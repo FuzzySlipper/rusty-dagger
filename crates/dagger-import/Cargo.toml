@@ -1,0 +1,8 @@
+[package]
+name = "dagger-import"
+version.workspace = true
+edition.workspace = true
+description = "Extract Daggerfall dungeon geometry (with textures) to GLB"
+
+[dependencies]
+arena2 = { path = "../arena2" }
