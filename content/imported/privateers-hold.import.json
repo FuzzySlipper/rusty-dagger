@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sourceUri": "content/privateers-hold.mesh.json",
+  "sourceHash": "18790e6a77819d68f68d4a65cce535ab1160e5b1e193048c2e8b3d98a8493887",
+  "sourceSchemaVersion": 1,
+  "importerVersion": 2,
+  "meshAssetId": "mesh/privateers-hold",
+  "guid": null,
+  "artifacts": [
+    {
+      "relativePath": "privateers-hold.catalog.json",
+      "contentHash": "a19e02e9d53c74ff4976d5c67a33b154cd2480d42ba491cb8abf9ea59c6eac04",
+      "byteLen": 94599
+    },
+    {
+      "relativePath": "privateers-hold.static-mesh.json",
+      "contentHash": "a07bbf254593d949c8e95a146c681221e749215ad9a8e150fc32b36737e5eafa",
+      "byteLen": 2143576
+    }
+  ]
+}

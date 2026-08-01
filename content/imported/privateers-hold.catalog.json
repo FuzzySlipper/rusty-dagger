@@ -1,0 +1,3950 @@
+{
+  "entries": [
+    {
+      "id": "material/default",
+      "version": 1,
+      "hash": "8ba690626e5b13f2fe7314b659490c719ea1ac076a3a19f59b74add0e5796076",
+      "sourcePath": null,
+      "label": "default",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.72,
+            0.7,
+            0.66,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.72,
+            0.7,
+            0.66,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-124",
+      "version": 1,
+      "hash": "96a12022a525f2cc5f88e605c5d95bff1cfc430e1a1dcd0c3eadcaded36b7523",
+      "sourcePath": null,
+      "label": "texture-000-124",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.262745,
+            0.262745,
+            0.262745,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.262745,
+            0.262745,
+            0.262745,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-44",
+      "version": 1,
+      "hash": "7ea1d3b5f90b230b987b0e606be30bae47d3d426b21748d5b7292baa02526a63",
+      "sourcePath": null,
+      "label": "texture-000-44",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.356863,
+            0.262745,
+            0.14902,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.356863,
+            0.262745,
+            0.14902,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-45",
+      "version": 1,
+      "hash": "87f726c00ce0d45caed87e35ba56f66c01fd0af906ffb43076aaca811ed2231c",
+      "sourcePath": null,
+      "label": "texture-000-45",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.309804,
+            0.247059,
+            0.168627,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.309804,
+            0.247059,
+            0.168627,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-74",
+      "version": 1,
+      "hash": "34927fddb5e5b81f46736e00171edeb1c91636ccac37db8185de5c15f2ef8cea",
+      "sourcePath": null,
+      "label": "texture-000-74",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.427451,
+            0.333333,
+            0.211765,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.427451,
+            0.333333,
+            0.211765,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-75",
+      "version": 1,
+      "hash": "b878f25d961b2e0200f7c997e5262c4a1b2dba6dec757348bc96e93fc59f360a",
+      "sourcePath": null,
+      "label": "texture-000-75",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.376471,
+            0.298039,
+            0.2,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.376471,
+            0.298039,
+            0.2,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-76",
+      "version": 1,
+      "hash": "4d08caeabba4aad055e99d66a2775b0008f6470bb5ac022c5117dab476d62816",
+      "sourcePath": null,
+      "label": "texture-000-76",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.32549,
+            0.278431,
+            0.172549,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.32549,
+            0.278431,
+            0.172549,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-77",
+      "version": 1,
+      "hash": "933357fdaa7c1ece576dbcb18846dbcbdf88eedbfe770811001c555a552a2c80",
+      "sourcePath": null,
+      "label": "texture-000-77",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.270588,
+            0.247059,
+            0.164706,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.270588,
+            0.247059,
+            0.164706,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-78",
+      "version": 1,
+      "hash": "2676d2769e783bc1cd6f1c8360f535b64c7916fd520af441ac6dabd8e98bdd71",
+      "sourcePath": null,
+      "label": "texture-000-78",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.239216,
+            0.211765,
+            0.14902,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.239216,
+            0.211765,
+            0.14902,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-79",
+      "version": 1,
+      "hash": "eec3951336272a8fa1b46fcf44ee33deb2ee41dd8a86b98c04878e80a15e1da7",
+      "sourcePath": null,
+      "label": "texture-000-79",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.196078,
+            0.176471,
+            0.133333,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.196078,
+            0.176471,
+            0.133333,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-000-89",
+      "version": 1,
+      "hash": "e7fe61b4262ac3d0bd342b78b0569810d3660f89366a17eb18b55e30bc20c8ea",
+      "sourcePath": null,
+      "label": "texture-000-89",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.333333,
+            0.333333,
+            0.376471,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.333333,
+            0.333333,
+            0.376471,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-001-24",
+      "version": 1,
+      "hash": "fe1778b50b5e51782bb490abb3e83be1fc4a58307636b013141fae6b47141245",
+      "sourcePath": null,
+      "label": "texture-001-24",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.545098,
+            0.45098,
+            0.0,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.545098,
+            0.45098,
+            0.0,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-041-1",
+      "version": 1,
+      "hash": "4d687b567e92db27f332cfc68c635fefc1798a1f4cfee841c52919b50ea4c007",
+      "sourcePath": null,
+      "label": "texture-041-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.267242,
+            0.280265,
+            0.311087,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.267242,
+            0.280265,
+            0.311087,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-046-1",
+      "version": 1,
+      "hash": "c7ae173ebb54b978db6cc900b1edf4a3da194e6ae5cab5b82aaa04df5304efd3",
+      "sourcePath": null,
+      "label": "texture-046-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.182991,
+            0.180896,
+            0.179017,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.182991,
+            0.180896,
+            0.179017,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-046-2",
+      "version": 1,
+      "hash": "2a11a34d0ac4331a6ffae3ae24958481475be7e6ef169a522a14ad37e6220380",
+      "sourcePath": null,
+      "label": "texture-046-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.114442,
+            0.113695,
+            0.11273,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.114442,
+            0.113695,
+            0.11273,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-067-0",
+      "version": 1,
+      "hash": "b43884b8f68efff42e41b171c882aaa7f7ce41cf0153576f0591ea3449346bb6",
+      "sourcePath": null,
+      "label": "texture-067-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.347434,
+            0.257156,
+            0.16114,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.347434,
+            0.257156,
+            0.16114,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-067-1",
+      "version": 1,
+      "hash": "48753ba6fe21567ac08b37d17851f9bb92d8065b5ecb012780b4fda14f560518",
+      "sourcePath": null,
+      "label": "texture-067-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.501555,
+            0.306937,
+            0.180019,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.501555,
+            0.306937,
+            0.180019,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-067-14",
+      "version": 1,
+      "hash": "3d843b647ef46fc76e137e406f2d20cd844cdcf6f7b22e1ba799d1c74417c9d9",
+      "sourcePath": null,
+      "label": "texture-067-14",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.301026,
+            0.253707,
+            0.168612,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.301026,
+            0.253707,
+            0.168612,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-067-15",
+      "version": 1,
+      "hash": "54e5f0ace74da124403051ec845ca5a33025e8a124cfc0e7d8daa0ff276e51c9",
+      "sourcePath": null,
+      "label": "texture-067-15",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.280936,
+            0.225061,
+            0.156365,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.280936,
+            0.225061,
+            0.156365,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-067-2",
+      "version": 1,
+      "hash": "83503cdb533b193f668209fd70cd0dfafeb0ed072c8ce5c566aae5a674796be2",
+      "sourcePath": null,
+      "label": "texture-067-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.278692,
+            0.183793,
+            0.11056,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.278692,
+            0.183793,
+            0.11056,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-067-6",
+      "version": 1,
+      "hash": "49ae7d36bd72d5789b33b3ce5a86cb03fabf7f2eca90b7c90fda193c84dec4ea",
+      "sourcePath": null,
+      "label": "texture-067-6",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.304454,
+            0.255371,
+            0.168643,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.304454,
+            0.255371,
+            0.168643,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-067-8",
+      "version": 1,
+      "hash": "5de264f5b774fe2b1d01d19b262cddbc3182dd015952ea78689a97c91b8157d2",
+      "sourcePath": null,
+      "label": "texture-067-8",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.346814,
+            0.257705,
+            0.16188,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.346814,
+            0.257705,
+            0.16188,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-071-0",
+      "version": 1,
+      "hash": "3f42c81ff0084c4dc3ac4f7b86f1e9282d9d5c19b97203d91ae1cb73ffeba746",
+      "sourcePath": null,
+      "label": "texture-071-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.210561,
+            0.195398,
+            0.157801,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.210561,
+            0.195398,
+            0.157801,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-071-2",
+      "version": 1,
+      "hash": "53d589560138eb7b9def6c787a008b23b121e0df67047b1a96665c7f161efbb7",
+      "sourcePath": null,
+      "label": "texture-071-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.244532,
+            0.203702,
+            0.146964,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.244532,
+            0.203702,
+            0.146964,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-090-12",
+      "version": 1,
+      "hash": "52b360dd47e3c43331340c013c5383215e9060f31dd3b09e72dce5ff51c30395",
+      "sourcePath": null,
+      "label": "texture-090-12",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.293566,
+            0.231863,
+            0.158502,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.293566,
+            0.231863,
+            0.158502,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-090-13",
+      "version": 1,
+      "hash": "cac64f4a8f1f855543f027ded2a4a98b7d95a627296c45abaf8317e3193a17d3",
+      "sourcePath": null,
+      "label": "texture-090-13",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.311428,
+            0.240012,
+            0.159199,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.311428,
+            0.240012,
+            0.159199,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-090-14",
+      "version": 1,
+      "hash": "3f9f25da4d91678a51b8ea04598cfe889ac340ced3a110eedc34b49cbf962ee5",
+      "sourcePath": null,
+      "label": "texture-090-14",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.317203,
+            0.240319,
+            0.157843,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.317203,
+            0.240319,
+            0.157843,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-090-2",
+      "version": 1,
+      "hash": "307ff9dfc8f8d267d1c1b191e7ae5700ece4ec96dfdb8a9480d0d34704dfcd0b",
+      "sourcePath": null,
+      "label": "texture-090-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.294711,
+            0.230796,
+            0.15633,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.294711,
+            0.230796,
+            0.15633,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-090-3",
+      "version": 1,
+      "hash": "d2328f72f41f71ad143fd60744c245b268a06d1cd7f5270974f8cb0048c254eb",
+      "sourcePath": null,
+      "label": "texture-090-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.313635,
+            0.240412,
+            0.158311,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.313635,
+            0.240412,
+            0.158311,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-092-10",
+      "version": 1,
+      "hash": "67bcbe5362d1b79ed62a1d204c6e874bc39516bd5921c0f189ed8af150dc2469",
+      "sourcePath": null,
+      "label": "texture-092-10",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.465912,
+            0.350625,
+            0.299763,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.465912,
+            0.350625,
+            0.299763,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-092-11",
+      "version": 1,
+      "hash": "850be4833ac5b2adefb8c1c16242db8f78f3a5cb4ca27c657d65eaba5e40d0ae",
+      "sourcePath": null,
+      "label": "texture-092-11",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.43767,
+            0.313318,
+            0.274569,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.43767,
+            0.313318,
+            0.274569,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-092-3",
+      "version": 1,
+      "hash": "2ce022b5b03990821231789b3f9a567e3ecb2e721bd5847b7b9c972152d986d2",
+      "sourcePath": null,
+      "label": "texture-092-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.266989,
+            0.249788,
+            0.216812,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.266989,
+            0.249788,
+            0.216812,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-092-5",
+      "version": 1,
+      "hash": "77a83f7fb02a696d24dd00c23d259b692b1b5304935f02ef0408fec1b9b882e9",
+      "sourcePath": null,
+      "label": "texture-092-5",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.23211,
+            0.20171,
+            0.152955,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.23211,
+            0.20171,
+            0.152955,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-092-7",
+      "version": 1,
+      "hash": "f8e4f6304da5b6dba98c332c2ddad3b5bea46e5e87dab017d95c3ae13e7f4e9e",
+      "sourcePath": null,
+      "label": "texture-092-7",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.253653,
+            0.221057,
+            0.160933,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.253653,
+            0.221057,
+            0.160933,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-092-8",
+      "version": 1,
+      "hash": "924b27fcf36b0c6051f271aff7fbb462b86ebe8ed6d85126b387af04ae30b904",
+      "sourcePath": null,
+      "label": "texture-092-8",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.540653,
+            0.378601,
+            0.322288,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.540653,
+            0.378601,
+            0.322288,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-093-0",
+      "version": 1,
+      "hash": "8a3166e4b43b75130a9564cfe1d4632127e9d1c33a6d2952cae6a9cc9fa49a2b",
+      "sourcePath": null,
+      "label": "texture-093-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.459429,
+            0.341466,
+            0.310446,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.459429,
+            0.341466,
+            0.310446,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-093-10",
+      "version": 1,
+      "hash": "eb63e8660e45ac419baba28eef70cf904cf38f5a9fc9ffbee8c13a1ae349e951",
+      "sourcePath": null,
+      "label": "texture-093-10",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.338187,
+            0.319902,
+            0.325272,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.338187,
+            0.319902,
+            0.325272,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-093-4",
+      "version": 1,
+      "hash": "8a908aeceddd69b02ae4d84cca34e8c816db32491e9659be0a85e411efd8ebdf",
+      "sourcePath": null,
+      "label": "texture-093-4",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.27698,
+            0.250218,
+            0.237406,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.27698,
+            0.250218,
+            0.237406,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-093-5",
+      "version": 1,
+      "hash": "4156e37eda3055ff6fb67a1c08e9b1939bfd26e8a7e63e12dabc723b8ce28c4c",
+      "sourcePath": null,
+      "label": "texture-093-5",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.371977,
+            0.371977,
+            0.371977,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.371977,
+            0.371977,
+            0.371977,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-093-6",
+      "version": 1,
+      "hash": "3fd11cdac5b4deab3ef2304d6c7ed656c1e54c5d930498ed1189121da5e3c4c9",
+      "sourcePath": null,
+      "label": "texture-093-6",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.412892,
+            0.347215,
+            0.316392,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.412892,
+            0.347215,
+            0.316392,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-093-7",
+      "version": 1,
+      "hash": "05919386ae846412b3c265358d20c9e07491c74727158f85ae930022e04f79be",
+      "sourcePath": null,
+      "label": "texture-093-7",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.27698,
+            0.250218,
+            0.237406,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.27698,
+            0.250218,
+            0.237406,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-093-8",
+      "version": 1,
+      "hash": "c24c94681603b9932750d8e6d9f8d1a01ad4751c5619361845939deaa5ba7d23",
+      "sourcePath": null,
+      "label": "texture-093-8",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.477391,
+            0.323265,
+            0.200512,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.477391,
+            0.323265,
+            0.200512,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-095-0",
+      "version": 1,
+      "hash": "ab648fd5b2d9b96f429b1fbba3522dae850866dfaf093aeeee1913f4ab119703",
+      "sourcePath": null,
+      "label": "texture-095-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.228067,
+            0.228848,
+            0.23837,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.228067,
+            0.228848,
+            0.23837,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-120-0",
+      "version": 1,
+      "hash": "82a8f542e0c0ef533c2d75171980fc1ccfb442726cad10d135a4a14472b21ca8",
+      "sourcePath": null,
+      "label": "texture-120-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.278265,
+            0.248485,
+            0.208052,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.278265,
+            0.248485,
+            0.208052,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-120-2",
+      "version": 1,
+      "hash": "10703c4a8afa2531b90b215260082db312d6098c243f590a1b3fff8fb3b1b32f",
+      "sourcePath": null,
+      "label": "texture-120-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.308718,
+            0.30549,
+            0.301279,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.308718,
+            0.30549,
+            0.301279,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-120-3",
+      "version": 1,
+      "hash": "cbe5d2dfad87b42927d957f83fe253795589aec47c7d2a941964c2a256a44bbe",
+      "sourcePath": null,
+      "label": "texture-120-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.399181,
+            0.306083,
+            0.199556,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.399181,
+            0.306083,
+            0.199556,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-121-0",
+      "version": 1,
+      "hash": "bdc476c46df634bc9c8f6334f6f9c5b7a1573bf32cfa16d42a0f96def629b6b3",
+      "sourcePath": null,
+      "label": "texture-121-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.311757,
+            0.256835,
+            0.173529,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.311757,
+            0.256835,
+            0.173529,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-121-1",
+      "version": 1,
+      "hash": "50da308cc58518cfe87c27bdd7e3f702d4297803a10c2320b46b0e4d11c94ab4",
+      "sourcePath": null,
+      "label": "texture-121-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.30871,
+            0.254842,
+            0.172041,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.30871,
+            0.254842,
+            0.172041,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-121-2",
+      "version": 1,
+      "hash": "65c806f28992ca72992e7041a6e635276fe68a9332671e87c73b8ef5f2c9b87f",
+      "sourcePath": null,
+      "label": "texture-121-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.316811,
+            0.260124,
+            0.17401,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.316811,
+            0.260124,
+            0.17401,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-121-3",
+      "version": 1,
+      "hash": "9991658e0c5d4b13535f6f3c934f6815747535f6f49b92d470124da126b2d167",
+      "sourcePath": null,
+      "label": "texture-121-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.313311,
+            0.25852,
+            0.173061,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.313311,
+            0.25852,
+            0.173061,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-122-0",
+      "version": 1,
+      "hash": "217dc1573e934fb2edfec7193155719bc1914237bdd4ae302aec15e18a752cc8",
+      "sourcePath": null,
+      "label": "texture-122-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.269072,
+            0.269694,
+            0.248483,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.269072,
+            0.269694,
+            0.248483,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-122-1",
+      "version": 1,
+      "hash": "ef284139d655ebd06866f818bc89816642949b51094346c91e51d181f1d7db55",
+      "sourcePath": null,
+      "label": "texture-122-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.277311,
+            0.279611,
+            0.256292,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.277311,
+            0.279611,
+            0.256292,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-122-2",
+      "version": 1,
+      "hash": "612ea7528d7dbfe6c32059ca187700b049268b83b68ab96e4f78bf2e9ad832c6",
+      "sourcePath": null,
+      "label": "texture-122-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.45234,
+            0.347497,
+            0.227621,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.45234,
+            0.347497,
+            0.227621,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-122-3",
+      "version": 1,
+      "hash": "cca7bfcff52dc3f6f03458c87a26ad9bfe9c00924466b037725cf1a8637a9024",
+      "sourcePath": null,
+      "label": "texture-122-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.293173,
+            0.270549,
+            0.245627,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.293173,
+            0.270549,
+            0.245627,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-122-4",
+      "version": 1,
+      "hash": "98151af409bc2ea9534a14ee033ac2006beb4f8c9e345b5e998bc47a5d4cff8e",
+      "sourcePath": null,
+      "label": "texture-122-4",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.247442,
+            0.253397,
+            0.275481,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.247442,
+            0.253397,
+            0.275481,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-124-0",
+      "version": 1,
+      "hash": "57a4b3eec4c06438541fa145fa810842a30a2c5a767c3e76eb4191b3b24813db",
+      "sourcePath": null,
+      "label": "texture-124-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.245173,
+            0.259863,
+            0.244104,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.245173,
+            0.259863,
+            0.244104,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-124-1",
+      "version": 1,
+      "hash": "1fe3555ef4ea9ecf55e84903e705ed3a17b205dee1c89bf5ee8b22857d8bb6f4",
+      "sourcePath": null,
+      "label": "texture-124-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.25517,
+            0.265028,
+            0.254117,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.25517,
+            0.265028,
+            0.254117,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-124-2",
+      "version": 1,
+      "hash": "ad5a7a56171358d2300bd4069b55389f3152b1c5bcb45cb0f7e490d1be62dccd",
+      "sourcePath": null,
+      "label": "texture-124-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.397861,
+            0.283268,
+            0.199996,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.397861,
+            0.283268,
+            0.199996,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-124-3",
+      "version": 1,
+      "hash": "46a5d821682786bc363efd5f7af08b74b0ef7b876d00de18bcdbadc593dbe948",
+      "sourcePath": null,
+      "label": "texture-124-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.301846,
+            0.288333,
+            0.26931,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.301846,
+            0.288333,
+            0.26931,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-124-4",
+      "version": 1,
+      "hash": "8a2531877202f5b8d9d0f60921243c81568c0ac497c957ee037577c8300b9ebd",
+      "sourcePath": null,
+      "label": "texture-124-4",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.229146,
+            0.262969,
+            0.22797,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.229146,
+            0.262969,
+            0.22797,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-141-1",
+      "version": 1,
+      "hash": "11ffdc0d59cb12d96d21020970bb67ac1ce8f44737b199459378bd9fb369eb73",
+      "sourcePath": null,
+      "label": "texture-141-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.750102,
+            0.75716,
+            0.753458,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.750102,
+            0.75716,
+            0.753458,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-141-2",
+      "version": 1,
+      "hash": "c6d4d244f37be408ce95369a84a9938b19df4742e0ac4bfe6a9ce8228a7ff320",
+      "sourcePath": null,
+      "label": "texture-141-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.422154,
+            0.366573,
+            0.342,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.422154,
+            0.366573,
+            0.342,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-146-0",
+      "version": 1,
+      "hash": "d871e090d11794c332f10315f7bcc5a7d9e66197b3755b5681ddbe7833aa5af3",
+      "sourcePath": null,
+      "label": "texture-146-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.196502,
+            0.175211,
+            0.138756,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.196502,
+            0.175211,
+            0.138756,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-146-1",
+      "version": 1,
+      "hash": "844678f01319f919a620b831cd192ceda4e59b63a301f7880f22dc3c286ddf9e",
+      "sourcePath": null,
+      "label": "texture-146-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.268352,
+            0.228106,
+            0.155959,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.268352,
+            0.228106,
+            0.155959,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-147-1",
+      "version": 1,
+      "hash": "f4c323c09f4d3f7506c00150fe8319866f68e6f8bfd733a71f68162f55297053",
+      "sourcePath": null,
+      "label": "texture-147-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.448816,
+            0.441466,
+            0.45404,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.448816,
+            0.441466,
+            0.45404,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-147-2",
+      "version": 1,
+      "hash": "4883b7934fb6dcf33b674e6b2e65b8a190d5c077df3348394ccba454198a75fb",
+      "sourcePath": null,
+      "label": "texture-147-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.259498,
+            0.258417,
+            0.287933,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.259498,
+            0.258417,
+            0.287933,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-168-0",
+      "version": 1,
+      "hash": "a8afedbdcafb72a3602f21c345bcde88cf182457289e91afa72b57d75a8a1601",
+      "sourcePath": null,
+      "label": "texture-168-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.264633,
+            0.275701,
+            0.222377,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.264633,
+            0.275701,
+            0.222377,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-168-2",
+      "version": 1,
+      "hash": "25e320de32098ef0dd35a6abc160d278103fb0e14439f0a11c2394979abdbf3e",
+      "sourcePath": null,
+      "label": "texture-168-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.251301,
+            0.257609,
+            0.279103,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.251301,
+            0.257609,
+            0.279103,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-168-3",
+      "version": 1,
+      "hash": "c909f1c8af37c6d5b864e7d17eeca0a49d53bfcaa2a2d0ffb6fb5cef4ef088c3",
+      "sourcePath": null,
+      "label": "texture-168-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.399181,
+            0.306083,
+            0.199556,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.399181,
+            0.306083,
+            0.199556,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-321-0",
+      "version": 1,
+      "hash": "4ea0a9075cade275dfd8d17b3e2a4f18f1a89d4fb2ce3b44b8f0c03e857ea57c",
+      "sourcePath": null,
+      "label": "texture-321-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.281274,
+            0.23594,
+            0.162735,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.281274,
+            0.23594,
+            0.162735,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-321-1",
+      "version": 1,
+      "hash": "2ff42ac151999801186b2236b6fc9b4c432a835766fc11027e258501da21b337",
+      "sourcePath": null,
+      "label": "texture-321-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.302937,
+            0.251081,
+            0.169487,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.302937,
+            0.251081,
+            0.169487,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-321-2",
+      "version": 1,
+      "hash": "7302b6cc8c09ab71c16c1444e39efb2f10cae7e2ae8305b89fd285b458b2f01d",
+      "sourcePath": null,
+      "label": "texture-321-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.21515,
+            0.18958,
+            0.14399,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.21515,
+            0.18958,
+            0.14399,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-341-0",
+      "version": 1,
+      "hash": "6b925f64ab6d865e6c4ed031c8c3bdab84f428cf4c5b13123b77e2349681f13c",
+      "sourcePath": null,
+      "label": "texture-341-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.437184,
+            0.444223,
+            0.433836,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.437184,
+            0.444223,
+            0.433836,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-341-3",
+      "version": 1,
+      "hash": "385f59f83d03645b8dc92a593b071d13f465a29027933e976b429bd14913d6f2",
+      "sourcePath": null,
+      "label": "texture-341-3",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.174291,
+            0.184819,
+            0.170183,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.174291,
+            0.184819,
+            0.170183,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-374-0",
+      "version": 1,
+      "hash": "62fa3c1d4b65908b2d4a6adea2c5727613f0c1461c92c9eaaf189313d7452725",
+      "sourcePath": null,
+      "label": "texture-374-0",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.264743,
+            0.228548,
+            0.169937,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.264743,
+            0.228548,
+            0.169937,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-374-2",
+      "version": 1,
+      "hash": "3194b95d64e7485b9cd4ab0f69aba10c9122892f9be72576bc9c38cb8bf89fbe",
+      "sourcePath": null,
+      "label": "texture-374-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.309206,
+            0.224438,
+            0.148063,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.309206,
+            0.224438,
+            0.148063,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-449-1",
+      "version": 1,
+      "hash": "d5aca6b151ce3f6dec5ecdbab049cdecb166ea9498e704b70c3909284443a06f",
+      "sourcePath": null,
+      "label": "texture-449-1",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.218604,
+            0.382842,
+            0.6058,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.218604,
+            0.382842,
+            0.6058,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-449-2",
+      "version": 1,
+      "hash": "3e71c5512d491dd1bc1d7234dc40f5b6eee6ef23600cfcdf09dca6bf0a86d58b",
+      "sourcePath": null,
+      "label": "texture-449-2",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.179404,
+            0.26885,
+            0.161658,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.179404,
+            0.26885,
+            0.161658,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-450-11",
+      "version": 1,
+      "hash": "325555e253a240150281060035537f883a81a42a84b54c749292c2ec2d7bf201",
+      "sourcePath": null,
+      "label": "texture-450-11",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.241318,
+            0.415028,
+            0.281649,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.241318,
+            0.415028,
+            0.281649,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-450-5",
+      "version": 1,
+      "hash": "fe4c3574b6e261acbc035a76d72d12cb5c783fc0ed782407c6d1acd9a31e6fc9",
+      "sourcePath": null,
+      "label": "texture-450-5",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.208959,
+            0.341071,
+            0.498675,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.208959,
+            0.341071,
+            0.498675,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-450-7",
+      "version": 1,
+      "hash": "898de9c92016c16787e821a5a9a50a61e9b01db38faa37b149d7420f5965a8ae",
+      "sourcePath": null,
+      "label": "texture-450-7",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.203111,
+            0.323906,
+            0.471598,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.203111,
+            0.323906,
+            0.471598,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "material/texture-450-9",
+      "version": 1,
+      "hash": "2c3ca942f5fe5aa34ccdcc4e5df38daae316ffe6d18017cf464c93030e4603c2",
+      "sourcePath": null,
+      "label": "texture-450-9",
+      "dependencies": [],
+      "material": {
+        "authority": {
+          "solid": false,
+          "collidable": false,
+          "occludes": false,
+          "structuralClass": "decorative"
+        },
+        "style": {
+          "color": [
+            0.281445,
+            0.397143,
+            0.176175,
+            1.0
+          ],
+          "texture": null,
+          "textureTint": [
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "emissionColor": [
+            0.281445,
+            0.397143,
+            0.176175,
+            1.0
+          ],
+          "roughness": 1.0,
+          "emissive": 0.0,
+          "uvStrategy": "flat"
+        }
+      }
+    },
+    {
+      "id": "mesh/privateers-hold",
+      "version": 1,
+      "hash": "98e07a00d8f8cf1853cc99dc059fc05778a7ab3b3ab1fe6bdcd69343aad8de50",
+      "sourcePath": null,
+      "label": "privateers-hold",
+      "dependencies": [
+        {
+          "id": "material/default",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "8ba690626e5b13f2fe7314b659490c719ea1ac076a3a19f59b74add0e5796076"
+        },
+        {
+          "id": "material/texture-000-124",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "96a12022a525f2cc5f88e605c5d95bff1cfc430e1a1dcd0c3eadcaded36b7523"
+        },
+        {
+          "id": "material/texture-000-44",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "7ea1d3b5f90b230b987b0e606be30bae47d3d426b21748d5b7292baa02526a63"
+        },
+        {
+          "id": "material/texture-000-45",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "87f726c00ce0d45caed87e35ba56f66c01fd0af906ffb43076aaca811ed2231c"
+        },
+        {
+          "id": "material/texture-000-74",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "34927fddb5e5b81f46736e00171edeb1c91636ccac37db8185de5c15f2ef8cea"
+        },
+        {
+          "id": "material/texture-000-75",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "b878f25d961b2e0200f7c997e5262c4a1b2dba6dec757348bc96e93fc59f360a"
+        },
+        {
+          "id": "material/texture-000-76",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "4d08caeabba4aad055e99d66a2775b0008f6470bb5ac022c5117dab476d62816"
+        },
+        {
+          "id": "material/texture-000-77",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "933357fdaa7c1ece576dbcb18846dbcbdf88eedbfe770811001c555a552a2c80"
+        },
+        {
+          "id": "material/texture-000-78",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "2676d2769e783bc1cd6f1c8360f535b64c7916fd520af441ac6dabd8e98bdd71"
+        },
+        {
+          "id": "material/texture-000-79",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "eec3951336272a8fa1b46fcf44ee33deb2ee41dd8a86b98c04878e80a15e1da7"
+        },
+        {
+          "id": "material/texture-000-89",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "e7fe61b4262ac3d0bd342b78b0569810d3660f89366a17eb18b55e30bc20c8ea"
+        },
+        {
+          "id": "material/texture-001-24",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "fe1778b50b5e51782bb490abb3e83be1fc4a58307636b013141fae6b47141245"
+        },
+        {
+          "id": "material/texture-041-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "4d687b567e92db27f332cfc68c635fefc1798a1f4cfee841c52919b50ea4c007"
+        },
+        {
+          "id": "material/texture-046-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "c7ae173ebb54b978db6cc900b1edf4a3da194e6ae5cab5b82aaa04df5304efd3"
+        },
+        {
+          "id": "material/texture-046-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "2a11a34d0ac4331a6ffae3ae24958481475be7e6ef169a522a14ad37e6220380"
+        },
+        {
+          "id": "material/texture-067-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "b43884b8f68efff42e41b171c882aaa7f7ce41cf0153576f0591ea3449346bb6"
+        },
+        {
+          "id": "material/texture-067-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "48753ba6fe21567ac08b37d17851f9bb92d8065b5ecb012780b4fda14f560518"
+        },
+        {
+          "id": "material/texture-067-14",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "3d843b647ef46fc76e137e406f2d20cd844cdcf6f7b22e1ba799d1c74417c9d9"
+        },
+        {
+          "id": "material/texture-067-15",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "54e5f0ace74da124403051ec845ca5a33025e8a124cfc0e7d8daa0ff276e51c9"
+        },
+        {
+          "id": "material/texture-067-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "83503cdb533b193f668209fd70cd0dfafeb0ed072c8ce5c566aae5a674796be2"
+        },
+        {
+          "id": "material/texture-067-6",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "49ae7d36bd72d5789b33b3ce5a86cb03fabf7f2eca90b7c90fda193c84dec4ea"
+        },
+        {
+          "id": "material/texture-067-8",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "5de264f5b774fe2b1d01d19b262cddbc3182dd015952ea78689a97c91b8157d2"
+        },
+        {
+          "id": "material/texture-071-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "3f42c81ff0084c4dc3ac4f7b86f1e9282d9d5c19b97203d91ae1cb73ffeba746"
+        },
+        {
+          "id": "material/texture-071-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "53d589560138eb7b9def6c787a008b23b121e0df67047b1a96665c7f161efbb7"
+        },
+        {
+          "id": "material/texture-090-12",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "52b360dd47e3c43331340c013c5383215e9060f31dd3b09e72dce5ff51c30395"
+        },
+        {
+          "id": "material/texture-090-13",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "cac64f4a8f1f855543f027ded2a4a98b7d95a627296c45abaf8317e3193a17d3"
+        },
+        {
+          "id": "material/texture-090-14",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "3f9f25da4d91678a51b8ea04598cfe889ac340ced3a110eedc34b49cbf962ee5"
+        },
+        {
+          "id": "material/texture-090-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "307ff9dfc8f8d267d1c1b191e7ae5700ece4ec96dfdb8a9480d0d34704dfcd0b"
+        },
+        {
+          "id": "material/texture-090-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "d2328f72f41f71ad143fd60744c245b268a06d1cd7f5270974f8cb0048c254eb"
+        },
+        {
+          "id": "material/texture-092-10",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "67bcbe5362d1b79ed62a1d204c6e874bc39516bd5921c0f189ed8af150dc2469"
+        },
+        {
+          "id": "material/texture-092-11",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "850be4833ac5b2adefb8c1c16242db8f78f3a5cb4ca27c657d65eaba5e40d0ae"
+        },
+        {
+          "id": "material/texture-092-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "2ce022b5b03990821231789b3f9a567e3ecb2e721bd5847b7b9c972152d986d2"
+        },
+        {
+          "id": "material/texture-092-5",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "77a83f7fb02a696d24dd00c23d259b692b1b5304935f02ef0408fec1b9b882e9"
+        },
+        {
+          "id": "material/texture-092-7",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "f8e4f6304da5b6dba98c332c2ddad3b5bea46e5e87dab017d95c3ae13e7f4e9e"
+        },
+        {
+          "id": "material/texture-092-8",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "924b27fcf36b0c6051f271aff7fbb462b86ebe8ed6d85126b387af04ae30b904"
+        },
+        {
+          "id": "material/texture-093-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "8a3166e4b43b75130a9564cfe1d4632127e9d1c33a6d2952cae6a9cc9fa49a2b"
+        },
+        {
+          "id": "material/texture-093-10",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "eb63e8660e45ac419baba28eef70cf904cf38f5a9fc9ffbee8c13a1ae349e951"
+        },
+        {
+          "id": "material/texture-093-4",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "8a908aeceddd69b02ae4d84cca34e8c816db32491e9659be0a85e411efd8ebdf"
+        },
+        {
+          "id": "material/texture-093-5",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "4156e37eda3055ff6fb67a1c08e9b1939bfd26e8a7e63e12dabc723b8ce28c4c"
+        },
+        {
+          "id": "material/texture-093-6",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "3fd11cdac5b4deab3ef2304d6c7ed656c1e54c5d930498ed1189121da5e3c4c9"
+        },
+        {
+          "id": "material/texture-093-7",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "05919386ae846412b3c265358d20c9e07491c74727158f85ae930022e04f79be"
+        },
+        {
+          "id": "material/texture-093-8",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "c24c94681603b9932750d8e6d9f8d1a01ad4751c5619361845939deaa5ba7d23"
+        },
+        {
+          "id": "material/texture-095-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "ab648fd5b2d9b96f429b1fbba3522dae850866dfaf093aeeee1913f4ab119703"
+        },
+        {
+          "id": "material/texture-120-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "82a8f542e0c0ef533c2d75171980fc1ccfb442726cad10d135a4a14472b21ca8"
+        },
+        {
+          "id": "material/texture-120-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "10703c4a8afa2531b90b215260082db312d6098c243f590a1b3fff8fb3b1b32f"
+        },
+        {
+          "id": "material/texture-120-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "cbe5d2dfad87b42927d957f83fe253795589aec47c7d2a941964c2a256a44bbe"
+        },
+        {
+          "id": "material/texture-121-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "bdc476c46df634bc9c8f6334f6f9c5b7a1573bf32cfa16d42a0f96def629b6b3"
+        },
+        {
+          "id": "material/texture-121-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "50da308cc58518cfe87c27bdd7e3f702d4297803a10c2320b46b0e4d11c94ab4"
+        },
+        {
+          "id": "material/texture-121-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "65c806f28992ca72992e7041a6e635276fe68a9332671e87c73b8ef5f2c9b87f"
+        },
+        {
+          "id": "material/texture-121-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "9991658e0c5d4b13535f6f3c934f6815747535f6f49b92d470124da126b2d167"
+        },
+        {
+          "id": "material/texture-122-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "217dc1573e934fb2edfec7193155719bc1914237bdd4ae302aec15e18a752cc8"
+        },
+        {
+          "id": "material/texture-122-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "ef284139d655ebd06866f818bc89816642949b51094346c91e51d181f1d7db55"
+        },
+        {
+          "id": "material/texture-122-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "612ea7528d7dbfe6c32059ca187700b049268b83b68ab96e4f78bf2e9ad832c6"
+        },
+        {
+          "id": "material/texture-122-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "cca7bfcff52dc3f6f03458c87a26ad9bfe9c00924466b037725cf1a8637a9024"
+        },
+        {
+          "id": "material/texture-122-4",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "98151af409bc2ea9534a14ee033ac2006beb4f8c9e345b5e998bc47a5d4cff8e"
+        },
+        {
+          "id": "material/texture-124-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "57a4b3eec4c06438541fa145fa810842a30a2c5a767c3e76eb4191b3b24813db"
+        },
+        {
+          "id": "material/texture-124-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "1fe3555ef4ea9ecf55e84903e705ed3a17b205dee1c89bf5ee8b22857d8bb6f4"
+        },
+        {
+          "id": "material/texture-124-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "ad5a7a56171358d2300bd4069b55389f3152b1c5bcb45cb0f7e490d1be62dccd"
+        },
+        {
+          "id": "material/texture-124-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "46a5d821682786bc363efd5f7af08b74b0ef7b876d00de18bcdbadc593dbe948"
+        },
+        {
+          "id": "material/texture-124-4",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "8a2531877202f5b8d9d0f60921243c81568c0ac497c957ee037577c8300b9ebd"
+        },
+        {
+          "id": "material/texture-141-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "11ffdc0d59cb12d96d21020970bb67ac1ce8f44737b199459378bd9fb369eb73"
+        },
+        {
+          "id": "material/texture-141-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "c6d4d244f37be408ce95369a84a9938b19df4742e0ac4bfe6a9ce8228a7ff320"
+        },
+        {
+          "id": "material/texture-146-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "d871e090d11794c332f10315f7bcc5a7d9e66197b3755b5681ddbe7833aa5af3"
+        },
+        {
+          "id": "material/texture-146-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "844678f01319f919a620b831cd192ceda4e59b63a301f7880f22dc3c286ddf9e"
+        },
+        {
+          "id": "material/texture-147-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "f4c323c09f4d3f7506c00150fe8319866f68e6f8bfd733a71f68162f55297053"
+        },
+        {
+          "id": "material/texture-147-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "4883b7934fb6dcf33b674e6b2e65b8a190d5c077df3348394ccba454198a75fb"
+        },
+        {
+          "id": "material/texture-168-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "a8afedbdcafb72a3602f21c345bcde88cf182457289e91afa72b57d75a8a1601"
+        },
+        {
+          "id": "material/texture-168-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "25e320de32098ef0dd35a6abc160d278103fb0e14439f0a11c2394979abdbf3e"
+        },
+        {
+          "id": "material/texture-168-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "c909f1c8af37c6d5b864e7d17eeca0a49d53bfcaa2a2d0ffb6fb5cef4ef088c3"
+        },
+        {
+          "id": "material/texture-321-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "4ea0a9075cade275dfd8d17b3e2a4f18f1a89d4fb2ce3b44b8f0c03e857ea57c"
+        },
+        {
+          "id": "material/texture-321-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "2ff42ac151999801186b2236b6fc9b4c432a835766fc11027e258501da21b337"
+        },
+        {
+          "id": "material/texture-321-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "7302b6cc8c09ab71c16c1444e39efb2f10cae7e2ae8305b89fd285b458b2f01d"
+        },
+        {
+          "id": "material/texture-341-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "6b925f64ab6d865e6c4ed031c8c3bdab84f428cf4c5b13123b77e2349681f13c"
+        },
+        {
+          "id": "material/texture-341-3",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "385f59f83d03645b8dc92a593b071d13f465a29027933e976b429bd14913d6f2"
+        },
+        {
+          "id": "material/texture-374-0",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "62fa3c1d4b65908b2d4a6adea2c5727613f0c1461c92c9eaaf189313d7452725"
+        },
+        {
+          "id": "material/texture-374-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "3194b95d64e7485b9cd4ab0f69aba10c9122892f9be72576bc9c38cb8bf89fbe"
+        },
+        {
+          "id": "material/texture-449-1",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "d5aca6b151ce3f6dec5ecdbab049cdecb166ea9498e704b70c3909284443a06f"
+        },
+        {
+          "id": "material/texture-449-2",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "3e71c5512d491dd1bc1d7234dc40f5b6eee6ef23600cfcdf09dca6bf0a86d58b"
+        },
+        {
+          "id": "material/texture-450-11",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "325555e253a240150281060035537f883a81a42a84b54c749292c2ec2d7bf201"
+        },
+        {
+          "id": "material/texture-450-5",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "fe4c3574b6e261acbc035a76d72d12cb5c783fc0ed782407c6d1acd9a31e6fc9"
+        },
+        {
+          "id": "material/texture-450-7",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "898de9c92016c16787e821a5a9a50a61e9b01db38faa37b149d7420f5965a8ae"
+        },
+        {
+          "id": "material/texture-450-9",
+          "version": {
+            "req": "exact",
+            "value": 1
+          },
+          "hash": "2c3ca942f5fe5aa34ccdcc4e5df38daae316ffe6d18017cf464c93030e4603c2"
+        }
+      ],
+      "material": null
+    }
+  ]
+}
