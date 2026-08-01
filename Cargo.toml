@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/arena2",
+    "crates/dagger-import",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
