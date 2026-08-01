@@ -13,6 +13,8 @@ pub struct PrimitiveInput {
 pub struct TextureInput {
     pub name: String,
     pub png: Vec<u8>,
+    /// Average RGB of the decoded texture (0..1), used for untextured material colors.
+    pub avg_color: [f32; 3],
 }
 
 fn pad4(v: &mut Vec<u8>, pad: u8) {

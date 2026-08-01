@@ -1,0 +1,95 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>rusty-dagger render check</title>
+  <style>html,body{margin:0;height:100%;background:#101418}canvas{display:block}</style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "/vendor/three/build/three.module.js",
+        "three/addons/": "/vendor/three/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+<script type="module">
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+  window.__errors = [];
+  window.addEventListener('error', (e) => window.__errors.push(String(e.message)));
+  window.addEventListener('unhandledrejection', (e) => window.__errors.push(String(e.reason)));
+
+  const params = new URLSearchParams(location.search);
+  const glbUrl = params.get('glb') ?? '/content/privateers-hold.glb';
+
+  try {
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setSize(1280, 960);
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x101418);
+    const hemi = new THREE.HemisphereLight(0xfff2dc, 0x30281e, 1.1);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 1.4);
+    dir.position.set(40, 80, 60);
+    scene.add(dir);
+
+    const camera = new THREE.PerspectiveCamera(60, 1280 / 960, 0.05, 2000);
+
+    new GLTFLoader().load(glbUrl, (gltf) => {
+      const model = gltf.scene;
+      scene.add(model);
+
+      const box = new THREE.Box3().setFromObject(model);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+
+      let meshCount = 0, triCount = 0, texturedMats = 0;
+      model.traverse((o) => {
+        if (o.isMesh) {
+          meshCount++;
+          const idx = o.geometry.getIndex();
+          triCount += (idx ? idx.count : o.geometry.getAttribute('position').count) / 3;
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          for (const m of mats) if (m.map) texturedMats++;
+        }
+      });
+
+      // Camera modes: overview (default), top, interior
+      const radius = Math.max(size.x, size.y, size.z);
+      const camMode = params.get('cam') ?? 'overview';
+      if (camMode === 'top') {
+        camera.position.set(center.x, 45, center.z + 0.01);
+        camera.lookAt(center.x, 0, center.z);
+      } else if (camMode === 'interior') {
+        // Start block center at eye height, looking down the -z block row
+        camera.position.set(25.6, 1.6, -25.6);
+        camera.lookAt(25.6, 1.4, -76.8);
+      } else {
+        camera.position.set(center.x + radius * 0.9, center.y + radius * 0.65, center.z + radius * 0.9);
+        camera.lookAt(center);
+      }
+      camera.updateProjectionMatrix();
+      renderer.render(scene, camera);
+      window.__done = {
+        ok: true,
+        meshCount,
+        triCount: Math.round(triCount),
+        texturedMats,
+        bounds: { min: box.min.toArray(), max: box.max.toArray() },
+      };
+    }, undefined, (err) => {
+      window.__errors.push('GLTFLoader: ' + (err && err.message ? err.message : String(err)));
+      window.__done = { ok: false };
+    });
+  } catch (e) {
+    window.__errors.push(String(e && e.stack || e));
+    window.__done = { ok: false };
+  }
+</script>
+</body>
+</html>

@@ -114,6 +114,18 @@ fn normalize(v: [f32; 3]) -> [f32; 3] {
     }
 }
 
+fn average_rgb(rgba: &[u8]) -> [f32; 3] {
+    let (mut r, mut g, mut b, mut n) = (0u64, 0u64, 0u64, 0u64);
+    for px in rgba.chunks_exact(4) {
+        r += px[0] as u64;
+        g += px[1] as u64;
+        b += px[2] as u64;
+        n += 1;
+    }
+    let n = n.max(1) as f32;
+    [r as f32 / n / 255.0, g as f32 / n / 255.0, b as f32 / n / 255.0]
+}
+
 pub struct Importer {
     arena2_dir: PathBuf,
     palette: Palette,
@@ -180,11 +192,13 @@ impl Importer {
             })
             .ok()?;
         let rgba = self.palette.to_rgba(&indexed);
+        let avg = average_rgb(&rgba);
         let png = crate::png::encode_rgba(w as u32, h as u32, &rgba);
         let idx = self.textures.len();
         self.textures.push(TextureInput {
             name: format!("TEXTURE.{archive:03}[{record}] ({info_w}x{info_h})", info_w = info.width, info_h = info.height),
             png,
+            avg_color: avg,
         });
         self.texture_keys.insert(key, idx);
         Some((idx, info.width as f32, info.height as f32))

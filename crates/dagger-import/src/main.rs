@@ -3,6 +3,7 @@
 
 mod dungeon;
 mod glb;
+mod meshjson;
 mod png;
 
 use std::path::PathBuf;
@@ -13,6 +14,7 @@ struct Args {
     location: String,
     out: PathBuf,
     textured: bool,
+    format: String,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -21,6 +23,7 @@ fn parse_args() -> Result<Args, String> {
     let mut location = "Privateer's Hold".to_string();
     let mut out = PathBuf::from("content/privateers-hold.glb");
     let mut textured = true;
+    let mut format = "glb".to_string();
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -34,12 +37,16 @@ fn parse_args() -> Result<Args, String> {
             }
             "--location" => location = it.next().ok_or("--location needs a value")?,
             "--out" => out = PathBuf::from(it.next().ok_or("--out needs a value")?),
+            "--format" => format = it.next().ok_or("--format needs a value")?,
             "--untextured" => textured = false,
             "--help" | "-h" => return Err(usage()),
             other => return Err(format!("unknown arg {other}\n{}", usage())),
         }
     }
-    Ok(Args { arena2_dir, region, location, out, textured })
+    if format != "glb" && format != "mesh-json" {
+        return Err(format!("--format must be glb or mesh-json, got {format:?}"));
+    }
+    Ok(Args { arena2_dir, region, location, out, textured, format })
 }
 
 fn usage() -> String {
@@ -81,13 +88,16 @@ fn main() {
         s.bounds_max[0], s.bounds_max[1], s.bounds_max[2]
     );
 
-    let name = args.location.replace('\'', "").replace(' ', "-");
-    let glb = glb::write_glb(&name, &output.primitives, &output.textures);
+    let name = args.location.replace('\'', "").replace(' ', "-").to_lowercase();
+    let bytes = match args.format.as_str() {
+        "mesh-json" => meshjson::write_mesh_json(&name, &output.primitives, &output.textures).into_bytes(),
+        _ => glb::write_glb(&name, &output.primitives, &output.textures),
+    };
     if let Some(parent) = args.out.parent() {
         if !parent.as_os_str().is_empty() {
             std::fs::create_dir_all(parent).expect("create output dir");
         }
     }
-    std::fs::write(&args.out, &glb).expect("write GLB");
-    println!("wrote:       {} ({} bytes)", args.out.display(), glb.len());
+    std::fs::write(&args.out, &bytes).expect("write output");
+    println!("wrote:       {} ({} bytes)", args.out.display(), bytes.len());
 }
