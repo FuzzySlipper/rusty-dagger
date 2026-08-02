@@ -121,6 +121,56 @@ modularity gate, task 6529):
   playwright) reusing rusty-engine's installed packages; screenshots are
   durable artifacts.
 
+## Collision stopgap and the walk-through proof (task 6520, review R6520-1)
+
+Until upstream triangle-mesh collision lands (rusty-engine task 6516), the
+generated studio project carries a hidden `gameplayProxy` material-voxel
+environment as the collision authority, rasterized from the dungeon mesh by
+`scripts/generate-project.py`:
+
+- Every up-facing triangle (`ny/|n| > 0.5`) is rasterized into 0.5m columns;
+  each column's surface heights are clustered (0.3m) and every cluster
+  becomes one solid voxel whose top face is the cluster height rounded to
+  the nearest cell boundary. Columns keep **every** walkable level — the
+  start-marker layer (38.4m) and the levels beneath it — which is what makes
+  both the spawn support and the descending border route real.
+- The player controller opts into the loading-bay runtime's
+  `fallSpeedUnitsPerSecond` / `stepUpUnits` semantics (added there for this
+  consumer): a constant-speed, 0.1m-substepped downward settle after every
+  action (including idles), plus a bounded ledge climb assist. Projects
+  without those fields keep the original pure-kinematic behaviour.
+- `scripts/find-route.py` derives the verified route
+  (`content/projects/privateers-hold.route.json`) from the **proxy voxels
+  themselves** (not the mesh), mirroring the controller's footprint, settle,
+  and step-up rules. `scripts/regenerate.sh` runs the whole chain.
+
+Known stopgap limitations: vertical walls contribute no voxels (wall solidity
+is incidental), and raised solids are represented by their top surface only,
+so their undersides are hollow. The accepted route is checked against the
+proxy, so its floor collision is real regardless.
+
+`dagger-walkthrough` (rusty-engine-demo, `loading-bay-game` bin) is the
+headless proof, driving the admitted project through the public controller
+API and asserting on **authoritative** readback:
+
+1. Settle — from the parsed start marker the player falls and comes to rest
+   on proxy support (occupancy probe over the body footprint finds solid
+   within the fall-substep window; a further idle does not move it).
+2. Traversal — the waypoint route from the start block into a border block
+   ((0,-1) → (1,-1), ~25m, descending ~6.5m), with support asserted after
+   every action and the end block verified from the position readback.
+3. Negative probes — each must change the authoritative outcome: (a) the
+   proxy shifted 2m down removes the spawn support and lands the player
+   measurably lower; (b) no support outside covered columns; (c) deleting a
+   route-midpoint column's voxels removes its support.
+
+Boundary-contact note: svc-collision treats exactly-flush contact as
+overlapping (parry intersection), so horizontal motion while exactly flush is
+blocked. The substepped settle leaves a sub-0.1m hover; because voxel tops
+are 0.5-multiples and the substep (0.1) divides 0.5, a positive initial hover
+is invariant along any route — the walkthrough's per-action movement
+assertions would catch a violation.
+
 ## Verification culture
 
 - Every format claim is backed by a test against the real data files

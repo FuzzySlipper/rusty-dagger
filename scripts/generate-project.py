@@ -27,6 +27,15 @@ PROJECT_ID = "privateers-hold"
 SCENE_ID = "scene/privateers-hold"
 MESH_ASSET = "mesh/privateers-hold"
 
+# Collision stopgap tuning (shared with scripts/find-route.py — keep in sync).
+# Until upstream trimesh collision lands (rusty-engine task 6516), the hidden
+# gameplayProxy voxel environment is the collision authority. See build_scene.
+PROXY_CELL = 0.5            # voxel edge length (m)
+PROXY_NORMAL_THRESHOLD = 0.5  # up-facing filter: ny/|n| > 0.5 (floors + ramps)
+PROXY_CLUSTER_TOL = 0.3     # merge surface heights closer than this per column
+PLAYER_FALL_SPEED = 12.0    # controller settle speed (m/s), opt-in
+PLAYER_STEP_UP = 0.75       # controller ledge climb assist (m), opt-in
+
 
 def load_json(p: Path):
     return json.loads(p.read_text())
@@ -73,26 +82,91 @@ def build_scene(static_mesh: dict) -> dict:
     """One scene: the dungeon mesh entity + a player-camera entity, over a
     hidden gameplayProxy voxel environment.
 
-    Spawn comes from the extracted start marker (content/privateers-hold.scene.json,
-    written by dagger-import) when available; falls back to block center.
+    Collision stopgap until upstream trimesh lands (rusty-engine task 6516,
+    swap path: replace this rasterizer with the engine collision owner):
+
+    - Every up-facing mesh triangle (ny/|n| > PROXY_NORMAL_THRESHOLD, so floors
+      and walkable ramps) is rasterized into the 0.5m columns its XZ bounding
+      box touches, recording the triangle centroid height.
+    - Heights within one column are clustered (PROXY_CLUSTER_TOL), and each
+      cluster becomes ONE solid voxel whose top face sits at the cluster
+      height rounded to the nearest cell boundary (max 0.25m error). Columns
+      therefore keep EVERY walkable level (spawn plateau at 38.4 AND the
+      levels beneath it), not just the topmost surface — this is what lets
+      the start-marker layer and the descending border route both have
+      authoritative support (review finding R6520-1).
+    - Where the mesh has no up-facing surface there is no voxel: walking out
+      of the dungeon through a gap means falling, and the walkthrough's
+      negative probes prove support disappears when the proxy is displaced.
+
+    Known limitations (documented, accepted for the stopgap): vertical wall
+    faces contribute no voxels, so wall solidity is incidental (a wall only
+    blocks where its top edge or an adjacent floor voxel intersects the
+    mover), and a raised solid (e.g. a staircase flank) is represented only
+    by its top surface, so its underside is hollow from below. The verified
+    traversal route (content/projects/privateers-hold.route.json) is checked
+    against these voxels, so the accepted route's floor collision is real.
+
+    The player controller opts into fall/step-up semantics (parsed by the
+    loading-bay runtime): constant-speed downward settle after every action
+    plus a bounded ledge climb assist, so support, landing, and stair descent
+    are observable through authoritative readback.
     """
+    import math
+
     bounds = static_mesh["payload"]["bounds"]
     mn, mx = bounds["min"], bounds["max"]
 
-    # Ground plane of solid voxels just under the dungeon floor (1m voxels).
-    # Material slots are 1-based into the project's material palette (slot 0 =
-    # empty in the engine voxel convention); slot 1 = our first material.
-    x0, x1 = int(mn[0] // 1), int(mx[0] // 1) + 1
-    z0, z1 = int(mn[2] // 1), int(mx[2] // 1) + 1
+    # Rasterize up-facing triangles from the inline mesh payload into columns.
+    positions = static_mesh["payload"]["source"]["positions"]
+    indices = static_mesh["payload"]["source"]["indices"]
+    CELL = PROXY_CELL
+    columns: dict = {}
+    for t in range(0, len(indices), 3):
+        a, b, c = indices[t], indices[t + 1], indices[t + 2]
+        ax, ay, az = positions[a * 3], positions[a * 3 + 1], positions[a * 3 + 2]
+        bx, by, bz = positions[b * 3], positions[b * 3 + 1], positions[b * 3 + 2]
+        cx, cy, cz = positions[c * 3], positions[c * 3 + 1], positions[c * 3 + 2]
+        ux, uy, uz = bx - ax, by - ay, bz - az
+        vx, vy, vz = cx - ax, cy - ay, cz - az
+        nx, ny, nz = uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
+        ln = (nx * nx + ny * ny + nz * nz) ** 0.5 or 1.0
+        if ny / ln <= PROXY_NORMAL_THRESHOLD:
+            continue
+        fy = (ay + by + cy) / 3.0
+        ix0 = math.floor(min(ax, bx, cx) / CELL)
+        ix1 = math.floor(max(ax, bx, cx) / CELL)
+        iz0 = math.floor(min(az, bz, cz) / CELL)
+        iz1 = math.floor(max(az, bz, cz) / CELL)
+        for ix in range(ix0, ix1 + 1):
+            for iz in range(iz0, iz1 + 1):
+                columns.setdefault((ix, iz), []).append(fy)
+
+    # Cluster each column's surface heights, then emit one voxel per cluster.
+    # The voxel at address y occupies [y*CELL, (y+1)*CELL]; round the top face
+    # to the cell boundary nearest the surface (y+1 = round(fy/CELL)) so a
+    # walkable plateau's tops stay level instead of stair-stepping.
+    addresses = set()
+    for (ix, iz), heights in columns.items():
+        heights.sort()
+        clusters: list = []
+        for h in heights:
+            if clusters and h - clusters[-1][-1] <= PROXY_CLUSTER_TOL:
+                clusters[-1].append(h)
+            else:
+                clusters.append([h])
+        for group in clusters:
+            fy = sum(group) / len(group)
+            addresses.add((ix, round(fy / CELL) - 1, iz))
+
     solid = [
-        {"address": [x, -1, z], "materialSlot": 1}
-        for x in range(x0, x1 + 1)
-        for z in range(z0, z1 + 1)
+        {"address": [ix, iy, iz], "materialSlot": 1}
+        for (ix, iy, iz) in sorted(addresses)
     ]
 
     voxel_environment = {
         "kind": "material",
-        "voxelSize": 1.0,
+        "voxelSize": CELL,
         "chunkSize": 16,
         "materialVoxels": solid,
         "gameplayProxy": True,
@@ -149,6 +223,8 @@ def build_scene(static_mesh: dict) -> dict:
             "lookDegreesPerUnit": 12.0,
             "initialYawDegrees": 180.0,
             "initialPitchDegrees": 0.0,
+            "fallSpeedUnitsPerSecond": PLAYER_FALL_SPEED,
+            "stepUpUnits": PLAYER_STEP_UP,
             "bindings": {
                 "moveForward": "KeyW",
                 "moveBackward": "KeyS",
@@ -184,7 +260,10 @@ def build_project() -> dict:
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "--write"
     project = build_project()
-    text = json.dumps(project, indent=2) + "\n"
+    # Compact separators: deterministic regenerated artifact, and the studio
+    # adapter rejects project docs over 8 MiB (the multi-level collision
+    # proxy pushes the pretty-printed form past that bound).
+    text = json.dumps(project, separators=(",", ":")) + "\n"
     if mode == "--check":
         actual = OUT.read_text() if OUT.exists() else ""
         if actual != text:
