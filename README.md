@@ -30,6 +30,12 @@ current task state in the Den `rusty-dagger` project.
   the committed Privateer's Hold project, owns the first-person controller,
   and provides the real-project collision walkthrough without importing the
   loading-bay game.
+- `crates/dagger-studio-adapter` — Rust-owned protocol-14 Studio adapter. It
+  admits the committed project through `dagger-runtime` and publishes its
+  static mesh/lights as an Engine render frame; unsupported mutations fail
+  closed until a Dagger authority exists.
+- `scripts/studio-host.mjs` / `scripts/serve-studio.sh` — bounded local HTTP
+  bridge for the exact Engine Studio static app and the local adapter.
 - `content/` — generated assets (privateers-hold.glb, privateers-hold.mesh.json,
   imported/ engine artifacts)
 - `render-check/` — headless render verification (three.js GLTFLoader + playwright,
@@ -49,7 +55,13 @@ scripts/regenerate.sh
 cargo test                      # arena2 parser tests against the real data files
 cargo run -p dagger-runtime --bin dagger-walkthrough
 node render-check/check.mjs [--cam overview|top|interior] [--out shot.png]
-python3 scripts/check-adapter.py   # optional until the local adapter lands
+python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
+# Human-visible Studio host (uses the exact Engine static build by default):
+scripts/serve-studio.sh
+# Focused HTTP/adapter check while the host is running:
+node scripts/check-studio-host.mjs
+# Real Chromium desktop+narrow render proof while the host is running:
+scripts/check-studio-browser.sh
 ```
 
 ## Verification status (2026-08-01)
@@ -92,9 +104,10 @@ Tracked as Den tasks in the `rusty-dagger` project (dependencies wired):
   docs/companion-reuse.md.
 - **6563** Self-contained downstream runtime: the exact Engine pin, local
   controller/admission, and real-project `dagger-walkthrough` now live here.
-- **6564** Standalone Studio adapter/browser host: the current adapter probe is
-  still an explicitly configured diagnostic against the demo host until this
-  follow-up lands; it is not a runtime dependency.
+- **6564** Standalone Studio adapter/browser host: local Rust admission,
+  protocol-14 readout, and HTTP bridge are now in this repository. The host
+  serves the exact Engine Studio build selected by
+  `RUSTY_ENGINE_STUDIO_STATIC_ROOT` (or the conventional sibling build path).
 - **6521 / 6522** Consume upstream **rusty-engine 6515** (static-mesh UVs) and
   **6516** (trimesh collision) when they land.
 - **6523** Billboards (RDB flats), **6524** lights, **6525** action doors,

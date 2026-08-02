@@ -1,0 +1,15 @@
+[package]
+name = "dagger-studio-adapter"
+version.workspace = true
+edition.workspace = true
+description = "Rusty Dagger protocol-14 Studio adapter and renderer projection"
+
+[dependencies]
+dagger-runtime = { path = "../dagger-runtime" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[[bin]]
+name = "dagger-studio-adapter"
+path = "src/main.rs"
