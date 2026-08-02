@@ -34,6 +34,11 @@ import {
   resolve,
 } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  expectedEngineSourceCommit,
+  loadStudioStaticProvenance,
+  verifyStudioStaticRoot,
+} from './studio-static-provenance.mjs';
 
 const repo = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const defaultStaticRoot = process.env.RUSTY_ENGINE_STUDIO_STATIC_ROOT
@@ -48,9 +53,6 @@ const settingsRoot = resolve(
   'rusty-engine-studio',
   'projects',
 );
-const engineRevision = process.env.RUSTY_ENGINE_SOURCE_COMMIT
-  ?? 'd52c9b0f3287f21eea81d465871978a117750d0c';
-
 function option(name, fallback) {
   const index = process.argv.indexOf(name);
   return index >= 0 && process.argv[index + 1] !== undefined ? process.argv[index + 1] : fallback;
@@ -62,6 +64,16 @@ const host = option('--host', '127.0.0.1');
 const port = Number(option('--port', '4173'));
 const consumerCommit = process.env.RUSTY_DAGGER_COMMIT
   ?? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repo, encoding: 'utf8' }).trim();
+const staticProvenance = await loadStudioStaticProvenance();
+const requestedEngineRevision = process.env.RUSTY_ENGINE_SOURCE_COMMIT?.trim();
+if (requestedEngineRevision !== undefined && requestedEngineRevision !== staticProvenance.engineSourceCommit) {
+  throw new Error(`RUSTY_ENGINE_SOURCE_COMMIT must match the verified static build ${staticProvenance.engineSourceCommit}`);
+}
+if (staticProvenance.engineSourceCommit !== expectedEngineSourceCommit) {
+  throw new Error('Studio static provenance is not pinned to the expected Engine revision');
+}
+const staticBuild = await verifyStudioStaticRoot(staticRoot, staticProvenance);
+const engineRevision = staticBuild.engineSourceCommit;
 
 class AdapterProcess {
   constructor(binary) {
@@ -129,6 +141,7 @@ function hostStatus() {
     status: 'ok',
     mode: 'managed',
     engineSourceCommit: engineRevision,
+    staticBuild,
     configuredConsumer: {
       repository: 'https://github.com/FuzzySlipper/rusty-dagger',
       commit: consumerCommit,

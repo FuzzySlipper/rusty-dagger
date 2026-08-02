@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "engineSourceCommit": "d52c9b0f3287f21eea81d465871978a117750d0c",
+  "buildCommand": "pnpm --dir studio run build",
+  "artifactTreeSha256": "c0359039a92be565abbd7b9f5d970fba983d66ef02221694b8cb31d98e6494a2",
+  "files": [
+    {
+      "path": "chunk-BVQSLW2Z.js",
+      "size": 376,
+      "sha256": "620fcc5aa4751d2a1ee279a77b55eebbc08b5c5baf028958053a7daaa457f16c"
+    },
+    {
+      "path": "chunk-NJNEOMWS.js",
+      "size": 763340,
+      "sha256": "8b30ddbdbb693e29082f423ff98271e2bf9f38bcb73570d9552bc5623142272d"
+    },
+    {
+      "path": "index.html",
+      "size": 1265,
+      "sha256": "f7fd824bd6f78a26b832fd7a2f0cd83817a5729769829d5ab79fb41045ee827e"
+    },
+    {
+      "path": "main-JAKLT7RC.js",
+      "size": 638465,
+      "sha256": "288b8484be102c3f3b1383c47e18c93e5a99989efece238f45d0148d9df33cb6"
+    },
+    {
+      "path": "styles-ULO4RNUD.css",
+      "size": 681,
+      "sha256": "a63431792d2708a1304fab7eac07beabcbbffc2a82074d6c57d3b1f0e88e2708"
+    }
+  ]
+}
