@@ -36,6 +36,12 @@ try {
       const canvas = viewport.locator('canvas[aria-label="Shared Rusty renderer viewport"]');
       const bounds = await canvas.boundingBox();
       assert.ok(bounds !== null && bounds.width > 0 && bounds.height > 0, `${name} renderer canvas has no area`);
+      const viewMenuButton = page.getByRole('button', { name: 'View', exact: true });
+      await viewMenuButton.click();
+      const gridToggle = page.getByLabel('Editor grid');
+      if (await gridToggle.isChecked()) await gridToggle.uncheck();
+      assert.equal(await gridToggle.isChecked(), false, `${name} editor grid did not turn off`);
+      await viewMenuButton.click();
       await page.waitForTimeout(750);
       await canvas.screenshot({ path: `${output}/${name}-before-canvas.png` });
 
@@ -44,6 +50,20 @@ try {
       await dungeon.dblclick();
       await page.locator('[data-entity-id="2"].is-selected').waitFor({ state: 'visible', timeout: 5_000 });
       await page.waitForTimeout(1_200);
+      if (name === 'narrow') {
+        // The narrow layout opens with the selected dungeon just outside the
+        // clipped camera view. Use the same normal viewport orbit gesture a
+        // human uses to expose it before asserting framebuffer evidence.
+        const focusedBounds = await canvas.boundingBox();
+        assert.ok(focusedBounds !== null, 'narrow renderer canvas disappeared before orbit');
+        const startX = focusedBounds.x + 100;
+        const startY = focusedBounds.y + focusedBounds.height / 2;
+        await page.mouse.move(startX, startY);
+        await page.mouse.down({ button: 'left' });
+        await page.mouse.move(startX + 450, startY, { steps: 10 });
+        await page.mouse.up({ button: 'left' });
+        await page.waitForTimeout(1_200);
+      }
       await canvas.screenshot({ path: `${output}/${name}-canvas.png` });
       await page.screenshot({ path: `${output}/${name}.png`, fullPage: false });
       await writeFile(`${output}/${name}.html`, await page.content());
