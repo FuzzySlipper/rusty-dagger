@@ -117,6 +117,14 @@ modularity gate, task 6529):
 - `dagger-runtime` — Daggerfall-owned project admission, player controller,
   and real-project collision walkthrough. It consumes only generic Rusty
   Engine crates at the exact public pin; it does not import loading-bay-game.
+- `dagger-studio-adapter` — Rust-owned protocol-14 read-only admission and
+  render projection for the committed Privateer's Hold project. The adapter
+  reuses `dagger-runtime`; it rejects mutations until a Dagger-owned authority
+  exists.
+- `scripts/studio-host.mjs` — bounded HTTP/static host for the exact Engine
+  Studio app, adapter lifecycle, normalized host-file browsing, and atomic
+  per-project user settings. It is transport/presentation glue, not gameplay
+  authority. See `docs/studio-host.md` for the runnable contract.
 - Planned: `dagger-content` (decoded materials/meshes with provenance),
   `dagger-world` (dungeon session runtime: blocks, doors, lights, water
   state), each arriving only when the code that needs a home exists.

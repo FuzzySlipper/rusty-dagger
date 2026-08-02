@@ -16,8 +16,5 @@ cargo run -q -p dagger-import -- \
 python3 scripts/generate-project.py --write
 python3 scripts/find-route.py --write
 cargo run -q -p dagger-runtime --bin dagger-walkthrough
-if [[ -n "${RUSTY_STUDIO_ADAPTER:-}" ]]; then
-    python3 scripts/check-adapter.py
-else
-    echo "studio adapter check skipped (Den task 6564: no local adapter is installed yet)"
-fi
+cargo build -q -p dagger-studio-adapter
+python3 scripts/check-adapter.py

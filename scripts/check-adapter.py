@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Drive a configured Studio adapter over stdio to open the project.
+"""Drive the local Rusty Dagger Studio adapter over stdio.
 
-The adapter is deliberately injected through ``RUSTY_STUDIO_ADAPTER`` until
-Den task 6564 lands a local rusty-dagger-owned host.
+``RUSTY_STUDIO_ADAPTER`` remains an explicit escape hatch for diagnostics
+against another adapter; normal checks always exercise the local binary.
 """
 import json
 import os
@@ -50,7 +50,7 @@ print(json.dumps(opened, indent=1)[:1200])
 if opened.get("type") != "projectOpened":
     failures.append(f"openProject failed: {json.dumps(opened)[:600]}")
 else:
-    ident = opened.get("project", opened)
+    ident = opened.get("project", {}).get("identity", {})
     print("project identity:", json.dumps({k: ident.get(k) for k in ("projectId","name","entryScene")})[:200])
 
 if opened.get("type") == "projectOpened":
@@ -67,6 +67,17 @@ if opened.get("type") == "projectOpened":
 
     close = exchange({"type": "closeProject", "protocolVersion": PROTOCOL, "requestId": "close-1"})
     print("closeProject:", close.get("type"))
+    if close.get("type") != "projectClosed":
+        failures.append(f"closeProject failed: {json.dumps(close)[:600]}")
+
+    rejected = exchange({
+        "type": "setSceneObjectTransform",
+        "protocolVersion": PROTOCOL,
+        "requestId": "mutation-1",
+        "entityId": 2,
+    })
+    if rejected.get("type") != "rejected" or rejected.get("error", {}).get("code") != "unsupported_operation":
+        failures.append(f"mutation did not fail closed: {json.dumps(rejected)[:600]}")
 
 proc.terminate()
 if failures:
