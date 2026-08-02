@@ -38,16 +38,16 @@ impl Palette {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use crate::arena2_dir;
 
     #[test]
     fn pal_pal_loads() {
-        let dir = PathBuf::from(
-            std::env::var("ARENA2_DIR").unwrap_or_else(|_| "/home/research/daggerfall-files".into()),
-        );
+        let dir = arena2_dir();
         let pal = Palette::load(&dir.join("PAL.PAL")).unwrap();
         // Palette contains full-range values (verified max byte 255)
         assert!(pal.colors.iter().any(|c| c.iter().any(|&v| v > 63)));

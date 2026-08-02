@@ -103,3 +103,11 @@ impl<'a> Cursor<'a> {
         s
     }
 }
+
+/// Test data root: $ARENA2_DIR or <repo>/local/arena2 (gitignored classic data copy).
+#[cfg(test)]
+pub(crate) fn arena2_dir() -> std::path::PathBuf {
+    std::env::var("ARENA2_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2"))
+}

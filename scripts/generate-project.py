@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Generate a studio-openable project doc for rusty-dagger from the engine
+import artifacts (content/imported/) produced by rusty-asset-import.
+
+Design decision (task 6518): hand-roll a small generator instead of consuming
+@rusty-engine-demo/project-content. That package is TS, demo-flavored (loading-
+bay-specific generators), and its value here would be the schema definitions
+(which we mirror minimally below) plus a write-file step. Our artifacts are
+already fully-formed catalog entries from rusty-asset-import; this script just
+publishes them into the StoredProjectContent (schemaVersion 24) shape studio
+expects, following the demo projects as the reference. If this grows past a
+few asset kinds, re-evaluate consuming an engine-owned generator.
+
+Usage: python3 scripts/generate-project.py [--write|--check]
+  --write (default): write content/projects/privateers-hold.project.json
+  --check: fail if the committed project doc is stale (for CI/verify hooks)
+"""
+import json, sys, hashlib
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent
+IMPORTED = REPO / "content" / "imported"
+OUT = REPO / "content" / "projects" / "privateers-hold.project.json"
+
+SCHEMA_VERSION = 24
+PROJECT_ID = "privateers-hold"
+SCENE_ID = "scene/privateers-hold"
+MESH_ASSET = "mesh/privateers-hold"
+
+
+def load_json(p: Path):
+    return json.loads(p.read_text())
+
+
+def build_assets(catalog: dict, static_mesh: dict) -> list:
+    """StoredAssetDefinition[] from imported catalog entries + the static-mesh artifact.
+
+    Catalog entry -> embedded asset: id, catalog {version, hash, sourcePath,
+    label, dependencies(ids only)}, plus the typed payload key (material /
+    staticMesh).
+    """
+    assets = []
+    mesh_hash_by_id = {}
+    for entry in catalog["entries"]:
+        mesh_hash_by_id[entry["id"]] = (entry["version"], entry["hash"])
+
+    def catalog_block(entry):
+        deps = [
+            {"id": d["id"], "version": d["version"], "hash": d["hash"]}
+            for d in entry.get("dependencies", [])
+        ]
+        return {
+            "version": 1,
+            "hash": entry["hash"],
+            "sourcePath": entry.get("sourcePath"),
+            "label": entry.get("label"),
+            "dependencies": deps,
+        }
+
+    for entry in catalog["entries"]:
+        asset = {"id": entry["id"], "catalog": catalog_block(entry)}
+        if entry["id"] == MESH_ASSET:
+            asset["staticMesh"] = static_mesh
+        elif "material" in entry:
+            asset["material"] = entry["material"]
+        else:
+            raise SystemExit(f"unknown catalog entry shape: {entry['id']}")
+        assets.append(asset)
+    return assets
+
+
+def build_scene(static_mesh: dict) -> dict:
+    """One scene: the dungeon mesh entity + a player-camera entity, over a
+    hidden gameplayProxy voxel environment.
+
+    Model follows loading-bay (docs/visual-content-pipeline.md): the voxel
+    environment is the collision/occlusion truth; the static mesh is visible
+    content only. Today the voxel truth is a ground plane at y<0 (bounds of the
+    dungeon minus its volume = air); when upstream trimesh collision lands
+    (rusty-engine 6516) the mesh becomes its own truth and this proxy shrinks
+    to just the floor. The proxy uses material voxels with slot 0; the scene
+    references material asset ids via `voxelAssets`? No — material slot indexes
+    into the scene's material palette order, mirroring the demo (slot 0 =
+    material/default in demo scenes is by palette convention there; here we
+    only need solidity, and the demo's decoder treats any material slot as
+    solid).
+    """
+    bounds = static_mesh["payload"]["bounds"]
+    mn, mx = bounds["min"], bounds["max"]
+
+    # Ground plane of solid voxels just under the dungeon floor (1m voxels).
+    # Material slots are 1-based into the project's material palette (slot 0 =
+    # empty in the engine voxel convention); slot 1 = our first material.
+    x0, x1 = int(mn[0] // 1), int(mx[0] // 1) + 1
+    z0, z1 = int(mn[2] // 1), int(mx[2] // 1) + 1
+    solid = [
+        {"address": [x, -1, z], "materialSlot": 1}
+        for x in range(x0, x1 + 1)
+        for z in range(z0, z1 + 1)
+    ]
+
+    voxel_environment = {
+        "kind": "material",
+        "voxelSize": 1.0,
+        "chunkSize": 16,
+        "materialVoxels": solid,
+        "gameplayProxy": True,
+    }
+
+    dungeon_entity = {
+        "id": 2,
+        "name": "privateers-hold-dungeon",
+        "translation": [0.0, 0.0, 0.0],
+        "collision": {"enabled": True, "staticCollider": True},
+        "renderable": {"asset": MESH_ASSET, "visible": True},
+        "bounds": {"min": mn, "max": mx},
+    }
+    player_entity = {
+        "id": 1,
+        "name": "player",
+        # Start block (S0000999) center at eye height; replaced by the parsed
+        # start marker when task 6520 lands.
+        "translation": [25.6, 1.6, -25.6],
+        "collision": {"enabled": True, "staticCollider": False},
+        "renderable": {"asset": MESH_ASSET, "visible": False},
+        "kinematic": {"halfExtents": [0.25, 0.25, 0.25], "velocity": [0.0, 0.0, 0.0]},
+        "playerController": {
+            "moveSpeedUnitsPerSecond": 4.0,
+            "moveStepSeconds": 0.1,
+            "lookDegreesPerUnit": 12.0,
+            "initialYawDegrees": 180.0,
+            "initialPitchDegrees": 0.0,
+            "bindings": {
+                "moveForward": "KeyW",
+                "moveBackward": "KeyS",
+                "moveLeft": "KeyA",
+                "moveRight": "KeyD",
+                "mouseLook": "pointer",
+                "primaryFire": "Mouse0",
+            },
+        },
+    }
+    return {
+        "id": SCENE_ID,
+        "name": "Privateer's Hold",
+        "voxelEnvironment": voxel_environment,
+        "entities": [player_entity, dungeon_entity],
+    }
+
+
+def build_project() -> dict:
+    catalog = load_json(IMPORTED / "privateers-hold.catalog.json")
+    static_mesh = load_json(IMPORTED / "privateers-hold.static-mesh.json")
+    return {
+        "schemaVersion": SCHEMA_VERSION,
+        "projectId": PROJECT_ID,
+        "name": "Privateer's Hold",
+        "entryScene": SCENE_ID,
+        "assets": build_assets(catalog, static_mesh),
+        "itemDefinitions": [],
+        "scenes": [build_scene(static_mesh)],
+    }
+
+
+def main() -> None:
+    mode = sys.argv[1] if len(sys.argv) > 1 else "--write"
+    project = build_project()
+    text = json.dumps(project, indent=2) + "\n"
+    if mode == "--check":
+        actual = OUT.read_text() if OUT.exists() else ""
+        if actual != text:
+            raise SystemExit(f"{OUT} is stale; run scripts/generate-project.py --write")
+        print(f"{OUT} up to date ({len(project['assets'])} assets)")
+        return
+    if mode != "--write":
+        raise SystemExit(__doc__)
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(text)
+    digest = hashlib.sha256(text.encode()).hexdigest()[:16]
+    print(f"wrote {OUT} ({len(text)} bytes, sha256:{digest}, assets={len(project['assets'])})")
+
+
+if __name__ == "__main__":
+    main()

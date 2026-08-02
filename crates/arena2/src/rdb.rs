@@ -117,17 +117,17 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
     Ok(block)
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arena2_dir;
     use crate::bsa::BsaArchive;
-    use std::path::PathBuf;
 
     #[test]
     fn s0000999_model_count() {
-        let dir = PathBuf::from(
-            std::env::var("ARENA2_DIR").unwrap_or_else(|_| "/home/research/daggerfall-files".into()),
-        );
+        let dir = arena2_dir();
         let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
         let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
         assert_eq!((block.width, block.height), (8, 8));

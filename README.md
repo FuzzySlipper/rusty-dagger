@@ -36,11 +36,15 @@ current task state in the Den `rusty-dagger` project.
 ```sh
 cargo run -p dagger-import -- [--arena2 DIR] [--region N] [--location NAME] \
     [--format glb|mesh-json] [--untextured] [--out FILE]
-# defaults: --arena2 /home/research/daggerfall-files --region 17 \
+# defaults: --arena2 local/arena2 --region 17 \
 #           --location "Privateer's Hold" --out content/privateers-hold.glb
+
+# Regenerate everything (extract -> engine import -> studio project doc):
+scripts/regenerate.sh
 
 cargo test                      # arena2 parser tests against the real data files
 node render-check/check.mjs [--cam overview|top|interior] [--out shot.png]
+python3 scripts/check-adapter.py   # prove studio's host admits the project
 ```
 
 ## Verification status (2026-08-01)

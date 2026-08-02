@@ -143,16 +143,16 @@ pub fn lon_lat_to_map_pixel(longitude: i32, latitude: i32) -> (i32, i32) {
     (longitude / 128, 499 - latitude / 128)
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use crate::arena2_dir;
 
     #[test]
     fn resolves_privateers_hold() {
-        let dir = PathBuf::from(
-            std::env::var("ARENA2_DIR").unwrap_or_else(|_| "/home/research/daggerfall-files".into()),
-        );
+        let dir = arena2_dir();
         let bsa = BsaArchive::load(&dir.join("MAPS.BSA")).unwrap();
         let layout = resolve_dungeon(&bsa, 17, "Privateer's Hold").unwrap();
         assert_eq!(layout.map_id, 187853213);

@@ -18,7 +18,7 @@ struct Args {
 }
 
 fn parse_args() -> Result<Args, String> {
-    let mut arena2_dir = PathBuf::from("/home/research/daggerfall-files");
+    let mut arena2_dir = PathBuf::from("local/arena2");
     let mut region = 17usize;
     let mut location = "Privateer's Hold".to_string();
     let mut out = PathBuf::from("content/privateers-hold.glb");

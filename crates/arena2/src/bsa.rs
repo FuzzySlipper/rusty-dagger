@@ -92,14 +92,14 @@ impl BsaArchive {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use crate::arena2_dir;
 
-    fn arena2_dir() -> PathBuf {
-        PathBuf::from(std::env::var("ARENA2_DIR").unwrap_or_else(|_| "/home/research/daggerfall-files".into()))
-    }
+
 
     #[test]
     fn blocks_bsa_record_counts() {

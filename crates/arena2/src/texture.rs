@@ -225,16 +225,16 @@ impl TextureFile {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use crate::arena2_dir;
 
     #[test]
     fn texture_120_decodes() {
-        let dir = PathBuf::from(
-            std::env::var("ARENA2_DIR").unwrap_or_else(|_| "/home/research/daggerfall-files".into()),
-        );
+        let dir = arena2_dir();
         let tex = TextureFile::load(&dir.join("TEXTURE.120")).unwrap();
         assert!(tex.len() > 0);
         let info = tex.record_info(0).unwrap();
