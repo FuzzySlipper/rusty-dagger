@@ -4,10 +4,14 @@ Daggerfall (Arena2) data-file import pipeline for rusty-engine, and a home for
 extracted content. Currently extracts **Privateer's Hold** (the classic starting
 dungeon) from the original game data into engine-consumable mesh assets.
 
+**Intent and tracking**: durable design in [docs/design.md](docs/design.md)
+(format reference: [docs/daggerfall-formats.md](docs/daggerfall-formats.md));
+current task state in the Den `rusty-dagger` project.
+
 ## Layout
 
 - `crates/arena2` — read-only parsers for classic Daggerfall data files, ported
-  from Daggerfall Unity semantics (see `/home/research/reports/daggerfall-mesh-research/REPORT.md`):
+  from Daggerfall Unity semantics (see [docs/daggerfall-formats.md](docs/daggerfall-formats.md)):
   - `bsa.rs` — BSA archives (MAPS/BLOCKS/ARCH3D)
   - `maps.rs` — MAPS.BSA location -> dungeon block layout resolution
   - `rdb.rs` — RDB dungeon block objects (models, positions, rotations)
@@ -70,27 +74,19 @@ TEXTURE.000/.001 are virtual solid-colour archives (32x32 palette fills).
 
 ## Next steps / known gaps
 
-- Studio project wiring: studio opens external projects via
-  `?root=<dir>&project=<file>` (see rusty-engine-demo
-  apps/loading-bay-studio/src/studio-startup.ts), but a schema-24
-  `*.project.json` needs catalog/hash machinery that is normally produced by
-  the consumer's content pipeline (@rusty-engine-demo/project-content). The
-  imported artifacts here (catalog + static-mesh) are the inputs that pipeline
-  would consume.
-- **Textured static meshes in engine**: render-model already has
-  `MeshAttributeName::Uv` + `PackedStreamsLeV2` plumbing, but the authored
-  `.mesh.json` source format (`asset-import/src/source.rs`, deny_unknown_fields)
-  and the renderer-three static-mesh path carry no UVs. Upstream task filed:
-  rusty-engine **task 6515** (UV through static mesh pipeline). The recent
-  voxel-texture work is voxel-surface-only (voxel-convert/material.rs) — it did
-  not add static-mesh UVs.
-- **Collision**: rusty-engine static meshes resolve to VisualOnly/AabbFallback/
-  Proxy (render-model `MeshCollisionPolicy`); svc-collision projects parry3d
-  from voxel authority only. Daggerfall Unity collides dungeons with
-  `MeshCollider` (sharedMesh = the render mesh; convex for props; box colliders
-  on sliding doors) — i.e. straight triangle-mesh collision. Upstream task
-  filed: rusty-engine **task 6516** (trimesh collision policy in svc-collision).
-- Flats (billboards), lights, action-door animation, water, and the
-  automap/start-marker metadata are parsed-skipped (models only).
-- Texturing is classic-default; the per-location randomized texture table
-  (DFRandom over MapId) is not replicated.
+Tracked as Den tasks in the `rusty-dagger` project (dependencies wired):
+
+- **6518** Studio project wiring: generate a studio-openable
+  `content/projects/privateers-hold.project.json` from the imported artifacts
+  (studio opens via `?root=<dir>&project=<file>`).
+- **6519** Companion-reuse survey (FP controller, UI, content pipeline) →
+  docs/companion-reuse.md.
+- **6520** First-person walk-through: spawn at start marker, traverse the hold
+  (depends on 6518 + 6519).
+- **6521 / 6522** Consume upstream **rusty-engine 6515** (static-mesh UVs) and
+  **6516** (trimesh collision) when they land.
+- **6523** Billboards (RDB flats), **6524** lights, **6525** action doors,
+  **6526** water planes, **6528** automap, **6527** classic randomized
+  per-location texture table (DFRandom port).
+- **6529** Modularity gate: split crates per system as features land so systems
+  port cleanly to the successor project.
