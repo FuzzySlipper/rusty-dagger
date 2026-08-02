@@ -14,11 +14,6 @@ pub const MAX_PLAYER_LOOK_DEGREES_PER_UNIT: f32 = 180.0;
 pub const MAX_PLAYER_STEP_UP_UNITS: f32 = 4.0;
 pub const MAX_INPUT_CONTROL_LENGTH: usize = 64;
 pub const FALL_SUBSTEP_UNITS: f32 = 0.1;
-// A collision with only a tiny requested displacement is numerical/grazing
-// contact, not a meaningful wall face for step-up retry. Ignoring that residue
-// preserves legitimate corner slides while still rolling back a rise when the
-// retry is materially blocked on the originally obstructed axis.
-const STEP_CONTACT_EPSILON: f32 = 0.01;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayerInputBindings {
@@ -220,7 +215,18 @@ pub(crate) fn apply_player_action(
                     run_player_motion(entities, scene, player, velocity, move_delta_seconds)?;
                 if motion_blocked(&horizontal, player) {
                     if let Some(step) = config.step_up_units {
-                        let step_origin = player_translation(entities, player)?;
+                        let horizontal_after = player_translation(entities, player)?;
+                        // The first sweep may already have slid along an open
+                        // axis. Retry the complete request from the action's
+                        // original position so a successful step cannot apply
+                        // that displacement twice. If the rise is not usable,
+                        // restore the initial horizontal slide below.
+                        entities
+                            .apply_batch(EntityCommandBatch::new([EntityCommand::SetTranslation {
+                                entity: player,
+                                translation: start,
+                            }]))
+                            .map_err(PlayerError::EntityBatch)?;
                         let rise = run_player_motion(
                             entities,
                             scene,
@@ -239,27 +245,21 @@ pub(crate) fn apply_player_action(
                             // A retry that made horizontal progress can still
                             // report a blocked secondary axis while sliding
                             // around the obstacle. It is only a successful step
-                            // when the axis blocked before the rise is clear.
+                            // when every axis blocked before the rise is clear.
                             let original_blocked = [
-                                motion_blocked_delta_on_axis(&horizontal, player, MotionAxis::X),
-                                motion_blocked_delta_on_axis(&horizontal, player, MotionAxis::Y),
-                                motion_blocked_delta_on_axis(&horizontal, player, MotionAxis::Z),
+                                motion_blocked_on_axis(&horizontal, player, MotionAxis::X),
+                                motion_blocked_on_axis(&horizontal, player, MotionAxis::Y),
+                                motion_blocked_on_axis(&horizontal, player, MotionAxis::Z),
                             ];
                             let retry_still_blocked = [
-                                motion_blocked_delta_on_axis(&retry, player, MotionAxis::X),
-                                motion_blocked_delta_on_axis(&retry, player, MotionAxis::Y),
-                                motion_blocked_delta_on_axis(&retry, player, MotionAxis::Z),
+                                motion_blocked_on_axis(&retry, player, MotionAxis::X),
+                                motion_blocked_on_axis(&retry, player, MotionAxis::Y),
+                                motion_blocked_on_axis(&retry, player, MotionAxis::Z),
                             ];
                             let step_succeeded = original_blocked
                                 .iter()
                                 .zip(retry_still_blocked)
-                                .all(|(original, retry)| {
-                                    !(original
-                                        .is_some_and(|delta| delta.abs() > STEP_CONTACT_EPSILON)
-                                        && retry.is_some_and(|delta| {
-                                            delta.abs() > STEP_CONTACT_EPSILON
-                                        }))
-                                });
+                                .all(|(original, retry)| !(*original && retry));
                             if !step_succeeded {
                                 let after_retry = player_translation(entities, player)?;
                                 entities
@@ -268,7 +268,7 @@ pub(crate) fn apply_player_action(
                                             entity: player,
                                             translation: Vec3::new(
                                                 after_retry.x,
-                                                step_origin.y,
+                                                start.y,
                                                 after_retry.z,
                                             ),
                                         },
@@ -276,6 +276,17 @@ pub(crate) fn apply_player_action(
                                     .map_err(PlayerError::EntityBatch)?;
                             }
                             horizontal = retry;
+                        } else {
+                            // No usable rise: the initial sweep's partial
+                            // horizontal progress remains authoritative.
+                            entities
+                                .apply_batch(EntityCommandBatch::new([
+                                    EntityCommand::SetTranslation {
+                                        entity: player,
+                                        translation: horizontal_after,
+                                    },
+                                ]))
+                                .map_err(PlayerError::EntityBatch)?;
                         }
                     }
                 }
@@ -457,18 +468,9 @@ fn motion_blocked(motion: &MotionPhaseReceipt, player: EntityId) -> bool {
         .any(|fact| matches!(fact, MotionFact::Blocked { entity, .. } if *entity == player))
 }
 
-fn motion_blocked_delta_on_axis(
-    motion: &MotionPhaseReceipt,
-    player: EntityId,
-    axis: MotionAxis,
-) -> Option<f32> {
-    motion.facts.iter().find_map(|fact| match fact {
-        MotionFact::Blocked {
-            entity,
-            axis: blocked_axis,
-            attempted_delta,
-        } if *entity == player && *blocked_axis == axis => Some(*attempted_delta),
-        _ => None,
+fn motion_blocked_on_axis(motion: &MotionPhaseReceipt, player: EntityId, axis: MotionAxis) -> bool {
+    motion.facts.iter().any(|fact| {
+        matches!(fact, MotionFact::Blocked { entity, axis: blocked_axis, .. } if *entity == player && *blocked_axis == axis)
     })
 }
 

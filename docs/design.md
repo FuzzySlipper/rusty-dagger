@@ -140,11 +140,13 @@ environment as the collision authority, rasterized from the dungeon mesh by
 - The Daggerfall-owned `dagger-runtime` controller opts into
   `fallSpeedUnitsPerSecond` / `stepUpUnits`: a constant-speed, 0.1m-substepped
   downward settle after every action (including idles), plus a bounded ledge
-  climb assist. A retry that remains materially blocked on an originally
-  blocked axis restores the pre-step height, while a residual request of at
-  most 0.01m is treated as grazing contact so diagonal corner slides remain
-  possible. Repeated input therefore cannot climb a taller-than-step obstacle.
-  The generic Engine motion system remains the sole collision authority.
+  climb assist. A retry starts from the action's pre-motion position so a
+  partially blocked first sweep cannot be applied twice. A retry that remains
+  blocked on any axis blocked before the rise restores the pre-step height
+  while preserving the retry's horizontal slide; only a retry that clears all
+  originally blocked axes keeps the rise. Repeated input therefore cannot
+  climb a taller-than-step obstacle. The generic Engine motion system remains
+  the sole collision authority.
 - A present `entryScene` is authoritative and must resolve to a named scene;
   a dangling reference is rejected. An absent entry scene may select the first
   scene for legacy/generated documents.
