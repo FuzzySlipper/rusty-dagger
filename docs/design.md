@@ -69,9 +69,7 @@ must exist:
 - Start marker spawn and a minimal automap.
 - Studio/project integration so the whole thing is inspectable and editable.
 
-Explicitly out of scope for this repo: character creation, attributes and
-leveling, combat depth, enemies beyond possible placement markers, quests,
-dialogue, inventory/economy, the exterior world, fast travel, save games.
+Explicitly out of scope for this repo: the exterior world, other dungeons, and fast travel.
 Those belong to the successor (or to companion repos when they already exist
 there).
 

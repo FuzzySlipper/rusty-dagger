@@ -85,16 +85,16 @@ pub fn climate_base_type(world_climate: u8) -> ClimateBaseType {
     }
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use crate::arena2_dir;
 
     #[test]
     fn climate_at_privateers_hold() {
-        let dir = PathBuf::from(
-            std::env::var("ARENA2_DIR").unwrap_or_else(|_| "/home/research/daggerfall-files".into()),
-        );
+        let dir = arena2_dir();
         let pak = PakFile::load(&dir.join("CLIMATE.PAK")).unwrap();
         // Privateer's Hold: lon 14008, lat 43687 -> pixel (109, 158)
         let v = pak.get(109, 158).expect("in bounds");

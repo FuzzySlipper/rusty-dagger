@@ -113,16 +113,16 @@ pub fn parse_mesh(data: &[u8]) -> Result<Mesh, String> {
     Ok(mesh)
 }
 
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::PathBuf;
+    use crate::arena2_dir;
 
     #[test]
     fn mesh_61000_layout() {
-        let dir = PathBuf::from(
-            std::env::var("ARENA2_DIR").unwrap_or_else(|_| "/home/research/daggerfall-files".into()),
-        );
+        let dir = arena2_dir();
         let arch = Arch3dFile::load(&dir.join("ARCH3D.BSA")).unwrap();
         let mesh = arch.mesh("61000").unwrap();
         assert_eq!(mesh.planes.len(), 22);
