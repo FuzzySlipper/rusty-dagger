@@ -29,7 +29,10 @@ fn block_of(x: f32, z: f32) -> (i32, i32) {
 }
 
 fn supported(runtime: &DaggerRuntime, eye: [f32; 3], window: f32) -> Option<f32> {
-    const OFFSETS: [f32; 3] = [0.0, 0.24, -0.24];
+    // Probe the actual kinematic footprint edges. Using 0.24m leaves a
+    // 0.01m gap at a voxel boundary and can falsely report a supported body
+    // as airborne at route corners.
+    const OFFSETS: [f32; 3] = [0.0, BODY_HALF, -BODY_HALF];
     let bottom = eye[1] - BODY_HALF;
     let steps = (window / 0.025).ceil() as i32;
     for step in 0..=steps {

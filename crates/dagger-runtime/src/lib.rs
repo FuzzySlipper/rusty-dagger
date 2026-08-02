@@ -124,44 +124,46 @@ mod tests {
 
     #[test]
     fn blocked_step_up_does_not_keep_rise_when_retry_only_slides() {
-        let mut runtime =
-            DaggerRuntime::from_project_json(&adversarial_wall_project()).expect("admit project");
-        for _ in 0..30 {
-            runtime
-                .apply_player_action(ResolvedPlayerAction::Move {
-                    forward: 0.0,
-                    right: 0.0,
-                })
-                .expect("settle action");
-        }
-
-        let initial_y = runtime.player_position().expect("initial position").y;
-        let mut horizontal_slide = 0.0_f32;
-        let mut blocked_actions = 0;
-        for _ in 0..8 {
-            let before = runtime.player_position().expect("before position");
-            let receipt = runtime
-                .apply_player_action(ResolvedPlayerAction::Move {
-                    forward: 1.0,
-                    right: 1.0,
-                })
-                .expect("diagonal blocked action");
-            let after = runtime.player_position().expect("after position");
-            horizontal_slide +=
-                ((after.x - before.x).powi(2) + (after.z - before.z).powi(2)).sqrt();
-            if receipt
-                .facts
-                .iter()
-                .any(|fact| matches!(fact, PlayerControlFact::Blocked { .. }))
-            {
-                blocked_actions += 1;
-                assert!(after.y <= initial_y + 0.001);
+        for (forward, right, action_count) in [(1.0, 1.0, 8), (0.01, 0.02, 64)] {
+            let mut runtime = DaggerRuntime::from_project_json(&adversarial_wall_project())
+                .expect("admit project");
+            for _ in 0..30 {
+                runtime
+                    .apply_player_action(ResolvedPlayerAction::Move {
+                        forward: 0.0,
+                        right: 0.0,
+                    })
+                    .expect("settle action");
             }
+
+            let initial_y = runtime.player_position().expect("initial position").y;
+            let mut horizontal_slide = 0.0_f32;
+            let mut blocked_actions = 0;
+            for _ in 0..action_count {
+                let before = runtime.player_position().expect("before position");
+                let receipt = runtime
+                    .apply_player_action(ResolvedPlayerAction::Move { forward, right })
+                    .expect("diagonal blocked action");
+                let after = runtime.player_position().expect("after position");
+                horizontal_slide +=
+                    ((after.x - before.x).powi(2) + (after.z - before.z).powi(2)).sqrt();
+                if receipt
+                    .facts
+                    .iter()
+                    .any(|fact| matches!(fact, PlayerControlFact::Blocked { .. }))
+                {
+                    blocked_actions += 1;
+                    assert!(after.y <= initial_y + 0.001);
+                }
+            }
+            assert!(
+                blocked_actions >= 2,
+                "diagonal wall regression did not repeat a blocked slide for input ({forward}, {right})"
+            );
+            assert!(
+                horizontal_slide > 0.001,
+                "diagonal slide was lost for input ({forward}, {right})"
+            );
         }
-        assert!(
-            blocked_actions >= 2,
-            "diagonal wall regression did not repeat a blocked slide"
-        );
-        assert!(horizontal_slide > 0.001, "diagonal slide was lost");
     }
 }
