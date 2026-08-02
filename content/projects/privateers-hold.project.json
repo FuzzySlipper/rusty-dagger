@@ -340329,6 +340329,1568 @@
               51.2
             ]
           }
+        },
+        {
+          "id": 100,
+          "name": "dungeon-light-100",
+          "translation": [
+            15.025001,
+            40.975002,
+            -19.325
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 101,
+          "name": "dungeon-light-101",
+          "translation": [
+            23.65,
+            24.275,
+            -18.775
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 102,
+          "name": "dungeon-light-102",
+          "translation": [
+            8.075,
+            18.475,
+            -14.825
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 103,
+          "name": "dungeon-light-103",
+          "translation": [
+            3.5,
+            8.475,
+            -21.75
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 104,
+          "name": "dungeon-light-104",
+          "translation": [
+            1.475,
+            34.350002,
+            -1.4
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.125,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 105,
+          "name": "dungeon-light-105",
+          "translation": [
+            15.975,
+            8.3,
+            -17.15
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 106,
+          "name": "dungeon-light-106",
+          "translation": [
+            14.400001,
+            49.05,
+            -17.6
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 8.25,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 107,
+          "name": "dungeon-light-107",
+          "translation": [
+            1.95,
+            33.425,
+            -24.125
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 108,
+          "name": "dungeon-light-108",
+          "translation": [
+            15.825,
+            14.400001,
+            -6.2000003
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 8.25,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 109,
+          "name": "dungeon-light-109",
+          "translation": [
+            26.275,
+            34.45,
+            -2.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.375,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 110,
+          "name": "dungeon-light-110",
+          "translation": [
+            38.7,
+            26.45,
+            -14.95
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 111,
+          "name": "dungeon-light-111",
+          "translation": [
+            49.0,
+            8.35,
+            -8.675
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 112,
+          "name": "dungeon-light-112",
+          "translation": [
+            31.050001,
+            1.95,
+            -16.125
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 113,
+          "name": "dungeon-light-113",
+          "translation": [
+            49.025,
+            44.100002,
+            -8.575
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 114,
+          "name": "dungeon-light-114",
+          "translation": [
+            46.75,
+            34.025,
+            -16.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 115,
+          "name": "dungeon-light-115",
+          "translation": [
+            34.7,
+            8.0,
+            -15.625
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 116,
+          "name": "dungeon-light-116",
+          "translation": [
+            36.825,
+            47.25,
+            -16.075
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 117,
+          "name": "dungeon-light-117",
+          "translation": [
+            38.2,
+            39.775,
+            -12.85
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 118,
+          "name": "dungeon-light-118",
+          "translation": [
+            35.2,
+            13.6,
+            -6.525
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 119,
+          "name": "dungeon-light-119",
+          "translation": [
+            42.65,
+            28.15,
+            -2.25
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.375,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 120,
+          "name": "dungeon-light-120",
+          "translation": [
+            42.725002,
+            13.825,
+            -14.8
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 121,
+          "name": "dungeon-light-121",
+          "translation": [
+            24.275,
+            24.15,
+            -32.425
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 122,
+          "name": "dungeon-light-122",
+          "translation": [
+            7.9500003,
+            18.35,
+            -36.95
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 123,
+          "name": "dungeon-light-123",
+          "translation": [
+            21.6,
+            8.2,
+            -31.75
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 124,
+          "name": "dungeon-light-124",
+          "translation": [
+            13.275001,
+            20.825,
+            -43.025
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 125,
+          "name": "dungeon-light-125",
+          "translation": [
+            12.775001,
+            34.3,
+            -25.7
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 126,
+          "name": "dungeon-light-126",
+          "translation": [
+            10.25,
+            26.775,
+            -44.65
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 127,
+          "name": "dungeon-light-127",
+          "translation": [
+            2.3500001,
+            47.2,
+            -29.9
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.375,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 128,
+          "name": "dungeon-light-128",
+          "translation": [
+            18.800001,
+            32.8,
+            -47.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 129,
+          "name": "dungeon-light-129",
+          "translation": [
+            16.300001,
+            1.0,
+            -42.125
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 8.25,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 130,
+          "name": "dungeon-light-130",
+          "translation": [
+            38.875,
+            26.425001,
+            -36.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 131,
+          "name": "dungeon-light-131",
+          "translation": [
+            35.675,
+            45.9,
+            -30.550001
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 132,
+          "name": "dungeon-light-132",
+          "translation": [
+            34.875,
+            8.575,
+            -35.65
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.625,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 133,
+          "name": "dungeon-light-133",
+          "translation": [
+            48.4,
+            14.05,
+            -34.325
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.25,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 134,
+          "name": "dungeon-light-134",
+          "translation": [
+            36.100002,
+            14.0,
+            -48.725002
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.25,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 135,
+          "name": "dungeon-light-135",
+          "translation": [
+            37.525,
+            1.6,
+            -35.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 5.25,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 136,
+          "name": "dungeon-light-136",
+          "translation": [
+            35.375,
+            46.75,
+            -42.5
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 137,
+          "name": "dungeon-light-137",
+          "translation": [
+            42.65,
+            27.625,
+            -49.125
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 138,
+          "name": "dungeon-light-138",
+          "translation": [
+            48.65,
+            8.225,
+            -42.3
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 139,
+          "name": "dungeon-light-139",
+          "translation": [
+            -29.6,
+            34.4,
+            -3.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 140,
+          "name": "dungeon-light-140",
+          "translation": [
+            -48.0,
+            34.4,
+            -17.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 141,
+          "name": "dungeon-light-141",
+          "translation": [
+            -47.2,
+            15.2,
+            -36.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 142,
+          "name": "dungeon-light-142",
+          "translation": [
+            -34.800003,
+            34.4,
+            -48.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 143,
+          "name": "dungeon-light-143",
+          "translation": [
+            -15.599998,
+            15.2,
+            -48.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 144,
+          "name": "dungeon-light-144",
+          "translation": [
+            3.2,
+            34.4,
+            34.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 145,
+          "name": "dungeon-light-145",
+          "translation": [
+            34.4,
+            40.8,
+            48.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 146,
+          "name": "dungeon-light-146",
+          "translation": [
+            4.8,
+            21.6,
+            16.400002
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 147,
+          "name": "dungeon-light-147",
+          "translation": [
+            16.0,
+            15.2,
+            20.800001
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 148,
+          "name": "dungeon-light-148",
+          "translation": [
+            4.0,
+            15.2,
+            15.200001
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 149,
+          "name": "dungeon-light-149",
+          "translation": [
+            12.8,
+            34.4,
+            3.2000008
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 150,
+          "name": "dungeon-light-150",
+          "translation": [
+            36.0,
+            15.2,
+            3.2000008
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 151,
+          "name": "dungeon-light-151",
+          "translation": [
+            54.4,
+            34.4,
+            -17.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 152,
+          "name": "dungeon-light-152",
+          "translation": [
+            99.2,
+            33.600002,
+            -8.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 153,
+          "name": "dungeon-light-153",
+          "translation": [
+            85.600006,
+            40.8,
+            -3.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 154,
+          "name": "dungeon-light-154",
+          "translation": [
+            56.0,
+            21.6,
+            -34.8
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 155,
+          "name": "dungeon-light-155",
+          "translation": [
+            67.2,
+            15.2,
+            -30.4
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 156,
+          "name": "dungeon-light-156",
+          "translation": [
+            55.2,
+            15.2,
+            -36.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 157,
+          "name": "dungeon-light-157",
+          "translation": [
+            64.0,
+            34.4,
+            -48.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 158,
+          "name": "dungeon-light-158",
+          "translation": [
+            76.0,
+            24.800001,
+            -28.800001
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 159,
+          "name": "dungeon-light-159",
+          "translation": [
+            73.6,
+            18.4,
+            -48.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 160,
+          "name": "dungeon-light-160",
+          "translation": [
+            80.0,
+            31.2,
+            -43.600002
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 161,
+          "name": "dungeon-light-161",
+          "translation": [
+            86.8,
+            15.2,
+            -48.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 7.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 162,
+          "name": "dungeon-light-162",
+          "translation": [
+            3.4,
+            33.600002,
+            -67.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 6.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 163,
+          "name": "dungeon-light-163",
+          "translation": [
+            23.0,
+            13.2,
+            -75.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 15,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 164,
+          "name": "dungeon-light-164",
+          "translation": [
+            7.6,
+            14.8,
+            -76.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 165,
+          "name": "dungeon-light-165",
+          "translation": [
+            43.2,
+            14.8,
+            -74.4
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 166,
+          "name": "dungeon-light-166",
+          "translation": [
+            16.0,
+            34.4,
+            -101.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 4.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 167,
+          "name": "dungeon-light-167",
+          "translation": [
+            14.8,
+            27.6,
+            -88.0
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 4.5,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 168,
+          "name": "dungeon-light-168",
+          "translation": [
+            2.4,
+            21.2,
+            -92.4
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3.75,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 169,
+          "name": "dungeon-light-169",
+          "translation": [
+            3.2,
+            14.8,
+            -87.2
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3,
+            "decay": 2.0,
+            "shadows": false
+          }
+        },
+        {
+          "id": 170,
+          "name": "dungeon-light-170",
+          "translation": [
+            28.0,
+            14.8,
+            -99.600006
+          ],
+          "light": {
+            "kind": "point",
+            "color": [
+              1.0,
+              1.0,
+              1.0
+            ],
+            "intensity": 0.8,
+            "enabled": true,
+            "range": 3,
+            "decay": 2.0,
+            "shadows": false
+          }
         }
       ]
     }

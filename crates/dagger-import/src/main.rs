@@ -115,10 +115,14 @@ fn main() {
         }
     }
     let scene_json = format!(
-        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
+        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
         args.location.replace('"', "'"),
         v3(output.scene.start_marker), v3(output.scene.enter_marker),
         output.scene.light_count, output.scene.flat_count,
+        output.scene.lights.iter()
+            .map(|(p, r)| format!("{{\"position\": {:?}, \"range\": {r}}}", p))
+            .collect::<Vec<_>>()
+            .join(","),
         s.bounds_min, s.bounds_max
     );
     let scene_path = args.out.with_extension("scene.json");

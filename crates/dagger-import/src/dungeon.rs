@@ -72,6 +72,8 @@ pub struct DungeonScene {
     pub enter_marker: Option<[f32; 3]>,
     pub light_count: usize,
     pub flat_count: usize,
+    /// Point lights in glTF world space: (position, range in meters).
+    pub lights: Vec<([f32; 3], f32)>,
 }
 
 type Mat3 = [[f32; 3]; 3];
@@ -256,6 +258,7 @@ pub fn build_dungeon(
         enter_marker: None,
         light_count: 0,
         flat_count: 0,
+        lights: Vec::new(),
     };
 
     // One primitive per texture key (None = untextured/default material).
@@ -273,6 +276,16 @@ pub fn build_dungeon(
         ];
         scene.light_count += block.lights.len();
         scene.flat_count += block.flats.len();
+        for l in &block.lights {
+            // DFU AddLight: position (x, -y, z) * 0.025 + block origin; range = radius * 0.025 * 3.
+            let dfu = [
+                l.x as f32 * GLOBAL_SCALE + origin[0],
+                -l.y as f32 * GLOBAL_SCALE + origin[1],
+                l.z as f32 * GLOBAL_SCALE + origin[2],
+            ];
+            let range = l.radius as f32 * GLOBAL_SCALE * 3.0;
+            scene.lights.push(([dfu[0], dfu[1], -dfu[2]], range));
+        }
         if block_ref.is_start {
             // Marker positions are block-local raw coords (same units as models):
             // DFU space (x, -y, z) * 0.025 + block origin, then glTF (x, y, -z).

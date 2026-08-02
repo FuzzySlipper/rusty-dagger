@@ -108,10 +108,33 @@ def build_scene(static_mesh: dict) -> dict:
     }
     scene_meta_path = REPO / "content" / "privateers-hold.scene.json"
     spawn = [25.6, 1.6, -25.6]
+    scene_meta = None
     if scene_meta_path.exists():
         scene_meta = load_json(scene_meta_path)
         if scene_meta.get("startMarker"):
             spawn = [float(v) for v in scene_meta["startMarker"]]
+
+    # Point lights from the RDB light objects (DFU: white, intensity 0.8,
+    # range = radius*0.025*3 — computed in dagger-import and stored here).
+    light_entities = []
+    next_id = 100
+    if scene_meta and scene_meta.get("lights"):
+        for entry in scene_meta["lights"]:
+            light_entities.append({
+                "id": next_id,
+                "name": f"dungeon-light-{next_id}",
+                "translation": entry["position"],
+                "light": {
+                    "kind": "point",
+                    "color": [1.0, 1.0, 1.0],
+                    "intensity": 0.8,
+                    "enabled": True,
+                    "range": entry["range"],
+                    "decay": 2.0,
+                    "shadows": False,
+                },
+            })
+            next_id += 1
 
     player_entity = {
         "id": 1,
@@ -140,7 +163,7 @@ def build_scene(static_mesh: dict) -> dict:
         "id": SCENE_ID,
         "name": "Privateer's Hold",
         "voxelEnvironment": voxel_environment,
-        "entities": [player_entity, dungeon_entity],
+        "entities": [player_entity, dungeon_entity] + light_entities,
     }
 
 
