@@ -14,4 +14,5 @@ cargo run -q -p dagger-import -- \
     --format mesh-json --out content/privateers-hold.mesh.json
 "$RUSTY_ASSET_IMPORT" write content/privateers-hold.mesh.json content/imported
 python3 scripts/generate-project.py --write
+python3 scripts/find-route.py --write
 python3 scripts/check-adapter.py
