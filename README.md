@@ -56,7 +56,8 @@ cargo test                      # arena2 parser tests against the real data file
 cargo run -p dagger-runtime --bin dagger-walkthrough
 node render-check/check.mjs [--cam overview|top|interior] [--out shot.png]
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
-# Human-visible Studio host (uses the exact Engine static build by default):
+# Human-visible Studio host (requires the exact Engine static build; the
+# conventional sibling path is checked against scripts/studio-static-provenance.json):
 scripts/serve-studio.sh
 # Focused HTTP/adapter check while the host is running:
 node scripts/check-studio-host.mjs

@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 /** Focused protocol/HTTP check for the local rusty-dagger Studio host. */
 import assert from 'node:assert/strict';
-import { resolve } from 'node:path';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const base = (process.env.RUSTY_STUDIO_URL ?? 'http://127.0.0.1:4173').replace(/\/$/u, '');
 const root = resolve(process.env.RUSTY_DAGGER_ROOT ?? new URL('..', import.meta.url).pathname);
@@ -23,6 +27,9 @@ assert.equal(health.adapter, true);
 const status = await request('/api/studio-status');
 assert.equal(status.mode, 'managed');
 assert.equal(status.engineSourceCommit, 'd52c9b0f3287f21eea81d465871978a117750d0c');
+assert.equal(status.staticBuild.engineSourceCommit, status.engineSourceCommit);
+assert.match(status.staticBuild.artifactTreeSha256, /^[0-9a-f]{64}$/u);
+assert.equal(status.staticBuild.files, 5);
 assert.equal(status.runningAdapter.protocolVersion, 14);
 
 const described = await request('/api/studio-adapter', {
@@ -73,5 +80,20 @@ const closed = await request('/api/studio-adapter', {
   body: JSON.stringify({ type: 'closeProject', protocolVersion: 14, requestId: 'check-close' }),
 });
 assert.equal(closed.type, 'projectClosed');
+
+const mismatchRoot = await mkdtemp(join(tmpdir(), 'rusty-dagger-studio-mismatch-'));
+try {
+  await writeFile(join(mismatchRoot, 'index.html'), '<!doctype html><title>unproven</title>');
+  const hostScript = fileURLToPath(new URL('./studio-host.mjs', import.meta.url));
+  const mismatch = spawnSync(process.execPath, [hostScript, '--static-root', mismatchRoot], {
+    cwd: root,
+    encoding: 'utf8',
+    timeout: 10_000,
+  });
+  assert.notEqual(mismatch.status, 0, 'unproven static roots must fail startup');
+  assert.match(`${mismatch.stdout}\n${mismatch.stderr}`, /static root does not match Engine/u);
+} finally {
+  await rm(mismatchRoot, { recursive: true, force: true });
+}
 
 console.log(`STUDIO HOST CHECK PASSED (${opened.project.projection.ops.length} projection ops, ${files.entries.length} project files)`);

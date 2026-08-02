@@ -9,6 +9,7 @@ if [[ ! -f "$STATIC_ROOT/index.html" ]]; then
     echo "Set RUSTY_ENGINE_STUDIO_STATIC_ROOT to the exact Rusty Engine Studio build." >&2
     exit 1
 fi
+node scripts/studio-static-provenance.mjs "$STATIC_ROOT"
 COMMIT="$(git rev-parse HEAD)"
 export RUSTY_DAGGER_COMMIT="$COMMIT"
 exec node scripts/studio-host.mjs \
