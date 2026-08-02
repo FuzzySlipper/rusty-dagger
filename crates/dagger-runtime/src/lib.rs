@@ -20,7 +20,10 @@ pub use runtime::{DaggerRuntime, RuntimeError};
 
 #[cfg(test)]
 mod tests {
-    use super::{DaggerRuntime, ResolvedPlayerAction};
+    use super::{
+        AdmittedProject, DaggerRuntime, PlayerControlFact, ProjectAdmissionError,
+        ResolvedPlayerAction,
+    };
 
     const PROJECT: &str = include_str!("../../../content/projects/privateers-hold.project.json");
 
@@ -45,5 +48,74 @@ mod tests {
             .expect_err("out-of-range input must fail closed");
         assert!(format!("{error}").contains("InvalidAction"));
         assert_eq!(runtime.player_position().expect("player position"), before);
+    }
+
+    #[test]
+    fn dangling_entry_scene_is_rejected_while_absent_entry_scene_uses_the_first_scene() {
+        let mut dangling: serde_json::Value = serde_json::from_str(PROJECT).expect("project json");
+        dangling["entryScene"] = serde_json::Value::String("scene/missing".to_string());
+        let error = AdmittedProject::from_json(
+            &serde_json::to_string(&dangling).expect("encode dangling project"),
+        )
+        .expect_err("dangling entry scene must fail closed");
+        assert!(matches!(
+            error,
+            ProjectAdmissionError::UnknownEntryScene { scene_id } if scene_id == "scene/missing"
+        ));
+
+        dangling["entryScene"] = serde_json::Value::Null;
+        let admitted = AdmittedProject::from_json(
+            &serde_json::to_string(&dangling).expect("encode default-scene project"),
+        )
+        .expect("absent entry scene may select the first scene");
+        assert_eq!(admitted.scene_id, "scene/privateers-hold");
+    }
+
+    #[test]
+    fn blocked_step_up_is_failure_atomic_against_a_real_project_wall() {
+        let mut project: serde_json::Value = serde_json::from_str(PROJECT).expect("project json");
+        let scenes = project["scenes"].as_array_mut().expect("scenes");
+        let scene = &mut scenes[0];
+        scene["entities"][0]["playerController"]["fallSpeedUnitsPerSecond"] =
+            serde_json::Value::from(0.1);
+        let voxels = scene["voxelEnvironment"]["materialVoxels"]
+            .as_array_mut()
+            .expect("material voxels");
+        for x in 54..61 {
+            for y in 77..91 {
+                voxels.push(serde_json::json!({
+                    "address": [x, y, -24],
+                    "materialSlot": 1,
+                }));
+            }
+        }
+
+        let document = serde_json::to_string(&project).expect("adversarial project");
+        let mut runtime = DaggerRuntime::from_project_json(&document).expect("admit project");
+        for _ in 0..30 {
+            runtime
+                .apply_player_action(ResolvedPlayerAction::Move {
+                    forward: 0.0,
+                    right: 0.0,
+                })
+                .expect("settle action");
+        }
+
+        for _ in 0..2 {
+            let before = runtime.player_position().expect("before position");
+            let receipt = runtime
+                .apply_player_action(ResolvedPlayerAction::Move {
+                    forward: 1.0,
+                    right: 0.0,
+                })
+                .expect("blocked action");
+            let after = runtime.player_position().expect("after position");
+            assert!(receipt
+                .facts
+                .iter()
+                .any(|fact| matches!(fact, PlayerControlFact::Blocked { .. })));
+            assert!(((after.x - before.x).powi(2) + (after.z - before.z).powi(2)).sqrt() < 0.001);
+            assert!(after.y <= before.y + 0.001);
+        }
     }
 }

@@ -124,7 +124,7 @@ modularity gate, task 6529):
   playwright) reusing rusty-engine's installed packages; screenshots are
   durable artifacts.
 
-## Collision stopgap and the walk-through proof (task 6520, review R6520-1)
+## Collision stopgap and the walk-through proof (task 6563)
 
 Until upstream triangle-mesh collision lands (rusty-engine task 6516), the
 generated studio project carries a hidden `gameplayProxy` material-voxel
@@ -140,8 +140,12 @@ environment as the collision authority, rasterized from the dungeon mesh by
 - The Daggerfall-owned `dagger-runtime` controller opts into
   `fallSpeedUnitsPerSecond` / `stepUpUnits`: a constant-speed, 0.1m-substepped
   downward settle after every action (including idles), plus a bounded ledge
-  climb assist. The generic Engine motion system remains the sole collision
-  authority.
+  climb assist. A failed ledge retry restores the pre-step height, so repeated
+  input cannot climb a taller-than-step obstacle. The generic Engine motion
+  system remains the sole collision authority.
+- A present `entryScene` is authoritative and must resolve to a named scene;
+  a dangling reference is rejected. An absent entry scene may select the first
+  scene for legacy/generated documents.
 - `scripts/find-route.py` derives the verified route
   (`content/projects/privateers-hold.route.json`) from the **proxy voxels
   themselves** (not the mesh), mirroring the controller's footprint, settle,
@@ -162,10 +166,13 @@ asserting on **authoritative** readback:
 2. Traversal — the waypoint route from the start block into a border block
    ((0,-1) → (1,-1), ~25m, descending ~6.5m), with support asserted after
    every action and the end block verified from the position readback.
-3. Negative probes — each must change the authoritative outcome: (a) the
-   proxy shifted 2m down removes the spawn support and lands the player
-   measurably lower; (b) no support outside covered columns; (c) deleting a
-   route-midpoint column's voxels removes its support.
+3. Negative probes — each must change the authoritative outcome: (a) a tall
+   wall derived from the committed project produces `Blocked` facts and no
+   horizontal drift or cumulative step-up height; (b) the proxy shifted 2m
+   down removes the spawn support and lands the player measurably lower; (c)
+   no support outside covered columns; (d) deleting a route-midpoint column's
+   voxels removes its support; (e) a dangling explicit entry scene fails
+   admission instead of silently selecting another scene.
 
 Boundary-contact note: svc-collision treats exactly-flush contact as
 overlapping (parry intersection), so horizontal motion while exactly flush is

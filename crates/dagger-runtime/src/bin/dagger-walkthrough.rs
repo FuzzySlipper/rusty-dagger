@@ -129,6 +129,45 @@ fn delete_voxel_column(document: &str, column: [i64; 2]) -> String {
     serde_json::to_string(&value).expect("encode column-deleted project")
 }
 
+fn add_adversarial_wall(document: &str) -> String {
+    let mut value: Value = serde_json::from_str(document).expect("parse project document");
+    if let Some(scenes) = value.get_mut("scenes").and_then(Value::as_array_mut) {
+        for scene in scenes {
+            if let Some(player) = scene
+                .get_mut("entities")
+                .and_then(Value::as_array_mut)
+                .and_then(|entities| {
+                    entities
+                        .iter_mut()
+                        .find(|entity| entity.get("id") == Some(&Value::from(1)))
+                })
+            {
+                if let Some(controller) = player.get_mut("playerController") {
+                    controller["fallSpeedUnitsPerSecond"] = Value::from(0.1);
+                }
+            }
+            if let Some(voxels) = scene
+                .get_mut("voxelEnvironment")
+                .and_then(|environment| environment.get_mut("materialVoxels"))
+                .and_then(Value::as_array_mut)
+            {
+                // A tall wall immediately in front of the authored spawn. It
+                // is derived from the real project and exists only for this
+                // adversarial controller probe.
+                for x in 54..61 {
+                    for y in 77..91 {
+                        voxels.push(serde_json::json!({
+                            "address": [x, y, -24],
+                            "materialSlot": 1,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+    serde_json::to_string(&value).expect("encode adversarial project")
+}
+
 fn main() {
     let mut args = env::args().skip(1);
     let project_path = args.next().unwrap_or_else(|| {
@@ -253,6 +292,51 @@ fn main() {
     if end_block == spawn_block || travelled < 20.0 {
         failures.push(format!(
             "route did not cross the dungeon (end block {end_block:?}, distance {travelled:.1}m)"
+        ));
+    }
+
+    let adversarial_document = add_adversarial_wall(&document);
+    let mut blocked_runtime =
+        DaggerRuntime::from_project_json(&adversarial_document).expect("admit adversarial project");
+    settle(&mut blocked_runtime, 30);
+    let mut blocked_actions = 0usize;
+    let mut horizontal_drift = 0.0_f32;
+    let mut maximum_upward_displacement = 0.0_f32;
+    for _ in 0..2 {
+        let before = blocked_runtime
+            .player_position()
+            .expect("adversarial player position");
+        let receipt = blocked_runtime
+            .apply_player_action(ResolvedPlayerAction::Move {
+                forward: 1.0,
+                right: 0.0,
+            })
+            .expect("adversarial forward action");
+        let after = blocked_runtime
+            .player_position()
+            .expect("adversarial player position");
+        if receipt
+            .facts
+            .iter()
+            .any(|fact| matches!(fact, PlayerControlFact::Blocked { .. }))
+        {
+            blocked_actions += 1;
+        }
+        horizontal_drift += ((after.x - before.x).powi(2) + (after.z - before.z).powi(2)).sqrt();
+        maximum_upward_displacement = maximum_upward_displacement.max(after.y - before.y);
+    }
+    println!(
+        "negative controller boundary: blocked_actions={} horizontal_drift={horizontal_drift:.4} max_upward={maximum_upward_displacement:.4}",
+        blocked_actions
+    );
+    if blocked_actions != 2 {
+        failures.push(format!(
+            "adversarial wall did not report Blocked for both controller actions: {blocked_actions}"
+        ));
+    }
+    if horizontal_drift > 0.001 || maximum_upward_displacement > 0.001 {
+        failures.push(format!(
+            "blocked controller input changed coherent transform: horizontal_drift={horizontal_drift:.4} max_upward={maximum_upward_displacement:.4}"
         ));
     }
 

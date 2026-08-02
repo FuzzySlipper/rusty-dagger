@@ -15,6 +15,7 @@ pub enum ProjectAdmissionError {
     Json(String),
     UnsupportedSchema { actual: u32, expected: u32 },
     MissingScene,
+    UnknownEntryScene { scene_id: String },
     MissingVoxelEnvironment,
     EmptyVoxelEnvironment,
     InvalidVoxelEnvironment(String),
@@ -59,12 +60,19 @@ impl AdmittedProject {
             });
         }
 
-        let scene = project
-            .scenes
-            .iter()
-            .find(|scene| project.entry_scene.as_deref() == Some(scene.id.as_str()))
-            .or_else(|| project.scenes.first())
-            .ok_or(ProjectAdmissionError::MissingScene)?;
+        let scene = match project.entry_scene.as_deref() {
+            Some(entry_scene) => project
+                .scenes
+                .iter()
+                .find(|scene| scene.id == entry_scene)
+                .ok_or_else(|| ProjectAdmissionError::UnknownEntryScene {
+                    scene_id: entry_scene.to_string(),
+                })?,
+            None => project
+                .scenes
+                .first()
+                .ok_or(ProjectAdmissionError::MissingScene)?,
+        };
         let voxel_environment = scene
             .voxel_environment
             .as_ref()

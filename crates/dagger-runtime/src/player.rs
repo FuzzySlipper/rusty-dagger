@@ -215,6 +215,7 @@ pub(crate) fn apply_player_action(
                     run_player_motion(entities, scene, player, velocity, move_delta_seconds)?;
                 if motion_blocked(&horizontal, player) {
                     if let Some(step) = config.step_up_units {
+                        let step_origin = player_translation(entities, player)?;
                         let rise = run_player_motion(
                             entities,
                             scene,
@@ -223,13 +224,34 @@ pub(crate) fn apply_player_action(
                             move_delta_seconds,
                         )?;
                         if motion_moved(&rise, player) {
-                            horizontal = run_player_motion(
+                            let retry = run_player_motion(
                                 entities,
                                 scene,
                                 player,
                                 velocity,
                                 move_delta_seconds,
                             )?;
+                            // A retry that made horizontal progress can still
+                            // report a blocked secondary axis while sliding
+                            // around the obstacle. Only a fully blocked retry
+                            // must roll back the vertical rise.
+                            let step_succeeded = motion_moved(&retry, player);
+                            if !step_succeeded {
+                                let after_retry = player_translation(entities, player)?;
+                                entities
+                                    .apply_batch(EntityCommandBatch::new([
+                                        EntityCommand::SetTranslation {
+                                            entity: player,
+                                            translation: Vec3::new(
+                                                after_retry.x,
+                                                step_origin.y,
+                                                after_retry.z,
+                                            ),
+                                        },
+                                    ]))
+                                    .map_err(PlayerError::EntityBatch)?;
+                            }
+                            horizontal = retry;
                         }
                     }
                 }
