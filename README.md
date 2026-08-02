@@ -77,6 +77,19 @@ TEXTURE.000/.001 are virtual solid-colour archives (32x32 palette fills).
   the consumer's content pipeline (@rusty-engine-demo/project-content). The
   imported artifacts here (catalog + static-mesh) are the inputs that pipeline
   would consume.
+- **Textured static meshes in engine**: render-model already has
+  `MeshAttributeName::Uv` + `PackedStreamsLeV2` plumbing, but the authored
+  `.mesh.json` source format (`asset-import/src/source.rs`, deny_unknown_fields)
+  and the renderer-three static-mesh path carry no UVs. Upstream task filed:
+  rusty-engine **task 6515** (UV through static mesh pipeline). The recent
+  voxel-texture work is voxel-surface-only (voxel-convert/material.rs) — it did
+  not add static-mesh UVs.
+- **Collision**: rusty-engine static meshes resolve to VisualOnly/AabbFallback/
+  Proxy (render-model `MeshCollisionPolicy`); svc-collision projects parry3d
+  from voxel authority only. Daggerfall Unity collides dungeons with
+  `MeshCollider` (sharedMesh = the render mesh; convex for props; box colliders
+  on sliding doors) — i.e. straight triangle-mesh collision. Upstream task
+  filed: rusty-engine **task 6516** (trimesh collision policy in svc-collision).
 - Flats (billboards), lights, action-door animation, water, and the
   automap/start-marker metadata are parsed-skipped (models only).
 - Texturing is classic-default; the per-location randomized texture table
