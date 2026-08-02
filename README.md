@@ -26,6 +26,10 @@ current task state in the Den `rusty-dagger` project.
     embedded PNG textures (NEAREST, REPEAT), computed flat normals.
   - `--format mesh-json`: rusty-engine authored mesh source (untextured; one
     material per texture with its average colour — the engine format has no UVs).
+- `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
+  the committed Privateer's Hold project, owns the first-person controller,
+  and provides the real-project collision walkthrough without importing the
+  loading-bay game.
 - `content/` — generated assets (privateers-hold.glb, privateers-hold.mesh.json,
   imported/ engine artifacts)
 - `render-check/` — headless render verification (three.js GLTFLoader + playwright,
@@ -43,8 +47,9 @@ cargo run -p dagger-import -- [--arena2 DIR] [--region N] [--location NAME] \
 scripts/regenerate.sh
 
 cargo test                      # arena2 parser tests against the real data files
+cargo run -p dagger-runtime --bin dagger-walkthrough
 node render-check/check.mjs [--cam overview|top|interior] [--out shot.png]
-python3 scripts/check-adapter.py   # prove studio's host admits the project
+python3 scripts/check-adapter.py   # optional until the local adapter lands
 ```
 
 ## Verification status (2026-08-01)
@@ -85,8 +90,11 @@ Tracked as Den tasks in the `rusty-dagger` project (dependencies wired):
   (studio opens via `?root=<dir>&project=<file>`).
 - **6519** Companion-reuse survey (FP controller, UI, content pipeline) →
   docs/companion-reuse.md.
-- **6520** First-person walk-through: spawn at start marker, traverse the hold
-  (depends on 6518 + 6519).
+- **6563** Self-contained downstream runtime: the exact Engine pin, local
+  controller/admission, and real-project `dagger-walkthrough` now live here.
+- **6564** Standalone Studio adapter/browser host: the current adapter probe is
+  still an explicitly configured diagnostic against the demo host until this
+  follow-up lands; it is not a runtime dependency.
 - **6521 / 6522** Consume upstream **rusty-engine 6515** (static-mesh UVs) and
   **6516** (trimesh collision) when they land.
 - **6523** Billboards (RDB flats), **6524** lights, **6525** action doors,

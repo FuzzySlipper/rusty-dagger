@@ -114,6 +114,9 @@ modularity gate, task 6529):
 - `dagger-import` — CLI glue: drives arena2, assembles dungeon geometry and
   textures, emits GLB / engine mesh-json. Emitters (glb, png, meshjson) split
   out (→ `dagger-export`) if they outgrow the crate.
+- `dagger-runtime` — Daggerfall-owned project admission, player controller,
+  and real-project collision walkthrough. It consumes only generic Rusty
+  Engine crates at the exact public pin; it does not import loading-bay-game.
 - Planned: `dagger-content` (decoded materials/meshes with provenance),
   `dagger-world` (dungeon session runtime: blocks, doors, lights, water
   state), each arriving only when the code that needs a home exists.
@@ -134,11 +137,11 @@ environment as the collision authority, rasterized from the dungeon mesh by
   the nearest cell boundary. Columns keep **every** walkable level — the
   start-marker layer (38.4m) and the levels beneath it — which is what makes
   both the spawn support and the descending border route real.
-- The player controller opts into the loading-bay runtime's
-  `fallSpeedUnitsPerSecond` / `stepUpUnits` semantics (added there for this
-  consumer): a constant-speed, 0.1m-substepped downward settle after every
-  action (including idles), plus a bounded ledge climb assist. Projects
-  without those fields keep the original pure-kinematic behaviour.
+- The Daggerfall-owned `dagger-runtime` controller opts into
+  `fallSpeedUnitsPerSecond` / `stepUpUnits`: a constant-speed, 0.1m-substepped
+  downward settle after every action (including idles), plus a bounded ledge
+  climb assist. The generic Engine motion system remains the sole collision
+  authority.
 - `scripts/find-route.py` derives the verified route
   (`content/projects/privateers-hold.route.json`) from the **proxy voxels
   themselves** (not the mesh), mirroring the controller's footprint, settle,
@@ -149,9 +152,9 @@ is incidental), and raised solids are represented by their top surface only,
 so their undersides are hollow. The accepted route is checked against the
 proxy, so its floor collision is real regardless.
 
-`dagger-walkthrough` (rusty-engine-demo, `loading-bay-game` bin) is the
-headless proof, driving the admitted project through the public controller
-API and asserting on **authoritative** readback:
+`crates/dagger-runtime/src/bin/dagger-walkthrough.rs` is the headless proof,
+driving the admitted project through the Daggerfall-owned controller API and
+asserting on **authoritative** readback:
 
 1. Settle — from the parsed start marker the player falls and comes to rest
    on proxy support (occupancy probe over the body footprint finds solid

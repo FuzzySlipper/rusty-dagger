@@ -15,4 +15,9 @@ cargo run -q -p dagger-import -- \
 "$RUSTY_ASSET_IMPORT" write content/privateers-hold.mesh.json content/imported
 python3 scripts/generate-project.py --write
 python3 scripts/find-route.py --write
-python3 scripts/check-adapter.py
+cargo run -q -p dagger-runtime --bin dagger-walkthrough
+if [[ -n "${RUSTY_STUDIO_ADAPTER:-}" ]]; then
+    python3 scripts/check-adapter.py
+else
+    echo "studio adapter check skipped (Den task 6564: no local adapter is installed yet)"
+fi
