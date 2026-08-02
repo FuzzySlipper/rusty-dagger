@@ -73,17 +73,8 @@ def build_scene(static_mesh: dict) -> dict:
     """One scene: the dungeon mesh entity + a player-camera entity, over a
     hidden gameplayProxy voxel environment.
 
-    Model follows loading-bay (docs/visual-content-pipeline.md): the voxel
-    environment is the collision/occlusion truth; the static mesh is visible
-    content only. Today the voxel truth is a ground plane at y<0 (bounds of the
-    dungeon minus its volume = air); when upstream trimesh collision lands
-    (rusty-engine 6516) the mesh becomes its own truth and this proxy shrinks
-    to just the floor. The proxy uses material voxels with slot 0; the scene
-    references material asset ids via `voxelAssets`? No — material slot indexes
-    into the scene's material palette order, mirroring the demo (slot 0 =
-    material/default in demo scenes is by palette convention there; here we
-    only need solidity, and the demo's decoder treats any material slot as
-    solid).
+    Spawn comes from the extracted start marker (content/privateers-hold.scene.json,
+    written by dagger-import) when available; falls back to block center.
     """
     bounds = static_mesh["payload"]["bounds"]
     mn, mx = bounds["min"], bounds["max"]
@@ -115,12 +106,17 @@ def build_scene(static_mesh: dict) -> dict:
         "renderable": {"asset": MESH_ASSET, "visible": True},
         "bounds": {"min": mn, "max": mx},
     }
+    scene_meta_path = REPO / "content" / "privateers-hold.scene.json"
+    spawn = [25.6, 1.6, -25.6]
+    if scene_meta_path.exists():
+        scene_meta = load_json(scene_meta_path)
+        if scene_meta.get("startMarker"):
+            spawn = [float(v) for v in scene_meta["startMarker"]]
+
     player_entity = {
         "id": 1,
         "name": "player",
-        # Start block (S0000999) center at eye height; replaced by the parsed
-        # start marker when task 6520 lands.
-        "translation": [25.6, 1.6, -25.6],
+        "translation": spawn,
         "collision": {"enabled": True, "staticCollider": False},
         "renderable": {"asset": MESH_ASSET, "visible": False},
         "kinematic": {"halfExtents": [0.25, 0.25, 0.25], "velocity": [0.0, 0.0, 0.0]},

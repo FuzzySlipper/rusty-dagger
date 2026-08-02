@@ -62,6 +62,16 @@ pub struct BuildOutput {
     pub primitives: Vec<PrimitiveInput>,
     pub textures: Vec<TextureInput>,
     pub stats: BuildStats,
+    /// Dungeon-scene metadata: markers in glTF world space (RH Y-up, meters).
+    pub scene: DungeonScene,
+}
+
+#[derive(Debug, Clone)]
+pub struct DungeonScene {
+    pub start_marker: Option<[f32; 3]>,
+    pub enter_marker: Option<[f32; 3]>,
+    pub light_count: usize,
+    pub flat_count: usize,
 }
 
 type Mat3 = [[f32; 3]; 3];
@@ -241,6 +251,12 @@ pub fn build_dungeon(
     let mut stats = BuildStats { blocks: layout.blocks.len(), ..Default::default() };
     stats.bounds_min = [f32::MAX; 3];
     stats.bounds_max = [f32::MIN; 3];
+    let mut scene = DungeonScene {
+        start_marker: None,
+        enter_marker: None,
+        light_count: 0,
+        flat_count: 0,
+    };
 
     // One primitive per texture key (None = untextured/default material).
     let mut prims: HashMap<Option<(u16, u16)>, PrimitiveBuild> = HashMap::new();
@@ -255,6 +271,28 @@ pub fn build_dungeon(
             0.0,
             block_ref.z as f32 * RDB_SIDE,
         ];
+        scene.light_count += block.lights.len();
+        scene.flat_count += block.flats.len();
+        if block_ref.is_start {
+            // Marker positions are block-local raw coords (same units as models):
+            // DFU space (x, -y, z) * 0.025 + block origin, then glTF (x, y, -z).
+            if let Some((_f, m)) = block.start_marker() {
+                let dfu = [
+                    m[0] as f32 * GLOBAL_SCALE + origin[0],
+                    -m[1] as f32 * GLOBAL_SCALE + origin[1],
+                    m[2] as f32 * GLOBAL_SCALE + origin[2],
+                ];
+                scene.start_marker = Some([dfu[0], dfu[1], -dfu[2]]);
+            }
+            if let Some(m) = block.enter_marker() {
+                let dfu = [
+                    m[0] as f32 * GLOBAL_SCALE + origin[0],
+                    -m[1] as f32 * GLOBAL_SCALE + origin[1],
+                    m[2] as f32 * GLOBAL_SCALE + origin[2],
+                ];
+                scene.enter_marker = Some([dfu[0], dfu[1], -dfu[2]]);
+            }
+        }
 
         for obj in &block.models {
             let mesh = match imp.mesh(&arch, &obj.model_id) {
@@ -364,5 +402,5 @@ pub fn build_dungeon(
 
     stats.textures = imp.textures.len();
     stats.texture_failures = imp.texture_failures.clone();
-    Ok(BuildOutput { primitives, textures: imp.textures, stats })
+    Ok(BuildOutput { primitives, textures: imp.textures, stats, scene })
 }
