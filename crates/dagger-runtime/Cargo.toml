@@ -1,0 +1,17 @@
+[package]
+name = "dagger-runtime"
+version.workspace = true
+edition.workspace = true
+description = "Daggerfall gameplay runtime and real-project collision walkthrough"
+
+[dependencies]
+core-ids.workspace = true
+core-math.workspace = true
+engine-spatial.workspace = true
+entity-state.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[[bin]]
+name = "dagger-walkthrough"
+path = "src/bin/dagger-walkthrough.rs"

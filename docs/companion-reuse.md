@@ -30,19 +30,17 @@ cargo crate / pnpm package / generated artifact, not copy-paste, unless
 - `docs/visual-content-pipeline.md` — the collision-model doctrine our
   project doc follows (voxel gameplayProxy = truth, mesh = visible content).
 
-**Consume**: `loading-bay-game` crate for the FP controller and door system
-(the exact code 6520/6525 need). The crate is product-flavored (Loading Bay
-semantics in `combat`, `extraction_beacon`), so the boundary to keep: player
-controller, doors, interaction, navigation, hazard, pickups — not
-encounter/extraction/progression, which are loading-bay game design.
+**Consume**: the controller and collision behavior as a reference for the
+portable Daggerfall runtime. The crate is product-flavored (Loading Bay
+semantics in `combat`, `extraction_beacon`), so its gameplay services are not a
+valid downstream dependency here.
 **Avoid**: the studio-adapter/browser-host binaries themselves (loading-bay
 project semantics baked in), `enemy_combat`, `progression`, `extraction_beacon`.
-**Integration**: cargo `path = "../rusty-engine-demo/rust/crates/loading-bay-game"`
-(or git dep on FuzzySlipper/rusty-engine-demo pinned rev) for controller+doors
-in the walk-through crate. The task-6520 implementation should verify whether
-its public surface is usable without pulling loading-bay game semantics — if
-not, extract player.rs/door.rs patterns into a rusty-dagger crate rather than
-inherit the dependency.
+**Integration**: reference only for controller semantics. The controller and
+real-project walk-through now live in `crates/dagger-runtime`, consuming the
+generic Engine crates directly. No `path` or git dependency on
+`rusty-engine-demo` is permitted. Doors and other Daggerfall systems should be
+added to Daggerfall-owned crates as their semantics become real.
 
 ## rusty-roguelike
 
@@ -111,13 +109,12 @@ render-model/asset-catalog semantics via artifacts, studio adapter protocol,
 renderer-three (via render-check). Upstream needs tracked as engine tasks
 6515/6516 with local consume tasks 6521/6522.
 
-## Decisions (for task 6520 implementation)
+## Decisions (for task 6563 implementation)
 
-1. FP controller: **loading-bay-game's player controller** (`player.rs`) is
-   the only real Rust FP controller in the fleet and is engine-shaped.
-   Implementation starts by checking its surface against rusty-dagger's needs
-   (Move/Look over VoxelCollisionScene); extract to a rusty-dagger crate if
-   the loading-bay game-session coupling is heavier than vendoring is worth.
+1. FP controller: use the loading-bay implementation as a behavioral reference
+   only. `dagger-runtime` owns the Daggerfall controller and calls
+   `engine_spatial::KinematicMotionSystem` directly, avoiding Loading Bay
+   session/damage/progression coupling.
 2. UI: **rusty-engine-ui** for compass/minimap/theme when the browser app
    arrives (task 6528 automap is the first consumer).
 3. Project/content machinery: **hand-rolled** (scripts/generate-project.py) —

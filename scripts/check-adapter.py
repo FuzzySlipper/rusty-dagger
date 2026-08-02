@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
-"""Drive the loading-bay studio-adapter over stdio to open the rusty-dagger
-project — the real acceptance check for task 6518."""
-import json, subprocess, sys
+"""Drive a configured Studio adapter over stdio to open the project.
 
-ADAPTER = "/home/dev/rusty-engine-demo/target/debug/studio-adapter"
-ROOT = "/home/dev/rusty-dagger"
+The adapter is deliberately injected through ``RUSTY_STUDIO_ADAPTER`` until
+Den task 6564 lands a local rusty-dagger-owned host.
+"""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+ADAPTER = os.environ.get(
+    "RUSTY_STUDIO_ADAPTER",
+    str(REPO / "target" / "debug" / "dagger-studio-adapter"),
+)
+ROOT = str(REPO)
 PROJECT = "content/projects/privateers-hold.project.json"
 PROTOCOL = 14
 
