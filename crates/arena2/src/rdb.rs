@@ -27,14 +27,55 @@ pub struct RdbModelObject {
     pub has_action: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct RdbFlatObject {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+    pub texture_archive: u16,
+    pub texture_record: u16,
+    pub flags: u16,
+    pub next_object_offset: i32,
+    pub action: u8,
+}
+
+#[derive(Debug, Clone)]
+pub struct RdbLightObject {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+    pub radius: u16,
+}
+
+/// DFU TextureReader editor-flat archive; record 10 = start marker, 8 = enter marker.
+pub const EDITOR_FLATS_ARCHIVE: u16 = 199;
+pub const START_MARKER_RECORD: u16 = 10;
+pub const ENTER_MARKER_RECORD: u16 = 8;
+
 #[derive(Debug, Default)]
 pub struct RdbBlock {
     pub width: u32,
     pub height: u32,
     pub models: Vec<RdbModelObject>,
-    /// Counts of skipped object types (lights, flats) for diagnostics.
-    pub light_count: usize,
-    pub flat_count: usize,
+    pub flats: Vec<RdbFlatObject>,
+    pub lights: Vec<RdbLightObject>,
+}
+
+impl RdbBlock {
+    /// World-space start marker (block-local raw coords, same units as models).
+    pub fn start_marker(&self) -> Option<(&RdbFlatObject, [i32; 3])> {
+        self.flats
+            .iter()
+            .find(|f| f.texture_archive == EDITOR_FLATS_ARCHIVE && f.texture_record == START_MARKER_RECORD)
+            .map(|f| (f, [f.x, f.y, f.z]))
+    }
+
+    pub fn enter_marker(&self) -> Option<[i32; 3]> {
+        self.flats
+            .iter()
+            .find(|f| f.texture_archive == EDITOR_FLATS_ARCHIVE && f.texture_record == ENTER_MARKER_RECORD)
+            .map(|f| [f.x, f.y, f.z])
+    }
 }
 
 pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
@@ -100,8 +141,30 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                         has_action: action_offset > 0,
                     });
                 }
-                0x02 => block.light_count += 1,
-                0x03 => block.flat_count += 1,
+                0x02 => {
+                    let mut r = Cursor::at(data, resource_offset);
+                    let _unk1 = r.u32();
+                    let _unk2 = r.u32();
+                    let radius = r.u16();
+                    block.lights.push(RdbLightObject { x, y, z, radius });
+                }
+                0x03 => {
+                    let mut r = Cursor::at(data, resource_offset);
+                    let bitfield = r.u16();
+                    let flags = r.u16();
+                    let _magnitude = r.u8();
+                    let _sound = r.u8();
+                    let next_object_offset = r.i32();
+                    let action = r.u8();
+                    block.flats.push(RdbFlatObject {
+                        x, y, z,
+                        texture_archive: bitfield >> 7,
+                        texture_record: bitfield & 0x7F,
+                        flags,
+                        next_object_offset,
+                        action,
+                    });
+                }
                 other => return Err(format!("unknown RDB object type {other:#x} at {p}")),
             }
             if next < 0 {
@@ -138,5 +201,28 @@ mod tests {
             assert!((-2048..=0).contains(&m.y), "y {} out of range", m.y);
             assert!((0..=2048).contains(&m.z), "z {} out of range", m.z);
         }
+    }
+}
+
+#[cfg(test)]
+mod marker_tests {
+    use super::*;
+    use crate::arena2_dir;
+    use crate::bsa::BsaArchive;
+
+    #[test]
+    fn s0000999_start_marker_exists() {
+        let dir = arena2_dir();
+        let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
+        let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
+        assert!(block.flats.len() > 0, "expected flats in start block");
+        let (flat, pos) = block.start_marker().expect("start marker flat (199/10) must exist in S0000999");
+        assert_eq!(flat.texture_archive, EDITOR_FLATS_ARCHIVE);
+        assert_eq!(flat.texture_record, START_MARKER_RECORD);
+        // Marker must sit inside the block's raw extents
+        assert!((0..=2048).contains(&pos[0]), "x {} out of block", pos[0]);
+        assert!((-2048..=0).contains(&pos[1]), "y {} out of block", pos[1]);
+        assert!((0..=2048).contains(&pos[2]), "z {} out of block", pos[2]);
+        println!("start marker raw: {pos:?} lights={} flats={}", block.lights.len(), block.flats.len());
     }
 }

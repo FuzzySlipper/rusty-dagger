@@ -340261,9 +340261,9 @@
           "id": 1,
           "name": "player",
           "translation": [
-            25.6,
-            1.6,
-            -25.6
+            28.375,
+            38.975002,
+            -12.400001
           ],
           "collision": {
             "enabled": true,

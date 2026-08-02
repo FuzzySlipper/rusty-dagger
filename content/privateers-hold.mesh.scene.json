@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "location": "Privateer's Hold",
+  "startMarker": [28.375, 38.975002, -12.400001],
+  "enterMarker": [12.75, 0.625, -41.8],
+  "lightCount": 71,
+  "flatCount": 186,
+  "bounds": {"min": [-51.2, 0.0, -102.4], "max": [102.40001, 51.1, 51.2]}
+}

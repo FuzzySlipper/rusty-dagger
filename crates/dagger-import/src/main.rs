@@ -87,6 +87,11 @@ fn main() {
         s.bounds_min[0], s.bounds_min[1], s.bounds_min[2],
         s.bounds_max[0], s.bounds_max[1], s.bounds_max[2]
     );
+    println!(
+        "scene:       start={:?} enter={:?} lights={} flats={}",
+        output.scene.start_marker, output.scene.enter_marker,
+        output.scene.light_count, output.scene.flat_count
+    );
 
     let name = args.location.replace('\'', "").replace(' ', "-").to_lowercase();
     let bytes = match args.format.as_str() {
@@ -100,4 +105,23 @@ fn main() {
     }
     std::fs::write(&args.out, &bytes).expect("write output");
     println!("wrote:       {} ({} bytes)", args.out.display(), bytes.len());
+
+    // Scene metadata sidecar (markers in glTF world space), consumed by
+    // scripts/generate-project.py for the player spawn.
+    fn v3(v: Option<[f32; 3]>) -> String {
+        match v {
+            Some([x, y, z]) => format!("[{x}, {y}, {z}]"),
+            None => "null".to_string(),
+        }
+    }
+    let scene_json = format!(
+        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
+        args.location.replace('"', "'"),
+        v3(output.scene.start_marker), v3(output.scene.enter_marker),
+        output.scene.light_count, output.scene.flat_count,
+        s.bounds_min, s.bounds_max
+    );
+    let scene_path = args.out.with_extension("scene.json");
+    std::fs::write(&scene_path, scene_json).expect("write scene metadata");
+    println!("wrote:       {}", scene_path.display());
 }
