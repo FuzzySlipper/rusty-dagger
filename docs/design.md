@@ -85,9 +85,9 @@ engine. Both 2026-08-02 upstream needs have landed and are consumed here:
   the studio adapter projects `defineTexture` + protocol-14 `textureResources`
   so studio renders the textured dungeon matching the GLB.
 - rusty-engine task 6516 — triangle-mesh collision policy for static mesh
-  assets in svc-collision. **In the pin** (`MeshCollisionPolicy::Trimesh`
-  exists at d52c9b0); consumption is task 6522 and will retire the
-  gameplayProxy stopgap below.
+  assets in svc-collision. **Consumed (task 6522)**: the collision authority is
+  the dungeon static mesh (`collision: "trimesh"`); the gameplayProxy stopgap
+  is retired (see the collision authority section below).
 
 ## Companion reuse
 
