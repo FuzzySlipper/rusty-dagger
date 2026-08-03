@@ -46,7 +46,14 @@ fn parse_args() -> Result<Args, String> {
     if format != "glb" && format != "mesh-json" {
         return Err(format!("--format must be glb or mesh-json, got {format:?}"));
     }
-    Ok(Args { arena2_dir, region, location, out, textured, format })
+    Ok(Args {
+        arena2_dir,
+        region,
+        location,
+        out,
+        textured,
+        format,
+    })
 }
 
 fn usage() -> String {
@@ -63,7 +70,12 @@ fn main() {
         }
     };
 
-    let output = match dungeon::build_dungeon(&args.arena2_dir, args.region, &args.location, args.textured) {
+    let output = match dungeon::build_dungeon(
+        &args.arena2_dir,
+        args.region,
+        &args.location,
+        args.textured,
+    ) {
         Ok(o) => o,
         Err(e) => {
             eprintln!("dagger-import: {e}");
@@ -74,7 +86,10 @@ fn main() {
     let s = &output.stats;
     println!("location:    {} (region {})", args.location, args.region);
     println!("blocks:      {}", s.blocks);
-    println!("models:      {} used, {} missing", s.models_used, s.models_missing);
+    println!(
+        "models:      {} used, {} missing",
+        s.models_used, s.models_missing
+    );
     println!("verts:       {}", s.verts);
     println!("tris:        {}", s.tris);
     println!("primitives:  {}", output.primitives.len());
@@ -84,18 +99,30 @@ fn main() {
     }
     println!(
         "bounds:      [{:.2},{:.2},{:.2}] .. [{:.2},{:.2},{:.2}]",
-        s.bounds_min[0], s.bounds_min[1], s.bounds_min[2],
-        s.bounds_max[0], s.bounds_max[1], s.bounds_max[2]
+        s.bounds_min[0],
+        s.bounds_min[1],
+        s.bounds_min[2],
+        s.bounds_max[0],
+        s.bounds_max[1],
+        s.bounds_max[2]
     );
     println!(
         "scene:       start={:?} enter={:?} lights={} flats={}",
-        output.scene.start_marker, output.scene.enter_marker,
-        output.scene.light_count, output.scene.flat_count
+        output.scene.start_marker,
+        output.scene.enter_marker,
+        output.scene.light_count,
+        output.scene.flat_count
     );
 
-    let name = args.location.replace('\'', "").replace(' ', "-").to_lowercase();
+    let name = args
+        .location
+        .replace('\'', "")
+        .replace(' ', "-")
+        .to_lowercase();
     let bytes = match args.format.as_str() {
-        "mesh-json" => meshjson::write_mesh_json(&name, &output.primitives, &output.textures).into_bytes(),
+        "mesh-json" => {
+            meshjson::write_mesh_json(&name, &output.primitives, &output.textures).into_bytes()
+        }
         _ => glb::write_glb(&name, &output.primitives, &output.textures),
     };
     if let Some(parent) = args.out.parent() {
@@ -104,7 +131,11 @@ fn main() {
         }
     }
     std::fs::write(&args.out, &bytes).expect("write output");
-    println!("wrote:       {} ({} bytes)", args.out.display(), bytes.len());
+    println!(
+        "wrote:       {} ({} bytes)",
+        args.out.display(),
+        bytes.len()
+    );
 
     // Scene metadata sidecar (markers in glTF world space), consumed by
     // scripts/generate-project.py for the player spawn.

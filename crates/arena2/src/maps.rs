@@ -27,7 +27,8 @@ const RDB_BLOCK_LETTERS: [&str; 6] = ["N", "W", "L", "S", "B", "M"];
 
 fn region_record<'a>(bsa: &'a BsaArchive, stem: &str, region: usize) -> Result<&'a [u8], String> {
     let name = format!("{stem}.{region:03}");
-    bsa.get(&name).ok_or_else(|| format!("record {name} not found"))
+    bsa.get(&name)
+        .ok_or_else(|| format!("record {name} not found"))
 }
 
 /// Read MAPNAMES: u32 count, then count x 32-byte name strides.
@@ -142,8 +143,6 @@ pub fn resolve_dungeon(
 pub fn lon_lat_to_map_pixel(longitude: i32, latitude: i32) -> (i32, i32) {
     (longitude / 128, 499 - latitude / 128)
 }
-
-
 
 #[cfg(test)]
 mod tests {

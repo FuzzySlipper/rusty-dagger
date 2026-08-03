@@ -45,7 +45,11 @@ impl BsaArchive {
                     let name = d.cstring(14);
                     d.seek(base + i * 18 + 14);
                     let size = d.i32() as usize;
-                    records.push(Record { name, offset: pos, size });
+                    records.push(Record {
+                        name,
+                        offset: pos,
+                        size,
+                    });
                     pos += size;
                 }
             }
@@ -55,21 +59,32 @@ impl BsaArchive {
                     let mut d = Cursor::at(&data, base + i * 8);
                     let id = d.u32();
                     let size = d.i32() as usize;
-                    records.push(Record { name: id.to_string(), offset: pos, size });
+                    records.push(Record {
+                        name: id.to_string(),
+                        offset: pos,
+                        size,
+                    });
                     pos += size;
                 }
             }
             other => return Err(format!("unknown BSA directory type {other:#x}")),
         }
         if pos > data.len() {
-            return Err(format!("records overrun file: end {pos} > len {}", data.len()));
+            return Err(format!(
+                "records overrun file: end {pos} > len {}",
+                data.len()
+            ));
         }
         let by_name = records
             .iter()
             .enumerate()
             .map(|(i, r)| (r.name.clone(), i))
             .collect();
-        Ok(BsaArchive { data, records, by_name })
+        Ok(BsaArchive {
+            data,
+            records,
+            by_name,
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -92,14 +107,10 @@ impl BsaArchive {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::arena2_dir;
-
-
 
     #[test]
     fn blocks_bsa_record_counts() {

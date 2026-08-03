@@ -109,5 +109,7 @@ impl<'a> Cursor<'a> {
 pub(crate) fn arena2_dir() -> std::path::PathBuf {
     std::env::var("ARENA2_DIR")
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2"))
+        .unwrap_or_else(|_| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2")
+        })
 }

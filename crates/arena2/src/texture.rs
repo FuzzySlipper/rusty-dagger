@@ -56,7 +56,8 @@ impl TextureFile {
             Some("TEXTURE.001") => Some(SolidType::ColoursB),
             _ => None,
         };
-        Self::parse(data, solid).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+        Self::parse(data, solid)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
     }
 
     pub fn parse(data: Vec<u8>, solid: Option<SolidType>) -> Result<Self, String> {
@@ -69,11 +70,20 @@ impl TextureFile {
             let records = (0..record_count.max(1))
                 .map(|_| RecordEntry {
                     position: 0,
-                    info: TextureRecordInfo { width: SOLID_SIZE, height: SOLID_SIZE, compression: 0, frame_count: 1 },
+                    info: TextureRecordInfo {
+                        width: SOLID_SIZE,
+                        height: SOLID_SIZE,
+                        compression: 0,
+                        frame_count: 1,
+                    },
                     data_offset: 0,
                 })
                 .collect();
-            return Ok(TextureFile { data, records, solid: Some(solid) });
+            return Ok(TextureFile {
+                data,
+                records,
+                solid: Some(solid),
+            });
         }
         let mut records = Vec::with_capacity(record_count);
         for r in 0..record_count {
@@ -93,11 +103,20 @@ impl TextureFile {
             let frame_count = c.u16();
             records.push(RecordEntry {
                 position: record_position,
-                info: TextureRecordInfo { width, height, compression, frame_count },
+                info: TextureRecordInfo {
+                    width,
+                    height,
+                    compression,
+                    frame_count,
+                },
                 data_offset,
             });
         }
-        Ok(TextureFile { data, records, solid: None })
+        Ok(TextureFile {
+            data,
+            records,
+            solid: None,
+        })
     }
 
     pub fn len(&self) -> usize {
@@ -109,14 +128,21 @@ impl TextureFile {
     }
 
     /// Decode one frame of a record to indexed pixels (row-major, width*height).
-    pub fn frame_pixels(&self, record: usize, frame: usize) -> Result<(usize, usize, Vec<u8>), String> {
+    pub fn frame_pixels(
+        &self,
+        record: usize,
+        frame: usize,
+    ) -> Result<(usize, usize, Vec<u8>), String> {
         let r = self
             .records
             .get(record)
             .ok_or_else(|| format!("record {record} out of range"))?;
         let (w, h) = (r.info.width as usize, r.info.height as usize);
         if w == 0 || h == 0 || w > 4096 || h > 4096 {
-            return Err(format!("bad texture dims {}x{}", r.info.width, r.info.height));
+            return Err(format!(
+                "bad texture dims {}x{}",
+                r.info.width, r.info.height
+            ));
         }
         // DFU TextureFile.ReadSolid: fill with palette index
         if let Some(solid) = self.solid {
@@ -225,8 +251,6 @@ impl TextureFile {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,6 +267,9 @@ mod tests {
         assert_eq!(pixels.len(), w * h);
         // A real wall texture should not be a single flat color
         let first = pixels[0];
-        assert!(pixels.iter().any(|&p| p != first), "texture decoded as flat color");
+        assert!(
+            pixels.iter().any(|&p| p != first),
+            "texture decoded as flat color"
+        );
     }
 }

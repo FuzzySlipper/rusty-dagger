@@ -78,14 +78,12 @@ pub enum ClimateBaseType {
 /// DFU MapsFile.GetWorldClimateSettings -> ClimateBaseType mapping.
 pub fn climate_base_type(world_climate: u8) -> ClimateBaseType {
     match world_climate {
-        223 | 227 | 228 => ClimateBaseType::Swamp,      // Ocean, Rainforest, Swamp
-        224 | 225 | 229 => ClimateBaseType::Desert,     // Desert, Desert2, Subtropical
-        226 => ClimateBaseType::Mountain,               // Mountain
-        _ => ClimateBaseType::Temperate,                // Woods variants + default
+        223 | 227 | 228 => ClimateBaseType::Swamp, // Ocean, Rainforest, Swamp
+        224 | 225 | 229 => ClimateBaseType::Desert, // Desert, Desert2, Subtropical
+        226 => ClimateBaseType::Mountain,          // Mountain
+        _ => ClimateBaseType::Temperate,           // Woods variants + default
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

@@ -28,7 +28,11 @@ fn json_escape(s: &str) -> String {
 }
 
 /// Write a GLB with one mesh whose primitives are `primitives`.
-pub fn write_glb(mesh_name: &str, primitives: &[PrimitiveInput], textures: &[TextureInput]) -> Vec<u8> {
+pub fn write_glb(
+    mesh_name: &str,
+    primitives: &[PrimitiveInput],
+    textures: &[TextureInput],
+) -> Vec<u8> {
     let mut bin: Vec<u8> = Vec::new();
     let mut buffer_views: Vec<String> = Vec::new();
     let mut accessors: Vec<String> = Vec::new();
@@ -37,7 +41,9 @@ pub fn write_glb(mesh_name: &str, primitives: &[PrimitiveInput], textures: &[Tex
         pad4(bin, 0);
         let offset = bin.len();
         bin.extend_from_slice(data);
-        let target_str = target.map(|t| format!(",\"target\":{t}")).unwrap_or_default();
+        let target_str = target
+            .map(|t| format!(",\"target\":{t}"))
+            .unwrap_or_default();
         buffer_views.push(format!(
             "{{\"buffer\":0,\"byteOffset\":{offset},\"byteLength\":{}{target_str}}}",
             data.len()
@@ -85,7 +91,10 @@ pub fn write_glb(mesh_name: &str, primitives: &[PrimitiveInput], textures: &[Tex
     for prim in primitives {
         // POSITION
         let pos_bytes: &[u8] = unsafe {
-            std::slice::from_raw_parts(prim.positions.as_ptr() as *const u8, prim.positions.len() * 12)
+            std::slice::from_raw_parts(
+                prim.positions.as_ptr() as *const u8,
+                prim.positions.len() * 12,
+            )
         };
         let view = add_buffer_view(&mut bin, pos_bytes, Some(34962));
         let (mut mn, mut mx) = ([f32::MAX; 3], [f32::MIN; 3]);
@@ -97,7 +106,13 @@ pub fn write_glb(mesh_name: &str, primitives: &[PrimitiveInput], textures: &[Tex
         }
         let min_s = format!("[{},{},{}]", mn[0], mn[1], mn[2]);
         let max_s = format!("[{},{},{}]", mx[0], mx[1], mx[2]);
-        let pos_acc = add_accessor("VEC3", 5126, prim.positions.len(), view, Some((min_s, max_s)));
+        let pos_acc = add_accessor(
+            "VEC3",
+            5126,
+            prim.positions.len(),
+            view,
+            Some((min_s, max_s)),
+        );
 
         // NORMAL
         let nrm_bytes: &[u8] = unsafe {

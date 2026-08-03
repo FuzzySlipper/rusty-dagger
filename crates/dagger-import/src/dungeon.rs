@@ -135,7 +135,11 @@ fn average_rgb(rgba: &[u8]) -> [f32; 3] {
         n += 1;
     }
     let n = n.max(1) as f32;
-    [r as f32 / n / 255.0, g as f32 / n / 255.0, b as f32 / n / 255.0]
+    [
+        r as f32 / n / 255.0,
+        g as f32 / n / 255.0,
+        b as f32 / n / 255.0,
+    ]
 }
 
 pub struct Importer {
@@ -152,8 +156,8 @@ pub struct Importer {
 
 impl Importer {
     pub fn new(arena2_dir: &Path, layout: &DungeonLayout, textured: bool) -> Result<Self, String> {
-        let palette = Palette::load(&arena2_dir.join("PAL.PAL"))
-            .map_err(|e| format!("PAL.PAL: {e}"))?;
+        let palette =
+            Palette::load(&arena2_dir.join("PAL.PAL")).map_err(|e| format!("PAL.PAL: {e}"))?;
         let (px, py) = maps::lon_lat_to_map_pixel(layout.longitude, layout.latitude);
         let climate_base = PakFile::load(&arena2_dir.join("CLIMATE.PAK"))
             .ok()
@@ -180,7 +184,8 @@ impl Importer {
         let path = self.arena2_dir.join(format!("TEXTURE.{archive:03}"));
         let loaded = TextureFile::load(&path).ok().map(Rc::new);
         if loaded.is_none() {
-            self.texture_failures.push(format!("TEXTURE.{archive:03} unreadable"));
+            self.texture_failures
+                .push(format!("TEXTURE.{archive:03} unreadable"));
         }
         self.texfile_cache.insert(archive, loaded.clone());
         loaded
@@ -208,7 +213,11 @@ impl Importer {
         let png = crate::png::encode_rgba(w as u32, h as u32, &rgba);
         let idx = self.textures.len();
         self.textures.push(TextureInput {
-            name: format!("TEXTURE.{archive:03}[{record}] ({info_w}x{info_h})", info_w = info.width, info_h = info.height),
+            name: format!(
+                "TEXTURE.{archive:03}[{record}] ({info_w}x{info_h})",
+                info_w = info.width,
+                info_h = info.height
+            ),
             png,
             avg_color: avg,
         });
@@ -240,17 +249,20 @@ pub fn build_dungeon(
     location_name: &str,
     textured: bool,
 ) -> Result<BuildOutput, String> {
-    let maps_bsa = BsaArchive::load(&arena2_dir.join("MAPS.BSA"))
-        .map_err(|e| format!("MAPS.BSA: {e}"))?;
-    let blocks_bsa = BsaArchive::load(&arena2_dir.join("BLOCKS.BSA"))
-        .map_err(|e| format!("BLOCKS.BSA: {e}"))?;
-    let arch = Arch3dFile::load(&arena2_dir.join("ARCH3D.BSA"))
-        .map_err(|e| format!("ARCH3D.BSA: {e}"))?;
+    let maps_bsa =
+        BsaArchive::load(&arena2_dir.join("MAPS.BSA")).map_err(|e| format!("MAPS.BSA: {e}"))?;
+    let blocks_bsa =
+        BsaArchive::load(&arena2_dir.join("BLOCKS.BSA")).map_err(|e| format!("BLOCKS.BSA: {e}"))?;
+    let arch =
+        Arch3dFile::load(&arena2_dir.join("ARCH3D.BSA")).map_err(|e| format!("ARCH3D.BSA: {e}"))?;
 
     let layout = maps::resolve_dungeon(&maps_bsa, region, location_name)?;
     let mut imp = Importer::new(arena2_dir, &layout, textured)?;
 
-    let mut stats = BuildStats { blocks: layout.blocks.len(), ..Default::default() };
+    let mut stats = BuildStats {
+        blocks: layout.blocks.len(),
+        ..Default::default()
+    };
     stats.bounds_min = [f32::MAX; 3];
     stats.bounds_max = [f32::MIN; 3];
     let mut scene = DungeonScene {
@@ -319,7 +331,10 @@ pub fn build_dungeon(
 
             // DFU GetModelMatrix: M = T * Rz * Rx * Ry; degrees = -raw / ROTATION_DIVISOR
             let deg = |r: i32| (-r as f32 / ROTATION_DIVISOR).to_radians();
-            let rot = mat_mul(rot_z(deg(obj.z_rot)), mat_mul(rot_x(deg(obj.x_rot)), rot_y(deg(obj.y_rot))));
+            let rot = mat_mul(
+                rot_z(deg(obj.z_rot)),
+                mat_mul(rot_x(deg(obj.x_rot)), rot_y(deg(obj.y_rot))),
+            );
             let obj_pos = [
                 obj.x as f32 * GLOBAL_SCALE,
                 -obj.y as f32 * GLOBAL_SCALE,
@@ -331,7 +346,11 @@ pub fn build_dungeon(
                     continue;
                 }
                 let remapped = apply_texture_table(plane.texture_archive, imp.climate_base);
-                let tex_key = if textured { Some((remapped, plane.texture_record)) } else { None };
+                let tex_key = if textured {
+                    Some((remapped, plane.texture_record))
+                } else {
+                    None
+                };
 
                 // Resolve texture (decode on first use) to get dims for UVs
                 let (tex_ok, tex_w, tex_h) = match tex_key {
@@ -415,5 +434,10 @@ pub fn build_dungeon(
 
     stats.textures = imp.textures.len();
     stats.texture_failures = imp.texture_failures.clone();
-    Ok(BuildOutput { primitives, textures: imp.textures, stats, scene })
+    Ok(BuildOutput {
+        primitives,
+        textures: imp.textures,
+        stats,
+        scene,
+    })
 }
