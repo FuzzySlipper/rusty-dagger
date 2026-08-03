@@ -168,7 +168,7 @@ fn main() {
         }
     }
     let scene_json = format!(
-        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"billboards\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
+        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"billboards\": [{}],\n  \"doors\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
         args.location.replace('"', "'"),
         v3(output.scene.start_marker), v3(output.scene.enter_marker),
         output.scene.light_count, output.scene.flat_count,
@@ -180,6 +180,13 @@ fn main() {
             .map(|b| format!(
                 "{{\"position\": {:?}, \"textureArchive\": {}, \"textureRecord\": {}}}",
                 b.position, b.texture_archive, b.texture_record
+            ))
+            .collect::<Vec<_>>()
+            .join(","),
+        output.scene.doors.iter()
+            .map(|d| format!(
+                "{{\"position\": {:?}, \"rotationDeg\": {:?}, \"modelId\": \"{}\", \"axis\": {}, \"duration\": {}, \"magnitude\": {}}}",
+                d.position, d.rotation_deg, d.model_id, d.axis, d.duration, d.magnitude
             ))
             .collect::<Vec<_>>()
             .join(","),

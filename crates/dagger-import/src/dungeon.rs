@@ -75,6 +75,19 @@ pub struct BillboardFlat {
 }
 
 #[derive(Debug, Clone)]
+pub struct DoorScene {
+    /// glTF world-space position (meters, block origin + model offset).
+    pub position: [f32; 3],
+    /// glTF world-space rotation as euler degrees (x, y, z, DFU T·Rz·Rx·Ry).
+    pub rotation_deg: [f32; 3],
+    pub model_id: String,
+    /// Action record: slide axis (0/1/2 = x/y/z), duration, magnitude (raw).
+    pub axis: u8,
+    pub duration: u16,
+    pub magnitude: u16,
+}
+
+#[derive(Debug, Clone)]
 pub struct DungeonScene {
     pub start_marker: Option<[f32; 3]>,
     pub enter_marker: Option<[f32; 3]>,
@@ -84,6 +97,8 @@ pub struct DungeonScene {
     pub lights: Vec<([f32; 3], f32)>,
     /// Visible billboard flats (RDB type 0x03, excluding editor/enemy markers).
     pub billboards: Vec<BillboardFlat>,
+    /// Action-door models, carved out of the static mesh into separate nodes.
+    pub doors: Vec<DoorScene>,
 }
 
 type Mat3 = [[f32; 3]; 3];
@@ -283,6 +298,7 @@ pub fn build_dungeon(
         flat_count: 0,
         lights: Vec::new(),
         billboards: Vec::new(),
+        doors: Vec::new(),
     };
 
     // One primitive per texture key (None = untextured/default material).
@@ -369,6 +385,27 @@ pub fn build_dungeon(
                 -obj.y as f32 * GLOBAL_SCALE,
                 obj.z as f32 * GLOBAL_SCALE,
             ];
+
+            // Action doors are carved OUT of the static mesh: they become
+            // separate scene nodes with action metadata (slide axis/duration/
+            // magnitude) so the runtime can move them (DFU IsActionDoor).
+            if obj.is_action_door() {
+                let record = obj.action.expect("is_action_door implies action");
+                let dfu = [
+                    obj.x as f32 * GLOBAL_SCALE + origin[0],
+                    -obj.y as f32 * GLOBAL_SCALE + origin[1],
+                    obj.z as f32 * GLOBAL_SCALE + origin[2],
+                ];
+                scene.doors.push(DoorScene {
+                    position: [dfu[0], dfu[1], -dfu[2]],
+                    rotation_deg: [deg(obj.x_rot), deg(obj.y_rot), deg(obj.z_rot)],
+                    model_id: obj.model_id.clone(),
+                    axis: record.axis,
+                    duration: record.duration,
+                    magnitude: record.magnitude,
+                });
+                continue;
+            }
 
             for plane in &mesh.planes {
                 if plane.points.len() < 3 {

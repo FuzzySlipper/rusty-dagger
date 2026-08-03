@@ -13,6 +13,24 @@
 
 use crate::Cursor;
 
+/// An RDB model action record (DFU BlocksFile.ReadRdbModelActionRecords):
+/// 8 bytes at the model's actionOffset — axis, duration, magnitude,
+/// next-object offset, flags. Doors translate along `axis` by `magnitude`
+/// (raw units, same scale as model positions) over `duration`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RdbActionRecord {
+    /// Axis about which the object rotates/translates (0/1/2 = x/y/z per DFU).
+    pub axis: u8,
+    /// Time to reach final state (raw units per DFU Duration semantics).
+    pub duration: u16,
+    /// Amount to translate/rotate around the axis (raw units per DFU).
+    pub magnitude: u16,
+    /// Offset to the object activated directly after this one (chaining), -1 = none.
+    pub next_object_offset: i32,
+    /// Action flags (non-zero = actionable).
+    pub flags: u8,
+}
+
 #[derive(Debug, Clone)]
 pub struct RdbModelObject {
     pub x: i32,
@@ -25,6 +43,20 @@ pub struct RdbModelObject {
     pub model_id: String,
     pub description: String,
     pub has_action: bool,
+    /// Parsed action record when has_action is set (DFU IsActionDoor + slide).
+    pub action: Option<RdbActionRecord>,
+}
+
+impl RdbModelObject {
+    /// Whether this model is an action door. Per DFU RDBLayout.IsActionDoor:
+    /// an action model whose description is DOR/DDR/NEW/CAV (red-brick doors
+    /// are rejected). These slide open instead of being static geometry.
+    pub fn is_action_door(&self) -> bool {
+        if !self.has_action {
+            return false;
+        }
+        matches!(self.description.as_str(), "DOR" | "DDR" | "NEW" | "CAV")
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -169,6 +201,23 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                     let _sound = r.u8();
                     let action_offset = r.i32();
                     let mi = model_index as usize;
+                    let action = if action_offset > 0 {
+                        let mut ar = Cursor::at(data, action_offset as usize);
+                        let axis = ar.u8();
+                        let duration = ar.u16();
+                        let magnitude = ar.u16();
+                        let next_object_offset = ar.i32();
+                        let flags = ar.u8();
+                        Some(RdbActionRecord {
+                            axis,
+                            duration,
+                            magnitude,
+                            next_object_offset,
+                            flags,
+                        })
+                    } else {
+                        None
+                    };
                     block.models.push(RdbModelObject {
                         x,
                         y,
@@ -180,6 +229,7 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                         model_id: model_ids.get(mi).cloned().unwrap_or_default(),
                         description: descriptions.get(mi).cloned().unwrap_or_default(),
                         has_action: action_offset > 0,
+                        action,
                     });
                 }
                 0x02 => {
