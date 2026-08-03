@@ -1,28 +1,28 @@
 {
   "schemaVersion": 1,
-  "engineSourceCommit": "d52c9b0f3287f21eea81d465871978a117750d0c",
+  "engineSourceCommit": "880a119466faebbf19ed05e39206ff4ba87237a2",
   "buildCommand": "pnpm --dir studio run build",
-  "artifactTreeSha256": "c0359039a92be565abbd7b9f5d970fba983d66ef02221694b8cb31d98e6494a2",
+  "artifactTreeSha256": "18f8d3fd3fa15a6cb7cb91a9d58aa94fa08f71f7dde346463a6f690b022b2d6d",
   "files": [
     {
-      "path": "chunk-BVQSLW2Z.js",
-      "size": 376,
-      "sha256": "620fcc5aa4751d2a1ee279a77b55eebbc08b5c5baf028958053a7daaa457f16c"
+      "path": "chunk-GNM37675.js",
+      "size": 764707,
+      "sha256": "af9b03531f5b1422285317f56ab8e5f60d40330a2c0d5946ad526e50491a3c81"
     },
     {
-      "path": "chunk-NJNEOMWS.js",
-      "size": 763340,
-      "sha256": "8b30ddbdbb693e29082f423ff98271e2bf9f38bcb73570d9552bc5623142272d"
+      "path": "chunk-OMHFRSO6.js",
+      "size": 376,
+      "sha256": "a298502b4edb3d9ba2c02d05620c0d6da2fd551a22d874d75937505c465314aa"
     },
     {
       "path": "index.html",
       "size": 1265,
-      "sha256": "f7fd824bd6f78a26b832fd7a2f0cd83817a5729769829d5ab79fb41045ee827e"
+      "sha256": "69537fd35a3609854217cb14214b9e4feea66ab9c01d71e5bf2978e2f0fcf32b"
     },
     {
-      "path": "main-JAKLT7RC.js",
+      "path": "main-5DQXM6BJ.js",
       "size": 638465,
-      "sha256": "288b8484be102c3f3b1383c47e18c93e5a99989efece238f45d0148d9df33cb6"
+      "sha256": "81221664c0d15fc09165dd3487b92b453d2a9d7920f9fb5df388a5c43892a64c"
     },
     {
       "path": "styles-ULO4RNUD.css",

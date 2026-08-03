@@ -26,7 +26,7 @@ assert.equal(health.adapter, true);
 
 const status = await request('/api/studio-status');
 assert.equal(status.mode, 'managed');
-assert.equal(status.engineSourceCommit, 'd52c9b0f3287f21eea81d465871978a117750d0c');
+assert.equal(status.engineSourceCommit, '880a119466faebbf19ed05e39206ff4ba87237a2');
 assert.equal(status.staticBuild.engineSourceCommit, status.engineSourceCommit);
 assert.match(status.staticBuild.artifactTreeSha256, /^[0-9a-f]{64}$/u);
 assert.equal(status.staticBuild.files, 5);
