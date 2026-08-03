@@ -20,12 +20,31 @@ clean checkout first, or point `RUSTY_ENGINE_STUDIO_STATIC_ROOT` at an exact
 compatible build:
 
 ```sh
-RUSTY_ENGINE_STUDIO_STATIC_ROOT=/home/dev/rusty-engine/studio/dist/apps/studio-app/browser \
+RUSTY_ENGINE_STUDIO_STATIC_ROOT=/home/dev/rusty-engine-d52/studio/dist/apps/studio-app/browser \
   scripts/serve-studio.sh
 ```
 
-The conventional sibling build path is only a convenience; it is still
-subject to the same provenance check. The default host is `127.0.0.1:4173`.
+The current known-good root is
+`/home/dev/rusty-engine-d52/studio/dist/apps/studio-app/browser`, built from a
+`git archive` export of the pin (the sibling `/home/dev/rusty-engine` checkout
+tracks that repo's moving HEAD, so its own dist fails the provenance check
+once the repo advances; ad-hoc worktrees under `/tmp` get reaped). Recreate
+it from nothing with:
+
+```sh
+mkdir -p /home/dev/rusty-engine-d52
+git -C /home/dev/rusty-engine archive d52c9b0f3287f21eea81d465871978a117750d0c \
+  | tar -x -C /home/dev/rusty-engine-d52
+cd /home/dev/rusty-engine-d52/studio
+npx --yes pnpm@11.7.0 install --frozen-lockfile --prefer-offline
+npx --yes pnpm@11.7.0 run build
+node /home/dev/rusty-dagger/scripts/studio-static-provenance.mjs \
+  /home/dev/rusty-engine-d52/studio/dist/apps/studio-app/browser
+```
+
+The build is byte-reproducible from the pinned source (matching file names,
+sizes, and hashes), so any agent can regenerate an accepted root. Any other
+path is equally acceptable when it passes the same provenance check. The default host is `127.0.0.1:4173`.
 The startup page can be opened directly
 with the canonical project:
 
@@ -54,18 +73,36 @@ scripts/check-studio-browser.sh   # Chromium + SwiftShader, same host
 
 For a human-visible browser proof, use Chromium at desktop and narrow sizes
 against the startup URL above. `scripts/check-studio-browser.sh` opens the
-project, double-clicks `privateers-hold-dungeon` through the normal visible
-hierarchy, waits for the current frame, captures both the full page and the
-actual renderer canvas, and compares pre/post-focus pixels so a DOM-only
-ready state cannot pass. The proof should show the Privateer's Hold title, the authored asset count (164
-with the textured engine-native chain: 82 materials + 81 textures + 1 mesh),
-73 scene nodes, a complete retained render frame (including `defineTexture` ops
-and a protocol-14 `textureResources` manifest when the textured chain is
-generated), and the managed host status. The authored dungeon is intentionally
-a large world mesh; the focused canvas captures are the useful visual artifact
-at narrow widths. A renderer context failure under
-`--disable-gpu` is not a product result; use the normal host or an explicit
-SwiftShader WebGL mode when the environment has no hardware GPU.
+project, waits for the renderer's texture-resource traffic to settle, disables
+the editor grid through the visible View menu, double-clicks
+`privateers-hold-dungeon` through the normal visible hierarchy, and performs a
+bounded normal viewport orbit before capturing the renderer canvas, the full
+page, and the DOM. Beyond the DOM/readout assertions (title, >= 160 authored
+assets, ready renderer, pre/post-focus pixel change), the proof now audits the
+textured render itself (pure-Node PNG metrics in
+`scripts/studio-frame-metrics.mjs`; no PIL):
+
+- **Texture fetch/hash audit**: every `/api/studio-render-resource` response in
+  the run must be HTTP 200 whose body SHA-256 equals the admitted
+  `contentHash`; every `sourcePath` must stay under `content/textures/`; at
+  least 60 unique texture resources must be fetched (today all 80).
+- **Non-flat-texture assertions**: occupancy >= 0.02 vs the renderer clear
+  color, >= 800 unique geometry colors and >= 1 texel-frequency grid cell
+  (luminance stddev >= 6) — gates the average-color fallback (~100-500
+  colors, no such cells) cannot pass.
+- **GLB comparison**: the focused frame's 12-bin hue histogram must overlap
+  the best of the three committed GLB render references (`render-check/*.png`)
+  by histogram intersection >= 0.40. Studio and the GLB viewer use different
+  lighting rigs and framing, so this is a hue-signature tolerance rather than
+  pixel equality; measured ~0.65 desktop / ~0.70 narrow, while the untextured
+  average-color frame scores ~0.25.
+
+Per-viewport metric reports land in `*-metrics.json` next to the screenshots
+in the artifact directory. The authored dungeon is intentionally a large world
+mesh; the focused canvas captures are the useful visual artifact. A renderer
+context failure under `--disable-gpu` is not a product result; use the normal
+host or an explicit SwiftShader WebGL mode when the environment has no
+hardware GPU.
 
 `python3 scripts/check-adapter.py` remains the stdio open/read/close proof.
 `RUSTY_STUDIO_ADAPTER` is retained only as an explicit diagnostic escape hatch;

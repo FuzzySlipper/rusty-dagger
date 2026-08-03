@@ -318,6 +318,57 @@ fn sha256(text: &str) -> String {
     format!("sha256:{digest:x}")
 }
 
+/// Shared admission rule for project-relative resource paths (texture bytes
+/// today). A catalog `sourcePath` is accepted only when it is a normalized
+/// relative path naming a regular file inside the project root: no absolute
+/// paths, no `ParentDir`/`CurDir` components, no non-normalized spellings
+/// (`a//b`, `a/./b`, trailing separators), no symlinks anywhere in the
+/// chain, and the canonical file must stay inside the canonical root.
+///
+/// Returns `None` to fail closed — the caller emits no texture descriptor or
+/// resource entry for a rejected path, so an escaping or non-regular catalog
+/// identity is never admitted or exposed (R6521-1).
+fn project_resource_path(root: &Path, source_path: &str) -> Option<PathBuf> {
+    if source_path.is_empty() {
+        return None;
+    }
+    let relative = Path::new(source_path);
+    if relative.is_absolute() {
+        return None;
+    }
+    if !relative
+        .components()
+        .all(|component| matches!(component, Component::Normal(_)))
+    {
+        return None;
+    }
+    // The catalog spelling must already be the normalized form: recomposing
+    // the components must reproduce the input byte-for-byte (Path equality is
+    // component-based and would not see `a//b` or `a/./b` as different).
+    if relative.components().collect::<PathBuf>().as_os_str() != relative.as_os_str() {
+        return None;
+    }
+    let canonical_root = root.canonicalize().ok()?;
+    let mut candidate = canonical_root.clone();
+    let mut file_metadata = None;
+    for component in relative.components() {
+        candidate.push(component);
+        let metadata = fs::symlink_metadata(&candidate).ok()?;
+        if metadata.file_type().is_symlink() {
+            return None;
+        }
+        file_metadata = Some(metadata);
+    }
+    if !file_metadata?.file_type().is_file() {
+        return None;
+    }
+    let canonical = candidate.canonicalize().ok()?;
+    if !canonical.starts_with(&canonical_root) {
+        return None;
+    }
+    Some(canonical)
+}
+
 fn make_readout(open: &OpenProject) -> Value {
     let project = open.project.as_object().expect("validated project object");
     let scene_id = project
@@ -567,8 +618,9 @@ fn texture_descriptor(root: &Path, asset: &Value, texture: &Value) -> Option<Val
     }
     // Byte length comes from the on-disk resource the host will serve; reading
     // it here keeps the descriptor consistent with the exact bytes whose hash
-    // was stamped at generation time. Paths are project-root relative.
-    let bytes = fs::read(root.join(source_path)).ok()?;
+    // was stamped at generation time. The shared containment rule admits only
+    // normalized project-root-relative regular files (R6521-1).
+    let bytes = fs::read(project_resource_path(root, source_path)?).ok()?;
     let expected = format!("sha256:{hash_hex}");
     let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
     if actual != expected {
@@ -605,14 +657,25 @@ fn texture_resources(root: &Path, project: &Map<String, Value>) -> Value {
     let mut resources = Vec::new();
     let mut seen_hashes = std::collections::HashSet::new();
     for asset in &assets {
-        let Some(texture) = asset.get("texture") else { continue };
-        let Some(catalog) = asset.get("catalog") else { continue };
-        let Some(hash_hex) = catalog.get("hash").and_then(Value::as_str) else { continue };
-        let Some(source_path) = catalog.get("sourcePath").and_then(Value::as_str) else { continue };
+        let Some(texture) = asset.get("texture") else {
+            continue;
+        };
+        let Some(catalog) = asset.get("catalog") else {
+            continue;
+        };
+        let Some(hash_hex) = catalog.get("hash").and_then(Value::as_str) else {
+            continue;
+        };
+        let Some(source_path) = catalog.get("sourcePath").and_then(Value::as_str) else {
+            continue;
+        };
         if hash_hex.len() != 64 || source_path.is_empty() {
             continue;
         }
-        let Ok(bytes) = fs::read(root.join(source_path)) else { continue };
+        let Some(path) = project_resource_path(root, source_path) else {
+            continue;
+        };
+        let Ok(bytes) = fs::read(path) else { continue };
         let expected = format!("sha256:{hash_hex}");
         if format!("sha256:{:x}", Sha256::digest(&bytes)) != expected {
             continue;
@@ -704,4 +767,164 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
         ops.push(json!({"op":"createLight","handle":id,"parent":null,"light":{"kind":"point","color":light.get("color").cloned().unwrap_or_else(|| json!([1.0,1.0,1.0])),"intensity":light.get("intensity").and_then(Value::as_f64).unwrap_or(0.8),"enabled":light.get("enabled").and_then(Value::as_bool).unwrap_or(true),"position":entity.get("translation").cloned().unwrap_or_else(|| json!([0.0,0.0,0.0])),"range":light.get("range").cloned().unwrap_or(Value::Null),"decay":light.get("decay").and_then(Value::as_f64).unwrap_or(2.0),"shadowIntent":"disabled"}}));
     }
     json!({ "schemaVersion": 1, "ops": ops })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    static NEXT_TEMP_DIR: AtomicUsize = AtomicUsize::new(0);
+
+    struct TempTree {
+        path: PathBuf,
+    }
+
+    impl TempTree {
+        fn new(name: &str) -> Self {
+            let id = NEXT_TEMP_DIR.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "dagger-studio-adapter-{name}-{}-{id}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&path).expect("temp tree");
+            Self { path }
+        }
+    }
+
+    impl Drop for TempTree {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn sha256_hex(bytes: &[u8]) -> String {
+        format!("{:x}", Sha256::digest(bytes))
+    }
+
+    fn texture_asset(id: &str, source_path: &str, hash_hex: &str) -> Value {
+        json!({
+            "id": id,
+            "catalog": {
+                "version": 1,
+                "hash": hash_hex,
+                "sourcePath": source_path,
+                "label": id,
+                "dependencies": [],
+            },
+            "texture": { "width": 4, "height": 4, "filter": "nearest", "wrap": "repeat" },
+        })
+    }
+
+    fn define_texture_ids(ops: &[Value]) -> Vec<String> {
+        ops.iter()
+            .filter(|op| op.get("op").and_then(Value::as_str) == Some("defineTexture"))
+            .map(|op| {
+                op.pointer("/texture/id")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_owned()
+            })
+            .collect()
+    }
+
+    /// R6521-1 regression: a catalog entry that names anything other than a
+    /// normalized project-root-relative regular file — even with a hash that
+    /// matches real bytes on disk — must produce no defineTexture op and no
+    /// textureResources entry on either adapter code path.
+    #[cfg(unix)]
+    #[test]
+    fn catalog_texture_paths_must_be_normalized_regular_files_inside_the_project_root() {
+        let tree = TempTree::new("containment");
+        let root = tree.path.join("root");
+        let textures = root.join("content/textures");
+        fs::create_dir_all(&textures).unwrap();
+        let good_bytes = b"good-texture-bytes";
+        let outside_bytes = b"outside-the-project-root";
+        fs::write(textures.join("tex.png"), good_bytes).unwrap();
+        fs::write(tree.path.join("outside.bin"), outside_bytes).unwrap();
+        std::os::unix::fs::symlink("../../outside.bin", root.join("content/link.png")).unwrap();
+        std::os::unix::fs::symlink("textures", root.join("content/linked-dir")).unwrap();
+        let good_hash = sha256_hex(good_bytes);
+        let outside_hash = sha256_hex(outside_bytes);
+        let absolute_outside = tree.path.join("outside.bin").to_string_lossy().into_owned();
+        let assets = vec![
+            texture_asset("texture/good", "content/textures/tex.png", &good_hash),
+            texture_asset("texture/parent-escape", "../outside.bin", &outside_hash),
+            texture_asset("texture/absolute-escape", &absolute_outside, &outside_hash),
+            texture_asset(
+                "texture/double-slash",
+                "content//textures/tex.png",
+                &good_hash,
+            ),
+            texture_asset("texture/dot-dir", "content/./textures/tex.png", &good_hash),
+            texture_asset(
+                "texture/parent-in-middle",
+                "content/textures/../textures/tex.png",
+                &good_hash,
+            ),
+            texture_asset("texture/symlink-file", "content/link.png", &outside_hash),
+            texture_asset(
+                "texture/symlink-dir",
+                "content/linked-dir/tex.png",
+                &good_hash,
+            ),
+            texture_asset("texture/directory", "content/textures", &good_hash),
+        ];
+        let project = json!({ "assets": assets });
+        let project = project.as_object().unwrap();
+
+        let projected = projection(&root, project, &[]);
+        let ops = projected.get("ops").and_then(Value::as_array).unwrap();
+        assert_eq!(
+            define_texture_ids(ops),
+            vec!["texture/good".to_owned()],
+            "only the in-root regular-file texture may be projected",
+        );
+        let resources = texture_resources(&root, project);
+        let resources = resources.as_array().unwrap();
+        assert_eq!(resources.len(), 1);
+        assert_eq!(
+            resources[0].get("sourcePath").and_then(Value::as_str),
+            Some("content/textures/tex.png"),
+        );
+    }
+
+    /// R6521-1 companion: hardening must not change canonical admission — the
+    /// committed Privateer's Hold project still projects every authored
+    /// texture descriptor and every unique content-addressed resource.
+    #[test]
+    fn canonical_project_texture_projection_is_unchanged() {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .expect("workspace root")
+            .to_path_buf();
+        let project_text =
+            fs::read_to_string(workspace.join("content/projects/privateers-hold.project.json"))
+                .expect("committed project document");
+        let project = serde_json::from_str::<Value>(&project_text).unwrap();
+        let project = project.as_object().unwrap();
+        let projected = projection(&workspace, project, &[]);
+        let ops = projected.get("ops").and_then(Value::as_array).unwrap();
+        assert_eq!(
+            define_texture_ids(ops).len(),
+            81,
+            "the committed project must keep projecting every authored texture",
+        );
+        let resources = texture_resources(&workspace, project);
+        let resources = resources.as_array().unwrap();
+        assert_eq!(
+            resources.len(),
+            80,
+            "the committed project keeps its unique content-addressed texture resources",
+        );
+        for entry in resources {
+            let source_path = entry.get("sourcePath").and_then(Value::as_str).unwrap();
+            assert!(
+                source_path.starts_with("content/textures/"),
+                "unexpected texture resource path: {source_path}",
+            );
+        }
+    }
 }
