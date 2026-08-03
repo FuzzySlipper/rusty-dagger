@@ -2,6 +2,7 @@ use core_ids::EntityId;
 use core_math::Vec3;
 use engine_spatial::VoxelCollisionScene;
 use entity_state::EntityState;
+use svc_collision::{StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform};
 
 use crate::player::{
     apply_player_action, player_view, PlayerControlReceipt, PlayerControllerConfig,
@@ -34,17 +35,36 @@ pub struct DaggerRuntime {
 impl DaggerRuntime {
     pub fn from_project_json(document: &str) -> Result<Self, RuntimeError> {
         let admitted = AdmittedProject::from_json(document).map_err(RuntimeError::Admission)?;
-        Ok(Self::from_admitted_project(admitted))
+        Self::from_admitted_project(admitted).map_err(RuntimeError::Admission)
     }
 
-    pub fn from_admitted_project(admitted: AdmittedProject) -> Self {
-        Self {
+    pub fn from_admitted_project(admitted: AdmittedProject) -> Result<Self, ProjectAdmissionError> {
+        let mut collision_scene = admitted.collision_scene;
+        // Register the dungeon trimesh collider so the kinematic motion sweep
+        // blocks on the full dungeon geometry (floors, walls, ramps) with no
+        // controller changes. One instance at identity over the whole mesh.
+        if let Some(collider) = admitted.dungeon_collider {
+            let geometry_hash = collider.geometry_hash;
+            let instance = StaticMeshColliderInstance {
+                id: StaticMeshInstanceId(1),
+                asset: collider.id,
+                expected_geometry_hash: geometry_hash,
+                transform: StaticMeshTransform::IDENTITY,
+            };
+            let revision = collision_scene.static_mesh_collision_revision();
+            collision_scene
+                .replace_static_mesh_colliders(revision, [collider], [instance])
+                .map_err(|error| {
+                    ProjectAdmissionError::CollisionRegistration(format!("{error:?}"))
+                })?;
+        }
+        Ok(Self {
             entities: admitted.entities,
-            collision_scene: admitted.collision_scene,
+            collision_scene,
             player: admitted.player,
             player_controller: admitted.player_controller,
             player_state: admitted.player_state,
-        }
+        })
     }
 
     pub fn player(&self) -> EntityId {
@@ -65,6 +85,28 @@ impl DaggerRuntime {
 
     pub fn player_state(&self) -> PlayerControllerState {
         self.player_state
+    }
+
+    /// Authoritatively reposition the player (route derivation / probing).
+    /// Sets the translation and clears vertical velocity so a subsequent
+    /// settle starts cleanly; collision is re-evaluated by the next action.
+    pub fn set_player_position(&mut self, translation: Vec3) -> Result<(), RuntimeError> {
+        use entity_state::{EntityCommand, EntityCommandBatch};
+        self.entities
+            .apply_batch(EntityCommandBatch::new([
+                EntityCommand::SetTranslation {
+                    entity: self.player,
+                    translation,
+                },
+                EntityCommand::SetKinematicVelocity {
+                    entity: self.player,
+                    velocity: Vec3::ZERO,
+                },
+            ]))
+            .map_err(|error| {
+                RuntimeError::Player(crate::player::PlayerError::EntityBatch(error))
+            })?;
+        Ok(())
     }
 
     pub fn entities(&self) -> &EntityState {

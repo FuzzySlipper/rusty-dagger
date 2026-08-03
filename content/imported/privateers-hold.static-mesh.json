@@ -179063,6 +179063,6 @@
     }
   ],
   "collision": {
-    "kind": "visualOnly"
+    "kind": "trimesh"
   }
 }

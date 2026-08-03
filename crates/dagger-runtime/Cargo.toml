@@ -11,7 +11,12 @@ engine-spatial.workspace = true
 entity-state.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+svc-collision.workspace = true
 
 [[bin]]
 name = "dagger-walkthrough"
 path = "src/bin/dagger-walkthrough.rs"
+
+[[bin]]
+name = "dagger-derive-route"
+path = "src/bin/dagger-derive-route.rs"

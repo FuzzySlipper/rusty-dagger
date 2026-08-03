@@ -3,12 +3,18 @@ use core_math::Vec3;
 use engine_spatial::{MaterialVoxel, VoxelCollisionScene};
 use entity_state::{EntityDefinition, EntityState};
 use serde::Deserialize;
+use svc_collision::{StaticMeshAssetId, StaticMeshColliderAsset};
 
 use crate::player::{PlayerControllerConfig, PlayerControllerState, PlayerInputBindings};
 
 pub const SUPPORTED_PROJECT_SCHEMA_VERSION: u32 = 24;
 pub const PLAYER_ENTITY_ID: EntityId = EntityId::new(1);
 pub const PLAYER_HALF_EXTENTS: Vec3 = Vec3::new(0.25, 0.25, 0.25);
+/// The dungeon static mesh is the collision authority (rusty-engine task
+/// 6516): one trimesh collider over the full dungeon geometry (floors, walls,
+/// ceilings, ramps). Registered under a fixed asset/instance id at identity.
+pub const DUNGEON_COLLIDER_ASSET_ID: StaticMeshAssetId = StaticMeshAssetId(1);
+pub const DUNGEON_COLLIDER_MESH_ASSET: &str = "mesh/privateers-hold";
 
 #[derive(Debug)]
 pub enum ProjectAdmissionError {
@@ -16,12 +22,14 @@ pub enum ProjectAdmissionError {
     UnsupportedSchema { actual: u32, expected: u32 },
     MissingScene,
     UnknownEntryScene { scene_id: String },
-    MissingVoxelEnvironment,
-    EmptyVoxelEnvironment,
+    MissingCollisionAuthority,
     InvalidVoxelEnvironment(String),
+    MissingDungeonCollider,
+    InvalidDungeonCollider(String),
     MissingPlayer,
     InvalidPlayer(String),
     InvalidEntityState(String),
+    CollisionRegistration(String),
 }
 
 impl std::fmt::Display for ProjectAdmissionError {
@@ -41,15 +49,19 @@ pub struct AdmittedProject {
     pub player_controller: PlayerControllerConfig,
     pub player_state: PlayerControllerState,
     pub material_voxel_count: usize,
+    pub dungeon_collider: Option<StaticMeshColliderAsset>,
     pub collision_scene: VoxelCollisionScene,
     pub entities: EntityState,
 }
 
 impl AdmittedProject {
-    /// Admit the committed project document through the same material voxel
-    /// data used by the imported presentation. Unknown authored fields remain
-    /// opaque; only the runtime-owned scene, player, and controller fields are
-    /// interpreted here.
+    /// Admit the committed project document. The dungeon static mesh is the
+    /// collision authority: its full inline triangle payload (floors, walls,
+    /// ceilings, ramps) becomes one trimesh collider. The legacy hidden
+    /// `gameplayProxy` material-voxel environment is accepted as an optional
+    /// additive authority (used by the adversarial wall/floor probes) but is
+    /// no longer required. Unknown authored fields remain opaque; only the
+    /// runtime-owned scene, player, and controller fields are interpreted here.
     pub fn from_json(document: &str) -> Result<Self, ProjectAdmissionError> {
         let project: ProjectDocument = serde_json::from_str(document)
             .map_err(|error| ProjectAdmissionError::Json(error.to_string()))?;
@@ -73,28 +85,44 @@ impl AdmittedProject {
                 .first()
                 .ok_or(ProjectAdmissionError::MissingScene)?,
         };
-        let voxel_environment = scene
-            .voxel_environment
-            .as_ref()
-            .ok_or(ProjectAdmissionError::MissingVoxelEnvironment)?;
-        if voxel_environment.material_voxels.is_empty() {
-            return Err(ProjectAdmissionError::EmptyVoxelEnvironment);
-        }
-        let material_voxels = voxel_environment
-            .material_voxels
+
+        // Optional additive voxel authority (legacy gameplayProxy / probes).
+        let (material_voxel_count, material_voxels, voxel_size, chunk_size) =
+            match scene.voxel_environment.as_ref() {
+                Some(environment) if !environment.material_voxels.is_empty() => {
+                    let voxels = environment
+                        .material_voxels
+                        .iter()
+                        .map(|voxel| MaterialVoxel {
+                            address: voxel.address,
+                            material_slot: voxel.material_slot,
+                        })
+                        .collect::<Vec<_>>();
+                    (
+                        voxels.len(),
+                        voxels,
+                        environment.voxel_size,
+                        environment.chunk_size,
+                    )
+                }
+                _ => (0, Vec::new(), 0.5, 16),
+            };
+        let collision_scene =
+            VoxelCollisionScene::from_material_voxels(voxel_size, chunk_size, material_voxels)
+                .map_err(|error| {
+                    ProjectAdmissionError::InvalidVoxelEnvironment(error.to_string())
+                })?;
+
+        // Trimesh authority: decode the dungeon static mesh's inline payload.
+        let dungeon_collider = project
+            .assets
             .iter()
-            .map(|voxel| MaterialVoxel {
-                address: voxel.address,
-                material_slot: voxel.material_slot,
-            })
-            .collect::<Vec<_>>();
-        let material_voxel_count = material_voxels.len();
-        let collision_scene = VoxelCollisionScene::from_material_voxels(
-            voxel_environment.voxel_size,
-            voxel_environment.chunk_size,
-            material_voxels,
-        )
-        .map_err(|error| ProjectAdmissionError::InvalidVoxelEnvironment(error.to_string()))?;
+            .find(|asset| asset.id == DUNGEON_COLLIDER_MESH_ASSET)
+            .map(dungeon_collider_asset)
+            .transpose()?;
+        if dungeon_collider.is_none() && material_voxel_count == 0 {
+            return Err(ProjectAdmissionError::MissingCollisionAuthority);
+        }
 
         let player = scene
             .entities
@@ -140,18 +168,52 @@ impl AdmittedProject {
             player_controller,
             player_state,
             material_voxel_count,
+            dungeon_collider,
             collision_scene,
             entities,
         })
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ProjectDocument {
-    schema_version: u32,
-    entry_scene: Option<String>,
-    scenes: Vec<SceneDocument>,
+/// Build the dungeon trimesh collider from a static-mesh asset's inline
+/// payload (`f32` positions + `u32` indices → `f64` world-space triangles).
+fn dungeon_collider_asset(
+    asset: &AssetDocument,
+) -> Result<StaticMeshColliderAsset, ProjectAdmissionError> {
+    let mesh = asset
+        .static_mesh
+        .as_ref()
+        .ok_or(ProjectAdmissionError::MissingDungeonCollider)?;
+    if mesh.collision.kind != "trimesh" {
+        return Err(ProjectAdmissionError::InvalidDungeonCollider(format!(
+            "static mesh collision policy must be trimesh, got {}",
+            mesh.collision.kind
+        )));
+    }
+    let source = &mesh.payload.source;
+    if source.kind != "inline" {
+        return Err(ProjectAdmissionError::InvalidDungeonCollider(format!(
+            "static mesh payload must be inline geometry, got {}",
+            source.kind
+        )));
+    }
+    if source.positions.len() % 3 != 0 || source.indices.len() % 3 != 0 {
+        return Err(ProjectAdmissionError::InvalidDungeonCollider(
+            "static mesh payload has ragged positions or indices".to_string(),
+        ));
+    }
+    let positions = source
+        .positions
+        .chunks_exact(3)
+        .map(|vertex| [vertex[0] as f64, vertex[1] as f64, vertex[2] as f64])
+        .collect::<Vec<_>>();
+    let triangles = source
+        .indices
+        .chunks_exact(3)
+        .map(|triangle| [triangle[0], triangle[1], triangle[2]])
+        .collect::<Vec<_>>();
+    StaticMeshColliderAsset::new(DUNGEON_COLLIDER_ASSET_ID, positions, triangles)
+        .map_err(|error| ProjectAdmissionError::InvalidDungeonCollider(format!("{error:?}")))
 }
 
 #[derive(Debug, Deserialize)]
@@ -242,4 +304,47 @@ impl PlayerControllerDocument {
             ))
         }
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct ProjectDocument {
+    #[serde(rename = "schemaVersion")]
+    schema_version: u32,
+    #[serde(rename = "entryScene")]
+    entry_scene: Option<String>,
+    #[serde(default)]
+    assets: Vec<AssetDocument>,
+    scenes: Vec<SceneDocument>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AssetDocument {
+    id: String,
+    #[serde(rename = "staticMesh")]
+    static_mesh: Option<StaticMeshDocument>,
+}
+
+#[derive(Debug, Deserialize)]
+struct StaticMeshDocument {
+    collision: MeshCollisionDocument,
+    payload: MeshPayloadDocument,
+}
+
+#[derive(Debug, Deserialize)]
+struct MeshCollisionDocument {
+    kind: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct MeshPayloadDocument {
+    source: MeshPayloadSourceDocument,
+}
+
+#[derive(Debug, Deserialize)]
+struct MeshPayloadSourceDocument {
+    kind: String,
+    #[serde(default)]
+    positions: Vec<f32>,
+    #[serde(default)]
+    indices: Vec<u32>,
 }

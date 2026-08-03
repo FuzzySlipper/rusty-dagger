@@ -134,67 +134,69 @@ modularity gate, task 6529):
   playwright) reusing rusty-engine's installed packages; screenshots are
   durable artifacts.
 
-## Collision stopgap and the walk-through proof (task 6563)
+## Collision authority: the dungeon trimesh (tasks 6563, 6522)
 
-Upstream triangle-mesh collision has landed in the pin (rusty-engine task
-6516, `MeshCollisionPolicy::Trimesh` at d52c9b0); consuming it is task 6522.
-Until then, the generated studio project carries a hidden `gameplayProxy`
-material-voxel environment as the collision authority, rasterized from the
-dungeon mesh by `scripts/generate-project.py`:
+Upstream triangle-mesh collision landed in the pin (rusty-engine task 6516,
+`MeshCollisionPolicy::Trimesh`) and is now consumed here (task 6522). The
+hidden `gameplayProxy` material-voxel stopgap is **retired** — the collision
+authority is the dungeon static mesh itself:
 
-- Every up-facing triangle (`ny/|n| > 0.5`) is rasterized into 0.5m columns;
-  each column's surface heights are clustered (0.3m) and every cluster
-  becomes one solid voxel whose top face is the cluster height rounded to
-  the nearest cell boundary. Columns keep **every** walkable level — the
-  start-marker layer (38.4m) and the levels beneath it — which is what makes
-  both the spawn support and the descending border route real.
-- The Daggerfall-owned `dagger-runtime` controller opts into
-  `fallSpeedUnitsPerSecond` / `stepUpUnits`: a constant-speed, 0.1m-substepped
-  downward settle after every action (including idles), plus a bounded ledge
-  climb assist. A retry starts from the action's pre-motion position so a
-  partially blocked first sweep cannot be applied twice. A retry that remains
-  blocked on any axis blocked before the rise restores the pre-step height
-  while preserving the retry's horizontal slide; only a retry that clears all
-  originally blocked axes keeps the rise. Repeated input therefore cannot
-  climb a taller-than-step obstacle. The generic Engine motion system remains
-  the sole collision authority.
-- A present `entryScene` is authoritative and must resolve to a named scene;
-  a dangling reference is rejected. An absent entry scene may select the first
-  scene for legacy/generated documents.
-- `scripts/find-route.py` derives the verified route
-  (`content/projects/privateers-hold.route.json`) from the **proxy voxels
-  themselves** (not the mesh), mirroring the controller's footprint, settle,
-  and step-up rules. `scripts/regenerate.sh` runs the whole chain.
+- `dagger-import --format mesh-json` emits `collision: "trimesh"` → the
+  imported static-mesh artifact carries `collision.kind: "trimesh"`.
+- `dagger-runtime` admission decodes the mesh's full inline triangle payload
+  (floors, walls, ceilings, ramps) into a `StaticMeshColliderAsset` and
+  registers one instance at identity via `replace_static_mesh_colliders`. The
+  scene carries no `voxelEnvironment`; the legacy rasterizer (and its
+  wall/underside limitations) is gone. `svc-collision` (parry3d) is the sole
+  collision authority — the kinematic sweep blocks on real geometry with no
+  controller changes.
+- `voxelEnvironment` is accepted as an optional *additive* authority (used by
+  the adversarial controller probes) but is not required; a project with
+  neither a trimesh mesh nor any voxels fails closed.
+- The Daggerfall-owned controller keeps its `fallSpeedUnitsPerSecond` /
+  `stepUpUnits` opt-ins (substepped settle, failure-atomic bounded step-up).
 
-Known stopgap limitations: vertical walls contribute no voxels (wall solidity
-is incidental), and raised solids are represented by their top surface only,
-so their undersides are hollow. The accepted route is checked against the
-proxy, so its floor collision is real regardless.
+**What the trimesh changes.** The retired proxy only kept up-facing surfaces,
+so walls were incidental and the old walkthrough route silently clipped
+through the start room's z=-6.81 wall. With the trimesh, walls are real. The
+start room's spawn ledge (38.4m) is enclosed at its level, and its exit to
+the main floor (32.0m) is a **door baked into the static mesh** — so the
+full start-room → border-block route is gated on Daggerfall doors (task
+6525, doors split + openable). That is a door problem, not a collision
+deficiency: the start room's main floor connects freely to the descending
+multi-level dungeon (probed 8m+ unobstructed, down to y≈13).
+
+**Route derivation is runtime-driven (task 6522).** `scripts/find-route.py`
+had become a second, approximate collision system next to the real one (the
+compiled-language bet: Python is script plumbing, not durable logic). It is
+replaced by `dagger-derive-route` (`src/bin/dagger-derive-route.rs`), which
+admits the real project and flood-fills the movement graph by *actually
+driving* `DaggerRuntime` — settle + Move + authoritative readback — so the
+route and the collision authority are one system. Once doors open (6525) it
+derives the full route against the real runtime.
 
 `crates/dagger-runtime/src/bin/dagger-walkthrough.rs` is the headless proof,
 driving the admitted project through the Daggerfall-owned controller API and
 asserting on **authoritative** readback:
 
 1. Settle — from the parsed start marker the player falls and comes to rest
-   on proxy support (occupancy probe over the body footprint finds solid
-   within the fall-substep window; a further idle does not move it).
-2. Traversal — the waypoint route from the start block into a border block
-   ((0,-1) → (1,-1), ~25m, descending ~6.5m), with support asserted after
-   every action and the end block verified from the position readback.
+   on genuine trimesh support (raycast into the world collision projection
+   over the body footprint; a further idle does not move it).
+2. Reachable-region traversal — from the start room's main floor the player
+   walks into the descending multi-level dungeon (the region open without
+   doors), with support asserted and blocked facts observable. The full
+   cross-dungeon route resumes once doors open (6525).
 3. Negative probes — each must change the authoritative outcome: (a) a tall
-   wall derived from the committed project produces `Blocked` facts and no
-   horizontal drift or cumulative step-up height; (b) the proxy shifted 2m
-   down removes the spawn support and lands the player measurably lower; (c)
-   no support outside covered columns; (d) deleting a route-midpoint column's
-   voxels removes its support; (e) a dangling explicit entry scene fails
-   admission instead of silently selecting another scene.
+   wall (injected additive voxelEnvironment) produces `Blocked` facts and no
+   horizontal drift or cumulative step-up height; (b) no support outside the
+   trimesh bounds; (c) a project with the mesh stripped (no collision
+   authority) fails admission instead of admitting a collision-less world;
+   (d) a dangling explicit entry scene fails closed.
 
 Boundary-contact note: svc-collision treats exactly-flush contact as
 overlapping (parry intersection), so horizontal motion while exactly flush is
-blocked. The substepped settle leaves a sub-0.1m hover; because voxel tops
-are 0.5-multiples and the substep (0.1) divides 0.5, a positive initial hover
-is invariant along any route — the walkthrough's per-action movement
-assertions would catch a violation.
+blocked. The substepped settle leaves a sub-0.1m hover; the walkthrough's
+per-action movement assertions would catch a violation.
 
 ## Verification culture
 

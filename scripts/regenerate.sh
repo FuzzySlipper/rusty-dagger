@@ -14,7 +14,6 @@ cargo run -q -p dagger-import -- \
     --format mesh-json --texture-dir content/textures --out content/privateers-hold.mesh.json
 "$RUSTY_ASSET_IMPORT" write content/privateers-hold.mesh.json content/imported
 python3 scripts/generate-project.py --write
-python3 scripts/find-route.py --write
 cargo run -q -p dagger-runtime --bin dagger-walkthrough
 cargo build -q -p dagger-studio-adapter
 python3 scripts/check-adapter.py
