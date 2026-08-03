@@ -54,14 +54,16 @@ def load_texture_manifest() -> dict:
     return {t["path"]: t for t in data.get("textures", [])}
 
 
-def build_assets(catalog: dict, static_mesh: dict) -> list:
+def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict) -> list:
     """StoredAssetDefinition[] from imported catalog entries + the static-mesh artifact.
 
     Catalog entry -> embedded asset: id, catalog {version, hash, sourcePath,
     label, dependencies(ids only)}, plus the typed payload key (material /
     staticMesh). texture/ entries additionally get their catalog hash and
     sourcePath stamped from the texture manifest so the studio adapter can
-    resolve exact content-addressed PNG render resources.
+    resolve exact content-addressed PNG render resources. Billboard sprite
+    textures (RDB flats) are appended as texture/billboard-A-R entries with
+    transparent PNGs from the billboard manifest.
     """
     texture_manifest = load_texture_manifest()
 
@@ -134,6 +136,28 @@ def build_assets(catalog: dict, static_mesh: dict) -> list:
             raise SystemExit(f"unknown catalog entry shape: {entry['id']}")
         assets.append(asset)
 
+    # Billboard sprite textures (RDB flat billboards). One texture asset per
+    # unique (archive, record) with a transparent PNG (index 0 = transparent).
+    for tex in billboard_manifest.get("billboards", []):
+        slug = f"billboard-{tex['archive']}-{tex['record']}"
+        assets.append({
+            "id": f"texture/{slug}",
+            "catalog": {
+                "version": 1,
+                "hash": tex["sha256"].removeprefix("sha256:"),
+                "sourcePath": f"content/textures/{tex['path']}",
+                "label": slug,
+                "dependencies": [],
+            },
+            "texture": {
+                "width": tex["width"],
+                "height": tex["height"],
+                "filter": "nearest",
+                "wrap": "clamp",
+                "alphaCutout": True,
+            },
+        })
+
     # Re-stamp material -> texture dependency hashes so the catalog lock stays
     # consistent with the real PNG content hashes stamped above (the importer
     # only knows placeholder texture hashes).
@@ -178,7 +202,12 @@ def build_scene(static_mesh: dict) -> dict:
         "renderable": {"asset": MESH_ASSET, "visible": True},
         "bounds": {"min": mn, "max": mx},
     }
-    scene_meta_path = REPO / "content" / "privateers-hold.scene.json"
+    # Scene metadata sidecar from the mesh-json import run (markers, lights,
+    # billboards in glTF world space). The mesh.scene.json is the complete one
+    # (the GLB run's scene.json is a lighter subset).
+    scene_meta_path = REPO / "content" / "privateers-hold.mesh.scene.json"
+    if not scene_meta_path.exists():
+        scene_meta_path = REPO / "content" / "privateers-hold.scene.json"
     spawn = [25.6, 1.6, -25.6]
     scene_meta = None
     if scene_meta_path.exists():
@@ -208,6 +237,28 @@ def build_scene(static_mesh: dict) -> dict:
             })
             next_id += 1
 
+    # Billboard sprite entities (RDB flat billboards: torches, furniture,
+    # markers). One SpriteInstanceDescriptor-shaped node per flat, cylindrical
+    # (Y-facing) billboard with a transparent texture. Positions are glTF world
+    # space from dagger-import.
+    billboard_entities = []
+    if scene_meta and scene_meta.get("billboards"):
+        for index, b in enumerate(scene_meta["billboards"]):
+            slug = f"billboard-{b['textureArchive']}-{b['textureRecord']}"
+            billboard_entities.append({
+                "id": 1000 + index,
+                "name": f"{slug}-{index}",
+                "translation": [float(v) for v in b["position"]],
+                "sprite": {
+                    "asset": f"texture/{slug}",
+                    "billboard": "cylindrical",
+                    "sizeMode": "world",
+                    "shading": "lit",
+                    "depth": "default",
+                    "visible": True,
+                },
+            })
+
     player_entity = {
         "id": 1,
         "name": "player",
@@ -236,19 +287,21 @@ def build_scene(static_mesh: dict) -> dict:
     return {
         "id": SCENE_ID,
         "name": "Privateer's Hold",
-        "entities": [player_entity, dungeon_entity] + light_entities,
+        "entities": [player_entity, dungeon_entity] + light_entities + billboard_entities,
     }
 
 
 def build_project() -> dict:
     catalog = load_json(IMPORTED / "privateers-hold.catalog.json")
     static_mesh = load_json(IMPORTED / "privateers-hold.static-mesh.json")
+    billboard_manifest_path = TEXTURES / "billboard-manifest.json"
+    billboard_manifest = load_json(billboard_manifest_path) if billboard_manifest_path.exists() else {}
     return {
         "schemaVersion": SCHEMA_VERSION,
         "projectId": PROJECT_ID,
         "name": "Privateer's Hold",
         "entryScene": SCENE_ID,
-        "assets": build_assets(catalog, static_mesh),
+        "assets": build_assets(catalog, static_mesh, billboard_manifest),
         "itemDefinitions": [],
         "scenes": [build_scene(static_mesh)],
     }

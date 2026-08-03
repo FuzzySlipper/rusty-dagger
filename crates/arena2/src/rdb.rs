@@ -51,6 +51,24 @@ pub struct RdbLightObject {
 pub const EDITOR_FLATS_ARCHIVE: u16 = 199;
 pub const START_MARKER_RECORD: u16 = 10;
 pub const ENTER_MARKER_RECORD: u16 = 8;
+/// Editor enemy-marker records (DFU disables these — they are spawn markers,
+/// not visible flats). See RDBLayout AddFlat: records 15 and 16 in archive 199.
+pub const ENEMY_MARKER_RECORDS: [u16; 2] = [15, 16];
+
+impl RdbFlatObject {
+    /// Whether this flat renders as a visible billboard. Per DFU RDBLayout
+    /// AddFlat/AddFlats: every flat is a billboard EXCEPT the editor flats
+    /// archive (199 — start/enter/quest/treasure markers, hidden) and the
+    /// enemy spawn markers (records 15/16 in archive 199, also hidden).
+    /// Real billboards come from archives like 210 (lights/furniture), 213,
+    /// 203, 206, and the NPC archives (handled separately by enemies).
+    pub fn is_visible_billboard(&self) -> bool {
+        if self.texture_archive == EDITOR_FLATS_ARCHIVE {
+            return false;
+        }
+        !ENEMY_MARKER_RECORDS.contains(&self.texture_record)
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct RdbBlock {

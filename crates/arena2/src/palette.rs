@@ -36,6 +36,19 @@ impl Palette {
         }
         out
     }
+
+    /// Convert indexed pixels to RGBA with palette index 0 made fully
+    /// transparent. This is the Daggerfall billboard rule (DFU TextureFile
+    /// writes 0 for transparent runs; billboards render with alpha cutout).
+    pub fn to_rgba_transparent(&self, indexed: &[u8]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(indexed.len() * 4);
+        for &i in indexed {
+            let [r, g, b] = self.colors[i as usize];
+            let a = if i == 0 { 0 } else { 255 };
+            out.extend_from_slice(&[r, g, b, a]);
+        }
+        out
+    }
 }
 
 #[cfg(test)]

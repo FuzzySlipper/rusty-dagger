@@ -67,6 +67,14 @@ pub struct BuildOutput {
 }
 
 #[derive(Debug, Clone)]
+pub struct BillboardFlat {
+    /// glTF world-space position (meters).
+    pub position: [f32; 3],
+    pub texture_archive: u16,
+    pub texture_record: u16,
+}
+
+#[derive(Debug, Clone)]
 pub struct DungeonScene {
     pub start_marker: Option<[f32; 3]>,
     pub enter_marker: Option<[f32; 3]>,
@@ -74,6 +82,8 @@ pub struct DungeonScene {
     pub flat_count: usize,
     /// Point lights in glTF world space: (position, range in meters).
     pub lights: Vec<([f32; 3], f32)>,
+    /// Visible billboard flats (RDB type 0x03, excluding editor/enemy markers).
+    pub billboards: Vec<BillboardFlat>,
 }
 
 type Mat3 = [[f32; 3]; 3];
@@ -272,6 +282,7 @@ pub fn build_dungeon(
         light_count: 0,
         flat_count: 0,
         lights: Vec::new(),
+        billboards: Vec::new(),
     };
 
     // One primitive per texture key (None = untextured/default material).
@@ -289,6 +300,23 @@ pub fn build_dungeon(
         ];
         scene.light_count += block.lights.len();
         scene.flat_count += block.flats.len();
+        for f in &block.flats {
+            if !f.is_visible_billboard() {
+                continue;
+            }
+            // DFU AddFlat: position (x, -y, z) * 0.025 + block origin, then
+            // glTF (x, y, -z). Billboard texture from TEXTURE.nnn[record].
+            let dfu = [
+                f.x as f32 * GLOBAL_SCALE + origin[0],
+                -f.y as f32 * GLOBAL_SCALE + origin[1],
+                f.z as f32 * GLOBAL_SCALE + origin[2],
+            ];
+            scene.billboards.push(BillboardFlat {
+                position: [dfu[0], dfu[1], -dfu[2]],
+                texture_archive: f.texture_archive,
+                texture_record: f.texture_record,
+            });
+        }
         for l in &block.lights {
             // DFU AddLight: position (x, -y, z) * 0.025 + block origin; range = radius * 0.025 * 3.
             let dfu = [

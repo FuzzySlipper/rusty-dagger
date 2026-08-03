@@ -168,12 +168,19 @@ fn main() {
         }
     }
     let scene_json = format!(
-        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
+        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"billboards\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
         args.location.replace('"', "'"),
         v3(output.scene.start_marker), v3(output.scene.enter_marker),
         output.scene.light_count, output.scene.flat_count,
         output.scene.lights.iter()
             .map(|(p, r)| format!("{{\"position\": {:?}, \"range\": {r}}}", p))
+            .collect::<Vec<_>>()
+            .join(","),
+        output.scene.billboards.iter()
+            .map(|b| format!(
+                "{{\"position\": {:?}, \"textureArchive\": {}, \"textureRecord\": {}}}",
+                b.position, b.texture_archive, b.texture_record
+            ))
             .collect::<Vec<_>>()
             .join(","),
         s.bounds_min, s.bounds_max
@@ -189,6 +196,7 @@ fn main() {
     // from the same bytes.
     if let Some(dir) = &args.texture_dir {
         publish_textures(dir, &output.textures);
+        publish_billboard_textures(dir, &args.arena2_dir, &output.scene.billboards);
     }
 }
 
@@ -219,5 +227,67 @@ fn publish_textures(dir: &std::path::Path, textures: &[glb::TextureInput]) {
         dir.display(),
         count,
         bytes_total
+    );
+}
+
+/// Decode unique billboard (archive, record) textures to transparent PNGs
+/// (palette index 0 = transparent, the Daggerfall billboard rule) plus a
+/// billboard manifest mapping each texture to its PNG sourcePath/hash/dims.
+/// generate-project.py consumes this to stamp billboard sprite resources.
+fn publish_billboard_textures(
+    dir: &std::path::Path,
+    arena2_dir: &std::path::Path,
+    billboards: &[dungeon::BillboardFlat],
+) {
+    use arena2::palette::Palette;
+    use arena2::texture::TextureFile;
+    use std::collections::BTreeMap;
+
+    let palette = Palette::load(&arena2_dir.join("PAL.PAL")).expect("PAL.PAL");
+    let mut unique: BTreeMap<(u16, u16), ()> = BTreeMap::new();
+    for b in billboards {
+        unique.insert((b.texture_archive, b.texture_record), ());
+    }
+    let mut entries: Vec<String> = Vec::new();
+    let mut count = 0usize;
+    let mut failures = 0usize;
+    for (archive, record) in unique.keys() {
+        let tex_path = arena2_dir.join(format!("TEXTURE.{archive:03}"));
+        let Ok(tex) = TextureFile::load(&tex_path) else {
+            failures += 1;
+            eprintln!("billboard texture warning: TEXTURE.{archive:03} unreadable");
+            continue;
+        };
+        if tex.record_info(*record as usize).is_none() {
+            failures += 1;
+            eprintln!("billboard texture warning: TEXTURE.{archive:03} rec {record} missing");
+            continue;
+        };
+        let Ok((w, h, indexed)) = tex.frame_pixels(*record as usize, 0) else {
+            failures += 1;
+            eprintln!("billboard texture warning: TEXTURE.{archive:03} rec {record} decode failed");
+            continue;
+        };
+        let rgba = palette.to_rgba_transparent(&indexed);
+        let png = crate::png::encode_rgba(w as u32, h as u32, &rgba);
+        let slug = format!("billboard-{archive}-{record}");
+        let file = format!("{slug}.png");
+        std::fs::write(dir.join(&file), &png).expect("write billboard png");
+        let hash = format!("sha256:{:x}", Sha256::digest(&png));
+        entries.push(format!(
+            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h}}}",
+            png.len()
+        ));
+        count += 1;
+    }
+    let manifest = format!(
+        "{{\n  \"schemaVersion\": 1,\n  \"billboards\": [\n{}\n  ]\n}}\n",
+        entries.join(",\n")
+    );
+    std::fs::write(dir.join("billboard-manifest.json"), manifest)
+        .expect("write billboard manifest");
+    println!(
+        "billboards:  {} unique textures ({} decode failures)",
+        count, failures
     );
 }
