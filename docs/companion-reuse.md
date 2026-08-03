@@ -28,7 +28,9 @@ cargo crate / pnpm package / generated artifact, not copy-paste, unless
 - `libs/ui-*` (demo): ui-game-panels, ui-compass, ui-combat-log, theme —
   mostly superseded by rusty-engine-ui (below).
 - `docs/visual-content-pipeline.md` — the collision-model doctrine our
-  project doc follows (voxel gameplayProxy = truth, mesh = visible content).
+  project doc followed at the time (voxel gameplayProxy = truth, mesh =
+  visible content). Retired by 6522 (see Decisions §4): the collision
+  authority is now the dungeon static mesh's trimesh.
 
 **Consume**: the controller and collision behavior as a reference for the
 portable Daggerfall runtime. The crate is product-flavored (Loading Bay
@@ -119,5 +121,12 @@ renderer-three (via render-check). Upstream needs tracked as engine tasks
    arrives (task 6528 automap is the first consumer).
 3. Project/content machinery: **hand-rolled** (scripts/generate-project.py) —
    already landed and adapter-verified; no change.
-4. Collision doctrine: **loading-bay's** (voxel gameplayProxy truth + mesh
-   visual), already applied in the 6518 project doc.
+4. Collision doctrine: **superseded by task 6522.** This decision originally
+   adopted loading-bay's voxel gameplayProxy-as-truth + mesh-visual model
+   (applied in the 6518 project doc). Task 6522 retired the gameplayProxy
+   stopgap: the collision authority is now the dungeon static mesh itself
+   (`collision: "trimesh"` → `StaticMeshColliderAsset` →
+   `replace_static_mesh_colliders`); the scene carries no `voxelEnvironment`,
+   and `voxelEnvironment` survives only as an optional *additive* authority
+   for adversarial probes. The loading-bay doctrine remains the reference for
+   the *controller* (point 1), not for collision authority.
