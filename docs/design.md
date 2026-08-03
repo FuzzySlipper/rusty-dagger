@@ -134,6 +134,31 @@ modularity gate, task 6529):
   playwright) reusing rusty-engine's installed packages; screenshots are
   durable artifacts.
 
+### Modularity gate evaluation (task 6529, 2026-08-03)
+
+Evaluated after billboards (6523) landed and the 6525 door attempt: **no
+split is warranted yet.** Current sizes and public surfaces: `arena2` 1327
+lines / 8 files (pure readers, one-paragraph purpose); `dagger-import` 1319
+lines / 5 files (CLI glue + emitters); `dagger-runtime` 1917 lines / 6 files
+(admission + controller + collision walkthrough); `dagger-studio-adapter` 961
+lines / 1 file (protocol-14 boundary). Every crate's purpose still fits in one
+paragraph and matches this map.
+
+The design's "when to pull" conditions are not met: the emitters (`glb.rs`
+229, `meshjson.rs` 183, `png.rs` 98) are each under the ~300-line
+`dagger-export` threshold and cohesive inside `dagger-import`; no code yet
+needs a `dagger-content` (decoded-materials) or `dagger-world` (session
+runtime) home. Concrete triggers for the next gate, re-evaluated as features
+land:
+
+- A crate's public surface stops fitting in one paragraph (the recurring
+  check), or any emitter crosses ~300 lines → split `dagger-export`.
+- Doors (6525), water (6526), or enemies (6595) introduce shared block/session
+  state that two or more crates need → that state is the seed of
+  `dagger-world` (block layout, door/light/water/enemy session objects).
+- A second consumer (beyond `dagger-import`) needs decoded material/mesh data
+  with provenance → that data is the seed of `dagger-content`.
+
 ## Collision authority: the dungeon trimesh (tasks 6563, 6522)
 
 Upstream triangle-mesh collision landed in the pin (rusty-engine task 6516,
