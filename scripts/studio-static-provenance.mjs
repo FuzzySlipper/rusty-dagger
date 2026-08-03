@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const scriptDirectory = dirname(fileURLToPath(import.meta.url));
 const manifestPath = join(scriptDirectory, 'studio-static-provenance.json');
 
-export const expectedEngineSourceCommit = 'd52c9b0f3287f21eea81d465871978a117750d0c';
+export const expectedEngineSourceCommit = '880a119466faebbf19ed05e39206ff4ba87237a2';
 
 export async function loadStudioStaticProvenance(path = manifestPath) {
   const manifest = JSON.parse(await readFile(path, 'utf8'));

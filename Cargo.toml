@@ -12,14 +12,14 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-core-ids = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "d52c9b0f3287f21eea81d465871978a117750d0c" }
-core-math = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "d52c9b0f3287f21eea81d465871978a117750d0c" }
-engine-spatial = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "d52c9b0f3287f21eea81d465871978a117750d0c" }
-entity-state = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "d52c9b0f3287f21eea81d465871978a117750d0c" }
+core-ids = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
+core-math = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
+engine-spatial = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
+entity-state = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 
 [workspace.metadata.rusty-engine]
 repository = "https://github.com/FuzzySlipper/rusty-engine"
-revision = "d52c9b0f3287f21eea81d465871978a117750d0c"
+revision = "880a119466faebbf19ed05e39206ff4ba87237a2"

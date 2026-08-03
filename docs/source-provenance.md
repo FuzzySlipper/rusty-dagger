@@ -4,7 +4,7 @@ This repository is a downstream Rusty Engine consumer. The generic engine
 dependency is pinned in `Cargo.toml`, `Cargo.lock`, and `engine-source.json` to
 the exact public revision:
 
-`https://github.com/FuzzySlipper/rusty-engine@d52c9b0f3287f21eea81d465871978a117750d0c`
+`https://github.com/FuzzySlipper/rusty-engine@880a119466faebbf19ed05e39206ff4ba87237a2`
 
 The Privateer's Hold mesh, material catalog, gameplay proxy, project document,
 and route are generated from the local Daggerfall/Arena2 source described in

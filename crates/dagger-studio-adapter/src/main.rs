@@ -16,7 +16,7 @@ use std::path::{Component, Path, PathBuf};
 const PROTOCOL_VERSION: u64 = 14;
 const MAX_REQUEST_BYTES: usize = 256 * 1024;
 const MAX_PROJECT_BYTES: usize = 64 * 1024 * 1024;
-const ENGINE_REVISION: &str = "d52c9b0f3287f21eea81d465871978a117750d0c";
+const ENGINE_REVISION: &str = "880a119466faebbf19ed05e39206ff4ba87237a2";
 
 const OPERATIONS: &[&str] = &[
     "describe",
