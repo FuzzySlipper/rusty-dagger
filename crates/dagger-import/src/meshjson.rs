@@ -14,7 +14,11 @@ fn fmt_f32(v: f32) -> String {
     }
 }
 
-pub fn write_mesh_json(mesh_name: &str, primitives: &[PrimitiveInput], textures: &[TextureInput]) -> String {
+pub fn write_mesh_json(
+    mesh_name: &str,
+    primitives: &[PrimitiveInput],
+    textures: &[TextureInput],
+) -> String {
     // Merge all primitives into one vertex/index buffer with one group per primitive.
     // Material slot = texture index + 1 (0 = default untextured).
     let mut positions = String::with_capacity(1 << 20);
@@ -30,20 +34,26 @@ pub fn write_mesh_json(mesh_name: &str, primitives: &[PrimitiveInput], textures:
     for prim in primitives {
         for p in &prim.positions {
             for k in 0..3 {
-                if n_pos > 0 { positions.push(','); }
+                if n_pos > 0 {
+                    positions.push(',');
+                }
                 positions.push_str(&fmt_f32(p[k]));
                 n_pos += 1;
             }
         }
         for n in &prim.normals {
             for k in 0..3 {
-                if n_nrm > 0 { normals.push(','); }
+                if n_nrm > 0 {
+                    normals.push(',');
+                }
                 normals.push_str(&fmt_f32(n[k]));
                 n_nrm += 1;
             }
         }
         for i in &prim.indices {
-            if n_idx > 0 { indices.push(','); }
+            if n_idx > 0 {
+                indices.push(',');
+            }
             indices.push_str(&(vert_base + i).to_string());
             n_idx += 1;
         }
@@ -58,9 +68,7 @@ pub fn write_mesh_json(mesh_name: &str, primitives: &[PrimitiveInput], textures:
 
     // Materials: slot 0 default + one per texture with its average color
     let mut materials: Vec<String> = Vec::new();
-    materials.push(
-        "{\"slot\":0,\"name\":\"default\",\"color\":[0.72,0.70,0.66,1.0]}".to_string(),
-    );
+    materials.push("{\"slot\":0,\"name\":\"default\",\"color\":[0.72,0.70,0.66,1.0]}".to_string());
     for (i, tex) in textures.iter().enumerate() {
         let [r, g, b] = tex.avg_color;
         // Engine asset ids must be lowercase kebab-case; derive from "TEXTURE.nnn[r]"

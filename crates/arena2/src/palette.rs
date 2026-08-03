@@ -38,8 +38,6 @@ impl Palette {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;

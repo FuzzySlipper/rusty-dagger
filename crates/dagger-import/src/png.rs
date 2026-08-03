@@ -5,7 +5,11 @@ fn crc32(data: &[u8]) -> u32 {
     for (i, e) in table.iter_mut().enumerate() {
         let mut c = i as u32;
         for _ in 0..8 {
-            c = if c & 1 != 0 { 0xEDB8_8320 ^ (c >> 1) } else { c >> 1 };
+            c = if c & 1 != 0 {
+                0xEDB8_8320 ^ (c >> 1)
+            } else {
+                c >> 1
+            };
         }
         *e = c;
     }
@@ -83,7 +87,10 @@ mod tests {
     #[test]
     fn png_header_and_chunks() {
         let png = encode_rgba(2, 1, &[255, 0, 0, 255, 0, 255, 0, 255]);
-        assert_eq!(&png[0..8], &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
+        assert_eq!(
+            &png[0..8],
+            &[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+        );
         assert_eq!(&png[12..16], b"IHDR");
         assert!(png.windows(4).any(|w| w == b"IDAT"));
         assert!(png.ends_with(&[0xAE, 0x42, 0x60, 0x82])); // IEND CRC of empty data

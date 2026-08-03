@@ -40,7 +40,9 @@ pub struct Arch3dFile {
 
 impl Arch3dFile {
     pub fn load(path: &Path) -> std::io::Result<Self> {
-        Ok(Arch3dFile { bsa: BsaArchive::load(path)? })
+        Ok(Arch3dFile {
+            bsa: BsaArchive::load(path)?,
+        })
     }
 
     pub fn has_model(&self, model_id: &str) -> bool {
@@ -99,7 +101,12 @@ pub fn parse_mesh(data: &[u8]) -> Result<Mesh, String> {
             let point_offset = pc.i32() as usize;
             let u = pc.i16();
             let v = pc.i16();
-            let ppos = point_list_offset + if is_v25 { point_offset * 3 } else { point_offset };
+            let ppos = point_list_offset
+                + if is_v25 {
+                    point_offset * 3
+                } else {
+                    point_offset
+                };
             let mut vc = Cursor::at(data, ppos);
             let x = vc.i32();
             let y = vc.i32();
@@ -112,8 +119,6 @@ pub fn parse_mesh(data: &[u8]) -> Result<Mesh, String> {
     }
     Ok(mesh)
 }
-
-
 
 #[cfg(test)]
 mod tests {
