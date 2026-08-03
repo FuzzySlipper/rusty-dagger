@@ -13,8 +13,16 @@ pub struct PrimitiveInput {
 pub struct TextureInput {
     pub name: String,
     pub png: Vec<u8>,
+    /// Classic texture identity: (archive, record).
+    pub id: (u16, u16),
     /// Average RGB of the decoded texture (0..1), used for untextured material colors.
     pub avg_color: [f32; 3],
+}
+
+/// Stable engine-asset slug for a classic texture identity ("texture-450-5").
+/// Engine asset ids are lowercase kebab-case; importer prepends "texture/".
+pub fn texture_slug(id: (u16, u16)) -> String {
+    format!("texture-{}-{}", id.0, id.1)
 }
 
 fn pad4(v: &mut Vec<u8>, pad: u8) {

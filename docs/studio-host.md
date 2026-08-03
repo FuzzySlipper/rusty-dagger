@@ -57,11 +57,13 @@ against the startup URL above. `scripts/check-studio-browser.sh` opens the
 project, double-clicks `privateers-hold-dungeon` through the normal visible
 hierarchy, waits for the current frame, captures both the full page and the
 actual renderer canvas, and compares pre/post-focus pixels so a DOM-only
-ready state cannot pass. The proof should show the Privateer's Hold title, 83
-authored assets, 73 scene nodes, a complete retained render frame, and the
-managed host status. The authored dungeon is intentionally a large world
-mesh; the focused canvas captures are the useful visual artifact at narrow
-widths. A renderer context failure under
+ready state cannot pass. The proof should show the Privateer's Hold title, the authored asset count (164
+with the textured engine-native chain: 82 materials + 81 textures + 1 mesh),
+73 scene nodes, a complete retained render frame (including `defineTexture` ops
+and a protocol-14 `textureResources` manifest when the textured chain is
+generated), and the managed host status. The authored dungeon is intentionally
+a large world mesh; the focused canvas captures are the useful visual artifact
+at narrow widths. A renderer context failure under
 `--disable-gpu` is not a product result; use the normal host or an explicit
 SwiftShader WebGL mode when the environment has no hardware GPU.
 

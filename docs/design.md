@@ -78,14 +78,16 @@ there).
 Rusty Engine is the provider; this repo is a consumer, same as
 rusty-engine-demo. Work that belongs upstream is filed upstream rather than
 patched locally — the demo doubles as a needs-discovery surface for the
-engine. Current upstream needs (both filed 2026-08-02):
+engine. Both 2026-08-02 upstream needs have landed and are consumed here:
 
-- rusty-engine task 6515 — UV vertex data through the static mesh pipeline
-  (render-model already has `MeshAttributeName::Uv` and `PackedStreamsLeV2`;
-  the authored source format and renderer path don't carry them).
+- rusty-engine task 6515 — UV vertex data through the static mesh pipeline.
+  **Consumed (task 6521)**: mesh-json carries `uvs` + `materials[].texture`;
+  the studio adapter projects `defineTexture` + protocol-14 `textureResources`
+  so studio renders the textured dungeon matching the GLB.
 - rusty-engine task 6516 — triangle-mesh collision policy for static mesh
-  assets in svc-collision (parry3d TriMesh; DFU equivalent: MeshCollider with
-  sharedMesh = render mesh).
+  assets in svc-collision. **In the pin** (`MeshCollisionPolicy::Trimesh`
+  exists at d52c9b0); consumption is task 6522 and will retire the
+  gameplayProxy stopgap below.
 
 ## Companion reuse
 
@@ -134,10 +136,11 @@ modularity gate, task 6529):
 
 ## Collision stopgap and the walk-through proof (task 6563)
 
-Until upstream triangle-mesh collision lands (rusty-engine task 6516), the
-generated studio project carries a hidden `gameplayProxy` material-voxel
-environment as the collision authority, rasterized from the dungeon mesh by
-`scripts/generate-project.py`:
+Upstream triangle-mesh collision has landed in the pin (rusty-engine task
+6516, `MeshCollisionPolicy::Trimesh` at d52c9b0); consuming it is task 6522.
+Until then, the generated studio project carries a hidden `gameplayProxy`
+material-voxel environment as the collision authority, rasterized from the
+dungeon mesh by `scripts/generate-project.py`:
 
 - Every up-facing triangle (`ny/|n| > 0.5`) is rasterized into 0.5m columns;
   each column's surface heights are clustered (0.3m) and every cluster

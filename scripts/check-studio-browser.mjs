@@ -28,8 +28,10 @@ try {
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
     try {
       await page.goto(projectUrl, { waitUntil: 'domcontentloaded' });
-      const shell = page.locator('main.studio-layout[data-project-assets="83"]');
+      const shell = page.locator('main.studio-layout[data-project-assets]');
       await shell.waitFor({ state: 'visible', timeout: 20_000 });
+      const assetCount = Number(await shell.getAttribute('data-project-assets'));
+      assert.ok(assetCount >= 83, `expected at least 83 project assets, got ${assetCount}`);
       const viewport = page.locator('rusty-studio-viewport[data-renderer-status="ready"]');
       await viewport.waitFor({ state: 'visible', timeout: 20_000 });
       await page.getByText("Privateer's Hold", { exact: true }).first().waitFor({ state: 'visible' });

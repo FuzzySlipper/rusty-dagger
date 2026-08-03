@@ -6,3 +6,4 @@ description = "Extract Daggerfall dungeon geometry (with textures) to GLB"
 
 [dependencies]
 arena2 = { path = "../arena2" }
+sha2.workspace = true

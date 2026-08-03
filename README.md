@@ -24,8 +24,13 @@ current task state in the Den `rusty-dagger` project.
   by texture, emitted as:
   - `--format glb` (default): one GLB, one primitive per (archive,record) texture,
     embedded PNG textures (NEAREST, REPEAT), computed flat normals.
-  - `--format mesh-json`: rusty-engine authored mesh source (untextured; one
-    material per texture with its average colour — the engine format has no UVs).
+  - `--format mesh-json`: rusty-engine authored mesh source **with real UVs and
+    per-material texture references** (upstream 6515 consumed: `uvs` stream +
+    `materials[].texture` -> `texture/<slug>` catalog entries). `--texture-dir
+    content/textures` publishes the decoded PNGs + a sha256 manifest that
+    generate-project.py stamps into the catalog so the studio host can serve
+    them as exact content-addressed render resources. `--untextured` keeps the
+    legacy average-color fallback for A/B mood comparison.
 - `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
   the committed Privateer's Hold project, owns the first-person controller,
   and provides the real-project collision walkthrough without importing the
@@ -45,7 +50,7 @@ current task state in the Den `rusty-dagger` project.
 
 ```sh
 cargo run -p dagger-import -- [--arena2 DIR] [--region N] [--location NAME] \
-    [--format glb|mesh-json] [--untextured] [--out FILE]
+    [--format glb|mesh-json] [--texture-dir DIR] [--untextured] [--out FILE]
 # defaults: --arena2 local/arena2 --region 17 \
 #           --location "Privateer's Hold" --out content/privateers-hold.glb
 
@@ -78,9 +83,12 @@ scripts/check-studio-browser.sh
   for overview/top/interior cameras. Screenshots in render-check/*.png.
 - Engine-native: `content/privateers-hold.mesh.json` is admitted by the
   engine's `rusty-asset-import` CLI with zero diagnostics as
-  `mesh/privateers-hold`; `content/imported/` holds the published
-  catalog (82 material entries) + static-mesh artifact (18,811 verts,
-  27,789 indices, matching bounds).
+  `mesh/privateers-hold`; `content/imported/` holds the published catalog
+  (82 material + 81 texture entries) + static-mesh artifact (18,811 verts,
+  27,789 indices, position/normal/uv layout, matching bounds). The studio
+  adapter projects the textured frame (defineTexture + textured materials +
+  textureResources manifest); host serves exact content-addressed PNG bytes
+  with hash verification.
 
 ## Data provenance & conventions
 
@@ -109,8 +117,13 @@ Tracked as Den tasks in the `rusty-dagger` project (dependencies wired):
   protocol-14 readout, and HTTP bridge are now in this repository. The host
   serves the exact Engine Studio build selected by
   `RUSTY_ENGINE_STUDIO_STATIC_ROOT` (or the conventional sibling build path).
-- **6521 / 6522** Consume upstream **rusty-engine 6515** (static-mesh UVs) and
-  **6516** (trimesh collision) when they land.
+- **6521** Textured engine-native chain (landed): mesh-json carries real UVs
+  and per-material texture references (upstream 6515); the studio adapter
+  projects `defineTexture` ops + a protocol-14 `textureResources` manifest so
+  studio renders the dungeon textured, matching the GLB. The average-color
+  fallback remains behind `--untextured`.
+- **6522** Consume upstream **rusty-engine 6516** (trimesh collision) to
+  retire the gameplayProxy stopgap.
 - **6523** Billboards (RDB flats), **6524** lights, **6525** action doors,
   **6526** water planes, **6528** automap, **6527** classic randomized
   per-location texture table (DFRandom port).

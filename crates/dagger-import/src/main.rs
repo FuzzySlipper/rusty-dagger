@@ -8,6 +8,8 @@ mod png;
 
 use std::path::PathBuf;
 
+use sha2::{Digest, Sha256};
+
 struct Args {
     arena2_dir: PathBuf,
     region: usize,
@@ -15,6 +17,7 @@ struct Args {
     out: PathBuf,
     textured: bool,
     format: String,
+    texture_dir: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -24,6 +27,7 @@ fn parse_args() -> Result<Args, String> {
     let mut out = PathBuf::from("content/privateers-hold.glb");
     let mut textured = true;
     let mut format = "glb".to_string();
+    let mut texture_dir: Option<PathBuf> = None;
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -38,6 +42,11 @@ fn parse_args() -> Result<Args, String> {
             "--location" => location = it.next().ok_or("--location needs a value")?,
             "--out" => out = PathBuf::from(it.next().ok_or("--out needs a value")?),
             "--format" => format = it.next().ok_or("--format needs a value")?,
+            "--texture-dir" => {
+                texture_dir = Some(PathBuf::from(
+                    it.next().ok_or("--texture-dir needs a value")?,
+                ))
+            }
             "--untextured" => textured = false,
             "--help" | "-h" => return Err(usage()),
             other => return Err(format!("unknown arg {other}\n{}", usage())),
@@ -53,11 +62,12 @@ fn parse_args() -> Result<Args, String> {
         out,
         textured,
         format,
+        texture_dir,
     })
 }
 
 fn usage() -> String {
-    "usage: dagger-import [--arena2 DIR] [--region N] [--location NAME] [--out FILE] [--untextured]"
+    "usage: dagger-import [--arena2 DIR] [--region N] [--location NAME] [--out FILE] [--format glb|mesh-json] [--texture-dir DIR] [--untextured]"
         .to_string()
 }
 
@@ -121,7 +131,19 @@ fn main() {
         .to_lowercase();
     let bytes = match args.format.as_str() {
         "mesh-json" => {
-            meshjson::write_mesh_json(&name, &output.primitives, &output.textures).into_bytes()
+            let out = meshjson::write_mesh_json(
+                &name,
+                &output.primitives,
+                &output.textures,
+                args.textured,
+            );
+            if args.textured {
+                println!(
+                    "mesh-json:   textured ({} texture references)",
+                    out.referenced.len()
+                );
+            }
+            out.json.into_bytes()
         }
         _ => glb::write_glb(&name, &output.primitives, &output.textures),
     };
@@ -159,4 +181,43 @@ fn main() {
     let scene_path = args.out.with_extension("scene.json");
     std::fs::write(&scene_path, scene_json).expect("write scene metadata");
     println!("wrote:       {}", scene_path.display());
+
+    // Publish decoded texture PNGs + a content-hash manifest. The studio host
+    // serves these as content-addressed render resources (`.png` is on its
+    // allowlist); generate-project.py stamps the catalog entries with the
+    // manifest's sourcePath/hash, and the adapter re-derives resource identity
+    // from the same bytes.
+    if let Some(dir) = &args.texture_dir {
+        publish_textures(dir, &output.textures);
+    }
+}
+
+fn publish_textures(dir: &std::path::Path, textures: &[glb::TextureInput]) {
+    std::fs::create_dir_all(dir).expect("create texture dir");
+    let mut entries: Vec<String> = Vec::new();
+    let mut count = 0usize;
+    let mut bytes_total = 0usize;
+    for tex in textures {
+        let slug = glb::texture_slug(tex.id);
+        let file = format!("{slug}.png");
+        std::fs::write(dir.join(&file), &tex.png).expect("write texture png");
+        let hash = format!("sha256:{:x}", Sha256::digest(&tex.png));
+        entries.push(format!(
+            "    {{\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{}}}",
+            tex.png.len()
+        ));
+        count += 1;
+        bytes_total += tex.png.len();
+    }
+    let manifest = format!(
+        "{{\n  \"schemaVersion\": 1,\n  \"textures\": [\n{}\n  ]\n}}\n",
+        entries.join(",\n")
+    );
+    std::fs::write(dir.join("manifest.json"), manifest).expect("write texture manifest");
+    println!(
+        "wrote:       {} ({} pngs, {} bytes) + manifest.json",
+        dir.display(),
+        count,
+        bytes_total
+    );
 }
