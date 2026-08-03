@@ -86,7 +86,7 @@ const OPERATIONS: &[&str] = &[
 ];
 
 struct OpenProject {
-    _root: PathBuf,
+    root: PathBuf,
     relative_project_file: String,
     project_hash: String,
     project_text: String,
@@ -232,7 +232,7 @@ impl Adapter {
         };
         let project_hash = sha256(&project_text);
         self.open = Some(OpenProject {
-            _root: root,
+            root,
             relative_project_file: relative,
             project_hash,
             project_text,
@@ -383,7 +383,7 @@ fn make_readout(open: &OpenProject) -> Value {
         .get("name")
         .and_then(Value::as_str)
         .unwrap_or(scene_id);
-    let projection = projection(project, &entities);
+    let projection = projection(&open.root, project, &entities);
     json!({
         "identity": {
             "projectId": project.get("projectId").and_then(Value::as_str).unwrap_or("privateers-hold"),
@@ -415,6 +415,7 @@ fn make_readout(open: &OpenProject) -> Value {
         "voxelSurfaceAuthoring": { "textures": [], "atlases": [], "materials": [] },
         "voxelObjectAuthoring": { "assets": [], "instances": [] },
         "animatedMeshResources": [],
+        "textureResources": texture_resources(&open.root, project),
         "entityComponents": [],
         "projection": projection,
         "projectionReadout": {
@@ -549,7 +550,91 @@ fn inspections(assets: &[Value], scene_name: &str, entities: &[Value]) -> Value 
     })
 }
 
-fn projection(project: &Map<String, Value>, entities: &[Value]) -> Value {
+/// Exact content-addressed texture descriptor (protocol-14) for one project
+/// texture asset. Returns None when the asset lacks the exact identity facts
+/// (e.g. the untextured fallback chain) — the renderer then keeps the
+/// historical color-fallback meaning for that material.
+fn texture_descriptor(root: &Path, asset: &Value, texture: &Value) -> Option<Value> {
+    let id = asset.get("id").and_then(Value::as_str)?;
+    let catalog = asset.get("catalog")?;
+    let hash_hex = catalog.get("hash").and_then(Value::as_str)?;
+    if hash_hex.len() != 64 || !hash_hex.chars().all(|c| c.is_ascii_hexdigit()) {
+        return None;
+    }
+    let source_path = catalog.get("sourcePath").and_then(Value::as_str)?;
+    if source_path.is_empty() {
+        return None;
+    }
+    // Byte length comes from the on-disk resource the host will serve; reading
+    // it here keeps the descriptor consistent with the exact bytes whose hash
+    // was stamped at generation time. Paths are project-root relative.
+    let bytes = fs::read(root.join(source_path)).ok()?;
+    let expected = format!("sha256:{hash_hex}");
+    let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
+    if actual != expected {
+        // Content drifted since generation: fail closed, project nothing
+        // rather than admit a mismatched resource identity.
+        return None;
+    }
+    Some(json!({
+        "id": id,
+        "width": texture.get("width").and_then(Value::as_u64).unwrap_or(0),
+        "height": texture.get("height").and_then(Value::as_u64).unwrap_or(0),
+        "filter": texture.get("filter").and_then(Value::as_str).unwrap_or("nearest"),
+        "wrap": texture.get("wrap").and_then(Value::as_str).unwrap_or("repeat"),
+        "contentHash": expected,
+        "version": 1,
+        "payload": {
+            "encoding": "pngRgba8",
+            "colorSpace": "srgb",
+            "contentHash": expected,
+            "byteLength": bytes.len(),
+            "source": { "kind": "resource", "resource": format!("texture-resource/{hash_hex}") },
+        },
+    }))
+}
+
+/// Protocol-14 `textureResources` readout: one entry per project texture
+/// asset with a resolvable exact resource identity.
+fn texture_resources(root: &Path, project: &Map<String, Value>) -> Value {
+    let assets = project
+        .get("assets")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let mut resources = Vec::new();
+    let mut seen_hashes = std::collections::HashSet::new();
+    for asset in &assets {
+        let Some(texture) = asset.get("texture") else { continue };
+        let Some(catalog) = asset.get("catalog") else { continue };
+        let Some(hash_hex) = catalog.get("hash").and_then(Value::as_str) else { continue };
+        let Some(source_path) = catalog.get("sourcePath").and_then(Value::as_str) else { continue };
+        if hash_hex.len() != 64 || source_path.is_empty() {
+            continue;
+        }
+        let Ok(bytes) = fs::read(root.join(source_path)) else { continue };
+        let expected = format!("sha256:{hash_hex}");
+        if format!("sha256:{:x}", Sha256::digest(&bytes)) != expected {
+            continue;
+        }
+        let _ = texture;
+        // Distinct classic textures may decode to identical bytes (e.g.
+        // TEXTURE.120[3] == TEXTURE.168[3]); the manifest is keyed by exact
+        // resource identity, so emit one entry per unique resource while
+        // defineTexture ops keep their per-asset ids bound to it.
+        if seen_hashes.insert(hash_hex.to_owned()) {
+            resources.push(json!({
+                "resource": format!("texture-resource/{hash_hex}"),
+                "contentHash": expected,
+                "byteLength": bytes.len(),
+                "sourcePath": source_path,
+            }));
+        }
+    }
+    Value::Array(resources)
+}
+
+fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> Value {
     let mut ops = Vec::new();
     let assets = project
         .get("assets")
@@ -558,6 +643,14 @@ fn projection(project: &Map<String, Value>, entities: &[Value]) -> Value {
         .unwrap_or_default();
     for asset in &assets {
         let id = asset.get("id").and_then(Value::as_str).unwrap_or("");
+        // Exact content-addressed texture resources (protocol-14). The host
+        // serves the bytes from catalog.sourcePath after re-hashing them; the
+        // renderer preloads them through the studio texture-resource manifest.
+        if let Some(texture) = asset.get("texture") {
+            if let Some(descriptor) = texture_descriptor(root, asset, texture) {
+                ops.push(json!({"op":"defineTexture","texture":descriptor}));
+            }
+        }
         if let Some(material) = asset.get("material") {
             let style = material.get("style").unwrap_or(&Value::Null);
             let color = style
@@ -575,7 +668,12 @@ fn projection(project: &Map<String, Value>, entities: &[Value]) -> Value {
                     ])
                 })
                 .unwrap_or_else(|| json!([0.0, 0.0, 0.0]));
-            ops.push(json!({"op":"defineMaterial","material":{"schemaVersion":1,"id":id,"color":color,"texture":null,"roughness":style.get("roughness").and_then(Value::as_f64).unwrap_or(1.0),"textureTint":style.get("textureTint").cloned().unwrap_or_else(|| json!([1.0,1.0,1.0,1.0])),"emissionColor":emission,"emissionIntensity":style.get("emissive").and_then(Value::as_f64).unwrap_or(0.0),"uvStrategy":style.get("uvStrategy").and_then(Value::as_str).unwrap_or("flat")}}));
+            let texture_ref = style
+                .get("texture")
+                .and_then(|t| t.get("id"))
+                .cloned()
+                .unwrap_or(Value::Null);
+            ops.push(json!({"op":"defineMaterial","material":{"schemaVersion":1,"id":id,"color":color,"texture":texture_ref,"roughness":style.get("roughness").and_then(Value::as_f64).unwrap_or(1.0),"textureTint":style.get("textureTint").cloned().unwrap_or_else(|| json!([1.0,1.0,1.0,1.0])),"emissionColor":emission,"emissionIntensity":style.get("emissive").and_then(Value::as_f64).unwrap_or(0.0),"uvStrategy":style.get("uvStrategy").and_then(Value::as_str).unwrap_or("flat")}}));
         }
         if let Some(static_mesh) = asset.get("staticMesh") {
             ops.push(json!({"op":"defineStaticMesh","asset":static_mesh}));

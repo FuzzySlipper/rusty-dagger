@@ -120,6 +120,7 @@ name = "dagger-import"
 version = "0.1.0"
 dependencies = [
  "arena2",
+ "sha2",
 ]
 
 [[package]]

@@ -11,7 +11,7 @@ RUSTY_ASSET_IMPORT="${RUSTY_ASSET_IMPORT:-/home/dev/rusty-engine/target/debug/ru
 cargo run -q -p dagger-import -- \
     --out content/privateers-hold.glb
 cargo run -q -p dagger-import -- \
-    --format mesh-json --out content/privateers-hold.mesh.json
+    --format mesh-json --texture-dir content/textures --out content/privateers-hold.mesh.json
 "$RUSTY_ASSET_IMPORT" write content/privateers-hold.mesh.json content/imported
 python3 scripts/generate-project.py --write
 python3 scripts/find-route.py --write

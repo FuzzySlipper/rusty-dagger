@@ -219,6 +219,7 @@ impl Importer {
                 info_h = info.height
             ),
             png,
+            id: (archive, record),
             avg_color: avg,
         });
         self.texture_keys.insert(key, idx);
