@@ -133,6 +133,7 @@ dependencies = [
  "entity-state",
  "serde",
  "serde_json",
+ "svc-collision",
 ]
 
 [[package]]

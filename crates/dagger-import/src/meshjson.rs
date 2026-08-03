@@ -117,7 +117,7 @@ pub fn write_mesh_json(
     referenced.dedup();
 
     let json = format!(
-        "{{\n  \"schemaVersion\": 1,\n  \"name\": \"{mesh_name}\",\n  \"positions\": [{positions}],\n  \"normals\": [{normals}],\n  \"uvs\": [{uvs}],\n  \"indices\": [{indices}],\n  \"materials\": [{}],\n  \"groups\": [{}],\n  \"collision\": \"visualOnly\"\n}}\n",
+        "{{\n  \"schemaVersion\": 1,\n  \"name\": \"{mesh_name}\",\n  \"positions\": [{positions}],\n  \"normals\": [{normals}],\n  \"uvs\": [{uvs}],\n  \"indices\": [{indices}],\n  \"materials\": [{}],\n  \"groups\": [{}],\n  \"collision\": \"trimesh\"\n}}\n",
         materials.join(","),
         groups.join(",")
     );
@@ -150,11 +150,16 @@ mod tests {
 
     #[test]
     fn emits_engine_schema_shape() {
-        let prim = PrimitiveInput { texture: None, ..sample_prim() };
+        let prim = PrimitiveInput {
+            texture: None,
+            ..sample_prim()
+        };
         let out = write_mesh_json("tri", &[prim], &[], false);
         assert!(out.json.contains("\"schemaVersion\": 1"));
-        assert!(out.json.contains("\"collision\": \"visualOnly\""));
-        assert!(out.json.contains("\"materialSlot\":0,\"start\":0,\"count\":3"));
+        assert!(out.json.contains("\"collision\": \"trimesh\""));
+        assert!(out
+            .json
+            .contains("\"materialSlot\":0,\"start\":0,\"count\":3"));
         assert!(out.referenced.is_empty());
     }
 

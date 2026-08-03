@@ -28,14 +28,15 @@ mod tests {
     const PROJECT: &str = include_str!("../../../content/projects/privateers-hold.project.json");
 
     fn adversarial_wall_project() -> String {
+        // Inject an additive voxelEnvironment carrying a tall wall in front of
+        // spawn. The committed project has no proxy (trimesh authority), so the
+        // adversarial controller probe adds its own optional voxel authority.
         let mut project: serde_json::Value = serde_json::from_str(PROJECT).expect("project json");
         let scenes = project["scenes"].as_array_mut().expect("scenes");
         let scene = &mut scenes[0];
         scene["entities"][0]["playerController"]["fallSpeedUnitsPerSecond"] =
             serde_json::Value::from(0.1);
-        let voxels = scene["voxelEnvironment"]["materialVoxels"]
-            .as_array_mut()
-            .expect("material voxels");
+        let mut voxels = Vec::new();
         for x in 54..61 {
             for y in 77..91 {
                 voxels.push(serde_json::json!({
@@ -44,6 +45,12 @@ mod tests {
                 }));
             }
         }
+        scene["voxelEnvironment"] = serde_json::json!({
+            "kind": "material",
+            "voxelSize": 0.5,
+            "chunkSize": 16,
+            "materialVoxels": voxels,
+        });
         serde_json::to_string(&project).expect("adversarial project")
     }
 
@@ -51,8 +58,44 @@ mod tests {
     fn admits_the_committed_privateers_hold_project() {
         let runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
         assert_eq!(runtime.player().raw(), 1);
-        assert_eq!(runtime.collision_scene().solid_voxel_count(), 51_294);
+        // Trimesh authority: no voxel proxy; the dungeon mesh is the collider.
+        assert_eq!(runtime.collision_scene().solid_voxel_count(), 0);
         assert_eq!(runtime.player_controller().step_up_units, Some(0.75));
+    }
+
+    #[test]
+    fn the_committed_project_requires_a_collision_authority() {
+        // A project with neither a trimesh dungeon mesh nor any voxels fails
+        // closed rather than admitting a collision-less world.
+        let mut value: serde_json::Value = serde_json::from_str(PROJECT).expect("project json");
+        for asset in value["assets"].as_array_mut().expect("assets") {
+            if asset["id"].as_str() == Some("mesh/privateers-hold") {
+                asset.as_object_mut().unwrap().remove("staticMesh");
+            }
+        }
+        let error = AdmittedProject::from_json(&serde_json::to_string(&value).unwrap())
+            .expect_err("project without any collision authority must fail closed");
+        // The mesh asset is present but its staticMesh payload was stripped:
+        // no trimesh collider can be built and there are no voxels.
+        assert!(matches!(
+            error,
+            ProjectAdmissionError::MissingDungeonCollider
+        ));
+    }
+
+    #[test]
+    fn a_project_with_no_collision_authority_at_all_fails_closed() {
+        // Remove the mesh asset entirely AND there are no voxels: nothing can
+        // authorize collision, so admission fails closed.
+        let mut value: serde_json::Value = serde_json::from_str(PROJECT).expect("project json");
+        let assets = value["assets"].as_array_mut().expect("assets");
+        assets.retain(|asset| asset["id"].as_str() != Some("mesh/privateers-hold"));
+        let error = AdmittedProject::from_json(&serde_json::to_string(&value).unwrap())
+            .expect_err("project with no mesh and no voxels must fail closed");
+        assert!(matches!(
+            error,
+            ProjectAdmissionError::MissingCollisionAuthority
+        ));
     }
 
     #[test]

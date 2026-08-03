@@ -16,6 +16,7 @@ core-ids = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "88
 core-math = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
 engine-spatial = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
 entity-state = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
+svc-collision = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
