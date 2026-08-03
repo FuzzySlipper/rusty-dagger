@@ -766,6 +766,37 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
         let light = entity.get("light").unwrap_or(&Value::Null);
         ops.push(json!({"op":"createLight","handle":id,"parent":null,"light":{"kind":"point","color":light.get("color").cloned().unwrap_or_else(|| json!([1.0,1.0,1.0])),"intensity":light.get("intensity").and_then(Value::as_f64).unwrap_or(0.8),"enabled":light.get("enabled").and_then(Value::as_bool).unwrap_or(true),"position":entity.get("translation").cloned().unwrap_or_else(|| json!([0.0,0.0,0.0])),"range":light.get("range").cloned().unwrap_or(Value::Null),"decay":light.get("decay").and_then(Value::as_f64).unwrap_or(2.0),"shadowIntent":"disabled"}}));
     }
+    for entity in entities
+        .iter()
+        .filter(|entity| entity.get("sprite").is_some())
+    {
+        let id = entity.get("id").and_then(Value::as_u64).unwrap_or(0);
+        let sprite = entity.get("sprite").unwrap_or(&Value::Null);
+        let asset = sprite.get("asset").and_then(Value::as_str).unwrap_or("");
+        // SpriteInstanceDescriptor: cylindrical (Y-facing) billboard with the
+        // flat's transparent texture, at the flat's world position.
+        ops.push(json!({
+            "op": "createSprite",
+            "handle": id,
+            "parent": null,
+            "sprite": {
+                "asset": asset,
+                "frame": 0,
+                "pivot": [0.5, 0.0],
+                "size": [1.0, 1.0],
+                "sizeMode": sprite.get("sizeMode").and_then(Value::as_str).unwrap_or("world"),
+                "billboard": sprite.get("billboard").and_then(Value::as_str).unwrap_or("cylindrical"),
+                "tint": [1.0, 1.0, 1.0, 1.0],
+                "renderOrder": 0,
+                "depth": sprite.get("depth").and_then(Value::as_str).unwrap_or("default"),
+                "shading": sprite.get("shading").and_then(Value::as_str).unwrap_or("lit"),
+                "visible": sprite.get("visible").and_then(Value::as_bool).unwrap_or(true),
+                "transform": transform(entity),
+                "attachment": {"sourceEntity": id, "sourceSceneNode": id, "attachmentPoint": null},
+                "metadata": {"sourceEntity": id, "sourceSceneNode": id, "tags": [], "label": entity.get("name").and_then(Value::as_str)},
+            }
+        }));
+    }
     json!({ "schemaVersion": 1, "ops": ops })
 }
 
@@ -909,14 +940,14 @@ mod tests {
         let ops = projected.get("ops").and_then(Value::as_array).unwrap();
         assert_eq!(
             define_texture_ids(ops).len(),
-            81,
-            "the committed project must keep projecting every authored texture",
+            113,
+            "the committed project must keep projecting every authored texture (81 dungeon + 32 billboard)",
         );
         let resources = texture_resources(&workspace, project);
         let resources = resources.as_array().unwrap();
         assert_eq!(
             resources.len(),
-            80,
+            112,
             "the committed project keeps its unique content-addressed texture resources",
         );
         for entry in resources {
