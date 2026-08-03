@@ -67,8 +67,28 @@ pub struct RdbFlatObject {
     pub texture_archive: u16,
     pub texture_record: u16,
     pub flags: u16,
+    pub magnitude: u8,
+    pub sound_index: u8,
+    /// Faction/Mobile id (DFU RdbFlatResource.FactionOrMobileId). Range 0-42 =
+    /// monster in MONSTER.BSA, 128-146 = humanoid mobile type; & 0xFF = mobile id.
+    pub faction_or_mobile_id: u16,
     pub next_object_offset: i32,
     pub action: u8,
+}
+
+impl RdbFlatObject {
+    /// Whether this flat is a fixed enemy marker (DFU AddFixedRDBEnemy): an
+    /// editor-archive (199) flat whose record is 15 (random) or 16 (fixed), or
+    /// any flat carrying a non-zero mobile id. These become directional enemy
+    /// sprites (6595), not static billboards.
+    pub fn is_enemy(&self) -> bool {
+        if self.texture_archive == EDITOR_FLATS_ARCHIVE
+            && (self.texture_record == 15 || self.texture_record == 16)
+        {
+            return true;
+        }
+        self.faction_or_mobile_id & 0xFF != 0 && self.faction_or_mobile_id & 0xFF != 99
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -243,8 +263,9 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                     let mut r = Cursor::at(data, resource_offset);
                     let bitfield = r.u16();
                     let flags = r.u16();
-                    let _magnitude = r.u8();
-                    let _sound = r.u8();
+                    let magnitude = r.u8();
+                    let sound_index = r.u8();
+                    let faction_or_mobile_id = r.u16();
                     let next_object_offset = r.i32();
                     let action = r.u8();
                     block.flats.push(RdbFlatObject {
@@ -254,6 +275,9 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                         texture_archive: bitfield >> 7,
                         texture_record: bitfield & 0x7F,
                         flags,
+                        magnitude,
+                        sound_index,
+                        faction_or_mobile_id,
                         next_object_offset,
                         action,
                     });
