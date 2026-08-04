@@ -13,7 +13,7 @@
  * project -> frame path, exactly as the Studio host consumes it.
  */
 import { spawn } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -115,12 +115,66 @@ export async function dumpFrame() {
       interior: lookAtPose([25.6, 1.6, -25.6], [25.6, 1.4, -76.8]),
     };
 
+    // Directional enemy sprites (6595): scene.json enemy flats zipped with the
+    // frame's enemy createSprite ops (same order), plus the two proof poses
+    // around the enemy nearest the start marker. "front" puts the camera on
+    // the enemy's facing side (Unity +z == glTF -z) so the classic front
+    // sprite (orientation 0) shows; "back" expects orientation 4.
+    const sceneMeta = JSON.parse(
+      await readFile(resolve(ROOT, 'content/privateers-hold.scene.json'), 'utf8'),
+    );
+    const sceneEnemies = sceneMeta.enemies ?? [];
+    const enemySprites = frame.ops.filter(
+      (op) => op.op === 'createSprite' && op.sprite?.asset?.startsWith('texture/enemy-'),
+    );
+    if (enemySprites.length !== sceneEnemies.length) {
+      throw new Error(
+        `enemy count mismatch: ${enemySprites.length} sprite ops vs ${sceneEnemies.length} scene enemies`,
+      );
+    }
+    const enemies = sceneEnemies.map((enemy, index) => ({
+      handle: enemySprites[index].handle,
+      nodeHandle: enemySprites[index].parent,
+      mobileId: enemy.mobileId,
+      name: enemy.name,
+      position: enemy.position.map(Number),
+    }));
+    let targetIndex = 0;
+    if (enemies.length > 0 && Array.isArray(sceneMeta.startMarker)) {
+      let best = Infinity;
+      enemies.forEach((enemy, index) => {
+        const d = Math.hypot(
+          enemy.position[0] - sceneMeta.startMarker[0],
+          enemy.position[1] - sceneMeta.startMarker[1],
+          enemy.position[2] - sceneMeta.startMarker[2],
+        );
+        if (d < best) {
+          best = d;
+          targetIndex = index;
+        }
+      });
+    }
+    const target = enemies[targetIndex] ?? null;
+    if (target !== null) {
+      const feet = target.position;
+      const aim = [feet[0], feet[1] + 1.2, feet[2]];
+      // The 0.5m x offset keeps the camera off the degenerate exact-0/180
+      // bearing (cross product sign is zero there) while staying well inside
+      // the front/back 45-degree sectors.
+      poses['enemy-front'] = lookAtPose([feet[0] + 0.5, feet[1] + 1.4, feet[2] - 4], aim);
+      poses['enemy-back'] = lookAtPose([feet[0] + 0.5, feet[1] + 1.4, feet[2] + 4], aim);
+    }
+
     await mkdir(GENERATED, { recursive: true });
     await writeFile(resolve(GENERATED, 'frame.json'), JSON.stringify(frame));
     await writeFile(resolve(GENERATED, 'texture-manifest.json'), JSON.stringify({
       kind: 'rusty_renderer_texture_resources.v1',
       resources: textureResources,
     }));
+    await writeFile(resolve(GENERATED, 'enemies.json'), `${JSON.stringify({
+      target: target === null ? null : { ...target, index: targetIndex },
+      enemies,
+    }, null, 1)}\n`);
     await writeFile(resolve(GENERATED, 'proof-input.json'), `${JSON.stringify({
       poses,
       expectations: {

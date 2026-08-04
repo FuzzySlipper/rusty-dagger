@@ -52,12 +52,26 @@ async function main() {
     pixelRatio: 1,
     textureResourceSource,
   });
-  const submission = surface.renderOnce(1);
+  let submission = surface.renderOnce(1);
+
+  // Directional enemy sprite driver (6595). The renderer does not implement
+  // billboard modes (rusty-engine 6630) and frame selection is
+  // projection-driven by design, so the Daggerfall-side authority evaluates
+  // camera<->enemy bearing per pose: rotate each enemy's parent node to face
+  // the camera (cylindrical) and step its 8-orientation atlas frame.
+  let driver = null;
+  if (cam.startsWith('enemy')) {
+    const enemyData = await fetch('/generated/enemies.json').then((r) => r.json());
+    driver = driveDirectionalSprites(surface, enemyData, pose.position);
+    submission = surface.renderOnce(1);
+  }
+
   const lighting = surface.lightingReadout();
   const framePng = await captureFramePng(canvas);
   window.__proof = {
     ready: true,
     cam,
+    driver,
     statistics: {
       drawCallCount: submission.drawCallCount,
       triangleCount: submission.triangleCount,
@@ -71,6 +85,80 @@ async function main() {
     expectations: input.expectations,
     framePng,
   };
+}
+
+/**
+ * Per-pose directional sprite authority (6595): a JS port of
+ * arena2::mobile::orientation_index (DFU DaggerfallMobileUnit.UpdateOrientation)
+ * plus the camera-facing yaw the renderer cannot do itself yet. Emits one
+ * partial frame of node `update` (rotation) + `updateSprite` (frame) ops and
+ * returns the applied state for assertions.
+ */
+function driveDirectionalSprites(surface, enemyData, cameraPosition) {
+  const ops = [];
+  const applied = {};
+  for (const enemy of enemyData.enemies) {
+    const orientation = orientationIndex(enemy.position, cameraPosition);
+    // Face the camera cylindrically: plane geometry looks down +z, so yaw
+    // about Y by atan2(dx, dz) (glTF right-handed space).
+    const yaw = Math.atan2(
+      cameraPosition[0] - enemy.position[0],
+      cameraPosition[2] - enemy.position[2],
+    );
+    ops.push({
+      op: 'update',
+      handle: enemy.nodeHandle,
+      transform: {
+        translation: enemy.position,
+        rotation: [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)],
+        scale: [1, 1, 1],
+      },
+      material: null,
+      visible: null,
+      metadata: null,
+    });
+    ops.push({
+      op: 'updateSprite',
+      handle: enemy.handle,
+      frame: orientation,
+      tint: null,
+      renderOrder: null,
+      visible: null,
+    });
+    applied[enemy.handle] = orientation;
+  }
+  surface.applyFrame({ schemaVersion: 1, ops });
+  const target = enemyData.target;
+  const readback = target === null
+    ? null
+    : surface.renderer.objectFor(target.handle)?.userData?.frame ?? null;
+  return {
+    enemyCount: enemyData.enemies.length,
+    appliedCount: Object.keys(applied).length,
+    targetHandle: target?.handle ?? null,
+    targetFrame: target === null ? null : applied[target.handle] ?? null,
+    targetFrameReadback: readback,
+  };
+}
+
+/**
+ * arena2::mobile::orientation_index: DFU 8-sector facing. Inputs are glTF
+ * world positions; converted to DFU/Unity space (z negated) where enemies
+ * face Unity +z.
+ */
+function orientationIndex(enemyGltf, cameraGltf) {
+  const eu = [enemyGltf[0], -enemyGltf[2]];
+  const cu = [cameraGltf[0], -cameraGltf[2]];
+  let dir = [cu[0] - eu[0], cu[1] - eu[1]];
+  const len = Math.hypot(dir[0], dir[1]);
+  if (len === 0) return 0;
+  dir = [dir[0] / len, dir[1] / len];
+  const fwd = [0, 1]; // Unity +z in xz
+  const cos = Math.max(-1, Math.min(1, dir[0] * fwd[0] + dir[1] * fwd[1]));
+  const angle = Math.acos(cos) * 180 / Math.PI;
+  const crossY = dir[1] * fwd[0] - dir[0] * fwd[1];
+  const signed = angle * -Math.sign(crossY);
+  return ((-(Math.round(signed / 45)) % 8) + 8) % 8;
 }
 
 /**

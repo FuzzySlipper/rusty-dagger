@@ -406,4 +406,31 @@ mod marker_tests {
             block.flats.len()
         );
     }
+
+    #[test]
+    fn s0000999_enemy_flats_match_known_inventory() {
+        // 6595: the start block carries 26 enemy flats — 25 fixed markers
+        // (199/16) plus one 206/2 flat with a mobile id — across the mobile
+        // ids {0, 1, 3, 4, 7, 15, 138, 141} (all resolvable in MOBILE_TYPES).
+        let dir = arena2_dir();
+        let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
+        let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
+        let enemies: Vec<&RdbFlatObject> = block.flats.iter().filter(|f| f.is_enemy()).collect();
+        assert_eq!(enemies.len(), 26, "start-block enemy flat count");
+        let mut ids: Vec<u8> = enemies
+            .iter()
+            .map(|f| (f.faction_or_mobile_id & 0xFF) as u8)
+            .collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids, [0, 1, 3, 4, 7, 15, 138, 141]);
+        for id in ids {
+            assert!(
+                crate::mobile::mobile_type(id).is_some(),
+                "mobile id {id} must resolve to a known enemy type"
+            );
+        }
+    }
 }
+
+

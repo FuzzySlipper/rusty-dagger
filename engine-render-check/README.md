@@ -40,9 +40,16 @@ node engine-render-check/check.mjs   # from the repo root; exits nonzero on fail
    `drawCallCount >= 78`; screenshot metrics (the
    `scripts/studio-frame-metrics.mjs` vocabulary) occupancy >= 0.02,
    uniqueColors >= 800, textureCells >= 1; zero console errors.
-5. Screenshots are written to `privateers-hold-overview.png` and
-   `privateers-hold-interior.png` (native drawing-buffer pixels captured
-   in-page via readPixels + OffscreenCanvas, no CSS upscale interpolation).
+5. Directional enemy poses (`enemy-front` / `enemy-back`, task 6595): the
+   in-page driver (JS port of `arena2::mobile::orientation_index`) rotates
+   every enemy's parent node to face the camera and steps its 8-orientation
+   atlas frame from the camera bearing, then `renderOnce` again. Assertions:
+   every enemy got a frame, the target enemy (nearest the start marker)
+   shows orientation 0 from the front pose and 4 from the back pose, and the
+   renderer's retained sprite holds that exact frame.
+6. Screenshots are written to `privateers-hold-{overview,interior,enemy-front,enemy-back}.png`
+   (native drawing-buffer pixels captured in-page via readPixels +
+   OffscreenCanvas, no CSS upscale interpolation).
 
 Measured on the committed content (SwiftShader): overview triangles=8943
 drawCalls=208 textures=114 occupancy=0.052 uniqueColors=10914 textureCells=2;
@@ -78,13 +85,10 @@ textureCells=10.
 
 ## Known engine limitations (upstream, do not paper over)
 
-- **Sprites render untextured** (white quads). `renderer-three`
-  `three-renderer.ts` `#createSprite` builds a `MeshBasicMaterial` with tint
-  only — no `map` is ever bound (lines ~2025-2031); `defineSpriteAtlas` only
-  registers UV rects (lines ~519-521) and `#applySpriteUv` touches UVs, not
-  the material. The adapter also emits no `defineSpriteAtlas` ops. Torch
-  billboards in the screenshots are therefore white; the texture assertions
-  target the static mesh, which is fully textured.
+- **Billboard modes unimplemented** (rusty-engine 6630): sprites keep their
+  authored rotation; nothing orients them toward the camera. The 6595 driver
+  rotates enemy parent nodes consumer-side; torch billboards stay
+  fixed-orientation until the engine honors `billboard: cylindrical`.
 - **Software pixel-ratio cap + canvas sizing feedback**: for SwiftShader the
   backing buffer is capped at 0.25x (`software-renderer-resolution.ts`), and
   `resize()` (`browser-surface.ts` ~410-427) calls `setSize(w, h, false)`

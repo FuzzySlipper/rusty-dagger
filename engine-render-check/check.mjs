@@ -67,7 +67,8 @@ const check = (condition, message) => {
 };
 
 try {
-  for (const cam of ['overview', 'interior']) {
+  // enemy-front/enemy-back also exercise the directional sprite driver (6595).
+  for (const cam of ['overview', 'interior', 'enemy-front', 'enemy-back']) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1 });
     const consoleErrors = [];
     page.on('console', (message) => {
@@ -101,6 +102,29 @@ try {
 
       if (proof !== null && metrics !== null) {
         const stats = proof.statistics;
+        // Directional sprite poses: the driver must have stepped every enemy
+        // to the bearing-correct frame, with the target enemy showing its
+        // front (0) from the front pose and its back (4) from the back pose,
+        // and the renderer must hold that exact frame.
+        if (cam.startsWith('enemy')) {
+          const driver = proof.driver;
+          check(driver !== null, `${cam}: no directional sprite driver report`);
+          if (driver !== null) {
+            check(
+              driver.appliedCount === driver.enemyCount && driver.enemyCount > 0,
+              `${cam}: driver applied ${driver.appliedCount}/${driver.enemyCount} enemy frames`,
+            );
+            const expected = cam === 'enemy-front' ? 0 : 4;
+            check(
+              driver.targetFrame === expected,
+              `${cam}: target enemy orientation ${driver.targetFrame} != ${expected}`,
+            );
+            check(
+              driver.targetFrameReadback === expected,
+              `${cam}: renderer holds frame ${driver.targetFrameReadback} != ${expected} for target enemy`,
+            );
+          }
+        }
         // The dungeon mesh is a single static-mesh instance, so its 8683
         // triangles are drawn whole whenever it passes frustum culling; torch
         // sprite billboards add 2 triangles each on top.
@@ -164,5 +188,6 @@ if (failures.length > 0) {
 }
 console.log(
   'ENGINE RENDER CHECK PASSED; screenshots: '
-  + 'engine-render-check/privateers-hold-overview.png, engine-render-check/privateers-hold-interior.png',
+  + 'engine-render-check/privateers-hold-overview.png, engine-render-check/privateers-hold-interior.png, '
+  + 'engine-render-check/privateers-hold-enemy-front.png, engine-render-check/privateers-hold-enemy-back.png',
 );

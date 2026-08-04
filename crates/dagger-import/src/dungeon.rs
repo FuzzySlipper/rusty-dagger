@@ -12,6 +12,7 @@ use crate::glb::{PrimitiveInput, TextureInput};
 use arena2::arch3d::{Arch3dFile, Mesh};
 use arena2::bsa::BsaArchive;
 use arena2::maps::{self, DungeonLayout};
+use arena2::mobile::mobile_type;
 use arena2::pak::{climate_base_type, PakFile};
 use arena2::palette::Palette;
 use arena2::rdb;
@@ -102,6 +103,18 @@ pub struct DoorAction {
     pub magnitude: u16,
 }
 
+/// A classic enemy flat (DFU AddFixedRDBEnemy): a directional billboard to be
+/// emitted as its own scene node, not baked into the static mesh. View-only:
+/// position + mobile type; facing is identity (DFU spawns RDB enemies
+/// unrotated, facing Unity +z).
+#[derive(Debug, Clone)]
+pub struct EnemyScene {
+    pub position: [f32; 3],
+    pub mobile_id: u8,
+    pub name: String,
+    pub texture_archive: u16,
+}
+
 #[derive(Debug, Clone)]
 pub struct DungeonScene {
     pub start_marker: Option<[f32; 3]>,
@@ -112,6 +125,8 @@ pub struct DungeonScene {
     pub lights: Vec<([f32; 3], f32)>,
     /// Visible billboard flats (RDB type 0x03, excluding editor/enemy markers).
     pub billboards: Vec<BillboardFlat>,
+    /// Classic enemies (directional billboards), from RDB enemy flats.
+    pub enemies: Vec<EnemyScene>,
     /// Action-door models, carved out of the static mesh into separate nodes.
     pub doors: Vec<DoorScene>,
 }
@@ -349,6 +364,7 @@ pub fn build_dungeon(
         flat_count: 0,
         lights: Vec::new(),
         billboards: Vec::new(),
+        enemies: Vec::new(),
         doors: Vec::new(),
     };
 
@@ -372,6 +388,32 @@ pub fn build_dungeon(
         scene.light_count += block.lights.len();
         scene.flat_count += block.flats.len();
         for f in &block.flats {
+            if f.is_enemy() {
+                // DFU AddFixedRDBEnemy: enemy flats become directional
+                // billboard nodes, not static billboards. Mobile id =
+                // faction_or_mobile_id & 0xFF (0-42 monster, 128-146 humanoid;
+                // random markers carry the same id semantics here).
+                let dfu = [
+                    f.x as f32 * GLOBAL_SCALE + origin[0],
+                    -f.y as f32 * GLOBAL_SCALE + origin[1],
+                    f.z as f32 * GLOBAL_SCALE + origin[2],
+                ];
+                let mobile_id = (f.faction_or_mobile_id & 0xFF) as u8;
+                match mobile_type(mobile_id) {
+                    Some(mobile) => scene.enemies.push(EnemyScene {
+                        position: [dfu[0], dfu[1], -dfu[2]],
+                        mobile_id,
+                        name: mobile.name.to_string(),
+                        texture_archive: mobile.texture_archive,
+                    }),
+                    None => stats.texture_failures.push(format!(
+                        "enemy flat with unknown mobile id {mobile_id} \
+                         (archive {} record {}), skipped",
+                        f.texture_archive, f.texture_record
+                    )),
+                }
+                continue;
+            }
             if !f.is_visible_billboard() {
                 continue;
             }

@@ -54,7 +54,7 @@ def load_texture_manifest() -> dict:
     return {t["path"]: t for t in data.get("textures", [])}
 
 
-def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict) -> list:
+def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, enemy_manifest: dict) -> list:
     """StoredAssetDefinition[] from imported catalog entries + the static-mesh artifact.
 
     Catalog entry -> embedded asset: id, catalog {version, hash, sourcePath,
@@ -63,7 +63,8 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict) -> 
     sourcePath stamped from the texture manifest so the studio adapter can
     resolve exact content-addressed PNG render resources. Billboard sprite
     textures (RDB flats) are appended as texture/billboard-A-R entries with
-    transparent PNGs from the billboard manifest.
+    transparent PNGs from the billboard manifest; enemy directional atlases
+    as texture/enemy-<id>-atlas entries with per-orientation frame rects.
     """
     texture_manifest = load_texture_manifest()
 
@@ -138,6 +139,8 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict) -> 
 
     # Billboard sprite textures (RDB flat billboards). One texture asset per
     # unique (archive, record) with a transparent PNG (index 0 = transparent).
+    # Each also declares a full-rect single-frame sprite atlas so the adapter
+    # can bind the texture (createSprite assets resolve against atlases).
     for tex in billboard_manifest.get("billboards", []):
         slug = f"billboard-{tex['archive']}-{tex['record']}"
         assets.append({
@@ -155,6 +158,43 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict) -> 
                 "filter": "nearest",
                 "wrap": "clamp",
                 "alphaCutout": True,
+                "spriteAtlas": {
+                    "frames": [{"frame": 0, "uvMin": [0, 0], "uvMax": [1, 1]}],
+                },
+            },
+        })
+
+    # Enemy directional sprite atlases (6595). One texture asset per unique
+    # enemy mobile id; the importer-packed PNG holds the 8 orientation frames
+    # (mirrored sides baked) and the manifest carries per-frame UV rects and
+    # DFU world sizes.
+    for enemy in enemy_manifest.get("enemies", []):
+        slug = f"enemy-{enemy['mobileId']}-atlas"
+        assets.append({
+            "id": f"texture/{slug}",
+            "catalog": {
+                "version": 1,
+                "hash": enemy["sha256"].removeprefix("sha256:"),
+                "sourcePath": f"content/textures/{enemy['path']}",
+                "label": slug,
+                "dependencies": [],
+            },
+            "texture": {
+                "width": enemy["width"],
+                "height": enemy["height"],
+                "filter": "nearest",
+                "wrap": "clamp",
+                "alphaCutout": True,
+                "spriteAtlas": {
+                    "frames": [
+                        {
+                            "frame": f["frame"],
+                            "uvMin": f["uvMin"],
+                            "uvMax": f["uvMax"],
+                        }
+                        for f in enemy["frames"]
+                    ],
+                },
             },
         })
 
@@ -175,7 +215,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict) -> 
     return assets
 
 
-def build_scene(static_mesh: dict) -> dict:
+def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
     """One scene: the dungeon mesh entity + a player-camera entity.
 
     Collision authority is the dungeon static mesh itself (rusty-engine task
@@ -259,6 +299,36 @@ def build_scene(static_mesh: dict) -> dict:
                 },
             })
 
+    # Enemy directional sprite entities (6595). One sprite per RDB enemy flat;
+    # the adapter parents these under a group node so a live driver can rotate
+    # them toward the camera and step the 8-orientation frame from bearing.
+    # `size` is the front (orientation 0) DFU world size; per-orientation
+    # record sizes differ, which the static sprite size cannot express yet.
+    enemy_entities = []
+    enemy_frames = {e["mobileId"]: e["frames"] for e in enemy_manifest.get("enemies", [])}
+    if scene_meta and scene_meta.get("enemies"):
+        for index, e in enumerate(scene_meta["enemies"]):
+            frames = enemy_frames.get(e["mobileId"])
+            if not frames:
+                continue  # atlas decode failed at import; warning already emitted
+            slug = f"enemy-{e['mobileId']}-atlas"
+            enemy_entities.append({
+                "id": 2000 + index,
+                "name": f"enemy-{e['name'].lower()}-{index}",
+                "translation": [float(v) for v in e["position"]],
+                "sprite": {
+                    "asset": f"texture/{slug}",
+                    "directional": True,
+                    "frame": 0,
+                    "size": frames[0]["size"],
+                    "billboard": "cylindrical",
+                    "sizeMode": "world",
+                    "shading": "lit",
+                    "depth": "default",
+                    "visible": True,
+                },
+            })
+
     player_entity = {
         "id": 1,
         "name": "player",
@@ -287,7 +357,7 @@ def build_scene(static_mesh: dict) -> dict:
     return {
         "id": SCENE_ID,
         "name": "Privateer's Hold",
-        "entities": [player_entity, dungeon_entity] + light_entities + billboard_entities,
+        "entities": [player_entity, dungeon_entity] + light_entities + billboard_entities + enemy_entities,
     }
 
 
@@ -296,14 +366,16 @@ def build_project() -> dict:
     static_mesh = load_json(IMPORTED / "privateers-hold.static-mesh.json")
     billboard_manifest_path = TEXTURES / "billboard-manifest.json"
     billboard_manifest = load_json(billboard_manifest_path) if billboard_manifest_path.exists() else {}
+    enemy_manifest_path = TEXTURES / "enemy-manifest.json"
+    enemy_manifest = load_json(enemy_manifest_path) if enemy_manifest_path.exists() else {}
     return {
         "schemaVersion": SCHEMA_VERSION,
         "projectId": PROJECT_ID,
         "name": "Privateer's Hold",
         "entryScene": SCENE_ID,
-        "assets": build_assets(catalog, static_mesh, billboard_manifest),
+        "assets": build_assets(catalog, static_mesh, billboard_manifest, enemy_manifest),
         "itemDefinitions": [],
-        "scenes": [build_scene(static_mesh)],
+        "scenes": [build_scene(static_mesh, enemy_manifest)],
     }
 
 
