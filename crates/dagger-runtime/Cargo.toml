@@ -5,6 +5,7 @@ edition.workspace = true
 description = "Daggerfall gameplay runtime and real-project collision walkthrough"
 
 [dependencies]
+arena2 = { path = "../arena2" }
 core-ids.workspace = true
 core-math.workspace = true
 engine-spatial.workspace = true
@@ -20,3 +21,7 @@ path = "src/bin/dagger-walkthrough.rs"
 [[bin]]
 name = "dagger-derive-route"
 path = "src/bin/dagger-derive-route.rs"
+
+[[bin]]
+name = "dagger-sprite-frames"
+path = "src/bin/dagger-sprite-frames.rs"

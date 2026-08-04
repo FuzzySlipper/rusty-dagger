@@ -24,6 +24,24 @@ const ADAPTER = process.env.RUSTY_STUDIO_ADAPTER
 const PROJECT = 'content/projects/privateers-hold.project.json';
 const PROTOCOL = 14;
 const GENERATED = resolve(HERE, 'generated');
+const SPRITE_FRAMES = resolve(ROOT, 'target/debug/dagger-sprite-frames');
+
+/** Directional sprite frames from the Rust runtime authority (6595). */
+async function runSpriteFrames(cameras) {
+  const args = [
+    resolve(ROOT, 'content/privateers-hold.scene.json'),
+    ...cameras.map((c) => c.join(',')),
+  ];
+  const proc = spawn(SPRITE_FRAMES, args, { stdio: ['ignore', 'pipe', 'inherit'] });
+  let out = '';
+  proc.stdout.setEncoding('utf8');
+  proc.stdout.on('data', (chunk) => {
+    out += chunk;
+  });
+  const code = await new Promise((resolveExit) => proc.on('close', resolveExit));
+  if (code !== 0) throw new Error(`dagger-sprite-frames exited ${code} (build it: cargo build -p dagger-runtime)`);
+  return JSON.parse(out);
+}
 
 export async function dumpFrame() {
   const proc = spawn(ADAPTER, [], { stdio: ['pipe', 'pipe', 'inherit'] });
@@ -155,6 +173,7 @@ export async function dumpFrame() {
       });
     }
     const target = enemies[targetIndex] ?? null;
+    const poseAssignments = {};
     if (target !== null) {
       const feet = target.position;
       const aim = [feet[0], feet[1] + 1.2, feet[2]];
@@ -163,6 +182,16 @@ export async function dumpFrame() {
       // the front/back 45-degree sectors.
       poses['enemy-front'] = lookAtPose([feet[0] + 0.5, feet[1] + 1.4, feet[2] - 4], aim);
       poses['enemy-back'] = lookAtPose([feet[0] + 0.5, feet[1] + 1.4, feet[2] + 4], aim);
+
+      // Runtime-authoritative directional frames (6595 R6595-1): the Rust
+      // runtime computes orientation frames + facing rotations via
+      // arena2::mobile; this harness never re-implements the math.
+      const spriteFrames = await runSpriteFrames(
+        ['enemy-front', 'enemy-back'].map((name) => poses[name].position),
+      );
+      for (const [index, name] of ['enemy-front', 'enemy-back'].entries()) {
+        poseAssignments[name] = spriteFrames.poses[index].assignments;
+      }
     }
 
     await mkdir(GENERATED, { recursive: true });
@@ -174,6 +203,7 @@ export async function dumpFrame() {
     await writeFile(resolve(GENERATED, 'enemies.json'), `${JSON.stringify({
       target: target === null ? null : { ...target, index: targetIndex },
       enemies,
+      poseAssignments,
     }, null, 1)}\n`);
     await writeFile(resolve(GENERATED, 'proof-input.json'), `${JSON.stringify({
       poses,

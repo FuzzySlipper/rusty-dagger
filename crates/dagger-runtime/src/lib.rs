@@ -9,6 +9,9 @@
 mod player;
 mod project;
 mod runtime;
+pub mod directional;
+
+pub use directional::{evaluate_directional, DirectionalAssignment};
 
 pub use player::{
     PlayerControlFact, PlayerControlReceipt, PlayerControllerConfig, PlayerControllerState,

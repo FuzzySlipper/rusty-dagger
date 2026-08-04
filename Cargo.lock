@@ -127,6 +127,7 @@ dependencies = [
 name = "dagger-runtime"
 version = "0.1.0"
 dependencies = [
+ "arena2",
  "core-ids",
  "core-math",
  "engine-spatial",
