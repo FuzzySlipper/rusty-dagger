@@ -78,6 +78,8 @@ async function main() {
 
   const lighting = surface.lightingReadout();
   const framePng = await captureFramePng(canvas);
+  window.__surface = surface; // debug/probe seam
+  window.__capture = captureFramePng; // probe seam: native-pixel PNG after renderOnce
   window.__proof = {
     ready: true,
     cam,

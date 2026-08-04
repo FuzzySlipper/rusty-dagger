@@ -27,9 +27,17 @@ assert.equal(health.adapter, true);
 const status = await request('/api/studio-status');
 assert.equal(status.mode, 'unmanaged');
 assert.equal(status.engineSourceCommit, null);
-assert.equal(status.activeProjectRoot, null);
-assert.equal(status.activeProjectFile, null);
 assert.equal(status.runningAdapter.protocolVersion, 14);
+// A previous session may still be open (e.g. after a browser-check run) —
+// close it, then verify the tracking actually clears.
+await request('/api/studio-adapter', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ type: 'closeProject', protocolVersion: 14, requestId: 'check-initial-close' }),
+});
+const statusAfterClose = await request('/api/studio-status');
+assert.equal(statusAfterClose.activeProjectRoot, null);
+assert.equal(statusAfterClose.activeProjectFile, null);
 
 // The session transaction is the browser's actual open path (engine d488a56).
 const session = await request('/api/studio-session/open', {

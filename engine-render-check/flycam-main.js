@@ -76,6 +76,8 @@ async function main() {
 
   // --- per-frame loop ------------------------------------------------------
   let last = performance.now();
+  let lastRender = 0;
+  const MIN_RENDER_MS = 5; // cap ~200Hz — the loop is RAF-driven on high-refresh displays
   let spriteRefresh = 0; // timestamp of last completed assignment fetch
   let fetching = false;
   const poseEquals = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
@@ -139,7 +141,10 @@ async function main() {
         });
     }
 
-    surface.renderOnce(now);
+    if (now - lastRender >= MIN_RENDER_MS) {
+      surface.renderOnce(now);
+      lastRender = now;
+    }
     hud.textContent = `pos ${state.position.map((v) => v.toFixed(1)).join(', ')}  yaw ${state.yawDegrees.toFixed(0)}  pitch ${state.pitchDegrees.toFixed(0)}`;
     requestAnimationFrame(step);
   }

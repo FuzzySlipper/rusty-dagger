@@ -286,6 +286,19 @@ fn publish_textures(dir: &std::path::Path, textures: &[glb::TextureInput]) {
     );
 }
 
+/// Sprite PNGs are stored bottom-up: renderer-three samples v=0 at the
+/// first PNG row and maps uvMin to the quad's bottom vertices, so a
+/// top-down PNG renders upside down (and the contract forbids
+/// uvMin.y > uvMax.y, so the flip must be in the pixels).
+fn flip_rgba_rows(rgba: &mut [u8], width: usize, height: usize) {
+    let stride = width * 4;
+    for y in 0..height / 2 {
+        for x in 0..stride {
+            rgba.swap(y * stride + x, (height - 1 - y) * stride + x);
+        }
+    }
+}
+
 /// Decode unique billboard (archive, record) textures to transparent PNGs
 /// (palette index 0 = transparent, the Daggerfall billboard rule) plus a
 /// billboard manifest mapping each texture to its PNG sourcePath/hash/dims.
@@ -325,6 +338,8 @@ fn publish_billboard_textures(
             continue;
         };
         let rgba = palette.to_rgba_transparent(&indexed);
+        let mut rgba = rgba;
+        flip_rgba_rows(&mut rgba, w, h);
         let png = crate::png::encode_rgba(w as u32, h as u32, &rgba);
         let slug = format!("billboard-{archive}-{record}");
         let file = format!("{slug}.png");
@@ -440,7 +455,11 @@ fn publish_enemy_atlases(
             ));
             x0 += w;
         }
-        let png = crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &atlas);
+        let png = {
+            let mut flipped = atlas.clone();
+            flip_rgba_rows(&mut flipped, atlas_w, atlas_h);
+            crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &flipped)
+        };
         let slug = format!("enemy-{}-atlas", mobile.id);
         let file = format!("{slug}.png");
         std::fs::write(dir.join(&file), &png).expect("write enemy atlas png");
@@ -460,3 +479,4 @@ fn publish_enemy_atlases(
     std::fs::write(dir.join("enemy-manifest.json"), manifest).expect("write enemy manifest");
     println!("enemies:     {} atlases ({} decode failures)", count, failures);
 }
+
