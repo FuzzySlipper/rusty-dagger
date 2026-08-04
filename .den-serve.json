@@ -1,0 +1,11 @@
+{
+  "project": "rusty-dagger",
+  "serve": {
+    "command": "node engine-render-check/serve-flycam.mjs {host} {port}",
+    "preferredPort": 4174,
+    "healthUrl": "/healthz",
+    "readyText": "\"status\":\"ok\"",
+    "reusePolicy": "broker_owned",
+    "startupTimeout": "240s"
+  }
+}

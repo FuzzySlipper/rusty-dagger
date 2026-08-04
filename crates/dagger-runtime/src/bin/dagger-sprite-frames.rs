@@ -14,19 +14,22 @@ use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 
 fn parse_camera(arg: &str) -> [f32; 3] {
-    let parts: Vec<&str> = arg.split(',').collect();
-    if parts.len() != 3 {
+    parse_camera_opt(arg).unwrap_or_else(|| {
         eprintln!("bad camera {arg:?}; expected x,y,z");
         std::process::exit(2);
+    })
+}
+
+fn parse_camera_opt(arg: &str) -> Option<[f32; 3]> {
+    let parts: Vec<&str> = arg.split(',').collect();
+    if parts.len() != 3 {
+        return None;
     }
     let mut out = [0.0f32; 3];
     for (i, part) in parts.iter().enumerate() {
-        out[i] = part.parse().unwrap_or_else(|_| {
-            eprintln!("bad camera component {part:?}");
-            std::process::exit(2);
-        });
+        out[i] = part.parse().ok()?;
     }
-    out
+    Some(out)
 }
 
 fn load_enemy_positions(scene_path: &str) -> Vec<[f32; 3]> {
@@ -95,7 +98,7 @@ fn serve(positions: &[[f32; 3]], addr: &str) {
             .split_whitespace()
             .nth(1)
             .and_then(|path| path.strip_prefix("/assignments?cam="))
-            .map(parse_camera);
+            .and_then(parse_camera_opt);
         let (status, body) = match camera {
             Some(cam) => (
                 "200 OK",

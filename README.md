@@ -47,6 +47,9 @@ current task state in the Den `rusty-dagger` project.
   renderer (renderer-three browser surface, consumed from rusty-engine
   `main`); the only render verification path. When the engine renderer lacks
   a capability, file an upstream task rather than building a side renderer.
+  Also hosts the interactive flycam (`serve-flycam.mjs`, registered with
+  den-serve): pointer-lock WASD flight through the dungeon with live
+  directional enemy sprites driven by the Rust runtime authority.
 
 ## Usage
 
@@ -64,6 +67,8 @@ cargo run -p dagger-runtime --bin dagger-walkthrough
 # Render proof through the real rusty-engine renderer (one-time: pnpm install
 # inside engine-render-check/):
 node engine-render-check/check.mjs
+# Interactive flycam (same renderer; usually started by den-serve on 4174):
+node engine-render-check/serve-flycam.mjs 127.0.0.1 4174
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (uses a local Rusty Engine Studio build; set
 # RUSTY_ENGINE_STUDIO_STATIC_ROOT to override the conventional sibling path):
