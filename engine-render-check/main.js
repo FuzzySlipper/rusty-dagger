@@ -56,13 +56,13 @@ async function main() {
 
   // Directional enemy sprite driver (6595). The renderer does not implement
   // billboard modes (rusty-engine 6630) and frame selection is
-  // projection-driven by design, so the Daggerfall-side authority evaluates
-  // camera<->enemy bearing per pose: rotate each enemy's parent node to face
-  // the camera (cylindrical) and step its 8-orientation atlas frame.
+  // projection-driven by design, so the Daggerfall-side authority
+  // (dagger-runtime, arena2::mobile semantics) computes per-pose assignments;
+  // this page only applies them.
   let driver = null;
   if (cam.startsWith('enemy')) {
     const enemyData = await fetch('/generated/enemies.json').then((r) => r.json());
-    driver = driveDirectionalSprites(surface, enemyData, pose.position);
+    driver = driveDirectionalSprites(surface, enemyData, cam);
     submission = surface.renderOnce(1);
   }
 
@@ -88,29 +88,28 @@ async function main() {
 }
 
 /**
- * Per-pose directional sprite authority (6595): a JS port of
- * arena2::mobile::orientation_index (DFU DaggerfallMobileUnit.UpdateOrientation)
- * plus the camera-facing yaw the renderer cannot do itself yet. Emits one
- * partial frame of node `update` (rotation) + `updateSprite` (frame) ops and
- * returns the applied state for assertions.
+ * Per-pose directional sprite authority (6595): applies the assignments
+ * computed by the Rust runtime (`dagger-sprite-frames`, arena2::mobile
+ * semantics) — this page never re-implements the orientation math. Each
+ * assignment rotates the enemy's parent node to face the camera (the
+ * renderer does not implement billboard modes yet, rusty-engine 6630) and
+ * steps the 8-orientation atlas frame.
  */
-function driveDirectionalSprites(surface, enemyData, cameraPosition) {
+function driveDirectionalSprites(surface, enemyData, cam) {
+  const assignments = enemyData.poseAssignments?.[cam];
+  if (!Array.isArray(assignments)) {
+    throw new Error(`no runtime sprite assignments for pose ${cam}`);
+  }
   const ops = [];
   const applied = {};
-  for (const enemy of enemyData.enemies) {
-    const orientation = orientationIndex(enemy.position, cameraPosition);
-    // Face the camera cylindrically: plane geometry looks down +z, so yaw
-    // about Y by atan2(dx, dz) (glTF right-handed space).
-    const yaw = Math.atan2(
-      cameraPosition[0] - enemy.position[0],
-      cameraPosition[2] - enemy.position[2],
-    );
+  for (const assignment of assignments) {
+    const enemy = enemyData.enemies[assignment.index];
     ops.push({
       op: 'update',
       handle: enemy.nodeHandle,
       transform: {
         translation: enemy.position,
-        rotation: [0, Math.sin(yaw / 2), 0, Math.cos(yaw / 2)],
+        rotation: assignment.rotation,
         scale: [1, 1, 1],
       },
       material: null,
@@ -120,12 +119,12 @@ function driveDirectionalSprites(surface, enemyData, cameraPosition) {
     ops.push({
       op: 'updateSprite',
       handle: enemy.handle,
-      frame: orientation,
+      frame: assignment.frame,
       tint: null,
       renderOrder: null,
       visible: null,
     });
-    applied[enemy.handle] = orientation;
+    applied[enemy.handle] = assignment.frame;
   }
   surface.applyFrame({ schemaVersion: 1, ops });
   const target = enemyData.target;
@@ -139,26 +138,6 @@ function driveDirectionalSprites(surface, enemyData, cameraPosition) {
     targetFrame: target === null ? null : applied[target.handle] ?? null,
     targetFrameReadback: readback,
   };
-}
-
-/**
- * arena2::mobile::orientation_index: DFU 8-sector facing. Inputs are glTF
- * world positions; converted to DFU/Unity space (z negated) where enemies
- * face Unity +z.
- */
-function orientationIndex(enemyGltf, cameraGltf) {
-  const eu = [enemyGltf[0], -enemyGltf[2]];
-  const cu = [cameraGltf[0], -cameraGltf[2]];
-  let dir = [cu[0] - eu[0], cu[1] - eu[1]];
-  const len = Math.hypot(dir[0], dir[1]);
-  if (len === 0) return 0;
-  dir = [dir[0] / len, dir[1] / len];
-  const fwd = [0, 1]; // Unity +z in xz
-  const cos = Math.max(-1, Math.min(1, dir[0] * fwd[0] + dir[1] * fwd[1]));
-  const angle = Math.acos(cos) * 180 / Math.PI;
-  const crossY = dir[1] * fwd[0] - dir[0] * fwd[1];
-  const signed = angle * -Math.sign(crossY);
-  return ((-(Math.round(signed / 45)) % 8) + 8) % 8;
 }
 
 /**

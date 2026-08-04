@@ -244,10 +244,15 @@ Classic enemies are view-only directional billboards. Ownership split:
   rotate it — renderer-three does not implement billboard modes (rusty-engine
   6630) and `updateSprite` cannot patch transforms.
 - The per-camera-tick directional authority is consumer-side by engine design
-  ("projection-driven, never renderer wall-clock"): compute bearing ->
-  orientation frame + camera-facing yaw, emit `update` + `updateSprite` ops.
-  The engine-render-check harness owns the first such driver (per-pose);
-  a runtime live loop (future `dagger-world`) reuses `arena2::mobile`.
+  ("projection-driven, never renderer wall-clock") and lives in
+  `dagger-runtime::directional` (`evaluate_directional`, arena2::mobile
+  semantics): camera pose -> per-enemy orientation frame + camera-facing yaw.
+  Consumers apply the assignments (`update` + `updateSprite` ops) and never
+  re-implement the math — the engine-render-check driver consumes them via
+  the `dagger-sprite-frames` CLI; a future `dagger-world` live loop calls the
+  same API. Evaluation is a naive full-scene poll per pose — documented
+  stopgap until the engine exposes a renderer-visibility query
+  (rusty-engine 6632).
 - Static-size limitation: a sprite's quad size is fixed at creation (front
   record), while DFU scales per orientation record; accepted for view-only.
 
