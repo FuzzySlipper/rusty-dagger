@@ -48,7 +48,7 @@
       const center = box.getCenter(new THREE.Vector3());
       const size = box.getSize(new THREE.Vector3());
 
-      let meshCount = 0, triCount = 0, texturedMats = 0;
+      let meshCount = 0, triCount = 0, texturedMats = 0, doorNodes = 0;
       model.traverse((o) => {
         if (o.isMesh) {
           meshCount++;
@@ -57,6 +57,7 @@
           const mats = Array.isArray(o.material) ? o.material : [o.material];
           for (const m of mats) if (m.map) texturedMats++;
         }
+        if (o.name && o.name.startsWith('door-')) doorNodes++;
       });
 
       // Camera modes: overview (default), top, interior
@@ -80,6 +81,7 @@
         meshCount,
         triCount: Math.round(triCount),
         texturedMats,
+        doorNodes,
         bounds: { min: box.min.toArray(), max: box.max.toArray() },
       };
     }, undefined, (err) => {

@@ -62,9 +62,10 @@ pub struct BuildOutput {
     /// Combined dungeon primitives (the collision trimesh source AND the
     /// static render mesh) — hinged doors are NOT in this set.
     pub primitives: Vec<PrimitiveInput>,
-    /// Per-door render primitives (named `door/N`), emitted into the GLB so
-    /// doors render as distinct nodes but kept OUT of `primitives` so the
-    /// collision trimesh has open doorways for route derivation.
+    /// Per-door render primitives (named `door-N-<model_id>`, sanitize-safe
+    /// for three.js/glTF consumers), emitted into the GLB so doors render as
+    /// distinct nodes but kept OUT of `primitives` so the collision trimesh
+    /// has open doorways for route derivation.
     pub door_primitives: Vec<PrimitiveInput>,
     pub textures: Vec<TextureInput>,
     pub stats: BuildStats,
@@ -592,7 +593,7 @@ pub fn build_dungeon(
         }
         let texture = imp.texture_keys.get(&(tex_key, tex_rec)).copied();
         door_primitives.push(PrimitiveInput {
-            name: format!("door/{door_index} {model_id} TEXTURE.{tex_key:03}[{tex_rec}]"),
+            name: format!("door-{door_index}-{model_id}"),
             positions: build.positions,
             normals: build.normals,
             uvs: build.uvs,

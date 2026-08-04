@@ -36,9 +36,10 @@ try {
   if (!done.ok) failures.push('viewer reported not-ok');
   if (errors.length) failures.push('page errors: ' + errors.join(' | '));
   if (consoleErrors.length) failures.push('console errors: ' + consoleErrors.join(' | '));
-  if (done.meshCount !== 81) failures.push(`expected 81 primitive meshes, got ${done.meshCount}`);
+  if (done.meshCount !== 136) failures.push(`expected 136 primitive meshes, got ${done.meshCount}`);
   if (done.triCount !== 9263) failures.push(`expected 9263 tris, got ${done.triCount}`);
-  if (done.texturedMats !== 81) failures.push(`expected 81 textured materials, got ${done.texturedMats}`);
+  if (done.texturedMats !== 136) failures.push(`expected 136 textured materials, got ${done.texturedMats}`);
+  if (done.doorNodes !== 58) failures.push(`expected 58 named door nodes, got ${done.doorNodes}`);
   const [mn, mx] = [done.bounds.min, done.bounds.max];
   const near = (a, b) => Math.abs(a - b) < 0.05;
   if (!near(mn[0], -51.2) || !near(mx[0], 102.4) || !near(mn[1], 0) || !near(mx[1], 51.1) || !near(mn[2], -102.4) || !near(mx[2], 51.2)) {
