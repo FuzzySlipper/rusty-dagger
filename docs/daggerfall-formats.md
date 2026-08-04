@@ -188,7 +188,7 @@ import-format surface area is added.
 
 The plan in §3 was executed in `/home/dev/rusty-dagger`:
 - `crates/arena2` — Rust parsers for BSA/MAPS/RDB/ARCH3D/TEXTURE/PAL/PAK (unit-tested against the real data).
-- `crates/dagger-import` — CLI producing (a) a **textured GLB** (81 primitives, one per texture, embedded PNGs) and (b) the engine-native **untextured** `privateers-hold.mesh.json`.
-- GLB verified by headless render through three.js GLTFLoader (studio's renderer) — `render-check/` in that repo.
+- `crates/dagger-import` — CLI producing (a) a **textured GLB** (combined dungeon node + one named node per door, embedded PNGs) and (b) the engine-native **untextured** `privateers-hold.mesh.json`.
+- GLB verified by headless render through the real rusty-engine renderer — `engine-render-check/` in that repo (the earlier ad-hoc three.js GLTFLoader harness was removed).
 - mesh.json admitted by the engine's `rusty-asset-import` with zero diagnostics as `mesh/privateers-hold` (artifacts in `content/imported/`).
 - TEXTURE.nnn decode (incl. RecordRle), PAL.PAL palette, dungeon texture table + climate door remap (74→374 for Privateer's Hold Woodlands climate), and TEXTURE.000/.001 solid-colour virtual archives are all implemented — details in the rusty-dagger README.

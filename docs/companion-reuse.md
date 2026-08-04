@@ -84,7 +84,8 @@ markers), `theme`. These are dependency-clean (presentational, input-only).
 equipment, inventory, main-menu) until the successor project has those
 concepts; `domain`, `protocol`, `store`, `transport` (their game loopback).
 **Integration**: pnpm workspace deps `@rusty-engine/ui-*` when a rusty-dagger
-browser app exists; until then, nothing to wire (render-check covers visuals).
+browser app exists; until then, nothing to wire (engine-render-check covers
+visuals).
 
 ## rusty-d20
 
@@ -108,7 +109,8 @@ and d20 is not a drop-in for it.
 
 Already consumed: `rusty-asset-import` CLI (content pipeline),
 render-model/asset-catalog semantics via artifacts, studio adapter protocol,
-renderer-three (via render-check). Upstream needs tracked as engine tasks
+renderer-three (via engine-render-check). Upstream needs tracked as engine
+tasks
 6515/6516 with local consume tasks 6521/6522.
 
 ## Decisions (for task 6563 implementation)

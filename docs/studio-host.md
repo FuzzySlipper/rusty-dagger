@@ -74,10 +74,11 @@ textured render itself (pure-Node PNG metrics in
   color, >= 800 unique geometry colors and >= 1 texel-frequency grid cell
   (luminance stddev >= 6) — gates the average-color fallback (~100-500
   colors, no such cells) cannot pass.
-- **GLB comparison**: the focused frame's 12-bin hue histogram must overlap
-  the best of the three committed GLB render references (`render-check/*.png`)
-  by histogram intersection >= 0.40. Studio and the GLB viewer use different
-  lighting rigs and framing, so this is a hue-signature tolerance rather than
+- **Renderer comparison**: the focused frame's 12-bin hue histogram must
+  overlap the best of the committed rusty-engine render references
+  (`engine-render-check/*.png` — the same renderer) by histogram
+  intersection >= 0.40. Studio framing and lighting differ from the
+  harness poses, so this is a hue-signature tolerance rather than
   pixel equality; measured ~0.65 desktop / ~0.70 narrow, while the untextured
   average-color frame scores ~0.25.
 
