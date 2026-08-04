@@ -59,7 +59,13 @@ pub struct BuildStats {
 }
 
 pub struct BuildOutput {
+    /// Combined dungeon primitives (the collision trimesh source AND the
+    /// static render mesh) — hinged doors are NOT in this set.
     pub primitives: Vec<PrimitiveInput>,
+    /// Per-door render primitives (named `door/N`), emitted into the GLB so
+    /// doors render as distinct nodes but kept OUT of `primitives` so the
+    /// collision trimesh has open doorways for route derivation.
+    pub door_primitives: Vec<PrimitiveInput>,
     pub textures: Vec<TextureInput>,
     pub stats: BuildStats,
     /// Dungeon-scene metadata: markers in glTF world space (RH Y-up, meters).
@@ -81,7 +87,16 @@ pub struct DoorScene {
     /// glTF world-space rotation as euler degrees (x, y, z, DFU T·Rz·Rx·Ry).
     pub rotation_deg: [f32; 3],
     pub model_id: String,
-    /// Action record: slide axis (0/1/2 = x/y/z), duration, magnitude (raw).
+    /// Hinged action door (DFU DaggerfallActionDoor, OpenAngle=-90). True for
+    /// every DOR-tagged model; the door swings open rather than sliding.
+    pub hinged: bool,
+    /// Optional special action record (slide axis/duration/magnitude) when the
+    /// model carries one — most hinged doors do not.
+    pub action: Option<DoorAction>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DoorAction {
     pub axis: u8,
     pub duration: u16,
     pub magnitude: u16,
@@ -303,6 +318,10 @@ pub fn build_dungeon(
 
     // One primitive per texture key (None = untextured/default material).
     let mut prims: HashMap<Option<(u16, u16)>, PrimitiveBuild> = HashMap::new();
+    // Per-door render primitives, kept OUT of the combined dungeon primitives
+    // (and therefore out of the collision trimesh). Each entry:
+    // (door scene index, door texture archive, record, model id, geometry).
+    let mut door_prims: Vec<(usize, u16, u16, String, PrimitiveBuild)> = Vec::new();
 
     for block_ref in &layout.blocks {
         let data = blocks_bsa
@@ -386,23 +405,88 @@ pub fn build_dungeon(
                 obj.z as f32 * GLOBAL_SCALE,
             ];
 
-            // Action doors are carved OUT of the static mesh: they become
-            // separate scene nodes with action metadata (slide axis/duration/
-            // magnitude) so the runtime can move them (DFU IsActionDoor).
+            // Hinged action doors are carved OUT of the static collision mesh:
+            // their triangles are NOT merged into the combined dungeon
+            // primitives (which become the collision trimesh), so the doorway
+            // is open for route derivation. Instead each door's geometry is
+            // emitted as its own named render primitive (door still visible,
+            // correctly textured, and addressable as a distinct node the
+            // runtime can swing open — DFU DaggerfallActionDoor, OpenAngle=-90).
             if obj.is_action_door() {
-                let record = obj.action.expect("is_action_door implies action");
                 let dfu = [
                     obj.x as f32 * GLOBAL_SCALE + origin[0],
                     -obj.y as f32 * GLOBAL_SCALE + origin[1],
                     obj.z as f32 * GLOBAL_SCALE + origin[2],
                 ];
+                let door_index = scene.doors.len();
+                let mut door_prim = PrimitiveBuild::default();
+                for plane in &mesh.planes {
+                    if plane.points.len() < 3 {
+                        continue;
+                    }
+                    let remapped = apply_texture_table(plane.texture_archive, imp.climate_base);
+                    let (tex_w, tex_h) = match imp.resolve_texture(remapped, plane.texture_record) {
+                        Some((_idx, w, h)) => (w, h),
+                        None => (64.0, 64.0),
+                    };
+                    let base = door_prim.positions.len() as u32;
+                    let mut world: Vec<[f32; 3]> = Vec::with_capacity(plane.points.len());
+                    for p in &plane.points {
+                        let local = [
+                            p.x as f32 / POINT_DIVISOR * GLOBAL_SCALE,
+                            -p.y as f32 / POINT_DIVISOR * GLOBAL_SCALE,
+                            p.z as f32 / POINT_DIVISOR * GLOBAL_SCALE,
+                        ];
+                        let v = mat_vec(rot, local);
+                        let wdfu = [
+                            v[0] + obj_pos[0] + origin[0],
+                            v[1] + obj_pos[1] + origin[1],
+                            v[2] + obj_pos[2] + origin[2],
+                        ];
+                        let gltf = [wdfu[0], wdfu[1], -wdfu[2]];
+                        world.push(gltf);
+                        door_prim.uvs.push([
+                            p.u as f32 / TEXTURE_DIVISOR / tex_w,
+                            p.v as f32 / TEXTURE_DIVISOR / tex_h,
+                        ]);
+                    }
+                    let n = normalize(cross(sub(world[1], world[0]), sub(world[2], world[0])));
+                    for w in &world {
+                        door_prim.normals.push(n);
+                        door_prim.positions.push(*w);
+                    }
+                    for i in 0..(plane.points.len() as u32 - 2) {
+                        door_prim.indices.push(base);
+                        door_prim.indices.push(base + i + 1);
+                        door_prim.indices.push(base + i + 2);
+                    }
+                }
+                let tex_key = apply_texture_table(
+                    mesh
+                        .planes
+                        .first()
+                        .map(|p| p.texture_archive)
+                        .unwrap_or(74),
+                    imp.climate_base,
+                );
+                let tex_rec = mesh.planes.first().map(|p| p.texture_record).unwrap_or(0);
+                door_prims.push((
+                    door_index,
+                    tex_key,
+                    tex_rec,
+                    obj.model_id.clone(),
+                    door_prim,
+                ));
                 scene.doors.push(DoorScene {
                     position: [dfu[0], dfu[1], -dfu[2]],
                     rotation_deg: [deg(obj.x_rot), deg(obj.y_rot), deg(obj.z_rot)],
                     model_id: obj.model_id.clone(),
-                    axis: record.axis,
-                    duration: record.duration,
-                    magnitude: record.magnitude,
+                    hinged: true,
+                    action: obj.action.map(|record| DoorAction {
+                        axis: record.axis,
+                        duration: record.duration,
+                        magnitude: record.magnitude,
+                    }),
                 });
                 continue;
             }
@@ -475,7 +559,8 @@ pub fn build_dungeon(
         }
     }
 
-    // Finalize primitives; map texture keys to output texture indices
+    // Finalize the combined dungeon primitives (collision trimesh source +
+    // static render mesh). Hinged doors are NOT in this set.
     let mut primitives: Vec<PrimitiveInput> = Vec::new();
     let mut keys: Vec<Option<(u16, u16)>> = prims.keys().cloned().collect();
     keys.sort_by_key(|k| (k.is_none(), k.map(|(a, r)| (a, r))));
@@ -498,10 +583,29 @@ pub fn build_dungeon(
         });
     }
 
+    // Emit each hinged door as its own named render primitive (GLB only; NOT
+    // in the collision mesh), keyed to the door texture (74+climate).
+    let mut door_primitives: Vec<PrimitiveInput> = Vec::new();
+    for (door_index, tex_key, tex_rec, model_id, build) in door_prims {
+        if build.indices.is_empty() {
+            continue;
+        }
+        let texture = imp.texture_keys.get(&(tex_key, tex_rec)).copied();
+        door_primitives.push(PrimitiveInput {
+            name: format!("door/{door_index} {model_id} TEXTURE.{tex_key:03}[{tex_rec}]"),
+            positions: build.positions,
+            normals: build.normals,
+            uvs: build.uvs,
+            indices: build.indices,
+            texture,
+        });
+    }
+
     stats.textures = imp.textures.len();
     stats.texture_failures = imp.texture_failures.clone();
     Ok(BuildOutput {
         primitives,
+        door_primitives,
         textures: imp.textures,
         stats,
         scene,

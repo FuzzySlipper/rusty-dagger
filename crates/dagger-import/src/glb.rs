@@ -1,5 +1,6 @@
 //! Minimal GLB (glTF 2.0 binary) writer — single mesh, per-texture primitives.
 
+#[derive(Clone)]
 pub struct PrimitiveInput {
     pub name: String,
     pub positions: Vec<[f32; 3]>,

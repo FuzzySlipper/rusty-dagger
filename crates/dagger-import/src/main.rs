@@ -145,7 +145,16 @@ fn main() {
             }
             out.json.into_bytes()
         }
-        _ => glb::write_glb(&name, &output.primitives, &output.textures),
+        _ => {
+            // The GLB carries the combined static mesh (render) plus the
+            // hinged door primitives as distinct named nodes. The collision
+            // mesh.json uses only `output.primitives` (no doors), so doorways
+            // stay open for route derivation.
+            let mut glb_prims: Vec<glb::PrimitiveInput> =
+                output.primitives.iter().cloned().collect();
+            glb_prims.extend(output.door_primitives.iter().cloned());
+            glb::write_glb(&name, &glb_prims, &output.textures)
+        }
     };
     if let Some(parent) = args.out.parent() {
         if !parent.as_os_str().is_empty() {
@@ -184,10 +193,22 @@ fn main() {
             .collect::<Vec<_>>()
             .join(","),
         output.scene.doors.iter()
-            .map(|d| format!(
-                "{{\"position\": {:?}, \"rotationDeg\": {:?}, \"modelId\": \"{}\", \"axis\": {}, \"duration\": {}, \"magnitude\": {}}}",
-                d.position, d.rotation_deg, d.model_id, d.axis, d.duration, d.magnitude
-            ))
+            .map(|d| {
+                let action = d
+                    .action
+                    .as_ref()
+                    .map(|a| {
+                        format!(
+                            "{{\"axis\": {}, \"duration\": {}, \"magnitude\": {}}}",
+                            a.axis, a.duration, a.magnitude
+                        )
+                    })
+                    .unwrap_or_else(|| "null".to_string());
+                format!(
+                    "{{\"position\": {:?}, \"rotationDeg\": {:?}, \"modelId\": \"{}\", \"hinged\": {}, \"action\": {}}}",
+                    d.position, d.rotation_deg, d.model_id, d.hinged, action
+                )
+            })
             .collect::<Vec<_>>()
             .join(","),
         s.bounds_min, s.bounds_max

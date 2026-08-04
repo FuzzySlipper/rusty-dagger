@@ -47,12 +47,19 @@ pub struct RdbModelObject {
     pub action: Option<RdbActionRecord>,
 }
 
+/// DFU RDBLayout rejects the red-brick door model even though it carries a
+/// "DOR" tag — it is not an action door.
+pub const RED_BRICK_DOOR_MODEL_ID: u32 = 72100;
+
 impl RdbModelObject {
-    /// Whether this model is an action door. Per DFU RDBLayout.IsActionDoor:
-    /// an action model whose description is DOR/DDR/NEW/CAV (red-brick doors
-    /// are rejected). These slide open instead of being static geometry.
+    /// Whether this model is a hinged action door. Per DFU RDBLayout
+    /// IsActionDoor: the model's Description tag is DOR/DDR/NEW/CAV and it is
+    /// not the red-brick door model (72100). DFU does NOT require an action
+    /// record — a DOR-tagged model is a hinged action door that swings open
+    /// (DaggerfallActionDoor, OpenAngle=-90) rather than sliding. The action
+    /// record is only for special chained action doors.
     pub fn is_action_door(&self) -> bool {
-        if !self.has_action {
+        if self.model_id.parse::<u32>().ok() == Some(RED_BRICK_DOOR_MODEL_ID) {
             return false;
         }
         matches!(self.description.as_str(), "DOR" | "DDR" | "NEW" | "CAV")
