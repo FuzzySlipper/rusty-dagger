@@ -118,21 +118,22 @@ modularity gate, task 6529):
   out (→ `dagger-export`) if they outgrow the crate.
 - `dagger-runtime` — Daggerfall-owned project admission, player controller,
   and real-project collision walkthrough. It consumes only generic Rusty
-  Engine crates at the exact public pin; it does not import loading-bay-game.
+  Engine crates (git deps on the public repo); it does not import
+  loading-bay-game.
 - `dagger-studio-adapter` — Rust-owned protocol-14 read-only admission and
   render projection for the committed Privateer's Hold project. The adapter
   reuses `dagger-runtime`; it rejects mutations until a Dagger-owned authority
   exists.
-- `scripts/studio-host.mjs` — bounded HTTP/static host for the exact Engine
-  Studio app, adapter lifecycle, normalized host-file browsing, and atomic
+- `scripts/studio-host.mjs` — bounded HTTP/static host for the Engine Studio
+  app, adapter lifecycle, normalized host-file browsing, and atomic
   per-project user settings. It is transport/presentation glue, not gameplay
   authority. See `docs/studio-host.md` for the runnable contract.
 - Planned: `dagger-content` (decoded materials/meshes with provenance),
   `dagger-world` (dungeon session runtime: blocks, doors, lights, water
   state), each arriving only when the code that needs a home exists.
 - `engine-render-check/` — headless render proof through the real
-  rusty-engine renderer (renderer-three browser surface, engine pinned via
-  `engine-source.json`): adapter protocol-14 readout -> vite page ->
+  rusty-engine renderer (renderer-three browser surface, consumed from
+  rusty-engine `main`): adapter protocol-14 readout -> vite page ->
   verified texture resources -> overview/interior assertions + screenshots.
   This is the primary render verification gate.
 - `render-check/` — legacy ad-hoc three.js GLTFLoader debug view; kept for
@@ -165,7 +166,7 @@ land:
 
 ## Collision authority: the dungeon trimesh (tasks 6563, 6522)
 
-Upstream triangle-mesh collision landed in the pin (rusty-engine task 6516,
+Upstream triangle-mesh collision landed in rusty-engine (task 6516,
 `MeshCollisionPolicy::Trimesh`) and is now consumed here (task 6522). The
 hidden `gameplayProxy` material-voxel stopgap is **retired** — the collision
 authority is the dungeon static mesh itself:

@@ -1,10 +1,10 @@
 # Source provenance
 
-This repository is a downstream Rusty Engine consumer. The generic engine
-dependency is pinned in `Cargo.toml`, `Cargo.lock`, and `engine-source.json` to
-the exact public revision:
-
-`https://github.com/FuzzySlipper/rusty-engine@880a119466faebbf19ed05e39206ff4ba87237a2`
+This repository is a downstream Rusty Engine consumer. Engine crates are
+consumed as git dependencies on the public repository
+(`https://github.com/FuzzySlipper/rusty-engine`) and locked by `Cargo.lock`;
+the render-check harness tracks the repo's `main` branch via pnpm.
+Bumping forward is an ordinary dependency update, not a provenance ritual.
 
 The Privateer's Hold mesh, material catalog, and project document are
 generated from the local Daggerfall/Arena2 source described in
@@ -47,5 +47,5 @@ The Studio adapter and bounded browser host landed in Den task 6564.
 `scripts/check-adapter.py` is the stdio open/read/close proof against the
 local adapter; `scripts/serve-studio.sh` + `scripts/check-studio-host.mjs` +
 `scripts/check-studio-browser.sh` cover the HTTP host and the real-Chromium
-textured render against the provenance-pinned Studio static build (see
+textured render against a local Studio static build (see
 `docs/studio-host.md`).

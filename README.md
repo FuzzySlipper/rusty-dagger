@@ -44,8 +44,8 @@ current task state in the Den `rusty-dagger` project.
 - `content/` — generated assets (privateers-hold.glb, privateers-hold.mesh.json,
   imported/ engine artifacts)
 - `engine-render-check/` — headless render proof through the real rusty-engine
-  renderer (renderer-three browser surface, engine pinned via
-  `engine-source.json`); the primary render verification gate
+  renderer (renderer-three browser surface, consumed from rusty-engine
+  `main`); the primary render verification gate
 - `render-check/` — legacy debug view (ad-hoc three.js GLTFLoader + playwright);
   kept for reference, no further investment
 
@@ -68,8 +68,8 @@ node engine-render-check/check.mjs
 # Legacy ad-hoc three.js debug view:
 node render-check/check.mjs [--cam overview|top|interior] [--out shot.png]
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
-# Human-visible Studio host (requires the exact Engine static build; the
-# conventional sibling path is checked against scripts/studio-static-provenance.json):
+# Human-visible Studio host (uses a local Rusty Engine Studio build; set
+# RUSTY_ENGINE_STUDIO_STATIC_ROOT to override the conventional sibling path):
 scripts/serve-studio.sh
 # Focused HTTP/adapter check while the host is running:
 node scripts/check-studio-host.mjs
@@ -98,7 +98,7 @@ scripts/check-studio-browser.sh
   with hash verification.
 - Render proof (2026-08-04): `engine-render-check/` renders the dungeon
   through the real rusty-engine renderer (renderer-three browser surface,
-  engine pinned at `engine-source.json`) in headless Chromium, asserting
+  consumed from rusty-engine `main`) in headless Chromium, asserting
   triangle/draw-call counts, texture-resource count, pixel gates, and zero
   console errors across overview + interior poses. This is the render
   verification gate going forward; the three.js `render-check/` remains as a
@@ -128,11 +128,11 @@ Tracked as Den tasks in the `rusty-dagger` project (dependencies wired):
   (studio opens via `?root=<dir>&project=<file>`).
 - **6519** Companion-reuse survey (FP controller, UI, content pipeline) →
   docs/companion-reuse.md.
-- **6563** Self-contained downstream runtime: the exact Engine pin, local
-  controller/admission, and real-project `dagger-walkthrough` now live here.
+- **6563** Self-contained downstream runtime: local controller/admission and
+  real-project `dagger-walkthrough` now live here.
 - **6564** Standalone Studio adapter/browser host: local Rust admission,
   protocol-14 readout, and HTTP bridge are now in this repository. The host
-  serves the exact Engine Studio build selected by
+  serves the Engine Studio build selected by
   `RUSTY_ENGINE_STUDIO_STATIC_ROOT` (or the conventional sibling build path).
 - **6521** Textured engine-native chain (landed): mesh-json carries real UVs
   and per-material texture references (upstream 6515); the studio adapter

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Focused protocol/HTTP check for the local rusty-dagger Studio host. */
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -26,10 +26,6 @@ assert.equal(health.adapter, true);
 
 const status = await request('/api/studio-status');
 assert.equal(status.mode, 'managed');
-assert.equal(status.engineSourceCommit, '880a119466faebbf19ed05e39206ff4ba87237a2');
-assert.equal(status.staticBuild.engineSourceCommit, status.engineSourceCommit);
-assert.match(status.staticBuild.artifactTreeSha256, /^[0-9a-f]{64}$/u);
-assert.equal(status.staticBuild.files, 5);
 assert.equal(status.runningAdapter.protocolVersion, 14);
 
 const described = await request('/api/studio-adapter', {
@@ -83,15 +79,14 @@ assert.equal(closed.type, 'projectClosed');
 
 const mismatchRoot = await mkdtemp(join(tmpdir(), 'rusty-dagger-studio-mismatch-'));
 try {
-  await writeFile(join(mismatchRoot, 'index.html'), '<!doctype html><title>unproven</title>');
   const hostScript = fileURLToPath(new URL('./studio-host.mjs', import.meta.url));
   const mismatch = spawnSync(process.execPath, [hostScript, '--static-root', mismatchRoot], {
     cwd: root,
     encoding: 'utf8',
     timeout: 10_000,
   });
-  assert.notEqual(mismatch.status, 0, 'unproven static roots must fail startup');
-  assert.match(`${mismatch.stdout}\n${mismatch.stderr}`, /static root does not match Engine/u);
+  assert.notEqual(mismatch.status, 0, 'static roots without a Studio build must fail startup');
+  assert.match(`${mismatch.stdout}\n${mismatch.stderr}`, /Studio static app not found/u);
 } finally {
   await rm(mismatchRoot, { recursive: true, force: true });
 }
