@@ -4,10 +4,10 @@
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "dependencies": {
-    "@rusty-engine/render-contracts": "github:FuzzySlipper/rusty-engine#880a119466faebbf19ed05e39206ff4ba87237a2&path:render/packages/render-contracts",
-    "@rusty-engine/render-projection": "github:FuzzySlipper/rusty-engine#880a119466faebbf19ed05e39206ff4ba87237a2&path:render/packages/render-projection",
-    "@rusty-engine/renderer-host": "github:FuzzySlipper/rusty-engine#880a119466faebbf19ed05e39206ff4ba87237a2&path:render/packages/renderer-host",
-    "@rusty-engine/renderer-three": "github:FuzzySlipper/rusty-engine#880a119466faebbf19ed05e39206ff4ba87237a2&path:render/packages/renderer-three"
+    "@rusty-engine/render-contracts": "github:FuzzySlipper/rusty-engine#main&path:render/packages/render-contracts",
+    "@rusty-engine/render-projection": "github:FuzzySlipper/rusty-engine#main&path:render/packages/render-projection",
+    "@rusty-engine/renderer-host": "github:FuzzySlipper/rusty-engine#main&path:render/packages/renderer-host",
+    "@rusty-engine/renderer-three": "github:FuzzySlipper/rusty-engine#main&path:render/packages/renderer-three"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

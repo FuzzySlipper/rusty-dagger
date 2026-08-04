@@ -6,10 +6,9 @@ cargo build -q -p dagger-studio-adapter
 STATIC_ROOT="${RUSTY_ENGINE_STUDIO_STATIC_ROOT:-/home/dev/rusty-engine/studio/dist/apps/studio-app/browser}"
 if [[ ! -f "$STATIC_ROOT/index.html" ]]; then
     echo "Studio static app not found at $STATIC_ROOT" >&2
-    echo "Set RUSTY_ENGINE_STUDIO_STATIC_ROOT to the exact Rusty Engine Studio build." >&2
+    echo "Set RUSTY_ENGINE_STUDIO_STATIC_ROOT to a Rusty Engine Studio build." >&2
     exit 1
 fi
-node scripts/studio-static-provenance.mjs "$STATIC_ROOT"
 COMMIT="$(git rev-parse HEAD)"
 export RUSTY_DAGGER_COMMIT="$COMMIT"
 exec node scripts/studio-host.mjs \

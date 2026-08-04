@@ -2,10 +2,10 @@
 
 Headless render proof of Privateer's Hold through the **real rusty-engine
 renderer** — `@rusty-engine/renderer-three` (browser surface) plus
-`@rusty-engine/renderer-host` texture-resource admission — pinned to the exact
-engine revision in `../engine-source.json`
-(`880a119466faebbf19ed05e39206ff4ba87237a2`) via pnpm Git-subdirectory
-dependencies. This replaces the retired ad-hoc three.js GLB harness in
+`@rusty-engine/renderer-host` texture-resource admission — consumed from the
+public rusty-engine repo's `main` branch via pnpm Git-subdirectory
+dependencies (the lockfile records what was last installed; `pnpm update`
+moves it forward). This replaces the retired ad-hoc three.js GLB harness in
 `render-check/` (do not invest in that one).
 
 ## Run
@@ -68,13 +68,15 @@ textureCells=10.
 - `check.mjs` — orchestrator: dump, serve, browse, assert, summarize.
 - `dump-frame.mjs` — adapter stdio dump + camera-pose/expectation derivation.
 - `index.html`, `main.js` — the renderer page (`?cam=overview|interior`).
-- `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` — pinned engine
-  deps; `allowBuilds` entries let the codeload `prepare` scripts (tsc build)
-  and the esbuild postinstall run.
+- `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` — engine deps
+  tracking rusty-engine `main`; `allowBuilds` entries let the codeload
+  `prepare` scripts (tsc build) and the esbuild postinstall run (the entries
+  name the resolved tarball — refresh them if pnpm reports ignored builds
+  after an update).
 - `generated/` — gitignored dump + per-pose proof JSON.
 - `privateers-hold-*.png` — committed proof screenshots (overwritten each run).
 
-## Known engine limitations at this pin (upstream, do not paper over)
+## Known engine limitations (upstream, do not paper over)
 
 - **Sprites render untextured** (white quads). `renderer-three`
   `three-renderer.ts` `#createSprite` builds a `MeshBasicMaterial` with tint
