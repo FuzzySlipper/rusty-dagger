@@ -947,8 +947,9 @@ mod tests {
         let resources = resources.as_array().unwrap();
         assert_eq!(
             resources.len(),
-            113,
-            "the committed project keeps its unique content-addressed texture resources",
+            114,
+            "the committed project keeps its unique content-addressed texture resources \
+             (114 since the 6527 classic texture table — the identity-table dedup pair no longer collides)",
         );
         for entry in resources {
             let source_path = entry.get("sourcePath").and_then(Value::as_str).unwrap();
