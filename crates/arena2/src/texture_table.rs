@@ -16,17 +16,26 @@ pub const DEFAULT_TEXTURE_TABLE: [u16; 6] = [119, 120, 122, 123, 124, 168];
 const CLIMATE_OCEAN: u8 = 223;
 const CLIMATE_DESERT: u8 = 224;
 const CLIMATE_SWAMP: u8 = 228;
+const CLIMATE_HAUNTED_WOODLANDS: u8 = 232;
 
 /// DFU DungeonTextureTables.RandomTextureTableClassic(seed,
 /// randomDungeonTextures: 0) — the classic algorithm used for main-story
 /// dungeons. `world_climate` is the CLIMATE.PAK value at the location's map
-/// pixel (MapsFile.Climates, 223..=232).
-pub fn random_texture_table_classic(seed: u32, world_climate: u8) -> [u16; 6] {
+/// pixel (MapsFile.Climates, 223..=232). Returns a typed error for climate
+/// values outside the classic range rather than panicking on the DFU index
+/// arithmetic — invalid climate authority must not silently produce a table.
+pub fn random_texture_table_classic(seed: u32, world_climate: u8) -> Result<[u16; 6], String> {
     const CLIMATE_TEXTURE_ARCHIVE_INDICES: [u8; 10] = [0, 0, 1, 4, 4, 0, 3, 3, 3, 0];
     // Values from classic, used in the classic algorithm.
     const CLIMATE_TEXTURE_ARCHIVES: [u16; 5] = [19, 119, 319, 419, 119];
     // DFU TravelTimeCalculator.climateIndices.
     const CLIMATE_INDICES: [u8; 10] = [0, 0, 0, 1, 2, 3, 4, 5, 5, 5];
+
+    if !(CLIMATE_OCEAN..=CLIMATE_HAUNTED_WOODLANDS).contains(&world_climate) {
+        return Err(format!(
+            "world climate {world_climate} outside classic range {CLIMATE_OCEAN}..={CLIMATE_HAUNTED_WOODLANDS}"
+        ));
+    }
 
     let mut climate = world_climate;
     if climate == CLIMATE_OCEAN {
@@ -51,7 +60,7 @@ pub fn random_texture_table_classic(seed: u32, world_climate: u8) -> [u16; 6] {
     }
     // DFLocation.ClimateTextureSet.Interior_Sewer (68) + 100 * climate set.
     table[5] = 68 + 100 * CLIMATE_TEXTURE_ARCHIVE_INDICES[climate_based_index_value] as u16;
-    table
+    Ok(table)
 }
 
 /// DFU DungeonTextureTables.ApplyTextureTable: remap a base texture archive
@@ -81,9 +90,22 @@ mod tests {
         // pixel (pak.rs test pins 223..=232; 231 printed from real data).
         // Expected values cross-checked against an independent implementation
         // of DFU RandomTextureTableClassic.
-        let table = random_texture_table_classic(50050, 231);
+        let table = random_texture_table_classic(50050, 231).unwrap();
         assert_eq!(table, [23, 22, 19, 22, 20, 368]);
         assert_ne!(table, DEFAULT_TEXTURE_TABLE);
+    }
+
+    #[test]
+    fn out_of_range_climate_rejects_without_panic() {
+        // Climate authority outside the classic 223..=232 range must produce
+        // a typed error, not a panic on the DFU index arithmetic.
+        for wc in [0u8, 100, 222, 233, 255] {
+            let err = random_texture_table_classic(50050, wc).unwrap_err();
+            assert!(err.contains("outside classic range"), "climate {wc}: {err}");
+        }
+        // Boundary values remain valid.
+        assert!(random_texture_table_classic(50050, 223).is_ok());
+        assert!(random_texture_table_classic(50050, 232).is_ok());
     }
 
     #[test]
@@ -113,7 +135,7 @@ mod tests {
             let layout = maps::resolve_dungeon(&bsa, 17, name).unwrap();
             let (px, py) = lon_lat_to_map_pixel(layout.longitude, layout.latitude);
             let wc = pak.get(px, py).unwrap();
-            random_texture_table_classic(layout.location_id, wc)
+            random_texture_table_classic(layout.location_id, wc).unwrap()
         };
         // Privateer's Hold: LocationId 50050, climate 231.
         assert_eq!(table_for("Privateer's Hold"), [23, 22, 19, 22, 20, 368]);
