@@ -16,25 +16,22 @@ use arena2::pak::{climate_base_type, PakFile};
 use arena2::palette::Palette;
 use arena2::rdb;
 use arena2::texture::TextureFile;
+use arena2::texture_table::{
+    apply_texture_table, random_texture_table_classic, DEFAULT_TEXTURE_TABLE,
+};
 use arena2::{GLOBAL_SCALE, POINT_DIVISOR, RDB_SIDE, ROTATION_DIVISOR, TEXTURE_DIVISOR};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-/// DFU DungeonTextureTables.ApplyTextureTable with the classic default table
-/// {119, 120, 122, 123, 124, 168} (identity) and climate-based door offset.
-fn apply_texture_table(archive: u16, climate_base: u16) -> u16 {
-    const TABLE: [u16; 6] = [119, 120, 122, 123, 124, 168];
-    match archive {
-        74 => archive + climate_base,
-        119 => TABLE[0],
-        120 => TABLE[1],
-        122 => TABLE[2],
-        123 => TABLE[3],
-        124 => TABLE[4],
-        168 => TABLE[5],
-        a => a,
-    }
+/// Which dungeon texture table to apply (DFU DungeonTextureTables).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextureTableMode {
+    /// Classic default identity table {119, 120, 122, 123, 124, 168}.
+    Default,
+    /// Per-location classic randomized table: DFRandom seeded by the
+    /// dungeon's LocationId, what classic uses for main-story dungeons.
+    Classic,
 }
 
 #[derive(Default)]
@@ -56,6 +53,8 @@ pub struct BuildStats {
     pub texture_failures: Vec<String>,
     pub bounds_min: [f32; 3],
     pub bounds_max: [f32; 3],
+    /// The dungeon texture table applied (DFU DungeonTextureTables).
+    pub texture_table: [u16; 6],
 }
 
 pub struct BuildOutput {
@@ -187,6 +186,7 @@ pub struct Importer {
     arena2_dir: PathBuf,
     palette: Palette,
     climate_base: u16,
+    texture_table: [u16; 6],
     textured: bool,
     mesh_cache: HashMap<String, Rc<Mesh>>,
     texfile_cache: HashMap<u16, Option<Rc<TextureFile>>>,
@@ -196,19 +196,34 @@ pub struct Importer {
 }
 
 impl Importer {
-    pub fn new(arena2_dir: &Path, layout: &DungeonLayout, textured: bool) -> Result<Self, String> {
+    pub fn new(
+        arena2_dir: &Path,
+        layout: &DungeonLayout,
+        textured: bool,
+        table_mode: TextureTableMode,
+    ) -> Result<Self, String> {
         let palette =
             Palette::load(&arena2_dir.join("PAL.PAL")).map_err(|e| format!("PAL.PAL: {e}"))?;
         let (px, py) = maps::lon_lat_to_map_pixel(layout.longitude, layout.latitude);
-        let climate_base = PakFile::load(&arena2_dir.join("CLIMATE.PAK"))
+        let world_climate = PakFile::load(&arena2_dir.join("CLIMATE.PAK"))
             .ok()
-            .and_then(|pak| pak.get(px, py))
+            .and_then(|pak| pak.get(px, py));
+        let climate_base = world_climate
             .map(|wc| climate_base_type(wc) as u16)
             .unwrap_or(300); // Temperate fallback
+        let texture_table = match (table_mode, world_climate) {
+            // Classic seeds the table with the dungeon's LocationId (DFU
+            // DaggerfallDungeon: Dungeon.RecordElement.Header.LocationId).
+            (TextureTableMode::Classic, Some(wc)) => {
+                random_texture_table_classic(layout.location_id, wc)
+            }
+            _ => DEFAULT_TEXTURE_TABLE,
+        };
         Ok(Importer {
             arena2_dir: arena2_dir.to_path_buf(),
             palette,
             climate_base,
+            texture_table,
             textured,
             mesh_cache: HashMap::new(),
             texfile_cache: HashMap::new(),
@@ -290,6 +305,7 @@ pub fn build_dungeon(
     region: usize,
     location_name: &str,
     textured: bool,
+    table_mode: TextureTableMode,
 ) -> Result<BuildOutput, String> {
     let maps_bsa =
         BsaArchive::load(&arena2_dir.join("MAPS.BSA")).map_err(|e| format!("MAPS.BSA: {e}"))?;
@@ -299,10 +315,11 @@ pub fn build_dungeon(
         Arch3dFile::load(&arena2_dir.join("ARCH3D.BSA")).map_err(|e| format!("ARCH3D.BSA: {e}"))?;
 
     let layout = maps::resolve_dungeon(&maps_bsa, region, location_name)?;
-    let mut imp = Importer::new(arena2_dir, &layout, textured)?;
+    let mut imp = Importer::new(arena2_dir, &layout, textured, table_mode)?;
 
     let mut stats = BuildStats {
         blocks: layout.blocks.len(),
+        texture_table: imp.texture_table,
         ..Default::default()
     };
     stats.bounds_min = [f32::MAX; 3];
@@ -425,7 +442,8 @@ pub fn build_dungeon(
                     if plane.points.len() < 3 {
                         continue;
                     }
-                    let remapped = apply_texture_table(plane.texture_archive, imp.climate_base);
+                    let remapped =
+                        apply_texture_table(plane.texture_archive, &imp.texture_table, imp.climate_base);
                     let (tex_w, tex_h) = match imp.resolve_texture(remapped, plane.texture_record) {
                         Some((_idx, w, h)) => (w, h),
                         None => (64.0, 64.0),
@@ -468,6 +486,7 @@ pub fn build_dungeon(
                         .first()
                         .map(|p| p.texture_archive)
                         .unwrap_or(74),
+                    &imp.texture_table,
                     imp.climate_base,
                 );
                 let tex_rec = mesh.planes.first().map(|p| p.texture_record).unwrap_or(0);
@@ -496,7 +515,8 @@ pub fn build_dungeon(
                 if plane.points.len() < 3 {
                     continue;
                 }
-                let remapped = apply_texture_table(plane.texture_archive, imp.climate_base);
+                let remapped =
+                    apply_texture_table(plane.texture_archive, &imp.texture_table, imp.climate_base);
                 let tex_key = if textured {
                     Some((remapped, plane.texture_record))
                 } else {

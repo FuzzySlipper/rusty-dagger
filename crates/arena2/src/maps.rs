@@ -17,6 +17,7 @@ pub struct DungeonLayout {
     pub location_index: usize,
     pub location_name: String,
     pub map_id: i32,
+    pub location_id: u32,
     pub longitude: i32,
     pub latitude: i32,
     pub dungeon_type: u8,
@@ -101,7 +102,10 @@ pub fn resolve_dungeon(
     let mut c = Cursor::at(ditem, 4 + dungeon_count * 8 + dungeon_offset);
     let door_count = c.u32() as usize;
     c.skip(door_count * 6);
-    // LocationRecordElementHeader = 112 bytes (LocationId at +33)
+    // LocationRecordElementHeader = 112 bytes (LocationId u32 at +33).
+    // DFU seeds the dungeon texture table with this LocationId
+    // (DaggerfallDungeon: Summary.LocationData.Dungeon.RecordElement.Header.LocationId).
+    let location_id = Cursor::at(ditem, c.pos + 33).u32();
     c.skip(112);
     // DungeonHeader: u16 null, u32 unk, u32 unk, u16 blockCount, 5B unk = 17 bytes
     c.skip(10);
@@ -132,6 +136,7 @@ pub fn resolve_dungeon(
         location_index,
         location_name: location_name.to_string(),
         map_id,
+        location_id,
         longitude,
         latitude,
         dungeon_type,
@@ -155,6 +160,7 @@ mod tests {
         let bsa = BsaArchive::load(&dir.join("MAPS.BSA")).unwrap();
         let layout = resolve_dungeon(&bsa, 17, "Privateer's Hold").unwrap();
         assert_eq!(layout.map_id, 187853213);
+        println!("Privateer's Hold dungeon LocationId: {}", layout.location_id);
         assert_eq!(layout.location_index, 179);
         assert_eq!(layout.dungeon_type, 2);
         let expect = [
