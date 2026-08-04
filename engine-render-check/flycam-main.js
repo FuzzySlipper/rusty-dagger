@@ -1,0 +1,148 @@
+/**
+ * Interactive flycam for Privateer's Hold through the REAL rusty-engine
+ * renderer (renderer-three browser surface, texture admission via
+ * renderer-host). Pointer-lock mouse look + WASD/QE flight; every frame the
+ * camera moves, directional enemy frames come from the Rust runtime authority
+ * (dagger-sprite-frames --serve, proxied at /assignments by serve-flycam.mjs)
+ * — this page never re-implements the orientation math (6595).
+ */
+import { loadRendererTextureResourceSource } from '@rusty-engine/renderer-host';
+import { mountRendererBrowserSurface } from '@rusty-engine/renderer-three';
+
+const hud = document.getElementById('hud');
+const hint = document.getElementById('hint');
+const canvas = document.getElementById('renderer');
+
+async function main() {
+  const [frame, manifest, enemies] = await Promise.all([
+    fetch('/generated/frame.json').then((r) => r.json()),
+    fetch('/generated/texture-manifest.json').then((r) => r.json()),
+    fetch('/generated/enemies.json').then((r) => r.json()),
+  ]);
+
+  const textureResourceSource = await loadRendererTextureResourceSource(
+    manifest,
+    async (descriptor) => {
+      const url = `/${descriptor.sourcePath.replace(/^content\//u, '')}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`texture fetch failed ${response.status}: ${url}`);
+      return response.arrayBuffer();
+    },
+  );
+
+  // Spawn at the start marker (same default as the project player entity).
+  const spawn = enemies.spawn ?? [25.6, 1.6, -25.6];
+  const state = {
+    position: [...spawn],
+    yawDegrees: 180,
+    pitchDegrees: 0,
+    keys: new Set(),
+    moved: true,
+  };
+
+  const surface = mountRendererBrowserSurface(canvas, {
+    autoStart: false,
+    camera: {
+      initialPose: { position: state.position, yawDegrees: state.yawDegrees, pitchDegrees: 0 },
+      projection: { fovYDegrees: 70, near: 0.05, far: 2000 },
+    },
+    clearColor: 0x101418,
+    frame,
+    pixelRatio: 1,
+    textureResourceSource,
+  });
+
+  // --- input -------------------------------------------------------------
+  canvas.addEventListener('click', () => canvas.requestPointerLock());
+  document.addEventListener('pointerlockchange', () => {
+    hint.style.display = document.pointerLockElement === canvas ? 'none' : 'grid';
+  });
+  document.addEventListener('mousemove', (event) => {
+    if (document.pointerLockElement !== canvas) return;
+    state.yawDegrees -= event.movementX * 0.12;
+    state.pitchDegrees = Math.max(-89, Math.min(89, state.pitchDegrees - event.movementY * 0.12));
+    state.moved = true;
+  });
+  window.addEventListener('keydown', (event) => {
+    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'ShiftLeft', 'ShiftRight'].includes(event.code)) {
+      state.keys.add(event.code);
+      event.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', (event) => state.keys.delete(event.code));
+
+  // --- per-frame loop ------------------------------------------------------
+  let last = performance.now();
+  let spriteRefresh = 0; // timestamp of last completed assignment fetch
+  let fetching = false;
+  const poseEquals = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+  let lastSpriteCamera = [NaN, NaN, NaN];
+
+  function step(now) {
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+
+    const yaw = state.yawDegrees * Math.PI / 180;
+    const pitch = state.pitchDegrees * Math.PI / 180;
+    // Forward matches the surface convention: yaw 0/pitch 0 looks down -Z.
+    const forward = [-Math.cos(pitch) * Math.sin(yaw), Math.sin(pitch), -Math.cos(pitch) * Math.cos(yaw)];
+    const right = [Math.cos(yaw), 0, -Math.sin(yaw)];
+    const speed = (state.keys.has('ShiftLeft') || state.keys.has('ShiftRight') ? 14 : 5) * dt;
+    const before = [...state.position];
+    for (const key of state.keys) {
+      if (key === 'KeyW') for (let i = 0; i < 3; i += 1) state.position[i] += forward[i] * speed;
+      if (key === 'KeyS') for (let i = 0; i < 3; i += 1) state.position[i] -= forward[i] * speed;
+      if (key === 'KeyD') for (let i = 0; i < 3; i += 1) state.position[i] += right[i] * speed;
+      if (key === 'KeyA') for (let i = 0; i < 3; i += 1) state.position[i] -= right[i] * speed;
+      if (key === 'KeyE') state.position[1] += speed;
+      if (key === 'KeyQ') state.position[1] -= speed;
+    }
+    if (!poseEquals(before, state.position)) state.moved = true;
+
+    if (state.moved) {
+      surface.setCameraPose({
+        position: state.position,
+        yawDegrees: state.yawDegrees,
+        pitchDegrees: state.pitchDegrees,
+      });
+      state.moved = false;
+    }
+
+    // Directional sprite refresh: at most one in flight, at most ~10 Hz, and
+    // only when the camera actually changed.
+    if (!fetching && !poseEquals(lastSpriteCamera, state.position) && now - spriteRefresh > 100) {
+      fetching = true;
+      const cam = state.position.map((v) => v.toFixed(3)).join(',');
+      fetch(`/assignments?cam=${cam}`)
+        .then((r) => r.json())
+        .then(({ assignments }) => {
+          surface.applyFrame({
+            schemaVersion: 1,
+            ops: assignments.map((a) => ({
+              op: 'updateSprite',
+              handle: enemies.enemies[a.index].handle,
+              frame: a.frame,
+              tint: null,
+              renderOrder: null,
+              visible: null,
+            })),
+          });
+          lastSpriteCamera = [...state.position];
+          spriteRefresh = performance.now();
+        })
+        .catch(() => { /* keep flying if the authority hiccups */ })
+        .finally(() => {
+          fetching = false;
+        });
+    }
+
+    surface.renderOnce(now);
+    hud.textContent = `pos ${state.position.map((v) => v.toFixed(1)).join(', ')}  yaw ${state.yawDegrees.toFixed(0)}  pitch ${state.pitchDegrees.toFixed(0)}`;
+    requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+main().catch((error) => {
+  hint.textContent = `flycam failed: ${error && error.stack ? error.stack : error}`;
+});

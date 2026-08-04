@@ -208,6 +208,7 @@ export async function dumpFrame() {
       enemies,
       poseAssignments,
       orbit,
+      spawn: sceneMeta.startMarker ?? null,
     }, null, 1)}\n`);
     await writeFile(resolve(GENERATED, 'proof-input.json'), `${JSON.stringify({
       poses,

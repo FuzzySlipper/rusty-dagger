@@ -253,7 +253,9 @@ Classic enemies are view-only directional billboards. Ownership split:
   renderer-held frame readback). A future `dagger-world` live loop calls the
   same API. Camera-facing is the renderer's (billboard modes, rusty-engine
   6630); per-handle visibility readouts landed upstream (6632) if the naive
-  full-scene poll ever needs gating.
+  full-scene poll ever needs gating. The interactive flycam
+  (`engine-render-check/serve-flycam.mjs`, den-serve registered) polls the
+  same authority live as the user flies.
 - Static-size limitation: a sprite's quad size is fixed at creation (front
   record), while DFU scales per orientation record; accepted for view-only.
 

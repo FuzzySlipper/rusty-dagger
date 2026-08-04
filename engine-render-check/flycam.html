@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Privateer's Hold — rusty-engine flycam</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body { margin: 0; height: 100%; background: #101418; overflow: hidden; }
+    #renderer { width: 100vw; height: 100vh; display: block; }
+    #hud {
+      position: fixed; left: 10px; top: 10px; color: #9fb4c8;
+      font: 12px/1.5 monospace; white-space: pre; pointer-events: none;
+      text-shadow: 0 1px 2px #000;
+    }
+    #hint {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      color: #cfe3f4; font: 16px monospace; background: rgba(10, 14, 18, 0.55);
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="renderer"></canvas>
+  <div id="hud"></div>
+  <div id="hint">click to fly — WASD + QE up/down, Shift fast, mouse look, Esc release</div>
+  <script type="module" src="/flycam-main.js"></script>
+</body>
+</html>
