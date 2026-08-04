@@ -146,14 +146,17 @@ fn main() {
             out.json.into_bytes()
         }
         _ => {
-            // The GLB carries the combined static mesh (render) plus the
-            // hinged door primitives as distinct named nodes. The collision
-            // mesh.json uses only `output.primitives` (no doors), so doorways
-            // stay open for route derivation.
-            let mut glb_prims: Vec<glb::PrimitiveInput> =
-                output.primitives.iter().cloned().collect();
-            glb_prims.extend(output.door_primitives.iter().cloned());
-            glb::write_glb(&name, &glb_prims, &output.textures)
+            // The GLB carries the combined static mesh node (render) plus one
+            // named glTF node per carved door (door-N-<model_id>), so every
+            // door is addressable by name in the engine-consumable artifact.
+            // The collision mesh.json uses only `output.primitives` (no
+            // doors), so doorways stay open for route derivation.
+            glb::write_glb(
+                &name,
+                &output.primitives,
+                &output.door_primitives,
+                &output.textures,
+            )
         }
     };
     if let Some(parent) = args.out.parent() {

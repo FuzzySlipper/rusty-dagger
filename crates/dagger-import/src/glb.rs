@@ -36,53 +36,32 @@ fn json_escape(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-/// Write a GLB with one mesh whose primitives are `primitives`.
+/// Write a GLB: one named node for the combined dungeon mesh (per-texture
+/// primitives) plus one named glTF node per door primitive, each carrying its
+/// own single-primitive mesh so every carved door is addressable by name
+/// (door-N-<model_id>) in the engine-consumable artifact.
 pub fn write_glb(
     mesh_name: &str,
     primitives: &[PrimitiveInput],
+    door_primitives: &[PrimitiveInput],
     textures: &[TextureInput],
 ) -> Vec<u8> {
     let mut bin: Vec<u8> = Vec::new();
     let mut buffer_views: Vec<String> = Vec::new();
     let mut accessors: Vec<String> = Vec::new();
 
-    let mut add_buffer_view = |bin: &mut Vec<u8>, data: &[u8], target: Option<u32>| -> usize {
-        pad4(bin, 0);
-        let offset = bin.len();
-        bin.extend_from_slice(data);
-        let target_str = target
-            .map(|t| format!(",\"target\":{t}"))
-            .unwrap_or_default();
-        buffer_views.push(format!(
-            "{{\"buffer\":0,\"byteOffset\":{offset},\"byteLength\":{}{target_str}}}",
-            data.len()
-        ));
-        buffer_views.len() - 1
-    };
-
-    let mut add_accessor = |accessor_type: &str,
-                            component_type: u32,
-                            count: usize,
-                            view: usize,
-                            minmax: Option<(String, String)>|
-     -> usize {
-        let mm = match minmax {
-            Some((mn, mx)) => format!(",\"min\":{mn},\"max\":{mx}"),
-            None => String::new(),
-        };
-        accessors.push(format!(
-            "{{\"bufferView\":{view},\"componentType\":{component_type},\"count\":{count},\"type\":\"{accessor_type}\"{mm}}}"
-        ));
-        accessors.len() - 1
-    };
-
     let mut image_views: Vec<usize> = Vec::new();
     for tex in textures {
-        let view = add_buffer_view(&mut bin, &tex.png, None);
-        image_views.push(view);
+        pad4(&mut bin, 0);
+        let offset = bin.len();
+        bin.extend_from_slice(&tex.png);
+        buffer_views.push(format!(
+            "{{\"buffer\":0,\"byteOffset\":{offset},\"byteLength\":{}}}",
+            tex.png.len()
+        ));
+        image_views.push(buffer_views.len() - 1);
     }
 
-    let mut prim_json: Vec<String> = Vec::new();
     let mut material_json: Vec<String> = Vec::new();
 
     // Default untextured material (index 0) always present
@@ -97,58 +76,133 @@ pub fn write_glb(
         ));
     }
 
-    for prim in primitives {
-        // POSITION
-        let pos_bytes: &[u8] = unsafe {
-            std::slice::from_raw_parts(
-                prim.positions.as_ptr() as *const u8,
-                prim.positions.len() * 12,
-            )
-        };
-        let view = add_buffer_view(&mut bin, pos_bytes, Some(34962));
-        let (mut mn, mut mx) = ([f32::MAX; 3], [f32::MIN; 3]);
-        for p in &prim.positions {
-            for k in 0..3 {
-                mn[k] = mn[k].min(p[k]);
-                mx[k] = mx[k].max(p[k]);
+    // Build accessor sets + primitive JSON for a slice of primitives; returns
+    // the primitive JSON entries (shared by the dungeon mesh and per-door meshes).
+    let build_prims = |prims: &[PrimitiveInput],
+                           bin: &mut Vec<u8>,
+                           buffer_views: &mut Vec<String>,
+                           accessors: &mut Vec<String>|
+     -> Vec<String> {
+        let mut out = Vec::new();
+        for prim in prims {
+            // POSITION
+            let pos_bytes: &[u8] = unsafe {
+                std::slice::from_raw_parts(
+                    prim.positions.as_ptr() as *const u8,
+                    prim.positions.len() * 12,
+                )
+            };
+            pad4(bin, 0);
+            let poff = bin.len();
+            bin.extend_from_slice(pos_bytes);
+            buffer_views.push(format!(
+                "{{\"buffer\":0,\"byteOffset\":{poff},\"byteLength\":{},\"target\":34962}}",
+                pos_bytes.len()
+            ));
+            let pview = buffer_views.len() - 1;
+            let (mut mn, mut mx) = ([f32::MAX; 3], [f32::MIN; 3]);
+            for p in &prim.positions {
+                for k in 0..3 {
+                    mn[k] = mn[k].min(p[k]);
+                    mx[k] = mx[k].max(p[k]);
+                }
             }
+            accessors.push(format!(
+                "{{\"bufferView\":{pview},\"componentType\":5126,\"count\":{},\"type\":\"VEC3\",\"min\":[{},{},{}],\"max\":[{},{},{}]}}",
+                prim.positions.len(), mn[0], mn[1], mn[2], mx[0], mx[1], mx[2]
+            ));
+            let pos_acc = accessors.len() - 1;
+
+            // NORMAL
+            let nrm_bytes: &[u8] = unsafe {
+                std::slice::from_raw_parts(
+                    prim.normals.as_ptr() as *const u8,
+                    prim.normals.len() * 12,
+                )
+            };
+            pad4(bin, 0);
+            let noff = bin.len();
+            bin.extend_from_slice(nrm_bytes);
+            buffer_views.push(format!(
+                "{{\"buffer\":0,\"byteOffset\":{noff},\"byteLength\":{},\"target\":34962}}",
+                nrm_bytes.len()
+            ));
+            let nview = buffer_views.len() - 1;
+            accessors.push(format!(
+                "{{\"bufferView\":{nview},\"componentType\":5126,\"count\":{},\"type\":\"VEC3\"}}",
+                prim.normals.len()
+            ));
+            let nrm_acc = accessors.len() - 1;
+
+            // TEXCOORD_0
+            let uv_bytes: &[u8] = unsafe {
+                std::slice::from_raw_parts(prim.uvs.as_ptr() as *const u8, prim.uvs.len() * 8)
+            };
+            pad4(bin, 0);
+            let uoff = bin.len();
+            bin.extend_from_slice(uv_bytes);
+            buffer_views.push(format!(
+                "{{\"buffer\":0,\"byteOffset\":{uoff},\"byteLength\":{},\"target\":34962}}",
+                uv_bytes.len()
+            ));
+            let uview = buffer_views.len() - 1;
+            accessors.push(format!(
+                "{{\"bufferView\":{uview},\"componentType\":5126,\"count\":{},\"type\":\"VEC2\"}}",
+                prim.uvs.len()
+            ));
+            let uv_acc = accessors.len() - 1;
+
+            // INDICES
+            let idx_bytes: &[u8] = unsafe {
+                std::slice::from_raw_parts(prim.indices.as_ptr() as *const u8, prim.indices.len() * 4)
+            };
+            pad4(bin, 0);
+            let ioff = bin.len();
+            bin.extend_from_slice(idx_bytes);
+            buffer_views.push(format!(
+                "{{\"buffer\":0,\"byteOffset\":{ioff},\"byteLength\":{},\"target\":34963}}",
+                idx_bytes.len()
+            ));
+            let iview = buffer_views.len() - 1;
+            accessors.push(format!(
+                "{{\"bufferView\":{iview},\"componentType\":5125,\"count\":{},\"type\":\"SCALAR\"}}",
+                prim.indices.len()
+            ));
+            let idx_acc = accessors.len() - 1;
+
+            let material = prim.texture.map(|t| t + 1).unwrap_or(0);
+            out.push(format!(
+                "{{\"attributes\":{{\"POSITION\":{pos_acc},\"NORMAL\":{nrm_acc},\"TEXCOORD_0\":{uv_acc}}},\"indices\":{idx_acc},\"material\":{material},\"mode\":4}}"
+            ));
         }
-        let min_s = format!("[{},{},{}]", mn[0], mn[1], mn[2]);
-        let max_s = format!("[{},{},{}]", mx[0], mx[1], mx[2]);
-        let pos_acc = add_accessor(
-            "VEC3",
-            5126,
-            prim.positions.len(),
-            view,
-            Some((min_s, max_s)),
-        );
+        out
+    };
 
-        // NORMAL
-        let nrm_bytes: &[u8] = unsafe {
-            std::slice::from_raw_parts(prim.normals.as_ptr() as *const u8, prim.normals.len() * 12)
-        };
-        let view = add_buffer_view(&mut bin, nrm_bytes, Some(34962));
-        let nrm_acc = add_accessor("VEC3", 5126, prim.normals.len(), view, None);
+    // Dungeon mesh (per-texture primitives) + one named mesh per door.
+    let dungeon_prims_json = build_prims(primitives, &mut bin, &mut buffer_views, &mut accessors);
+    let mut meshes_json: Vec<String> = Vec::new();
+    meshes_json.push(format!(
+        "{{\"name\":\"{}\",\"primitives\":[{}]}}",
+        json_escape(mesh_name),
+        dungeon_prims_json.join(",")
+    ));
+    let mut nodes_json: Vec<String> = Vec::new();
+    nodes_json.push(format!("{{\"mesh\":0,\"name\":\"{}\"}}", json_escape(mesh_name)));
 
-        // TEXCOORD_0
-        let uv_bytes: &[u8] = unsafe {
-            std::slice::from_raw_parts(prim.uvs.as_ptr() as *const u8, prim.uvs.len() * 8)
-        };
-        let view = add_buffer_view(&mut bin, uv_bytes, Some(34962));
-        let uv_acc = add_accessor("VEC2", 5126, prim.uvs.len(), view, None);
-
-        // INDICES
-        let idx_bytes: &[u8] = unsafe {
-            std::slice::from_raw_parts(prim.indices.as_ptr() as *const u8, prim.indices.len() * 4)
-        };
-        let view = add_buffer_view(&mut bin, idx_bytes, Some(34963));
-        let idx_acc = add_accessor("SCALAR", 5125, prim.indices.len(), view, None);
-
-        let material = prim.texture.map(|t| t + 1).unwrap_or(0);
-        prim_json.push(format!(
-            "{{\"attributes\":{{\"POSITION\":{pos_acc},\"NORMAL\":{nrm_acc},\"TEXCOORD_0\":{uv_acc}}},\"indices\":{idx_acc},\"material\":{material},\"mode\":4}}"
+    for (door_i, door) in door_primitives.iter().enumerate() {
+        let door_json = build_prims(std::slice::from_ref(door), &mut bin, &mut buffer_views, &mut accessors);
+        meshes_json.push(format!(
+            "{{\"name\":\"{}\",\"primitives\":[{}]}}",
+            json_escape(&door.name),
+            door_json.join(",")
+        ));
+        nodes_json.push(format!(
+            "{{\"mesh\":{},\"name\":\"{}\"}}",
+            door_i + 1,
+            json_escape(&door.name)
         ));
     }
+    let node_indices: Vec<String> = (0..nodes_json.len()).map(|i| i.to_string()).collect();
 
     let textures_json: Vec<String> = textures
         .iter()
@@ -169,9 +223,9 @@ pub fn write_glb(
 
     let json = format!(
         "{{\"asset\":{{\"version\":\"2.0\",\"generator\":\"dagger-import\"}},\
-\"scene\":0,\"scenes\":[{{\"nodes\":[0]}}],\
-\"nodes\":[{{\"mesh\":0,\"name\":\"{}\"}}],\
-\"meshes\":[{{\"name\":\"{}\",\"primitives\":[{}]}}],\
+\"scene\":0,\"scenes\":[{{\"nodes\":[{}]}}],\
+\"nodes\":[{}],\
+\"meshes\":[{}],\
 \"materials\":[{}],\
 \"textures\":[{}],\
 \"images\":[{}],\
@@ -179,9 +233,9 @@ pub fn write_glb(
 \"accessors\":[{}],\
 \"bufferViews\":[{}],\
 \"buffers\":[{{\"byteLength\":{}}}]}}",
-        json_escape(mesh_name),
-        json_escape(mesh_name),
-        prim_json.join(","),
+        node_indices.join(","),
+        nodes_json.join(","),
+        meshes_json.join(","),
         material_json.join(","),
         textures_json.join(","),
         images_json.join(","),
@@ -222,7 +276,7 @@ mod tests {
             indices: vec![0, 1, 2],
             texture: None,
         };
-        let glb = write_glb("tri", &[prim], &[]);
+        let glb = write_glb("tri", &[prim], &[], &[]);
         assert_eq!(&glb[0..4], b"glTF");
         let total = u32::from_le_bytes([glb[8], glb[9], glb[10], glb[11]]) as usize;
         assert_eq!(total, glb.len());
