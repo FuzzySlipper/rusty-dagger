@@ -27,7 +27,9 @@ async function main() {
     fetch('/generated/texture-manifest.json').then((r) => r.json()),
     fetch('/generated/proof-input.json').then((r) => r.json()),
   ]);
-  const pose = input.poses[cam];
+  // enemy-orbit starts from the enemy-front pose and then walks the camera.
+  const poseName = cam === 'enemy-orbit' ? 'enemy-front' : cam;
+  const pose = input.poses[poseName];
   if (!pose) throw new Error(`unknown camera pose: ${cam}`);
 
   const textureResourceSource = await loadRendererTextureResourceSource(
@@ -54,15 +56,23 @@ async function main() {
   });
   let submission = surface.renderOnce(1);
 
-  // Directional enemy sprite driver (6595). The renderer does not implement
-  // billboard modes (rusty-engine 6630) and frame selection is
-  // projection-driven by design, so the Daggerfall-side authority
-  // (dagger-runtime, arena2::mobile semantics) computes per-pose assignments;
-  // this page only applies them.
+  // Directional enemy sprite driver (6595). Frame selection is
+  // projection-driven by engine design; the Daggerfall-side authority
+  // (dagger-runtime, arena2::mobile semantics) computes the frames and this
+  // page only applies them. enemy-front/enemy-back use the dump-time static
+  // assignments; enemy-orbit is a live loop: per step it moves the camera,
+  // polls the Rust authority (dagger-sprite-frames --serve, URL in
+  // ?spriteserver=), applies the frames, and re-renders.
   let driver = null;
-  if (cam.startsWith('enemy')) {
+  if (cam === 'enemy-front' || cam === 'enemy-back') {
     const enemyData = await fetch('/generated/enemies.json').then((r) => r.json());
-    driver = driveDirectionalSprites(surface, enemyData, cam);
+    driver = driveDirectionalSprites(surface, enemyData, enemyData.poseAssignments[cam]);
+    submission = surface.renderOnce(1);
+  } else if (cam === 'enemy-orbit') {
+    const enemyData = await fetch('/generated/enemies.json').then((r) => r.json());
+    const server = params.get('spriteserver');
+    if (!server) throw new Error('enemy-orbit needs ?spriteserver=<url>');
+    driver = await orbitDirectionalSprites(surface, enemyData, server);
     submission = surface.renderOnce(1);
   }
 
@@ -88,55 +98,78 @@ async function main() {
 }
 
 /**
- * Per-pose directional sprite authority (6595): applies the assignments
- * computed by the Rust runtime (`dagger-sprite-frames`, arena2::mobile
- * semantics) — this page never re-implements the orientation math. Each
- * assignment rotates the enemy's parent node to face the camera (the
- * renderer does not implement billboard modes yet, rusty-engine 6630) and
- * steps the 8-orientation atlas frame.
+ * Apply one set of runtime-computed assignments (6595): updateSprite frame
+ * per enemy. Renderer billboards (rusty-engine 6630) handle camera-facing.
  */
-function driveDirectionalSprites(surface, enemyData, cam) {
-  const assignments = enemyData.poseAssignments?.[cam];
-  if (!Array.isArray(assignments)) {
-    throw new Error(`no runtime sprite assignments for pose ${cam}`);
-  }
-  const ops = [];
-  const applied = {};
-  for (const assignment of assignments) {
-    const enemy = enemyData.enemies[assignment.index];
-    ops.push({
-      op: 'update',
-      handle: enemy.nodeHandle,
-      transform: {
-        translation: enemy.position,
-        rotation: assignment.rotation,
-        scale: [1, 1, 1],
-      },
-      material: null,
-      visible: null,
-      metadata: null,
-    });
-    ops.push({
-      op: 'updateSprite',
-      handle: enemy.handle,
-      frame: assignment.frame,
-      tint: null,
-      renderOrder: null,
-      visible: null,
-    });
-    applied[enemy.handle] = assignment.frame;
-  }
+function applySpriteFrames(surface, enemies, assignments) {
+  const ops = assignments.map((assignment) => ({
+    op: 'updateSprite',
+    handle: enemies[assignment.index].handle,
+    frame: assignment.frame,
+    tint: null,
+    renderOrder: null,
+    visible: null,
+  }));
   surface.applyFrame({ schemaVersion: 1, ops });
+  return Object.fromEntries(assignments.map((a) => [enemies[a.index].handle, a.frame]));
+}
+
+/** Static enemy pose: apply the dump-time assignments, report target state. */
+function driveDirectionalSprites(surface, enemyData, assignments) {
+  if (!Array.isArray(assignments)) throw new Error('no runtime sprite assignments for pose');
+  const applied = applySpriteFrames(surface, enemyData.enemies, assignments);
   const target = enemyData.target;
-  const readback = target === null
-    ? null
-    : surface.renderer.objectFor(target.handle)?.userData?.frame ?? null;
   return {
     enemyCount: enemyData.enemies.length,
     appliedCount: Object.keys(applied).length,
     targetHandle: target?.handle ?? null,
     targetFrame: target === null ? null : applied[target.handle] ?? null,
-    targetFrameReadback: readback,
+    targetFrameReadback: target === null
+      ? null
+      : surface.renderer.objectFor(target.handle)?.userData?.frame ?? null,
+  };
+}
+
+/**
+ * Live camera-driven loop (6595 R6595-2): 8 orbit steps around the target
+ * enemy; per step the camera moves, the Rust authority (dagger-sprite-frames
+ * --serve) computes frames for the new pose, and the renderer-held frame is
+ * read back. DFU maps positive camera bearings to descending orientation
+ * indices, so a counterclockwise orbit from the front yields 0,7,6,...,1.
+ */
+async function orbitDirectionalSprites(surface, enemyData, server) {
+  const { target, enemies, orbit } = enemyData;
+  const sequence = [];
+  let appliedCount = 0;
+  for (let step = 0; step < 8; step += 1) {
+    const theta = (1 + 45 * step) * Math.PI / 180;
+    const position = [
+      target.position[0] + orbit.radius * Math.sin(theta),
+      target.position[1] + orbit.height,
+      target.position[2] - orbit.radius * Math.cos(theta),
+    ];
+    const d = [orbit.aim[0] - position[0], orbit.aim[1] - position[1], orbit.aim[2] - position[2]];
+    const length = Math.hypot(d[0], d[1], d[2]);
+    const f = [d[0] / length, d[1] / length, d[2] / length];
+    surface.setCameraPose({
+      position,
+      pitchDegrees: Math.asin(f[1]) * 180 / Math.PI,
+      yawDegrees: Math.atan2(-f[0], -f[2]) * 180 / Math.PI,
+    });
+    const response = await fetch(`${server}/assignments?cam=${position.join(',')}`);
+    if (!response.ok) throw new Error(`sprite server ${response.status}`);
+    const { assignments } = await response.json();
+    const applied = applySpriteFrames(surface, enemies, assignments);
+    appliedCount = Object.keys(applied).length;
+    surface.renderOnce(1);
+    sequence.push(surface.renderer.objectFor(target.handle)?.userData?.frame ?? null);
+  }
+  return {
+    mode: 'orbit',
+    enemyCount: enemies.length,
+    appliedCount,
+    targetHandle: target.handle,
+    orbitSequence: sequence,
   };
 }
 

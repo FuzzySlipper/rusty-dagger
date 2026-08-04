@@ -21,6 +21,7 @@
  *   the local dependency (e.g. borrow /home/dev/rusty-engine/studio/node_modules/@playwright/test/index.mjs)
  */
 import { readFile, writeFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'vite';
@@ -30,6 +31,8 @@ import { decodePng, frameMetrics } from '../scripts/studio-frame-metrics.mjs';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 const PORT = Number(process.env.RUSTY_RENDER_CHECK_PORT ?? 4183);
+const SPRITE_BINARY = process.env.RUSTY_SPRITE_FRAMES
+  ?? resolve(ROOT, 'target/debug/dagger-sprite-frames');
 
 const { chromium } = await import(
   process.env.RUSTY_RENDER_CHECK_PLAYWRIGHT ?? '@playwright/test'
@@ -45,6 +48,27 @@ console.log(
   `adapter readout: triangles=${expectations.triangles} `
   + `materialGroups=${expectations.materialGroups} textureResources=${expectations.textureResources}`,
 );
+
+// Live directional-frame authority for the orbit pose (6595 R6595-2): the
+// Rust runtime in --serve mode; the page polls it per camera step.
+const SPRITE_PORT = Number(process.env.RUSTY_SPRITE_SERVER_PORT ?? 4194);
+const spriteServer = spawn(
+  SPRITE_BINARY,
+  [resolve(ROOT, 'content/privateers-hold.scene.json'), '--serve', `127.0.0.1:${SPRITE_PORT}`],
+  { stdio: ['ignore', 'ignore', 'inherit'] },
+);
+await new Promise((resolveReady, rejectReady) => {
+  const deadline = Date.now() + 10_000;
+  const probe = async () => {
+    try {
+      const r = await fetch(`http://127.0.0.1:${SPRITE_PORT}/assignments?cam=25.6,1.6,-25.6`);
+      if (r.ok) return resolveReady(undefined);
+    } catch { /* not up yet */ }
+    if (Date.now() > deadline) return rejectReady(new Error('sprite server did not start'));
+    setTimeout(probe, 100);
+  };
+  probe();
+});
 
 const server = await createServer({
   root: HERE,
@@ -67,8 +91,9 @@ const check = (condition, message) => {
 };
 
 try {
-  // enemy-front/enemy-back also exercise the directional sprite driver (6595).
-  for (const cam of ['overview', 'interior', 'enemy-front', 'enemy-back']) {
+  // enemy-front/enemy-back apply static runtime assignments; enemy-orbit is
+  // the live camera loop polling the sprite server per step.
+  for (const cam of ['overview', 'interior', 'enemy-front', 'enemy-back', 'enemy-orbit']) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 960 }, deviceScaleFactor: 1 });
     const consoleErrors = [];
     page.on('console', (message) => {
@@ -76,7 +101,10 @@ try {
     });
     page.on('pageerror', (error) => consoleErrors.push(String(error)));
     try {
-      await page.goto(`http://127.0.0.1:${PORT}/?cam=${cam}`, { waitUntil: 'domcontentloaded' });
+      const query = cam === 'enemy-orbit'
+        ? `?cam=${cam}&spriteserver=${encodeURIComponent(`http://127.0.0.1:${SPRITE_PORT}`)}`
+        : `?cam=${cam}`;
+      await page.goto(`http://127.0.0.1:${PORT}/${query}`, { waitUntil: 'domcontentloaded' });
       await page.waitForFunction(
         () => window.__proof?.ready === true || window.__failure !== undefined,
         undefined,
@@ -105,7 +133,9 @@ try {
         // Directional sprite poses: the driver must have stepped every enemy
         // to the bearing-correct frame, with the target enemy showing its
         // front (0) from the front pose and its back (4) from the back pose,
-        // and the renderer must hold that exact frame.
+        // and the renderer must hold that exact frame. The orbit pose is the
+        // live loop: 8 camera steps around the target must walk the renderer-
+        // held frame through DFU's descending sector order.
         if (cam.startsWith('enemy')) {
           const driver = proof.driver;
           check(driver !== null, `${cam}: no directional sprite driver report`);
@@ -114,15 +144,23 @@ try {
               driver.appliedCount === driver.enemyCount && driver.enemyCount > 0,
               `${cam}: driver applied ${driver.appliedCount}/${driver.enemyCount} enemy frames`,
             );
-            const expected = cam === 'enemy-front' ? 0 : 4;
-            check(
-              driver.targetFrame === expected,
-              `${cam}: target enemy orientation ${driver.targetFrame} != ${expected}`,
-            );
-            check(
-              driver.targetFrameReadback === expected,
-              `${cam}: renderer holds frame ${driver.targetFrameReadback} != ${expected} for target enemy`,
-            );
+            if (cam === 'enemy-orbit') {
+              const expected = [0, 7, 6, 5, 4, 3, 2, 1];
+              check(
+                JSON.stringify(driver.orbitSequence) === JSON.stringify(expected),
+                `${cam}: orbit frame sequence ${JSON.stringify(driver.orbitSequence)} != ${JSON.stringify(expected)}`,
+              );
+            } else {
+              const expected = cam === 'enemy-front' ? 0 : 4;
+              check(
+                driver.targetFrame === expected,
+                `${cam}: target enemy orientation ${driver.targetFrame} != ${expected}`,
+              );
+              check(
+                driver.targetFrameReadback === expected,
+                `${cam}: renderer holds frame ${driver.targetFrameReadback} != ${expected} for target enemy`,
+              );
+            }
           }
         }
         // The dungeon mesh is a single static-mesh instance, so its 8683
@@ -179,6 +217,7 @@ try {
 } finally {
   await browser.close();
   await server.close();
+  spriteServer.kill();
 }
 
 if (failures.length > 0) {

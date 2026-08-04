@@ -40,13 +40,16 @@ node engine-render-check/check.mjs   # from the repo root; exits nonzero on fail
    `drawCallCount >= 78`; screenshot metrics (the
    `scripts/studio-frame-metrics.mjs` vocabulary) occupancy >= 0.02,
    uniqueColors >= 800, textureCells >= 1; zero console errors.
-5. Directional enemy poses (`enemy-front` / `enemy-back`, task 6595): the
-   in-page driver (JS port of `arena2::mobile::orientation_index`) rotates
-   every enemy's parent node to face the camera and steps its 8-orientation
-   atlas frame from the camera bearing, then `renderOnce` again. Assertions:
-   every enemy got a frame, the target enemy (nearest the start marker)
-   shows orientation 0 from the front pose and 4 from the back pose, and the
-   renderer's retained sprite holds that exact frame.
+5. Directional enemy poses (`enemy-front` / `enemy-back` / `enemy-orbit`,
+   task 6595): the page applies per-pose frames computed by the Rust runtime
+   authority (`dagger-sprite-frames`, arena2::mobile semantics) — the orbit
+   pose polls it live (`--serve` mode, spawned by check.mjs) once per camera
+   step while walking an 8-step circle around the target enemy. Assertions:
+   every enemy got a frame, the target shows orientation 0 from the front
+   pose and 4 from the back pose with renderer-held frame readback, and the
+   orbit's frame sequence is exactly DFU's descending sector order
+   [0,7,6,5,4,3,2,1]. Camera-facing itself is the renderer's (billboard
+   modes, rusty-engine 6630).
 6. Screenshots are written to `privateers-hold-{overview,interior,enemy-front,enemy-back}.png`
    (native drawing-buffer pixels captured in-page via readPixels +
    OffscreenCanvas, no CSS upscale interpolation).
@@ -85,10 +88,6 @@ textureCells=10.
 
 ## Known engine limitations (upstream, do not paper over)
 
-- **Billboard modes unimplemented** (rusty-engine 6630): sprites keep their
-  authored rotation; nothing orients them toward the camera. The 6595 driver
-  rotates enemy parent nodes consumer-side; torch billboards stay
-  fixed-orientation until the engine honors `billboard: cylindrical`.
 - **Software pixel-ratio cap + canvas sizing feedback**: for SwiftShader the
   backing buffer is capped at 0.25x (`software-renderer-resolution.ts`), and
   `resize()` (`browser-surface.ts` ~410-427) calls `setSize(w, h, false)`

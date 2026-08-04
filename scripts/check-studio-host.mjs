@@ -25,8 +25,28 @@ assert.equal(health.status, 'ok');
 assert.equal(health.adapter, true);
 
 const status = await request('/api/studio-status');
-assert.equal(status.mode, 'managed');
+assert.equal(status.mode, 'unmanaged');
+assert.equal(status.engineSourceCommit, null);
+assert.equal(status.activeProjectRoot, null);
+assert.equal(status.activeProjectFile, null);
 assert.equal(status.runningAdapter.protocolVersion, 14);
+
+// The session transaction is the browser's actual open path (engine d488a56).
+const session = await request('/api/studio-session/open', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ root, projectFile: project }),
+});
+assert.equal(session.type, 'studioSessionOpened');
+assert.equal(session.adapter.adapterId, 'rusty-dagger.privateers-hold');
+assert.equal(session.project.identity.projectId, 'privateers-hold');
+assert.equal(session.hostStatus.activeProjectRoot, root);
+assert.equal(session.hostStatus.activeProjectFile, project);
+await request('/api/studio-adapter', {
+  method: 'POST',
+  headers: { 'content-type': 'application/json' },
+  body: JSON.stringify({ type: 'closeProject', protocolVersion: 14, requestId: 'check-session-close' }),
+});
 
 const described = await request('/api/studio-adapter', {
   method: 'POST',

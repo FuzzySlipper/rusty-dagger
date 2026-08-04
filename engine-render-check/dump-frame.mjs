@@ -152,7 +152,6 @@ export async function dumpFrame() {
     }
     const enemies = sceneEnemies.map((enemy, index) => ({
       handle: enemySprites[index].handle,
-      nodeHandle: enemySprites[index].parent,
       mobileId: enemy.mobileId,
       name: enemy.name,
       position: enemy.position.map(Number),
@@ -174,6 +173,7 @@ export async function dumpFrame() {
     }
     const target = enemies[targetIndex] ?? null;
     const poseAssignments = {};
+    let orbit = null;
     if (target !== null) {
       const feet = target.position;
       const aim = [feet[0], feet[1] + 1.2, feet[2]];
@@ -183,15 +183,18 @@ export async function dumpFrame() {
       poses['enemy-front'] = lookAtPose([feet[0] + 0.5, feet[1] + 1.4, feet[2] - 4], aim);
       poses['enemy-back'] = lookAtPose([feet[0] + 0.5, feet[1] + 1.4, feet[2] + 4], aim);
 
-      // Runtime-authoritative directional frames (6595 R6595-1): the Rust
-      // runtime computes orientation frames + facing rotations via
-      // arena2::mobile; this harness never re-implements the math.
+      // Runtime-authoritative directional frames (6595 R6595-2): the Rust
+      // runtime computes orientation frames via arena2::mobile; this harness
+      // never re-implements the math. Static poses use the one-shot CLI; the
+      // live orbit polls the same binary in --serve mode (spawned by
+      // check.mjs, URL via RUSTY_SPRITE_SERVER).
       const spriteFrames = await runSpriteFrames(
         ['enemy-front', 'enemy-back'].map((name) => poses[name].position),
       );
       for (const [index, name] of ['enemy-front', 'enemy-back'].entries()) {
         poseAssignments[name] = spriteFrames.poses[index].assignments;
       }
+      orbit = { aim, radius: 4, height: 1.4 };
     }
 
     await mkdir(GENERATED, { recursive: true });
@@ -204,6 +207,7 @@ export async function dumpFrame() {
       target: target === null ? null : { ...target, index: targetIndex },
       enemies,
       poseAssignments,
+      orbit,
     }, null, 1)}\n`);
     await writeFile(resolve(GENERATED, 'proof-input.json'), `${JSON.stringify({
       poses,
