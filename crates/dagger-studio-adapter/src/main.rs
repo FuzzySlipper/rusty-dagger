@@ -940,14 +940,14 @@ mod tests {
         let ops = projected.get("ops").and_then(Value::as_array).unwrap();
         assert_eq!(
             define_texture_ids(ops).len(),
-            113,
-            "the committed project must keep projecting every authored texture (81 dungeon + 32 billboard)",
+            114,
+            "the committed project must keep projecting every authored texture (81 dungeon + 33 billboard; archive-210/16 restored by R6523-1)",
         );
         let resources = texture_resources(&workspace, project);
         let resources = resources.as_array().unwrap();
         assert_eq!(
             resources.len(),
-            112,
+            113,
             "the committed project keeps its unique content-addressed texture resources",
         );
         for entry in resources {

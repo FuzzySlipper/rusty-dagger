@@ -111,14 +111,17 @@ impl RdbFlatObject {
     /// Whether this flat renders as a visible billboard. Per DFU RDBLayout
     /// AddFlat/AddFlats: every flat is a billboard EXCEPT the editor flats
     /// archive (199 — start/enter/quest/treasure markers, hidden) and the
-    /// enemy spawn markers (records 15/16 in archive 199, also hidden).
-    /// Real billboards come from archives like 210 (lights/furniture), 213,
-    /// 203, 206, and the NPC archives (handled separately by enemies).
+    /// enemy spawn markers (records 15/16 **in archive 199 only**, also
+    /// hidden). The marker-record exclusion is scoped to archive 199: in
+    /// other archives (e.g. 210 — torch/light flats), records 15 and 16 are
+    /// real billboards. Real billboards come from archives like 210
+    /// (lights/furniture), 213, 203, 206, and the NPC archives (handled
+    /// separately by enemies).
     pub fn is_visible_billboard(&self) -> bool {
         if self.texture_archive == EDITOR_FLATS_ARCHIVE {
             return false;
         }
-        !ENEMY_MARKER_RECORDS.contains(&self.texture_record)
+        true
     }
 }
 
@@ -260,12 +263,18 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                     block.lights.push(RdbLightObject { x, y, z, radius });
                 }
                 0x03 => {
+                    // DFU ReadRdbFlatResource (11 bytes): TextureBitfield(2) +
+                    // Flags(2) + Magnitude(1) + SoundIndex(1) +
+                    // NextObjectOffset(4) + Action(1). FactionOrMobileId is
+                    // synthesized from (Magnitude, SoundIndex), not read
+                    // separately — reading it as a distinct u16 overruns the
+                    // final flat record in border blocks by 2 bytes.
                     let mut r = Cursor::at(data, resource_offset);
                     let bitfield = r.u16();
                     let flags = r.u16();
                     let magnitude = r.u8();
                     let sound_index = r.u8();
-                    let faction_or_mobile_id = r.u16();
+                    let faction_or_mobile_id = u16::from_le_bytes([magnitude, sound_index]);
                     let next_object_offset = r.i32();
                     let action = r.u8();
                     block.flats.push(RdbFlatObject {
@@ -316,6 +325,50 @@ mod tests {
             assert!((-2048..=0).contains(&m.y), "y {} out of range", m.y);
             assert!((0..=2048).contains(&m.z), "z {} out of range", m.z);
         }
+    }
+}
+
+#[cfg(test)]
+mod billboard_tests {
+    use super::*;
+
+    fn flat(archive: u16, record: u16) -> RdbFlatObject {
+        RdbFlatObject {
+            x: 0,
+            y: 0,
+            z: 0,
+            texture_archive: archive,
+            texture_record: record,
+            flags: 0,
+            magnitude: 0,
+            sound_index: 0,
+            faction_or_mobile_id: 0,
+            next_object_offset: -1,
+            action: 0,
+        }
+    }
+
+    #[test]
+    fn editor_archive_flats_are_never_visible_billboards() {
+        // Archive 199 is the editor archive: start/enter/quest/treasure
+        // markers AND enemy spawn markers (records 15/16) are all hidden.
+        for record in [START_MARKER_RECORD, ENTER_MARKER_RECORD, 15, 16, 3] {
+            assert!(
+                !flat(EDITOR_FLATS_ARCHIVE, record).is_visible_billboard(),
+                "editor archive record {record} must not be a visible billboard"
+            );
+        }
+    }
+
+    #[test]
+    fn non_editor_record_16_is_a_real_billboard() {
+        // R6523-1 regression: the marker-record exclusion is scoped to archive
+        // 199. Archive 210 record 16 is a normal torch/light flat (DFU
+        // IsTorchFlat includes record 16) and must render as a billboard, not
+        // be hidden as an enemy marker. Same for record 15 in other archives.
+        assert!(flat(210, 16).is_visible_billboard());
+        assert!(flat(210, 15).is_visible_billboard());
+        assert!(flat(213, 16).is_visible_billboard());
     }
 }
 

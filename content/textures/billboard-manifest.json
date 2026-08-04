@@ -24,6 +24,7 @@
     {"archive":210,"record":11,"path":"billboard-210-11.png","sha256":"sha256:ef0b1dadb35c2e5af63fd7ccca90c428aeb4439c25287b76982f4a06737caff7","byteLength":7205,"width":29,"height":61},
     {"archive":210,"record":12,"path":"billboard-210-12.png","sha256":"sha256:a441845a2529575f61fbf071ae36d1d0eb33293961431ff8e90bbc571f54fb57","byteLength":7898,"width":36,"height":54},
     {"archive":210,"record":13,"path":"billboard-210-13.png","sha256":"sha256:57fd0117ebf2860e41ea2b1c20c8a7b1c98b3087403dbd54abb6143e4e3a4661","byteLength":7753,"width":36,"height":53},
+    {"archive":210,"record":16,"path":"billboard-210-16.png","sha256":"sha256:d1a3f734a53f993be508f9d8852d70ecf263df157ef0150b11100fe213ee5958","byteLength":2930,"width":13,"height":54},
     {"archive":210,"record":17,"path":"billboard-210-17.png","sha256":"sha256:b242adf13b75bcf819baaf01db50c38f756699c24f81f92f50580449d434a4c9","byteLength":2718,"width":13,"height":50},
     {"archive":210,"record":18,"path":"billboard-210-18.png","sha256":"sha256:1523874098bd9957cae91fbd73c4ce4e069ac21f86ca8ed32124b61480111694","byteLength":3643,"width":16,"height":55},
     {"archive":210,"record":19,"path":"billboard-210-19.png","sha256":"sha256:52e89fc13f7006793d461ca3a3fb509fba7308b00527d6574833b375fe1e8f6b","byteLength":15413,"width":41,"height":93},
