@@ -18,6 +18,7 @@ struct Args {
     textured: bool,
     format: String,
     texture_dir: Option<PathBuf>,
+    table_mode: dungeon::TextureTableMode,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -28,6 +29,7 @@ fn parse_args() -> Result<Args, String> {
     let mut textured = true;
     let mut format = "glb".to_string();
     let mut texture_dir: Option<PathBuf> = None;
+    let mut table_mode = dungeon::TextureTableMode::Classic;
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -47,6 +49,18 @@ fn parse_args() -> Result<Args, String> {
                     it.next().ok_or("--texture-dir needs a value")?,
                 ))
             }
+            "--texture-table" => {
+                table_mode = match it.next().as_deref() {
+                    Some("default") => dungeon::TextureTableMode::Default,
+                    Some("classic") => dungeon::TextureTableMode::Classic,
+                    Some(other) => {
+                        return Err(format!(
+                            "--texture-table must be default or classic, got {other:?}"
+                        ))
+                    }
+                    None => return Err("--texture-table needs a value".to_string()),
+                }
+            }
             "--untextured" => textured = false,
             "--help" | "-h" => return Err(usage()),
             other => return Err(format!("unknown arg {other}\n{}", usage())),
@@ -63,11 +77,12 @@ fn parse_args() -> Result<Args, String> {
         textured,
         format,
         texture_dir,
+        table_mode,
     })
 }
 
 fn usage() -> String {
-    "usage: dagger-import [--arena2 DIR] [--region N] [--location NAME] [--out FILE] [--format glb|mesh-json] [--texture-dir DIR] [--untextured]"
+    "usage: dagger-import [--arena2 DIR] [--region N] [--location NAME] [--out FILE] [--format glb|mesh-json] [--texture-dir DIR] [--texture-table default|classic] [--untextured]"
         .to_string()
 }
 
@@ -85,6 +100,7 @@ fn main() {
         args.region,
         &args.location,
         args.textured,
+        args.table_mode,
     ) {
         Ok(o) => o,
         Err(e) => {
@@ -104,6 +120,7 @@ fn main() {
     println!("tris:        {}", s.tris);
     println!("primitives:  {}", output.primitives.len());
     println!("textures:    {}", s.textures);
+    println!("texture table: {:?}", s.texture_table);
     for f in &s.texture_failures {
         println!("texture warning: {f}");
     }
