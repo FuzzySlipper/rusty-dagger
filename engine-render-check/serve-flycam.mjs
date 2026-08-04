@@ -12,6 +12,7 @@
  * stays single-origin.
  */
 import { createServer as createHttpServer } from 'node:http';
+import { createServer as createNetServer } from 'node:net';
 import { spawn, spawnSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -22,7 +23,20 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 const host = process.argv[2] ?? '127.0.0.1';
 const port = Number(process.argv[3] ?? 4174);
-const spritePort = port + 1000;
+
+/** A definitely-free localhost port (fixed arithmetic collides with whatever
+ * else runs on this LAN box). */
+function freePort() {
+  return new Promise((resolvePort, rejectPort) => {
+    const probe = createNetServer();
+    probe.once('error', rejectPort);
+    probe.listen(0, '127.0.0.1', () => {
+      const assigned = probe.address().port;
+      probe.close(() => resolvePort(assigned));
+    });
+  });
+}
+const spritePort = await freePort();
 
 // Build the Rust binaries the dump + sprite authority need (cheap when fresh).
 for (const pkg of ['dagger-studio-adapter', 'dagger-runtime']) {
@@ -47,13 +61,28 @@ for (const signal of ['SIGINT', 'SIGTERM']) {
     process.exit(0);
   });
 }
+// Readiness probe: fail loudly at startup rather than 404/502 per frame.
+{
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    try {
+      const probe = await fetch(`http://127.0.0.1:${spritePort}/assignments?cam=25.6,1.6,-25.6`);
+      if (probe.ok) break;
+    } catch { /* not up yet */ }
+    if (Date.now() > deadline) {
+      console.error(`sprite authority did not come up on 127.0.0.1:${spritePort}`);
+      process.exit(1);
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
 
 const vite = await createViteServer({
   root: HERE,
   logLevel: 'warn',
   publicDir: resolve(ROOT, 'content'),
   appType: 'spa',
-  server: { middlewareMode: true, fs: { allow: [ROOT] } },
+  server: { middlewareMode: true, fs: { allow: [ROOT] }, hmr: false },
 });
 
 const server = createHttpServer(async (request, response) => {

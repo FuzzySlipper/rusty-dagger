@@ -53,7 +53,10 @@ async function main() {
   });
 
   // --- input -------------------------------------------------------------
-  canvas.addEventListener('click', () => canvas.requestPointerLock());
+  // Click anywhere (the hint overlay sits on top of the canvas) to lock.
+  const lock = () => canvas.requestPointerLock();
+  canvas.addEventListener('click', lock);
+  hint.addEventListener('click', lock);
   document.addEventListener('pointerlockchange', () => {
     hint.style.display = document.pointerLockElement === canvas ? 'none' : 'grid';
   });
