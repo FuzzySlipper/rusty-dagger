@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="data:," />
+  <title>rusty-dagger engine render check</title>
+  <!--
+    renderer-three caps the backing-buffer pixel ratio at 0.25 for software
+    rasterizers (SwiftShader) and sizes the buffer from canvas.clientWidth.
+    Fix the CSS size at 4x the target frame so the drawing buffer is exactly
+    1280x960 real pixels; the page exports the frame via readPixels.
+  -->
+  <style>
+    html,body{margin:0;background:#101418}
+    canvas{display:block;width:5120px;height:3840px}
+  </style>
+</head>
+<body>
+<canvas id="renderer" width="1280" height="960"></canvas>
+<script type="module" src="/main.js"></script>
+</body>
+</html>
