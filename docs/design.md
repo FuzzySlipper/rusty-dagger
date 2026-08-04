@@ -134,10 +134,10 @@ modularity gate, task 6529):
 - `engine-render-check/` — headless render proof through the real
   rusty-engine renderer (renderer-three browser surface, consumed from
   rusty-engine `main`): adapter protocol-14 readout -> vite page ->
-  verified texture resources -> overview/interior assertions + screenshots.
-  This is the primary render verification gate.
-- `render-check/` — legacy ad-hoc three.js GLTFLoader debug view; kept for
-  reference, no further investment.
+  verified texture resources -> overview/interior/directional-enemy
+  assertions + screenshots. This is the only render verification path —
+  when the engine renderer lacks a capability, file an upstream task
+  instead of building a side renderer.
 
 ### Modularity gate evaluation (task 6529, 2026-08-03)
 
@@ -256,7 +256,7 @@ Classic enemies are view-only directional billboards. Ownership split:
 - Every format claim is backed by a test against the real data files
   (arena2 unit tests run against /home/research/daggerfall-files).
 - Every visible result is backed by a headless render assertion plus a
-  screenshot artifact (render-check).
+  screenshot artifact (engine-render-check, the real rusty-engine renderer).
 - Every engine claim is checked against engine source, not memory; upstream
   gaps are filed with file/line evidence (see tasks 6515/6516).
 

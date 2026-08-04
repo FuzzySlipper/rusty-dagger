@@ -17,12 +17,12 @@
  *   textureCells >= 1 (6x6 grid cell dominated by geometry with luminance
  *   stddev >= 6: texel-frequency alternation flat shading cannot produce),
  *   huePixels >= 5000 (histogram sample floor).
- * - GLB comparison: the focused frame's 12-bin hue histogram must overlap the
- *   best of the three committed GLB render references (render-check/*.png) by
- *   histogramIntersection >= 0.40. Studio and the GLB viewer use different
- *   lighting rigs and framing, so this is a hue-signature tolerance, not pixel
- *   equality; measured 0.65 desktop / 0.70 narrow, while the untextured
- *   average-color frame scores ~0.25.
+ * - Renderer comparison: the focused frame's 12-bin hue histogram must
+ *   overlap the best of the committed rusty-engine render references
+ *   (engine-render-check/*.png — the same renderer, so this is a framing/
+ *   lighting tolerance, not pixel equality) by histogramIntersection >= 0.40.
+ *   Measured 0.65 desktop / 0.70 narrow, while the untextured average-color
+ *   frame scores ~0.25.
  */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -48,9 +48,8 @@ const projectUrl = `${base}/?root=${encodeURIComponent(root)}&project=${encodeUR
 const executablePath = process.env.RUSTY_STUDIO_CHROMIUM ?? '/usr/bin/chromium';
 
 const GLB_REFERENCES = [
-  'render-check/privateers-hold.png',
-  'render-check/privateers-hold-top.png',
-  'render-check/privateers-hold-interior.png',
+  'engine-render-check/privateers-hold-overview.png',
+  'engine-render-check/privateers-hold-interior.png',
 ];
 
 const referenceHistograms = [];

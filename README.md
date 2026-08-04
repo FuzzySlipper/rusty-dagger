@@ -45,9 +45,8 @@ current task state in the Den `rusty-dagger` project.
   imported/ engine artifacts)
 - `engine-render-check/` — headless render proof through the real rusty-engine
   renderer (renderer-three browser surface, consumed from rusty-engine
-  `main`); the primary render verification gate
-- `render-check/` — legacy debug view (ad-hoc three.js GLTFLoader + playwright);
-  kept for reference, no further investment
+  `main`); the only render verification path. When the engine renderer lacks
+  a capability, file an upstream task rather than building a side renderer.
 
 ## Usage
 
@@ -65,8 +64,6 @@ cargo run -p dagger-runtime --bin dagger-walkthrough
 # Render proof through the real rusty-engine renderer (one-time: pnpm install
 # inside engine-render-check/):
 node engine-render-check/check.mjs
-# Legacy ad-hoc three.js debug view:
-node render-check/check.mjs [--cam overview|top|interior] [--out shot.png]
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (uses a local Rusty Engine Studio build; set
 # RUSTY_ENGINE_STUDIO_STATIC_ROOT to override the conventional sibling path):
@@ -84,10 +81,9 @@ scripts/check-studio-browser.sh
   proof-of-concept exactly (bounds X[-51.2,102.4] Y[0,51.1] Z[-102.4,51.2] m,
   glTF right-handed space).
 - GLB: structurally validated (JSON/accessor/bufferView/PNG decoding) and
-  **rendered headless through three.js GLTFLoader** (the same renderer
-  rusty-engine studio uses) with playwright+swiftshader; assertions on mesh
-  count, triangle count, textured materials, bounds, and pixel coverage pass
-  for overview/top/interior cameras. Screenshots in render-check/*.png.
+  rendered headless; the original three.js GLTFLoader harness
+  (`render-check/`) has since been removed in favor of the real
+  rusty-engine renderer proof below.
 - Engine-native: `content/privateers-hold.mesh.json` is admitted by the
   engine's `rusty-asset-import` CLI with zero diagnostics as
   `mesh/privateers-hold`; `content/imported/` holds the published catalog
@@ -100,9 +96,9 @@ scripts/check-studio-browser.sh
   through the real rusty-engine renderer (renderer-three browser surface,
   consumed from rusty-engine `main`) in headless Chromium, asserting
   triangle/draw-call counts, texture-resource count, pixel gates, and zero
-  console errors across overview + interior poses. This is the render
-  verification gate going forward; the three.js `render-check/` remains as a
-  legacy debug view.
+  console errors across overview + interior + directional-enemy poses. This
+  is the only render verification path; the ad-hoc three.js harnesses were
+  removed.
 
 ## Data provenance & conventions
 
