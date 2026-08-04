@@ -112,7 +112,8 @@ function json(response, status, value) {
 }
 
 function error(response, status, message) {
-  json(response, status, { error: message });
+  // `message` is the field the studio client's studioHostError reads.
+  json(response, status, { error: message, message });
 }
 
 async function body(request) {
@@ -126,22 +127,28 @@ async function body(request) {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+// Active session tracking for the strict host-status contract (engine
+// f8b15a0): both null or both set, project file always project-relative.
+let activeProjectRoot = null;
+let activeProjectFile = null;
+
 function hostStatus() {
   return {
     schemaVersion: 1,
     project: 'rusty-engine-studio',
     status: 'ok',
-    mode: 'managed',
-    engineSourceCommit: engineRevision,
-    configuredConsumer: {
-      repository: 'https://github.com/FuzzySlipper/rusty-dagger',
-      commit: consumerCommit,
-    },
+    // 'unmanaged': we spawn an explicit adapter binary without managed
+    // certification; the decoder forbids managed identity claims here.
+    mode: 'unmanaged',
+    engineSourceCommit: null,
+    configuredConsumer: null,
+    activeProjectRoot,
+    activeProjectFile,
     runningAdapter: {
       adapterId: 'rusty-dagger.privateers-hold',
       adapterVersion: 1,
       protocolVersion: 14,
-      buildCommit: consumerCommit,
+      buildCommit: null,
       binarySha256,
     },
   };
@@ -320,10 +327,46 @@ const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${host}:${port}`);
     if (url.pathname === '/health') return json(response, 200, { status: 'ok', adapter: true, engineRevision, consumerCommit });
     if (url.pathname === '/api/studio-status') return json(response, 200, hostStatus());
+    if (url.pathname === '/api/studio-session/open') {
+      // Session transaction (engine d488a56): describe + openProject in one
+      // envelope; the strict decoder requires exactly these keys.
+      if (request.method !== 'POST') { response.writeHead(405, { allow: 'POST' }); response.end(); return; }
+      const value = JSON.parse(await body(request));
+      const sessionRoot = resolve(String(value.root ?? ''));
+      const projectFile = String(value.projectFile ?? '');
+      const described = await adapter.exchange(JSON.stringify({
+        type: 'describe', protocolVersion: 14, requestId: 'session-describe',
+      }));
+      const opened = await adapter.exchange(JSON.stringify({
+        type: 'openProject', protocolVersion: 14, requestId: 'session-open',
+        root: sessionRoot, projectFile,
+      }));
+      if (opened.type !== 'projectOpened') {
+        return error(response, 502, `session openProject failed: ${JSON.stringify(opened).slice(0, 300)}`);
+      }
+      activeProjectRoot = sessionRoot;
+      activeProjectFile = projectFile;
+      return json(response, 200, {
+        schemaVersion: 1,
+        type: 'studioSessionOpened',
+        adapter: described.adapter,
+        project: opened.project,
+        hostStatus: hostStatus(),
+      });
+    }
     if (url.pathname === '/api/studio-adapter') {
       if (request.method !== 'POST') { response.writeHead(405, { allow: 'POST' }); response.end(); return; }
       const value = JSON.parse(await body(request));
       const reply = await adapter.exchange(JSON.stringify(value));
+      // Track the active project across the plain adapter path too (the
+      // studio shell's close flow uses it).
+      if (value.type === 'openProject' && reply.type === 'projectOpened') {
+        activeProjectRoot = resolve(String(value.root ?? ''));
+        activeProjectFile = String(value.projectFile ?? '');
+      } else if (value.type === 'closeProject' && reply.type === 'projectClosed') {
+        activeProjectRoot = null;
+        activeProjectFile = null;
+      }
       return json(response, 200, reply);
     }
     if (url.pathname === '/api/studio-render-resource') {

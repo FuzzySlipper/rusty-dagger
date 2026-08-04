@@ -318,7 +318,6 @@ def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
                 "translation": [float(v) for v in e["position"]],
                 "sprite": {
                     "asset": f"texture/{slug}",
-                    "directional": True,
                     "frame": 0,
                     "size": frames[0]["size"],
                     "billboard": "cylindrical",

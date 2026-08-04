@@ -77,14 +77,15 @@ try {
     try {
       await page.goto(projectUrl, { waitUntil: 'domcontentloaded' });
       const shell = page.locator('main.studio-layout[data-project-assets]');
-      await shell.waitFor({ state: 'visible', timeout: 20_000 });
+      // Cold-start budget per the engine's own studio spec precedent (90s).
+      await shell.waitFor({ state: 'visible', timeout: 90_000 });
       const assetCount = Number(await shell.getAttribute('data-project-assets'));
       assert.ok(
         assetCount >= 160,
         `expected the textured project (>= 160 assets incl. textures), got ${assetCount}`,
       );
       const viewport = page.locator('rusty-studio-viewport[data-renderer-status="ready"]');
-      await viewport.waitFor({ state: 'visible', timeout: 20_000 });
+      await viewport.waitFor({ state: 'visible', timeout: 90_000 });
       await page.getByText("Privateer's Hold", { exact: true }).first().waitFor({ state: 'visible' });
       const canvas = viewport.locator('canvas[aria-label="Shared Rusty renderer viewport"]');
       const bounds = await canvas.boundingBox();

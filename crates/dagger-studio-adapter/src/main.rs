@@ -786,39 +786,14 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
         let asset = sprite.get("asset").and_then(Value::as_str).unwrap_or("");
         let frame = sprite.get("frame").and_then(Value::as_u64).unwrap_or(0);
         let size = sprite.get("size").cloned().unwrap_or_else(|| json!([1.0, 1.0]));
-        // Directional sprites (enemies) get a parent group node so a live
-        // driver can rotate them toward the camera with plain update ops —
-        // renderer-three does not implement billboard modes yet (rusty-engine
-        // 6630) and updateSprite cannot patch transforms.
-        let directional = sprite.get("directional").and_then(Value::as_bool) == Some(true);
-        let (parent, sprite_transform) = if directional {
-            let node_handle = id + 1_000_000;
-            ops.push(json!({
-                "op": "create",
-                "handle": node_handle,
-                "parent": null,
-                "node": {
-                    "geometry": {"kind": "group"},
-                    "material": {"color": [1.0, 1.0, 1.0, 1.0], "wireframe": false},
-                    "transform": transform(entity),
-                    "visible": true,
-                    "layer": "scene",
-                    "metadata": {"sourceEntity": id, "sourceSceneNode": id, "tags": ["directional-sprite"], "label": entity.get("name").and_then(Value::as_str)},
-                }
-            }));
-            (
-                Value::from(node_handle),
-                json!({"translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0]}),
-            )
-        } else {
-            (Value::Null, transform(entity))
-        };
         // SpriteInstanceDescriptor: cylindrical (Y-facing) billboard with the
-        // flat's transparent texture, at the flat's world position.
+        // flat's transparent texture, at the flat's world position. The
+        // renderer honors billboard modes (rusty-engine 6630); directional
+        // frame selection stays consumer-side via updateSprite.
         ops.push(json!({
             "op": "createSprite",
             "handle": id,
-            "parent": parent,
+            "parent": null,
             "sprite": {
                 "asset": asset,
                 "frame": frame,
@@ -831,7 +806,7 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
                 "depth": sprite.get("depth").and_then(Value::as_str).unwrap_or("default"),
                 "shading": sprite.get("shading").and_then(Value::as_str).unwrap_or("lit"),
                 "visible": sprite.get("visible").and_then(Value::as_bool).unwrap_or(true),
-                "transform": sprite_transform,
+                "transform": transform(entity),
                 "attachment": {"sourceEntity": id, "sourceSceneNode": id, "attachmentPoint": null},
                 "metadata": {"sourceEntity": id, "sourceSceneNode": id, "tags": [], "label": entity.get("name").and_then(Value::as_str)},
             }

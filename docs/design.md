@@ -239,20 +239,21 @@ Classic enemies are view-only directional billboards. Ownership split:
 - `dagger-import` collects RDB enemy flats into scene nodes (`scene.enemies`,
   never baked into the static mesh) and packs one 8-frame orientation atlas
   PNG per mobile id (mirrored sides baked, palette index 0 transparent).
-- The studio adapter emits `defineSpriteAtlas` + `createSprite` per enemy,
-  parented under a group node (`directional: true`) so a live driver can
-  rotate it — renderer-three does not implement billboard modes (rusty-engine
-  6630) and `updateSprite` cannot patch transforms.
+- The studio adapter emits `defineSpriteAtlas` + `createSprite` per enemy
+  (`billboard: cylindrical`; the renderer honors billboard modes,
+  rusty-engine 6630).
 - The per-camera-tick directional authority is consumer-side by engine design
   ("projection-driven, never renderer wall-clock") and lives in
   `dagger-runtime::directional` (`evaluate_directional`, arena2::mobile
-  semantics): camera pose -> per-enemy orientation frame + camera-facing yaw.
-  Consumers apply the assignments (`update` + `updateSprite` ops) and never
-  re-implement the math — the engine-render-check driver consumes them via
-  the `dagger-sprite-frames` CLI; a future `dagger-world` live loop calls the
-  same API. Evaluation is a naive full-scene poll per pose — documented
-  stopgap until the engine exposes a renderer-visibility query
-  (rusty-engine 6632).
+  semantics): camera pose -> per-enemy orientation frame. Consumers apply the
+  frames (`updateSprite` ops) and never re-implement the math — the
+  engine-render-check driver consumes them live: `dagger-sprite-frames
+  --serve` answers per-step camera poses while the page orbits an enemy (the
+  `enemy-orbit` proof asserts the DFU sector sequence 0,7,6,5,4,3,2,1 with
+  renderer-held frame readback). A future `dagger-world` live loop calls the
+  same API. Camera-facing is the renderer's (billboard modes, rusty-engine
+  6630); per-handle visibility readouts landed upstream (6632) if the naive
+  full-scene poll ever needs gating.
 - Static-size limitation: a sprite's quad size is fixed at creation (front
   record), while DFU scales per orientation record; accepted for view-only.
 
