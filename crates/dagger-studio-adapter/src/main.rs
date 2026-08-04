@@ -711,6 +711,19 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
             if let Some(descriptor) = texture_descriptor(root, asset, texture) {
                 ops.push(json!({"op":"defineTexture","texture":descriptor}));
             }
+            // Sprite atlas (directional enemy frames, or a full-rect single
+            // frame for plain billboards): createSprite asset ids resolve
+            // against atlases, so without this sprites render untextured.
+            if let Some(atlas) = texture.get("spriteAtlas") {
+                ops.push(json!({
+                    "op": "defineSpriteAtlas",
+                    "atlas": {
+                        "id": id,
+                        "texture": id,
+                        "frames": atlas.get("frames").cloned().unwrap_or_else(|| json!([])),
+                    }
+                }));
+            }
         }
         if let Some(material) = asset.get("material") {
             let style = material.get("style").unwrap_or(&Value::Null);
@@ -771,17 +784,46 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
         let id = entity.get("id").and_then(Value::as_u64).unwrap_or(0);
         let sprite = entity.get("sprite").unwrap_or(&Value::Null);
         let asset = sprite.get("asset").and_then(Value::as_str).unwrap_or("");
+        let frame = sprite.get("frame").and_then(Value::as_u64).unwrap_or(0);
+        let size = sprite.get("size").cloned().unwrap_or_else(|| json!([1.0, 1.0]));
+        // Directional sprites (enemies) get a parent group node so a live
+        // driver can rotate them toward the camera with plain update ops —
+        // renderer-three does not implement billboard modes yet (rusty-engine
+        // 6630) and updateSprite cannot patch transforms.
+        let directional = sprite.get("directional").and_then(Value::as_bool) == Some(true);
+        let (parent, sprite_transform) = if directional {
+            let node_handle = id + 1_000_000;
+            ops.push(json!({
+                "op": "create",
+                "handle": node_handle,
+                "parent": null,
+                "node": {
+                    "geometry": {"kind": "group"},
+                    "material": {"color": [1.0, 1.0, 1.0, 1.0], "wireframe": false},
+                    "transform": transform(entity),
+                    "visible": true,
+                    "layer": "scene",
+                    "metadata": {"sourceEntity": id, "sourceSceneNode": id, "tags": ["directional-sprite"], "label": entity.get("name").and_then(Value::as_str)},
+                }
+            }));
+            (
+                Value::from(node_handle),
+                json!({"translation": [0.0, 0.0, 0.0], "rotation": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0]}),
+            )
+        } else {
+            (Value::Null, transform(entity))
+        };
         // SpriteInstanceDescriptor: cylindrical (Y-facing) billboard with the
         // flat's transparent texture, at the flat's world position.
         ops.push(json!({
             "op": "createSprite",
             "handle": id,
-            "parent": null,
+            "parent": parent,
             "sprite": {
                 "asset": asset,
-                "frame": 0,
+                "frame": frame,
                 "pivot": [0.5, 0.0],
-                "size": [1.0, 1.0],
+                "size": size,
                 "sizeMode": sprite.get("sizeMode").and_then(Value::as_str).unwrap_or("world"),
                 "billboard": sprite.get("billboard").and_then(Value::as_str).unwrap_or("cylindrical"),
                 "tint": [1.0, 1.0, 1.0, 1.0],
@@ -789,7 +831,7 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
                 "depth": sprite.get("depth").and_then(Value::as_str).unwrap_or("default"),
                 "shading": sprite.get("shading").and_then(Value::as_str).unwrap_or("lit"),
                 "visible": sprite.get("visible").and_then(Value::as_bool).unwrap_or(true),
-                "transform": transform(entity),
+                "transform": sprite_transform,
                 "attachment": {"sourceEntity": id, "sourceSceneNode": id, "attachmentPoint": null},
                 "metadata": {"sourceEntity": id, "sourceSceneNode": id, "tags": [], "label": entity.get("name").and_then(Value::as_str)},
             }

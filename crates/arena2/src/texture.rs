@@ -18,6 +18,10 @@ pub struct TextureRecordInfo {
     pub height: i16,
     pub compression: u16,
     pub frame_count: u16,
+    /// DFU TextureFile scale factors (BlocksFile.ScaleDivisor = 256): billboard
+    /// size = size + size * scale / 256. Zero for most environment textures.
+    pub scale_x: i16,
+    pub scale_y: i16,
 }
 
 pub struct TextureFile {
@@ -75,6 +79,8 @@ impl TextureFile {
                         height: SOLID_SIZE,
                         compression: 0,
                         frame_count: 1,
+                        scale_x: 0,
+                        scale_y: 0,
                     },
                     data_offset: 0,
                 })
@@ -101,6 +107,9 @@ impl TextureFile {
             let data_offset = c.u32() as usize;
             let _is_normal = c.i16();
             let frame_count = c.u16();
+            let _unk = c.i16();
+            let scale_x = c.i16();
+            let scale_y = c.i16();
             records.push(RecordEntry {
                 position: record_position,
                 info: TextureRecordInfo {
@@ -108,6 +117,8 @@ impl TextureFile {
                     height,
                     compression,
                     frame_count,
+                    scale_x,
+                    scale_y,
                 },
                 data_offset,
             });

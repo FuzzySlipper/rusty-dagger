@@ -197,7 +197,7 @@ fn main() {
         }
     }
     let scene_json = format!(
-        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"billboards\": [{}],\n  \"doors\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
+        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"billboards\": [{}],\n  \"enemies\": [{}],\n  \"doors\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
         args.location.replace('"', "'"),
         v3(output.scene.start_marker), v3(output.scene.enter_marker),
         output.scene.light_count, output.scene.flat_count,
@@ -209,6 +209,13 @@ fn main() {
             .map(|b| format!(
                 "{{\"position\": {:?}, \"textureArchive\": {}, \"textureRecord\": {}}}",
                 b.position, b.texture_archive, b.texture_record
+            ))
+            .collect::<Vec<_>>()
+            .join(","),
+        output.scene.enemies.iter()
+            .map(|e| format!(
+                "{{\"position\": {:?}, \"mobileId\": {}, \"name\": \"{}\", \"textureArchive\": {}}}",
+                e.position, e.mobile_id, e.name, e.texture_archive
             ))
             .collect::<Vec<_>>()
             .join(","),
@@ -245,6 +252,7 @@ fn main() {
     if let Some(dir) = &args.texture_dir {
         publish_textures(dir, &output.textures);
         publish_billboard_textures(dir, &args.arena2_dir, &output.scene.billboards);
+        publish_enemy_atlases(dir, &args.arena2_dir, &output.scene.enemies);
     }
 }
 
@@ -338,4 +346,117 @@ fn publish_billboard_textures(
         "billboards:  {} unique textures ({} decode failures)",
         count, failures
     );
+}
+
+
+/// Decode and pack one directional sprite atlas per unique enemy mobile id:
+/// 8 orientation frames (frame 0 of each standing-anim record, mirrored when
+/// the DFU anim table flips that side) in a horizontal strip, plus an
+/// enemy-manifest.json mapping each atlas to its PNG sourcePath/hash/dims,
+/// per-frame UV rects, and DFU world sizes. generate-project.py consumes this
+/// to stamp enemy sprite resources and atlas frame descriptors.
+fn publish_enemy_atlases(
+    dir: &std::path::Path,
+    arena2_dir: &std::path::Path,
+    enemies: &[dungeon::EnemyScene],
+) {
+    use arena2::mobile::{mobile_type, record_world_size, standing_anims};
+    use arena2::palette::Palette;
+    use arena2::texture::TextureFile;
+    use std::collections::BTreeMap;
+
+    let palette = Palette::load(&arena2_dir.join("PAL.PAL")).expect("PAL.PAL");
+    let mut unique: BTreeMap<u8, ()> = BTreeMap::new();
+    for e in enemies {
+        unique.insert(e.mobile_id, ());
+    }
+    let mut entries: Vec<String> = Vec::new();
+    let mut count = 0usize;
+    let mut failures = 0usize;
+    for id in unique.keys() {
+        let mobile = mobile_type(*id).expect("mobile type for collected enemy");
+        let anims = standing_anims(mobile);
+        let tex_path = arena2_dir.join(format!("TEXTURE.{:03}", mobile.texture_archive));
+        let Ok(tex) = TextureFile::load(&tex_path) else {
+            failures += 1;
+            eprintln!(
+                "enemy atlas warning: TEXTURE.{:03} unreadable ({} skipped)",
+                mobile.texture_archive, mobile.name
+            );
+            continue;
+        };
+        // Decode the 8 orientation frames.
+        let mut decoded: Vec<(bool, usize, usize, Vec<u8>, [f32; 2])> = Vec::new();
+        let mut failed = false;
+        for anim in anims.iter() {
+            let rec = anim.record as usize;
+            match (tex.frame_pixels(rec, 0), tex.record_info(rec)) {
+                (Ok((w, h, indexed)), Some(info)) => {
+                    let size = record_world_size(info.width, info.height, info.scale_x, info.scale_y);
+                    decoded.push((anim.flip, w, h, indexed, size));
+                }
+                _ => {
+                    failures += 1;
+                    eprintln!(
+                        "enemy atlas warning: TEXTURE.{:03} rec {} decode failed ({} skipped)",
+                        mobile.texture_archive, anim.record, mobile.name
+                    );
+                    failed = true;
+                    break;
+                }
+            }
+        }
+        if failed {
+            continue;
+        }
+        // Pack horizontally into one atlas (palette index 0 = transparent).
+        let atlas_w: usize = decoded.iter().map(|d| d.1).sum();
+        let atlas_h: usize = decoded.iter().map(|d| d.2).max().unwrap_or(0);
+        let mut atlas = vec![0u8; atlas_w * atlas_h * 4];
+        let mut frame_entries: Vec<String> = Vec::new();
+        let mut x0 = 0usize;
+        for (orientation, (flip, w, h, indexed, size)) in decoded.iter().enumerate() {
+            let mut rgba = palette.to_rgba_transparent(indexed);
+            if *flip {
+                // Mirror each row horizontally (DFU FlipLeftRight).
+                for row in rgba.chunks_mut(w * 4) {
+                    for px in 0..w / 2 {
+                        for c in 0..4 {
+                            row.swap(px * 4 + c, (w - 1 - px) * 4 + c);
+                        }
+                    }
+                }
+            }
+            for (row_i, row) in rgba.chunks(w * 4).enumerate() {
+                let dst = (row_i * atlas_w + x0) * 4;
+                atlas[dst..dst + w * 4].copy_from_slice(row);
+            }
+            frame_entries.push(format!(
+                "      {{\"frame\":{orientation},\"uvMin\":[{},0],\"uvMax\":[{},{}],\"size\":[{:?},{:?}]}}",
+                x0 as f64 / atlas_w as f64,
+                (x0 + w) as f64 / atlas_w as f64,
+                *h as f64 / atlas_h as f64,
+                size[0], size[1]
+            ));
+            x0 += w;
+        }
+        let png = crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &atlas);
+        let slug = format!("enemy-{}-atlas", mobile.id);
+        let file = format!("{slug}.png");
+        std::fs::write(dir.join(&file), &png).expect("write enemy atlas png");
+        let hash = format!("sha256:{:x}", Sha256::digest(&png));
+        entries.push(format!(
+            "    {{\"mobileId\":{},\"name\":\"{}\",\"archive\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{atlas_w},\"height\":{atlas_h},\"frames\":[\n{}\n    ]}}",
+            mobile.id, mobile.name, mobile.texture_archive,
+            png.len(),
+            frame_entries.join(",\n")
+        ));
+        count += 1;
+    }
+    let manifest = format!(
+        "{{\n  \"schemaVersion\": 1,\n  \"enemies\": [\n{}\n  ]\n}}\n",
+        entries.join(",\n")
+    );
+    std::fs::write(dir.join("enemy-manifest.json"), manifest).expect("write enemy manifest");
+    println!("enemies:     {} atlases ({} decode failures)", count, failures);
 }

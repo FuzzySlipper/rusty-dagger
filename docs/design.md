@@ -228,6 +228,29 @@ overlapping (parry intersection), so horizontal motion while exactly flush is
 blocked. The substepped settle leaves a sub-0.1m hover; the walkthrough's
 per-action movement assertions would catch a violation.
 
+## Directional enemy sprites (task 6595)
+
+Classic enemies are view-only directional billboards. Ownership split:
+
+- `arena2::mobile` owns the Daggerfall reference data and math: the minimal
+  enemy table (mobile id -> texture archive/idle semantics), the DFU 8-sector
+  orientation function, the Move/Idle record+flip tables, and DFU billboard
+  record sizing.
+- `dagger-import` collects RDB enemy flats into scene nodes (`scene.enemies`,
+  never baked into the static mesh) and packs one 8-frame orientation atlas
+  PNG per mobile id (mirrored sides baked, palette index 0 transparent).
+- The studio adapter emits `defineSpriteAtlas` + `createSprite` per enemy,
+  parented under a group node (`directional: true`) so a live driver can
+  rotate it — renderer-three does not implement billboard modes (rusty-engine
+  6630) and `updateSprite` cannot patch transforms.
+- The per-camera-tick directional authority is consumer-side by engine design
+  ("projection-driven, never renderer wall-clock"): compute bearing ->
+  orientation frame + camera-facing yaw, emit `update` + `updateSprite` ops.
+  The engine-render-check harness owns the first such driver (per-pose);
+  a runtime live loop (future `dagger-world`) reuses `arena2::mobile`.
+- Static-size limitation: a sprite's quad size is fixed at creation (front
+  record), while DFU scales per orientation record; accepted for view-only.
+
 ## Verification culture
 
 - Every format claim is backed by a test against the real data files

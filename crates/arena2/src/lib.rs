@@ -3,7 +3,7 @@
 //! Semantics are ported from Daggerfall Unity (MIT, dfworkshop.net):
 //! BsaFile.cs, MapsFile.cs, BlocksFile.cs, Arch3dFile.cs, MeshReader.cs,
 //! TextureFile.cs, DFPalette.cs, PakFile.cs, DungeonTextureTables.cs,
-//! DFRandom.cs.
+//! DFRandom.cs, EnemyBasics.cs, DaggerfallMobileUnit.cs.
 //!
 //! Conventions (matching DFU):
 //! - GlobalScale = 0.025 (raw units -> meters)
@@ -16,6 +16,7 @@ pub mod arch3d;
 pub mod bsa;
 pub mod dfrandom;
 pub mod maps;
+pub mod mobile;
 pub mod pak;
 pub mod palette;
 pub mod rdb;
