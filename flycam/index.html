@@ -1,0 +1,165 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>rusty-dagger flycam — Privateer's Hold</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #0d1418; overflow: hidden; font-family: ui-monospace, monospace; }
+    canvas { display: block; }
+    #hud {
+      position: fixed; top: 8px; left: 8px; color: #cfe3ee; font-size: 12px;
+      background: rgba(10, 18, 22, 0.72); padding: 8px 10px; border-radius: 6px;
+      pointer-events: none; white-space: pre; line-height: 1.5;
+    }
+    #help {
+      position: fixed; bottom: 8px; left: 8px; color: #8fa8b5; font-size: 11px;
+      background: rgba(10, 18, 22, 0.6); padding: 6px 10px; border-radius: 6px; pointer-events: none;
+    }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "/vendor/three/build/three.module.js", "three/addons/": "/vendor/three/examples/jsm/" } }
+  </script>
+</head>
+<body>
+<div id="hud">loading…</div>
+<div id="help">click to lock mouse · WASD move · QE up/down · Shift fast · scroll speed · Space/C up/down · R start · E enter · F overview</div>
+<script type="module">
+  import * as THREE from 'three';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+  const hud = document.getElementById('hud');
+  const errors = [];
+  window.addEventListener('error', (e) => errors.push(String(e.message)));
+  window.addEventListener('unhandledrejection', (e) => errors.push(String(e.reason)));
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0d1418);
+  scene.fog = new THREE.Fog(0x0d1418, 12, 90);
+  scene.add(new THREE.HemisphereLight(0xfff2dc, 0x2a241c, 0.55));
+
+  const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.05, 400);
+
+  // --- Flycam state ---
+  const cam = { yaw: Math.PI, pitch: 0, speed: 6, pos: new THREE.Vector3(28.375, 39.0, -12.4) };
+  const keys = new Set();
+  const stats = { billboards: 0, lights: 0, triCount: 0, texturedMats: 0 };
+
+  function applyCam() {
+    camera.position.copy(cam.pos);
+    camera.rotation.set(0, 0, 0);
+    camera.rotateY(cam.yaw);
+    camera.rotateX(cam.pitch);
+  }
+
+  renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock());
+  document.addEventListener('mousemove', (e) => {
+    if (document.pointerLockElement !== renderer.domElement) return;
+    cam.yaw -= e.movementX * 0.0022;
+    cam.pitch = Math.max(-1.55, Math.min(1.55, cam.pitch - e.movementY * 0.0022));
+  });
+  document.addEventListener('keydown', (e) => keys.add(e.code));
+  document.addEventListener('keyup', (e) => keys.delete(e.code));
+  document.addEventListener('wheel', (e) => { cam.speed = Math.max(0.5, Math.min(60, cam.speed * (e.deltaY < 0 ? 1.15 : 0.87))); });
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  const VIEWS = {
+    KeyR: () => { cam.pos.set(28.375, 39.0, -12.4); cam.yaw = Math.PI; cam.pitch = 0; },   // start marker
+    KeyE: () => { cam.pos.set(12.75, 1.6, -41.8); cam.yaw = Math.PI; cam.pitch = 0; },    // enter marker
+    KeyF: () => { cam.pos.set(77, 45, 77); cam.yaw = Math.PI * 0.75; cam.pitch = -0.5; }, // overview
+  };
+  document.addEventListener('keydown', (e) => { if (VIEWS[e.code]) VIEWS[e.code](); });
+
+  function tick(dt) {
+    const sp = cam.speed * (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 3.5 : 1) * dt;
+    const f = new THREE.Vector3(-Math.sin(cam.yaw), 0, -Math.cos(cam.yaw));
+    const r = new THREE.Vector3(Math.cos(cam.yaw), 0, -Math.sin(cam.yaw));
+    if (keys.has('KeyW')) cam.pos.addScaledVector(f, sp);
+    if (keys.has('KeyS')) cam.pos.addScaledVector(f, -sp);
+    if (keys.has('KeyD')) cam.pos.addScaledVector(r, sp);
+    if (keys.has('KeyA')) cam.pos.addScaledVector(r, -sp);
+    if (keys.has('KeyQ')) cam.pos.y -= sp;
+    if (keys.has('Space')) cam.pos.y += sp;
+    if (keys.has('KeyC')) cam.pos.y -= sp;
+    applyCam();
+  }
+
+  // --- Content ---
+  const gl = new GLTFLoader();
+  gl.load('/content/privateers-hold.glb', (gltf) => {
+    const model = gltf.scene;
+    scene.add(model);
+    model.traverse((o) => {
+      if (o.isMesh) {
+        const idx = o.geometry.getIndex();
+        stats.triCount += (idx ? idx.count : o.geometry.getAttribute('position').count) / 3;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        for (const m of mats) if (m.map) stats.texturedMats++;
+      }
+    });
+    loadScene();
+  }, undefined, (err) => { hud.textContent = 'GLB load failed: ' + (err && err.message || err); });
+
+  const texLoader = new THREE.TextureLoader();
+  async function loadScene() {
+    const sceneJson = await (await fetch('/content/privateers-hold.mesh.scene.json')).json();
+    const manifest = await (await fetch('/content/textures/billboard-manifest.json')).json();
+    const texByKey = new Map(manifest.billboards.map((b) => [`${b.archive}/${b.record}`, b]));
+
+    // Billboards as camera-facing sprites (transparency, classic nearest filter).
+    for (const bb of sceneJson.billboards) {
+      const entry = texByKey.get(`${bb.textureArchive}/${bb.textureRecord}`);
+      if (!entry) continue;
+      const tex = texLoader.load('/content/textures/' + entry.path);
+      tex.magFilter = THREE.NearestFilter;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const aspect = entry.width / entry.height;
+      const h = Math.min(1.4, entry.height / 64);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, alphaTest: 0.1, depthWrite: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.scale.set(h * aspect, h, 1);
+      sprite.position.set(bb.position[0], bb.position[1], bb.position[2]);
+      scene.add(sprite);
+      stats.billboards++;
+    }
+
+    // Point lights from the RDB light objects (white, intensity 0.8, decay 2 — as generated).
+    for (const li of sceneJson.lights) {
+      const light = new THREE.PointLight(0xffffff, 0.8, li.range ?? 6, 2);
+      light.position.set(li.position[0], li.position[1], li.position[2]);
+      scene.add(light);
+      stats.lights++;
+    }
+
+    hud.textContent = `Privateer's Hold — flycam\n` +
+      `tris ${Math.round(stats.triCount)} · textured mats ${stats.texturedMats}\n` +
+      `billboards ${stats.billboards} · lights ${stats.lights}\n` +
+      `speed ${cam.speed.toFixed(1)}`;
+    if (errors.length) hud.textContent += `\nERRORS: ${errors.length}`;
+    window.__flyDone = true;
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    tick(dt);
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  applyCam();
+  requestAnimationFrame(frame);
+
+  // Lightweight readback for headless verification.
+  window.__fly = { stats, errors, cam };
+</script>
+</body>
+</html>
