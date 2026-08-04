@@ -43,8 +43,11 @@ current task state in the Den `rusty-dagger` project.
   bridge for the exact Engine Studio static app and the local adapter.
 - `content/` — generated assets (privateers-hold.glb, privateers-hold.mesh.json,
   imported/ engine artifacts)
-- `render-check/` — headless render verification (three.js GLTFLoader + playwright,
-  reusing the rusty-engine installed packages; writes screenshots)
+- `engine-render-check/` — headless render proof through the real rusty-engine
+  renderer (renderer-three browser surface, engine pinned via
+  `engine-source.json`); the primary render verification gate
+- `render-check/` — legacy debug view (ad-hoc three.js GLTFLoader + playwright);
+  kept for reference, no further investment
 
 ## Usage
 
@@ -59,6 +62,10 @@ scripts/regenerate.sh
 
 cargo test                      # arena2 parser tests against the real data files
 cargo run -p dagger-runtime --bin dagger-walkthrough
+# Render proof through the real rusty-engine renderer (one-time: pnpm install
+# inside engine-render-check/):
+node engine-render-check/check.mjs
+# Legacy ad-hoc three.js debug view:
 node render-check/check.mjs [--cam overview|top|interior] [--out shot.png]
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (requires the exact Engine static build; the
@@ -89,6 +96,13 @@ scripts/check-studio-browser.sh
   adapter projects the textured frame (defineTexture + textured materials +
   textureResources manifest); host serves exact content-addressed PNG bytes
   with hash verification.
+- Render proof (2026-08-04): `engine-render-check/` renders the dungeon
+  through the real rusty-engine renderer (renderer-three browser surface,
+  engine pinned at `engine-source.json`) in headless Chromium, asserting
+  triangle/draw-call counts, texture-resource count, pixel gates, and zero
+  console errors across overview + interior poses. This is the render
+  verification gate going forward; the three.js `render-check/` remains as a
+  legacy debug view.
 
 ## Data provenance & conventions
 
@@ -97,8 +111,11 @@ mesh coords 1/256 sub-units, UVs 1/16 texel sub-units, rotations 1/2048-turn
 negated (T*Rz*Rx*Ry), RDB block side 2048 raw (51.2 m), Daggerfall Y-down ->
 (x,-y,z). Handedness: DFU(Unity) is left-handed Y-up; glTF/rusty-engine is
 right-handed Y-up, so Z is negated and fan winding reversed on export.
-Textures: plane texture bitfield -> archive/record; dungeon table default
-{119,120,122,123,124,168} (identity); door archive 74 -> 74+climateBase
+Textures: plane texture bitfield -> archive/record; the dungeon texture table
+defaults to the classic per-location randomized table (DFRandom seeded by the
+dungeon's LocationId; Privateer's Hold -> {23,22,19,22,20,368}), with
+`--texture-table default` selecting the identity table
+{119,120,122,123,124,168}; door archive 74 -> 74+climateBase
 (Privateer's Hold is Woodlands climate -> Temperate -> TEXTURE.374);
 TEXTURE.000/.001 are virtual solid-colour archives (32x32 palette fills).
 

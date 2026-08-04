@@ -130,9 +130,13 @@ modularity gate, task 6529):
 - Planned: `dagger-content` (decoded materials/meshes with provenance),
   `dagger-world` (dungeon session runtime: blocks, doors, lights, water
   state), each arriving only when the code that needs a home exists.
-- `render-check/` — headless verification harness (three.js GLTFLoader +
-  playwright) reusing rusty-engine's installed packages; screenshots are
-  durable artifacts.
+- `engine-render-check/` — headless render proof through the real
+  rusty-engine renderer (renderer-three browser surface, engine pinned via
+  `engine-source.json`): adapter protocol-14 readout -> vite page ->
+  verified texture resources -> overview/interior assertions + screenshots.
+  This is the primary render verification gate.
+- `render-check/` — legacy ad-hoc three.js GLTFLoader debug view; kept for
+  reference, no further investment.
 
 ### Modularity gate evaluation (task 6529, 2026-08-03)
 
