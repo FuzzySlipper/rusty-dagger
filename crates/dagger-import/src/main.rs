@@ -333,26 +333,96 @@ fn publish_billboard_textures(
             continue;
         };
         let info = tex.record_info(*record as usize).unwrap();
-        let Ok((w, h, indexed)) = tex.frame_pixels(*record as usize, 0) else {
-            failures += 1;
-            eprintln!("billboard texture warning: TEXTURE.{archive:03} rec {record} decode failed");
-            continue;
-        };
+        let frame_count = info.frame_count.max(1) as usize;
         // DFU GetScaledBillboardSize: (size + size*scale/256) * GlobalScale.
         let world =
             arena2::mobile::record_world_size(info.width, info.height, info.scale_x, info.scale_y);
-        let rgba = palette.to_rgba_transparent(&indexed);
-        let mut rgba = rgba;
-        flip_rgba_rows(&mut rgba, w, h);
-        let png = crate::png::encode_rgba(w as u32, h as u32, &rgba);
+
+        // Decode all frames (single-frame records decode just frame 0).
+        // Multi-frame records (torch flames, animated lights) are packed into
+        // a horizontal strip atlas so the engine can cycle frames via
+        // updateSprite without texture swapping.
+        let mut all_frames: Vec<Vec<u8>> = Vec::with_capacity(frame_count);
+        let mut decode_ok = true;
+        for f in 0..frame_count {
+            match tex.frame_pixels(*record as usize, f) {
+                Ok((_fw, _fh, indexed)) => {
+                    all_frames.push(palette.to_rgba_transparent(&indexed));
+                }
+                Err(e) => {
+                    failures += 1;
+                    eprintln!(
+                        "billboard texture warning: TEXTURE.{archive:03} rec {record} frame {f} decode failed: {e}"
+                    );
+                    decode_ok = false;
+                    break;
+                }
+            }
+        }
+        if !decode_ok {
+            continue;
+        }
+        let (w, h) = (info.width.max(1) as usize, info.height.max(1) as usize);
+
+        // Pack into atlas: single frame = plain PNG; multi-frame = horizontal strip.
+        let (atlas_w, atlas_h, rgba) = if all_frames.len() == 1 {
+            let mut rgba = all_frames.into_iter().next().unwrap();
+            flip_rgba_rows(&mut rgba, w, h);
+            (w, h, rgba)
+        } else {
+            let fc = all_frames.len();
+            let mut strip = vec![0u8; w * fc * h * 4];
+            for (i, frame) in all_frames.iter().enumerate() {
+                // Each frame is bottom-up in source; flip into atlas row order.
+                let mut flipped = frame.clone();
+                flip_rgba_rows(&mut flipped, w, h);
+                // Copy each row of the frame into its column range in the strip.
+                for y in 0..h {
+                    let src = &flipped[y * w * 4..(y + 1) * w * 4];
+                    let dst_start = (y * w * fc + i * w) * 4;
+                    strip[dst_start..dst_start + w * 4].copy_from_slice(src);
+                }
+            }
+            (w * fc, h, strip)
+        };
+
+        let png = crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &rgba);
         let slug = format!("billboard-{archive}-{record}");
         let file = format!("{slug}.png");
         std::fs::write(dir.join(&file), &png).expect("write billboard png");
         let hash = format!("sha256:{:x}", Sha256::digest(&png));
+
+        // Manifest entry: single-frame records stay backward-compatible
+        // (no frameCount/frames). Multi-frame records add frameCount, fps,
+        // and per-frame UV rects so generate-project.py can build a
+        // multi-frame spriteAtlas.
+        let extra = if frame_count > 1 {
+            let fc = frame_count as f32;
+            let frames: Vec<String> = (0..frame_count)
+                .map(|i| {
+                    format!(
+                        "{{\"frame\":{i},\"uvMin\":[{:?},{:?}],\"uvMax\":[{:?},{:?}]}}",
+                        i as f32 / fc,
+                        0.0,
+                        (i + 1) as f32 / fc,
+                        1.0
+                    )
+                })
+                .collect();
+            format!(
+                ",\"frameCount\":{frame_count},\"fps\":{},\"frames\":[{}]",
+                arena2::mobile::ENV_BILLBOARD_FPS,
+                frames.join(",")
+            )
+        } else {
+            String::new()
+        };
         entries.push(format!(
-            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"worldSize\":[{:?},{:?}]}}",
+            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"worldSize\":[{:?},{:?}]{}}}",
             png.len(),
-            world[0], world[1]
+            world[0],
+            world[1],
+            extra
         ));
         count += 1;
     }
