@@ -139,10 +139,15 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
 
     # Billboard sprite textures (RDB flat billboards). One texture asset per
     # unique (archive, record) with a transparent PNG (index 0 = transparent).
-    # Each also declares a full-rect single-frame sprite atlas so the adapter
-    # can bind the texture (createSprite assets resolve against atlases).
+    # Multi-frame records (torch flames, animated lights) carry a multi-frame
+    # spriteAtlas with per-frame UV rects from the billboard manifest;
+    # single-frame records use the default full-rect atlas.
     for tex in billboard_manifest.get("billboards", []):
         slug = f"billboard-{tex['archive']}-{tex['record']}"
+        frame_count = tex.get("frameCount", 1)
+        atlas_frames = tex.get("frames", [{"frame": 0, "uvMin": [0, 0], "uvMax": [1, 1]}])
+        # Multi-frame atlas PNG is wider: frame_width * frame_count.
+        tex_width = tex["width"] * frame_count
         assets.append({
             "id": f"texture/{slug}",
             "catalog": {
@@ -153,13 +158,13 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
                 "dependencies": [],
             },
             "texture": {
-                "width": tex["width"],
+                "width": tex_width,
                 "height": tex["height"],
                 "filter": "nearest",
                 "wrap": "clamp",
                 "alphaCutout": True,
                 "spriteAtlas": {
-                    "frames": [{"frame": 0, "uvMin": [0, 0], "uvMax": [1, 1]}],
+                    "frames": atlas_frames,
                 },
             },
         })
