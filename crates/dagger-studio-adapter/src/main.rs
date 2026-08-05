@@ -785,8 +785,14 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
         let sprite = entity.get("sprite").unwrap_or(&Value::Null);
         let asset = sprite.get("asset").and_then(Value::as_str).unwrap_or("");
         let frame = sprite.get("frame").and_then(Value::as_u64).unwrap_or(0);
-        let size = sprite.get("size").cloned().unwrap_or_else(|| json!([1.0, 1.0]));
-        let pivot = sprite.get("pivot").cloned().unwrap_or_else(|| json!([0.5, 0.0]));
+        let size = sprite
+            .get("size")
+            .cloned()
+            .unwrap_or_else(|| json!([1.0, 1.0]));
+        let pivot = sprite
+            .get("pivot")
+            .cloned()
+            .unwrap_or_else(|| json!([0.5, 0.0]));
         // SpriteInstanceDescriptor: cylindrical (Y-facing) billboard with the
         // flat's transparent texture, at the flat's world position. The
         // renderer honors billboard modes (rusty-engine 6630); directional

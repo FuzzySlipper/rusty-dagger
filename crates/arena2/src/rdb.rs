@@ -321,6 +321,9 @@ mod tests {
 
     #[test]
     fn s0000999_model_count() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let dir = arena2_dir();
         let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
         let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
@@ -387,6 +390,9 @@ mod marker_tests {
 
     #[test]
     fn s0000999_start_marker_exists() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let dir = arena2_dir();
         let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
         let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
@@ -409,6 +415,9 @@ mod marker_tests {
 
     #[test]
     fn s0000999_enemy_flats_match_known_inventory() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         // 6595: the start block carries 26 enemy flats — 25 fixed markers
         // (199/16) plus one 206/2 flat with a mobile id — across the mobile
         // ids {0, 1, 3, 4, 7, 15, 138, 141} (all resolvable in MOBILE_TYPES).
@@ -432,6 +441,3 @@ mod marker_tests {
         }
     }
 }
-
-
-

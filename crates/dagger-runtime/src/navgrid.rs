@@ -101,7 +101,9 @@ impl NavGrid {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (NavCell, f32)> + '_ {
-        self.cells.iter().map(|(cell, support_y)| (*cell, *support_y))
+        self.cells
+            .iter()
+            .map(|(cell, support_y)| (*cell, *support_y))
     }
 
     /// All walkable levels in one column, lowest first.
@@ -154,11 +156,7 @@ fn ray_surface(
 
 /// Derive the walkable grid over the dungeon AABB from the admitted
 /// collision scene's trimesh (plus any additive voxel authority).
-pub fn derive_nav_grid(
-    scene: &VoxelCollisionScene,
-    min: [f64; 3],
-    max: [f64; 3],
-) -> NavGrid {
+pub fn derive_nav_grid(scene: &VoxelCollisionScene, min: [f64; 3], max: [f64; 3]) -> NavGrid {
     let mut grid = NavGrid::default();
     let col_min_x = (min[0] as f32 / CELL_SIZE).floor() as i32;
     let col_max_x = (max[0] as f32 / CELL_SIZE).floor() as i32;
@@ -177,8 +175,7 @@ pub fn derive_nav_grid(
                 if y <= bottom {
                     break;
                 }
-                let Some(hit) = ray_surface(scene, [x, y, z], [0.0, -1.0, 0.0], y - bottom)
-                else {
+                let Some(hit) = ray_surface(scene, [x, y, z], [0.0, -1.0, 0.0], y - bottom) else {
                     break;
                 };
                 if hit.point[1] >= y - RAY_EPSILON * 0.5 {
@@ -241,12 +238,7 @@ pub fn ground_spawn(
     // floor still registers, but never so high that a ledge above the spawn
     // could win the ray.
     let origin = [spawn[0] as f64, (spawn[1] + 0.25) as f64, spawn[2] as f64];
-    let hit = ray_surface(
-        scene,
-        origin,
-        [0.0, -1.0, 0.0],
-        (max_drop + 0.25) as f64,
-    )?;
+    let hit = ray_surface(scene, origin, [0.0, -1.0, 0.0], (max_drop + 0.25) as f64)?;
     if hit.normal_y < MIN_FLOOR_NORMAL_Y {
         return None;
     }

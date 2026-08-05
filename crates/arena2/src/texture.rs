@@ -269,6 +269,9 @@ mod tests {
 
     #[test]
     fn texture_120_decodes() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let dir = arena2_dir();
         let tex = TextureFile::load(&dir.join("TEXTURE.120")).unwrap();
         assert!(tex.len() > 0);
