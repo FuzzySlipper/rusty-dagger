@@ -102,6 +102,14 @@ pub struct OrientationAnim {
     pub flip: bool,
 }
 
+/// DFU EnemyBasics animation speeds (frames per second).
+pub const MOVE_ANIM_SPEED: u32 = 6;
+pub const FLY_ANIM_SPEED: u32 = 10;
+pub const IDLE_ANIM_SPEED: u32 = 4;
+
+/// DFU DaggerfallBillboard default animation speed (frames per second).
+pub const ENV_BILLBOARD_FPS: u32 = 5;
+
 /// DFU EnemyBasics.MoveAnims (records 0-4, mirrored sides at 5-7).
 pub const MOVE_ANIMS: [OrientationAnim; 8] = anims([0, 1, 2, 3, 4], false);
 /// DFU EnemyBasics.IdleAnims (records 15-19, mirrored sides at 5-7).
