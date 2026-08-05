@@ -215,7 +215,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
     return assets
 
 
-def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
+def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dict) -> dict:
     """One scene: the dungeon mesh entity + a player-camera entity.
 
     Collision authority is the dungeon static mesh itself (rusty-engine task
@@ -382,7 +382,7 @@ def build_project() -> dict:
         "entryScene": SCENE_ID,
         "assets": build_assets(catalog, static_mesh, billboard_manifest, enemy_manifest),
         "itemDefinitions": [],
-        "scenes": [build_scene(static_mesh, enemy_manifest)],
+        "scenes": [build_scene(static_mesh, enemy_manifest, billboard_manifest)],
     }
 
 

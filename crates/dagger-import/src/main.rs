@@ -428,9 +428,19 @@ fn publish_enemy_atlases(
         if failed {
             continue;
         }
-        // Pack horizontally into one atlas (palette index 0 = transparent).
-        let atlas_w: usize = decoded.iter().map(|d| d.1).sum();
-        let atlas_h: usize = decoded.iter().map(|d| d.2).max().unwrap_or(0);
+        // Pack horizontally into one atlas of 8 uniform cells (max frame dims,
+        // each frame bottom-center aligned; palette index 0 = transparent).
+        // Uniform full-height cells mean every frame rect covers its whole
+        // cell, so the fixed-size quad maps each frame's pixels 1:1 — small
+        // frames keep their proportions (transparent margins) instead of
+        // being stretched, and the authored position stays the pivot for
+        // every orientation. (DFU resizes the billboard per frame; the
+        // renderer cannot, so per-frame scale-factor differences of a few
+        // percent remain.)
+        let cell_w: usize = decoded.iter().map(|d| d.1).max().unwrap_or(0);
+        let cell_h: usize = decoded.iter().map(|d| d.2).max().unwrap_or(0);
+        let atlas_w: usize = cell_w * 8;
+        let atlas_h: usize = cell_h;
         let mut atlas = vec![0u8; atlas_w * atlas_h * 4];
         let mut frame_entries: Vec<String> = Vec::new();
         let mut x0 = 0usize;
@@ -446,18 +456,20 @@ fn publish_enemy_atlases(
                     }
                 }
             }
+            // Bottom-center the frame within its uniform cell.
+            let dx = x0 + (cell_w - w) / 2;
+            let dy = cell_h - h;
             for (row_i, row) in rgba.chunks(w * 4).enumerate() {
-                let dst = (row_i * atlas_w + x0) * 4;
+                let dst = ((dy + row_i) * atlas_w + dx) * 4;
                 atlas[dst..dst + w * 4].copy_from_slice(row);
             }
             frame_entries.push(format!(
-                "      {{\"frame\":{orientation},\"uvMin\":[{},0],\"uvMax\":[{},{}],\"size\":[{:?},{:?}]}}",
+                "      {{\"frame\":{orientation},\"uvMin\":[{},0],\"uvMax\":[{},1],\"size\":[{:?},{:?}]}}",
                 x0 as f64 / atlas_w as f64,
-                (x0 + w) as f64 / atlas_w as f64,
-                *h as f64 / atlas_h as f64,
+                (x0 + cell_w) as f64 / atlas_w as f64,
                 size[0], size[1]
             ));
-            x0 += w;
+            x0 += cell_w;
         }
         let png = {
             let mut flipped = atlas.clone();
