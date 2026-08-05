@@ -130,6 +130,7 @@ dependencies = [
  "arena2",
  "core-ids",
  "core-math",
+ "core-space",
  "engine-spatial",
  "entity-state",
  "serde",

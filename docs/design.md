@@ -259,7 +259,42 @@ Classic enemies are view-only directional billboards. Ownership split:
 - Static-size limitation: a sprite's quad size is fixed at creation (front
   record), while DFU scales per orientation record; accepted for view-only.
 
-## Verification culture
+## Navigation grid (task 6639)
+
+Enemy spawn Y is an authored spawn point, not floor support — all 43 measured
+spawns float (0.5–1.8m). The nav grid is how runtime grounding and patrol
+(6641) get support answers. Ownership split:
+
+- Upstream `svc-pathfinding` is voxel-only: `build_nav_projection` requires a
+  `VoxelWorld`, `NavProjection` has no host-derived constructor, and
+  `find_path` is planar-same-Y only (no stairs). Filed upstream:
+  rusty-engine 6642 (projection from host-derived walkable cells) and 6643
+  (step-aware vertical neighbors). Grid-style navigation fits the known
+  consumer; maintained pure-Rust navmesh crates (`rerecast`, `landmass`,
+  `pathfinding`) were named in the filing in case scope grows.
+- `dagger-runtime::navgrid` owns the Dagger-side derivation — projection
+  *construction*, not a pathfinder: a bounded sweep over the dungeon mesh AABB
+  casts one downward ray per 0.5m column into the admitted collision scene
+  (backface-culled trimesh raycast, so only up-facing surfaces register),
+  re-casting below each hit so multi-level columns (ledge over main floor)
+  record every standable level. A surface is walkable when it faces up
+  (normal.y ≥ 0.7), has 2m headroom, and is enclosed (a down-facing surface
+  within 64m overhead rejects open-sky rooftops; sized to the full mesh so the
+  start room's ~30m shaft stays walkable). 0.25m level quantization matches
+  the derive-route convention.
+- `dagger-navgrid --write|--check` is the headless proof: known spots
+  (start room floor y=32, spawn ledge y=38.4, multi-level column, ≥4 RDB
+  blocks, rock columns unwalkable) plus ground-support answers for all 43
+  enemy spawns (every one lands on a walkable cell within 12m). Writes the
+  committed `content/projects/privateers-hold.navgrid.json`; regenerate.sh
+  keeps it fresh.
+- The flycam `N` toggle renders the grid through the real renderer: a bounded
+  handle pool (2048) shows the nearest cells within 10m and ±6m of the
+  camera's level, rebuilt debounced on moves; `check-flycam-navgrid.mjs` is
+  the headless screenshot proof. Adjacency (walls between columns) is
+  deliberately not modeled here — path connectivity is the upstream seam's
+  job (6642/6643).
+
 
 - Every format claim is backed by a test against the real data files
   (arena2 unit tests run against /home/research/daggerfall-files).
