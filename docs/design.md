@@ -259,6 +259,56 @@ Classic enemies are view-only directional billboards. Ownership split:
 - Static-size limitation: a sprite's quad size is fixed at creation (front
   record), while DFU scales per orientation record; accepted for view-only.
 
+## Sprite animation service (task 6640)
+
+Animated sprites — environment flats (torch flames cycle classic TEXTURE.nnn
+multi-frame records) and directional enemy sprites — are driven by a
+consolidated per-tick animation authority in `dagger-runtime::animation`.
+
+**Design principle**: one evaluation pass per tick over all animated sprites
+produces a consolidated frame diff (only changed entries), not per-entity
+polling. This is deliberate: once naive per-entity polling becomes the
+pattern, future work inherits it. The service shape stays the same when
+offscreen-sprite throttling arrives (engine 6632 visibility readouts exist):
+freeze an entry's `last_frame` or filter the diff — no API change.
+
+Ownership split:
+
+- `arena2::mobile` owns the DFU animation timing constants: `MOVE_ANIM_SPEED`
+  (6fps), `FLY_ANIM_SPEED` (10fps), `IDLE_ANIM_SPEED` (4fps), and
+  `ENV_BILLBOARD_FPS` (5fps, DFU DaggerfallBillboard default). Enemy idle
+  records are 1-frame (static orientation); move records carry 4-8 frames.
+  Classic env textures carry 4-5 frames per animated record.
+- `dagger-import` packs multi-frame billboard records into horizontal strip
+  atlas PNGs (one per animated (archive, record) pair) and emits per-frame
+  UV rects + frameCount + fps in the billboard manifest. Single-frame records
+  stay backward-compatible (plain PNG, no frameCount key). The importer
+  decodes ALL frames via `arena2::texture::frame_pixels(record, frame)`.
+- `dagger-runtime::animation` owns the Daggerfall-side per-tick authority:
+  `AnimationService` tracks elapsed time and per-sprite state; one
+  `evaluate(dt, camera)` call per tick walks all entries and emits only
+  changed frames as a `Vec<FrameUpdate>`. Two `SpriteKind`s:
+  - `Env { frame_count, fps }`: time-cycled, frame = `(elapsed * fps) % frame_count`.
+  - `Enemy { position, mobile_id }`: camera-driven orientation via
+    `evaluate_directional` (idle, this task); move-state cycling
+    (orientation × anim_frame) arrives with the patrol task (6641).
+- The interactive flycam applies the animation frames client-side (it has
+  wall-clock time) using the authoritative frameCount + fps data from the
+  Rust-generated dump (`enemies.json → animatedBillboards`). The
+  directional enemy refresh still polls the Rust server; both happen in the
+  same per-tick loop with consolidated `applyFrame` calls — one for each
+  sprite kind. No per-sprite polling.
+
+`dagger-sprite-frames --serve` answers per-step camera poses for directional
+enemy frames (6595). The animation authority (env flat timing) is stateful
+(elapsed time accumulates); the flycam applies it locally. A future
+`dagger-world` live loop calls `AnimationService::evaluate` directly.
+
+**Fidelity**: classic torches/flames carry 4-5 frames at 5fps (DFU
+DaggerfallBillboard default). Enemy idle records are 1-frame for all
+Privateer's Hold enemies (the orientation evaluation IS the idle animation).
+Move-state cycling at 6fps (ground) / 10fps (flying) comes with 6641.
+
 ## Navigation grid (task 6639)
 
 Enemy spawn Y is an authored spawn point, not floor support — all 43 measured
