@@ -156,6 +156,26 @@ export async function dumpFrame() {
       name: enemy.name,
       position: enemy.position.map(Number),
     }));
+    // Animated billboard sprites (6640): createSprite ops referencing a
+    // spriteAtlas with >1 frame. The frame data carries the atlas frame
+    // count from the Rust importer's strip packing; the fps comes from the
+    // DFU billboard animation speed (ENV_BILLBOARD_FPS=5). The flycam
+    // advances frames locally using this authoritative timing data.
+    const atlasByAsset = new Map();
+    for (const op of frame.ops) {
+      if (op.op === 'defineSpriteAtlas' && op.atlas) {
+        atlasByAsset.set(op.atlas.asset, op.atlas.frames?.length ?? 1);
+      }
+    }
+    const animatedBillboards = frame.ops
+      .filter((op) => op.op === 'createSprite'
+        && !op.sprite?.asset?.startsWith('texture/enemy-'))
+      .map((op) => {
+        const asset = op.sprite?.asset;
+        const frameCount = atlasByAsset.get(asset) ?? 1;
+        return { handle: op.handle, frameCount, fps: 5 };
+      })
+      .filter((b) => b.frameCount > 1);
     // Every sprite (enemies + billboards) for the flycam debug gizmos.
     const sprites = frame.ops
       .filter((op) => op.op === 'createSprite')
@@ -217,6 +237,7 @@ export async function dumpFrame() {
       target: target === null ? null : { ...target, index: targetIndex },
       enemies,
       sprites,
+      animatedBillboards,
       poseAssignments,
       orbit,
       spawn: sceneMeta.startMarker ?? null,

@@ -19,6 +19,7 @@ async function main() {
     fetch('/generated/texture-manifest.json').then((r) => r.json()),
     fetch('/generated/enemies.json').then((r) => r.json()),
   ]);
+  const animatedBillboards = enemies.animatedBillboards ?? [];
 
   const textureResourceSource = await loadRendererTextureResourceSource(
     manifest,
@@ -212,6 +213,15 @@ async function main() {
   const poseEquals = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
   let lastSpriteCamera = [NaN, NaN, NaN];
 
+  // Consolidated billboard animation state (6640): the flycam advances env
+  // flat frames (torch flames, animated lights) from the authoritative
+  // frameCount + fps data produced by the Rust importer. One consolidated
+  // pass per tick computes all changed frames and sends them in a single
+  // applyFrame — no per-billboard polling. The directional enemy refresh
+  // above is the other half of the per-tick sprite update.
+  const animStart = performance.now();
+  const animLastFrames = new Map();
+
   function step(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
@@ -268,6 +278,28 @@ async function main() {
         .finally(() => {
           fetching = false;
         });
+    }
+
+    // Consolidated billboard animation (6640): advance all animated env
+    // flats (torch flames) from elapsed time. One pass computes the diff
+    // (only changed frames) and sends a single applyFrame — no per-billboard
+    // polling. FPS and frame counts come from the Rust-generated dump.
+    if (animatedBillboards.length > 0) {
+      const elapsed = (now - animStart) / 1000;
+      const animOps = [];
+      for (const bb of animatedBillboards) {
+        const frame = Math.floor(elapsed * bb.fps) % bb.frameCount;
+        if (animLastFrames.get(bb.handle) !== frame) {
+          animLastFrames.set(bb.handle, frame);
+          animOps.push({
+            op: 'updateSprite', handle: bb.handle, frame,
+            tint: null, renderOrder: null, visible: null,
+          });
+        }
+      }
+      if (animOps.length > 0) {
+        surface.applyFrame({ schemaVersion: 1, ops: animOps });
+      }
     }
 
     // Nav grid gizmo rebuild: debounced, only when the camera strayed far
