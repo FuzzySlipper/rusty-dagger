@@ -282,9 +282,12 @@ def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
     # (Y-facing) billboard with a transparent texture. Positions are glTF world
     # space from dagger-import.
     billboard_entities = []
+    billboard_sizes = {t['path']: t for t in billboard_manifest.get('billboards', [])}
     if scene_meta and scene_meta.get("billboards"):
         for index, b in enumerate(scene_meta["billboards"]):
             slug = f"billboard-{b['textureArchive']}-{b['textureRecord']}"
+            tex = billboard_sizes.get(f"{slug}.png", {})
+            # DFU GetScaledBillboardSize world dims, center-anchored quad.
             billboard_entities.append({
                 "id": 1000 + index,
                 "name": f"{slug}-{index}",
@@ -292,6 +295,8 @@ def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
                 "sprite": {
                     "asset": f"texture/{slug}",
                     "billboard": "cylindrical",
+                    "pivot": [0.5, 0.5],
+                    "size": tex.get("worldSize", [1.0, 1.0]),
                     "sizeMode": "world",
                     "shading": "lit",
                     "depth": "default",
@@ -300,10 +305,10 @@ def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
             })
 
     # Enemy directional sprite entities (6595). One sprite per RDB enemy flat;
-    # the adapter parents these under a group node so a live driver can rotate
-    # them toward the camera and step the 8-orientation frame from bearing.
-    # `size` is the front (orientation 0) DFU world size; per-orientation
-    # record sizes differ, which the static sprite size cannot express yet.
+    # the runtime driver steps the 8-orientation frame from camera bearing.
+    # The quad is sized to the LARGEST orientation frame per axis (frames vary
+    # per orientation and the renderer cannot resize a live sprite), feet at
+    # the authored flat position.
     enemy_entities = []
     enemy_frames = {e["mobileId"]: e["frames"] for e in enemy_manifest.get("enemies", [])}
     if scene_meta and scene_meta.get("enemies"):
@@ -312,6 +317,8 @@ def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
             if not frames:
                 continue  # atlas decode failed at import; warning already emitted
             slug = f"enemy-{e['mobileId']}-atlas"
+            max_w = max(f["size"][0] for f in frames)
+            max_h = max(f["size"][1] for f in frames)
             enemy_entities.append({
                 "id": 2000 + index,
                 "name": f"enemy-{e['name'].lower()}-{index}",
@@ -319,7 +326,8 @@ def build_scene(static_mesh: dict, enemy_manifest: dict) -> dict:
                 "sprite": {
                     "asset": f"texture/{slug}",
                     "frame": 0,
-                    "size": frames[0]["size"],
+                    "pivot": [0.5, 0.0],
+                    "size": [max_w, max_h],
                     "billboard": "cylindrical",
                     "sizeMode": "world",
                     "shading": "lit",

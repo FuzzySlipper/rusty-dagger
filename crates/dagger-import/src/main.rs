@@ -332,11 +332,14 @@ fn publish_billboard_textures(
             eprintln!("billboard texture warning: TEXTURE.{archive:03} rec {record} missing");
             continue;
         };
+        let info = tex.record_info(*record as usize).unwrap();
         let Ok((w, h, indexed)) = tex.frame_pixels(*record as usize, 0) else {
             failures += 1;
             eprintln!("billboard texture warning: TEXTURE.{archive:03} rec {record} decode failed");
             continue;
         };
+        // DFU GetScaledBillboardSize: (size + size*scale/256) * GlobalScale.
+        let world = arena2::mobile::record_world_size(info.width, info.height, info.scale_x, info.scale_y);
         let rgba = palette.to_rgba_transparent(&indexed);
         let mut rgba = rgba;
         flip_rgba_rows(&mut rgba, w, h);
@@ -346,8 +349,9 @@ fn publish_billboard_textures(
         std::fs::write(dir.join(&file), &png).expect("write billboard png");
         let hash = format!("sha256:{:x}", Sha256::digest(&png));
         entries.push(format!(
-            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h}}}",
-            png.len()
+            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"worldSize\":[{:?},{:?}]}}",
+            png.len(),
+            world[0], world[1]
         ));
         count += 1;
     }
