@@ -74,6 +74,49 @@ async function main() {
   });
   window.addEventListener('keyup', (event) => state.keys.delete(event.code));
 
+  // --- debug gizmos (G): anchor markers + sprite quad bounds ---------------
+  let gizmosOn = false;
+  let gizmosCreated = false;
+  const GIZMO_HANDLE_BASE = 9_000_000;
+  const gizmoHandles = [];
+  window.addEventListener('keydown', (event) => {
+    if (event.code !== 'KeyG') return;
+    const ops = [];
+    if (!gizmosCreated) {
+      gizmosCreated = true;
+      let i = 0;
+      for (const sprite of enemies.sprites ?? []) {
+        const color = sprite.kind === 'enemy' ? [0.2, 1.0, 0.3, 1.0] : [1.0, 0.85, 0.2, 1.0];
+        const centerY = sprite.position[1] + sprite.size[1] * (0.5 - sprite.pivot[1]);
+        // anchor marker: small solid cube at the sprite's authored position
+        ops.push({ op: 'create', handle: GIZMO_HANDLE_BASE + i, parent: null, node: {
+          geometry: { kind: 'cube' }, material: { color, wireframe: false },
+          transform: { translation: sprite.position, rotation: [0, 0, 0, 1], scale: [0.08, 0.08, 0.08] },
+          visible: false, layer: 'scene', metadata: null,
+        } });
+        gizmoHandles.push(GIZMO_HANDLE_BASE + i);
+        i += 1;
+        // quad bounds: wireframe box of the sprite's size at its pivot
+        ops.push({ op: 'create', handle: GIZMO_HANDLE_BASE + i, parent: null, node: {
+          geometry: { kind: 'cube' }, material: { color, wireframe: true },
+          transform: {
+            translation: [sprite.position[0], centerY, sprite.position[2]],
+            rotation: [0, 0, 0, 1], scale: [sprite.size[0], sprite.size[1], 0.02],
+          },
+          visible: false, layer: 'scene', metadata: null,
+        } });
+        gizmoHandles.push(GIZMO_HANDLE_BASE + i);
+        i += 1;
+      }
+    }
+    gizmosOn = !gizmosOn;
+    for (const handle of gizmoHandles) {
+      ops.push({ op: 'update', handle, transform: null, material: null, visible: gizmosOn, metadata: null });
+    }
+    surface.applyFrame({ schemaVersion: 1, ops });
+    surface.renderOnce(performance.now());
+  });
+
   // --- per-frame loop ------------------------------------------------------
   let last = performance.now();
   let lastRender = 0;

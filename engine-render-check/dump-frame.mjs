@@ -156,6 +156,16 @@ export async function dumpFrame() {
       name: enemy.name,
       position: enemy.position.map(Number),
     }));
+    // Every sprite (enemies + billboards) for the flycam debug gizmos.
+    const sprites = frame.ops
+      .filter((op) => op.op === 'createSprite')
+      .map((op) => ({
+        handle: op.handle,
+        kind: op.sprite?.asset?.startsWith('texture/enemy-') ? 'enemy' : 'billboard',
+        position: op.sprite?.transform?.translation ?? [0, 0, 0],
+        size: op.sprite?.size ?? [1, 1],
+        pivot: op.sprite?.pivot ?? [0.5, 0],
+      }));
     let targetIndex = 0;
     if (enemies.length > 0 && Array.isArray(sceneMeta.startMarker)) {
       let best = Infinity;
@@ -206,6 +216,7 @@ export async function dumpFrame() {
     await writeFile(resolve(GENERATED, 'enemies.json'), `${JSON.stringify({
       target: target === null ? null : { ...target, index: targetIndex },
       enemies,
+      sprites,
       poseAssignments,
       orbit,
       spawn: sceneMeta.startMarker ?? null,
