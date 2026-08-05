@@ -6,12 +6,14 @@
 
 #![forbid(unsafe_code)]
 
+pub mod animation;
 pub mod directional;
 pub mod navgrid;
 mod player;
 mod project;
 mod runtime;
 
+pub use animation::{AnimationService, FrameUpdate, SpriteEntry, SpriteKind};
 pub use directional::evaluate_directional;
 pub use navgrid::{derive_nav_grid, ground_spawn, level_of, NavCell, NavGrid, SpawnGrounding};
 
