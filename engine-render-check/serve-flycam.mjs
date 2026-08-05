@@ -37,6 +37,10 @@ function freePort() {
   });
 }
 const spritePort = await freePort();
+// vite's middleware-mode HMR websocket ignores hmr:false and always binds
+// 24678 — a second flycam instance collides with the first and its pages log
+// handshake errors. Give each instance its own HMR port.
+const hmrPort = await freePort();
 
 // Build the Rust binaries the dump + sprite authority need (cheap when fresh).
 for (const pkg of ['dagger-studio-adapter', 'dagger-runtime']) {
@@ -82,7 +86,7 @@ const vite = await createViteServer({
   logLevel: 'warn',
   publicDir: resolve(ROOT, 'content'),
   appType: 'spa',
-  server: { middlewareMode: true, fs: { allow: [ROOT] }, hmr: false },
+  server: { middlewareMode: true, fs: { allow: [ROOT] }, hmr: { port: hmrPort } },
 });
 
 const server = createHttpServer(async (request, response) => {

@@ -30,6 +30,7 @@ pub struct DaggerRuntime {
     player: EntityId,
     player_controller: PlayerControllerConfig,
     player_state: PlayerControllerState,
+    dungeon_bounds: Option<([f64; 3], [f64; 3])>,
 }
 
 impl DaggerRuntime {
@@ -64,6 +65,7 @@ impl DaggerRuntime {
             player: admitted.player,
             player_controller: admitted.player_controller,
             player_state: admitted.player_state,
+            dungeon_bounds: admitted.dungeon_bounds,
         })
     }
 
@@ -115,6 +117,11 @@ impl DaggerRuntime {
 
     pub fn collision_scene(&self) -> &VoxelCollisionScene {
         &self.collision_scene
+    }
+
+    /// World-space AABB (min, max) of the dungeon trimesh, when admitted.
+    pub fn dungeon_bounds(&self) -> Option<([f64; 3], [f64; 3])> {
+        self.dungeon_bounds
     }
 
     pub fn apply_player_action(

@@ -120,6 +120,89 @@ async function main() {
     surface.renderOnce(performance.now());
   });
 
+  // --- nav grid gizmo (N): walkable cells near the camera ------------------
+  // The grid comes from the committed dagger-navgrid artifact (Rust trimesh
+  // derivation, task 6639) — the page only visualizes it. A fixed handle pool
+  // is created once; each rebuild (debounced, on camera move) points the pool
+  // at the nearest cells and hides the rest, so op counts stay bounded.
+  const navgrid = await fetch('/projects/privateers-hold.navgrid.json').then((r) => r.json());
+  const GRID_HANDLE_BASE = 8_000_000;
+  const GRID_POOL = 2048;
+  const GRID_RADIUS = 10;
+  // Only cells near the camera's own level — Privateer's Hold stacks rooms in
+  // the same columns, so an unfiltered gizmo reads as a solid slab.
+  const GRID_VERTICAL_WINDOW = 6;
+  let gridOn = false;
+  let gridCreated = false;
+  let gridBuiltAt = [NaN, NaN, NaN];
+  let gridLastBuild = 0;
+  const gridCells = navgrid.cells.map(([x, z, level, y]) => ({
+    cx: (x + 0.5) * navgrid.cellSize,
+    cz: (z + 0.5) * navgrid.cellSize,
+    y,
+  }));
+
+  function rebuildGridGizmos(now) {
+    const nearest = gridCells
+      .map((cell) => ({
+        cell,
+        d2: (cell.cx - state.position[0]) ** 2 + (cell.cz - state.position[2]) ** 2,
+      }))
+      .filter((entry) => entry.d2 <= GRID_RADIUS * GRID_RADIUS
+        && Math.abs(entry.cell.y - state.position[1]) <= GRID_VERTICAL_WINDOW)
+      .sort((a, b) => a.d2 - b.d2)
+      .slice(0, GRID_POOL);
+    const ops = [];
+    for (let i = 0; i < GRID_POOL; i += 1) {
+      const handle = GRID_HANDLE_BASE + i;
+      if (i < nearest.length) {
+        const { cell } = nearest[i];
+        ops.push({
+          op: 'update', handle, material: null, metadata: null, visible: true,
+          transform: {
+            translation: [cell.cx, cell.y + 0.03, cell.cz],
+            rotation: [0, 0, 0, 1],
+            scale: [navgrid.cellSize * 0.7, 0.05, navgrid.cellSize * 0.7],
+          },
+        });
+      } else {
+        ops.push({ op: 'update', handle, transform: null, material: null, visible: false, metadata: null });
+      }
+    }
+    surface.applyFrame({ schemaVersion: 1, ops });
+    surface.renderOnce(now);
+    gridBuiltAt = [...state.position];
+    gridLastBuild = now;
+  }
+
+  window.addEventListener('keydown', (event) => {
+    if (event.code !== 'KeyN') return;
+    if (!gridCreated) {
+      gridCreated = true;
+      const ops = [];
+      for (let i = 0; i < GRID_POOL; i += 1) {
+        ops.push({ op: 'create', handle: GRID_HANDLE_BASE + i, parent: null, node: {
+          geometry: { kind: 'cube' }, material: { color: [0.2, 0.9, 1.0, 0.85], wireframe: false },
+          transform: { translation: [0, -100, 0], rotation: [0, 0, 0, 1], scale: [0.01, 0.01, 0.01] },
+          visible: false, layer: 'scene',
+          metadata: { sourceEntity: null, sourceSceneNode: null, tags: [], label: 'navgrid-cell' },
+        } });
+      }
+      surface.applyFrame({ schemaVersion: 1, ops });
+    }
+    gridOn = !gridOn;
+    if (gridOn) {
+      rebuildGridGizmos(performance.now());
+    } else {
+      const ops = [];
+      for (let i = 0; i < GRID_POOL; i += 1) {
+        ops.push({ op: 'update', handle: GRID_HANDLE_BASE + i, transform: null, material: null, visible: false, metadata: null });
+      }
+      surface.applyFrame({ schemaVersion: 1, ops });
+      surface.renderOnce(performance.now());
+    }
+  });
+
   // --- per-frame loop ------------------------------------------------------
   let last = performance.now();
   let lastRender = 0;
@@ -185,6 +268,15 @@ async function main() {
         .finally(() => {
           fetching = false;
         });
+    }
+
+    // Nav grid gizmo rebuild: debounced, only when the camera strayed far
+    // enough that the visible cell set should change.
+    if (
+      gridOn && now - gridLastBuild > 250
+      && ((state.position[0] - gridBuiltAt[0]) ** 2 + (state.position[2] - gridBuiltAt[2]) ** 2 > 9)
+    ) {
+      rebuildGridGizmos(now);
     }
 
     if (now - lastRender >= MIN_RENDER_MS) {

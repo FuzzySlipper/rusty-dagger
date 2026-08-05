@@ -50,6 +50,10 @@ pub struct AdmittedProject {
     pub player_state: PlayerControllerState,
     pub material_voxel_count: usize,
     pub dungeon_collider: Option<StaticMeshColliderAsset>,
+    /// World-space AABB of the dungeon trimesh payload (min, max), when the
+    /// mesh asset is present. Consumers (nav grid derivation) use it to bound
+    /// their sweeps over the collision authority.
+    pub dungeon_bounds: Option<([f64; 3], [f64; 3])>,
     pub collision_scene: VoxelCollisionScene,
     pub entities: EntityState,
 }
@@ -114,12 +118,16 @@ impl AdmittedProject {
                 })?;
 
         // Trimesh authority: decode the dungeon static mesh's inline payload.
-        let dungeon_collider = project
+        let (dungeon_collider, dungeon_bounds) = match project
             .assets
             .iter()
             .find(|asset| asset.id == DUNGEON_COLLIDER_MESH_ASSET)
             .map(dungeon_collider_asset)
-            .transpose()?;
+            .transpose()?
+        {
+            Some((collider, bounds)) => (Some(collider), Some(bounds)),
+            None => (None, None),
+        };
         if dungeon_collider.is_none() && material_voxel_count == 0 {
             return Err(ProjectAdmissionError::MissingCollisionAuthority);
         }
@@ -169,6 +177,7 @@ impl AdmittedProject {
             player_state,
             material_voxel_count,
             dungeon_collider,
+            dungeon_bounds,
             collision_scene,
             entities,
         })
@@ -177,9 +186,10 @@ impl AdmittedProject {
 
 /// Build the dungeon trimesh collider from a static-mesh asset's inline
 /// payload (`f32` positions + `u32` indices → `f64` world-space triangles).
+/// Also returns the payload's world-space AABB for bounded sweeps.
 fn dungeon_collider_asset(
     asset: &AssetDocument,
-) -> Result<StaticMeshColliderAsset, ProjectAdmissionError> {
+) -> Result<(StaticMeshColliderAsset, ([f64; 3], [f64; 3])), ProjectAdmissionError> {
     let mesh = asset
         .static_mesh
         .as_ref()
@@ -212,8 +222,17 @@ fn dungeon_collider_asset(
         .chunks_exact(3)
         .map(|triangle| [triangle[0], triangle[1], triangle[2]])
         .collect::<Vec<_>>();
-    StaticMeshColliderAsset::new(DUNGEON_COLLIDER_ASSET_ID, positions, triangles)
-        .map_err(|error| ProjectAdmissionError::InvalidDungeonCollider(format!("{error:?}")))
+    let mut min = [f64::INFINITY; 3];
+    let mut max = [f64::NEG_INFINITY; 3];
+    for vertex in &positions {
+        for axis in 0..3 {
+            min[axis] = min[axis].min(vertex[axis]);
+            max[axis] = max[axis].max(vertex[axis]);
+        }
+    }
+    let collider = StaticMeshColliderAsset::new(DUNGEON_COLLIDER_ASSET_ID, positions, triangles)
+        .map_err(|error| ProjectAdmissionError::InvalidDungeonCollider(format!("{error:?}")))?;
+    Ok((collider, (min, max)))
 }
 
 #[derive(Debug, Deserialize)]
