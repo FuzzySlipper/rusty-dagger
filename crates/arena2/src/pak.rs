@@ -92,6 +92,9 @@ mod tests {
 
     #[test]
     fn climate_at_privateers_hold() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let dir = arena2_dir();
         let pak = PakFile::load(&dir.join("CLIMATE.PAK")).unwrap();
         // Privateer's Hold: lon 14008, lat 43687 -> pixel (109, 158)

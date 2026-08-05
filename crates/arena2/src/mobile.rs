@@ -33,14 +33,62 @@ pub struct MobileType {
 /// GrizzlyBear(259), Orc(262), SkeletalWarrior(270), Thief(484M/483F),
 /// Archer(482M/481F).
 pub const MOBILE_TYPES: &[MobileType] = &[
-    MobileType { id: 0, name: "Rat", texture_archive: 255, has_idle: true, flying: false },
-    MobileType { id: 1, name: "Imp", texture_archive: 256, has_idle: false, flying: true },
-    MobileType { id: 3, name: "GiantBat", texture_archive: 258, has_idle: false, flying: true },
-    MobileType { id: 4, name: "GrizzlyBear", texture_archive: 259, has_idle: true, flying: false },
-    MobileType { id: 7, name: "Orc", texture_archive: 262, has_idle: true, flying: false },
-    MobileType { id: 15, name: "SkeletalWarrior", texture_archive: 270, has_idle: true, flying: false },
-    MobileType { id: 138, name: "Thief", texture_archive: 484, has_idle: true, flying: false },
-    MobileType { id: 141, name: "Archer", texture_archive: 482, has_idle: true, flying: false },
+    MobileType {
+        id: 0,
+        name: "Rat",
+        texture_archive: 255,
+        has_idle: true,
+        flying: false,
+    },
+    MobileType {
+        id: 1,
+        name: "Imp",
+        texture_archive: 256,
+        has_idle: false,
+        flying: true,
+    },
+    MobileType {
+        id: 3,
+        name: "GiantBat",
+        texture_archive: 258,
+        has_idle: false,
+        flying: true,
+    },
+    MobileType {
+        id: 4,
+        name: "GrizzlyBear",
+        texture_archive: 259,
+        has_idle: true,
+        flying: false,
+    },
+    MobileType {
+        id: 7,
+        name: "Orc",
+        texture_archive: 262,
+        has_idle: true,
+        flying: false,
+    },
+    MobileType {
+        id: 15,
+        name: "SkeletalWarrior",
+        texture_archive: 270,
+        has_idle: true,
+        flying: false,
+    },
+    MobileType {
+        id: 138,
+        name: "Thief",
+        texture_archive: 484,
+        has_idle: true,
+        flying: false,
+    },
+    MobileType {
+        id: 141,
+        name: "Archer",
+        texture_archive: 482,
+        has_idle: true,
+        flying: false,
+    },
 ];
 
 pub fn mobile_type(id: u8) -> Option<&'static MobileType> {
@@ -63,14 +111,38 @@ pub const RAT_IDLE_ANIMS: [OrientationAnim; 8] = anims([15, 16, 17, 18, 19], tru
 
 const fn anims(base: [u16; 5], flip_sides: bool) -> [OrientationAnim; 8] {
     [
-        OrientationAnim { record: base[0], flip: false },
-        OrientationAnim { record: base[1], flip: flip_sides },
-        OrientationAnim { record: base[2], flip: flip_sides },
-        OrientationAnim { record: base[3], flip: flip_sides },
-        OrientationAnim { record: base[4], flip: false },
-        OrientationAnim { record: base[3], flip: !flip_sides },
-        OrientationAnim { record: base[2], flip: !flip_sides },
-        OrientationAnim { record: base[1], flip: !flip_sides },
+        OrientationAnim {
+            record: base[0],
+            flip: false,
+        },
+        OrientationAnim {
+            record: base[1],
+            flip: flip_sides,
+        },
+        OrientationAnim {
+            record: base[2],
+            flip: flip_sides,
+        },
+        OrientationAnim {
+            record: base[3],
+            flip: flip_sides,
+        },
+        OrientationAnim {
+            record: base[4],
+            flip: false,
+        },
+        OrientationAnim {
+            record: base[3],
+            flip: !flip_sides,
+        },
+        OrientationAnim {
+            record: base[2],
+            flip: !flip_sides,
+        },
+        OrientationAnim {
+            record: base[1],
+            flip: !flip_sides,
+        },
     ]
 }
 
@@ -132,13 +204,43 @@ mod tests {
     fn anim_tables_match_dfu_layout() {
         assert_eq!(MOVE_ANIMS[0].record, 0);
         assert_eq!(MOVE_ANIMS[4].record, 4);
-        assert_eq!(MOVE_ANIMS[5], OrientationAnim { record: 3, flip: true });
-        assert_eq!(MOVE_ANIMS[7], OrientationAnim { record: 1, flip: true });
+        assert_eq!(
+            MOVE_ANIMS[5],
+            OrientationAnim {
+                record: 3,
+                flip: true
+            }
+        );
+        assert_eq!(
+            MOVE_ANIMS[7],
+            OrientationAnim {
+                record: 1,
+                flip: true
+            }
+        );
         assert_eq!(IDLE_ANIMS[0].record, 15);
-        assert_eq!(IDLE_ANIMS[6], OrientationAnim { record: 17, flip: true });
+        assert_eq!(
+            IDLE_ANIMS[6],
+            OrientationAnim {
+                record: 17,
+                flip: true
+            }
+        );
         // Rat idles mirror the opposite side.
-        assert_eq!(RAT_IDLE_ANIMS[1], OrientationAnim { record: 16, flip: true });
-        assert_eq!(RAT_IDLE_ANIMS[6], OrientationAnim { record: 17, flip: false });
+        assert_eq!(
+            RAT_IDLE_ANIMS[1],
+            OrientationAnim {
+                record: 16,
+                flip: true
+            }
+        );
+        assert_eq!(
+            RAT_IDLE_ANIMS[6],
+            OrientationAnim {
+                record: 17,
+                flip: false
+            }
+        );
         assert_eq!(standing_anims(&MOBILE_TYPES[0])[1].record, 16);
         assert_eq!(standing_anims(&MOBILE_TYPES[1])[1].record, 1); // Imp: no idle -> Move
     }
@@ -155,7 +257,7 @@ mod tests {
     fn orientation_sectors_match_dfu() {
         let enemy = [0.0, 0.0, 0.0];
         let facing = [0.0, 0.0, 1.0]; // Unity +z
-        // Camera dead ahead (Unity +z of enemy): front, orientation 0.
+                                      // Camera dead ahead (Unity +z of enemy): front, orientation 0.
         assert_eq!(orientation_index(enemy, facing, [0.0, 0.0, 10.0]), 0);
         // Camera behind (Unity -z): back, orientation 4.
         assert_eq!(orientation_index(enemy, facing, [0.0, 0.0, -10.0]), 4);

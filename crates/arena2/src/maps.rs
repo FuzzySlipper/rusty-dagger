@@ -156,11 +156,17 @@ mod tests {
 
     #[test]
     fn resolves_privateers_hold() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let dir = arena2_dir();
         let bsa = BsaArchive::load(&dir.join("MAPS.BSA")).unwrap();
         let layout = resolve_dungeon(&bsa, 17, "Privateer's Hold").unwrap();
         assert_eq!(layout.map_id, 187853213);
-        println!("Privateer's Hold dungeon LocationId: {}", layout.location_id);
+        println!(
+            "Privateer's Hold dungeon LocationId: {}",
+            layout.location_id
+        );
         assert_eq!(layout.location_index, 179);
         assert_eq!(layout.dungeon_type, 2);
         let expect = [

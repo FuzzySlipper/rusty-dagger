@@ -339,7 +339,8 @@ fn publish_billboard_textures(
             continue;
         };
         // DFU GetScaledBillboardSize: (size + size*scale/256) * GlobalScale.
-        let world = arena2::mobile::record_world_size(info.width, info.height, info.scale_x, info.scale_y);
+        let world =
+            arena2::mobile::record_world_size(info.width, info.height, info.scale_x, info.scale_y);
         let rgba = palette.to_rgba_transparent(&indexed);
         let mut rgba = rgba;
         flip_rgba_rows(&mut rgba, w, h);
@@ -366,7 +367,6 @@ fn publish_billboard_textures(
         count, failures
     );
 }
-
 
 /// Decode and pack one directional sprite atlas per unique enemy mobile id:
 /// 8 orientation frames (frame 0 of each standing-anim record, mirrored when
@@ -411,7 +411,8 @@ fn publish_enemy_atlases(
             let rec = anim.record as usize;
             match (tex.frame_pixels(rec, 0), tex.record_info(rec)) {
                 (Ok((w, h, indexed)), Some(info)) => {
-                    let size = record_world_size(info.width, info.height, info.scale_x, info.scale_y);
+                    let size =
+                        record_world_size(info.width, info.height, info.scale_x, info.scale_y);
                     decoded.push((anim.flip, w, h, indexed, size));
                 }
                 _ => {
@@ -493,6 +494,8 @@ fn publish_enemy_atlases(
         entries.join(",\n")
     );
     std::fs::write(dir.join("enemy-manifest.json"), manifest).expect("write enemy manifest");
-    println!("enemies:     {} atlases ({} decode failures)", count, failures);
+    println!(
+        "enemies:     {} atlases ({} decode failures)",
+        count, failures
+    );
 }
-

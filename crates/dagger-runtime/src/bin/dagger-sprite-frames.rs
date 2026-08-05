@@ -85,7 +85,10 @@ fn serve(positions: &[[f32; 3]], addr: &str) {
         eprintln!("bind {addr}: {e}");
         std::process::exit(1);
     });
-    eprintln!("dagger-sprite-frames serving {} enemies on {addr}", positions.len());
+    eprintln!(
+        "dagger-sprite-frames serving {} enemies on {addr}",
+        positions.len()
+    );
     for stream in listener.incoming() {
         let Ok(mut stream) = stream else { continue };
         let mut reader = BufReader::new(stream.try_clone().unwrap());
@@ -104,7 +107,10 @@ fn serve(positions: &[[f32; 3]], addr: &str) {
                 "200 OK",
                 format!("{{\"assignments\":{}}}", assignments_json(positions, cam)),
             ),
-            None => ("400 Bad Request", "{\"error\":\"expected /assignments?cam=x,y,z\"}".into()),
+            None => (
+                "400 Bad Request",
+                "{\"error\":\"expected /assignments?cam=x,y,z\"}".into(),
+            ),
         };
         let response = format!(
             "HTTP/1.1 {status}\r\ncontent-type: application/json\r\naccess-control-allow-origin: *\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",

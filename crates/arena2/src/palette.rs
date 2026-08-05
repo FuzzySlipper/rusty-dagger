@@ -58,6 +58,9 @@ mod tests {
 
     #[test]
     fn pal_pal_loads() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let dir = arena2_dir();
         let pal = Palette::load(&dir.join("PAL.PAL")).unwrap();
         // Palette contains full-range values (verified max byte 255)

@@ -114,6 +114,9 @@ mod tests {
 
     #[test]
     fn blocks_bsa_record_counts() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let bsa = BsaArchive::load(&arena2_dir().join("BLOCKS.BSA")).unwrap();
         assert_eq!(bsa.len(), 1295);
         assert!(bsa.contains("S0000999.RDB"));
@@ -122,6 +125,9 @@ mod tests {
 
     #[test]
     fn arch3d_numeric_records() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let bsa = BsaArchive::load(&arena2_dir().join("ARCH3D.BSA")).unwrap();
         assert_eq!(bsa.len(), 10251);
         assert!(bsa.contains("61000"));

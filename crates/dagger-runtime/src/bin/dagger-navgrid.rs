@@ -228,7 +228,10 @@ fn main() {
             }
         }
     }
-    println!("spawn grounding: {} spawns, {floaters} floaters", spawns.len());
+    println!(
+        "spawn grounding: {} spawns, {floaters} floaters",
+        spawns.len()
+    );
     if spawns.len() != 43 {
         failures.push(format!("expected 43 enemy spawns, found {}", spawns.len()));
     }
@@ -236,9 +239,7 @@ fn main() {
     // 6. Artifact for the flycam grid gizmo.
     let cells: Vec<serde_json::Value> = grid
         .iter()
-        .map(|(cell, support_y)| {
-            serde_json::json!([cell.x, cell.z, cell.level, round3(support_y)])
-        })
+        .map(|(cell, support_y)| serde_json::json!([cell.x, cell.z, cell.level, round3(support_y)]))
         .collect();
     let artifact = serde_json::json!({
         "version": 1,

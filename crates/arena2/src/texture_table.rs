@@ -121,6 +121,9 @@ mod tests {
 
     #[test]
     fn classic_tables_from_real_location_data() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         // End-to-end acceptance: seed (dungeon LocationId) and climate both
         // resolved from the real data files. Two locations produce two
         // different, correct tables (expected values cross-checked against an

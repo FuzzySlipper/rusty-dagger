@@ -90,13 +90,7 @@ fn uv_unpack(u: i32) -> i32 {
 /// into the plane's 2D basis. Returns false on a singular matrix (DFU then
 /// keeps the raw stored UVs).
 fn compute_face_uv(points: &mut [MeshPoint]) -> bool {
-    let coord = |i: usize| {
-        [
-            points[i].x as f32,
-            points[i].y as f32,
-            points[i].z as f32,
-        ]
-    };
+    let coord = |i: usize| [points[i].x as f32, points[i].y as f32, points[i].z as f32];
     let dot = |a: [f32; 3], b: [f32; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     let sub = |a: [f32; 3], b: [f32; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
     let norm = |a: [f32; 3]| {
@@ -139,8 +133,7 @@ fn compute_face_uv(points: &mut [MeshPoint]) -> bool {
     ];
 
     // l_ComputeDFUVMatrixXY: solve U = UA*x + UB*y + UD (and V likewise).
-    let determinant =
-        x0 * y1 + y0 * x2 + x1 * y2 - y1 * x2 - y0 * x1 - x0 * y2;
+    let determinant = x0 * y1 + y0 * x2 + x1 * y2 - y1 * x2 - y0 * x1 - x0 * y2;
     if determinant == 0.0 {
         return false;
     }
@@ -279,6 +272,9 @@ mod tests {
 
     #[test]
     fn mesh_61000_layout() {
+        if !crate::have_arena2_data() {
+            return;
+        }
         let dir = arena2_dir();
         let arch = Arch3dFile::load(&dir.join("ARCH3D.BSA")).unwrap();
         let mesh = arch.mesh("61000").unwrap();
@@ -344,7 +340,11 @@ mod tests {
         let packed = || point(0, 0, 0, 14336, -14336);
         let mut pts = vec![packed(), point(256, 0, 0, 0, 0), point(256, 256, 0, 0, 0)];
         fix_plane_uvs(&mut pts, 61000);
-        assert_eq!((pts[0].u, pts[0].v), (14336, -14336), "no unpack at id >= 905");
+        assert_eq!(
+            (pts[0].u, pts[0].v),
+            (14336, -14336),
+            "no unpack at id >= 905"
+        );
         let mut pts = vec![packed(), point(256, 0, 0, 0, 0), point(256, 256, 0, 0, 0)];
         fix_plane_uvs(&mut pts, 42);
         assert_eq!((pts[0].u, pts[0].v), (-2048, 2048), "unpacked at id < 905");

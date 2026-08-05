@@ -117,3 +117,11 @@ pub(crate) fn arena2_dir() -> std::path::PathBuf {
             std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2")
         })
 }
+
+/// True when classic Daggerfall Arena2 data is present locally. CI has no
+/// data; data-dependent tests early-return (pass) when this is false and run
+/// the full assertion suite when data exists.
+#[cfg(test)]
+pub(crate) fn have_arena2_data() -> bool {
+    arena2_dir().join("BLOCKS.BSA").exists()
+}

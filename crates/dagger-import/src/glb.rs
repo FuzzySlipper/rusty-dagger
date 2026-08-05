@@ -79,9 +79,9 @@ pub fn write_glb(
     // Build accessor sets + primitive JSON for a slice of primitives; returns
     // the primitive JSON entries (shared by the dungeon mesh and per-door meshes).
     let build_prims = |prims: &[PrimitiveInput],
-                           bin: &mut Vec<u8>,
-                           buffer_views: &mut Vec<String>,
-                           accessors: &mut Vec<String>|
+                       bin: &mut Vec<u8>,
+                       buffer_views: &mut Vec<String>,
+                       accessors: &mut Vec<String>|
      -> Vec<String> {
         let mut out = Vec::new();
         for prim in prims {
@@ -154,7 +154,10 @@ pub fn write_glb(
 
             // INDICES
             let idx_bytes: &[u8] = unsafe {
-                std::slice::from_raw_parts(prim.indices.as_ptr() as *const u8, prim.indices.len() * 4)
+                std::slice::from_raw_parts(
+                    prim.indices.as_ptr() as *const u8,
+                    prim.indices.len() * 4,
+                )
             };
             pad4(bin, 0);
             let ioff = bin.len();
@@ -187,10 +190,18 @@ pub fn write_glb(
         dungeon_prims_json.join(",")
     ));
     let mut nodes_json: Vec<String> = Vec::new();
-    nodes_json.push(format!("{{\"mesh\":0,\"name\":\"{}\"}}", json_escape(mesh_name)));
+    nodes_json.push(format!(
+        "{{\"mesh\":0,\"name\":\"{}\"}}",
+        json_escape(mesh_name)
+    ));
 
     for (door_i, door) in door_primitives.iter().enumerate() {
-        let door_json = build_prims(std::slice::from_ref(door), &mut bin, &mut buffer_views, &mut accessors);
+        let door_json = build_prims(
+            std::slice::from_ref(door),
+            &mut bin,
+            &mut buffer_views,
+            &mut accessors,
+        );
         meshes_json.push(format!(
             "{{\"name\":\"{}\",\"primitives\":[{}]}}",
             json_escape(&door.name),
