@@ -39,6 +39,7 @@ async function main() {
     keys: new Set(),
     moved: true,
   };
+  window.__flycam = state; // debug/test seam
 
   const surface = mountRendererBrowserSurface(canvas, {
     autoStart: false,
@@ -92,7 +93,8 @@ async function main() {
         ops.push({ op: 'create', handle: GIZMO_HANDLE_BASE + i, parent: null, node: {
           geometry: { kind: 'cube' }, material: { color, wireframe: false },
           transform: { translation: sprite.position, rotation: [0, 0, 0, 1], scale: [0.08, 0.08, 0.08] },
-          visible: false, layer: 'scene', metadata: null,
+          visible: false, layer: 'scene',
+          metadata: { sourceEntity: null, sourceSceneNode: null, tags: [], label: 'sprite-anchor' },
         } });
         gizmoHandles.push(GIZMO_HANDLE_BASE + i);
         i += 1;
@@ -103,7 +105,8 @@ async function main() {
             translation: [sprite.position[0], centerY, sprite.position[2]],
             rotation: [0, 0, 0, 1], scale: [sprite.size[0], sprite.size[1], 0.02],
           },
-          visible: false, layer: 'scene', metadata: null,
+          visible: false, layer: 'scene',
+          metadata: { sourceEntity: null, sourceSceneNode: null, tags: [], label: 'sprite-bounds' },
         } });
         gizmoHandles.push(GIZMO_HANDLE_BASE + i);
         i += 1;
