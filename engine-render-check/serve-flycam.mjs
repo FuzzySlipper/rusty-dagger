@@ -56,7 +56,7 @@ console.log('frame dumped from dagger-studio-adapter');
 
 const spriteServer = spawn(
   resolve(ROOT, 'target/debug/dagger-sprite-frames'),
-  [resolve(ROOT, 'content/privateers-hold.scene.json'), '--serve', `127.0.0.1:${spritePort}`],
+  [resolve(HERE, 'generated/enemies.json'), '--serve', `127.0.0.1:${spritePort}`],
   { stdio: ['ignore', 'ignore', 'inherit'] },
 );
 for (const signal of ['SIGINT', 'SIGTERM']) {
