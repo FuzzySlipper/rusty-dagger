@@ -120,6 +120,9 @@ struct PatrolNpc {
     level: i32,
     is_moving: bool,
     idle_timer: f32,
+    /// Current heading (radians, 0 = +X, increasing toward +Z).
+    /// Smoothly interpolated toward the target heading for natural turns.
+    heading: f32,
     rng: PatrolRng,
 }
 
@@ -181,7 +184,8 @@ impl PatrolService {
                 target: None,
                 level,
                 is_moving: false,
-                idle_timer: 0.5, // brief initial idle
+                idle_timer: 0.5,
+                heading: 0.0,
                 rng: PatrolRng::new(handle),
             });
         }
@@ -215,6 +219,19 @@ impl PatrolService {
                 let dz = target[2] - npc.position[2];
                 let dist = (dx * dx + dz * dz).sqrt();
                 npc.is_moving = true;
+
+                // Smoothly rotate heading toward target direction (max 3 rad/s)
+                let target_heading = dz.atan2(dx);
+                let mut diff = target_heading - npc.heading;
+                while diff > std::f32::consts::PI {
+                    diff -= std::f32::consts::TAU;
+                }
+                while diff < -std::f32::consts::PI {
+                    diff += std::f32::consts::TAU;
+                }
+                let turn_rate = 3.0; // rad/s
+                let turn = diff.clamp(-turn_rate * dt, turn_rate * dt);
+                npc.heading += turn;
 
                 if dist < 0.1 {
                     // Reached target
