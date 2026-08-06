@@ -251,19 +251,25 @@ async function main() {
       const cam = state.position.map((v) => v.toFixed(3)).join(',');
       fetch(`/assignments?cam=${cam}`)
         .then((r) => r.json())
-        .then(({ updates }) => {
-          if (updates && updates.length > 0) {
-            surface.applyFrame({
-              schemaVersion: 1,
-              ops: updates.map((u) => ({
-                op: 'updateSprite',
-                handle: u.handle,
-                frame: u.frame,
-                tint: null,
-                renderOrder: null,
-                visible: null,
-              })),
-            });
+        .then(({ updates, transforms }) => {
+          const ops = [];
+          if (updates) {
+            ops.push(...updates.map((u) => ({
+              op: 'updateSprite', handle: u.handle, frame: u.frame,
+              tint: null, renderOrder: null, visible: null,
+            })));
+          }
+          if (transforms) {
+            ops.push(...transforms.map((t) => ({
+              op: 'update', handle: t.handle, material: null, metadata: null,
+              visible: null,
+              transform: {
+                translation: t.translation, rotation: [0, 0, 0, 1], scale: [1, 1, 1],
+              },
+            })));
+          }
+          if (ops.length > 0) {
+            surface.applyFrame({ schemaVersion: 1, ops });
           }
           spriteRefresh = performance.now();
         })
