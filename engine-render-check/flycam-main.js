@@ -19,7 +19,6 @@ async function main() {
     fetch('/generated/texture-manifest.json').then((r) => r.json()),
     fetch('/generated/enemies.json').then((r) => r.json()),
   ]);
-  const animatedBillboards = enemies.animatedBillboards ?? [];
 
   const textureResourceSource = await loadRendererTextureResourceSource(
     manifest,
@@ -208,19 +207,9 @@ async function main() {
   let last = performance.now();
   let lastRender = 0;
   const MIN_RENDER_MS = 5; // cap ~200Hz — the loop is RAF-driven on high-refresh displays
-  let spriteRefresh = 0; // timestamp of last completed assignment fetch
+  let spriteRefresh = 0; // timestamp of last completed sprite authority fetch
   let fetching = false;
   const poseEquals = (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
-  let lastSpriteCamera = [NaN, NaN, NaN];
-
-  // Consolidated billboard animation state (6640): the flycam advances env
-  // flat frames (torch flames, animated lights) from the authoritative
-  // frameCount + fps data produced by the Rust importer. One consolidated
-  // pass per tick computes all changed frames and sends them in a single
-  // applyFrame — no per-billboard polling. The directional enemy refresh
-  // above is the other half of the per-tick sprite update.
-  const animStart = performance.now();
-  const animLastFrames = new Map();
 
   function step(now) {
     const dt = Math.min(0.1, (now - last) / 1000);
@@ -252,54 +241,36 @@ async function main() {
       state.moved = false;
     }
 
-    // Directional sprite refresh: at most one in flight, at most ~10 Hz, and
-    // only when the camera actually changed.
-    if (!fetching && !poseEquals(lastSpriteCamera, state.position) && now - spriteRefresh > 100) {
+    // Consolidated sprite frame refresh (6640): the Rust AnimationService
+    // (dagger-sprite-frames --serve) owns BOTH directional enemy orientation
+    // AND env flat animation (torch flames). This page polls it at ~10Hz and
+    // applies the result in a single applyFrame. No per-sprite polling, no
+    // JS frame math — the Rust authority is the single source of truth.
+    if (!fetching && now - spriteRefresh > 100) {
       fetching = true;
       const cam = state.position.map((v) => v.toFixed(3)).join(',');
       fetch(`/assignments?cam=${cam}`)
         .then((r) => r.json())
-        .then(({ assignments }) => {
-          surface.applyFrame({
-            schemaVersion: 1,
-            ops: assignments.map((a) => ({
-              op: 'updateSprite',
-              handle: enemies.enemies[a.index].handle,
-              frame: a.frame,
-              tint: null,
-              renderOrder: null,
-              visible: null,
-            })),
-          });
-          lastSpriteCamera = [...state.position];
+        .then(({ updates }) => {
+          if (updates && updates.length > 0) {
+            surface.applyFrame({
+              schemaVersion: 1,
+              ops: updates.map((u) => ({
+                op: 'updateSprite',
+                handle: u.handle,
+                frame: u.frame,
+                tint: null,
+                renderOrder: null,
+                visible: null,
+              })),
+            });
+          }
           spriteRefresh = performance.now();
         })
         .catch(() => { /* keep flying if the authority hiccups */ })
         .finally(() => {
           fetching = false;
         });
-    }
-
-    // Consolidated billboard animation (6640): advance all animated env
-    // flats (torch flames) from elapsed time. One pass computes the diff
-    // (only changed frames) and sends a single applyFrame — no per-billboard
-    // polling. FPS and frame counts come from the Rust-generated dump.
-    if (animatedBillboards.length > 0) {
-      const elapsed = (now - animStart) / 1000;
-      const animOps = [];
-      for (const bb of animatedBillboards) {
-        const frame = Math.floor(elapsed * bb.fps) % bb.frameCount;
-        if (animLastFrames.get(bb.handle) !== frame) {
-          animLastFrames.set(bb.handle, frame);
-          animOps.push({
-            op: 'updateSprite', handle: bb.handle, frame,
-            tint: null, renderOrder: null, visible: null,
-          });
-        }
-      }
-      if (animOps.length > 0) {
-        surface.applyFrame({ schemaVersion: 1, ops: animOps });
-      }
     }
 
     // Nav grid gizmo rebuild: debounced, only when the camera strayed far
