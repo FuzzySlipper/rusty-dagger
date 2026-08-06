@@ -164,7 +164,8 @@ export async function dumpFrame() {
     const atlasByAsset = new Map();
     for (const op of frame.ops) {
       if (op.op === 'defineSpriteAtlas' && op.atlas) {
-        atlasByAsset.set(op.atlas.asset, op.atlas.frames?.length ?? 1);
+        const key = op.atlas.id ?? op.atlas.asset;
+        atlasByAsset.set(key, op.atlas.frames?.length ?? 1);
       }
     }
     const animatedBillboards = frame.ops
