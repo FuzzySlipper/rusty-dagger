@@ -17,7 +17,7 @@
 //! animated billboards), returning a single consolidated frame diff. The
 //! flycam polls this endpoint and applies the result in one applyFrame.
 
-use dagger_runtime::{evaluate_directional, AnimationService, FrameUpdate};
+use dagger_runtime::{evaluate_directional, AnimationService, FrameUpdate, PatrolService};
 use std::io::{BufRead, BufReader, Write};
 use std::net::TcpListener;
 use std::time::Instant;
@@ -202,6 +202,41 @@ fn updates_json(updates: &[FrameUpdate]) -> String {
 fn serve(meta_path: &str, addr: &str) {
     let meta = load_sprite_metadata(meta_path);
     let mut svc = build_service(&meta);
+
+    // Load navgrid and create patrol service for NPC movement (6641).
+    // The navgrid.json is in the standard content path; load it relative
+    // to the current directory (serve-flycam.mjs runs from repo root).
+    let navgrid_path = "content/projects/privateers-hold.navgrid.json";
+    let mut patrol = std::fs::read_to_string(navgrid_path)
+        .ok()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
+        .and_then(|ng| {
+            let cells: Vec<(f64, f64, f64, f64)> = ng
+                .get("cells")
+                .and_then(serde_json::Value::as_array)?
+                .iter()
+                .filter_map(|c| c.as_array())
+                .filter_map(|a| {
+                    Some((
+                        a.first()?.as_f64()?,
+                        a.get(1)?.as_f64()?,
+                        a.get(2)?.as_f64()?,
+                        a.get(3)?.as_f64()?,
+                    ))
+                })
+                .collect();
+            let spawns: Vec<(u32, [f32; 3])> =
+                meta.enemies.iter().map(|&(h, pos, _)| (h, pos)).collect();
+            Some(PatrolService::new(&cells, &spawns))
+        });
+
+    if patrol.is_some() {
+        eprintln!(
+            "patrol:      {} NPCs grounded and patrolling",
+            meta.enemies.len()
+        );
+    }
+
     let start = Instant::now();
     let mut last_elapsed = 0.0f32;
 
@@ -241,12 +276,32 @@ fn serve(meta_path: &str, addr: &str) {
                 let dt = now - last_elapsed;
                 last_elapsed = now;
 
-                // One consolidated evaluation pass: both enemy directional
-                // and env flat animation in a single call.
+                // 1. Advance patrol (if loaded): moves NPCs on walkable cells.
+                let transform_json = if let Some(ref mut p) = patrol {
+                    let pos_updates = p.evaluate(dt);
+                    // Push updated positions + is_moving to animation service.
+                    svc.update_enemies(&p.positions());
+                    // Build transform JSON for the flycam to apply as `update` ops.
+                    let entries: Vec<String> = pos_updates
+                        .iter()
+                        .map(|u| {
+                            format!(
+                                "{{\"handle\":{},\"translation\":[{:?},{:?},{:?}]}}",
+                                u.handle, u.translation[0], u.translation[1], u.translation[2]
+                            )
+                        })
+                        .collect();
+                    format!(",\"transforms\":[{}]", entries.join(","))
+                } else {
+                    String::new()
+                };
+
+                // 2. Evaluate animation (env flat + enemy directional frames).
+                // Enemy positions/is_moving were just updated from patrol.
                 let updates = svc.evaluate(dt, cam);
                 (
                     "200 OK",
-                    format!("{{\"updates\":{}}}", updates_json(&updates)),
+                    format!("{{\"updates\":{}{transform_json}}}", updates_json(&updates)),
                 )
             }
             None => (
@@ -256,9 +311,9 @@ fn serve(meta_path: &str, addr: &str) {
         };
 
         let response = format!(
-            "HTTP/1.1 {status}\r\ncontent-type: application/json\r\naccess-control-allow-origin: *\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
-            body.len()
-        );
+"HTTP/1.1 {status}\r\ncontent-type: application/json\r\naccess-control-allow-origin: *\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",
+body.len()
+);
         let _ = stream.write_all(response.as_bytes());
     }
 }
@@ -266,11 +321,11 @@ fn serve(meta_path: &str, addr: &str) {
 fn main() {
     let mut args = std::env::args().skip(1);
     let path = args.next().unwrap_or_else(|| {
-        eprintln!(
-            "usage: dagger-sprite-frames <scene.json> <cam-x,cam-y,cam-z>...\n       dagger-sprite-frames <enemies.json> --serve <host:port>"
-        );
-        std::process::exit(2);
-    });
+eprintln!(
+"usage: dagger-sprite-frames <scene.json> <cam-x,cam-y,cam-z>...\n       dagger-sprite-frames <enemies.json> --serve <host:port>"
+);
+std::process::exit(2);
+});
     let rest: Vec<String> = args.collect();
 
     if rest.first().map(String::as_str) == Some("--serve") {
