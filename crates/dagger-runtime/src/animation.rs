@@ -33,6 +33,9 @@ pub struct SpriteEntry {
     pub kind: SpriteKind,
     /// Last frame emitted to the renderer; None = not yet sent.
     last_frame: Option<u32>,
+    /// Whether this sprite's entity is currently moving (patrol state).
+    /// When false, the anim_frame freezes at 0 (idle). When true, it cycles.
+    is_moving: bool,
 }
 
 /// What drives a sprite's frame.
@@ -92,6 +95,7 @@ impl AnimationService {
                 fps: ENV_BILLBOARD_FPS,
             },
             last_frame: None,
+            is_moving: false,
         });
     }
 
@@ -114,7 +118,24 @@ impl AnimationService {
                 anim_fps,
             },
             last_frame: None,
+            is_moving: false,
         });
+    }
+
+    /// Update enemy positions and move/idle state from the patrol service.
+    /// Called before evaluate() each tick so the animation tracks patrol movement.
+    pub fn update_enemies(&mut self, updates: &[(u32, [f32; 3], bool)]) {
+        for &(handle, pos, is_moving) in updates {
+            for entry in &mut self.entries {
+                if entry.handle == handle {
+                    if let SpriteKind::Enemy { position, .. } = &mut entry.kind {
+                        *position = pos;
+                    }
+                    entry.is_moving = is_moving;
+                    break;
+                }
+            }
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -153,10 +174,9 @@ impl AnimationService {
                 } => {
                     // Orientation from camera (0-7 DFU sectors).
                     let orientation = evaluate_directional(*position, camera) as u32;
-                    // Anim frame from global elapsed time. Independent of
-                    // orientation — a direction change mid-animation preserves
-                    // the anim frame position.
-                    let anim_frame = if *anim_frame_count <= 1 {
+                    // Anim frame: when moving, cycle at DFU speed; when idle,
+                    // freeze at 0 (most enemy idle records are 1-frame).
+                    let anim_frame = if !entry.is_moving || *anim_frame_count <= 1 {
                         0
                     } else {
                         ((self.elapsed * *anim_fps as f32) as u32) % anim_frame_count
@@ -303,6 +323,7 @@ mod tests {
         // SkeletalWarrior: 4 move frames, 6fps.
         let mut svc = AnimationService::new();
         svc.add_enemy(500, [10.0, 33.0, -7.0], 15, 4);
+        svc.update_enemies(&[(500, [10.0, 33.0, -7.0], true)]);
 
         // Advance ~0.35s → anim_frame = floor(0.35 * 6) % 4 = 2
         svc.evaluate(0.35, [10.5, 34.4, -11.0]); // front, frame = 0*4+2=2
@@ -325,6 +346,7 @@ mod tests {
         // SkeletalWarrior: 4 move frames, 6fps. Camera stays in front.
         let mut svc = AnimationService::new();
         svc.add_enemy(600, [10.0, 33.0, -7.0], 15, 4);
+        svc.update_enemies(&[(600, [10.0, 33.0, -7.0], true)]);
 
         // t=0: orientation 0, anim_frame 0 → frame 0
         let _ = svc.evaluate(0.0, [10.5, 34.4, -11.0]);
@@ -353,6 +375,7 @@ mod tests {
         let mut svc = AnimationService::new();
         svc.add_env(1, 4); // torch: 4 frames at 5fps
         svc.add_enemy(2, [10.0, 33.0, -7.0], 15, 4); // enemy: 4 frames at 6fps
+        svc.update_enemies(&[(2, [10.0, 33.0, -7.0], true)]);
 
         // t=0: both emit their initial frame
         let u = svc.evaluate(0.0, [10.5, 34.4, -11.0]);
