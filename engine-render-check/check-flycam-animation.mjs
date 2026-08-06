@@ -1,13 +1,21 @@
 #!/usr/bin/env node
 /**
- * Headless proof for sprite animation (task 6640): verifies that
- * animated billboard sprites exist with correct frame counts, advance at
- * the DFU fps, and that the animation service produces a consolidated
- * per-tick diff (not per-entity polling).
+ * Headless proof for sprite animation (task 6640): verifies the LIVE Rust
+ * animation authority through the flycam's actual behavior.
  *
- * Requires serve-flycam.mjs running (same as check-flycam-navgrid.mjs):
+ * Strategy: load the page, intercept fetch('/assignments') responses, move
+ * the camera to force enemy orientation changes (so enemies appear in the
+ * diff alongside billboards), then verify:
+ *
+ * 1. Responses use the consolidated {updates} format (not {assignments})
+ * 2. At least one response contains both enemy and billboard handles
+ * 3. Frame indices advance over time for at least some handles
+ * 4. Enemy frames are within atlas bounds
+ * 5. Zero console errors
+ *
+ * Requires serve-flycam.mjs running:
  *   node engine-render-check/serve-flycam.mjs
- *   node engine-render-check/check-flycam-animation.mjs
+ *   RUSTY_FLYCAM_URL=http://127.0.0.1:4174 node engine-render-check/check-flycam-animation.mjs
  */
 import { chromium } from '@playwright/test';
 
@@ -26,62 +34,106 @@ try {
   });
   page.on('pageerror', (err) => errors.push(String(err)));
 
-  // Load the flycam page
+  // Install fetch interception BEFORE the page loads.
+  await page.addInitScript(() => {
+    window.__assignmentResponses = [];
+    const origFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const resp = await origFetch(...args);
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url ?? '';
+      if (url.includes('/assignments')) {
+        const clone = resp.clone();
+        clone.json().then((body) => {
+          window.__assignmentResponses.push(body);
+        }).catch(() => {});
+      }
+      return resp;
+    };
+  });
+
+  // Load the page (starts the renderer + animation loop)
   await page.goto(FLYCAM, { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.__flycam !== undefined, { timeout: 10_000 });
 
-  // Wait for the renderer to mount and the animation loop to start
-  await page.waitForTimeout(2000);
-  assert(errors.length === 0, `console errors: ${errors.join('; ')}`);
+  // Wait for the initial animation polls
+  await page.waitForTimeout(1500);
 
-  // --- Check 1: animated billboards exist in the generated dump ---
+  // Move the camera sideways to force enemy orientation changes.
+  // This makes enemy handles appear in the diff alongside billboards.
+  await page.evaluate(() => {
+    window.__flycam.position[0] += 3.0;
+    window.__flycam.moved = true;
+  });
+  await page.waitForTimeout(1500);
+
+  // Collect all intercepted responses
+  const responses = await page.evaluate(() => window.__assignmentResponses ?? []);
+  assert(responses.length >= 2, `expected at least 2 /assignments polls, got ${responses.length}`);
+
+  // --- Check 1: all responses use the consolidated {updates} format ---
+  for (const resp of responses) {
+    assert(resp.updates !== undefined, `response missing "updates" key — expected consolidated format`);
+  }
+  console.log(`format: all ${responses.length} responses use {updates} format`);
+
+  // Load metadata to classify handles
   const enemies = await page.evaluate(async () => {
     const r = await fetch('/generated/enemies.json');
     return r.json();
   });
-  assert(
-    Array.isArray(enemies.animatedBillboards) && enemies.animatedBillboards.length > 0,
-    `expected animated billboards, got ${enemies.animatedBillboards?.length ?? 'none'}`,
-  );
-  console.log(`animated billboards: ${enemies.animatedBillboards.length}`);
+  const enemyHandles = new Set(enemies.enemies.map((e) => e.handle));
+  const billboardHandles = new Set((enemies.animatedBillboards ?? []).map((b) => b.handle));
 
-  // --- Check 2: all animated billboards have valid frame counts (4-5 for torches) ---
-  for (const bb of enemies.animatedBillboards) {
-    assert(bb.frameCount >= 2 && bb.frameCount <= 6, `unexpected frameCount ${bb.frameCount} for handle ${bb.handle}`);
-    assert(bb.fps === 5, `expected fps=5, got ${bb.fps} for handle ${bb.handle}`);
+  // --- Check 2: at least one response has both enemy and billboard ---
+  let mixedResponse = null;
+  for (const resp of responses) {
+    const hasEnemy = resp.updates.some((u) => enemyHandles.has(u.handle));
+    const hasBillboard = resp.updates.some((u) => billboardHandles.has(u.handle));
+    if (hasEnemy && hasBillboard) {
+      mixedResponse = resp;
+      break;
+    }
   }
-  console.log(`frame counts: ${[...new Set(enemies.animatedBillboards.map((b) => b.frameCount))].sort().join(', ')}`);
+  assert(mixedResponse !== null, 'no response contained both enemy and billboard handles');
+  console.log(`mixed response: ${mixedResponse.updates.length} updates (enemy + billboard)`);
 
-  // --- Check 3: frames advance over time (take screenshots at two timestamps) ---
-  // After 0.3s at 5fps = frame 1; after 0.6s = frame 3; wraps at frame_count.
-  // We verify by checking that updateSprite ops are being sent: read the
-  // renderer's internal frame counter via the debug seam.
-  const before = await page.evaluate(() => {
-    const flycam = window.__flycam;
-    return { pos: [...flycam.position] };
-  });
+  // --- Check 3: frame advancement across responses ---
+  // Track frames per handle across all responses; at least one must change.
+  const frameHistory = new Map(); // handle → [frames across responses]
+  for (const resp of responses) {
+    for (const u of resp.updates) {
+      if (!frameHistory.has(u.handle)) frameHistory.set(u.handle, []);
+      frameHistory.get(u.handle).push(u.frame);
+    }
+  }
 
-  // Wait 1 second to let animation frames cycle (at 5fps that's ~5 frame changes)
-  await page.waitForTimeout(1000);
+  let advanced = 0;
+  for (const [handle, frames] of frameHistory) {
+    if (new Set(frames).size > 1) advanced++;
+  }
+  assert(advanced > 0, `expected frame advancement for at least 1 handle, got ${advanced}`);
+  console.log(`frame advancement: ${advanced} handles changed across ${responses.length} polls`);
 
-  // Verify no new console errors during animation
-  assert(errors.length === 0, `console errors during animation: ${errors.join('; ')}`);
+  // --- Check 4: enemy frames within atlas bounds ---
+  const atlasFrames = enemies.enemyAtlasFrames ?? {};
+  let enemyChecks = 0;
+  for (const resp of responses) {
+    for (const u of resp.updates) {
+      if (!enemyHandles.has(u.handle)) continue;
+      const enemy = enemies.enemies.find((e) => e.handle === u.handle);
+      if (!enemy) continue;
+      const total = atlasFrames[String(enemy.mobileId)] ?? 8;
+      assert(u.frame < total, `enemy ${u.handle} frame ${u.frame} >= atlas ${total}`);
+      enemyChecks++;
+    }
+  }
+  console.log(`enemy bounds: ${enemyChecks} frames checked`);
 
-  // --- Check 4: the animation service Rust API advances frames correctly ---
-  // Use the Rust one-shot CLI to verify frame computation
-  const { execSync } = await import('node:child_process');
-  const spriteFramesJson = execSync(
-    'cargo run -q -p dagger-runtime --bin dagger-sprite-frames -- ' +
-    'content/privateers-hold.scene.json 25.6,1.6,-25.6',
-    { cwd: process.cwd(), encoding: 'utf8' },
-  );
-  const sf = JSON.parse(spriteFramesJson);
-  assert(sf.enemyCount === 43, `expected 43 enemies, got ${sf.enemyCount}`);
+  // --- Check 5: zero console errors ---
+  await page.waitForTimeout(500);
+  assert(errors.length === 0, `console errors: ${errors.join('; ')}`);
 
   console.log('ALL ANIMATION CHECKS PASSED');
-  console.log(`  animated billboards: ${enemies.animatedBillboards.length}`);
-  console.log(`  enemy directional: ${sf.enemyCount} enemies`);
-  console.log(`  console errors: ${errors.length}`);
 } finally {
   await browser.close();
 }
