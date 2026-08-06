@@ -9,19 +9,21 @@
 //!   at DFU's billboard default 5 fps (`ENV_BILLBOARD_FPS`). The frame index
 //!   advances linearly and wraps.
 //!
-//! - **Enemy directional sprites**: the visible frame is the camera-driven
-//!   orientation (0–7) from `evaluate_directional`. For idle (1-frame
-//!   records) this is static per camera pose. When move-state arrives with
-//!   the patrol task, the atlas frame = orientation × anim_frame_count +
-//!   current_anim_frame, where anim_frame cycles at DFU speed (6 fps ground,
-//!   10 fps flying).
+//! - **Enemy directional sprites**: the atlas is laid out as orientation ×
+//!   anim_frame (8 × M cells). The visible frame = orientation *
+//!   anim_frame_count + current_anim_frame. Orientation comes from the camera
+//!   (evaluate_directional); anim_frame advances independently from elapsed
+//!   time at DFU speed (6fps ground, 10fps flying). This means a direction
+//!   change mid-animation preserves the anim frame position — only the
+//!   orientation base shifts. All enemies share the same global clock, so
+//!   they're synchronized; per-enemy phase offsets arrive with patrol (6641).
 //!
 //! The service owns elapsed time and per-sprite state. One `evaluate` call
 //! per tick produces the complete diff — callers never poll individual
 //! sprites.
 
 use crate::evaluate_directional;
-use arena2::mobile::{self, ENV_BILLBOARD_FPS, FLY_ANIM_SPEED, IDLE_ANIM_SPEED, MOVE_ANIM_SPEED};
+use arena2::mobile::{self, ENV_BILLBOARD_FPS, FLY_ANIM_SPEED, MOVE_ANIM_SPEED};
 
 /// A sprite registered with the animation service.
 #[derive(Debug, Clone)]
@@ -39,9 +41,22 @@ pub enum SpriteKind {
     /// Environment flat: cycles `frame_count` frames at `fps`.
     /// Frame index = `(elapsed * fps) % frame_count`.
     Env { frame_count: u32, fps: u32 },
-    /// Enemy directional sprite: frame = orientation (idle) or
-    /// orientation * anim_frames + anim_frame (move, when 6641 adds it).
-    Enemy { position: [f32; 3], mobile_id: u8 },
+    /// Enemy directional sprite. The atlas is laid out as
+    /// orientation × anim_frame (8 × M cells). The visible frame =
+    /// orientation * anim_frame_count + current_anim_frame, where
+    /// orientation comes from the camera (evaluate_directional) and
+    /// anim_frame advances independently from elapsed time at DFU speed.
+    /// This means a direction change mid-animation preserves the anim
+    /// frame position — only the orientation base shifts.
+    Enemy {
+        position: [f32; 3],
+        mobile_id: u8,
+        /// Frames per orientation in the atlas (M). All 8 orientations
+        /// carry the same count (DFU move records are uniform per enemy).
+        anim_frame_count: u32,
+        /// DFU animation speed: 6fps ground, 10fps flying.
+        anim_fps: u32,
+    },
 }
 
 /// One entry in the consolidated per-tick frame diff.
@@ -80,13 +95,23 @@ impl AnimationService {
         });
     }
 
-    /// Register an enemy directional sprite for animation.
-    pub fn add_enemy(&mut self, handle: u32, position: [f32; 3], mobile_id: u8) {
+    /// Register an enemy directional sprite for animation. The atlas must be
+    /// laid out as 8 × `anim_frame_count` cells (orientation × anim_frame).
+    pub fn add_enemy(
+        &mut self,
+        handle: u32,
+        position: [f32; 3],
+        mobile_id: u8,
+        anim_frame_count: u32,
+    ) {
+        let anim_fps = move_fps(mobile_id);
         self.entries.push(SpriteEntry {
             handle,
             kind: SpriteKind::Enemy {
                 position,
                 mobile_id,
+                anim_frame_count,
+                anim_fps,
             },
             last_frame: None,
         });
@@ -122,15 +147,22 @@ impl AnimationService {
                 }
                 SpriteKind::Enemy {
                     position,
-                    mobile_id,
+                    anim_frame_count,
+                    anim_fps,
                     ..
                 } => {
-                    // Idle: frame = orientation only (idle records are 1-frame
-                    // for all our enemies). The directional evaluator maps
-                    // camera pose → 8-sector orientation. Move-state animation
-                    // (orientation × anim_frames + cycle) arrives with 6641.
-                    let _ = mobile_id; // used when move-state is added
-                    evaluate_directional(*position, camera) as u32
+                    // Orientation from camera (0-7 DFU sectors).
+                    let orientation = evaluate_directional(*position, camera) as u32;
+                    // Anim frame from global elapsed time. Independent of
+                    // orientation — a direction change mid-animation preserves
+                    // the anim frame position.
+                    let anim_frame = if *anim_frame_count <= 1 {
+                        0
+                    } else {
+                        ((self.elapsed * *anim_fps as f32) as u32) % anim_frame_count
+                    };
+                    // Atlas layout: orientation * M + anim_frame.
+                    orientation * anim_frame_count + anim_frame
                 }
             };
             if entry.last_frame != Some(frame) {
@@ -151,16 +183,7 @@ impl Default for AnimationService {
     }
 }
 
-/// DFU animation speed for a mobile type's idle state.
-pub fn idle_fps(mobile_id: u8) -> u32 {
-    match mobile::mobile_type(mobile_id) {
-        Some(m) if m.flying => FLY_ANIM_SPEED,
-        Some(m) if m.has_idle => IDLE_ANIM_SPEED,
-        _ => MOVE_ANIM_SPEED,
-    }
-}
-
-/// DFU animation speed for a mobile type's move state.
+/// DFU animation speed for a mobile type's move state (ground=6, flying=10).
 pub fn move_fps(mobile_id: u8) -> u32 {
     match mobile::mobile_type(mobile_id) {
         Some(m) if m.flying => FLY_ANIM_SPEED,
@@ -177,7 +200,6 @@ mod tests {
         let mut svc = AnimationService::new();
         svc.add_env(100, 4); // 4-frame torch at 5fps
 
-        // t=0: frame 0
         let u = svc.evaluate(0.0, [0.0, 0.0, 0.0]);
         assert_eq!(
             u,
@@ -187,8 +209,7 @@ mod tests {
             }]
         );
 
-        // 0.2s = 1 frame at 5fps
-        let u = svc.evaluate(0.2, [0.0, 0.0, 0.0]);
+        let u = svc.evaluate(0.2, [0.0, 0.0, 0.0]); // 0.2s = 1 frame at 5fps
         assert_eq!(
             u,
             vec![FrameUpdate {
@@ -197,7 +218,6 @@ mod tests {
             }]
         );
 
-        // 0.4s = 2 frames
         let u = svc.evaluate(0.2, [0.0, 0.0, 0.0]);
         assert_eq!(
             u,
@@ -207,7 +227,6 @@ mod tests {
             }]
         );
 
-        // 0.6s = 3 frames
         let u = svc.evaluate(0.2, [0.0, 0.0, 0.0]);
         assert_eq!(
             u,
@@ -217,8 +236,7 @@ mod tests {
             }]
         );
 
-        // 0.8s = wraps to 0
-        let u = svc.evaluate(0.2, [0.0, 0.0, 0.0]);
+        let u = svc.evaluate(0.2, [0.0, 0.0, 0.0]); // wraps to 0
         assert_eq!(
             u,
             vec![FrameUpdate {
@@ -232,10 +250,7 @@ mod tests {
     fn no_diff_when_frame_unchanged() {
         let mut svc = AnimationService::new();
         svc.add_env(200, 5);
-
-        // t=0 → frame 0
         let _ = svc.evaluate(0.0, [0.0, 0.0, 0.0]);
-        // Tiny dt, still frame 0 → no update
         let u = svc.evaluate(0.01, [0.0, 0.0, 0.0]);
         assert!(u.is_empty(), "no diff expected when frame unchanged");
     }
@@ -252,17 +267,17 @@ mod tests {
                 frame: 0
             }]
         );
-        // Never changes
         let u = svc.evaluate(1.0, [0.0, 0.0, 0.0]);
         assert!(u.is_empty());
     }
 
     #[test]
-    fn enemy_idle_uses_directional_orientation() {
+    fn enemy_combines_orientation_and_anim_frame() {
+        // SkeletalWarrior: 4 move frames per orientation, 6fps ground speed.
         let mut svc = AnimationService::new();
-        svc.add_enemy(400, [10.0, 33.0, -7.0], 15); // SkeletalWarrior
+        svc.add_enemy(400, [10.0, 33.0, -7.0], 15, 4);
 
-        // Camera in front: orientation 0
+        // t=0, camera in front: orientation 0, anim_frame 0 → frame 0
         let u = svc.evaluate(0.0, [10.5, 34.4, -11.0]);
         assert_eq!(
             u,
@@ -272,13 +287,63 @@ mod tests {
             }]
         );
 
-        // Camera behind: orientation 4
+        // Camera behind: orientation 4, same anim_frame 0 → frame 4*4+0=16
         let u = svc.evaluate(0.0, [10.5, 34.4, -3.0]);
         assert_eq!(
             u,
             vec![FrameUpdate {
                 handle: 400,
-                frame: 4
+                frame: 16
+            }]
+        );
+    }
+
+    #[test]
+    fn enemy_direction_change_preserves_anim_frame() {
+        // SkeletalWarrior: 4 move frames, 6fps.
+        let mut svc = AnimationService::new();
+        svc.add_enemy(500, [10.0, 33.0, -7.0], 15, 4);
+
+        // Advance ~0.35s → anim_frame = floor(0.35 * 6) % 4 = 2
+        svc.evaluate(0.35, [10.5, 34.4, -11.0]); // front, frame = 0*4+2=2
+        let last = svc.entries[0].last_frame;
+        assert_eq!(last, Some(2));
+
+        // Change direction: back. Anim frame stays 2 → frame = 4*4+2=18
+        let u = svc.evaluate(0.0, [10.5, 34.4, -3.0]);
+        assert_eq!(
+            u,
+            vec![FrameUpdate {
+                handle: 500,
+                frame: 18
+            }]
+        );
+    }
+
+    #[test]
+    fn enemy_anim_frame_advances_independently() {
+        // SkeletalWarrior: 4 move frames, 6fps. Camera stays in front.
+        let mut svc = AnimationService::new();
+        svc.add_enemy(600, [10.0, 33.0, -7.0], 15, 4);
+
+        // t=0: orientation 0, anim_frame 0 → frame 0
+        let _ = svc.evaluate(0.0, [10.5, 34.4, -11.0]);
+        // ~0.17s later: anim_frame = floor(0.17 * 6) % 4 = 1 → frame 0*4+1=1
+        let u = svc.evaluate(0.17, [10.5, 34.4, -11.0]);
+        assert_eq!(
+            u,
+            vec![FrameUpdate {
+                handle: 600,
+                frame: 1
+            }]
+        );
+        // ~0.17s later: anim_frame = floor(0.34 * 6) % 4 = 2 → frame 2
+        let u = svc.evaluate(0.17, [10.5, 34.4, -11.0]);
+        assert_eq!(
+            u,
+            vec![FrameUpdate {
+                handle: 600,
+                frame: 2
             }]
         );
     }
@@ -286,8 +351,8 @@ mod tests {
     #[test]
     fn consolidated_diff_mixed_kinds() {
         let mut svc = AnimationService::new();
-        svc.add_env(1, 4); // torch
-        svc.add_enemy(2, [10.0, 33.0, -7.0], 15); // enemy
+        svc.add_env(1, 4); // torch: 4 frames at 5fps
+        svc.add_enemy(2, [10.0, 33.0, -7.0], 15, 4); // enemy: 4 frames at 6fps
 
         // t=0: both emit their initial frame
         let u = svc.evaluate(0.0, [10.5, 34.4, -11.0]);
@@ -301,30 +366,17 @@ mod tests {
             frame: 0
         }));
 
-        // 0.2s later: torch advances to frame 1, enemy stays at frame 0
+        // 0.2s later: torch advances to frame 1 (5fps), enemy advances to
+        // frame 1 (6fps: floor(0.2*6)%4=1 → orientation 0 * 4 + 1 = 1)
         let u = svc.evaluate(0.2, [10.5, 34.4, -11.0]);
-        assert_eq!(
-            u,
-            vec![FrameUpdate {
-                handle: 1,
-                frame: 1
-            }]
-        );
-    }
-
-    #[test]
-    fn fps_constants_match_dfu() {
-        assert_eq!(ENV_BILLBOARD_FPS, 5);
-        assert_eq!(MOVE_ANIM_SPEED, 6);
-        assert_eq!(FLY_ANIM_SPEED, 10);
-        assert_eq!(IDLE_ANIM_SPEED, 4);
-    }
-
-    #[test]
-    fn idle_fps_by_mobile_type() {
-        assert_eq!(idle_fps(0), IDLE_ANIM_SPEED); // Rat: has_idle
-        assert_eq!(idle_fps(1), FLY_ANIM_SPEED); // Imp: flying
-        assert_eq!(idle_fps(15), IDLE_ANIM_SPEED); // SkeletalWarrior: has_idle
+        assert!(u.contains(&FrameUpdate {
+            handle: 1,
+            frame: 1
+        }));
+        assert!(u.contains(&FrameUpdate {
+            handle: 2,
+            frame: 1
+        }));
     }
 
     #[test]

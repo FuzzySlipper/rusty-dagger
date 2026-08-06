@@ -439,17 +439,18 @@ fn publish_billboard_textures(
 }
 
 /// Decode and pack one directional sprite atlas per unique enemy mobile id:
-/// 8 orientation frames (frame 0 of each standing-anim record, mirrored when
-/// the DFU anim table flips that side) in a horizontal strip, plus an
-/// enemy-manifest.json mapping each atlas to its PNG sourcePath/hash/dims,
-/// per-frame UV rects, and DFU world sizes. generate-project.py consumes this
-/// to stamp enemy sprite resources and atlas frame descriptors.
+/// 8 orientations × M move-state frames in a horizontal strip (orientation *
+/// M + anim_frame layout), plus an enemy-manifest.json mapping each atlas to
+/// its PNG sourcePath/hash/dims, per-frame UV rects, and DFU world sizes.
+/// generate-project.py consumes this to stamp enemy sprite resources and atlas
+/// frame descriptors. The AnimationService uses the 8×M layout so direction
+/// changes preserve the current anim frame position.
 fn publish_enemy_atlases(
     dir: &std::path::Path,
     arena2_dir: &std::path::Path,
     enemies: &[dungeon::EnemyScene],
 ) {
-    use arena2::mobile::{mobile_type, record_world_size, standing_anims};
+    use arena2::mobile::{mobile_type, record_world_size, MOVE_ANIMS};
     use arena2::palette::Palette;
     use arena2::texture::TextureFile;
     use std::collections::BTreeMap;
@@ -464,7 +465,7 @@ fn publish_enemy_atlases(
     let mut failures = 0usize;
     for id in unique.keys() {
         let mobile = mobile_type(*id).expect("mobile type for collected enemy");
-        let anims = standing_anims(mobile);
+        let anims = MOVE_ANIMS; // Move-state animation (4-8 frames per record)
         let tex_path = arena2_dir.join(format!("TEXTURE.{:03}", mobile.texture_archive));
         let Ok(tex) = TextureFile::load(&tex_path) else {
             failures += 1;
@@ -474,51 +475,69 @@ fn publish_enemy_atlases(
             );
             continue;
         };
-        // Decode the 8 orientation frames.
+
+        // Determine the frame count per orientation record (all move records
+        // for a given enemy carry the same frame count).
+        let first_rec = anims[0].record as usize;
+        let anim_frame_count = tex
+            .record_info(first_rec)
+            .map(|i| i.frame_count.max(1) as usize)
+            .unwrap_or(1);
+
+        // Decode all frames for all 8 orientations.
+        // Each entry: (flip, w, h, indexed_pixels, world_size).
         let mut decoded: Vec<(bool, usize, usize, Vec<u8>, [f32; 2])> = Vec::new();
         let mut failed = false;
         for anim in anims.iter() {
             let rec = anim.record as usize;
-            match (tex.frame_pixels(rec, 0), tex.record_info(rec)) {
-                (Ok((w, h, indexed)), Some(info)) => {
-                    let size =
-                        record_world_size(info.width, info.height, info.scale_x, info.scale_y);
-                    decoded.push((anim.flip, w, h, indexed, size));
-                }
-                _ => {
+            let info = match tex.record_info(rec) {
+                Some(i) => i,
+                None => {
                     failures += 1;
                     eprintln!(
-                        "enemy atlas warning: TEXTURE.{:03} rec {} decode failed ({} skipped)",
-                        mobile.texture_archive, anim.record, mobile.name
+                        "enemy atlas warning: TEXTURE.{:03} rec {} missing",
+                        mobile.texture_archive, rec
                     );
                     failed = true;
                     break;
                 }
+            };
+            let size = record_world_size(info.width, info.height, info.scale_x, info.scale_y);
+            for f in 0..anim_frame_count {
+                match tex.frame_pixels(rec, f) {
+                    Ok((w, h, indexed)) => {
+                        decoded.push((anim.flip, w, h, indexed, size));
+                    }
+                    Err(e) => {
+                        failures += 1;
+                        eprintln!(
+                            "enemy atlas warning: TEXTURE.{:03} rec {} frame {f}: {e}",
+                            mobile.texture_archive, rec
+                        );
+                        failed = true;
+                        break;
+                    }
+                }
+            }
+            if failed {
+                break;
             }
         }
         if failed {
             continue;
         }
-        // Pack horizontally into one atlas of 8 uniform cells (max frame dims,
-        // each frame bottom-center aligned; palette index 0 = transparent).
-        // Uniform full-height cells mean every frame rect covers its whole
-        // cell, so the fixed-size quad maps each frame's pixels 1:1 — small
-        // frames keep their proportions (transparent margins) instead of
-        // being stretched, and the authored position stays the pivot for
-        // every orientation. (DFU resizes the billboard per frame; the
-        // renderer cannot, so per-frame scale-factor differences of a few
-        // percent remain.)
+
+        let total_cells = 8 * anim_frame_count;
         let cell_w: usize = decoded.iter().map(|d| d.1).max().unwrap_or(0);
         let cell_h: usize = decoded.iter().map(|d| d.2).max().unwrap_or(0);
-        let atlas_w: usize = cell_w * 8;
+        let atlas_w: usize = cell_w * total_cells;
         let atlas_h: usize = cell_h;
         let mut atlas = vec![0u8; atlas_w * atlas_h * 4];
         let mut frame_entries: Vec<String> = Vec::new();
         let mut x0 = 0usize;
-        for (orientation, (flip, w, h, indexed, size)) in decoded.iter().enumerate() {
+        for (idx, (flip, w, h, indexed, size)) in decoded.iter().enumerate() {
             let mut rgba = palette.to_rgba_transparent(indexed);
             if *flip {
-                // Mirror each row horizontally (DFU FlipLeftRight).
                 for row in rgba.chunks_mut(w * 4) {
                     for px in 0..w / 2 {
                         for c in 0..4 {
@@ -527,7 +546,6 @@ fn publish_enemy_atlases(
                     }
                 }
             }
-            // Bottom-center the frame within its uniform cell.
             let dx = x0 + (cell_w - w) / 2;
             let dy = cell_h - h;
             for (row_i, row) in rgba.chunks(w * 4).enumerate() {
@@ -535,10 +553,11 @@ fn publish_enemy_atlases(
                 atlas[dst..dst + w * 4].copy_from_slice(row);
             }
             frame_entries.push(format!(
-                "      {{\"frame\":{orientation},\"uvMin\":[{},0],\"uvMax\":[{},1],\"size\":[{:?},{:?}]}}",
+                "      {{\"frame\":{idx},\"uvMin\":[{},0],\"uvMax\":[{},1],\"size\":[{:?},{:?}]}}",
                 x0 as f64 / atlas_w as f64,
                 (x0 + cell_w) as f64 / atlas_w as f64,
-                size[0], size[1]
+                size[0],
+                size[1]
             ));
             x0 += cell_w;
         }

@@ -234,11 +234,29 @@ export async function dumpFrame() {
       kind: 'rusty_renderer_texture_resources.v1',
       resources: textureResources,
     }));
+    // Enemy atlas frame counts (6640): the atlas total frame count from
+    // defineSpriteAtlas ops for enemy assets. The AnimationService divides
+    // by 8 to get anim_frame_count per orientation.
+    const enemyAtlasFrames = {};
+    for (const op of frame.ops) {
+      if (op.op === 'defineSpriteAtlas' && op.atlas) {
+        const key = op.atlas.id ?? op.atlas.asset ?? '';
+        if (key.startsWith('texture/enemy-')) {
+          // Extract mobile id from "texture/enemy-<id>-atlas"
+          const match = key.match(/enemy-(\d+)-atlas/);
+          if (match) {
+            enemyAtlasFrames[match[1]] = op.atlas.frames?.length ?? 8;
+          }
+        }
+      }
+    }
+
     await writeFile(resolve(GENERATED, 'enemies.json'), `${JSON.stringify({
       target: target === null ? null : { ...target, index: targetIndex },
       enemies,
       sprites,
       animatedBillboards,
+      enemyAtlasFrames,
       poseAssignments,
       orbit,
       spawn: sceneMeta.startMarker ?? null,

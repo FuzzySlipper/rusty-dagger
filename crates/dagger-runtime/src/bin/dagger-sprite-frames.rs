@@ -99,6 +99,8 @@ fn assignments_json(positions: &[[f32; 3]], camera: [f32; 3]) -> String {
 struct SpriteMetadata {
     enemies: Vec<(u32, [f32; 3], u8)>, // (handle, position, mobile_id)
     animated_billboards: Vec<(u32, u32)>, // (handle, frame_count)
+    /// Enemy atlas total frame count per mobile_id (8 * M).
+    enemy_atlas_frames: std::collections::HashMap<u8, u32>,
 }
 
 fn load_sprite_metadata(path: &str) -> SpriteMetadata {
@@ -148,16 +150,40 @@ fn load_sprite_metadata(path: &str) -> SpriteMetadata {
         })
         .collect();
 
+    let enemy_atlas_frames: std::collections::HashMap<u8, u32> = data
+        .get("enemyAtlasFrames")
+        .and_then(serde_json::Value::as_object)
+        .map(|m| {
+            m.iter()
+                .filter_map(|(k, v)| {
+                    let id = k.parse::<u8>().ok()?;
+                    let count = v.as_u64()? as u32;
+                    Some((id, count))
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
     SpriteMetadata {
         enemies,
         animated_billboards,
+        enemy_atlas_frames,
     }
 }
 
 fn build_service(meta: &SpriteMetadata) -> AnimationService {
     let mut svc = AnimationService::new();
     for &(handle, position, mobile_id) in &meta.enemies {
-        svc.add_enemy(handle, position, mobile_id);
+        // Compute anim_frame_count from the atlas: the enemy atlas has
+        // 8 orientations × M frames. We get the total from the atlas frame
+        // count and divide by 8.
+        let total = meta
+            .enemy_atlas_frames
+            .get(&mobile_id)
+            .copied()
+            .unwrap_or(8);
+        let anim_frame_count = total / 8;
+        svc.add_enemy(handle, position, mobile_id, anim_frame_count.max(1));
     }
     for &(handle, frame_count) in &meta.animated_billboards {
         svc.add_env(handle, frame_count);
