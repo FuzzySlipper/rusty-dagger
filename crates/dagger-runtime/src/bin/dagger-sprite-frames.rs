@@ -225,8 +225,36 @@ fn serve(meta_path: &str, addr: &str) {
                     ))
                 })
                 .collect();
-            let spawns: Vec<(u32, [f32; 3])> =
-                meta.enemies.iter().map(|&(h, pos, _)| (h, pos)).collect();
+
+            // Ground spawns using navgrid.json's spawn array (task 6639
+            // already computed the correct floor support per spawn).
+            let nav_spawns = ng
+                .get("spawns")
+                .and_then(serde_json::Value::as_array)
+                .cloned()
+                .unwrap_or_default();
+            let spawns: Vec<(u32, [f32; 3])> = meta
+                .enemies
+                .iter()
+                .map(|&(handle, authored_pos, _)| {
+                    // Match this enemy to a navgrid spawn by position proximity.
+                    let grounded = nav_spawns
+                        .iter()
+                        .filter_map(|s| {
+                            let sp = s.get("spawn")?.as_array()?;
+                            let dx = sp.first()?.as_f64()? as f32 - authored_pos[0];
+                            let dz = sp.get(2)?.as_f64()? as f32 - authored_pos[2];
+                            let dy = sp.get(1)?.as_f64()? as f32 - authored_pos[1];
+                            let d2 = dx * dx + dy * dy + dz * dz;
+                            let ly = s.get("landingY")?.as_f64()? as f32;
+                            Some((d2, ly))
+                        })
+                        .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+                        .map(|(_, ly)| ly)
+                        .unwrap_or(authored_pos[1]);
+                    (handle, [authored_pos[0], grounded, authored_pos[2]])
+                })
+                .collect();
             Some(PatrolService::new(&cells, &spawns))
         });
 
