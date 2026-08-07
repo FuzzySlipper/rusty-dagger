@@ -142,6 +142,61 @@ try {
       return map ? map.size : 0;
     });
     check(gizmoVisible >= 40, `gizmo map size after patrol ${gizmoVisible} <40`);
+
+    // --- R6671-2: assert authoritative live gizmo frame ops (translation + directional quaternion) ---
+    const frameProof = await page.evaluate(() => {
+      const last = window.__lastPatrolByHandle;
+      const ops = window.__lastFrameOps;
+      const liveMap = window.__liveGizmoMap;
+      if (!last || !ops || !liveMap) return { ok: false, reason: `missing lastPatrol (${!!last}) ops (${!!ops}) liveMap (${!!liveMap})` };
+      // ops only contains transforms for NPCs that moved this tick (patrol returns moving subset).
+      // Search the current frame's ops for any sprite whose patrol heading is non-zero and whose
+      // live gizmo anchor+arrow are also in the same frame. That triple proves the renderer was
+      // told the correct authoritative translation+rotation.
+      const eps = 0.02;
+      let best = null;
+      for (const op of ops) {
+        if (op.op !== 'update' || !op.transform || !op.transform.rotation) continue;
+        const patrolEntry = last.get(op.handle);
+        if (!patrolEntry) continue;
+        const h = patrolEntry.heading;
+        if (Math.abs(h) < 0.15) continue;
+        const entry = liveMap.get(op.handle);
+        if (!entry) continue;
+        const anchorOp = ops.find((o) => o.handle === entry.anchor && o.transform && o.transform.translation);
+        const arrowOp = ops.find((o) => o.handle === entry.arrow && o.transform && o.transform.translation);
+        if (!anchorOp || !arrowOp) continue;
+        best = { patrolEntry, entry, spriteOp: op, anchorOp, arrowOp, h };
+        break;
+      }
+      if (!best) return { ok: false, reason: `no frame triple with heading>0.15 and live gizmo ops (last size ${last.size}, ops ${ops.length}, liveMap ${liveMap.size})` };
+      const { patrolEntry: moved, spriteOp, anchorOp, arrowOp, h } = best;
+      const expectedRot = [0, -Math.sin(h * 0.5), 0, Math.cos(h * 0.5)];
+      const details = { handle: moved.handle, heading: h, expectedRot, spriteOp: spriteOp.transform, anchorOp: anchorOp.transform, arrowOp: arrowOp.transform, translation: moved.translation };
+      // sprite translation should match patrol translation within eps
+      const st = spriteOp.transform.translation;
+      const mt = moved.translation;
+      if (Math.hypot(st[0]-mt[0], st[1]-mt[1], st[2]-mt[2]) > eps) return { ok: false, reason: `sprite translation ${JSON.stringify(st)} != patrol ${JSON.stringify(mt)}`, details };
+      // sprite rotation should match expectedRot (sign-corrected) within 1e-3
+      const sr = spriteOp.transform.rotation;
+      if (Math.abs(sr[1]-expectedRot[1]) > 1e-3 || Math.abs(sr[3]-expectedRot[3]) > 1e-3) return { ok: false, reason: `sprite rotation ${JSON.stringify(sr)} != expected ${JSON.stringify(expectedRot)} for heading ${h}`, details };
+      // anchor translation should equal patrol translation
+      const at = anchorOp.transform.translation;
+      if (Math.hypot(at[0]-mt[0], at[1]-mt[1], at[2]-mt[2]) > eps) return { ok: false, reason: `anchor translation ${JSON.stringify(at)} != patrol ${JSON.stringify(mt)}`, details };
+      // arrow rotation should equal expectedRot
+      const ar = arrowOp.transform.rotation;
+      if (Math.abs(ar[1]-expectedRot[1]) > 1e-3 || Math.abs(ar[3]-expectedRot[3]) > 1e-3) return { ok: false, reason: `arrow rotation ${JSON.stringify(ar)} != expected ${JSON.stringify(expectedRot)}`, details };
+      // arrow translation should be offset 0.18m along heading + 0.12m up
+      const expectedArrow = [mt[0] + Math.cos(h)*0.18, mt[1]+0.12, mt[2]+Math.sin(h)*0.18];
+      const art = arrowOp.transform.translation;
+      if (Math.hypot(art[0]-expectedArrow[0], art[1]-expectedArrow[1], art[2]-expectedArrow[2]) > eps) return { ok: false, reason: `arrow translation ${JSON.stringify(art)} != expected ${JSON.stringify(expectedArrow)} for heading ${h}`, details };
+      const qy = ar[1], qw = ar[3];
+      const rotatedX_z = -2*qw*qy;
+      if (Math.sign(rotatedX_z) !== Math.sign(Math.sin(h)) && Math.abs(Math.sin(h)) > 0.1) return { ok: false, reason: `rotated +X z ${rotatedX_z} sign mismatches sin(heading)=${Math.sin(h)} (sign-reversed quaternion?)`, details };
+      return { ok: true, details };
+    });
+    console.log(`frameProof: ${JSON.stringify(frameProof).slice(0,1200)}`);
+    check(frameProof.ok, `live gizmo frame proof failed: ${frameProof.reason ?? 'unknown'} — ${JSON.stringify(frameProof.details ?? {}).slice(0,800)}`);
   }
 
   check(consoleErrors.length === 0, `${consoleErrors.length} console errors: ${consoleErrors.slice(0,3).join(' | ')}`);
