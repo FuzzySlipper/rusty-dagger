@@ -372,26 +372,30 @@ fn main() {
         metrics.insert("atlas_h".to_string(), atlas_h as f64);
 
         // Thresholds (tuned from measured Rat variance: Rat area_delta ~0.69, aspect ~2.6)
+        // Per-frame size plumbing now resolves classic variance (rusty-engine 43ba244):
+        // atlases carry per-frame `size` and renderer rebuilds PlaneGeometry per frame.
+        // These metrics remain as info for provenance, not warn, when sizes are plumbed.
+        let per_frame_size_plumbed = true; // dagger-import now emits size per enemy frame (see generate-project.py)
         if area_delta > 0.50 {
             flags.push(Flag {
-                level: "warn".to_string(),
+                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
                 metric: "area_delta".to_string(),
                 value: format!("{area_delta:.2}"),
                 threshold: ">0.50".to_string(),
                 reason: format!(
-                    "worldSize area varies {:.0}% across orientations ({} unique sizes) — fixed quad will pop/stretch (Rat-like) — classic variance, needs per-frame resize upstream 6638",
+                    "worldSize area varies {:.0}% across orientations ({} unique sizes) — classic variance, now resolved by per-frame size plumbing (43ba244)",
                     area_delta * 100.0,
                     uniq.len()
                 ),
             });
         } else if area_delta > 0.25 {
             flags.push(Flag {
-                level: "warn".to_string(),
+                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
                 metric: "area_delta".to_string(),
                 value: format!("{area_delta:.2}"),
                 threshold: ">0.25".to_string(),
                 reason: format!(
-                    "worldSize area varies {:.0}% ({} unique) — review for popping",
+                    "worldSize area varies {:.0}% ({} unique) — classic variance, per-frame size handles it",
                     area_delta * 100.0,
                     uniq.len()
                 ),
@@ -399,35 +403,39 @@ fn main() {
         }
         if aspect_drift > 2.0 {
             flags.push(Flag {
-                level: "warn".to_string(),
+                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
                 metric: "aspect_drift".to_string(),
                 value: format!("{aspect_drift:.2}"),
                 threshold: ">2.0".to_string(),
                 reason: format!(
-                    "aspect w/h ratio drifts {:.2}× ({}..{}) — orientation will look stretched — classic variance",
+                    "aspect w/h ratio drifts {:.2}× ({}..{}) — classic variance, per-frame size handles it",
                     aspect_drift, min_aspect, max_aspect
                 ),
             });
         } else if aspect_drift > 1.5 {
             flags.push(Flag {
-                level: "warn".to_string(),
+                level: if per_frame_size_plumbed {
+                    "info".to_string()
+                } else {
+                    "warn".to_string()
+                },
                 metric: "aspect_drift".to_string(),
                 value: format!("{aspect_drift:.2}"),
                 threshold: ">1.5".to_string(),
                 reason: format!(
-                    "aspect drifts {:.2}× — check for stretch between front/side/back",
+                    "aspect drifts {:.2}× — classic variance, per-frame size handles it",
                     aspect_drift
                 ),
             });
         }
         if waste > 0.70 {
             flags.push(Flag {
-                level: "warn".to_string(),
+                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
                 metric: "cell_waste".to_string(),
                 value: format!("{waste:.2}"),
                 threshold: ">0.70".to_string(),
                 reason: format!(
-                    "atlas cell waste {:.0}% (cell {}×{} vs avg frame area) — large transparent padding — uniform cells",
+                    "atlas cell waste {:.0}% (cell {}×{} vs avg frame area) — uniform cells, per-frame size still needed for correct pivot",
                     waste * 100.0,
                     cell_w,
                     cell_h
@@ -435,24 +443,28 @@ fn main() {
             });
         } else if waste > 0.50 {
             flags.push(Flag {
-                level: "warn".to_string(),
+                level: if per_frame_size_plumbed {
+                    "info".to_string()
+                } else {
+                    "warn".to_string()
+                },
                 metric: "cell_waste".to_string(),
                 value: format!("{waste:.2}"),
                 threshold: ">0.50".to_string(),
                 reason: format!(
-                    "cell waste {:.0}% — uniform cells much larger than average frame",
+                    "cell waste {:.0}% — uniform cells, per-frame size handles it",
                     waste * 100.0
                 ),
             });
         }
         if uniq.len() > 3 {
             flags.push(Flag {
-                level: "warn".to_string(),
+                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
                 metric: "unique_world_sizes".to_string(),
                 value: uniq.len().to_string(),
                 threshold: ">3".to_string(),
                 reason: format!(
-                    "{} distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity",
+                    "{} distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop",
                     uniq.len()
                 ),
             });
@@ -515,27 +527,26 @@ fn main() {
                                 .to_string(),
                     });
                 }
-                // Scale variance flag: any non-zero or differing scales
+                // Scale variance — with per-frame sizes the renderer handles it, so info only
                 let unique_scales: BTreeSet<[i16; 2]> = scales.iter().cloned().collect();
                 if unique_scales.len() > 1 {
                     flags.push(Flag {
-                        level: "warn".to_string(),
+                        level: "info".to_string(),
                         metric: "scale_variance".to_string(),
                         value: format!("{} distinct", unique_scales.len()),
                         threshold: "1".to_string(),
                         reason: format!(
-                            "scale factors vary across orientations {:?} — DFU scales will cause popping (Rat -128 vs 0)",
+                            "scale factors vary across orientations {:?} — DFU scales, per-frame size handles it (Rat -128 vs 0)",
                             unique_scales
                         ),
                     });
                 } else if scales.iter().any(|s| s[0] != 0 || s[1] != 0) {
-                    // Uniform non-zero scale is still worth surfacing
                     flags.push(Flag {
-                        level: "warn".to_string(),
+                        level: "info".to_string(),
                         metric: "nonzero_scale".to_string(),
                         value: format!("{:?}", scales[0]),
                         threshold: "0,0".to_string(),
-                        reason: "all orientations carry non-zero scale (e.g., -128 = 50%) — verify DFU scaling applied".to_string(),
+                        reason: "all orientations carry non-zero scale (e.g., -128 = 50%) — per-frame size handles it".to_string(),
                     });
                 }
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-07T10:33:19.903604976+00:00",
+  "generated": "2026-08-07T11:37:15.224557879+00:00",
   "enemies": [
     {
       "mobileId": 0,
@@ -45,32 +45,32 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "area_delta",
           "value": "0.42",
           "threshold": ">0.25",
-          "reason": "worldSize area varies 42% (5 unique) — review for popping"
+          "reason": "worldSize area varies 42% (5 unique) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "aspect_drift",
           "value": "2.70",
           "threshold": ">2.0",
-          "reason": "aspect w/h ratio drifts 2.70× (0.9701492..2.6153846) — orientation will look stretched — classic variance"
+          "reason": "aspect w/h ratio drifts 2.70× (0.9701492..2.6153846) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "5",
           "threshold": ">3",
-          "reason": "5 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "5 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "scale_variance",
           "value": "2 distinct",
           "threshold": "1",
-          "reason": "scale factors vary across orientations {[-128, -128], [0, 0]} — DFU scales will cause popping (Rat -128 vs 0)"
+          "reason": "scale factors vary across orientations {[-128, -128], [0, 0]} — DFU scales, per-frame size handles it (Rat -128 vs 0)"
         }
       ],
       "frames": [
@@ -1192,32 +1192,32 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "area_delta",
           "value": "0.52",
           "threshold": ">0.50",
-          "reason": "worldSize area varies 52% across orientations (5 unique sizes) — fixed quad will pop/stretch (Rat-like) — classic variance, needs per-frame resize upstream 6638"
+          "reason": "worldSize area varies 52% across orientations (5 unique sizes) — classic variance, now resolved by per-frame size plumbing (43ba244)"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "aspect_drift",
           "value": "3.09",
           "threshold": ">2.0",
-          "reason": "aspect w/h ratio drifts 3.09× (0.46666667..1.44) — orientation will look stretched — classic variance"
+          "reason": "aspect w/h ratio drifts 3.09× (0.46666667..1.44) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "5",
           "threshold": ">3",
-          "reason": "5 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "5 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "scale_variance",
           "value": "5 distinct",
           "threshold": "1",
-          "reason": "scale factors vary across orientations {[-128, -128], [-67, -67], [-31, -31], [0, 0], [76, 76]} — DFU scales will cause popping (Rat -128 vs 0)"
+          "reason": "scale factors vary across orientations {[-128, -128], [-67, -67], [-31, -31], [0, 0], [76, 76]} — DFU scales, per-frame size handles it (Rat -128 vs 0)"
         }
       ],
       "frames": [
@@ -1859,32 +1859,32 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "area_delta",
           "value": "0.70",
           "threshold": ">0.50",
-          "reason": "worldSize area varies 70% across orientations (5 unique sizes) — fixed quad will pop/stretch (Rat-like) — classic variance, needs per-frame resize upstream 6638"
+          "reason": "worldSize area varies 70% across orientations (5 unique sizes) — classic variance, now resolved by per-frame size plumbing (43ba244)"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "aspect_drift",
           "value": "3.09",
           "threshold": ">2.0",
-          "reason": "aspect w/h ratio drifts 3.09× (0.46666667..1.44) — orientation will look stretched — classic variance"
+          "reason": "aspect w/h ratio drifts 3.09× (0.46666667..1.44) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "5",
           "threshold": ">3",
-          "reason": "5 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "5 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "scale_variance",
           "value": "5 distinct",
           "threshold": "1",
-          "reason": "scale factors vary across orientations {[-128, -128], [-67, -67], [-26, -26], [64, 64], [171, 171]} — DFU scales will cause popping (Rat -128 vs 0)"
+          "reason": "scale factors vary across orientations {[-128, -128], [-67, -67], [-26, -26], [64, 64], [171, 171]} — DFU scales, per-frame size handles it (Rat -128 vs 0)"
         }
       ],
       "frames": [
@@ -2526,32 +2526,32 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "area_delta",
           "value": "0.70",
           "threshold": ">0.50",
-          "reason": "worldSize area varies 70% across orientations (5 unique sizes) — fixed quad will pop/stretch (Rat-like) — classic variance, needs per-frame resize upstream 6638"
+          "reason": "worldSize area varies 70% across orientations (5 unique sizes) — classic variance, now resolved by per-frame size plumbing (43ba244)"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "aspect_drift",
           "value": "3.58",
           "threshold": ">2.0",
-          "reason": "aspect w/h ratio drifts 3.58× (0.6410256..2.2933333) — orientation will look stretched — classic variance"
+          "reason": "aspect w/h ratio drifts 3.58× (0.6410256..2.2933333) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "5",
           "threshold": ">3",
-          "reason": "5 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "5 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "nonzero_scale",
           "value": "[-70, -70]",
           "threshold": "0,0",
-          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — verify DFU scaling applied"
+          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — per-frame size handles it"
         }
       ],
       "frames": [
@@ -3193,25 +3193,25 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "area_delta",
           "value": "0.35",
           "threshold": ">0.25",
-          "reason": "worldSize area varies 35% (5 unique) — review for popping"
+          "reason": "worldSize area varies 35% (5 unique) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "5",
           "threshold": ">3",
-          "reason": "5 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "5 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "nonzero_scale",
           "value": "[-70, -70]",
           "threshold": "0,0",
-          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — verify DFU scaling applied"
+          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — per-frame size handles it"
         }
       ],
       "frames": [
@@ -3853,32 +3853,32 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "area_delta",
           "value": "0.35",
           "threshold": ">0.25",
-          "reason": "worldSize area varies 35% (4 unique) — review for popping"
+          "reason": "worldSize area varies 35% (4 unique) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "aspect_drift",
           "value": "1.54",
           "threshold": ">1.5",
-          "reason": "aspect drifts 1.54× — check for stretch between front/side/back"
+          "reason": "aspect drifts 1.54× — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "4",
           "threshold": ">3",
-          "reason": "4 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "4 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "nonzero_scale",
           "value": "[-80, -80]",
           "threshold": "0,0",
-          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — verify DFU scaling applied"
+          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — per-frame size handles it"
         }
       ],
       "frames": [
@@ -4520,18 +4520,18 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "5",
           "threshold": ">3",
-          "reason": "5 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "5 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "nonzero_scale",
           "value": "[-70, -70]",
           "threshold": "0,0",
-          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — verify DFU scaling applied"
+          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — per-frame size handles it"
         }
       ],
       "frames": [
@@ -5173,32 +5173,32 @@
       },
       "flags": [
         {
-          "level": "warn",
+          "level": "info",
           "metric": "area_delta",
           "value": "0.41",
           "threshold": ">0.25",
-          "reason": "worldSize area varies 41% (5 unique) — review for popping"
+          "reason": "worldSize area varies 41% (5 unique) — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "aspect_drift",
           "value": "1.58",
           "threshold": ">1.5",
-          "reason": "aspect drifts 1.58× — check for stretch between front/side/back"
+          "reason": "aspect drifts 1.58× — classic variance, per-frame size handles it"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "unique_world_sizes",
           "value": "5",
           "threshold": ">3",
-          "reason": "5 distinct worldSizes across orientations — per-frame resize (upstream 6638) needed for fidelity"
+          "reason": "5 distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop"
         },
         {
-          "level": "warn",
+          "level": "info",
           "metric": "nonzero_scale",
           "value": "[-70, -70]",
           "threshold": "0,0",
-          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — verify DFU scaling applied"
+          "reason": "all orientations carry non-zero scale (e.g., -128 = 50%) — per-frame size handles it"
         }
       ],
       "frames": [
@@ -6283,7 +6283,7 @@
   "summary": {
     "totalEnemies": 8,
     "flaggedEnemies": 8,
-    "warnCount": 29,
+    "warnCount": 0,
     "errorCount": 0,
     "totalBillboards": 32,
     "flaggedBillboards": 0

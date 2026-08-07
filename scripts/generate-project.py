@@ -172,7 +172,9 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
     # Enemy directional sprite atlases (6595). One texture asset per unique
     # enemy mobile id; the importer-packed PNG holds the 8 orientation frames
     # (mirrored sides baked) and the manifest carries per-frame UV rects and
-    # DFU world sizes.
+    # DFU world sizes — now plumbed as per-frame `size` for the renderer
+    # (rusty-engine 43ba244, per-frame sprite world sizes), so the quad
+    # resizes per orientation frame instead of stretching a fixed max quad.
     for enemy in enemy_manifest.get("enemies", []):
         slug = f"enemy-{enemy['mobileId']}-atlas"
         assets.append({
@@ -196,6 +198,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
                             "frame": f["frame"],
                             "uvMin": f["uvMin"],
                             "uvMax": f["uvMax"],
+                            "size": f["size"],
                         }
                         for f in enemy["frames"]
                     ],

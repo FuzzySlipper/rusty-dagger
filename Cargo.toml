@@ -12,12 +12,12 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-core-ids = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
-core-math = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
-core-space = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
-engine-spatial = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
-entity-state = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
-svc-collision = { git = "https://github.com/FuzzySlipper/rusty-engine.git", rev = "880a119466faebbf19ed05e39206ff4ba87237a2" }
+core-ids = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
+core-math = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
+core-space = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
+engine-spatial = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
+entity-state = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
+svc-collision = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
