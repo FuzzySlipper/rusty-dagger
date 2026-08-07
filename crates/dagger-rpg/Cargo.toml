@@ -1,0 +1,12 @@
+[package]
+name = "dagger-rpg"
+version.workspace = true
+edition.workspace = true
+description = "Daggerfall-fidelity, data-driven RPG tables and pure formulas (stats, combat, items, progression) — liftable to successor"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[lints]
+workspace = true

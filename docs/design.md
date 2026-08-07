@@ -116,10 +116,23 @@ modularity gate, task 6529):
 - `dagger-import` — CLI glue: drives arena2, assembles dungeon geometry and
   textures, emits GLB / engine mesh-json. Emitters (glb, png, meshjson) split
   out (→ `dagger-export`) if they outgrow the crate.
+- `dagger-rpg` — **new in 6683** (Phase 0 of campaign 6682): Daggerfall-fidelity,
+  data-driven RPG tables + pure formulas (attributes, derived stats, combat,
+  items/armor/weapons, monsters, leveling). Owns committed JSON under `data/`
+  (`data/stats.json`, `weapons.json`, `monsters.json`, `leveling.json`, …)
+  with `#[derive(Deserialize)]` structs and `pub fn` formulas (e.g.
+  `max_health`, `attack_roll`) in one place so later phases (6684..6690) can
+  tweak/port without inline magic numbers. Depends only on `serde`/`serde_json`;
+  liftable to the successor. Follows the d20 boundary (Rust owns vocabulary
+  and validation) and the roguelike minimal-file shape (one JSON per domain,
+  strictly validated). See `data/README.md` and `docs/companion-reuse.md`
+  "Data-driven content shape".
 - `dagger-runtime` — Daggerfall-owned project admission, player controller,
   and real-project collision walkthrough. It consumes only generic Rusty
-  Engine crates (git deps on the public repo); it does not import
-  loading-bay-game.
+  Engine crates (git deps on the public repo) and (from 6684 onward) the
+  local `dagger-rpg` tables; it does not import `loading-bay-game` or any
+  sibling repo. Owns live session state (EntityState + engine-spatial +
+  svc-collision) and will apply `dagger-rpg` formulas there.
 - `dagger-studio-adapter` — Rust-owned protocol-14 read-only admission and
   render projection for the committed Privateer's Hold project. The adapter
   reuses `dagger-runtime`; it rejects mutations until a Dagger-owned authority
@@ -128,9 +141,14 @@ modularity gate, task 6529):
   app, adapter lifecycle, normalized host-file browsing, and atomic
   per-project user settings. It is transport/presentation glue, not gameplay
   authority. See `docs/studio-host.md` for the runnable contract.
-- Planned: `dagger-content` (decoded materials/meshes with provenance),
-  `dagger-world` (dungeon session runtime: blocks, doors, lights, water
-  state), each arriving only when the code that needs a home exists.
+- `data/` — **committed, hand-authored JSON tables** for `dagger-rpg` (not
+  generated). Each file has `schemaVersion` + typed arrays. `content/` stays
+  generated output from `scripts/regenerate.sh` (GLB, mesh-json, texture
+  publication, navgrid, sprites). See `data/README.md`.
+- Planned: `dagger-content` (decoded materials/meshes with provenance — distinct
+  from `dagger-rpg` which owns numbers), `dagger-world` (dungeon session runtime:
+  blocks, doors, lights, water state), each arriving only when the code that
+  needs a home exists.
 - `engine-render-check/` — headless render proof through the real
   rusty-engine renderer (renderer-three browser surface, consumed from
   rusty-engine `main`): adapter protocol-14 readout -> vite page ->
@@ -138,6 +156,28 @@ modularity gate, task 6529):
   assertions + screenshots. This is the only render verification path —
   when the engine renderer lacks a capability, file an upstream task
   instead of building a side renderer.
+
+### Data-driven content shape (campaign 6682, task 6683)
+
+- **Tables are data, formulas are code, both in one crate.** `data/*.json`
+  (committed) holds numbers; `crates/dagger-rpg/src/lib.rs` (and later
+  `stats.rs`, `combat.rs`, `items.rs`, …) holds `Deserialize` structs + pure
+  fns. Tests load `data/*.json` via `include_str!` and assert against DFU-known
+  values — no inline constants in `dagger-runtime` call sites.
+- **JSON, not RON or Rust DSL at Phase 0.** Matches the engine's existing
+  `content/projects/*.project.json` shape, avoids a new `ron` dep, keeps
+  tooling trivial. Each file carries `schemaVersion`; strict validation on load
+  (unknown fields deny, bounds checked) gives the same safety as d20's
+  `generated.ts` contract and roguelike's `starter.json` compile without the
+  extra codegen step. Revisit RON/JSONC only if comments/bulk become painful.
+- **Copy, don't import.** Any snippet copied from `../rusty-engine-demo`,
+  `../rusty-d20`, or `../rusty-roguelike` lands in a dagger-owned crate with a
+  `// Adapted from <path> @<rev>` provenance line; no `path`/`git` dep on
+  siblings is allowed without a `docs/companion-reuse.md` entry. The only
+  cross-repo provider is `../rusty-engine` (`branch = "main"`).
+- **Successor lift:** `dagger-rpg` has no engine service deps, so the next
+  project can vendor the whole crate + `data/` directory and get the same
+  formulas without dragging `dagger-runtime`'s session or the demo's domain.
 
 ### Modularity gate evaluation (task 6529, 2026-08-03)
 
