@@ -203,67 +203,85 @@ fn serve(meta_path: &str, addr: &str) {
     let meta = load_sprite_metadata(meta_path);
     let mut svc = build_service(&meta);
 
-    // Load navgrid and create patrol service for NPC movement (6641).
-    // The navgrid.json is in the standard content path; load it relative
-    // to the current directory (serve-flycam.mjs runs from repo root).
-    let navgrid_path = "content/projects/privateers-hold.navgrid.json";
-    let mut patrol = std::fs::read_to_string(navgrid_path)
-        .ok()
-        .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok())
-        .and_then(|ng| {
-            let cells: Vec<(f64, f64, f64, f64)> = ng
-                .get("cells")
-                .and_then(serde_json::Value::as_array)?
-                .iter()
-                .filter_map(|c| c.as_array())
-                .filter_map(|a| {
-                    Some((
-                        a.first()?.as_f64()?,
-                        a.get(1)?.as_f64()?,
-                        a.get(2)?.as_f64()?,
-                        a.get(3)?.as_f64()?,
-                    ))
-                })
-                .collect();
+    // Resolve the navgrid path relative to the enemies.json file's location,
+    // not the process cwd. The enemies.json lives at
+    // <repo>/engine-render-check/generated/enemies.json, so the repo root is
+    // 3 parents up. This ensures the serve endpoint works regardless of the
+    // process working directory (R6641-1: launching from /tmp must not
+    // silently disable patrol).
+    let meta_dir = std::path::Path::new(meta_path)
+        .parent() // generated/
+        .and_then(|p| p.parent()) // engine-render-check/
+        .and_then(|p| p.parent()) // repo root
+        .unwrap_or(std::path::Path::new("."));
+    let navgrid_path = meta_dir.join("content/projects/privateers-hold.navgrid.json");
 
-            // Ground spawns using navgrid.json's spawn array (task 6639
-            // already computed the correct floor support per spawn).
-            let nav_spawns = ng
-                .get("spawns")
-                .and_then(serde_json::Value::as_array)
-                .cloned()
-                .unwrap_or_default();
-            let spawns: Vec<(u32, [f32; 3])> = meta
-                .enemies
-                .iter()
-                .map(|&(handle, authored_pos, _)| {
-                    // Match this enemy to a navgrid spawn by position proximity.
-                    let grounded = nav_spawns
-                        .iter()
-                        .filter_map(|s| {
-                            let sp = s.get("spawn")?.as_array()?;
-                            let dx = sp.first()?.as_f64()? as f32 - authored_pos[0];
-                            let dz = sp.get(2)?.as_f64()? as f32 - authored_pos[2];
-                            let dy = sp.get(1)?.as_f64()? as f32 - authored_pos[1];
-                            let d2 = dx * dx + dy * dy + dz * dz;
-                            let ly = s.get("landingY")?.as_f64()? as f32;
-                            Some((d2, ly))
-                        })
-                        .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
-                        .map(|(_, ly)| ly)
-                        .unwrap_or(authored_pos[1]);
-                    (handle, [authored_pos[0], grounded, authored_pos[2]])
-                })
-                .collect();
-            Some(PatrolService::new(&cells, &spawns))
+    let mut patrol = {
+        let nav_text = std::fs::read_to_string(&navgrid_path).unwrap_or_else(|e| {
+            eprintln!(
+                "fatal: navgrid not found at {}: {e}",
+                navgrid_path.display()
+            );
+            std::process::exit(1);
         });
+        let ng: serde_json::Value = serde_json::from_str(&nav_text).unwrap_or_else(|e| {
+            eprintln!("fatal: navgrid parse error: {e}");
+            std::process::exit(1);
+        });
+        let cells: Vec<(f64, f64, f64, f64)> = ng
+            .get("cells")
+            .and_then(serde_json::Value::as_array)
+            .unwrap_or_else(|| {
+                eprintln!("fatal: navgrid has no cells array");
+                std::process::exit(1);
+            })
+            .iter()
+            .filter_map(|c| c.as_array())
+            .filter_map(|a| {
+                Some((
+                    a.first()?.as_f64()?,
+                    a.get(1)?.as_f64()?,
+                    a.get(2)?.as_f64()?,
+                    a.get(3)?.as_f64()?,
+                ))
+            })
+            .collect();
 
-    if patrol.is_some() {
-        eprintln!(
-            "patrol:      {} NPCs grounded and patrolling",
-            meta.enemies.len()
-        );
-    }
+        // Ground spawns using navgrid.json's spawn array (task 6639
+        // already computed the correct floor support per spawn).
+        let nav_spawns = ng
+            .get("spawns")
+            .and_then(serde_json::Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let spawns: Vec<(u32, [f32; 3])> = meta
+            .enemies
+            .iter()
+            .map(|&(handle, authored_pos, _)| {
+                let grounded = nav_spawns
+                    .iter()
+                    .filter_map(|s| {
+                        let sp = s.get("spawn")?.as_array()?;
+                        let dx = sp.first()?.as_f64()? as f32 - authored_pos[0];
+                        let dz = sp.get(2)?.as_f64()? as f32 - authored_pos[2];
+                        let dy = sp.get(1)?.as_f64()? as f32 - authored_pos[1];
+                        let d2 = dx * dx + dy * dy + dz * dz;
+                        let ly = s.get("landingY")?.as_f64()? as f32;
+                        Some((d2, ly))
+                    })
+                    .min_by(|a, b| a.0.partial_cmp(&b.0).unwrap())
+                    .map(|(_, ly)| ly)
+                    .unwrap_or(authored_pos[1]);
+                (handle, [authored_pos[0], grounded, authored_pos[2]])
+            })
+            .collect();
+        PatrolService::new(&cells, &spawns)
+    };
+
+    eprintln!(
+        "patrol:      {} NPCs grounded and patrolling",
+        meta.enemies.len()
+    );
 
     let start = Instant::now();
     let mut last_elapsed = 0.0f32;
@@ -305,10 +323,10 @@ fn serve(meta_path: &str, addr: &str) {
                 last_elapsed = now;
 
                 // 1. Advance patrol (if loaded): moves NPCs on walkable cells.
-                let transform_json = if let Some(ref mut p) = patrol {
-                    let pos_updates = p.evaluate(dt);
+                let transform_json = {
+                    let pos_updates = patrol.evaluate(dt);
                     // Push updated positions + is_moving to animation service.
-                    svc.update_enemies(&p.positions());
+                    svc.update_enemies(&patrol.positions());
                     // Build transform JSON for the flycam to apply as `update` ops.
                     let entries: Vec<String> = pos_updates
                         .iter()
@@ -320,8 +338,6 @@ fn serve(meta_path: &str, addr: &str) {
                         })
                         .collect();
                     format!(",\"transforms\":[{}]", entries.join(","))
-                } else {
-                    String::new()
                 };
 
                 // 2. Evaluate animation (env flat + enemy directional frames).
