@@ -283,6 +283,11 @@ fn serve(meta_path: &str, addr: &str) {
         PatrolService::new(&cells, &spawns)
     };
 
+    if let Err(e) = patrol.validate() {
+        eprintln!("fatal: {e}");
+        std::process::exit(1);
+    }
+
     eprintln!(
         "patrol:      {} NPCs grounded and patrolling",
         meta.enemies.len()

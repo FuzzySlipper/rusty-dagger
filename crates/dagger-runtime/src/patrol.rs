@@ -287,6 +287,41 @@ impl PatrolService {
     pub fn is_empty(&self) -> bool {
         self.npcs.is_empty()
     }
+
+    /// Validate that every loaded NPC has at least one usable patrol candidate
+    /// at its grounded level within the patrol radius. Returns Err with a
+    /// diagnostic if any NPC is stranded (no walkable neighbors).
+    pub fn validate(&self) -> Result<(), String> {
+        let mut stranded = 0;
+        let mut first_stranded = None;
+        for npc in &self.npcs {
+            let ccx = (npc.position[0] / CELL_SIZE).floor() as i32;
+            let ccz = (npc.position[2] / CELL_SIZE).floor() as i32;
+            let found = (-PATROL_RADIUS_CELLS..=PATROL_RADIUS_CELLS).any(|dx| {
+                (-PATROL_RADIUS_CELLS..=PATROL_RADIUS_CELLS).any(|dz| {
+                    if dx == 0 && dz == 0 {
+                        return false;
+                    }
+                    self.grid
+                        .cells
+                        .contains_key(&(ccx + dx, ccz + dz, npc.level))
+                })
+            });
+            if !found {
+                stranded += 1;
+                if first_stranded.is_none() {
+                    first_stranded = Some(npc.handle);
+                }
+            }
+        }
+        if stranded > 0 {
+            return Err(format!(
+                "navgrid cannot support {stranded} NPC(s) — no walkable patrol candidates near their grounded positions (first stranded handle: {})",
+                first_stranded.unwrap_or(0)
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
