@@ -171,6 +171,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "dagger-rpg"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "dagger-runtime"
 version = "0.1.0"
 dependencies = [

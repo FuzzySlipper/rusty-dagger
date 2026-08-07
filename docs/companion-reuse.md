@@ -1,11 +1,18 @@
-# Companion repo reuse survey (task 6519)
+# Companion repo reuse survey
 
-Date: 2026-08-02. One section per sibling repo: what exists, what to consume,
-what to avoid, and the integration shape. "Consume" here means depend on as a
-cargo crate / pnpm package / generated artifact, not copy-paste, unless
-"vendoring" is called out.
+This document tracks which sibling repos were surveyed, what was found, and
+what Rusty Dagger may **copy** (with provenance) vs must **avoid**. The
+policy is **copy, don't import**: no `path = ../rusty-engine-demo` or
+`git =` deps to sibling repos; useful patterns are copied into dagger-owned
+crates with a provenance comment.
 
-## rusty-engine-demo (loading-bay)
+## 2026-08-02 baseline (task 6519)
+
+One section per sibling repo at that date: what exists, what to consume,
+what to avoid, and the integration shape. "Consume" here means the pre-6682
+interpretation (depend as crate/pnpm); after 6682 it means copy-with-provenance.
+
+### rusty-engine-demo (loading-bay)
 
 **What exists**
 
@@ -13,8 +20,7 @@ cargo crate / pnpm package / generated artifact, not copy-paste, unless
   - `player.rs` — `PlayerControllerConfig/State/Component`,
     `ResolvedPlayerAction::{Move,Look}`, `PlayerControllerService::apply*` over
     `engine_spatial::KinematicMotionSystem` + `VoxelCollisionScene` (swept
-    collision, blocked/moved facts). This is the FP controller, already Rust,
-    already engine-shaped. ~320 lines, clean dependency surface (core-ids,
+    collision, blocked/moved facts). ~320 lines, clean deps (core-ids,
     core-math, engine-spatial, entity-state).
   - `door.rs`, `interaction.rs`, `hazard.rs`, `navigation.rs`, `combat.rs`,
     `inventory.rs`, `pickup.rs`, `encounter.rs` — game systems as engine
@@ -44,7 +50,7 @@ generic Engine crates directly. No `path` or git dependency on
 `rusty-engine-demo` is permitted. Doors and other Daggerfall systems should be
 added to Daggerfall-owned crates as their semantics become real.
 
-## rusty-roguelike
+### rusty-roguelike
 
 **What exists**
 
@@ -63,7 +69,7 @@ session state), not the code.
 **Avoid**: everything party/combat/procgen — different game.
 **Integration**: reference only.
 
-## rusty-engine-ui
+### rusty-engine-ui
 
 **What exists** (this is the UI kit the user meant)
 
@@ -87,7 +93,7 @@ concepts; `domain`, `protocol`, `store`, `transport` (their game loopback).
 browser app exists; until then, nothing to wire (engine-render-check covers
 visuals).
 
-## rusty-d20
+### rusty-d20
 
 **What exists**: d20 rules vocabulary/mechanics on the engine (stats, effects,
 damage, restoration — per its README/Den description).
@@ -99,21 +105,20 @@ and d20 is not a drop-in for it.
 **Avoid**: pulling it in early "because RPG" — vocabulary mismatch risk.
 **Integration**: revisit after the walk-through.
 
-## rusty-view / rusty-roleplay
+### rusty-view / rusty-roleplay
 
 **What exists**: chat client kit + lore/memory service.
 
 **Consume/avoid**: not relevant to this project. (Noted for completeness only.)
 
-## rusty-engine (provider, not a companion — recorded for clarity)
+### rusty-engine (provider, not a companion — recorded for clarity)
 
 Already consumed: `rusty-asset-import` CLI (content pipeline),
 render-model/asset-catalog semantics via artifacts, studio adapter protocol,
 renderer-three (via engine-render-check). Upstream needs tracked as engine
-tasks
-6515/6516 with local consume tasks 6521/6522.
+tasks 6515/6516 with local consume tasks 6521/6522.
 
-## Decisions (for task 6563 implementation)
+### Decisions (for task 6563 implementation)
 
 1. FP controller: use the loading-bay implementation as a behavioral reference
    only. `dagger-runtime` owns the Daggerfall controller and calls
@@ -132,3 +137,228 @@ tasks
    and `voxelEnvironment` survives only as an optional *additive* authority
    for adversarial probes. The loading-bay doctrine remains the reference for
    the *controller* (point 1), not for collision authority.
+
+---
+
+## 2026-08-07 campaign survey (task 6683) — Phase 0 foundation for 6682
+
+**Goal:** survey `../rusty-engine-demo` (FPS controller + `ui-game-panels`/compass +
+`project-content` pipeline), `../rusty-d20` and `../rusty-roguelike` (two
+different data-driven RPG approaches) for **patterns only**, decide what to
+**copy out** vs reimplement, and define the data-driven content shape for the
+Privateer's Hold gameplay loop (combat, inventory, leveling, RPG formulas — no
+quests/world travel/dialogue). This section plus `docs/design.md` system map is
+the source of truth that later tasks (6684..6690) follow.
+
+### Inventory — exact file lists surveyed
+
+#### rusty-engine-demo
+
+- `rust/crates/loading-bay-game/src/` — `player.rs` (PlayerControllerConfig/State,
+  ResolvedPlayerAction Move/Look, apply over KinematicMotionSystem +
+  VoxelCollisionScene), `door.rs` (SwitchComponent/InteractionService), `interaction.rs`,
+  `combat.rs` (WeaponConfig, ResolvedAttackAction, CombatFact/Fact, cooldowns),
+  `inventory.rs` (InventoryService, ItemDefinitionId), `pickup.rs`,
+  `encounter.rs`, `hazard.rs`, `navigation.rs`, `weapon_authoring.rs`,
+  `vitality.rs`, `progression.rs`, `session.rs` (GameSession), `runtime.rs`,
+  `project_admission.rs`/`project_codec.rs`/`project_store.rs`, `bin/browser-host.rs`,
+  `bin/studio-adapter.rs` + `studio_adapter/` (protocol-14 projection).
+- `ts/packages/project-content/src/` — `content-artifacts.ts`, `canonicalProject()`,
+  `synchronizeGeneratedProjects()`, `generated.ts` (schemaVersion 24 project doc
+  generator). Tests prove it never overwrites canonical `projects/*.project.json`.
+- `libs/` — `ui-game-panels`, `ui-compass` (bearing strip), `ui-combat-log`,
+  `ui-minimap`, `theme` — presentational, input-only view models.
+- `content/` — `assets/actor-kit`, `assets/brush-kit`, `assets/prop-kit` (mesh.json +
+  source GLBs), `doom-e1m1/` textures, `projects/loading-bay.project.json` (canonical).
+
+#### rusty-d20
+
+- `rules/packages/d20-authoring/src/generated.ts` — **checked contract** emitted by
+  Rust `rusty-d20-rules-contract` binary (`cargo run -p rusty-d20 --bin rusty-d20-rules-contract`).
+  TypeScript is composition surface only; Rust owns vocabulary, validation, compilation.
+- `rules/packages/starter-ruleset/` — multi-file TypeScript authoring modules compiled by
+  Rust into canonical artifacts via `node scripts/generate-artifacts.mjs --write` (checked
+  via `--check` in CI). Six canonical packages: `starter-core`, `steel-guard`, `ember-ward`,
+  `wardens-gate`, `embers-wake`, `catalog-probe`.
+- `rust/crates/rusty-d20/src/` — `candidate.rs` (D20RulesCandidate schemaVersion 6),
+  `compiler/` (strict validation: quotas, duplicates, provenance), `component.rs`
+  (AbilityScoresComponent, ActionResourcesComponent, ScheduledEffectsComponent),
+  `game/` (action preview → resolve implement → ability modifier → defense eval via
+  StatService → roll/damage), `session/` (live EntityState), `adventure.rs`.
+- `docs/d20-rules-kernel.md` — boundary: no callbacks/expression trees in candidate;
+  `gameplay-rules` + `gameplay-mechanics` + `svc-rng` supply mechanics.
+- `libs/domain/src/` — `projectRuntimeReadout()`/`projectGameSnapshot()` translators.
+
+#### rusty-roguelike
+
+- `rust/crates/rusty-roguelike/src/` — `lib.rs`, `bootstrap.rs` (floor admission),
+  `floor/` (procgen → VoxelWorld), `rules/` (starter.json → RoguelikeRulesCandidate →
+  RoguelikeRuleset via `gameplay-rules`), `world/` (collapsed party square), `session/`
+  (GameSession with initiative, one-activation economy, per-enemy round-robin target cursor,
+  saves schema 4 with replay validation).
+- `rust/content/rules/starter.json` — inert authored policy (single JSON file), strictly
+  decoded/validated/compiled by Rust; TS declarations generated from Rust schema.
+- `libs/renderer/src/dungeon-frame.ts` — renderer `dungeon-frame` component (camera pose +
+  yawDegrees) mounting `@rusty-engine/renderer-host` RendererSurface; `view-composition.ts`.
+- `libs/feature-game/src/` — `party-sheet.ts`, `loadout-panel.ts`, `minimap.ts` (grid domain).
+
+#### rusty-engine (provider)
+
+- `core-ids`, `core-math`, `core-space`, `engine-spatial` (KinematicMotionSystem),
+  `entity-state` (EntityState/EntityView), `svc-collision` (StaticMeshColliderAsset,
+  replace_static_mesh_colliders), `gameplay-mechanics`/`gameplay-rules` (mechanics catalog,
+  admitted packages), `svc-rng`, `svc-volume`, `svc-pathfinding`. See `../rusty-engine`
+  for exact revisions (tracked in `engine-source.json` of siblings).
+
+### What to copy, what to avoid — per repo
+
+#### rusty-engine-demo — copy the controller **pattern**, not the game
+
+- **Copy:** `player.rs` FP controller shape — `PlayerControllerConfig` bounds
+  (`MAX_PLAYER_SPEED_UNITS_PER_SECOND 1000`, `MAX_PLAYER_LOOK_DEGREES_PER_UNIT 180`,
+  `MAX_INPUT_CONTROL_LENGTH 64`), `is_valid()` checks (finite, >0, ≤ max, pitch ±89,
+  unique bindings), `ResolvedPlayerAction::{Move,Look}` + `PlayerControlFact::{Moved,Blocked,LookChanged}`
+  + `PlayerControlReceipt` split, `KinematicMotionSystem` sweep + `failure-atomic` step-up
+  pattern, `fallSpeedUnitsPerSecond`/`stepUpUnits` opt-ins. Also `door.rs`/`interaction.rs`
+  fact pattern (SwitchComponent → GameEvent) and `inventory.rs` Engine-component shape
+  (typed facts, not guessed). Copy with provenance comment like
+  `// Adapted from rusty-engine-demo rust/crates/loading-bay-game/src/player.rs @<rev>`.
+- **Avoid:** `combat.rs` Loading Bay specifics (enemy_combat, extraction_beacon,
+  weapon ammo/penetration), `progression.rs`/`enemy_drop.rs` product progression,
+  `session.rs` GameSession coupling (it pulls combat/inventory/enemy_combat together),
+  `bin/browser-host.rs` + `studio_adapter/` binaries (project semantics baked in),
+  `ts/packages/project-content` generator (we already own `scripts/generate-project.py`),
+  `libs/ui-*` feature compositions that assume Loading Bay domain.
+
+#### rusty-d20 — copy the **vocabulary-ownership** pattern, not the vocabulary
+
+- **Copy:** the *boundary* that makes data-driven safe — TypeScript may compose candidate
+  data, but **Rust defines the accepted vocabulary, validates, compiles immutable
+  definitions, owns live state, and executes actions**. No callbacks/expression trees in
+  data. The checked contract (`generated.ts` emitted by Rust) makes the authoring SDK
+  a typed surface over Rust-owned schema. Also the `compile → fingerprint → provenance`
+  pipeline (canonical bytes, sorted module/definition order, stable subject IDs like
+  `ability:might`). For dagger, this means: `data/*.json` → Rust `Deserialize` structs →
+  `dagger-rpg` validation → immutable `RpgRuleset` → pure `fn` formulas, never JS math.
+- **Avoid:** the entire d20 vocabulary (`abilities`, `defenses`, `implement definitions`,
+  `starter-core`/`steel-guard` packages) — Daggerfall's CLASS*.CFG/MONSTER.BSA attributes
+  are a different domain; importing `rules/packages/d20-authoring` would be a category error.
+  Also `libs/domain` translators (they are d20-cast specific).
+- **File list to reference:** `rules/packages/d20-authoring/src/generated.ts`,
+  `rust/crates/rusty-d20/src/candidate.rs`, `compiler/`, `docs/d20-rules-kernel.md`,
+  `scripts/generate-artifacts.mjs`.
+
+#### rusty-roguelike — copy the **single-JSON + strict compile** shape
+
+- **Copy:** the minimal alternative — one inert `starter.json` strictly decoded by Rust into
+  `RoguelikeRulesCandidate` → `admit_roguelike_candidate` → `RoguelikeRuleset`, with TS
+  declarations generated from Rust schema. Plus the session invariants that Rust enforces:
+  collapsed-party ownership, one-activation economy, save schema 4 with **replay validation**
+  (re-derive receipts from fresh authored session and require exact match). The key lesson:
+  a small hand-authorable file can still be *strictly* validated and liftable.
+- **Avoid:** grid-locked assumptions (party sheet, procgen floor admission, VoxelWorld
+  nav), initiative/round-robin specifics — they don't map to Daggerfall's free-move hold.
+  Also `libs/renderer/dungeon-frame.ts` grid coupling.
+- **File list to reference:** `rust/content/rules/starter.json`,
+  `rust/crates/rusty-roguelike/src/rules/` (candidate + compile), `session/` (replay),
+  `docs/design.md` turn model.
+
+#### rusty-engine-ui / rusty-d20 libs/ui-* — copy **presentational** widgets only
+
+- **Copy:** `ui-compass` (bearing strip), `ui-minimap` (marker view model), `ui-hotbar`,
+  `theme` — they are dependency-clean, input-only. When a browser app exists, copy their
+  view-model shape, not `feature-game-hud` composition.
+- **Avoid:** `feature-*` compositions, `domain`/`protocol`/`store` game loopback.
+
+### Copy, don't import — the rule
+
+> **No `path` or `git` dependency on any sibling repo.** If a pattern from
+> `../rusty-engine-demo`, `../rusty-d20`, or `../rusty-roguelike` is worth
+> reusing, copy the minimal snippet into a dagger-owned crate (`dagger-rpg`,
+> `dagger-runtime`, future `dagger-world`) and leave a provenance comment with
+> the donor file + rev. The engine (`../rusty-engine`, `branch = "main"`)
+> remains the only cross-repo provider (file upstream tasks instead of local
+> workarounds). This keeps each crate liftable to the successor project without
+> dragging a product's session, progression, or UI domain along.
+
+### Data-driven content shape — the decision for campaign 6682
+
+**Crate / module boundary**
+
+- `arena2` — stays pure, read-only BSA/MAPS/RDB/ARCH3D/TEXTURE/PAL/PAK parsers
+  (already 1327 lines / 8 files). No game semantics, no allocation of meaning
+  beyond "what the bytes say". Tests gate against `/home/research/daggerfall-files`.
+- **`dagger-rpg`** (new, landed as empty crate in this task) — owns **all**
+  Daggerfall-fidelity tables + pure formulas for the loop: attributes
+  (STR/INT/WIL/AGI/END/PER/SPD/LUC), derived stats (health/stamina/magicka/encumbrance),
+  combat (to-hit, damage, armor), item/weapon/armor defs, monster defs for the 8 hold
+  mobiles, and leveling (XP table, health-per-level, attribute gains). Each table is
+  a `#[derive(Deserialize)]` struct; each formula is a `pub fn` with **no inline
+  numbers at call sites** (those live in `data/*.json`). Liftable: it only depends
+  on `serde`/`serde_json`, not on `dagger-runtime` or engine services. Follows the
+  d20 boundary (Rust owns vocabulary) and the roguelike minimal-file shape (one JSON
+  per domain, strictly validated).
+- `dagger-runtime` — project admission (already `from_project_json`), player controller
+  (already `PlayerControllerConfig` + KinematicMotionSystem + trimesh), and the
+  runtime session that **uses** `dagger-rpg` tables to construct player/monster entities,
+  apply `attack_roll`/`damage_roll`, manage `Inventory` + encumbrance, and project
+  leveling. It will depend on `dagger-rpg` (local path) and on generic engine crates
+  (`entity-state`, `engine-spatial`, `svc-collision`). It never owns numbers.
+- `dagger-studio-adapter` — stays read-only protocol-14 projection; later consumes
+  `dagger-runtime` session facts for HUD/inventory visibility. No gameplay math.
+- Planned: `dagger-world` — only when doors/water/enemy session state needs a shared
+  home (the 6529 trigger: two crates need the same block/session state). Not created
+  in Phase 0.
+- `dagger-import` — stays offline CLI (`--format glb|mesh-json --texture-dir`);
+  still emits `collision:"trimesh"` + scene sidecars. No RPG tables here.
+
+**File format and place**
+
+- **Committed `data/` vs generated `content/`** — `data/*.json` is committed,
+  hand-authored, and reviewed. `content/` is generated output from
+  `scripts/regenerate.sh` (GLB, mesh-json, texture publication, navgrid,
+  sprites). `data/README.md` documents the convention.
+- **JSON, not RON or Rust DSL** at Phase 0 — matches the engine's existing
+  `content/projects/*.project.json` + `*.navgrid.json` + `*.scene.json` shape,
+  avoids a new dep (`ron`), keeps tooling trivial (`serde_json`, `include_str!`).
+  Each file has `schemaVersion` + typed arrays: `data/stats.json`,
+  `data/weapons.json`, `data/armor.json`, `data/monsters.json`,
+  `data/leveling.json`, etc. RON/JSONC with comments may be revisited if tables
+  grow unwieldy, but JSON keeps the door open to the d20 generated-contract
+  pattern later without committing to it now.
+- **Formulas stay in one place** — pure fns in `dagger-rpg` (e.g.
+  `pub fn max_health(endurance: u8, level: u8, class: &ClassDef) -> u32`) are
+  tested vs DFU-known values; `dagger-runtime` call sites pass tables in, never
+  hard-code. This satisfies "easy to tweak and eventually port out" — tweak the
+  JSON + re-run `cargo test`, not scattered constants.
+- **Provenance:** DFU semantics are donor evidence for numbers; original
+  formulas are tested, not arm-waved. Keep `docs/source-provenance.md` current
+  when donor revs change.
+
+**What lands now vs later**
+
+- **Now (6683):** this document + `docs/design.md` system map sketch + empty
+  `crates/dagger-rpg` with `data/README.md` and `hello_world` gate (2 tests).
+  No gameplay logic.
+- **Next (6684..6690):** 6684 populates `EntityStats`/`DerivedStats` + `data/stats.json`;
+  6685 adds `attack_roll`/`damage_roll` + `data/weapons.json`/`armor.json` and the
+  runtime attack authority; 6686 inventory model + RDB treasure flats; 6687 enemy
+  roster (+ AI stub); 6688 leveling; 6689 HUD shell; 6690 controller wiring.
+
+### Re-evaluated decisions (supercede 6519 where noted)
+
+1. **FP controller:** no change — still reference-only from demo `player.rs`; the
+   Daggerfall controller lives in `dagger-runtime` and calls `engine_spatial` directly.
+   No sibling dep added.
+2. **Data ownership:** new decision — `dagger-rpg` owns tables+formulas, not
+   `dagger-runtime` inline, not `arena2`, not demo/d20/roguelike imports. This was
+   the open question in 6519's `Planned: dagger-content/dagger-world` — now resolved
+   for the RPG half.
+3. **Project/content machinery:** still hand-rolled `scripts/generate-project.py`; its
+   scene generation stays out of `dagger-rpg` (visual vs RPG separation).
+4. **UI:** no change for now — `engine-render-check` remains the only render
+   verification path. When HUD (6689) needs presentational widgets, copy
+   `ui-compass`/`ui-minimap` view-model patterns, not feature compositions.
+5. **Copy rule:** tightened — every copied snippet must carry a `// Adapted from`
+   provenance line with donor path + rev, and no sibling `path` dep may be added to
+   `Cargo.toml`/`pnpm-workspace.yaml` without a `docs/companion-reuse.md` entry.
