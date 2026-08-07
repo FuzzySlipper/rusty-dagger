@@ -247,6 +247,11 @@ fn serve(meta_path: &str, addr: &str) {
             })
             .collect();
 
+        if cells.is_empty() {
+            eprintln!("fatal: navgrid has no walkable cells (degenerate/empty grid)");
+            std::process::exit(1);
+        }
+
         // Ground spawns using navgrid.json's spawn array (task 6639
         // already computed the correct floor support per spawn).
         let nav_spawns = ng
