@@ -338,12 +338,17 @@ fn serve(meta_path: &str, addr: &str) {
                     // Push updated positions + is_moving to animation service.
                     svc.update_enemies(&patrol.positions());
                     // Build transform JSON for the flycam to apply as `update` ops.
+                    // Includes heading as Y-rotation quaternion so gizmos can show facing.
                     let entries: Vec<String> = pos_updates
                         .iter()
                         .map(|u| {
+                            // heading 0 = +X, increasing toward +Z. Y-up quaternion for Y rotation.
+                            let half = u.heading * 0.5;
+                            let (sy, cy) = half.sin_cos();
+                            let rot = [0.0, sy, 0.0, cy];
                             format!(
-                                "{{\"handle\":{},\"translation\":[{:?},{:?},{:?}]}}",
-                                u.handle, u.translation[0], u.translation[1], u.translation[2]
+                                "{{\"handle\":{},\"translation\":[{:?},{:?},{:?}],\"rotation\":[{:?},{:?},{:?},{:?}],\"heading\":{:?}}}",
+                                u.handle, u.translation[0], u.translation[1], u.translation[2], rot[0], rot[1], rot[2], rot[3], u.heading
                             )
                         })
                         .collect();

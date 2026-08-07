@@ -131,6 +131,7 @@ struct PatrolNpc {
 pub struct PositionUpdate {
     pub handle: u32,
     pub translation: [f32; 3],
+    pub heading: f32,
     pub is_moving: bool,
 }
 
@@ -260,11 +261,12 @@ impl PatrolService {
                 npc.idle_timer = IDLE_DURATION;
             }
 
-            // Emit update if position changed or move/idle state changed
+            // Emit update if moving or state changed — includes heading so gizmos track rotation
             if npc.is_moving || was_moving != npc.is_moving {
                 updates.push(PositionUpdate {
                     handle: npc.handle,
                     translation: npc.position,
+                    heading: npc.heading,
                     is_moving: npc.is_moving,
                 });
             }
