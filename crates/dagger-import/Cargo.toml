@@ -6,4 +6,7 @@ description = "Extract Daggerfall dungeon geometry (with textures) to GLB"
 
 [dependencies]
 arena2 = { path = "../arena2" }
+serde.workspace = true
+serde_json.workspace = true
 sha2.workspace = true
+chrono = "0.4"
