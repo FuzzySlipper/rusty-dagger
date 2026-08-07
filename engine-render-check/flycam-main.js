@@ -90,6 +90,7 @@ async function main() {
   window.__liveGizmoMap = liveGizmoMap;
   window.__lastPatrolByHandle = lastPatrolByHandle;
   window.__gizmosOn = () => gizmosOn;
+  window.__lastFrameOps = null;
   window.addEventListener('keydown', (event) => {
     if (event.code !== 'KeyG') return;
     const ops = [];
@@ -339,6 +340,7 @@ async function main() {
           }
           if (ops.length > 0) {
             surface.applyFrame({ schemaVersion: 1, ops });
+            window.__lastFrameOps = ops;
           }
           spriteRefresh = performance.now();
         })
