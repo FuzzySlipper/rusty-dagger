@@ -150,7 +150,10 @@ try:
     if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
         raise SystemExit("physical W key-down injection failed")
     x11.XSync(display, 0)
-    time.sleep(0.45)
+    # Software-rendered CI can take several input polling intervals to return
+    # one webview readback. Keep this a real physical hold long enough for the
+    # native host to observe it under load.
+    time.sleep(0.75)
     if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
         raise SystemExit("physical W key-up injection failed")
     x11.XSync(display, 0)
