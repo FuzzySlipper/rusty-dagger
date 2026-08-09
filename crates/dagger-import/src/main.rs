@@ -486,7 +486,8 @@ fn publish_enemy_atlases(
 
         // Decode all frames for all 8 orientations.
         // Each entry: (flip, w, h, indexed_pixels, world_size).
-        let mut decoded: Vec<(bool, usize, usize, Vec<u8>, [f32; 2])> = Vec::new();
+        type DecodedEnemyFrame = (bool, usize, usize, Vec<u8>, [f32; 2]);
+        let mut decoded: Vec<DecodedEnemyFrame> = Vec::new();
         let mut failed = false;
         for anim in anims.iter() {
             let rec = anim.record as usize;
@@ -530,11 +531,17 @@ fn publish_enemy_atlases(
         let total_cells = 8 * anim_frame_count;
         let cell_w: usize = decoded.iter().map(|d| d.1).max().unwrap_or(0);
         let cell_h: usize = decoded.iter().map(|d| d.2).max().unwrap_or(0);
-        let atlas_w: usize = cell_w * total_cells;
-        let atlas_h: usize = cell_h;
+        // Engine's public texture contract bounds either dimension at 4096.
+        // Classic enemies can have enough directional animation frames to
+        // exceed that width in a historical one-row atlas, so pack a bounded
+        // grid while retaining stable frame numbers and per-frame UVs.
+        const MAX_ATLAS_DIMENSION: usize = 4096;
+        let columns = total_cells.min((MAX_ATLAS_DIMENSION / cell_w).max(1));
+        let rows = total_cells.div_ceil(columns);
+        let atlas_w: usize = cell_w * columns;
+        let atlas_h: usize = cell_h * rows;
         let mut atlas = vec![0u8; atlas_w * atlas_h * 4];
         let mut frame_entries: Vec<String> = Vec::new();
-        let mut x0 = 0usize;
         for (idx, (flip, w, h, indexed, size)) in decoded.iter().enumerate() {
             let mut rgba = palette.to_rgba_transparent(indexed);
             if *flip {
@@ -546,20 +553,23 @@ fn publish_enemy_atlases(
                     }
                 }
             }
+            let x0 = (idx % columns) * cell_w;
+            let y0 = (idx / columns) * cell_h;
             let dx = x0 + (cell_w - w) / 2;
-            let dy = cell_h - h;
+            let dy = y0 + cell_h - h;
             for (row_i, row) in rgba.chunks(w * 4).enumerate() {
                 let dst = ((dy + row_i) * atlas_w + dx) * 4;
                 atlas[dst..dst + w * 4].copy_from_slice(row);
             }
             frame_entries.push(format!(
-                "      {{\"frame\":{idx},\"uvMin\":[{},0],\"uvMax\":[{},1],\"size\":[{:?},{:?}]}}",
+                "      {{\"frame\":{idx},\"uvMin\":[{},{}],\"uvMax\":[{},{}],\"size\":[{:?},{:?}]}}",
                 x0 as f64 / atlas_w as f64,
+                y0 as f64 / atlas_h as f64,
                 (x0 + cell_w) as f64 / atlas_w as f64,
+                (y0 + cell_h) as f64 / atlas_h as f64,
                 size[0],
                 size[1]
             ));
-            x0 += cell_w;
         }
         let png = {
             let mut flipped = atlas.clone();

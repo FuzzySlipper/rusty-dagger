@@ -15,7 +15,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use arena2::mobile::{record_world_size, MOBILE_TYPES};
+use arena2::mobile::record_world_size;
 use arena2::texture::TextureFile;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -273,12 +273,18 @@ fn main() {
         let total_frames = enemy.frames.len();
         let atlas_w = enemy.width as usize;
         let atlas_h = enemy.height as usize;
-        let cell_w = if total_frames > 0 {
-            atlas_w / total_frames
-        } else {
-            0
-        };
-        let cell_h = atlas_h;
+        let cell_w = enemy
+            .frames
+            .iter()
+            .map(|frame| ((frame.uv_max[0] - frame.uv_min[0]) * atlas_w as f64).round() as usize)
+            .max()
+            .unwrap_or(0);
+        let cell_h = enemy
+            .frames
+            .iter()
+            .map(|frame| ((frame.uv_max[1] - frame.uv_min[1]) * atlas_h as f64).round() as usize)
+            .max()
+            .unwrap_or(0);
 
         // World size metrics from manifest
         let mut min_w = f32::MAX;
@@ -616,7 +622,7 @@ fn main() {
             atlas: enemy.path.clone(),
             atlas_size: [enemy.width, enemy.height],
             cell_size: [cell_w as u32, cell_h as u32],
-            total_frames: total_frames,
+            total_frames,
             unique_world_sizes: uniq.len(),
             world_size_range: [[min_w, min_h], [max_w, max_h]],
             aspect_range: [min_aspect, max_aspect],
@@ -802,7 +808,7 @@ fn main() {
 
     // Generate HTML if requested
     if let Some(dir) = &args.out_html_dir {
-        generate_html(&report, &args, dir);
+        generate_html(&report, dir);
         println!("wrote html to {}", dir.display());
     }
 
@@ -815,7 +821,7 @@ fn main() {
     }
 }
 
-fn generate_html(report: &ValidationReport, args: &Args, out_dir: &Path) {
+fn generate_html(report: &ValidationReport, out_dir: &Path) {
     std::fs::create_dir_all(out_dir).unwrap();
     // Index
     let mut idx = String::new();
@@ -918,7 +924,7 @@ fn generate_html(report: &ValidationReport, args: &Args, out_dir: &Path) {
         }
         // For each orientation 0..7
         let orientation_names = ["S (front)", "SW", "W", "NW", "N (back)", "NE", "E", "SE"];
-        for ori in 0..8 {
+        for (ori, orientation_name) in orientation_names.iter().enumerate() {
             for anim in 0..m {
                 let idx = ori * m + anim;
                 if idx >= er.frames.len() {
@@ -933,12 +939,14 @@ fn generate_html(report: &ValidationReport, args: &Args, out_dir: &Path) {
                 } else {
                     ""
                 };
-                // Compute background position: x = -idx * cell_w
-                let bg_x = -(idx as i32 * er.cell_size[0] as i32);
+                // CSS addresses from the PNG top-left while retained UVs are
+                // bottom-left, so derive both offsets from the frame rect.
+                let bg_x = -(frame.uv_min[0] * f64::from(er.atlas_size[0])).round() as i32;
+                let bg_y = -((1.0 - frame.uv_max[1]) * f64::from(er.atlas_size[1])).round() as i32;
                 // Use a div with atlas as background, sized to atlas dims
                 let atlas_url = format!("../../textures/{}", er.atlas);
-                html.push_str(&format!("<div class=\"cell{cell_flag}\"><div style=\"width:{}px;height:{}px;background:url('{atlas_url}') no-repeat;background-position:{}px 0;background-size:{}px {}px;image-rendering:pixelated\"></div><div class=caption>ori {} {} rec {}<br>{:.3}×{:.3} uv {:.3}..{:.3}</div></div>",
-                    er.cell_size[0], er.cell_size[1], bg_x, er.atlas_size[0], er.atlas_size[1], ori, orientation_names[ori], frame_index_to_record(ori), frame.size[0], frame.size[1], frame.uv_min[0], frame.uv_max[0]
+                html.push_str(&format!("<div class=\"cell{cell_flag}\"><div style=\"width:{}px;height:{}px;background:url('{atlas_url}') no-repeat;background-position:{}px {}px;background-size:{}px {}px;image-rendering:pixelated\"></div><div class=caption>ori {} {} rec {}<br>{:.3}×{:.3} uv [{:.3},{:.3}]..[{:.3},{:.3}]</div></div>",
+                    er.cell_size[0], er.cell_size[1], bg_x, bg_y, er.atlas_size[0], er.atlas_size[1], ori, orientation_name, frame_index_to_record(ori), frame.size[0], frame.size[1], frame.uv_min[0], frame.uv_min[1], frame.uv_max[0], frame.uv_max[1]
                 ));
             }
         }

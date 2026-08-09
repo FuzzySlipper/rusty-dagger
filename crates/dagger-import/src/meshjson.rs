@@ -47,29 +47,29 @@ pub fn write_mesh_json(
 
     for prim in primitives {
         for p in &prim.positions {
-            for k in 0..3 {
+            for value in p {
                 if n_pos > 0 {
                     positions.push(',');
                 }
-                positions.push_str(&fmt_f32(p[k]));
+                positions.push_str(&fmt_f32(*value));
                 n_pos += 1;
             }
         }
         for n in &prim.normals {
-            for k in 0..3 {
+            for value in n {
                 if n_nrm > 0 {
                     normals.push(',');
                 }
-                normals.push_str(&fmt_f32(n[k]));
+                normals.push_str(&fmt_f32(*value));
                 n_nrm += 1;
             }
         }
         for uv in &prim.uvs {
-            for k in 0..2 {
+            for value in uv {
                 if n_uv > 0 {
                     uvs.push(',');
                 }
-                uvs.push_str(&fmt_f32(uv[k]));
+                uvs.push_str(&fmt_f32(*value));
                 n_uv += 1;
             }
         }

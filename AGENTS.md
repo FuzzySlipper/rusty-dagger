@@ -58,9 +58,10 @@ Daggerfall-owned runtime/adapter surfaces.
 
 ## Code style and language authority
 
-> Rust owns all Daggerfall/gameplay logic. JS/TS owns rendering bootstraps,
-> content configuration, and headless checks. JS observes and applies Rust
-> authority results — it never becomes a second authority.
+> Dagger Rust owns Daggerfall/gameplay logic, presentation meaning, and product
+> orchestration. Engine owns the sensitive Rust-to-webview renderer boundary
+> behind its public Rust facade. Downstream JS/TS never imports or mounts the
+> renderer implementation.
 
 ### Rust is the authority
 
@@ -71,35 +72,29 @@ timing, directional orientation math, nav grid derivation, collision, and
 controller logic.
 
 A Rust service or function that exists only in tests but is not called from
-any production path is a defect. If the flycam, a headless check, or any
-other consumer needs a result, it must consume the Rust authority — not
-reimplement the math in JS.
+any production path is a defect. If the native diagnostic, a headless check,
+or another consumer needs a result, it must consume the Rust authority.
 
-### JS is a minimal bootstrap
+### Renderer implementation stays upstream
 
-The `engine-render-check/` JS files (flycam, headless checks, dump-frame)
-are thin presentation bootstraps. Their job is:
+Downstream Rust depends unconditionally on the `rusty-engine` facade and uses
+namespaced imports such as `rusty_engine::engine_spatial`. The runnable product
+diagnostic is `dagger-native-host`; it submits Dagger-owned retained facts to
+`rusty_engine::renderer_webview_host`. It must not expose the private webview,
+TypeScript, Three, HTML, canvas, or object-URL implementation to Dagger code.
 
-1. Mount the rusty-engine renderer surface.
-2. Wire input (pointer lock, keyboard, camera movement).
-3. Poll Rust authorities (the sprite-frames server, the adapter dump).
-4. Apply authority results to the renderer surface (`updateSprite`, camera
-   pose, gizmo ops).
+JS/MJS remains acceptable for the bounded Engine Studio HTTP bridge, browser
+integration checks, and other test/build plumbing. It must not import
+`@rusty-engine/render-*` or `@rusty-engine/renderer-*` packages, own gameplay
+or presentation state, or become a second application bootstrap.
 
-They must not recompute frame indices, animation timing, directional
-orientation, or any gameplay semantics. If a JS page grows beyond mounting,
-input, and result application, the new logic belongs in Rust — add a Rust
-bin or extend the runtime, then consume it from JS.
+### Native diagnostics are first-class
 
-### Flycam and debugging are first-class
-
-`engine-render-check/` is durable diagnostic infrastructure, not a throwaway
-test page. It survives content migration (Daggerfall content → original
-content): flycam, sprite diagnostics, nav grid overlays, and collision
-probes are useful in their own right regardless of the content source.
-Invest in keeping them clean and minimal. A flycam page that accretes
-gameplay logic is a maintenance liability; a flycam page that stays a thin
-bootstrap over Rust authorities is a durable tool.
+`dagger-native-host` is durable diagnostic infrastructure, not a synthetic
+renderer smoke. It must use committed project resources, real Dagger runtime
+authority, physical input/readback, meaningful pick routes, and explicit
+mount/failure/disposal proof. `engine-render-check/` is only a migration
+pointer and must not acquire application code again.
 
 ### Content and config stay in TS/JSON
 
@@ -119,19 +114,15 @@ cargo test                        # arena2 parser tests against the real data fi
 scripts/regenerate.sh             # extraction -> engine import -> studio project doc
 cargo run -p dagger-runtime --bin dagger-walkthrough
 cargo run -p dagger-runtime --bin dagger-navgrid -- --check  # nav grid proof + artifact freshness
-node engine-render-check/check.mjs  # render proof via the real rusty-engine renderer
+scripts/verify-native-host.sh     # Engine facade/native renderer/input/pick/lifecycle proof
+scripts/check-engine-freshness.py # rolling Engine main must stay current
 python3 scripts/check-adapter.py  # local adapter; env override is diagnostic-only
 ```
 
-Extraction claims require a real render proof, not only structural validation:
-headless Chromium screenshots through the actual rusty-engine renderer
-(renderer-three browser surface, consumed from rusty-engine `main`) via
-`engine-render-check/check.mjs`, with assertions on triangle/draw-call counts,
-texture-resource count, pixel coverage, and zero console errors (one-time
-setup: `pnpm install` inside `engine-render-check/`). This is the only render
-verification path — the ad-hoc three.js harnesses were removed; when the
-engine renderer lacks a capability, file an upstream rusty-engine task rather
-than building a side renderer. Studio-visible changes require the host gates
+Extraction claims require a real native render proof, not only structural
+validation. The proof must reach Engine presentation only through the public
+Rust facade and certify exact checked resources plus authoritative Dagger
+effects. Studio-visible changes additionally require the host gates
 while `scripts/serve-studio.sh` is running:
 
 ```bash

@@ -13,18 +13,17 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
-core-ids = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
-core-math = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
-core-space = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
-engine-spatial = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
-entity-state = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
-svc-collision = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
+anyhow = "1"
+gtk = "0.18"
+rusty-engine = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
+winit = "0.30"
+
+[workspace.metadata.rusty-engine]
+repository = "https://github.com/FuzzySlipper/rusty-engine.git"
+revision = "d0b5e672b83d463bff71d8d35c877f770142ff3c"
 
 [workspace.lints.rust]
-warnings = "warn"
-
-[workspace.lints.clippy]
 warnings = "warn"

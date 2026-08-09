@@ -74,13 +74,10 @@ textured render itself (pure-Node PNG metrics in
   color, >= 800 unique geometry colors and >= 1 texel-frequency grid cell
   (luminance stddev >= 6) — gates the average-color fallback (~100-500
   colors, no such cells) cannot pass.
-- **Renderer comparison**: the focused frame's 12-bin hue histogram must
-  overlap the best of the committed rusty-engine render references
-  (`engine-render-check/*.png` — the same renderer) by histogram
-  intersection >= 0.40. Studio framing and lighting differ from the
-  harness poses, so this is a hue-signature tolerance rather than
-  pixel equality; measured ~0.65 desktop / ~0.70 narrow, while the untextured
-  average-color frame scores ~0.25.
+- **Independent boundary**: the Studio browser proof certifies Engine Studio's
+  own renderer path. Rusty Dagger's separate renderer certification is the
+  Rust-native `dagger-native-host`; the Studio check does not depend on a
+  downstream-owned browser renderer or its screenshots.
 
 Per-viewport metric reports land in `*-metrics.json` next to the screenshots
 in the artifact directory. The authored dungeon is intentionally a large world

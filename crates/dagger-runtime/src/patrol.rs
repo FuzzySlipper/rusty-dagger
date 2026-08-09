@@ -76,7 +76,7 @@ impl PatrolGrid {
     fn is_walkable(&self, x: f32, z: f32, y: f32) -> Option<f32> {
         let cx = (x / CELL_SIZE).floor() as i32;
         let cz = (z / CELL_SIZE).floor() as i32;
-        let level = ((y / 0.25).round() as i32);
+        let level = (y / 0.25).round() as i32;
         self.cells.get(&(cx, cz, level)).copied()
     }
 
@@ -163,7 +163,7 @@ impl PatrolService {
                     let cz = (spawn[2] / CELL_SIZE).round() as i32;
                     let mut best = spawn[1];
                     let mut best_dist = f32::MAX;
-                    for &(x, z, level, sy) in navgrid_cells.iter() {
+                    for &(x, z, _level, sy) in navgrid_cells.iter() {
                         let x = x as i32;
                         let z = z as i32;
                         let d = ((x - cx).pow(2) + (z - cz).pow(2)) as f32;
@@ -399,13 +399,13 @@ mod tests {
                 let cz = (u.translation[2] / CELL_SIZE).floor() as i32;
                 // Must be within grid bounds (-5..5)
                 assert!(
-                    cx >= -5 && cx <= 5,
+                    (-5..=5).contains(&cx),
                     "NPC {} at cx={} outside grid",
                     u.handle,
                     cx
                 );
                 assert!(
-                    cz >= -5 && cz <= 5,
+                    (-5..=5).contains(&cz),
                     "NPC {} at cz={} outside grid",
                     u.handle,
                     cz

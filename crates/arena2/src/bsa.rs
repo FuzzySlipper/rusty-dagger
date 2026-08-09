@@ -91,6 +91,10 @@ impl BsaArchive {
         self.records.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.records.is_empty()
+    }
+
     pub fn contains(&self, name: &str) -> bool {
         self.by_name.contains_key(name)
     }

@@ -87,14 +87,13 @@ pub fn heading_to_rotation(heading: f32) -> [f32; 4] {
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::heading_to_rotation;
 
     fn rotate_x_by_heading(heading: f32) -> [f32; 3] {
         // Apply Y-quaternion to +X vector (1,0,0): q * v * q^-1
         let q = heading_to_rotation(heading);
-        let qy = q[1];
-        let qw = q[3];
         // For Y rotation only: rotated +X = (cos, 0, sin) if heading rotates +X toward +Z
         // Derive via quaternion math: x' = 1 - 2*qy^2? Actually for Y-only: x' = 1 -2*qy*qy? No.
         // Simpler: use matrix: cos = 1-2*qy^2, sin = 2*qy*qw with sign corrected by our convention.
@@ -410,7 +409,7 @@ fn serve(meta_path: &str, addr: &str) {
         let (status, body) = match camera {
             Some(cam) => {
                 // Advance elapsed time from wall-clock (the server owns timing).
-                let now = start.elapsed().as_secs_f32() as f32;
+                let now = start.elapsed().as_secs_f32();
                 let dt = now - last_elapsed;
                 last_elapsed = now;
 

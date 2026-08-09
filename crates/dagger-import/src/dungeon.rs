@@ -202,7 +202,6 @@ pub struct Importer {
     palette: Palette,
     climate_base: u16,
     texture_table: [u16; 6],
-    textured: bool,
     mesh_cache: HashMap<String, Rc<Mesh>>,
     texfile_cache: HashMap<u16, Option<Rc<TextureFile>>>,
     texture_keys: HashMap<(u16, u16), usize>, // (archive, record) -> output texture index
@@ -214,7 +213,6 @@ impl Importer {
     pub fn new(
         arena2_dir: &Path,
         layout: &DungeonLayout,
-        textured: bool,
         table_mode: TextureTableMode,
     ) -> Result<Self, String> {
         let palette =
@@ -257,7 +255,6 @@ impl Importer {
             palette,
             climate_base,
             texture_table,
-            textured,
             mesh_cache: HashMap::new(),
             texfile_cache: HashMap::new(),
             texture_keys: HashMap::new(),
@@ -348,7 +345,7 @@ pub fn build_dungeon(
         Arch3dFile::load(&arena2_dir.join("ARCH3D.BSA")).map_err(|e| format!("ARCH3D.BSA: {e}"))?;
 
     let layout = maps::resolve_dungeon(&maps_bsa, region, location_name)?;
-    let mut imp = Importer::new(arena2_dir, &layout, textured, table_mode)?;
+    let mut imp = Importer::new(arena2_dir, &layout, table_mode)?;
 
     let mut stats = BuildStats {
         blocks: layout.blocks.len(),
@@ -612,9 +609,9 @@ pub fn build_dungeon(
                         v[2] + obj_pos[2] + origin[2],
                     ];
                     let gltf = [dfu[0], dfu[1], -dfu[2]]; // LH -> RH
-                    for k in 0..3 {
-                        stats.bounds_min[k] = stats.bounds_min[k].min(gltf[k]);
-                        stats.bounds_max[k] = stats.bounds_max[k].max(gltf[k]);
+                    for (k, coordinate) in gltf.iter().copied().enumerate() {
+                        stats.bounds_min[k] = stats.bounds_min[k].min(coordinate);
+                        stats.bounds_max[k] = stats.bounds_max[k].max(coordinate);
                     }
                     world.push(gltf);
                     prim.uvs.push([
@@ -734,12 +731,12 @@ mod tests {
         }
         let layout = privateers_hold_layout();
         let dir = temp_arena2_dir("no-climate");
-        let err = Importer::new(&dir, &layout, true, TextureTableMode::Classic)
+        let err = Importer::new(&dir, &layout, TextureTableMode::Classic)
             .err()
             .expect("classic mode must fail without CLIMATE.PAK");
         assert!(err.contains("CLIMATE.PAK"), "{err}");
         // Explicitly requested default mode keeps the identity table.
-        let imp = Importer::new(&dir, &layout, true, TextureTableMode::Default).unwrap();
+        let imp = Importer::new(&dir, &layout, TextureTableMode::Default).unwrap();
         assert_eq!(imp.texture_table, DEFAULT_TEXTURE_TABLE);
         std::fs::remove_dir_all(&dir).ok();
     }
@@ -752,7 +749,7 @@ mod tests {
         let layout = privateers_hold_layout();
         let dir = temp_arena2_dir("truncated-climate");
         std::fs::write(dir.join("CLIMATE.PAK"), b"\0\0\0\0").unwrap();
-        let err = Importer::new(&dir, &layout, true, TextureTableMode::Classic)
+        let err = Importer::new(&dir, &layout, TextureTableMode::Classic)
             .err()
             .expect("classic mode must fail with a truncated CLIMATE.PAK");
         assert!(err.contains("CLIMATE.PAK"), "{err}");
@@ -765,8 +762,7 @@ mod tests {
             return;
         }
         let layout = privateers_hold_layout();
-        let imp =
-            Importer::new(&real_arena2_dir(), &layout, true, TextureTableMode::Classic).unwrap();
+        let imp = Importer::new(&real_arena2_dir(), &layout, TextureTableMode::Classic).unwrap();
         assert_eq!(imp.texture_table, [23, 22, 19, 22, 20, 368]);
     }
 }

@@ -134,6 +134,10 @@ impl TextureFile {
         self.records.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.records.is_empty()
+    }
+
     pub fn record_info(&self, record: usize) -> Option<TextureRecordInfo> {
         self.records.get(record).map(|r| r.info)
     }
@@ -274,7 +278,7 @@ mod tests {
         }
         let dir = arena2_dir();
         let tex = TextureFile::load(&dir.join("TEXTURE.120")).unwrap();
-        assert!(tex.len() > 0);
+        assert!(!tex.is_empty());
         let info = tex.record_info(0).unwrap();
         let (w, h, pixels) = tex.frame_pixels(0, 0).unwrap();
         assert_eq!((w, h), (info.width as usize, info.height as usize));

@@ -30,7 +30,7 @@ pub const POINT_DIVISOR: f32 = 256.0;
 /// Arch3dFile textureDivisor — ARCH3D UV coords are 1/16 sub-units of a texel.
 pub const TEXTURE_DIVISOR: f32 = 16.0;
 /// BlocksFile.RotationDivisor — rotations are 1/2048 turn (2048 * 360/2048 = 360 deg).
-pub const ROTATION_DIVISOR: f32 = 5.688_888_888_888_89;
+pub const ROTATION_DIVISOR: f32 = 5.688_889;
 /// BlocksFile.RDBDimension — raw units per dungeon block side.
 pub const RDB_DIMENSION: f32 = 2048.0;
 /// RDBLayout.RDBSide — meters per dungeon block side.

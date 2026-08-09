@@ -98,7 +98,7 @@ struct Adapter {
     open: Option<OpenProject>,
 }
 
-fn main() {
+pub fn run_stdio() {
     let stdin = io::stdin();
     let mut stdout = io::BufWriter::new(io::stdout().lock());
     let mut adapter = Adapter::default();
@@ -715,12 +715,32 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
             // frame for plain billboards): createSprite asset ids resolve
             // against atlases, so without this sprites render untextured.
             if let Some(atlas) = texture.get("spriteAtlas") {
+                let sprite_asset = id
+                    .strip_prefix("texture/")
+                    .map(|suffix| format!("sprite/{suffix}"))
+                    .unwrap_or_else(|| format!("sprite/{id}"));
+                let frames = atlas
+                    .get("frames")
+                    .and_then(Value::as_array)
+                    .map(|frames| {
+                        frames
+                            .iter()
+                            .map(|frame| {
+                                json!({
+                                    "frame": frame.get("frame").and_then(Value::as_u64).unwrap_or(0),
+                                    "uvMin": frame.get("uvMin").cloned().unwrap_or_else(|| json!([0.0, 0.0])),
+                                    "uvMax": frame.get("uvMax").cloned().unwrap_or_else(|| json!([1.0, 1.0])),
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                    .unwrap_or_default();
                 ops.push(json!({
                     "op": "defineSpriteAtlas",
                     "atlas": {
-                        "id": id,
+                        "id": sprite_asset,
                         "texture": id,
-                        "frames": atlas.get("frames").cloned().unwrap_or_else(|| json!([])),
+                        "frames": frames,
                     }
                 }));
             }
@@ -783,7 +803,11 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
     {
         let id = entity.get("id").and_then(Value::as_u64).unwrap_or(0);
         let sprite = entity.get("sprite").unwrap_or(&Value::Null);
-        let asset = sprite.get("asset").and_then(Value::as_str).unwrap_or("");
+        let texture_asset = sprite.get("asset").and_then(Value::as_str).unwrap_or("");
+        let asset = texture_asset
+            .strip_prefix("texture/")
+            .map(|suffix| format!("sprite/{suffix}"))
+            .unwrap_or_else(|| format!("sprite/{texture_asset}"));
         let frame = sprite.get("frame").and_then(Value::as_u64).unwrap_or(0);
         let size = sprite
             .get("size")
@@ -820,6 +844,100 @@ fn projection(root: &Path, project: &Map<String, Value>, entities: &[Value]) -> 
         }));
     }
     json!({ "schemaVersion": 1, "ops": ops })
+}
+
+/// Exact renderer input derived from an admitted Dagger project. The Dagger
+/// package owns what the project means; Engine owns decoding and presenting
+/// this typed retained frame and its content-addressed resources.
+pub struct DaggerRenderBundle {
+    pub frame: rusty_engine::render_model::RenderFrameDiff,
+    pub resources: Vec<DaggerRenderResource>,
+    pub source_entity_count: usize,
+}
+
+pub struct DaggerRenderResource {
+    pub identity: String,
+    pub content_hash: String,
+    pub media_type: String,
+    pub source_path: String,
+    pub bytes: Vec<u8>,
+}
+
+/// Admit and strictly decode the checked Dagger presentation through Engine's
+/// public Rust facade. No downstream renderer package or TypeScript contract
+/// is exposed to the caller.
+pub fn build_render_bundle(root: &Path, project_text: &str) -> Result<DaggerRenderBundle, String> {
+    DaggerRuntime::from_project_json(project_text)
+        .map_err(|error| format!("project admission failed: {error}"))?;
+    let project_value = serde_json::from_str::<Value>(project_text)
+        .map_err(|error| format!("project JSON failed: {error}"))?;
+    let project = project_value
+        .as_object()
+        .ok_or_else(|| "project root must be an object".to_owned())?;
+    let scene_id = project
+        .get("entryScene")
+        .and_then(Value::as_str)
+        .unwrap_or("scene/privateers-hold");
+    let scene = project
+        .get("scenes")
+        .and_then(Value::as_array)
+        .and_then(|scenes| {
+            scenes
+                .iter()
+                .find(|scene| scene.get("id").and_then(Value::as_str) == Some(scene_id))
+                .or_else(|| scenes.first())
+        })
+        .ok_or_else(|| "admitted project has no renderable scene".to_owned())?;
+    let entities = scene
+        .get("entities")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    let frame: rusty_engine::render_model::RenderFrameDiff =
+        serde_json::from_value(projection(root, project, &entities))
+            .map_err(|error| format!("Engine retained-frame decode failed: {error}"))?;
+    frame
+        .validate()
+        .map_err(|error| format!("Engine retained-frame validation failed: {error:?}"))?;
+
+    let resource_values = texture_resources(root, project);
+    let mut resources = Vec::new();
+    for resource in resource_values
+        .as_array()
+        .ok_or_else(|| "texture resource manifest was not an array".to_owned())?
+    {
+        let identity = resource
+            .get("resource")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "texture resource identity is missing".to_owned())?;
+        let content_hash = resource
+            .get("contentHash")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("texture resource {identity} has no content hash"))?;
+        let source_path = resource
+            .get("sourcePath")
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("texture resource {identity} has no source path"))?;
+        let path = project_resource_path(root, source_path)
+            .ok_or_else(|| format!("texture resource path was rejected: {source_path}"))?;
+        let bytes = fs::read(&path)
+            .map_err(|error| format!("read texture resource {source_path}: {error}"))?;
+        resources.push(DaggerRenderResource {
+            identity: identity.to_owned(),
+            content_hash: content_hash.to_owned(),
+            media_type: "image/png".to_owned(),
+            source_path: source_path.to_owned(),
+            bytes,
+        });
+    }
+    if resources.is_empty() {
+        return Err("admitted project produced no exact texture resources".to_owned());
+    }
+    Ok(DaggerRenderBundle {
+        frame,
+        resources,
+        source_entity_count: entities.len(),
+    })
 }
 
 #[cfg(test)]
@@ -975,5 +1093,22 @@ mod tests {
                 "unexpected texture resource path: {source_path}",
             );
         }
+    }
+
+    #[test]
+    fn canonical_project_decodes_through_the_public_engine_facade() {
+        let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .expect("workspace root")
+            .to_path_buf();
+        let project_text =
+            fs::read_to_string(workspace.join("content/projects/privateers-hold.project.json"))
+                .expect("committed project document");
+        let bundle = build_render_bundle(&workspace, &project_text)
+            .expect("Dagger projection must decode as an Engine retained frame");
+        assert!(!bundle.frame.ops.is_empty());
+        assert!(!bundle.resources.is_empty());
+        assert!(bundle.source_entity_count > 0);
     }
 }

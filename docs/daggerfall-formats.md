@@ -121,9 +121,11 @@ Per block: `origin = (gridX * 51.2, 0, gridZ * 51.2)`.
 - **Importer**: `rust/crates/asset-import` is **glTF/GLB-only** (`plan_import`, `plan_animated_glb_import`,
   `gltf_package.rs`) with a CLI at `src/bin/rusty_asset_import.rs`
   (`plan`/`write`/`init-sidecar`/`validate-sidecar`). No OBJ importer — and adding one is unnecessary (see plan).
-- **Renderer**: TypeScript/browser — `render/packages/renderer-three` (three.js ^0.184), `renderer-host`,
-  `render-contracts`; studio app at `studio/apps/studio-app`. Coordinate convention is **right-handed Y-up**
-  (docs/design.md:600), i.e. glTF/three.js convention — note this differs from Unity/DFU (left-handed):
+- **Renderer boundary**: downstream consumers use the public Rust facade and
+  Engine's Rust webview adapter; the private TypeScript/Three implementation
+  is not a Dagger dependency or vocabulary. Engine Studio remains a separate
+  first-party product. Coordinate convention is **right-handed Y-up**, which
+  differs from Unity/DFU (left-handed):
   when emitting glTF, map DFU-space `(x, y, z) → (x, y, -z)` and reverse triangle winding
   (or accept a mirrored dungeon for a pure geometry smoke test — decision point).
 - **Headless test path (ideal for "just a test")**: `rust/crates/render-presentation/tests/contract.rs`
@@ -154,8 +156,9 @@ Goal: one untextured static mesh asset `mesh/privateers-hold` renderable/validat
 3. **Validate headless**: add a presentation-frame fixture placing one `mesh/privateers-hold` instance
    with a flat material, extend/duplicate the `render-presentation` contract test pattern, assert
    golden snapshot (bounds/handles) — no GPU needed.
-4. **Optional visual check**: load the same asset in the studio app / renderer-three viewer with a
-   MeshNormalMaterial-style untextured material.
+4. **Optional visual check**: load the same asset through Engine Studio or
+   Dagger's Rust-native host. Downstream code does not import the private
+   renderer backend.
 
 Why GLB handoff instead of a native OBJ/RDB path: the engine's importer, validation, sidecar/metadata,
 and packing already speak glTF; the Daggerfall parser stays a clean offline converter and no engine
@@ -189,6 +192,8 @@ import-format surface area is added.
 The plan in §3 was executed in `/home/dev/rusty-dagger`:
 - `crates/arena2` — Rust parsers for BSA/MAPS/RDB/ARCH3D/TEXTURE/PAL/PAK (unit-tested against the real data).
 - `crates/dagger-import` — CLI producing (a) a **textured GLB** (combined dungeon node + one named node per door, embedded PNGs) and (b) the engine-native **untextured** `privateers-hold.mesh.json`.
-- GLB verified by headless render through the real rusty-engine renderer — `engine-render-check/` in that repo (the earlier ad-hoc three.js GLTFLoader harness was removed).
+- The real checked project is verified through `dagger-native-host`, which
+  reaches Engine presentation only through the public Rust facade. The former
+  downstream browser renderer harness was removed.
 - mesh.json admitted by the engine's `rusty-asset-import` with zero diagnostics as `mesh/privateers-hold` (artifacts in `content/imported/`).
 - TEXTURE.nnn decode (incl. RecordRle), PAL.PAL palette, dungeon texture table + climate door remap (74→374 for Privateer's Hold Woodlands climate), and TEXTURE.000/.001 solid-colour virtual archives are all implemented — details in the rusty-dagger README.

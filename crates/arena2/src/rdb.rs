@@ -396,7 +396,7 @@ mod marker_tests {
         let dir = arena2_dir();
         let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
         let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
-        assert!(block.flats.len() > 0, "expected flats in start block");
+        assert!(!block.flats.is_empty(), "expected flats in start block");
         let (flat, pos) = block
             .start_marker()
             .expect("start marker flat (199/10) must exist in S0000999");

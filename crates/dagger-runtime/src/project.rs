@@ -1,9 +1,12 @@
-use core_ids::EntityId;
-use core_math::Vec3;
-use engine_spatial::{MaterialVoxel, VoxelCollisionScene};
-use entity_state::{EntityDefinition, EntityState};
+use rusty_engine::core_ids::EntityId;
+use rusty_engine::core_math::Vec3;
+use rusty_engine::engine_spatial::{MaterialVoxel, VoxelCollisionScene};
+use rusty_engine::entity_state::{EntityDefinition, EntityState};
+use rusty_engine::svc_collision::{StaticMeshAssetId, StaticMeshColliderAsset};
+
+pub type DungeonBounds = ([f64; 3], [f64; 3]);
+type DungeonColliderAdmission = (StaticMeshColliderAsset, DungeonBounds);
 use serde::Deserialize;
-use svc_collision::{StaticMeshAssetId, StaticMeshColliderAsset};
 
 use crate::player::{PlayerControllerConfig, PlayerControllerState, PlayerInputBindings};
 
@@ -53,7 +56,7 @@ pub struct AdmittedProject {
     /// World-space AABB of the dungeon trimesh payload (min, max), when the
     /// mesh asset is present. Consumers (nav grid derivation) use it to bound
     /// their sweeps over the collision authority.
-    pub dungeon_bounds: Option<([f64; 3], [f64; 3])>,
+    pub dungeon_bounds: Option<DungeonBounds>,
     pub collision_scene: VoxelCollisionScene,
     pub entities: EntityState,
 }
@@ -189,7 +192,7 @@ impl AdmittedProject {
 /// Also returns the payload's world-space AABB for bounded sweeps.
 fn dungeon_collider_asset(
     asset: &AssetDocument,
-) -> Result<(StaticMeshColliderAsset, ([f64; 3], [f64; 3])), ProjectAdmissionError> {
+) -> Result<DungeonColliderAdmission, ProjectAdmissionError> {
     let mesh = asset
         .static_mesh
         .as_ref()

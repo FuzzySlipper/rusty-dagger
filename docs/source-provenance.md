@@ -1,17 +1,30 @@
 # Source provenance
 
-This repository is a downstream Rusty Engine consumer. Engine crates are
-consumed as git dependencies on the public repository
-(`https://github.com/FuzzySlipper/rusty-engine`) and locked by `Cargo.lock`;
-the render-check harness tracks the repo's `main` branch via pnpm.
-Bumping forward is an ordinary dependency update, not a provenance ritual.
+This repository is a downstream Rusty Engine consumer. Exactly one normal
+dependency, the public `rusty-engine` Rust facade, follows the provider's
+public `main` branch and is resolved by `Cargo.lock`. Owner namespaces remain
+visible under `rusty_engine::<owner>`. `scripts/check-engine-freshness.py`
+fails loudly when the lock is no longer current; moving forward is an ordinary
+dependency update, not a pin-maintenance ritual.
+
+The Engine renderer implementation, TypeScript packages, Three backend,
+webview bridge, bootstrap document, and generated private artifact remain
+upstream-owned. Rusty Dagger neither imports nor copies them. Its native
+diagnostic calls Engine's Rust host adapter through the facade; Engine owns
+the sensitive Rust-to-renderer relationship privately.
 
 The Privateer's Hold mesh, material catalog, and project document are
 generated from the local Daggerfall/Arena2 source described in
 `docs/daggerfall-formats.md`. The source game data is not committed. The
-runtime in `crates/dagger-runtime` is owned by this repository and consumes the
-generic `engine-spatial`, `entity-state`, and `svc-collision` contracts
-directly; it does not depend on `rusty-engine-demo` or `loading-bay-game`.
+runtime in `crates/dagger-runtime` is owned by this repository and consumes
+the generic `rusty_engine::engine_spatial`, `rusty_engine::entity_state`, and
+`rusty_engine::svc_collision` namespaces through the facade; it does not
+depend on `rusty-engine-demo` or `loading-bay-game`.
+
+The enemy atlas PNGs and manifests are generated, not hand-edited. Task 6707
+changed their durable extraction layout from an unbounded single row to a
+deterministic multi-row grid capped by Engine's public 4096-pixel texture
+dimension, then regenerated the checked project from local Arena2 data.
 
 ## Collision authority
 
