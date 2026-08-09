@@ -60,6 +60,26 @@ export interface ExperimentReadout {
   readonly playerPosition: readonly [number, number, number];
   readonly playerYawDegrees: number;
   readonly calculations: readonly CalculationRecord[];
+  readonly content: readonly ContentEntityReadout[];
+  readonly focusedContentId: number | null;
+}
+
+export interface ContentEntityReadout {
+  readonly id: number;
+  readonly kind: 'enemy';
+  readonly name: string;
+  readonly reference: {
+    readonly mobileId: number;
+    readonly mobileName: string;
+    readonly textureArchive: number;
+    readonly flying: boolean;
+    readonly spriteAsset: string;
+    readonly authoredPosition: readonly [number, number, number];
+  };
+  readonly live: {
+    readonly position: readonly [number, number, number];
+    readonly distanceFromPlayer: number;
+  };
 }
 
 export function cloneExperiment(document: ExperimentDocument): ExperimentDraft {

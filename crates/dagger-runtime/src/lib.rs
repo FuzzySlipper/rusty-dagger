@@ -26,7 +26,8 @@ pub use player::{
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
-    DaggerRuntime, ExperimentEvaluation, ExperimentReadout, RuntimeError, SessionCalculationRecord,
+    ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime, EnemyReferenceReadout,
+    ExperimentEvaluation, ExperimentReadout, RuntimeError, SessionCalculationRecord,
     CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
 };
 
@@ -150,6 +151,56 @@ mod tests {
         assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
         assert_eq!(reset.move_speed_units_per_second, 7.0);
         assert_eq!(reset.current_health, 115.0);
+    }
+
+    #[test]
+    fn browses_real_enemy_identity_and_jumps_using_live_runtime_state() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let spawn = runtime.player_position().expect("spawn position");
+        let initial = runtime
+            .experiment_readout()
+            .expect("initial content readout");
+        assert_eq!(initial.content.len(), 43);
+        let thief = initial
+            .content
+            .iter()
+            .find(|entity| entity.id == 2001)
+            .expect("committed thief identity");
+        assert_eq!(thief.name, "enemy-thief-1");
+        assert_eq!(thief.reference.mobile_id, 138);
+        assert_eq!(thief.reference.mobile_name, "Thief");
+        assert_eq!(thief.reference.texture_archive, 484);
+
+        let live_thief = [11.25, 33.025, -6.75];
+        runtime.sync_content_live_positions([(2001, live_thief), (999_999, [0.0; 3])]);
+        let jumped = runtime.jump_to_content(2001).expect("jump beside thief");
+        assert_eq!(jumped.focused_content_id, Some(2001));
+        let focused = jumped
+            .content
+            .iter()
+            .find(|entity| entity.id == 2001)
+            .expect("focused thief");
+        assert_eq!(focused.live.position, live_thief);
+        assert!(
+            focused.live.distance_from_player < 4.0,
+            "jump should land near the live thief, got {}",
+            focused.live.distance_from_player
+        );
+        assert_ne!(jumped.player_position, [spawn.x, spawn.y, spawn.z]);
+
+        let before_unknown = runtime.experiment_readout().unwrap();
+        let error = runtime
+            .jump_to_content(999_999)
+            .expect_err("unknown content must fail closed");
+        assert!(matches!(error, RuntimeError::Content(_)));
+        assert_eq!(runtime.experiment_readout().unwrap(), before_unknown);
+
+        let reset = runtime
+            .reset_play_session()
+            .expect("reset after content jump");
+        assert_eq!(reset.focused_content_id, None);
+        assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
     }
 
     #[test]

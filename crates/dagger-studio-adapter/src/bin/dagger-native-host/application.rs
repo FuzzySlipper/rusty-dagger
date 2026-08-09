@@ -141,6 +141,13 @@ impl NativeApplication {
                     let succeeded = result.is_ok();
                     (send_lab_result(reply, result), succeeded, succeeded)
                 }
+                LabCommand::Jump { id, reply } => {
+                    self.runtime
+                        .sync_content_live_positions(self.diagnostics.live_content_positions());
+                    let result = self.runtime.jump_to_content(id);
+                    let succeeded = result.is_ok();
+                    (send_lab_result(reply, result), succeeded, succeeded)
+                }
             };
             reply?;
             if reset_camera && self.ready {
@@ -379,6 +386,8 @@ impl NativeApplication {
                 pose.position[2] as f32,
             ],
         )?;
+        self.runtime
+            .sync_content_live_positions(self.diagnostics.live_content_positions());
         if diagnostic.frame.ops.is_empty() {
             return Ok(());
         }

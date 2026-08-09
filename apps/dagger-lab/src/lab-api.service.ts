@@ -36,4 +36,10 @@ export class LabApiService {
   play(): Promise<ExperimentReadout> {
     return firstValueFrom(this.http.post<ExperimentReadout>(`${API_URL}/play`, null));
   }
+
+  jumpToContent(id: number): Promise<ExperimentReadout> {
+    return firstValueFrom(
+      this.http.post<ExperimentReadout>(`${API_URL}/content/jump`, { id }),
+    );
+  }
 }

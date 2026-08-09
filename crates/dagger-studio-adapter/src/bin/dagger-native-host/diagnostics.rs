@@ -219,6 +219,13 @@ impl NativeDiagnostics {
         self.nav_overlay_enabled
     }
 
+    pub(crate) fn live_content_positions(&self) -> Vec<(u64, [f32; 3])> {
+        self.live_sprites
+            .iter()
+            .map(|(handle, live)| (u64::from(*handle), live.translation))
+            .collect()
+    }
+
     pub(crate) fn tick(&mut self, dt: f32, camera: [f32; 3]) -> Result<DiagnosticFrame> {
         if self.disposed {
             bail!("native diagnostics were disposed");

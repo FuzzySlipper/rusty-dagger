@@ -167,7 +167,10 @@ modularity gate, task 6529):
   decides what they mean.
 - `dagger-runtime` — Daggerfall-owned project admission, player controller,
   real-project collision walkthrough, experiment application/reset, and live
-  gameplay state. It consumes only the public `rusty_engine` Rust facade and
+  gameplay state. It also admits the small supported enemy-reference catalog
+  used by the Lab, accepts live patrol position snapshots from the native
+  composition root, and owns grounded jump-to-content commands. It consumes
+  only the public `rusty_engine` Rust facade and
   local `dagger-rpg`; it does not import sibling game products. It owns
   authoritative session mutation and exposes readback plus bounded semantic
   resolution history to Dagger-owned presentation/tooling.
@@ -193,7 +196,11 @@ modularity gate, task 6529):
   evaluation is side-effect-free; Reset & Play restores the named start and
   focuses the native window. The app calls Rust for every evaluation or
   mutation and never imports or mounts Engine renderer implementation.
-  Profiles and content browsing remain later vertical tasks.
+  The connected content browser searches the 43 committed enemy identities,
+  keeps decoded Arena2 reference fields distinct from authored player rules
+  and live patrol state, and asks Rust to choose a navigable grounded approach
+  before focusing the native game. It is deliberately not a generic Arena2
+  editor or a raw-coordinate teleport surface.
 - `data/` — optional committed, hand-authored JSON defaults for the experiment
   document. TS authoring modules may be preferable when builders materially
   improve readability. `content/` is committed generated output from
