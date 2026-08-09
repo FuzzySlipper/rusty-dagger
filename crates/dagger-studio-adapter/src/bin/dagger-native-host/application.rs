@@ -108,7 +108,11 @@ impl NativeApplication {
             .parent()
             .and_then(Path::parent)
             .context("resolve Rusty Dagger workspace root")?;
-        let server = LabServer::start(port, root.join("dist/apps/dagger-lab/browser"))?;
+        let server = LabServer::start(
+            self.options.lab_host,
+            port,
+            root.join("dist/apps/dagger-lab/browser"),
+        )?;
         println!(
             "DAGGER_LAB_READY api=http://127.0.0.1:{}/api/dagger-lab ui=http://127.0.0.1:{}",
             server.port(),
@@ -869,6 +873,7 @@ mod tests {
         let mut application = NativeApplication::new(Options {
             proof: false,
             corrupt_resource: false,
+            lab_host: std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
             lab_port: Some(port),
         })
         .expect("construct native host");

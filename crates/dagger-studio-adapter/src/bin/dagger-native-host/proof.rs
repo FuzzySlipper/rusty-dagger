@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, net::IpAddr};
 
 use anyhow::{bail, Result};
 
@@ -6,6 +6,7 @@ use anyhow::{bail, Result};
 pub(crate) struct Options {
     pub(crate) proof: bool,
     pub(crate) corrupt_resource: bool,
+    pub(crate) lab_host: IpAddr,
     pub(crate) lab_port: Option<u16>,
 }
 
@@ -14,6 +15,7 @@ impl Options {
         let mut proof = false;
         let mut corrupt_resource = false;
         let mut requested_lab_port = None;
+        let mut lab_host = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
         let mut no_lab = false;
         for argument in env::args().skip(1) {
             match argument.as_str() {
@@ -30,6 +32,11 @@ impl Options {
                             .map_err(|_| anyhow::anyhow!("invalid lab port in {value}"))?,
                     );
                 }
+                value if value.starts_with("--lab-host=") => {
+                    lab_host = value["--lab-host=".len()..]
+                        .parse::<IpAddr>()
+                        .map_err(|_| anyhow::anyhow!("invalid Lab bind address in {value}"))?;
+                }
                 _ => bail!("unknown argument {argument}"),
             }
         }
@@ -41,6 +48,7 @@ impl Options {
         Ok(Self {
             proof,
             corrupt_resource,
+            lab_host,
             lab_port,
         })
     }
