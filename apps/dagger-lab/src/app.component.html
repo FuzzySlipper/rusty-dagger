@@ -6,7 +6,11 @@
       <p class="lede">Work a rule, inspect the answer, apply it, and jump straight back into play.</p>
     </div>
     <div class="connection" [class.offline]="connectionError !== ''" data-testid="connection">
-      <span></span>{{ connectionError === '' && readout ? 'Connected' : 'Waiting for native host' }}
+      <span></span>
+      <div>
+        <strong>{{ connectionError === '' && readout ? 'Connected to native session' : 'Waiting for native host' }}</strong>
+        <small>Closing this tab leaves play running</small>
+      </div>
     </div>
   </header>
 

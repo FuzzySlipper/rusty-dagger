@@ -40,10 +40,10 @@ impl Options {
                 _ => bail!("unknown argument {argument}"),
             }
         }
-        let lab_port = if no_lab || (proof && requested_lab_port.is_none()) {
+        let lab_port = if no_lab {
             None
         } else {
-            Some(requested_lab_port.unwrap_or(4274))
+            Some(requested_lab_port.unwrap_or(if proof { 0 } else { 4274 }))
         };
         Ok(Self {
             proof,
@@ -67,6 +67,7 @@ pub(crate) struct Proof {
     pub(crate) pick_miss: bool,
     pub(crate) state: bool,
     pub(crate) render: bool,
+    pub(crate) lab_opened: bool,
     pub(crate) diagnostics_enabled: bool,
     pub(crate) diagnostics_disabled: bool,
     pub(crate) animation_advanced: bool,
@@ -90,6 +91,7 @@ impl Proof {
             && self.pick_miss
             && self.state
             && self.render
+            && self.lab_opened
             && self.diagnostics_enabled
             && self.diagnostics_disabled
             && self.animation_advanced

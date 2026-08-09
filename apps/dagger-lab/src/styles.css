@@ -11,8 +11,11 @@ h3 { margin-top: 3px; font-size: 1rem; }
 .eyebrow, .kicker { color: #c7a96a; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .lede { max-width: 650px; margin-top: 10px; color: #aab5b3; line-height: 1.6; }
 .muted { color: #839391; font-size: .86rem; line-height: 1.55; }
-.connection { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border: 1px solid #344b43; border-radius: 999px; background: #15221e; color: #b8d8cb; font-size: .82rem; white-space: nowrap; }
+.connection { display: flex; align-items: center; gap: 9px; padding: 9px 14px; border: 1px solid #344b43; border-radius: 12px; background: #15221e; color: #b8d8cb; font-size: .82rem; white-space: nowrap; }
 .connection span { width: 8px; height: 8px; border-radius: 50%; background: #70d39d; box-shadow: 0 0 14px #70d39d; }
+.connection div { display: grid; gap: 2px; }
+.connection strong { font-size: .82rem; }
+.connection small { color: #829b91; font-size: .68rem; }
 .connection.offline { border-color: #5c4634; color: #d7b59a; background: #251b16; }
 .connection.offline span { background: #d6895b; box-shadow: none; }
 .error, .inline-error { margin-bottom: 18px; padding: 12px 16px; border: 1px solid #6d3d34; border-radius: 8px; background: #2a1715; color: #efb9ac; }

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Focus the native Dagger product and send one physical W press."""
+"""Focus the native Dagger product and send one physical gameplay key."""
 
 import ctypes
 import sys
 import time
 
 key = sys.argv[1].lower() if len(sys.argv) > 1 else "w"
-if key not in {"w", "a", "s", "d"}:
-    raise SystemExit(f"unsupported movement key: {key}")
+if key not in {"w", "a", "s", "d", "l"}:
+    raise SystemExit(f"unsupported Dagger key: {key}")
 
 Display = ctypes.c_void_p
 Window = ctypes.c_ulong
@@ -162,6 +162,11 @@ try:
     if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
         raise SystemExit(f"physical {key.upper()} key-up injection failed")
     x11.XSync(display, 0)
-    print(f"DAGGER_LAB_PHYSICAL_MOVE_OK key={key.upper()} window={window}")
+    # Do not let the next Lab command race ahead of Engine's asynchronous
+    # physical-input readback for this falling edge. In particular, a reset
+    # followed by a late movement readout would immediately leave the spawn.
+    time.sleep(0.75)
+    marker = "DAGGER_LAB_PHYSICAL_OPEN_OK" if key == "l" else "DAGGER_LAB_PHYSICAL_MOVE_OK"
+    print(f"{marker} key={key.upper()} window={window}")
 finally:
     x11.XCloseDisplay(display)

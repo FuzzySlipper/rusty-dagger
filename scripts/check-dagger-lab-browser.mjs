@@ -14,7 +14,8 @@ const browser = await chromium.launch({
 });
 
 try {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  let page = await context.newPage();
   await page.goto('http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
   await waitForConnection(page);
 
@@ -105,6 +106,20 @@ try {
   await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
   const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
 
+  // Closing the companion tab must not create, reset, or dispose the native
+  // Rust session. Reopen it in the same browser profile and reattach to the
+  // exact authoritative values, history, and player position left above.
+  const beforeClosePosition = await page.getByTestId('player-position').innerText();
+  await page.close();
+  page = await context.newPage();
+  await page.goto('http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
+  await waitForConnection(page);
+  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
+  assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
+  assert.equal(await page.getByTestId('max-health').innerText(), '130.00');
+  assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
+  assert.equal(await page.getByTestId('player-position').innerText(), beforeClosePosition);
+
   await page.waitForTimeout(750);
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   const persistedProfileBSpeed = await page.evaluate(() => {
@@ -164,7 +179,7 @@ try {
   await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
 
   console.log(
-    `DAGGER_LAB_BROWSER_OK content=thief-2001/mobile-138 profileAContentMove=${JSON.stringify(profileAContentMove)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_LAB_BROWSER_OK lifecycle=tab-closed-reopened/same-native-session content=thief-2001/mobile-138 profileAContentMove=${JSON.stringify(profileAContentMove)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();

@@ -74,8 +74,10 @@ cargo run -p dagger-runtime --bin dagger-walkthrough
 pnpm install
 pnpm lab:build
 cargo run -p dagger-studio-adapter --bin dagger-native-host
-# Open http://127.0.0.1:4274 for Dagger Lab; play in the native window with
-# W/A/S/D, G patrol diagnostics, and N navgrid diagnostics.
+# Press L in the native product to open its connected Dagger Lab. Play with
+# W/A/S/D, use G for patrol diagnostics, and N for navgrid diagnostics.
+# The Lab is also directly reachable at http://127.0.0.1:4274 while this
+# native session is running; closing its browser tab does not stop play.
 ./scripts/check-dagger-lab-browser.sh # profiles/preview/apply/explain/A-B play + responsive proof
 ./scripts/check-engine-freshness.py # fail loudly when Engine main has moved
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
@@ -129,7 +131,10 @@ scripts/check-studio-browser.sh
   authored spawn remain separate from live patrol position and active player
   experiment values. Jump-to-play names an admitted entity; `dagger-runtime`
   chooses a grounded navigable approach and focuses the native product rather
-  than accepting browser-authored coordinates.
+  than accepting browser-authored coordinates. The native window advertises
+  and handles `L` through Engine physical-input readback to open the Lab for
+  that session. Closing and reopening the companion tab reattaches to the same
+  Rust runtime rather than creating a second gameplay authority.
 
 ## Data provenance & conventions
 
