@@ -14,6 +14,43 @@
   <p *ngIf="commandError" class="error" role="alert" data-testid="command-error">{{ commandError }}</p>
 
   <section class="workspace">
+    <article class="panel profiles">
+      <div class="panel-heading">
+        <div><p class="kicker">Local experiment shelf</p><h2>Named profiles</h2></div>
+        <span class="schema" data-testid="profile-count">{{ profiles.length }} profiles</span>
+      </div>
+      <div class="profile-layout">
+        <nav data-testid="profile-list" aria-label="Experiment profiles">
+          <button *ngFor="let profile of profiles" type="button"
+            [class.selected]="selectedProfileId === profile.id"
+            [class.active]="activeProfileId === profile.id"
+            (click)="selectProfile(profile)">
+            <span>{{ profile.name }}</span>
+            <small>{{ activeProfileId === profile.id ? 'Rust admitted' : 'Stored locally' }}</small>
+          </button>
+        </nav>
+        <section class="profile-editor">
+          <div class="active-profile">
+            <span>Authoritative session</span>
+            <strong data-testid="active-profile">{{ activeProfile()?.name ?? 'Custom / unsaved values' }}</strong>
+          </div>
+          <label class="profile-name"><span>Profile name</span>
+            <input data-testid="profile-name" maxlength="64" [(ngModel)]="profileName" />
+          </label>
+          <div class="profile-actions">
+            <button data-testid="activate-profile" class="primary" [disabled]="pending || !selectedProfile()" (click)="activateSelectedProfile()">Activate through Rust</button>
+            <button data-testid="save-profile" [disabled]="!selectedProfile()" (click)="saveSelectedProfile()">Save changes</button>
+            <button data-testid="save-as-profile" (click)="saveAsProfile()">Save as new</button>
+            <button data-testid="duplicate-profile" [disabled]="!selectedProfile()" (click)="duplicateSelectedProfile()">Duplicate</button>
+            <button data-testid="rename-profile" [disabled]="!selectedProfile()" (click)="renameSelectedProfile()">Rename</button>
+            <button data-testid="delete-profile" class="danger" [disabled]="!selectedProfile()" (click)="deleteSelectedProfile()">Delete</button>
+          </div>
+          <p *ngIf="profileError" class="inline-error" role="alert" data-testid="profile-error">{{ profileError }}</p>
+          <p class="play-note">Profiles store complete drafts in this browser. Activation succeeds only after Rust admits the whole document; use Reset &amp; Play below to try it.</p>
+        </section>
+      </div>
+    </article>
+
     <article class="panel editor">
       <div class="panel-heading">
         <div><p class="kicker">Active experiment draft</p><h2>Player rules</h2></div>
