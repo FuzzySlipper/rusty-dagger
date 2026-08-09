@@ -1,12 +1,12 @@
 use std::collections::BTreeSet;
 
-use core_ids::EntityId;
-use core_math::Vec3;
-use engine_spatial::{
+use rusty_engine::core_ids::EntityId;
+use rusty_engine::core_math::Vec3;
+use rusty_engine::engine_spatial::{
     KinematicMotionSystem, MotionAxis, MotionFact, MotionPhaseError, MotionPhaseReceipt,
     VoxelCollisionScene, MAX_MOTION_DELTA_SECONDS,
 };
-use entity_state::{EntityCommand, EntityCommandBatch, EntityState, EntityView};
+use rusty_engine::entity_state::{EntityCommand, EntityCommandBatch, EntityState, EntityView};
 use serde::{Deserialize, Serialize};
 
 pub const MAX_PLAYER_SPEED_UNITS_PER_SECOND: f32 = 1_000.0;
@@ -349,7 +349,7 @@ pub enum PlayerError {
     InvalidAction(ResolvedPlayerAction),
     UnknownPlayer { player: EntityId },
     MissingKinematicBody { player: EntityId },
-    EntityBatch(entity_state::BatchRejection),
+    EntityBatch(rusty_engine::entity_state::BatchRejection),
     Motion(MotionPhaseError),
 }
 

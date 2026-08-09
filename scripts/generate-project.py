@@ -170,11 +170,11 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
         })
 
     # Enemy directional sprite atlases (6595). One texture asset per unique
-    # enemy mobile id; the importer-packed PNG holds the 8 orientation frames
-    # (mirrored sides baked) and the manifest carries per-frame UV rects and
-    # DFU world sizes — now plumbed as per-frame `size` for the renderer
-    # (rusty-engine 43ba244, per-frame sprite world sizes), so the quad
-    # resizes per orientation frame instead of stretching a fixed max quad.
+    # enemy mobile id; the importer-packed, Engine-bounded PNG holds the
+    # orientation/animation frames (mirrored sides baked) and the manifest
+    # carries per-frame UV rects plus Dagger-owned DFU world sizes. The Engine
+    # retained atlas consumes only frame/UV identity; runtime sprite updates
+    # apply the selected Dagger size separately.
     for enemy in enemy_manifest.get("enemies", []):
         slug = f"enemy-{enemy['mobileId']}-atlas"
         assets.append({

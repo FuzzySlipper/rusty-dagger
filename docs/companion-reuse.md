@@ -6,6 +6,11 @@ policy is **copy, don't import**: no `path = ../rusty-engine-demo` or
 `git =` deps to sibling repos; useful patterns are copied into dagger-owned
 crates with a provenance comment.
 
+Current Engine exception: the canonical `rusty-engine` provider is consumed
+only through its single Rust facade dependency. Historical notes below that
+name renderer npm packages or browser renderer surfaces are survey evidence,
+not current integration guidance; task 6707 removed those downstream paths.
+
 ## 2026-08-02 baseline (task 6519)
 
 One section per sibling repo at that date: what exists, what to consume,

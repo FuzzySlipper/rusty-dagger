@@ -20,8 +20,8 @@
 
 use std::collections::BTreeMap;
 
-use core_space::Direction6;
-use engine_spatial::{SpatialCollisionHit, VoxelCollisionScene};
+use rusty_engine::core_space::Direction6;
+use rusty_engine::engine_spatial::{SpatialCollisionHit, VoxelCollisionScene};
 
 /// Horizontal column size (matches the derive-route column grid).
 pub const CELL_SIZE: f32 = 0.5;

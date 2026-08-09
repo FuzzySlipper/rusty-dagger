@@ -1,8 +1,10 @@
-use core_ids::EntityId;
-use core_math::Vec3;
-use engine_spatial::VoxelCollisionScene;
-use entity_state::EntityState;
-use svc_collision::{StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform};
+use rusty_engine::core_ids::EntityId;
+use rusty_engine::core_math::Vec3;
+use rusty_engine::engine_spatial::VoxelCollisionScene;
+use rusty_engine::entity_state::EntityState;
+use rusty_engine::svc_collision::{
+    StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
+};
 
 use crate::player::{
     apply_player_action, player_view, PlayerControlReceipt, PlayerControllerConfig,
@@ -93,7 +95,7 @@ impl DaggerRuntime {
     /// Sets the translation and clears vertical velocity so a subsequent
     /// settle starts cleanly; collision is re-evaluated by the next action.
     pub fn set_player_position(&mut self, translation: Vec3) -> Result<(), RuntimeError> {
-        use entity_state::{EntityCommand, EntityCommandBatch};
+        use rusty_engine::entity_state::{EntityCommand, EntityCommandBatch};
         self.entities
             .apply_batch(EntityCommandBatch::new([
                 EntityCommand::SetTranslation {

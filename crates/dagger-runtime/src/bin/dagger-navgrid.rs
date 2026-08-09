@@ -42,7 +42,7 @@ fn round3(value: f32) -> f32 {
 /// Explain why a landing cell failed derivation: report the up-ray
 /// obstruction (headroom/interior checks) at the cell center.
 fn diagnose_cell(
-    scene: &engine_spatial::VoxelCollisionScene,
+    scene: &rusty_engine::engine_spatial::VoxelCollisionScene,
     spawn: [f32; 3],
     support_y: f32,
 ) -> String {
@@ -55,8 +55,10 @@ fn diagnose_cell(
     match scene.raycast_world(origin, [0.0, 1.0, 0.0], MAX_CEILING_HEIGHT_UNITS) {
         Some(hit) => {
             let y = match hit {
-                engine_spatial::SpatialCollisionHit::Voxel(hit) => hit.point[1],
-                engine_spatial::SpatialCollisionHit::StaticMesh(hit) => hit.point.to_array()[1],
+                rusty_engine::engine_spatial::SpatialCollisionHit::Voxel(hit) => hit.point[1],
+                rusty_engine::engine_spatial::SpatialCollisionHit::StaticMesh(hit) => {
+                    hit.point.to_array()[1]
+                }
             };
             format!(" [up-ray obstruction at +{:.3}m]", y - support_y as f64)
         }
@@ -65,10 +67,10 @@ fn diagnose_cell(
 }
 
 fn main() {
-    let mut args = env::args().skip(1);
+    let args = env::args().skip(1);
     let mut project_path: Option<String> = None;
     let mut mode = String::from("--write");
-    while let Some(arg) = args.next() {
+    for arg in args {
         match arg.as_str() {
             "--write" | "--check" => mode = arg,
             _ if project_path.is_none() => project_path = Some(arg),

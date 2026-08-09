@@ -65,7 +65,7 @@ pub fn resolve_dungeon(
     let map_id = c.i32();
     let bitfield = c.u32();
     let longitude = ((bitfield & 0x1FF_FFFF) >> 8) as i32;
-    let latitude = ((c.i32() & 0xFF_FFFF) >> 8) as i32;
+    let latitude = (c.i32() & 0xFF_FFFF) >> 8;
     let dungeon_type = c.u8();
 
     // MAPPITEM: u32 offset table; record at count*4 + offset.

@@ -22,9 +22,9 @@
 use std::env;
 use std::fs;
 
-use core_math::Vec3;
 use dagger_runtime::{DaggerRuntime, PlayerControlFact, ResolvedPlayerAction};
-use engine_spatial::SpatialCollisionHit;
+use rusty_engine::core_math::Vec3;
+use rusty_engine::engine_spatial::SpatialCollisionHit;
 use serde_json::Value;
 
 const BODY_HALF: f32 = 0.25;

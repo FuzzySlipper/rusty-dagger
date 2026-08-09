@@ -149,13 +149,12 @@ modularity gate, task 6529):
   from `dagger-rpg` which owns numbers), `dagger-world` (dungeon session runtime:
   blocks, doors, lights, water state), each arriving only when the code that
   needs a home exists.
-- `engine-render-check/` — headless render proof through the real
-  rusty-engine renderer (renderer-three browser surface, consumed from
-  rusty-engine `main`): adapter protocol-14 readout -> vite page ->
-  verified texture resources -> overview/interior/directional-enemy
-  assertions + screenshots. This is the only render verification path —
-  when the engine renderer lacks a capability, file an upstream task
-  instead of building a side renderer.
+- `engine-render-check/` — migration pointer. The durable renderer diagnostic
+  is `dagger-native-host`: Dagger Rust owns project meaning and product
+  orchestration, the public `rusty_engine` facade owns the contract, and
+  Engine privately owns the Rust-to-webview/Three boundary. Downstream source
+  has no renderer TypeScript, HTML canvas bootstrap, or renderer package
+  imports.
 
 ### Data-driven content shape (campaign 6682, task 6683)
 
@@ -287,15 +286,10 @@ Classic enemies are view-only directional billboards. Ownership split:
   `dagger-runtime::directional` (`evaluate_directional`, arena2::mobile
   semantics): camera pose -> per-enemy orientation frame. Consumers apply the
   frames (`updateSprite` ops) and never re-implement the math — the
-  engine-render-check driver consumes them live: `dagger-sprite-frames
-  --serve` answers per-step camera poses while the page orbits an enemy (the
-  `enemy-orbit` proof asserts the DFU sector sequence 0,7,6,5,4,3,2,1 with
-  renderer-held frame readback). A future `dagger-world` live loop calls the
-  same API. Camera-facing is the renderer's (billboard modes, rusty-engine
-  6630); per-handle visibility readouts landed upstream (6632) if the naive
-  full-scene poll ever needs gating. The interactive flycam
-  (`engine-render-check/serve-flycam.mjs`, den-serve registered) polls the
-  same authority live as the user flies.
+  Rust tests and `dagger-sprite-frames` consume them without reimplementing
+  the sector math. A future Dagger-native presentation loop can submit those
+  updates through the same public retained-frame facade. Camera-facing stays
+  Engine presentation behavior; Dagger never calls the private renderer.
 - Static-size limitation: a sprite's quad size is fixed at creation (front
   record), while DFU scales per orientation record; accepted for view-only.
 
@@ -332,17 +326,16 @@ Ownership split:
   - `Enemy { position, mobile_id }`: camera-driven orientation via
     `evaluate_directional` (idle, this task); move-state cycling
     (orientation × anim_frame) arrives with the patrol task (6641).
-- The interactive flycam applies the animation frames client-side (it has
-  wall-clock time) using the authoritative frameCount + fps data from the
-  Rust-generated dump (`enemies.json → animatedBillboards`). The
-  directional enemy refresh still polls the Rust server; both happen in the
-  same per-tick loop with consolidated `applyFrame` calls — one for each
-  sprite kind. No per-sprite polling.
+- `AnimationService` remains the sole per-tick authority and is covered in
+  Rust. The initial native host submits the committed retained scene; adding
+  interactive animation playback means composing its consolidated updates in
+  downstream Rust and submitting them through the facade, never reviving a
+  browser-side clock or per-sprite polling.
 
 `dagger-sprite-frames --serve` answers per-step camera poses for directional
 enemy frames (6595). The animation authority (env flat timing) is stateful
-(elapsed time accumulates); the flycam applies it locally. A future
-`dagger-world` live loop calls `AnimationService::evaluate` directly.
+(elapsed time accumulates). A future `dagger-world` or native diagnostic loop
+calls `AnimationService::evaluate` directly.
 
 **Fidelity**: classic torches/flames carry 4-5 frames at 5fps (DFU
 DaggerfallBillboard default). Enemy idle records are 1-frame for all
@@ -378,18 +371,17 @@ spawns float (0.5–1.8m). The nav grid is how runtime grounding and patrol
   enemy spawns (every one lands on a walkable cell within 12m). Writes the
   committed `content/projects/privateers-hold.navgrid.json`; regenerate.sh
   keeps it fresh.
-- The flycam `N` toggle renders the grid through the real renderer: a bounded
-  handle pool (2048) shows the nearest cells within 10m and ±6m of the
-  camera's level, rebuilt debounced on moves; `check-flycam-navgrid.mjs` is
-  the headless screenshot proof. Adjacency (walls between columns) is
-  deliberately not modeled here — path connectivity is the upstream seam's
-  job (6642/6643).
+- The committed navgrid and grounding behavior are certified headlessly in
+  Rust. A future native diagnostic overlay must derive bounded cube updates
+  from this same artifact and submit them through the facade. Adjacency
+  (walls between columns) is deliberately not modeled here — path
+  connectivity is the upstream seam's job (6642/6643).
 
 
 - Every format claim is backed by a test against the real data files
   (arena2 unit tests run against /home/research/daggerfall-files).
-- Every visible result is backed by a headless render assertion plus a
-  screenshot artifact (engine-render-check, the real rusty-engine renderer).
+- The runnable visible result is backed by the native Engine host proof;
+  Studio has a separate real-browser integration gate.
 - Every engine claim is checked against engine source, not memory; upstream
   gaps are filed with file/line evidence (see tasks 6515/6516).
 

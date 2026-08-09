@@ -35,26 +35,22 @@ current task state in the Den `rusty-dagger` project.
   the committed Privateer's Hold project, owns the first-person controller,
   and provides the real-project collision walkthrough without importing the
   loading-bay game.
-- `crates/dagger-studio-adapter` — Rust-owned protocol-14 Studio adapter. It
-  admits the committed project through `dagger-runtime` and publishes its
-  static mesh/lights as an Engine render frame; unsupported mutations fail
-  closed until a Dagger authority exists.
+- `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
+  by the read-only protocol-14 Studio adapter and `dagger-native-host`. It
+  strictly decodes Dagger projection into Engine's public retained-frame
+  types; unsupported Studio mutations fail closed until Dagger owns them.
 - `scripts/studio-host.mjs` / `scripts/serve-studio.sh` — bounded local HTTP
   bridge for the exact Engine Studio static app and the local adapter.
 - `content/` — generated assets (privateers-hold.glb, privateers-hold.mesh.json,
   imported/ engine artifacts)
-- `engine-render-check/` — headless render proof through the real rusty-engine
-  renderer (renderer-three browser surface, consumed from rusty-engine
-  `main`); the only render verification path. When the engine renderer lacks
-  a capability, file an upstream task rather than building a side renderer.
-  Also hosts the interactive flycam (`serve-flycam.mjs`, registered with
-  den-serve): pointer-lock WASD flight through the dungeon with live
-  directional enemy sprites driven by the Rust runtime authority.
+- `engine-render-check/` — migration pointer only. Dagger no longer owns
+  renderer TypeScript, HTML, canvas bootstrap, or renderer package imports;
+  Engine privately owns that boundary behind the Rust facade.
 
 ## Usage
 
 ```sh
-cargo run -p dagger-import -- [--arena2 DIR] [--region N] [--location NAME] \
+cargo run -p dagger-import --bin dagger-import -- [--arena2 DIR] [--region N] [--location NAME] \
     [--format glb|mesh-json] [--texture-dir DIR] [--untextured] [--out FILE]
 # defaults: --arena2 local/arena2 --region 17 \
 #           --location "Privateer's Hold" --out content/privateers-hold.glb
@@ -62,13 +58,11 @@ cargo run -p dagger-import -- [--arena2 DIR] [--region N] [--location NAME] \
 # Regenerate everything (extract -> engine import -> studio project doc):
 scripts/regenerate.sh
 
-cargo test                      # arena2 parser tests against the real data files
+cargo test --workspace --locked
 cargo run -p dagger-runtime --bin dagger-walkthrough
-# Render proof through the real rusty-engine renderer (one-time: pnpm install
-# inside engine-render-check/):
-node engine-render-check/check.mjs
-# Interactive flycam (same renderer; usually started by den-serve on 4174):
-node engine-render-check/serve-flycam.mjs 127.0.0.1 4174
+./scripts/verify-native-host.sh # real Engine host, X11 input, pick, resources, lifecycle
+cargo run -p dagger-studio-adapter --bin dagger-native-host # interactive native diagnostic
+./scripts/check-engine-freshness.py # fail loudly when Engine main has moved
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (uses a local Rusty Engine Studio build; set
 # RUSTY_ENGINE_STUDIO_STATIC_ROOT to override the conventional sibling path):
@@ -79,10 +73,10 @@ node scripts/check-studio-host.mjs
 scripts/check-studio-browser.sh
 ```
 
-## Verification status (2026-08-01)
+## Verification status (2026-08-08)
 
 - Extraction: 5 RDB blocks (S0000999 start + 4 border), 365 model instances,
-  18,811 verts / 9,263 tris, 81 unique textures — matches the validated Python
+  17,651 verts / 8,683 tris, 81 unique textures — matches the checked importer
   proof-of-concept exactly (bounds X[-51.2,102.4] Y[0,51.1] Z[-102.4,51.2] m,
   glTF right-handed space).
 - GLB: structurally validated (JSON/accessor/bufferView/PNG decoding) and
@@ -92,18 +86,19 @@ scripts/check-studio-browser.sh
 - Engine-native: `content/privateers-hold.mesh.json` is admitted by the
   engine's `rusty-asset-import` CLI with zero diagnostics as
   `mesh/privateers-hold`; `content/imported/` holds the published catalog
-  (82 material + 81 texture entries) + static-mesh artifact (18,811 verts,
-  27,789 indices, position/normal/uv layout, matching bounds). The studio
+  (82 material + 81 texture entries) + static-mesh artifact (17,651 verts,
+  26,049 indices, position/normal/uv layout, matching bounds). The shared
   adapter projects the textured frame (defineTexture + textured materials +
   textureResources manifest); host serves exact content-addressed PNG bytes
   with hash verification.
-- Render proof (2026-08-04): `engine-render-check/` renders the dungeon
-  through the real rusty-engine renderer (renderer-three browser surface,
-  consumed from rusty-engine `main`) in headless Chromium, asserting
-  triangle/draw-call counts, texture-resource count, pixel gates, and zero
-  console errors across overview + interior + directional-enemy poses. This
-  is the only render verification path; the ad-hoc three.js harnesses were
-  removed.
+- Native render proof: `dagger-native-host` mounts Engine's private webview
+  adapter through `rusty_engine`, submits the real retained Privateer's Hold
+  frame and 121 exact texture resources, configures views/camera/resize,
+  reads state and renders, routes physical input and picks into authoritative
+  Dagger player state, proves a miss is a no-op, rejects corrupt resources
+  transactionally, and disposes. Engine Studio retains its separate browser
+  integration proof; neither path exposes renderer implementation packages to
+  Dagger source.
 
 ## Data provenance & conventions
 
@@ -121,6 +116,11 @@ dungeon's LocationId; Privateer's Hold -> {23,22,19,22,20,368}), with
 TEXTURE.000/.001 are virtual solid-colour archives (32x32 palette fills).
 
 ## Next steps / known gaps
+
+Current active feature work remains in Den: campaign `6682`, water `6526`, and
+automap `6528`. Task `6707` changes only the Engine integration and repository
+health posture; it does not absorb those owners. The numbered items below are
+historical landmarks and design triggers, not an inferred active queue.
 
 Tracked as Den tasks in the `rusty-dagger` project (dependencies wired):
 

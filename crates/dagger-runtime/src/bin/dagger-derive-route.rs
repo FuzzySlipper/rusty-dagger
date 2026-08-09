@@ -29,8 +29,8 @@ use std::collections::{BTreeMap, VecDeque};
 use std::env;
 use std::fs;
 
-use core_math::Vec3;
 use dagger_runtime::{DaggerRuntime, ResolvedPlayerAction};
+use rusty_engine::core_math::Vec3;
 
 const BODY_HALF: f32 = 0.25;
 const BLOCK_SIDE: f32 = 51.2;
@@ -92,7 +92,7 @@ fn level_of(support_y: f32) -> i32 {
 }
 
 fn support_height(runtime: &DaggerRuntime, eye: [f32; 3], window: f32) -> Option<f32> {
-    use engine_spatial::SpatialCollisionHit;
+    use rusty_engine::engine_spatial::SpatialCollisionHit;
     const OFFSETS: [f32; 3] = [0.0, BODY_HALF, -BODY_HALF];
     let bottom = eye[1] - BODY_HALF;
     for ox in OFFSETS {
@@ -126,10 +126,10 @@ fn settle(runtime: &mut DaggerRuntime, actions: usize) {
 }
 
 fn main() {
-    let mut args = env::args().skip(1);
+    let args = env::args().skip(1);
     let mut project_path: Option<String> = None;
     let mut mode = String::from("--write");
-    while let Some(arg) = args.next() {
+    for arg in args {
         match arg.as_str() {
             "--write" | "--check" => mode = arg,
             _ if project_path.is_none() => project_path = Some(arg),

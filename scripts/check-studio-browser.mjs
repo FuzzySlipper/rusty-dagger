@@ -17,12 +17,9 @@
  *   textureCells >= 1 (6x6 grid cell dominated by geometry with luminance
  *   stddev >= 6: texel-frequency alternation flat shading cannot produce),
  *   huePixels >= 5000 (histogram sample floor).
- * - Renderer comparison: the focused frame's 12-bin hue histogram must
- *   overlap the best of the committed rusty-engine render references
- *   (engine-render-check/*.png — the same renderer, so this is a framing/
- *   lighting tolerance, not pixel equality) by histogramIntersection >= 0.40.
- *   Measured 0.65 desktop / 0.70 narrow, while the untextured average-color
- *   frame scores ~0.25.
+ * The browser check certifies Engine Studio's own renderer path. Rusty
+ * Dagger's independent product proof is the native Rust host; this test no
+ * longer depends on screenshots from a downstream-owned browser renderer.
  */
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -32,7 +29,6 @@ import {
   decodePng,
   differenceRatio,
   frameMetrics,
-  histogramIntersection,
 } from './studio-frame-metrics.mjs';
 
 const { chromium } = await import(
@@ -46,17 +42,6 @@ const output = resolve(process.env.RUSTY_STUDIO_BROWSER_OUT ?? `/tmp/rusty-dagge
 const project = 'content/projects/privateers-hold.project.json';
 const projectUrl = `${base}/?root=${encodeURIComponent(root)}&project=${encodeURIComponent(project)}`;
 const executablePath = process.env.RUSTY_STUDIO_CHROMIUM ?? '/usr/bin/chromium';
-
-const GLB_REFERENCES = [
-  'engine-render-check/privateers-hold-overview.png',
-  'engine-render-check/privateers-hold-interior.png',
-];
-
-const referenceHistograms = [];
-for (const reference of GLB_REFERENCES) {
-  const image = decodePng(await readFile(resolve(root, reference)));
-  referenceHistograms.push({ reference, histogram: frameMetrics(image).hueHistogram });
-}
 
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
@@ -134,14 +119,6 @@ try {
       const afterImage = decodePng(await readFile(`${output}/${name}-canvas.png`));
       const changed = differenceRatio(beforeImage, afterImage);
       const metrics = frameMetrics(afterImage);
-      const intersections = Object.fromEntries(
-        referenceHistograms.map(({ reference, histogram }) => [
-          reference,
-          histogramIntersection(metrics.hueHistogram, histogram),
-        ]),
-      );
-      const bestIntersection = Math.max(...Object.values(intersections));
-
       // Texture resource audit for this viewport.
       const uniqueResources = new Map();
       let statusFailures = 0;
@@ -172,8 +149,6 @@ try {
         textureCells: metrics.textureCells,
         maxCellStddev: metrics.maxCellStddev,
         huePixels: metrics.huePixels,
-        glbReferenceIntersections: intersections,
-        bestGlbIntersection: bestIntersection,
         textureResources: {
           responses: resourceResponses.length,
           uniqueFetched: uniqueResources.size,
@@ -189,10 +164,6 @@ try {
       assert.ok(metrics.uniqueColors >= 800, `${name}: focused frame is not richly textured (uniqueColors ${metrics.uniqueColors})`);
       assert.ok(metrics.textureCells >= 1, `${name}: no texel-frequency detail cells in the focused frame`);
       assert.ok(metrics.huePixels >= 5000, `${name}: too few geometry hue samples (${metrics.huePixels}) for the GLB comparison`);
-      assert.ok(
-        bestIntersection >= 0.40,
-        `${name}: focused frame hue signature does not match the GLB references (best ${bestIntersection.toFixed(3)})`,
-      );
       assert.ok(uniqueResources.size >= 60, `${name}: renderer fetched too few unique texture resources (${uniqueResources.size})`);
       assert.equal(statusFailures, 0, `${name}: ${statusFailures} texture resource responses were not HTTP 200`);
       assert.equal(hashFailures, 0, `${name}: ${hashFailures} texture resource bodies failed the admitted content hash`);
@@ -201,7 +172,7 @@ try {
       console.log(
         `${name}: canvas ${Math.round(bounds.width)}x${Math.round(bounds.height)}; changed=${changed.toFixed(3)} `
         + `occupancy=${metrics.occupancy.toFixed(3)} uniqueColors=${metrics.uniqueColors} textureCells=${metrics.textureCells} `
-        + `glbBest=${bestIntersection.toFixed(3)} textures=${uniqueResources.size} fetched/hash-ok`,
+        + `textures=${uniqueResources.size} fetched/hash-ok`,
       );
     } finally {
       await page.close();
