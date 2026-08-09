@@ -25,14 +25,18 @@ pub use player::{
     MAX_PLAYER_LOOK_DEGREES_PER_UNIT, MAX_PLAYER_SPEED_UNITS_PER_SECOND, MAX_PLAYER_STEP_UP_UNITS,
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
-pub use runtime::{DaggerRuntime, RuntimeError};
+pub use runtime::{
+    DaggerRuntime, ExperimentReadout, RuntimeError, SessionCalculationRecord,
+    CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
+};
 
 #[cfg(test)]
 mod tests {
     use super::{
         AdmittedProject, DaggerRuntime, PlayerControlFact, ProjectAdmissionError,
-        ResolvedPlayerAction,
+        ResolvedPlayerAction, RuntimeError, CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
     };
+    use rusty_engine::core_math::Vec3;
 
     const PROJECT: &str = include_str!("../../../content/projects/privateers-hold.project.json");
 
@@ -120,6 +124,67 @@ mod tests {
             .expect_err("out-of-range input must fail closed");
         assert!(format!("{error}").contains("InvalidAction"));
         assert_eq!(runtime.player_position().expect("player position"), before);
+    }
+
+    #[test]
+    fn applies_a_complete_experiment_and_resets_the_live_run_to_spawn() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let spawn = runtime.player_position().expect("spawn position");
+        let mut experiment: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(7.0);
+        experiment["player"]["vitality"]["endurance"] = serde_json::Value::from(60.0);
+
+        let readout = runtime
+            .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
+            .expect("apply experiment");
+        assert_eq!(readout.move_speed_units_per_second, 7.0);
+        assert_eq!(readout.max_health, 115.0);
+        assert_eq!(readout.calculations.last().unwrap().sequence, 2);
+
+        runtime
+            .set_player_position(Vec3::new(spawn.x + 5.0, spawn.y, spawn.z))
+            .expect("move away from spawn");
+        let reset = runtime.reset_play_session().expect("reset live run");
+        assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
+        assert_eq!(reset.move_speed_units_per_second, 7.0);
+        assert_eq!(reset.current_health, 115.0);
+    }
+
+    #[test]
+    fn rejected_experiment_is_failure_atomic_and_history_is_bounded() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let before = runtime
+            .experiment_readout()
+            .expect("readout before rejection");
+        let error = runtime
+            .apply_experiment_json(
+                r#"{"schemaVersion":1,"player":{"movement":{"speedUnitsPerSecond":0},"vitality":{"baseHealth":25,"endurance":40,"healthPerEndurance":1.5}}}"#,
+            )
+            .expect_err("zero speed must be rejected");
+        assert!(matches!(error, RuntimeError::Experiment(_)));
+        assert_eq!(
+            runtime
+                .experiment_readout()
+                .expect("readout after rejection"),
+            before
+        );
+
+        for speed_tenths in 1..=(CALCULATION_HISTORY_LIMIT + 4) {
+            let speed = 1.0 + speed_tenths as f32 / 10.0;
+            let mut experiment: serde_json::Value =
+                serde_json::from_str(STARTER_EXPERIMENT_JSON).unwrap();
+            experiment["player"]["movement"]["speedUnitsPerSecond"] =
+                serde_json::Value::from(speed);
+            runtime
+                .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
+                .expect("apply bounded-history experiment");
+        }
+        let history = runtime.experiment_readout().unwrap().calculations;
+        assert_eq!(history.len(), CALCULATION_HISTORY_LIMIT);
+        assert!(history.first().unwrap().sequence > 1);
     }
 
     #[test]

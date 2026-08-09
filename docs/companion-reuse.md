@@ -1,10 +1,11 @@
 # Companion repo reuse survey
 
-This document tracks which sibling repos were surveyed, what was found, and
-what Rusty Dagger may **copy** (with provenance) vs must **avoid**. The
-policy is **copy, don't import**: no `path = ../rusty-engine-demo` or
-`git =` deps to sibling repos; useful patterns are copied into dagger-owned
-crates with a provenance comment.
+This document tracks which sibling repos were surveyed and which ideas are
+useful in Rusty Dagger. Siblings are design evidence, not product dependencies:
+do not add `path`/`git` dependencies on sibling games. Prefer reimplementation
+inside Dagger's ownership boundaries. If substantive source is actually copied,
+retain ordinary license/attribution information; do not build per-rule or
+per-value provenance machinery around design inspiration.
 
 Current Engine exception: the canonical `rusty-engine` provider is consumed
 only through its single Rust facade dependency. Historical notes below that
@@ -13,9 +14,9 @@ not current integration guidance; task 6707 removed those downstream paths.
 
 ## 2026-08-02 baseline (task 6519)
 
-One section per sibling repo at that date: what exists, what to consume,
-what to avoid, and the integration shape. "Consume" here means the pre-6682
-interpretation (depend as crate/pnpm); after 6682 it means copy-with-provenance.
+One section per sibling repo at that date: what existed, what looked reusable,
+what to avoid, and the integration shape. This baseline is historical. The
+2026-08-09 gameplay-lab guidance below supersedes it where they disagree.
 
 ### rusty-engine-demo (loading-bay)
 
@@ -145,7 +146,101 @@ tasks 6515/6516 with local consume tasks 6521/6522.
 
 ---
 
-## 2026-08-07 campaign survey (task 6683) — Phase 0 foundation for 6682
+## 2026-08-09 gameplay-lab guidance (program 6682)
+
+The earlier 6683 survey chose an empty Rust crate, strict JSON tables, and a
+horizontal sequence ending in UI/integration. That plan is superseded. The
+current center of gravity is a real edit -> apply -> play -> explain -> adjust
+loop in Privateer's Hold.
+
+### What to borrow
+
+#### asha-rpg
+
+- Immutable, data-only TypeScript builders are a good way to author the blurry
+  line between content and rules without creating a second authority.
+- A compact language-neutral document can cross into Rust, where operation
+  meaning, formula evaluation, legality, mutation, and semantic output live.
+- New operation meaning starts in Rust; TS sugar and Angular editors expose the
+  closed vocabulary.
+
+Do **not** inherit asha-rpg's scale: broad artifact contracts, version/fingerprint
+machinery, checkpoints, replay/certification, package governance, or a language
+roadmap detached from current gameplay. Dagger's internal TS/Rust document
+evolves in lockstep until independent consumers prove otherwise.
+
+#### Ruleweaver
+
+- Its simple named-variable arithmetic formula shape is appropriate for the
+  spreadsheet-like checks designers commonly need.
+- Its structured attack result/combat-log shape is more useful than its generic
+  tick/category/message rule trace. Dagger traces should record named rolls,
+  bonuses, defenses, effects, and before/after state in designer language.
+
+Do **not** port Ruleweaver's mutable handler/service architecture or use its
+generic execution trace as the product explanation.
+
+#### rusty-engine-demo, rusty-engine-ui, and rusty-roguelike
+
+- Reuse presentational patterns for compass, status, inventory, combat log,
+  responsive Angular layout, and first-person controls where they remain
+  dependency-clean.
+- Reuse gameplay service shapes only as references. Dagger Rust owns Daggerfall
+  semantics and the native composition root.
+- Never import or mount sibling/Engine renderer implementation from Dagger TS.
+  Current Engine is consumed through the public Rust facade.
+
+#### rusty-d20
+
+- Keep the useful authority rule: authored data may name and assemble supported
+  operations, while Rust defines and executes their meaning.
+- Do not adopt the d20 vocabulary, package compiler, canonical fingerprints,
+  provenance pipeline, or generated-contract governance. Dagger needs a much
+  smaller internal authoring seam driven by gameplay experiments.
+
+### Current authoring and tooling shape
+
+- TS/JSON defaults and Angular edits produce the same immutable experiment
+  document.
+- `dagger-rpg` currently admits movement plus named vitality inputs, evaluates
+  the Rust-owned max-health formula, and emits semantic calculation records.
+  Later vocabulary grows only with playable experiments.
+- `dagger-runtime` installs a complete admitted experiment, owns live state,
+  and supports explicit reset/retry. There is no per-field revision protocol.
+- The Angular Dagger Lab stays attached to the running native game. The first
+  surface has movement/vitality editors, live position/controller/health
+  readback, a Rust-backed formula worksheet, and bounded calculation history.
+  Named profiles and experiment-driven content browsing are follow-up tasks,
+  not current capabilities.
+- `arena2` remains read-only format/reference knowledge. In particular,
+  `arena2::mobile` owns classic mobile identity, sprite, animation, and facing
+  reference semantics; `dagger-rpg` owns authored gameplay stats keyed by those
+  same mobile ids.
+- `data/` may hold committed JSON defaults where that is ergonomic. TS authoring
+  modules may be used when builders make formulas/content clearer. `content/` is
+  committed generated output and is regenerated with `scripts/regenerate.sh`.
+
+### Guardrails
+
+- Every gameplay task ends in a named native Privateer's Hold interaction.
+- Headless examples and validation support play; they do not become the main
+  deliverable.
+- Add vocabulary and editor surface only for a current experiment.
+- Keep validation focused on useful author errors: unknown fields, unsupported
+  schema values, non-finite values, unusable ranges, and invalid derived
+  results. Add expression/reference checks only if those concepts actually
+  enter a playable document.
+- No provenance graph, per-value donor lineage, artifact fingerprinting,
+  deterministic random tapes, replay/checkpoint certification, revision DAG,
+  compatibility matrix, package dependency solver, or exhaustive proof corpus.
+
+---
+
+## 2026-08-07 historical campaign survey (superseded)
+
+The inventory below records what the first 6683 attempt examined. Its
+empty-crate delivery plan, strict schema/version posture, copy-provenance rule,
+replay suggestions, and horizontal 6684..6690 ordering are not current design.
 
 **Goal:** survey `../rusty-engine-demo` (FPS controller + `ui-game-panels`/compass +
 `project-content` pipeline), `../rusty-d20` and `../rusty-roguelike` (two
@@ -168,11 +263,12 @@ the source of truth that later tasks (6684..6690) follow.
   `vitality.rs`, `progression.rs`, `session.rs` (GameSession), `runtime.rs`,
   `project_admission.rs`/`project_codec.rs`/`project_store.rs`, `bin/browser-host.rs`,
   `bin/studio-adapter.rs` + `studio_adapter/` (protocol-14 projection).
-- `ts/packages/project-content/src/` — `content-artifacts.ts`, `canonicalProject()`,
-  `synchronizeGeneratedProjects()`, `generated.ts` (schemaVersion 24 project doc
-  generator). Tests prove it never overwrites canonical `projects/*.project.json`.
+- `ts/packages/project-content/src/` — `content-artifacts.ts`,
+  `synchronizeGeneratedProjects()`, and `schema.ts` (schemaVersion 24 project
+  document schema). `canonicalProject()` is test-only; this package has no
+  `generated.ts`.
 - `libs/` — `ui-game-panels`, `ui-compass` (bearing strip), `ui-combat-log`,
-  `ui-minimap`, `theme` — presentational, input-only view models.
+  and `theme`. `ui-minimap` belongs to rusty-engine-ui, not the demo.
 - `content/` — `assets/actor-kit`, `assets/brush-kit`, `assets/prop-kit` (mesh.json +
   source GLBs), `doom-e1m1/` textures, `projects/loading-bay.project.json` (canonical).
 
@@ -275,7 +371,7 @@ the source of truth that later tasks (6684..6690) follow.
   view-model shape, not `feature-game-hud` composition.
 - **Avoid:** `feature-*` compositions, `domain`/`protocol`/`store` game loopback.
 
-### Copy, don't import — the rule
+### Historical copy rule (superseded by the 2026-08-09 guidance)
 
 > **No `path` or `git` dependency on any sibling repo.** If a pattern from
 > `../rusty-engine-demo`, `../rusty-d20`, or `../rusty-roguelike` is worth
@@ -286,12 +382,12 @@ the source of truth that later tasks (6684..6690) follow.
 > workarounds). This keeps each crate liftable to the successor project without
 > dragging a product's session, progression, or UI domain along.
 
-### Data-driven content shape — the decision for campaign 6682
+### Superseded data-driven content shape from the first 6683 attempt
 
 **Crate / module boundary**
 
-- `arena2` — stays pure, read-only BSA/MAPS/RDB/ARCH3D/TEXTURE/PAL/PAK parsers
-  (already 1327 lines / 8 files). No game semantics, no allocation of meaning
+- `arena2` — stays read-only BSA/MAPS/RDB/ARCH3D/TEXTURE/PAL/PAK parsing and
+  classic reference semantics. No gameplay mutation or authored experiment meaning
   beyond "what the bytes say". Tests gate against `/home/research/daggerfall-files`.
 - **`dagger-rpg`** (new, landed as empty crate in this task) — owns **all**
   Daggerfall-fidelity tables + pure formulas for the loop: attributes
@@ -340,7 +436,7 @@ the source of truth that later tasks (6684..6690) follow.
   formulas are tested, not arm-waved. Keep `docs/source-provenance.md` current
   when donor revs change.
 
-**What lands now vs later**
+**Superseded horizontal delivery split**
 
 - **Now (6683):** this document + `docs/design.md` system map sketch + empty
   `crates/dagger-rpg` with `data/README.md` and `hello_world` gate (2 tests).
@@ -350,7 +446,7 @@ the source of truth that later tasks (6684..6690) follow.
   runtime attack authority; 6686 inventory model + RDB treasure flats; 6687 enemy
   roster (+ AI stub); 6688 leveling; 6689 HUD shell; 6690 controller wiring.
 
-### Re-evaluated decisions (supercede 6519 where noted)
+### Historical decisions from the first 6683 attempt (superseded)
 
 1. **FP controller:** no change — still reference-only from demo `player.rs`; the
    Daggerfall controller lives in `dagger-runtime` and calls `engine_spatial` directly.

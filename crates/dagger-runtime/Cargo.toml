@@ -6,6 +6,7 @@ description = "Daggerfall gameplay runtime and real-project collision walkthroug
 
 [dependencies]
 arena2 = { path = "../arena2" }
+dagger-rpg = { path = "../dagger-rpg" }
 rusty-engine.workspace = true
 serde.workspace = true
 serde_json.workspace = true

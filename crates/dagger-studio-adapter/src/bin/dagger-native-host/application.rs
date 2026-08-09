@@ -29,6 +29,7 @@ use winit::{
 
 use crate::{
     diagnostics::{DiagnosticFrameReadout, NativeDiagnostics},
+    lab_server::{LabCommand, LabReply, LabServer},
     proof::{Options, PendingPick, PickKind, Proof},
     view::{dagger_views, window_bounds},
 };
@@ -58,6 +59,7 @@ struct NativeApplication {
     ready: bool,
     proof: Proof,
     failure: Option<String>,
+    lab_server: Option<LabServer>,
 }
 
 impl NativeApplication {
@@ -70,6 +72,18 @@ impl NativeApplication {
             .context("admit checked Privateer's Hold project")?;
         let diagnostics = NativeDiagnostics::from_documents(PROJECT, NAVGRID)?;
         let bundle = build_render_bundle(root, PROJECT).map_err(anyhow::Error::msg)?;
+        let lab_server = options
+            .lab_port
+            .map(|port| LabServer::start(port, root.join("dist/apps/dagger-lab/browser")))
+            .transpose()?;
+        if let Some(server) = &lab_server {
+            println!(
+                "DAGGER_LAB_READY api=http://127.0.0.1:{}/api/dagger-lab ui=http://127.0.0.1:{}",
+                server.port(),
+                server.port()
+            );
+            io::stdout().flush()?;
+        }
         Ok(Self {
             options,
             runtime,
@@ -91,7 +105,39 @@ impl NativeApplication {
             ready: false,
             proof: Proof::default(),
             failure: None,
+            lab_server,
         })
+    }
+
+    fn drain_lab_commands(&mut self) -> Result<()> {
+        loop {
+            let command = match self.lab_server.as_ref().map(LabServer::try_recv) {
+                Some(Ok(command)) => command,
+                Some(Err(std::sync::mpsc::TryRecvError::Empty)) | None => break,
+                Some(Err(std::sync::mpsc::TryRecvError::Disconnected)) => {
+                    bail!("Dagger Lab bridge disconnected")
+                }
+            };
+            let (reply, reset_camera) = match command {
+                LabCommand::Read { reply } => {
+                    let result = self.runtime.experiment_readout();
+                    (send_lab_result(reply, result), false)
+                }
+                LabCommand::Apply { document, reply } => {
+                    let result = self.runtime.apply_experiment_json(&document);
+                    (send_lab_result(reply, result), false)
+                }
+                LabCommand::Reset { reply } => {
+                    let result = self.runtime.reset_play_session();
+                    (send_lab_result(reply, result), true)
+                }
+            };
+            reply?;
+            if reset_camera && self.ready {
+                self.update_camera()?;
+            }
+        }
+        Ok(())
     }
 
     fn mount(&mut self, event_loop: &ActiveEventLoop) -> Result<()> {
@@ -643,6 +689,10 @@ impl ApplicationHandler for NativeApplication {
         while gtk::events_pending() {
             gtk::main_iteration_do(false);
         }
+        if let Err(error) = self.drain_lab_commands() {
+            self.fail(event_loop, error);
+            return;
+        }
         if self.options.proof && self.started_at.elapsed() > Duration::from_secs(300) {
             self.fail(
                 event_loop,
@@ -697,6 +747,27 @@ impl ApplicationHandler for NativeApplication {
             }
         }
     }
+}
+
+fn send_lab_result(
+    reply: std::sync::mpsc::Sender<LabReply>,
+    result: Result<dagger_runtime::ExperimentReadout, dagger_runtime::RuntimeError>,
+) -> Result<()> {
+    let response = match result {
+        Ok(readout) => LabReply {
+            status: 200,
+            body: serde_json::to_string(&readout).context("serialize Dagger Lab readout")?,
+        },
+        Err(error) => LabReply {
+            status: 400,
+            body: serde_json::to_string(&serde_json::json!({ "error": error.to_string() }))
+                .context("serialize Dagger Lab error")?,
+        },
+    };
+    // A closed browser tab may abandon its one-shot reply channel. That is a
+    // transport disconnect, not a reason to stop the authoritative game.
+    let _ = reply.send(response);
+    Ok(())
 }
 
 pub(crate) fn run(options: Options) -> Result<()> {

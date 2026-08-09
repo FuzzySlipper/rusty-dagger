@@ -33,8 +33,15 @@ current task state in the Den `rusty-dagger` project.
     legacy average-color fallback for A/B mood comparison.
 - `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
   the committed Privateer's Hold project, owns the first-person controller,
-  and provides the real-project collision walkthrough without importing the
-  loading-bay game.
+  applies admitted experiments, owns reset/readback and bounded calculation
+  history, and provides the real-project collision walkthrough without
+  importing the loading-bay game.
+- `crates/dagger-rpg` — host-neutral Rust authority for the compact gameplay
+  experiment document, validation, derived values, and designer-facing
+  calculation records.
+- `apps/dagger-lab` — Dagger-owned Angular authoring/readback surface. It is
+  served by `dagger-native-host`, submits whole documents to Rust, and has no
+  gameplay evaluator or Engine renderer dependency.
 - `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
   by the read-only protocol-14 Studio adapter and `dagger-native-host`. It
   strictly decodes Dagger projection into Engine's public retained-frame
@@ -61,7 +68,12 @@ scripts/regenerate.sh
 cargo test --workspace --locked
 cargo run -p dagger-runtime --bin dagger-walkthrough
 ./scripts/verify-native-host.sh # real Engine host, X11 input, pick, resources, lifecycle
-cargo run -p dagger-studio-adapter --bin dagger-native-host # native diagnostic; G patrol, N navgrid
+pnpm install
+pnpm lab:build
+cargo run -p dagger-studio-adapter --bin dagger-native-host
+# Open http://127.0.0.1:4274 for Dagger Lab; play in the native window with
+# W/A/S/D, G patrol diagnostics, and N navgrid diagnostics.
+./scripts/check-dagger-lab-browser.sh # edit/apply/reset + physical-input/readback proof
 ./scripts/check-engine-freshness.py # fail loudly when Engine main has moved
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (uses a local Rusty Engine Studio build; set
@@ -103,6 +115,13 @@ scripts/check-studio-browser.sh
   authoritative patrol transforms, and bounded retained overlays. `G` toggles
   authored/live sprite and heading facts; `N` toggles nearby committed navgrid
   cells. The X11 proof covers on/off replacement and disposal.
+- Gameplay lab: the Angular surface edits the same schema-1 document as
+  `data/experiments/privateers-hold-starter.json`. Rust atomically admits the
+  complete candidate, installs movement speed, calculates and explains
+  `maxHealth = baseHealth + endurance * healthPerEndurance`, retains the latest
+  16 calculations, resets the playable run to the committed start, and exposes
+  live authoritative position/health/controller readback. Invalid candidates
+  leave the active experiment untouched.
 
 ## Data provenance & conventions
 
@@ -121,7 +140,9 @@ TEXTURE.000/.001 are virtual solid-colour archives (32x32 palette fills).
 
 ## Next steps / known gaps
 
-Current active feature work remains in Den: campaign `6682`, water `6526`, and
+Current active feature work remains in Den: gameplay-laboratory program `6682`
+with child campaigns `6719` (lab/construction-kit foundation), `6720`
+(combat/encounters), and `6721` (growth/loot/inventory), plus water `6526` and
 automap `6528`. Task `6707` changes only the Engine integration and repository
 health posture; it does not absorb those owners. The numbered items below are
 historical landmarks and design triggers, not an inferred active queue.

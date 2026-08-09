@@ -1,0 +1,48 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "apps",
+  "projects": {
+    "dagger-lab": {
+      "projectType": "application",
+      "root": "apps/dagger-lab",
+      "sourceRoot": "apps/dagger-lab/src",
+      "prefix": "dagger",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/apps/dagger-lab",
+            "browser": "apps/dagger-lab/src/main.ts",
+            "index": "apps/dagger-lab/src/index.html",
+            "tsConfig": "apps/dagger-lab/tsconfig.app.json",
+            "styles": ["apps/dagger-lab/src/styles.css"]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                { "type": "initial", "maximumWarning": "500kB", "maximumError": "1MB" },
+                { "type": "anyComponentStyle", "maximumWarning": "10kB", "maximumError": "16kB" }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": { "buildTarget": "dagger-lab:build:production" },
+            "development": { "buildTarget": "dagger-lab:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}
