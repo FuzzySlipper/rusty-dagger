@@ -62,6 +62,17 @@ pub struct ExperimentReadout {
     pub calculations: Vec<SessionCalculationRecord>,
 }
 
+/// A side-effect-free evaluation through the same admission and calculation
+/// authority used when an experiment is applied to play.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExperimentEvaluation {
+    pub document: ExperimentDocument,
+    pub move_speed_units_per_second: f32,
+    pub max_health: f32,
+    pub calculation: CalculationRecord,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionCalculationRecord {
@@ -185,6 +196,21 @@ impl DaggerRuntime {
         }
         self.experiment = admitted;
         self.experiment_readout()
+    }
+
+    /// Evaluate one complete authoring document without changing the active
+    /// experiment, player, or calculation history.
+    pub fn evaluate_experiment_json(
+        &self,
+        document: &str,
+    ) -> Result<ExperimentEvaluation, RuntimeError> {
+        let admitted = dagger_rpg::admit_json(document).map_err(RuntimeError::Experiment)?;
+        Ok(ExperimentEvaluation {
+            document: admitted.document,
+            move_speed_units_per_second: admitted.player.move_speed_units_per_second,
+            max_health: admitted.player.max_health,
+            calculation: admitted.calculation,
+        })
     }
 
     /// Reset the playable run to the committed Privateer's Hold start while

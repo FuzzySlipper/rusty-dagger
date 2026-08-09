@@ -183,12 +183,14 @@ modularity gate, task 6529):
   per-project user settings. It is transport/presentation glue, not gameplay
   authority. See `docs/studio-host.md` for the runnable contract.
 - `apps/dagger-lab` — the first Dagger Lab Angular surface: whole-document
-  authoring, live readback, the vitality formula worksheet, and semantic
-  calculation inspection. `dagger-native-host` serves it on loopback beside
-  the real Engine-rendered game and routes read/apply/reset commands to the
-  same `DaggerRuntime` receiving physical input. It calls Rust for every
-  evaluation or mutation and never imports or mounts Engine renderer
-  implementation. Profiles and content browsing remain later vertical tasks.
+  authoring, live readback, the vitality formula worksheet, and selectable
+  recent calculation inspection. `dagger-native-host` serves it on loopback
+  beside the real Engine-rendered game and routes read/evaluate/apply/reset/play
+  commands to the same `DaggerRuntime` receiving physical input. Worksheet
+  evaluation is side-effect-free; Reset & Play restores the named start and
+  focuses the native window. The app calls Rust for every evaluation or
+  mutation and never imports or mounts Engine renderer implementation.
+  Profiles and content browsing remain later vertical tasks.
 - `data/` — optional committed, hand-authored JSON defaults for the experiment
   document. TS authoring modules may be preferable when builders materially
   improve readability. `content/` is committed generated output from
@@ -204,7 +206,7 @@ modularity gate, task 6529):
   has no renderer TypeScript, HTML canvas bootstrap, or renderer package
   imports.
 
-### Gameplay authoring shape (program 6682, task 6683)
+### Gameplay authoring shape (program 6682, tasks 6683 and 6689)
 
 - **TypeScript/Angular authors; Rust means and acts.** Immutable TS builders,
   simple JSON defaults, and Angular forms may assemble supported values. They
@@ -227,9 +229,11 @@ modularity gate, task 6529):
   Focused formula examples and regressions are enough; there is no exhaustive
   proof or deterministic replay program.
 - **Semantic explanations, not execution logs.** Records are shaped around
-  gameplay resolutions: actor/action/target, named inputs, rolls/modifiers,
-  intermediate values, result, and before/after authoritative state. Store a
-  bounded recent-session history with optional copy/export.
+  gameplay resolutions: named inputs, rolls/modifiers, intermediate values,
+  result, and before/after authoritative state. The current max-health records
+  expose only the fields they genuinely possess; actor/action/target filtering
+  arrives with interactive resolutions that carry those identities. Store a
+  bounded recent-session history and add copy/export only when it serves play.
 - **Daggerfall is a preset.** Arena2 and classic/DFU knowledge help populate
   useful defaults. The lab does not track per-value provenance or require exact
   fidelity before an experiment can proceed.

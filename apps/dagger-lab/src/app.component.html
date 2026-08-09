@@ -1,128 +1,126 @@
 <main>
   <header>
     <div>
-      <p class="eyebrow">Privateer's Hold · live Rust authority</p>
+      <p class="eyebrow">Privateer's Hold · attached to live Rust authority</p>
       <h1>Dagger Lab</h1>
-      <p class="lede">Adjust a rule, apply the whole experiment, then focus the game and play it.</p>
+      <p class="lede">Work a rule, inspect the answer, apply it, and jump straight back into play.</p>
     </div>
-    <div class="connection" [class.offline]="error !== ''" data-testid="connection">
-      <span></span>{{ error === '' && readout ? 'Connected' : 'Waiting for native host' }}
+    <div class="connection" [class.offline]="connectionError !== ''" data-testid="connection">
+      <span></span>{{ connectionError === '' && readout ? 'Connected' : 'Waiting for native host' }}
     </div>
   </header>
 
-  <p *ngIf="error" class="error" role="alert">{{ error }}</p>
+  <p *ngIf="connectionError" class="error" role="alert">{{ connectionError }}</p>
+  <p *ngIf="commandError" class="error" role="alert" data-testid="command-error">{{ commandError }}</p>
 
   <section class="workspace">
     <article class="panel editor">
       <div class="panel-heading">
-        <div>
-          <p class="kicker">Experiment document</p>
-          <h2>Player rules</h2>
-        </div>
+        <div><p class="kicker">Active experiment draft</p><h2>Player rules</h2></div>
         <span class="schema">schema 1</span>
       </div>
 
       <label>
-        <span>Movement speed</span>
-        <small>units per second</small>
-        <input
-          data-testid="movement-speed"
-          type="number"
-          min="0.1"
-          max="50"
-          step="0.1"
-          [(ngModel)]="draft.player.movement.speedUnitsPerSecond"
-          (ngModelChange)="markDirty()"
-        />
+        <span>Movement speed</span><small>units per second</small>
+        <input data-testid="movement-speed" type="number" min="0.1" max="50" step="0.1"
+          [(ngModel)]="draft.player.movement.speedUnitsPerSecond" (ngModelChange)="markDirty()" />
       </label>
 
       <div class="formula">
-        <p class="kicker">Rust-owned formula</p>
+        <p class="kicker">Named Rust rule</p>
         <code>maxHealth = baseHealth + endurance × healthPerEndurance</code>
       </div>
 
       <div class="field-grid">
-        <label>
-          <span>Base health</span>
-          <input
-            data-testid="base-health"
-            type="number"
-            min="0"
-            step="1"
-            [(ngModel)]="draft.player.vitality.baseHealth"
-            (ngModelChange)="markDirty()"
-          />
-        </label>
-        <label>
-          <span>Endurance</span>
-          <input
-            data-testid="endurance"
-            type="number"
-            min="0"
-            step="1"
-            [(ngModel)]="draft.player.vitality.endurance"
-            (ngModelChange)="markDirty()"
-          />
-        </label>
-        <label>
-          <span>Health / endurance</span>
-          <input
-            data-testid="health-per-endurance"
-            type="number"
-            min="0"
-            step="0.1"
-            [(ngModel)]="draft.player.vitality.healthPerEndurance"
-            (ngModelChange)="markDirty()"
-          />
-        </label>
+        <label><span>Base health</span><input data-testid="base-health" type="number" min="0" step="1"
+          [(ngModel)]="draft.player.vitality.baseHealth" (ngModelChange)="markDirty()" /></label>
+        <label><span>Endurance</span><input data-testid="endurance" type="number" min="0" step="1"
+          [(ngModel)]="draft.player.vitality.endurance" (ngModelChange)="markDirty()" /></label>
+        <label><span>Health / endurance</span><input data-testid="health-per-endurance" type="number" min="0" step="0.1"
+          [(ngModel)]="draft.player.vitality.healthPerEndurance" (ngModelChange)="markDirty()" /></label>
       </div>
 
       <div class="actions">
-        <button data-testid="apply" class="primary" [disabled]="pending" (click)="apply()">
-          {{ pending ? 'Applying…' : 'Apply experiment' }}
-        </button>
-        <button data-testid="reset" [disabled]="pending" (click)="reset()">Reset run to start</button>
+        <button data-testid="apply" class="primary" [disabled]="pending" (click)="apply()">Apply experiment</button>
+        <button data-testid="reset" [disabled]="pending" (click)="reset()">Reset run</button>
+        <button data-testid="play" class="play" [disabled]="pending" (click)="resetAndPlay()">Reset &amp; play</button>
       </div>
-      <p class="play-note">After reset, click the native game window and use W/A/S/D. Live position below comes back from Rust.</p>
+      <p class="play-note">Reset &amp; play restores the start and focuses the native game. Use W/A/S/D; position below is live Rust readback.</p>
     </article>
 
-    <div class="readouts">
-      <article class="panel live" *ngIf="readout as live">
-        <div class="panel-heading">
-          <div>
-            <p class="kicker">Authoritative readback</p>
-            <h2>Running player</h2>
-          </div>
-          <span class="pulse">live</span>
-        </div>
-        <div class="metrics">
-          <div><span>Move speed</span><strong data-testid="live-speed">{{ format(live.moveSpeedUnitsPerSecond) }}</strong></div>
-          <div><span>Max health</span><strong data-testid="max-health">{{ format(live.maxHealth) }}</strong></div>
-          <div><span>Current health</span><strong>{{ format(live.currentHealth) }}</strong></div>
-          <div><span>Yaw</span><strong>{{ format(live.playerYawDegrees) }}°</strong></div>
-        </div>
-        <div class="position" data-testid="player-position">
-          <span>position</span>
-          <code>{{ format(live.playerPosition[0]) }}, {{ format(live.playerPosition[1]) }}, {{ format(live.playerPosition[2]) }}</code>
-        </div>
-      </article>
+    <article class="panel worksheet">
+      <div class="panel-heading">
+        <div><p class="kicker">Side-effect-free worksheet</p><h2>Try vitality inputs</h2></div>
+        <span class="schema">Rust eval</span>
+      </div>
+      <p class="muted">Test numbers without changing the active player or adding a history record.</p>
+      <div class="worksheet-grid">
+        <label><span>Base health</span><input data-testid="worksheet-base" type="number" [(ngModel)]="worksheet.baseHealth" /></label>
+        <label><span>Endurance</span><input data-testid="worksheet-endurance" type="number" [(ngModel)]="worksheet.endurance" /></label>
+        <label><span>Rate</span><input data-testid="worksheet-rate" type="number" step="0.1" [(ngModel)]="worksheet.healthPerEndurance" /></label>
+      </div>
+      <button data-testid="evaluate" class="primary evaluate" [disabled]="evaluating" (click)="evaluateWorksheet()">
+        {{ evaluating ? 'Evaluating…' : 'Evaluate through Rust' }}
+      </button>
+      <p *ngIf="worksheetError" class="inline-error" role="alert" data-testid="worksheet-error">{{ worksheetError }}</p>
 
-      <article class="panel trace" *ngIf="latestCalculation() as calculation">
-        <div class="panel-heading">
-          <div>
-            <p class="kicker">Calculation record #{{ calculation.sequence }}</p>
-            <h2>{{ calculation.rule }}</h2>
-          </div>
-          <strong data-testid="trace-result">{{ format(calculation.result) }}</strong>
-        </div>
-        <code class="expression">{{ calculation.expression }}</code>
+      <div *ngIf="evaluation as preview" class="preview" data-testid="worksheet-result">
+        <div><span>Preview max health</span><strong>{{ format(preview.maxHealth) }}</strong></div>
+        <code>{{ preview.calculation.expression }}</code>
         <ol>
-          <li *ngFor="let step of calculation.steps">
+          <li *ngFor="let step of preview.calculation.steps">
             <span>{{ step.operation }}</span>
             <code>{{ format(step.left) }} · {{ format(step.right) }} → {{ format(step.result) }}</code>
           </li>
         </ol>
-      </article>
-    </div>
+      </div>
+    </article>
+
+    <article class="panel live" *ngIf="readout as live">
+      <div class="panel-heading">
+        <div><p class="kicker">Authoritative session readback</p><h2>Running player</h2></div>
+        <span class="pulse">live</span>
+      </div>
+      <div class="metrics">
+        <div><span>Move speed</span><strong data-testid="live-speed">{{ format(live.moveSpeedUnitsPerSecond) }}</strong></div>
+        <div><span>Max health</span><strong data-testid="max-health">{{ format(live.maxHealth) }}</strong></div>
+        <div><span>Current health</span><strong>{{ format(live.currentHealth) }}</strong></div>
+        <div><span>Yaw</span><strong>{{ format(live.playerYawDegrees) }}°</strong></div>
+      </div>
+      <div class="position" data-testid="player-position">
+        <span>position</span>
+        <code>{{ format(live.playerPosition[0]) }}, {{ format(live.playerPosition[1]) }}, {{ format(live.playerPosition[2]) }}</code>
+      </div>
+    </article>
+
+    <article class="panel history" *ngIf="readout">
+      <div class="panel-heading">
+        <div><p class="kicker">This play session</p><h2>Calculation history</h2></div>
+        <span class="schema" data-testid="history-count">{{ readout.calculations.length }} records</span>
+      </div>
+      <label class="filter"><span>Find a rule or sequence</span>
+        <input data-testid="history-filter" type="search" placeholder="max health or #2" [(ngModel)]="historyFilter" />
+      </label>
+      <div class="history-layout">
+        <nav data-testid="history-list" aria-label="Calculation records">
+          <button *ngFor="let record of filteredCalculations()" type="button"
+            [class.selected]="selectedCalculation()?.sequence === record.sequence"
+            [attr.data-testid]="'history-' + record.sequence" (click)="selectCalculation(record)">
+            <span>#{{ record.sequence }} · {{ record.rule }}</span><strong>{{ format(record.result) }}</strong>
+          </button>
+          <p *ngIf="filteredCalculations().length === 0" class="muted">No calculation matches that filter.</p>
+        </nav>
+        <section class="trace" *ngIf="selectedCalculation() as calculation" data-testid="history-detail">
+          <div class="trace-title"><div><p class="kicker">Why record #{{ calculation.sequence }}</p><h3>{{ calculation.rule }}</h3></div>
+            <strong data-testid="trace-result">{{ format(calculation.result) }}</strong></div>
+          <code class="expression">{{ calculation.expression }}</code>
+          <div class="inputs"><span *ngFor="let input of calculation.inputs">{{ input.name }} = {{ format(input.value) }}</span></div>
+          <ol>
+            <li *ngFor="let step of calculation.steps"><span>{{ step.operation }}</span>
+              <code>{{ format(step.left) }} · {{ format(step.right) }} → {{ format(step.result) }}</code></li>
+          </ol>
+        </section>
+      </div>
+    </article>
   </section>
 </main>

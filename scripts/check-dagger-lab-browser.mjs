@@ -14,7 +14,7 @@ const browser = await chromium.launch({
 });
 
 try {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 860 } });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto('http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
   await page.getByTestId('connection').waitFor({ timeout: 30_000 });
   try {
@@ -24,16 +24,49 @@ try {
     throw error;
   }
 
+  const initialHealth = await page.getByTestId('max-health').innerText();
+  const initialHistory = await page.getByTestId('history-count').innerText();
+  assert.equal(initialHealth, '85.00');
+  assert.equal(initialHistory, '1 RECORDS');
+
+  await page.getByTestId('worksheet-base').fill('20');
+  await page.getByTestId('worksheet-endurance').fill('70');
+  await page.getByTestId('worksheet-rate').fill('2');
+  await page.getByTestId('evaluate').click();
+  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
+  assert.equal(await page.getByTestId('max-health').innerText(), initialHealth);
+  assert.equal(await page.getByTestId('history-count').innerText(), initialHistory);
+
+  await page.getByTestId('worksheet-base').fill('-1');
+  await page.getByTestId('evaluate').click();
+  await page.getByTestId('worksheet-error').filter({ hasText: 'player.vitality.baseHealth' }).waitFor();
+  assert.equal(await page.getByTestId('max-health').innerText(), initialHealth);
+  assert.equal(await page.getByTestId('history-count').innerText(), initialHistory);
+  await page.getByTestId('worksheet-base').fill('20');
+  await page.getByTestId('evaluate').click();
+  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
+
   await page.getByTestId('movement-speed').fill('8');
   await page.getByTestId('endurance').fill('60');
   await page.getByTestId('apply').click();
   await page.getByTestId('live-speed').filter({ hasText: '8.00' }).waitFor();
   await page.getByTestId('max-health').filter({ hasText: '115.00' }).waitFor();
-  await page.getByTestId('trace-result').filter({ hasText: '115.00' }).waitFor();
+  await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
 
-  await page.getByTestId('reset').click();
+  await page.getByTestId('endurance').fill('50');
+  await page.getByTestId('apply').click();
+  await page.getByTestId('max-health').filter({ hasText: '100.00' }).waitFor();
+  await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
+
+  await page.getByTestId('history-filter').fill('#2');
+  await page.getByTestId('history-2').click();
+  await page.getByTestId('history-detail').filter({ hasText: 'Why record #2' }).waitFor();
+  assert.equal(await page.getByTestId('trace-result').innerText(), '115.00');
+  await page.getByTestId('history-filter').fill('');
+
+  await page.getByTestId('play').click();
   const resetPosition = await page.getByTestId('player-position').innerText();
-  await page.waitForTimeout(1_500);
+  await page.waitForTimeout(500);
   execFileSync('python3', ['scripts/x11-send-dagger-move.py'], { stdio: 'inherit' });
   const movementDeadline = Date.now() + 10_000;
   while (await page.getByTestId('player-position').innerText() === resetPosition) {
@@ -42,7 +75,17 @@ try {
   }
   const movedPosition = await page.getByTestId('player-position').innerText();
   assert.notEqual(movedPosition, resetPosition, 'physical W input did not change Rust position');
-  await page.screenshot({ path: `${output}/live-after-move.png`, fullPage: true });
+  await page.screenshot({ path: `${output}/workbench-desktop.png`, fullPage: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByTestId('worksheet-result').scrollIntoViewIfNeeded();
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+    true,
+    'narrow Dagger Lab overflows horizontally',
+  );
+  await page.getByTestId('history-detail').waitFor();
+  await page.screenshot({ path: `${output}/workbench-narrow.png`, fullPage: true });
 
   await page.getByTestId('reset').click();
   const resetDeadline = Date.now() + 10_000;
@@ -52,10 +95,13 @@ try {
   }
   await page.getByTestId('movement-speed').fill('0');
   await page.getByTestId('apply').click();
-  await page.getByRole('alert').filter({ hasText: 'player.movement.speedUnitsPerSecond' }).waitFor();
+  await page.getByTestId('command-error').filter({ hasText: 'player.movement.speedUnitsPerSecond' }).waitFor();
   assert.equal(await page.getByTestId('live-speed').innerText(), '8.00');
+  assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
 
-  console.log(`DAGGER_LAB_BROWSER_OK speed=8.00 maxHealth=115.00 reset=${JSON.stringify(resetPosition)} moved=${JSON.stringify(movedPosition)} screenshot=${output}/live-after-move.png`);
+  console.log(
+    `DAGGER_LAB_BROWSER_OK preview=160.00 active=100.00 history=3 inspected=#2 reset=${JSON.stringify(resetPosition)} moved=${JSON.stringify(movedPosition)} desktop=${output}/workbench-desktop.png narrow=${output}/workbench-narrow.png`,
+  );
 } finally {
   await browser.close();
 }

@@ -1,7 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { ExperimentDocument, ExperimentReadout } from './lab-contract';
+import {
+  ExperimentDocument,
+  ExperimentEvaluation,
+  ExperimentReadout,
+} from './lab-contract';
 
 const API_URL = '/api/dagger-lab';
 
@@ -19,7 +23,17 @@ export class LabApiService {
     );
   }
 
+  evaluate(document: ExperimentDocument): Promise<ExperimentEvaluation> {
+    return firstValueFrom(
+      this.http.post<ExperimentEvaluation>(`${API_URL}/evaluate`, document),
+    );
+  }
+
   reset(): Promise<ExperimentReadout> {
     return firstValueFrom(this.http.post<ExperimentReadout>(`${API_URL}/reset`, null));
+  }
+
+  play(): Promise<ExperimentReadout> {
+    return firstValueFrom(this.http.post<ExperimentReadout>(`${API_URL}/play`, null));
   }
 }

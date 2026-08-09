@@ -40,8 +40,9 @@ current task state in the Den `rusty-dagger` project.
   experiment document, validation, derived values, and designer-facing
   calculation records.
 - `apps/dagger-lab` — Dagger-owned Angular authoring/readback surface. It is
-  served by `dagger-native-host`, submits whole documents to Rust, and has no
-  gameplay evaluator or Engine renderer dependency.
+  served by `dagger-native-host`, submits whole documents and side-effect-free
+  formula worksheets to Rust, exposes live player state plus selectable recent
+  calculations, and has no gameplay evaluator or Engine renderer dependency.
 - `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
   by the read-only protocol-14 Studio adapter and `dagger-native-host`. It
   strictly decodes Dagger projection into Engine's public retained-frame
@@ -73,7 +74,7 @@ pnpm lab:build
 cargo run -p dagger-studio-adapter --bin dagger-native-host
 # Open http://127.0.0.1:4274 for Dagger Lab; play in the native window with
 # W/A/S/D, G patrol diagnostics, and N navgrid diagnostics.
-./scripts/check-dagger-lab-browser.sh # edit/apply/reset + physical-input/readback proof
+./scripts/check-dagger-lab-browser.sh # preview/apply/explain/play + desktop+narrow proof
 ./scripts/check-engine-freshness.py # fail loudly when Engine main has moved
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (uses a local Rusty Engine Studio build; set

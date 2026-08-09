@@ -23,7 +23,14 @@ pub(crate) enum LabCommand {
         document: String,
         reply: Sender<LabReply>,
     },
+    Evaluate {
+        document: String,
+        reply: Sender<LabReply>,
+    },
     Reset {
+        reply: Sender<LabReply>,
+    },
+    Play {
         reply: Sender<LabReply>,
     },
 }
@@ -127,7 +134,12 @@ fn handle_request(
             document: request.body,
             reply: send_reply,
         },
+        ("POST", "/api/dagger-lab/evaluate") => LabCommand::Evaluate {
+            document: request.body,
+            reply: send_reply,
+        },
         ("POST", "/api/dagger-lab/reset") => LabCommand::Reset { reply: send_reply },
+        ("POST", "/api/dagger-lab/play") => LabCommand::Play { reply: send_reply },
         _ => {
             return write_response(stream, 404, r#"{"error":"unknown Dagger Lab route"}"#);
         }
