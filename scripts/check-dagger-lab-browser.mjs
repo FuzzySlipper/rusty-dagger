@@ -62,15 +62,32 @@ try {
   await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
   await page.getByTestId('profile-name').fill('Fast and hardy');
   await page.getByTestId('rename-profile').click();
-  await page.getByTestId('movement-speed').fill('9');
+  // This valid value cannot be represented exactly as Rust f32. Successful
+  // admission must persist Rust's canonical document so polling and reload do
+  // not discard the active profile identity.
+  const authoredProfileBSpeed = 9.123456789;
+  const admittedProfileBSpeed = Math.fround(authoredProfileBSpeed);
+  await page.getByTestId('movement-speed').fill(String(authoredProfileBSpeed));
   await page.getByTestId('endurance').fill('70');
   await page.getByTestId('save-profile').click();
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
-  await page.getByTestId('live-speed').filter({ hasText: '9.00' }).waitFor();
+  await page.getByTestId('live-speed').filter({ hasText: admittedProfileBSpeed.toFixed(2) }).waitFor();
   await page.getByTestId('max-health').filter({ hasText: '130.00' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
   const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
+
+  await page.waitForTimeout(750);
+  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
+  const persistedProfileBSpeed = await page.evaluate(() => {
+    const profiles = JSON.parse(
+      localStorage.getItem('rusty-dagger.experiment-profiles') ?? '[]',
+    );
+    return profiles.find((profile) => profile.name === 'Fast and hardy')?.document.player
+      .movement.speedUnitsPerSecond;
+  });
+  assert.equal(Math.fround(persistedProfileBSpeed), admittedProfileBSpeed);
+  assert.notEqual(persistedProfileBSpeed, authoredProfileBSpeed);
 
   // Local profiles survive a page reload, while the active label is restored
   // only by matching the document the still-running Rust session reports.
@@ -78,7 +95,7 @@ try {
   await waitForConnection(page);
   await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
-  assert.equal(await page.getByTestId('live-speed').innerText(), '9.00');
+  assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
   assert.equal(await page.getByTestId('max-health').innerText(), '130.00');
 
   // Invalid documents may be kept as drafts, but activating one must surface
@@ -90,7 +107,7 @@ try {
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('command-error').filter({ hasText: 'player.movement.speedUnitsPerSecond' }).waitFor();
   assert.equal(await page.getByTestId('active-profile').innerText(), 'Fast and hardy');
-  assert.equal(await page.getByTestId('live-speed').innerText(), '9.00');
+  assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
   assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
 
   page.once('dialog', (dialog) => dialog.accept());
@@ -116,7 +133,7 @@ try {
   await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
 
   console.log(
-    `DAGGER_LAB_BROWSER_OK profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=9.00/130.00 preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_LAB_BROWSER_OK profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();

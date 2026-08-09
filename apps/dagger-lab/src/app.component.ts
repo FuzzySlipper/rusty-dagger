@@ -199,6 +199,14 @@ export class AppComponent implements OnInit, OnDestroy {
     this.profileError = '';
     const succeeded = await this.runCommand(() => this.api.apply(selected.document));
     if (succeeded && this.readout) {
+      const admitted: ExperimentProfile = {
+        ...selected,
+        document: cloneExperiment(this.readout.document),
+      };
+      this.profiles = this.profiles.map((profile) =>
+        profile.id === selected.id ? admitted : profile,
+      );
+      this.profileStore.persist(this.profiles);
       this.activeProfileId = selected.id;
       this.draft = cloneExperiment(this.readout.document);
       this.dirty = false;
