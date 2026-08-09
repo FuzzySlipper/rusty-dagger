@@ -1,0 +1,29 @@
+{
+  "name": "rusty-dagger-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "lab:build": "ng build dagger-lab",
+    "lab:serve": "ng serve dagger-lab --host 127.0.0.1 --port 4200 --proxy-config apps/dagger-lab/proxy.conf.json",
+    "lab:typecheck": "tsc -p apps/dagger-lab/tsconfig.app.json --noEmit",
+    "lab:check": "pnpm lab:typecheck && pnpm lab:build"
+  },
+  "dependencies": {
+    "@angular/common": "~21.2.0",
+    "@angular/compiler": "~21.2.0",
+    "@angular/core": "~21.2.0",
+    "@angular/forms": "~21.2.0",
+    "@angular/platform-browser": "~21.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@angular/build": "~21.2.0",
+    "@angular/cli": "~21.2.0",
+    "@angular/compiler-cli": "~21.2.0",
+    "@playwright/test": "^1.61.1",
+    "typescript": "~5.9.3"
+  }
+}

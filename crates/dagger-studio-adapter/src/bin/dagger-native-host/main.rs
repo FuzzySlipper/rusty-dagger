@@ -1,5 +1,6 @@
 mod application;
 mod diagnostics;
+mod lab_server;
 mod proof;
 mod view;
 

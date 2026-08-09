@@ -12,8 +12,34 @@ original game's data files as the content source. It is the first stage of a
 longer arc toward an original Daggerfall-ish game built on Rusty Engine.
 
 It is explicitly **not** a port of Daggerfall. The classic game is a legible
-design target and a content source, fitted into a rusty-engine-shaped demo.
-Where the classic and the engine disagree, the engine's shape wins.
+starting profile and a content source, fitted into a rusty-engine-shaped
+gameplay laboratory. Where the classic and the engine disagree, the engine's
+shape wins. Where an experiment produces a better idea, the experiment wins.
+
+## Interactive gameplay is the center
+
+Rusty Dagger exists to make gameplay ideas cheap to try against a large body of
+ready-made content. Its central loop is:
+
+> edit -> apply -> play -> explain -> adjust
+
+The construction-kit and rules-workbench surfaces serve that loop. They are not
+separate proof products or comprehensive editors built ahead of use. A rule,
+content field, inspector, editor, or abstraction earns its place by supporting
+a named experiment in the real native Privateer's Hold product.
+
+This changes how work is sliced. Crate and authority boundaries remain strict,
+but tasks are vertical: authored values, Rust authority, live state,
+presentation, Angular tooling, and a real interaction land together in the
+smallest useful experiment. Headless examples and native/browser checks support
+the experiment; they never substitute for playing it.
+
+The classic rules and content are useful defaults, not a fidelity campaign.
+There is no requirement for per-value donor lineage, deterministic replay,
+artifact fingerprints, revision graphs, exhaustive validation matrices, or
+long-term compatibility contracts. Formula checks should feel like ordinary
+game-design spreadsheet work. Semantic traces should explain designer-facing
+inputs, rolls, modifiers, intermediate values, results, and state changes.
 
 ## The long arc and the successor pattern
 
@@ -33,13 +59,19 @@ Consequences for how this repo is built:
    lives behind a crate boundary that can be lifted into a successor project
    without dragging the whole demo along. Crates stay small enough that their
    public surface fits in one paragraph.
-2. **No rush to the headline deliverable.** A fast path to "walk Privateer's
-   Hold" that tangles systems together is a loss, not a win. The deliverable
-   arrives when the systems are clean enough to keep.
+2. **Playable vertical experiments.** Clean systems are proven by using them in
+   the native game, not by postponing integration. Modularity means stable
+   ownership and dependency direction, not a queue of headless models followed
+   by UI and play at the end.
 3. **Lessons in code.** Parser edge cases, format gotchas, scale constants,
    and conversion rules are recorded in tests and docs/daggerfall-formats.md,
    not in conversation. The successor project inherits confidence, not
    archaeology.
+4. **Deliberate, not enterprise-hardened.** Rust authority and the TS/Rust
+   boundary are durable. The authored vocabulary and its lockstep internal
+   document are expected to evolve rapidly as experiments reveal what is
+   useful. Do not freeze them behind compatibility, replay, provenance, or
+   certification machinery without a concrete product need.
 
 ## Why authentic Daggerfall content (and not greybox)
 
@@ -68,6 +100,10 @@ must exist:
 - Block water.
 - Start marker spawn and a minimal automap.
 - Studio/project integration so the whole thing is inspectable and editable.
+- A Dagger-owned gameplay lab for authoring supported content/rule values,
+  applying them through Rust, resetting a named experiment, and inspecting
+  authoritative state and semantic resolutions while playing.
+- Vertical experiments for combat/encounters, loot/inventory, and progression.
 
 Explicitly out of scope for this repo: the exterior world, other dungeons, and fast travel.
 Those belong to the successor (or to companion repos when they already exist
@@ -102,6 +138,12 @@ task 6519 → docs/companion-reuse.md):
   assess controller/camera reuse).
 - **rusty-engine-ui** — UI kit repo (inventory pending).
 - **rusty-d20** — rules vocabulary; minimal expected use here.
+- **asha-rpg** — useful immutable TypeScript authoring -> compact IR -> Rust
+  semantic authority pattern. Its broad versioning, replay, checkpoint,
+  fingerprint, and governance machinery is explicitly not a Dagger target.
+- **Ruleweaver** — useful predecessor evidence for simple named-variable
+  formulas and structured combat-result explanations; not an authority model
+  to port.
 - **rusty-view / rusty-roleplay** — chat/lore; not relevant.
 
 ## System map
@@ -116,23 +158,19 @@ modularity gate, task 6529):
 - `dagger-import` — CLI glue: drives arena2, assembles dungeon geometry and
   textures, emits GLB / engine mesh-json. Emitters (glb, png, meshjson) split
   out (→ `dagger-export`) if they outgrow the crate.
-- `dagger-rpg` — **new in 6683** (Phase 0 of campaign 6682): Daggerfall-fidelity,
-  data-driven RPG tables + pure formulas (attributes, derived stats, combat,
-  items/armor/weapons, monsters, leveling). Owns committed JSON under `data/`
-  (`data/stats.json`, `weapons.json`, `monsters.json`, `leveling.json`, …)
-  with `#[derive(Deserialize)]` structs and `pub fn` formulas (e.g.
-  `max_health`, `attack_roll`) in one place so later phases (6684..6690) can
-  tweak/port without inline magic numbers. Depends only on `serde`/`serde_json`;
-  liftable to the successor. Follows the d20 boundary (Rust owns vocabulary
-  and validation) and the roguelike minimal-file shape (one JSON per domain,
-  strictly validated). See `data/README.md` and `docs/companion-reuse.md`
-  "Data-driven content shape".
+- `dagger-rpg` — the Dagger-owned Rust semantic kernel for authored gameplay.
+  It admits the compact experiment document, owns the closed operation
+  vocabulary and formula evaluation, compiles admitted values into private
+  structures, and emits designer-facing calculation/resolution records. It has
+  no Engine, Angular, host, storage, replay, or certification dependencies.
+  Daggerfall-inspired defaults may be assembled from TS/JSON, but Rust alone
+  decides what they mean.
 - `dagger-runtime` — Daggerfall-owned project admission, player controller,
-  and real-project collision walkthrough. It consumes only generic Rusty
-  Engine crates (git deps on the public repo) and (from 6684 onward) the
-  local `dagger-rpg` tables; it does not import `loading-bay-game` or any
-  sibling repo. Owns live session state (EntityState + engine-spatial +
-  svc-collision) and will apply `dagger-rpg` formulas there.
+  real-project collision walkthrough, experiment application/reset, and live
+  gameplay state. It consumes only the public `rusty_engine` Rust facade and
+  local `dagger-rpg`; it does not import sibling game products. It owns
+  authoritative session mutation and exposes readback plus bounded semantic
+  resolution history to Dagger-owned presentation/tooling.
 - `dagger-studio-adapter` — Rust-owned protocol-14 read-only admission and
   render projection for the committed Privateer's Hold project, plus native
   product composition for that projection. The adapter reuses
@@ -144,14 +182,21 @@ modularity gate, task 6529):
   app, adapter lifecycle, normalized host-file browsing, and atomic
   per-project user settings. It is transport/presentation glue, not gameplay
   authority. See `docs/studio-host.md` for the runnable contract.
-- `data/` — **committed, hand-authored JSON tables** for `dagger-rpg` (not
-  generated). Each file has `schemaVersion` + typed arrays. `content/` stays
-  generated output from `scripts/regenerate.sh` (GLB, mesh-json, texture
-  publication, navgrid, sprites). See `data/README.md`.
-- Planned: `dagger-content` (decoded materials/meshes with provenance — distinct
-  from `dagger-rpg` which owns numbers), `dagger-world` (dungeon session runtime:
-  blocks, doors, lights, water state), each arriving only when the code that
-  needs a home exists.
+- `apps/dagger-lab` — the first Dagger Lab Angular surface: whole-document
+  authoring, live readback, the vitality formula worksheet, and semantic
+  calculation inspection. `dagger-native-host` serves it on loopback beside
+  the real Engine-rendered game and routes read/apply/reset commands to the
+  same `DaggerRuntime` receiving physical input. It calls Rust for every
+  evaluation or mutation and never imports or mounts Engine renderer
+  implementation. Profiles and content browsing remain later vertical tasks.
+- `data/` — optional committed, hand-authored JSON defaults for the experiment
+  document. TS authoring modules may be preferable when builders materially
+  improve readability. `content/` is committed generated output from
+  `scripts/regenerate.sh`; never hand-edit it. See `data/README.md`.
+- Planned only when demanded by code: `dagger-content` (decoded reusable
+  material/mesh meaning) and `dagger-world` (shared dungeon session state for
+  blocks, doors, lights, water, encounters). Neither is a prerequisite for the
+  gameplay lab.
 - `engine-render-check/` — migration pointer. The durable renderer diagnostic
   is `dagger-native-host`: Dagger Rust owns project meaning and product
   orchestration, the public `rusty_engine` facade owns the contract, and
@@ -159,27 +204,38 @@ modularity gate, task 6529):
   has no renderer TypeScript, HTML canvas bootstrap, or renderer package
   imports.
 
-### Data-driven content shape (campaign 6682, task 6683)
+### Gameplay authoring shape (program 6682, task 6683)
 
-- **Tables are data, formulas are code, both in one crate.** `data/*.json`
-  (committed) holds numbers; `crates/dagger-rpg/src/lib.rs` (and later
-  `stats.rs`, `combat.rs`, `items.rs`, …) holds `Deserialize` structs + pure
-  fns. Tests load `data/*.json` via `include_str!` and assert against DFU-known
-  values — no inline constants in `dagger-runtime` call sites.
-- **JSON, not RON or Rust DSL at Phase 0.** Matches the engine's existing
-  `content/projects/*.project.json` shape, avoids a new `ron` dep, keeps
-  tooling trivial. Each file carries `schemaVersion`; strict validation on load
-  (unknown fields deny, bounds checked) gives the same safety as d20's
-  `generated.ts` contract and roguelike's `starter.json` compile without the
-  extra codegen step. Revisit RON/JSONC only if comments/bulk become painful.
-- **Copy, don't import.** Any snippet copied from `../rusty-engine-demo`,
-  `../rusty-d20`, or `../rusty-roguelike` lands in a dagger-owned crate with a
-  `// Adapted from <path> @<rev>` provenance line; no `path`/`git` dep on
-  siblings is allowed without a `docs/companion-reuse.md` entry. The only
-  cross-repo provider is `../rusty-engine` (`branch = "main"`).
-- **Successor lift:** `dagger-rpg` has no engine service deps, so the next
-  project can vendor the whole crate + `data/` directory and get the same
-  formulas without dragging `dagger-runtime`'s session or the demo's domain.
+- **TypeScript/Angular authors; Rust means and acts.** Immutable TS builders,
+  simple JSON defaults, and Angular forms may assemble supported values. They
+  all produce one compact internal experiment document. The first document
+  exposes movement speed plus named vitality inputs; Rust owns the fixed
+  `baseHealth + endurance * healthPerEndurance` formula. `dagger-rpg` admits
+  and evaluates it; `dagger-runtime` applies it to live state. There is no TS
+  evaluator, expression AST, or callback escape hatch.
+- **Small vocabulary, grown by play.** Begin with the first movement/derived
+  value experiment. Add reads, arithmetic, rolls, conditions, effects, or
+  content fields only for a named interactive slice. Do not create a general
+  rules VM or enumerate a future game's whole domain up front.
+- **Whole-document apply.** The lab submits a complete candidate. Rust either
+  returns readable author errors or installs it and exposes authoritative
+  readback. Reset/retry is explicit. Per-field revisions, merges, package
+  dependency resolution, compatibility migrations, and schema governance are
+  out of scope.
+- **Useful validation only.** Reject unknown fields, unsupported schema values,
+  non-finite values, clearly unusable ranges, and invalid derived results.
+  Focused formula examples and regressions are enough; there is no exhaustive
+  proof or deterministic replay program.
+- **Semantic explanations, not execution logs.** Records are shaped around
+  gameplay resolutions: actor/action/target, named inputs, rolls/modifiers,
+  intermediate values, result, and before/after authoritative state. Store a
+  bounded recent-session history with optional copy/export.
+- **Daggerfall is a preset.** Arena2 and classic/DFU knowledge help populate
+  useful defaults. The lab does not track per-value provenance or require exact
+  fidelity before an experiment can proceed.
+- **Successor lift:** `dagger-rpg` remains host-neutral Rust authority and the
+  authored document remains data-only. A successor may reuse the useful pieces
+  without the Dagger native host, Angular product, or classic content.
 
 ### Modularity gate evaluation (tasks 6529 and 6708)
 
@@ -204,8 +260,8 @@ land:
 - Doors (6525), water (6526), or enemies (6595) introduce shared block/session
   state that two or more crates need → that state is the seed of
   `dagger-world` (block layout, door/light/water/enemy session objects).
-- A second consumer (beyond `dagger-import`) needs decoded material/mesh data
-  with provenance → that data is the seed of `dagger-content`.
+- A second consumer (beyond `dagger-import`) needs shared decoded
+  material/mesh meaning -> that data is the seed of `dagger-content`.
 
 ## Collision authority: the dungeon trimesh (tasks 6563, 6522)
 

@@ -6,12 +6,15 @@ use anyhow::{bail, Result};
 pub(crate) struct Options {
     pub(crate) proof: bool,
     pub(crate) corrupt_resource: bool,
+    pub(crate) lab_port: Option<u16>,
 }
 
 impl Options {
     pub(crate) fn parse() -> Result<Self> {
         let mut proof = false;
         let mut corrupt_resource = false;
+        let mut requested_lab_port = None;
+        let mut no_lab = false;
         for argument in env::args().skip(1) {
             match argument.as_str() {
                 "--proof" => proof = true,
@@ -19,12 +22,26 @@ impl Options {
                     proof = true;
                     corrupt_resource = true;
                 }
+                "--no-lab" => no_lab = true,
+                value if value.starts_with("--lab-port=") => {
+                    requested_lab_port = Some(
+                        value["--lab-port=".len()..]
+                            .parse::<u16>()
+                            .map_err(|_| anyhow::anyhow!("invalid lab port in {value}"))?,
+                    );
+                }
                 _ => bail!("unknown argument {argument}"),
             }
         }
+        let lab_port = if no_lab || (proof && requested_lab_port.is_none()) {
+            None
+        } else {
+            Some(requested_lab_port.unwrap_or(4274))
+        };
         Ok(Self {
             proof,
             corrupt_resource,
+            lab_port,
         })
     }
 }

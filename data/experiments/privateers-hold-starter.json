@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "player": {
+    "movement": {
+      "speedUnitsPerSecond": 3.5
+    },
+    "vitality": {
+      "baseHealth": 25.0,
+      "endurance": 40.0,
+      "healthPerEndurance": 1.5
+    }
+  }
+}
