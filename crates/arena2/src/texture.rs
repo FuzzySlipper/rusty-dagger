@@ -9,7 +9,7 @@
 //!   single-frame; multi-frame = offset table + per-frame RLE with transparent
 //!   runs), 0x0108 ImageRle / 0x1108 RecordRle = row-header RLE.
 
-use crate::Cursor;
+use crate::{require_range, Cursor};
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -68,7 +68,11 @@ impl TextureFile {
         if data.len() < 26 {
             return Err("texture file too small".into());
         }
-        let record_count = Cursor::new(&data).i16() as usize;
+        let record_count = Cursor::new(&data).i16();
+        if record_count < 0 {
+            return Err("negative texture record count".into());
+        }
+        let record_count = record_count as usize;
         if let Some(solid) = solid {
             // Virtual records: 32x32, filled with palette index (record or 128+record)
             let records = (0..record_count.max(1))
@@ -91,12 +95,21 @@ impl TextureFile {
                 solid: Some(solid),
             });
         }
+        let record_table_len = record_count
+            .checked_mul(20)
+            .ok_or_else(|| "texture record table size overflow".to_string())?;
+        require_range(&data, 26, record_table_len, "texture record table")?;
         let mut records = Vec::with_capacity(record_count);
         for r in 0..record_count {
             let mut h = Cursor::at(&data, 26 + r * 20);
             let _type1 = h.i16();
-            let record_position = h.i32() as usize;
+            let record_position = h.i32();
+            if record_position < 0 {
+                return Err(format!("negative texture record {r} position"));
+            }
+            let record_position = record_position as usize;
             // Record header
+            require_range(&data, record_position, 28, "texture record header")?;
             let mut c = Cursor::at(&data, record_position);
             let _offset_x = c.i16();
             let _offset_y = c.i16();
@@ -110,6 +123,10 @@ impl TextureFile {
             let _unk = c.i16();
             let scale_x = c.i16();
             let scale_y = c.i16();
+            record_position
+                .checked_add(data_offset)
+                .filter(|&offset| offset <= data.len())
+                .ok_or_else(|| format!("texture record {r} data offset out of bounds"))?;
             records.push(RecordEntry {
                 position: record_position,
                 info: TextureRecordInfo {
@@ -178,7 +195,10 @@ impl TextureFile {
     fn read_image(&self, r: &RecordEntry, frame: usize) -> Result<Vec<u8>, String> {
         let (w, h) = (r.info.width as usize, r.info.height as usize);
         let mut data = vec![0u8; w * h];
-        let position = r.position + r.data_offset;
+        let position = r
+            .position
+            .checked_add(r.data_offset)
+            .ok_or_else(|| "texture image position overflow".to_string())?;
         if r.info.frame_count == 1 {
             // Rows padded to 256-byte stride
             let mut src = position;
@@ -187,26 +207,50 @@ impl TextureFile {
                     return Err("image data out of bounds".into());
                 }
                 data[y * w..(y + 1) * w].copy_from_slice(&self.data[src..src + w]);
-                src += 256; // width + (256 - width)
+                src = src
+                    .checked_add(256)
+                    .ok_or_else(|| "texture row position overflow".to_string())?;
             }
         } else if r.info.frame_count > 1 {
             if frame >= r.info.frame_count as usize {
                 return Err(format!("frame {frame} out of range"));
             }
-            let frame_off = Cursor::at(&self.data, position + frame * 4).i32() as usize;
-            let mut c = Cursor::at(&self.data, position + frame_off);
+            let frame_entry = position
+                .checked_add(frame * 4)
+                .ok_or_else(|| "texture frame table offset overflow".to_string())?;
+            require_range(&self.data, frame_entry, 4, "texture frame table entry")?;
+            let frame_off = Cursor::at(&self.data, frame_entry).i32();
+            if frame_off < 0 {
+                return Err("negative texture frame offset".into());
+            }
+            let frame_position = position
+                .checked_add(frame_off as usize)
+                .ok_or_else(|| "texture frame offset overflow".to_string())?;
+            require_range(&self.data, frame_position, 4, "texture frame header")?;
+            let mut c = Cursor::at(&self.data, frame_position);
             let cx = c.i16() as usize;
             let cy = c.i16() as usize;
+            if cx > w || cy > h {
+                return Err(format!(
+                    "texture frame dims {cx}x{cy} exceed record {w}x{h}"
+                ));
+            }
             let mut dst = 0usize;
             for _y in 0..cy {
                 let mut x = 0usize;
                 while x < cx {
                     // Transparent run
+                    require_range(&self.data, c.pos, 1, "texture transparent run")?;
                     let run = c.u8() as usize;
                     x += run;
                     dst += run;
                     // Opaque run
+                    require_range(&self.data, c.pos, 1, "texture opaque run")?;
                     let run = c.u8() as usize;
+                    if x + run > cx || dst + run > data.len() {
+                        return Err("texture frame run exceeds bounds".into());
+                    }
+                    require_range(&self.data, c.pos, run, "texture opaque pixels")?;
                     for _ in 0..run {
                         data[dst] = c.u8();
                         dst += 1;
@@ -224,20 +268,58 @@ impl TextureFile {
     fn read_rle(&self, r: &RecordEntry, frame: usize) -> Result<Vec<u8>, String> {
         let (w, h) = (r.info.width as usize, r.info.height as usize);
         let mut data = vec![0u8; w * h];
-        let row_table = r.position + r.data_offset + (h * frame) * 4;
+        if frame >= r.info.frame_count as usize {
+            return Err(format!("frame {frame} out of range"));
+        }
+        let table_offset = h
+            .checked_mul(frame)
+            .and_then(|rows| rows.checked_mul(4))
+            .ok_or_else(|| "texture RLE row table overflow".to_string())?;
+        let row_table = r
+            .position
+            .checked_add(r.data_offset)
+            .and_then(|offset| offset.checked_add(table_offset))
+            .ok_or_else(|| "texture RLE row table offset overflow".to_string())?;
+        let row_table_len = h
+            .checked_mul(4)
+            .ok_or_else(|| "texture RLE row table size overflow".to_string())?;
+        require_range(
+            &self.data,
+            row_table,
+            row_table_len,
+            "texture RLE row table",
+        )?;
         let mut dst = 0usize;
         for row in 0..h {
             let mut rh = Cursor::at(&self.data, row_table + row * 4);
-            let row_offset = rh.i16() as usize;
+            let row_offset = rh.i16();
+            if row_offset < 0 {
+                return Err("negative texture RLE row offset".into());
+            }
+            let row_offset = row_offset as usize;
             let row_encoding = rh.u16();
-            let mut c = Cursor::at(&self.data, r.position + row_offset);
+            let row_position = r
+                .position
+                .checked_add(row_offset)
+                .ok_or_else(|| "texture RLE row offset overflow".to_string())?;
+            require_range(&self.data, row_position, 1, "texture RLE row")?;
+            let mut c = Cursor::at(&self.data, row_position);
             if row_encoding == 0x8000 {
+                require_range(&self.data, c.pos, 2, "texture RLE row width")?;
                 let row_width = c.u16() as usize;
+                if row_width > w {
+                    return Err(format!("texture RLE row width {row_width} exceeds {w}"));
+                }
                 let mut row_pos = 0usize;
                 while row_pos < row_width {
+                    require_range(&self.data, c.pos, 2, "texture RLE probe")?;
                     let probe = c.i16();
                     if probe < 0 {
-                        let count = (-probe) as usize;
+                        let count = (-(probe as i32)) as usize;
+                        if row_pos + count > row_width || dst + count > data.len() {
+                            return Err("texture RLE repeat run exceeds bounds".into());
+                        }
+                        require_range(&self.data, c.pos, 1, "texture RLE repeat pixel")?;
                         let pixel = c.u8();
                         for _ in 0..count {
                             data[dst] = pixel;
@@ -246,6 +328,10 @@ impl TextureFile {
                         row_pos += count;
                     } else if probe > 0 {
                         let count = probe as usize;
+                        if row_pos + count > row_width || dst + count > data.len() {
+                            return Err("texture RLE literal run exceeds bounds".into());
+                        }
+                        require_range(&self.data, c.pos, count, "texture RLE literal pixels")?;
                         for _ in 0..count {
                             data[dst] = c.u8();
                             dst += 1;
@@ -256,6 +342,10 @@ impl TextureFile {
                     }
                 }
             } else {
+                if dst + w > data.len() {
+                    return Err("texture raw row exceeds output bounds".into());
+                }
+                require_range(&self.data, c.pos, w, "texture raw row pixels")?;
                 for _ in 0..w {
                     data[dst] = c.u8();
                     dst += 1;
@@ -269,25 +359,37 @@ impl TextureFile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arena2_dir;
+
+    fn texture_fixture() -> Vec<u8> {
+        const RECORD_POSITION: usize = 46;
+        const PIXELS: usize = 74;
+        let mut data = vec![0u8; 332];
+        data[..2].copy_from_slice(&1i16.to_le_bytes());
+        data[28..32].copy_from_slice(&(RECORD_POSITION as i32).to_le_bytes());
+        data[RECORD_POSITION + 4..RECORD_POSITION + 6].copy_from_slice(&2i16.to_le_bytes());
+        data[RECORD_POSITION + 6..RECORD_POSITION + 8].copy_from_slice(&2i16.to_le_bytes());
+        data[RECORD_POSITION + 8..RECORD_POSITION + 10]
+            .copy_from_slice(&COMPRESSION_UNCOMPRESSED.to_le_bytes());
+        data[RECORD_POSITION + 14..RECORD_POSITION + 18].copy_from_slice(&28u32.to_le_bytes());
+        data[RECORD_POSITION + 20..RECORD_POSITION + 22].copy_from_slice(&1u16.to_le_bytes());
+        data[PIXELS..PIXELS + 2].copy_from_slice(&[1, 2]);
+        data[PIXELS + 256..PIXELS + 258].copy_from_slice(&[3, 4]);
+        data
+    }
 
     #[test]
-    fn texture_120_decodes() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        let dir = arena2_dir();
-        let tex = TextureFile::load(&dir.join("TEXTURE.120")).unwrap();
-        assert!(!tex.is_empty());
+    fn bounded_uncompressed_texture_decodes_and_truncation_fails_closed() {
+        let fixture = texture_fixture();
+        let tex = TextureFile::parse(fixture.clone(), None).unwrap();
         let info = tex.record_info(0).unwrap();
         let (w, h, pixels) = tex.frame_pixels(0, 0).unwrap();
         assert_eq!((w, h), (info.width as usize, info.height as usize));
-        assert_eq!(pixels.len(), w * h);
-        // A real wall texture should not be a single flat color
-        let first = pixels[0];
-        assert!(
-            pixels.iter().any(|&p| p != first),
-            "texture decoded as flat color"
-        );
+        assert_eq!(pixels, [1, 2, 3, 4]);
+
+        let truncated = TextureFile::parse(fixture[..331].to_vec(), None).unwrap();
+        assert!(truncated.frame_pixels(0, 0).is_err());
+        let mut bad_position = texture_fixture();
+        bad_position[28..32].copy_from_slice(&i32::MAX.to_le_bytes());
+        assert!(TextureFile::parse(bad_position, None).is_err());
     }
 }

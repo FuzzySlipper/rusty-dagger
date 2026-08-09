@@ -696,73 +696,85 @@ pub fn build_dungeon(
 mod tests {
     use super::*;
 
-    fn real_arena2_dir() -> PathBuf {
-        std::env::var("ARENA2_DIR")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2")
-            })
+    struct FixtureDir(PathBuf);
+
+    impl FixtureDir {
+        fn new(tag: &str) -> Self {
+            let path =
+                std::env::temp_dir().join(format!("dagger-import-{tag}-{}", std::process::id()));
+            let _ = std::fs::remove_dir_all(&path);
+            std::fs::create_dir_all(&path).unwrap();
+            std::fs::write(path.join("PAL.PAL"), vec![0u8; 768]).unwrap();
+            Self(path)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
     }
 
-    /// True when classic Daggerfall data is present. CI has no data; tests
-    /// that need it early-return (pass) when this is false.
-    fn have_arena2_data() -> bool {
-        real_arena2_dir().join("BLOCKS.BSA").exists()
+    impl Drop for FixtureDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
     }
 
-    fn privateers_hold_layout() -> DungeonLayout {
-        let bsa = BsaArchive::load(&real_arena2_dir().join("MAPS.BSA")).unwrap();
-        maps::resolve_dungeon(&bsa, 17, "Privateer's Hold").unwrap()
+    fn fixture_layout() -> DungeonLayout {
+        DungeonLayout {
+            region: 0,
+            location_index: 0,
+            location_name: "Fixture Hold".into(),
+            map_id: 42,
+            location_id: 50050,
+            longitude: 0,
+            latitude: 0,
+            dungeon_type: 2,
+            blocks: Vec::new(),
+        }
     }
 
-    /// Temp arena2 dir containing only PAL.PAL (no CLIMATE.PAK).
-    fn temp_arena2_dir(tag: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("dagger-import-{tag}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        std::fs::copy(real_arena2_dir().join("PAL.PAL"), dir.join("PAL.PAL")).unwrap();
-        dir
+    fn constant_pak(value: u8) -> Vec<u8> {
+        let header_len = arena2::pak::PAK_HEIGHT * 4;
+        let mut data = vec![0u8; header_len];
+        for row in 0..arena2::pak::PAK_HEIGHT {
+            let offset = header_len + row * 3;
+            data[row * 4..row * 4 + 4].copy_from_slice(&(offset as u32).to_le_bytes());
+            data.extend_from_slice(&(arena2::pak::PAK_WIDTH as u16).to_le_bytes());
+            data.push(value);
+        }
+        data
     }
 
     #[test]
     fn classic_mode_fails_closed_without_climate_pak() {
-        if !have_arena2_data() {
-            return;
-        }
-        let layout = privateers_hold_layout();
-        let dir = temp_arena2_dir("no-climate");
-        let err = Importer::new(&dir, &layout, TextureTableMode::Classic)
+        let layout = fixture_layout();
+        let dir = FixtureDir::new("no-climate");
+        let err = Importer::new(dir.path(), &layout, TextureTableMode::Classic)
             .err()
             .expect("classic mode must fail without CLIMATE.PAK");
         assert!(err.contains("CLIMATE.PAK"), "{err}");
         // Explicitly requested default mode keeps the identity table.
-        let imp = Importer::new(&dir, &layout, TextureTableMode::Default).unwrap();
+        let imp = Importer::new(dir.path(), &layout, TextureTableMode::Default).unwrap();
         assert_eq!(imp.texture_table, DEFAULT_TEXTURE_TABLE);
-        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
     fn classic_mode_fails_closed_with_truncated_climate_pak() {
-        if !have_arena2_data() {
-            return;
-        }
-        let layout = privateers_hold_layout();
-        let dir = temp_arena2_dir("truncated-climate");
-        std::fs::write(dir.join("CLIMATE.PAK"), b"\0\0\0\0").unwrap();
-        let err = Importer::new(&dir, &layout, TextureTableMode::Classic)
+        let layout = fixture_layout();
+        let dir = FixtureDir::new("truncated-climate");
+        std::fs::write(dir.path().join("CLIMATE.PAK"), b"\0\0\0\0").unwrap();
+        let err = Importer::new(dir.path(), &layout, TextureTableMode::Classic)
             .err()
             .expect("classic mode must fail with a truncated CLIMATE.PAK");
         assert!(err.contains("CLIMATE.PAK"), "{err}");
-        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
-    fn classic_mode_uses_real_location_table() {
-        if !have_arena2_data() {
-            return;
-        }
-        let layout = privateers_hold_layout();
-        let imp = Importer::new(&real_arena2_dir(), &layout, TextureTableMode::Classic).unwrap();
+    fn classic_mode_uses_hermetic_climate_authority() {
+        let layout = fixture_layout();
+        let dir = FixtureDir::new("climate");
+        std::fs::write(dir.path().join("CLIMATE.PAK"), constant_pak(231)).unwrap();
+        let imp = Importer::new(dir.path(), &layout, TextureTableMode::Classic).unwrap();
         assert_eq!(imp.texture_table, [23, 22, 19, 22, 20, 368]);
     }
 }

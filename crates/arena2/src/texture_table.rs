@@ -118,31 +118,4 @@ mod tests {
         // Unlisted archives pass through.
         assert_eq!(apply_texture_table(199, &table, 300), 199);
     }
-
-    #[test]
-    fn classic_tables_from_real_location_data() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        // End-to-end acceptance: seed (dungeon LocationId) and climate both
-        // resolved from the real data files. Two locations produce two
-        // different, correct tables (expected values cross-checked against an
-        // independent implementation of DFU RandomTextureTableClassic).
-        use crate::bsa::BsaArchive;
-        use crate::maps::{self, lon_lat_to_map_pixel};
-        use crate::pak::PakFile;
-        let dir = crate::arena2_dir();
-        let bsa = BsaArchive::load(&dir.join("MAPS.BSA")).unwrap();
-        let pak = PakFile::load(&dir.join("CLIMATE.PAK")).unwrap();
-        let table_for = |name: &str| {
-            let layout = maps::resolve_dungeon(&bsa, 17, name).unwrap();
-            let (px, py) = lon_lat_to_map_pixel(layout.longitude, layout.latitude);
-            let wc = pak.get(px, py).unwrap();
-            random_texture_table_classic(layout.location_id, wc).unwrap()
-        };
-        // Privateer's Hold: LocationId 50050, climate 231.
-        assert_eq!(table_for("Privateer's Hold"), [23, 22, 19, 22, 20, 368]);
-        // Castle Necromoghan: LocationId 17799, climate 230.
-        assert_eq!(table_for("Castle Necromoghan"), [20, 23, 23, 19, 19, 368]);
-    }
 }

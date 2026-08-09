@@ -3,7 +3,7 @@
 //! 500 x u32 row offsets at file start; each row is RLE runs of
 //! (u16 count, u8 value) filling 1000 pixels. World is 1000x500 map pixels.
 
-use crate::Cursor;
+use crate::{require_range, Cursor};
 use std::path::Path;
 
 pub const PAK_WIDTH: usize = 1001; // DFU PakFile.pakWidthValue (1000 pixels + 1 sentinel)
@@ -26,11 +26,16 @@ impl PakFile {
         let mut buffer = vec![0u8; PAK_WIDTH * PAK_HEIGHT];
         for row in 0..PAK_HEIGHT {
             let offset = Cursor::at(data, row * 4).u32() as usize;
+            require_range(data, offset, 3, &format!("PAK row {row} first run"))?;
             let mut c = Cursor::at(data, offset);
             let mut row_pos = 0usize;
             while row_pos < PAK_WIDTH {
+                require_range(data, c.pos, 3, &format!("PAK row {row} run"))?;
                 let count = c.u16() as usize;
                 let value = c.u8();
+                if count == 0 {
+                    return Err(format!("PAK row {row} contains an empty run"));
+                }
                 for _ in 0..count {
                     if row_pos >= PAK_WIDTH {
                         return Err(format!("PAK row {row} overrun"));
@@ -88,18 +93,23 @@ pub fn climate_base_type(world_climate: u8) -> ClimateBaseType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arena2_dir;
+    use crate::test_fixtures::constant_pak;
 
     #[test]
-    fn climate_at_privateers_hold() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        let dir = arena2_dir();
-        let pak = PakFile::load(&dir.join("CLIMATE.PAK")).unwrap();
-        // Privateer's Hold: lon 14008, lat 43687 -> pixel (109, 158)
-        let v = pak.get(109, 158).expect("in bounds");
-        println!("world climate at Privateer's Hold: {v}");
-        assert!((223..=232).contains(&v), "unexpected climate value {v}");
+    fn bounded_rows_decode_and_malformed_runs_fail_closed() {
+        let bytes = constant_pak(WorldClimate::Woodlands as u8);
+        let pak = PakFile::parse(&bytes).unwrap();
+        assert_eq!(pak.get(0, 0), Some(WorldClimate::Woodlands as u8));
+        assert_eq!(pak.get(1000, 499), Some(WorldClimate::Woodlands as u8));
+        assert_eq!(pak.get(1001, 0), None);
+
+        assert!(PakFile::parse(&bytes[..PAK_HEIGHT * 4 - 1]).is_err());
+        let mut zero_run = bytes.clone();
+        let first_run = PAK_HEIGHT * 4;
+        zero_run[first_run..first_run + 2].copy_from_slice(&0u16.to_le_bytes());
+        assert!(PakFile::parse(&zero_run).is_err());
+        let mut bad_offset = bytes;
+        bad_offset[..4].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert!(PakFile::parse(&bad_offset).is_err());
     }
 }
