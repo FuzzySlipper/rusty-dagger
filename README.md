@@ -61,7 +61,7 @@ scripts/regenerate.sh
 cargo test --workspace --locked
 cargo run -p dagger-runtime --bin dagger-walkthrough
 ./scripts/verify-native-host.sh # real Engine host, X11 input, pick, resources, lifecycle
-cargo run -p dagger-studio-adapter --bin dagger-native-host # interactive native diagnostic
+cargo run -p dagger-studio-adapter --bin dagger-native-host # native diagnostic; G patrol, N navgrid
 ./scripts/check-engine-freshness.py # fail loudly when Engine main has moved
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (uses a local Rusty Engine Studio build; set
@@ -99,6 +99,10 @@ scripts/check-studio-browser.sh
   transactionally, and disposes. Engine Studio retains its separate browser
   integration proof; neither path exposes renderer implementation packages to
   Dagger source.
+- Native advanced diagnostics: Rust batches directional/environment animation,
+  authoritative patrol transforms, and bounded retained overlays. `G` toggles
+  authored/live sprite and heading facts; `N` toggles nearby committed navgrid
+  cells. The X11 proof covers on/off replacement and disposal.
 
 ## Data provenance & conventions
 

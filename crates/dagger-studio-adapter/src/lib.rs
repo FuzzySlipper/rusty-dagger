@@ -2,6 +2,10 @@
 
 #![forbid(unsafe_code)]
 
-mod adapter;
+mod presentation;
+mod project_access;
+mod protocol;
+mod readout;
 
-pub use adapter::{build_render_bundle, run_stdio, DaggerRenderBundle, DaggerRenderResource};
+pub use presentation::{build_render_bundle, DaggerRenderBundle, DaggerRenderResource};
+pub use protocol::run_stdio;

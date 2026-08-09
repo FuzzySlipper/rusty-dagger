@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     env,
     io::{self, Write},
     path::Path,
@@ -11,11 +11,8 @@ use dagger_runtime::{DaggerRuntime, ResolvedPlayerAction};
 use dagger_studio_adapter::{build_render_bundle, DaggerRenderBundle};
 use rusty_engine::{
     render_host_contracts::{
-        RendererCameraPose, RendererCameraProjection, RendererCompositionCamera,
-        RendererCompositionTarget, RendererPhysicalInputReadout, RendererPickFilter,
-        RendererPickRay, RendererPickRequest, RendererTargetColor, RendererTargetDepth,
-        RendererTargetSampling, RendererViewComposition, RendererViewTarget, RendererViewport,
-        RENDERER_VIEW_COMPOSITION_SCHEMA_VERSION,
+        RendererCameraPose, RendererPhysicalInputReadout, RendererPickFilter, RendererPickRay,
+        RendererPickRequest,
     },
     render_model::{RenderHandle, RenderLayer},
     renderer_webview_host::{
@@ -30,91 +27,33 @@ use winit::{
     window::{Window, WindowId},
 };
 
-const PROJECT: &str = include_str!("../../../../content/projects/privateers-hold.project.json");
+use crate::{
+    diagnostics::{DiagnosticFrameReadout, NativeDiagnostics},
+    proof::{Options, PendingPick, PickKind, Proof},
+    view::{dagger_views, window_bounds},
+};
+
+const PROJECT: &str = include_str!("../../../../../content/projects/privateers-hold.project.json");
+const NAVGRID: &str = include_str!("../../../../../content/projects/privateers-hold.navgrid.json");
 const DUNGEON_HANDLE: RenderHandle = RenderHandle::new(2);
-
-#[derive(Debug, Clone, Copy)]
-struct Options {
-    proof: bool,
-    corrupt_resource: bool,
-}
-
-impl Options {
-    fn parse() -> Result<Self> {
-        let mut proof = false;
-        let mut corrupt_resource = false;
-        for argument in env::args().skip(1) {
-            match argument.as_str() {
-                "--proof" => proof = true,
-                "--proof-corrupt-resource" => {
-                    proof = true;
-                    corrupt_resource = true;
-                }
-                _ => bail!("unknown argument {argument}"),
-            }
-        }
-        Ok(Self {
-            proof,
-            corrupt_resource,
-        })
-    }
-}
-
-#[derive(Debug, Default)]
-struct Proof {
-    frame: bool,
-    views: bool,
-    camera: bool,
-    resize: bool,
-    resources: bool,
-    input_authority: bool,
-    input_noop: bool,
-    pick_authority: bool,
-    pick_miss: bool,
-    state: bool,
-    render: bool,
-}
-
-impl Proof {
-    fn complete(&self) -> bool {
-        self.frame
-            && self.views
-            && self.camera
-            && self.resize
-            && self.resources
-            && self.input_authority
-            && self.input_noop
-            && self.pick_authority
-            && self.pick_miss
-            && self.state
-            && self.render
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-enum PickKind {
-    Miss,
-    Dungeon,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct PendingPick {
-    request_id: u64,
-    kind: PickKind,
-    state_before: dagger_runtime::PlayerControllerState,
-}
 
 struct NativeApplication {
     options: Options,
     runtime: DaggerRuntime,
+    diagnostics: NativeDiagnostics,
     bundle: Option<DaggerRenderBundle>,
     window: Option<Window>,
     renderer: Option<RendererWebviewAdapter>,
     pressed_codes: BTreeSet<String>,
     pending_input: Option<u64>,
     pending_pick: Option<PendingPick>,
+    pending_diagnostic_frames: BTreeMap<u64, DiagnosticFrameReadout>,
+    base_frame_request: Option<u64>,
+    diagnostic_dispose_request: Option<u64>,
     dispose_request: Option<u64>,
     next_input_poll: Instant,
+    next_diagnostic_tick: Instant,
+    last_diagnostic_tick: Instant,
     started_at: Instant,
     ready: bool,
     proof: Proof,
@@ -129,18 +68,25 @@ impl NativeApplication {
             .context("resolve Rusty Dagger workspace root")?;
         let runtime = DaggerRuntime::from_project_json(PROJECT)
             .context("admit checked Privateer's Hold project")?;
+        let diagnostics = NativeDiagnostics::from_documents(PROJECT, NAVGRID)?;
         let bundle = build_render_bundle(root, PROJECT).map_err(anyhow::Error::msg)?;
         Ok(Self {
             options,
             runtime,
+            diagnostics,
             bundle: Some(bundle),
             window: None,
             renderer: None,
             pressed_codes: BTreeSet::new(),
             pending_input: None,
             pending_pick: None,
+            pending_diagnostic_frames: BTreeMap::new(),
+            base_frame_request: None,
+            diagnostic_dispose_request: None,
             dispose_request: None,
             next_input_poll: Instant::now(),
+            next_diagnostic_tick: Instant::now(),
+            last_diagnostic_tick: Instant::now(),
             started_at: Instant::now(),
             ready: false,
             proof: Proof::default(),
@@ -152,7 +98,9 @@ impl NativeApplication {
         let window = event_loop
             .create_window(
                 Window::default_attributes()
-                    .with_title("Privateer's Hold — Rust-native Engine renderer")
+                    .with_title(
+                        "Privateer's Hold — Rust-native Engine renderer — G patrol, N navgrid",
+                    )
                     .with_inner_size(winit::dpi::LogicalSize::new(1100, 720)),
             )
             .context("create Privateer's Hold product window")?;
@@ -225,7 +173,7 @@ impl NativeApplication {
             .clone();
         let pose = self.camera_pose()?;
         let renderer = self.renderer.as_mut().context("renderer unavailable")?;
-        renderer.submit_frame(&frame)?;
+        self.base_frame_request = Some(renderer.submit_frame(&frame)?);
         renderer.configure_views(&dagger_views(pose, 1))?;
         renderer.set_camera_pose(pose, None)?;
         renderer.read_state()?;
@@ -301,6 +249,18 @@ impl NativeApplication {
                 })?;
             self.update_camera()?;
         }
+        if pressed.contains("KeyG") && !self.pressed_codes.contains("KeyG") {
+            let enabled = self.diagnostics.toggle_sprite_overlay();
+            if self.options.proof {
+                println!("DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled={enabled}");
+            }
+        }
+        if pressed.contains("KeyN") && !self.pressed_codes.contains("KeyN") {
+            let enabled = self.diagnostics.toggle_nav_overlay();
+            if self.options.proof {
+                println!("DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled={enabled}");
+            }
+        }
         if pressed.contains("Enter") && !self.pressed_codes.contains("Enter") {
             self.runtime
                 .apply_player_action(ResolvedPlayerAction::Look {
@@ -314,6 +274,88 @@ impl NativeApplication {
             }
         }
         self.pressed_codes = pressed;
+        Ok(())
+    }
+
+    fn submit_diagnostic_tick(&mut self, now: Instant) -> Result<()> {
+        let dt = now
+            .saturating_duration_since(self.last_diagnostic_tick)
+            .as_secs_f32()
+            .min(0.25);
+        self.last_diagnostic_tick = now;
+        let pose = self.camera_pose()?;
+        let diagnostic = self.diagnostics.tick(
+            dt,
+            [
+                pose.position[0] as f32,
+                pose.position[1] as f32,
+                pose.position[2] as f32,
+            ],
+        )?;
+        if diagnostic.frame.ops.is_empty() {
+            return Ok(());
+        }
+        let renderer = self.renderer.as_mut().context("renderer unavailable")?;
+        let request_id = renderer.submit_frame(&diagnostic.frame)?;
+        renderer.render_once(None)?;
+        self.pending_diagnostic_frames
+            .insert(request_id, diagnostic.readout);
+        Ok(())
+    }
+
+    fn accept_diagnostic_readout(&mut self, readout: DiagnosticFrameReadout) {
+        let before = (
+            self.proof.diagnostics_enabled,
+            self.proof.diagnostics_disabled,
+            self.proof.animation_advanced,
+            self.proof.patrol_moved,
+            self.proof.stale_handle_replaced,
+        );
+        self.proof.animation_advanced |= readout.animation_advanced;
+        self.proof.patrol_moved |= readout.patrol_moved;
+        self.proof.diagnostics_enabled |= readout.overlays_enabled;
+        self.proof.diagnostics_disabled |= readout.overlays_disabled;
+        self.proof.stale_handle_replaced |= readout.stale_handle_replaced;
+        self.proof.max_animation_updates = self
+            .proof
+            .max_animation_updates
+            .max(readout.animation_updates);
+        self.proof.max_retained_overlays = self
+            .proof
+            .max_retained_overlays
+            .max(readout.retained_overlays);
+        let after = (
+            self.proof.diagnostics_enabled,
+            self.proof.diagnostics_disabled,
+            self.proof.animation_advanced,
+            self.proof.patrol_moved,
+            self.proof.stale_handle_replaced,
+        );
+        if self.options.proof && before != after {
+            println!(
+                "DAGGER_DIAGNOSTIC_APPLIED enabled={} disabled={} animation={} patrol={} replacement={} retained={}",
+                after.0,
+                after.1,
+                after.2,
+                after.3,
+                after.4,
+                self.proof.max_retained_overlays,
+            );
+        }
+    }
+
+    fn begin_proof_disposal(&mut self) -> Result<()> {
+        if self.diagnostic_dispose_request.is_some() || self.dispose_request.is_some() {
+            return Ok(());
+        }
+        let frame = self.diagnostics.dispose()?;
+        let renderer = self.renderer.as_mut().context("renderer unavailable")?;
+        if frame.ops.is_empty() {
+            self.proof.diagnostics_disposed = true;
+            self.dispose_request = Some(renderer.dispose()?);
+        } else {
+            self.diagnostic_dispose_request = Some(renderer.submit_frame(&frame)?);
+        }
         Ok(())
     }
 
@@ -424,15 +466,31 @@ impl NativeApplication {
                     io::stdout().flush()?;
                 }
             }
-            RendererWebviewObservation::FrameApplied { receipt, .. } => {
+            RendererWebviewObservation::FrameApplied {
+                request_id,
+                receipt,
+            } => {
                 if !receipt.applied {
                     bail!("renderer rejected Dagger frame: {:?}", receipt.diagnostics);
                 }
-                self.proof.frame = true;
-                self.proof.resources = self
-                    .bundle
-                    .as_ref()
-                    .is_some_and(|bundle| !bundle.resources.is_empty());
+                if self.base_frame_request == Some(request_id) {
+                    self.proof.frame = true;
+                    self.proof.resources = self
+                        .bundle
+                        .as_ref()
+                        .is_some_and(|bundle| !bundle.resources.is_empty());
+                } else if let Some(readout) = self.pending_diagnostic_frames.remove(&request_id) {
+                    self.accept_diagnostic_readout(readout);
+                } else if self.diagnostic_dispose_request == Some(request_id) {
+                    self.diagnostic_dispose_request = None;
+                    self.proof.diagnostics_disposed = true;
+                    self.dispose_request = Some(
+                        self.renderer
+                            .as_mut()
+                            .context("renderer unavailable")?
+                            .dispose()?,
+                    );
+                }
             }
             RendererWebviewObservation::ViewsConfigured { receipt, .. } => {
                 if !receipt.applied {
@@ -465,7 +523,7 @@ impl NativeApplication {
                     .map(|resource| resource.bytes.len())
                     .sum::<usize>();
                 println!(
-                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} lifecycle=disposed boundary=rust_facade",
+                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} diagnostics_enabled={} diagnostics_disabled={} animation_advanced={} patrol_moved={} stale_handle_replaced={} diagnostics_disposed={} max_animation_updates={} max_retained_overlays={} lifecycle=disposed boundary=rust_facade",
                     self.proof.frame,
                     self.proof.views,
                     self.proof.camera,
@@ -480,6 +538,14 @@ impl NativeApplication {
                     self.proof.pick_miss,
                     self.proof.state,
                     self.proof.render,
+                    self.proof.diagnostics_enabled,
+                    self.proof.diagnostics_disabled,
+                    self.proof.animation_advanced,
+                    self.proof.patrol_moved,
+                    self.proof.stale_handle_replaced,
+                    self.proof.diagnostics_disposed,
+                    self.proof.max_animation_updates,
+                    self.proof.max_retained_overlays,
                 );
                 event_loop.exit();
             }
@@ -538,6 +604,7 @@ impl ApplicationHandler for NativeApplication {
         event: WindowEvent,
     ) {
         if matches!(event, WindowEvent::CloseRequested) && self.dispose_request.is_none() {
+            let _ = self.diagnostics.dispose();
             match self.renderer.as_mut().map(RendererWebviewAdapter::dispose) {
                 Some(Ok(request_id)) => self.dispose_request = Some(request_id),
                 Some(Err(error)) => self.fail(event_loop, error),
@@ -572,7 +639,10 @@ impl ApplicationHandler for NativeApplication {
                 return;
             }
         }
-        if self.failure.is_some() || self.dispose_request.is_some() {
+        if self.failure.is_some()
+            || self.dispose_request.is_some()
+            || self.diagnostic_dispose_request.is_some()
+        {
             return;
         }
         if self.ready && self.renderer.is_some() && Instant::now() >= self.next_input_poll {
@@ -582,73 +652,28 @@ impl ApplicationHandler for NativeApplication {
             }
             self.next_input_poll = Instant::now() + Duration::from_millis(40);
         }
+        let now = Instant::now();
+        if self.ready
+            && self.proof.frame
+            && self.renderer.is_some()
+            && self.pending_diagnostic_frames.is_empty()
+            && now >= self.next_diagnostic_tick
+        {
+            if let Err(error) = self.submit_diagnostic_tick(now) {
+                self.fail(event_loop, error);
+                return;
+            }
+            self.next_diagnostic_tick = now + Duration::from_millis(100);
+        }
         if self.options.proof && self.proof.complete() {
-            match self.renderer.as_mut().map(RendererWebviewAdapter::dispose) {
-                Some(Ok(request_id)) => self.dispose_request = Some(request_id),
-                Some(Err(error)) => self.fail(event_loop, error),
-                None => self.fail(event_loop, "renderer disappeared before disposal"),
+            if let Err(error) = self.begin_proof_disposal() {
+                self.fail(event_loop, error);
             }
         }
     }
 }
 
-fn dagger_views(pose: RendererCameraPose, target_revision: u64) -> RendererViewComposition {
-    RendererViewComposition {
-        schema_version: RENDERER_VIEW_COMPOSITION_SCHEMA_VERSION,
-        cameras: vec![RendererCompositionCamera {
-            id: "camera.privateers-hold".to_owned(),
-            pose,
-            projection: RendererCameraProjection::Perspective {
-                fov_y_degrees: 65.0,
-                near: 0.05,
-                far: 512.0,
-            },
-        }],
-        targets: vec![RendererCompositionTarget {
-            id: "target.privateers-hold".to_owned(),
-            revision: target_revision,
-            width: 512,
-            height: 384,
-            color: RendererTargetColor::Rgba8Srgb,
-            depth: RendererTargetDepth::Depth24,
-            sampling: RendererTargetSampling::Linear,
-        }],
-        views: vec![
-            rusty_engine::render_host_contracts::RendererCompositionView {
-                id: "view.privateers-hold".to_owned(),
-                camera_id: "camera.privateers-hold".to_owned(),
-                target: RendererViewTarget::Offscreen {
-                    target_id: "target.privateers-hold".to_owned(),
-                    target_revision,
-                },
-                viewport: RendererViewport {
-                    x: 0.0,
-                    y: 0.0,
-                    width: 1.0,
-                    height: 1.0,
-                },
-                order: 10,
-            },
-        ],
-        presentations: Vec::new(),
-    }
-}
-
-fn window_bounds(window: &Window) -> RendererWebviewBounds {
-    let size = window.inner_size();
-    let scale = window.scale_factor();
-    RendererWebviewBounds {
-        x: 0,
-        y: 0,
-        width: ((f64::from(size.width) / scale).round() as u32).max(1),
-        height: ((f64::from(size.height) / scale).round() as u32).max(1),
-    }
-}
-
-fn main() -> Result<()> {
-    #[cfg(target_os = "linux")]
-    gtk::init().context("initialize GTK for native renderer host")?;
-    let options = Options::parse()?;
+pub(crate) fn run(options: Options) -> Result<()> {
     let event_loop = EventLoop::new().context("create Privateer's Hold event loop")?;
     event_loop.set_control_flow(ControlFlow::Poll);
     let mut application = NativeApplication::new(options)?;

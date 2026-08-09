@@ -41,8 +41,12 @@ grep -F \
   'DAGGER_NATIVE_PROOF_OK frame=true views=true camera=true resize=true resources=true' \
   "$proof_output"
 grep -F \
-  'input_authority=true input_noop=true pick_authority=true pick_miss=true state=true render=true lifecycle=disposed boundary=rust_facade' \
+  'input_authority=true input_noop=true pick_authority=true pick_miss=true state=true render=true' \
   "$proof_output"
+grep -F \
+  'diagnostics_enabled=true diagnostics_disabled=true animation_advanced=true patrol_moved=true stale_handle_replaced=true diagnostics_disposed=true' \
+  "$proof_output"
+grep -F 'lifecycle=disposed boundary=rust_facade' "$proof_output"
 grep -F \
   'DAGGER_RESOURCE_REJECTION_OK lifecycle=transactional' \
   "$rejection_output"

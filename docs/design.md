@@ -134,9 +134,12 @@ modularity gate, task 6529):
   sibling repo. Owns live session state (EntityState + engine-spatial +
   svc-collision) and will apply `dagger-rpg` formulas there.
 - `dagger-studio-adapter` — Rust-owned protocol-14 read-only admission and
-  render projection for the committed Privateer's Hold project. The adapter
-  reuses `dagger-runtime`; it rejects mutations until a Dagger-owned authority
-  exists.
+  render projection for the committed Privateer's Hold project, plus native
+  product composition for that projection. The adapter reuses
+  `dagger-runtime`; it rejects mutations until a Dagger-owned authority
+  exists. `dagger-native-host` calls the runtime animation and patrol services
+  directly and visualizes the committed navgrid through bounded retained
+  frames; Engine privately owns the webview renderer.
 - `scripts/studio-host.mjs` — bounded HTTP/static host for the Engine Studio
   app, adapter lifecycle, normalized host-file browsing, and atomic
   per-project user settings. It is transport/presentation glue, not gameplay
@@ -178,15 +181,16 @@ modularity gate, task 6529):
   project can vendor the whole crate + `data/` directory and get the same
   formulas without dragging `dagger-runtime`'s session or the demo's domain.
 
-### Modularity gate evaluation (task 6529, 2026-08-03)
+### Modularity gate evaluation (tasks 6529 and 6708)
 
-Evaluated after billboards (6523) landed and the 6525 door attempt: **no
-split is warranted yet.** Current sizes and public surfaces: `arena2` 1327
-lines / 8 files (pure readers, one-paragraph purpose); `dagger-import` 1319
-lines / 5 files (CLI glue + emitters); `dagger-runtime` 1917 lines / 6 files
-(admission + controller + collision walkthrough); `dagger-studio-adapter` 961
-lines / 1 file (protocol-14 boundary). Every crate's purpose still fits in one
-paragraph and matches this map.
+The 2026-08-03 check found no useful split. Task 6707 then unified Studio and
+native rendering behind one projection owner, making the real boundary clearer
+but growing neighboring responsibilities. Task 6708 therefore splits the
+adapter internally by purpose: protocol transport, project readout,
+presentation/resource admission, and native application/proof/view/diagnostic
+orchestration. This is a module split, not another crate or abstraction layer;
+the public library surface remains `run_stdio` and typed `build_render_bundle`,
+and the native binary remains a thin composition root.
 
 The design's "when to pull" conditions are not met: the emitters (`glb.rs`
 229, `meshjson.rs` 183, `png.rs` 98) are each under the ~300-line
@@ -327,15 +331,13 @@ Ownership split:
     `evaluate_directional` (idle, this task); move-state cycling
     (orientation × anim_frame) arrives with the patrol task (6641).
 - `AnimationService` remains the sole per-tick authority and is covered in
-  Rust. The initial native host submits the committed retained scene; adding
-  interactive animation playback means composing its consolidated updates in
-  downstream Rust and submitting them through the facade, never reviving a
-  browser-side clock or per-sprite polling.
+  Rust. `dagger-native-host` composes its consolidated updates with patrol
+  transforms in one bounded Rust tick and submits them through the facade.
+  There is no browser-side clock or per-sprite polling.
 
-`dagger-sprite-frames --serve` answers per-step camera poses for directional
-enemy frames (6595). The animation authority (env flat timing) is stateful
-(elapsed time accumulates). A future `dagger-world` or native diagnostic loop
-calls `AnimationService::evaluate` directly.
+`dagger-sprite-frames --serve` remains a headless inspection tool for per-step
+camera poses. The native product calls `AnimationService::evaluate` directly;
+the service's elapsed-time state never crosses the renderer boundary.
 
 **Fidelity**: classic torches/flames carry 4-5 frames at 5fps (DFU
 DaggerfallBillboard default). Enemy idle records are 1-frame for all
@@ -372,10 +374,34 @@ spawns float (0.5–1.8m). The nav grid is how runtime grounding and patrol
   committed `content/projects/privateers-hold.navgrid.json`; regenerate.sh
   keeps it fresh.
 - The committed navgrid and grounding behavior are certified headlessly in
-  Rust. A future native diagnostic overlay must derive bounded cube updates
-  from this same artifact and submit them through the facade. Adjacency
-  (walls between columns) is deliberately not modeled here — path
-  connectivity is the upstream seam's job (6642/6643).
+  Rust. The native `N` overlay selects at most 512 nearby same-level cells
+  from this artifact and submits retained debug cubes through the facade. The
+  `G` overlay similarly shows authored spawns, live grounded patrol positions,
+  sprite bounds, and Rust-owned headings. Both controls are opt-in and their
+  off/on lifecycle destroys and replaces retired handles. Adjacency (walls
+  between columns) is deliberately not modeled here — path connectivity is
+  the upstream seam's job (6642/6643).
+
+## Native diagnostic update lifecycle (task 6710)
+
+`dagger-native-host` is the campaign's advanced diagnostic, replacing the
+retired browser flycam without restoring downstream renderer access.
+
+- One `NativeDiagnostics` owner admits the real project and committed navgrid,
+  constructs `AnimationService` and `PatrolService`, and emits one validated
+  `RenderFrameDiff` per bounded tick. Patrol translations update the same
+  sprite handles created by the shared presentation projection; animation
+  frames and overlays are combined in that frame.
+- At most one diagnostic frame may be in flight. The next tick waits for the
+  Engine frame receipt, preventing presentation work from starving physical
+  input and keeping update pressure bounded.
+- `G` toggles authored-spawn/live-patrol diagnostics; `N` toggles nearby
+  navgrid cells. Retained overlay projection owns create/update/destroy and
+  allocates a fresh handle when an overlay returns after removal, so stale
+  handles never regain authority.
+- The Linux proof performs real X11 `G`/`N` on-off-on cycles, waits for applied
+  Engine receipts, observes live patrol movement and animation advancement,
+  destroys retained diagnostics, and only then disposes the Engine renderer.
 
 
 - Every format claim is backed by a test against the real data files

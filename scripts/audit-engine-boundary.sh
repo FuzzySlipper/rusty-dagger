@@ -66,7 +66,13 @@ if git grep -n -E \
 fi
 
 grep -F 'use rusty_engine::{' \
-  'crates/dagger-studio-adapter/src/bin/dagger-native-host.rs' >/dev/null
+  'crates/dagger-studio-adapter/src/bin/dagger-native-host/application.rs' >/dev/null
 grep -F 'renderer_webview_host::{' \
-  'crates/dagger-studio-adapter/src/bin/dagger-native-host.rs' >/dev/null
+  'crates/dagger-studio-adapter/src/bin/dagger-native-host/application.rs' >/dev/null
+native_main='crates/dagger-studio-adapter/src/bin/dagger-native-host/main.rs'
+if (($(wc -l <"$native_main") > 30)); then
+  echo "$native_main: native composition root grew beyond bounded wiring" >&2
+  exit 1
+fi
+grep -F 'application::run(proof::Options::parse()?)' "$native_main" >/dev/null
 echo 'Engine boundary audit passed'
