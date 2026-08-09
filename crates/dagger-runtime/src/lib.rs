@@ -26,7 +26,7 @@ pub use player::{
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
-    DaggerRuntime, ExperimentReadout, RuntimeError, SessionCalculationRecord,
+    DaggerRuntime, ExperimentEvaluation, ExperimentReadout, RuntimeError, SessionCalculationRecord,
     CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
 };
 
@@ -150,6 +150,36 @@ mod tests {
         assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
         assert_eq!(reset.move_speed_units_per_second, 7.0);
         assert_eq!(reset.current_health, 115.0);
+    }
+
+    #[test]
+    fn evaluates_an_experiment_without_mutating_the_play_session() {
+        let runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let before = runtime
+            .experiment_readout()
+            .expect("readout before preview");
+        let mut experiment: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(8.0);
+        experiment["player"]["vitality"]["baseHealth"] = serde_json::Value::from(20.0);
+        experiment["player"]["vitality"]["endurance"] = serde_json::Value::from(70.0);
+        experiment["player"]["vitality"]["healthPerEndurance"] = serde_json::Value::from(2.0);
+
+        let evaluation = runtime
+            .evaluate_experiment_json(&serde_json::to_string(&experiment).unwrap())
+            .expect("preview experiment");
+        assert_eq!(evaluation.move_speed_units_per_second, 8.0);
+        assert_eq!(evaluation.max_health, 160.0);
+        assert_eq!(evaluation.calculation.result, 160.0);
+        assert_eq!(runtime.experiment_readout().unwrap(), before);
+
+        let error = runtime
+            .evaluate_experiment_json(
+                r#"{"schemaVersion":1,"player":{"movement":{"speedUnitsPerSecond":0},"vitality":{"baseHealth":25,"endurance":40,"healthPerEndurance":1.5}}}"#,
+            )
+            .expect_err("invalid preview must fail closed");
+        assert!(matches!(error, RuntimeError::Experiment(_)));
+        assert_eq!(runtime.experiment_readout().unwrap(), before);
     }
 
     #[test]

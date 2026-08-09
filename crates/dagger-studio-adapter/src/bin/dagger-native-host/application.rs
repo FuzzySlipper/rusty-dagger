@@ -118,23 +118,39 @@ impl NativeApplication {
                     bail!("Dagger Lab bridge disconnected")
                 }
             };
-            let (reply, reset_camera) = match command {
+            let (reply, reset_camera, focus_game) = match command {
                 LabCommand::Read { reply } => {
                     let result = self.runtime.experiment_readout();
-                    (send_lab_result(reply, result), false)
+                    (send_lab_result(reply, result), false, false)
                 }
                 LabCommand::Apply { document, reply } => {
                     let result = self.runtime.apply_experiment_json(&document);
-                    (send_lab_result(reply, result), false)
+                    (send_lab_result(reply, result), false, false)
+                }
+                LabCommand::Evaluate { document, reply } => {
+                    let result = self.runtime.evaluate_experiment_json(&document);
+                    (send_lab_result(reply, result), false, false)
                 }
                 LabCommand::Reset { reply } => {
                     let result = self.runtime.reset_play_session();
-                    (send_lab_result(reply, result), true)
+                    let succeeded = result.is_ok();
+                    (send_lab_result(reply, result), succeeded, false)
+                }
+                LabCommand::Play { reply } => {
+                    let result = self.runtime.reset_play_session();
+                    let succeeded = result.is_ok();
+                    (send_lab_result(reply, result), succeeded, succeeded)
                 }
             };
             reply?;
             if reset_camera && self.ready {
                 self.update_camera()?;
+            }
+            if focus_game {
+                self.window
+                    .as_ref()
+                    .context("native game window unavailable")?
+                    .focus_window();
             }
         }
         Ok(())
@@ -749,14 +765,14 @@ impl ApplicationHandler for NativeApplication {
     }
 }
 
-fn send_lab_result(
+fn send_lab_result<T: serde::Serialize>(
     reply: std::sync::mpsc::Sender<LabReply>,
-    result: Result<dagger_runtime::ExperimentReadout, dagger_runtime::RuntimeError>,
+    result: Result<T, dagger_runtime::RuntimeError>,
 ) -> Result<()> {
     let response = match result {
-        Ok(readout) => LabReply {
+        Ok(value) => LabReply {
             status: 200,
-            body: serde_json::to_string(&readout).context("serialize Dagger Lab readout")?,
+            body: serde_json::to_string(&value).context("serialize Dagger Lab response")?,
         },
         Err(error) => LabReply {
             status: 400,
