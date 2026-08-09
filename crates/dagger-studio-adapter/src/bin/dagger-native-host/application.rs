@@ -206,6 +206,16 @@ impl NativeApplication {
         Ok(())
     }
 
+    fn input_control_held(&self) -> bool {
+        // Input readbacks and retained updates share the Engine-owned webview.
+        // Keep a control's falling edge ahead of the next diagnostic batch so
+        // constrained hosts cannot latch the Rust semantic edge or dispose
+        // the renderer before the physical release is observed.
+        self.pressed_codes
+            .iter()
+            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "Enter"))
+    }
+
     fn apply_input(&mut self, input: &RendererPhysicalInputReadout) -> Result<()> {
         let pressed = input.pressed_codes.iter().cloned().collect::<BTreeSet<_>>();
         let state_before = self.runtime.player_state();
@@ -671,6 +681,7 @@ impl ApplicationHandler for NativeApplication {
         if self.ready
             && self.proof.frame
             && self.renderer.is_some()
+            && !self.input_control_held()
             && self.pending_diagnostic_frames.is_empty()
             && now >= self.next_diagnostic_tick
         {
@@ -680,7 +691,7 @@ impl ApplicationHandler for NativeApplication {
             }
             self.next_diagnostic_tick = now + Duration::from_millis(100);
         }
-        if self.options.proof && self.proof.complete() {
+        if self.options.proof && self.proof.complete() && !self.input_control_held() {
             if let Err(error) = self.begin_proof_disposal() {
                 self.fail(event_loop, error);
             }

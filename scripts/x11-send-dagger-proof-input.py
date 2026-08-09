@@ -32,6 +32,8 @@ x11.XFree.argtypes = [ctypes.c_void_p]
 x11.XMapRaised.argtypes = [Display, Window]
 x11.XSetInputFocus.argtypes = [Display, Window, ctypes.c_int, ctypes.c_ulong]
 x11.XGetInputFocus.argtypes = [Display, ctypes.POINTER(Window), ctypes.POINTER(ctypes.c_int)]
+x11.XQueryKeymap.argtypes = [Display, ctypes.POINTER(ctypes.c_char)]
+x11.XQueryKeymap.restype = ctypes.c_int
 x11.XGetGeometry.argtypes = [
     Display,
     Window,
@@ -211,25 +213,30 @@ try:
     print(f"DAGGER_X11_SURFACE_CLICK_OK x={root_x.value} y={root_y.value}")
 
     def release_key(keycode, label, marker, occurrence, timeout=15.0):
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
-                raise SystemExit(f"XTest {label} key-up injection failed")
-            # Wait until the X server has processed the release before asking
-            # the Rust host to observe the renderer's physical-input state.
-            x11.XSync(display, 0)
-            receipt_deadline = min(deadline, time.monotonic() + 0.5)
-            while time.monotonic() < receipt_deadline:
-                if marker_count(marker) >= occurrence:
-                    print(
-                        f"DAGGER_X11_KEY_RELEASE_OK label={label} "
-                        f"marker={marker} occurrence={occurrence}"
-                    )
-                    return
-                time.sleep(0.05)
-        raise SystemExit(
-            f"timed out waiting for physical {label} release marker "
-            f"{marker!r} occurrence {occurrence}"
+        if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
+            raise SystemExit(f"XTest {label} key-up injection failed")
+        x11.XSync(display, 0)
+        keymap = (ctypes.c_char * 32)()
+        if not x11.XQueryKeymap(display, keymap):
+            raise SystemExit("XQueryKeymap failed after key release")
+        server_pressed = bool(ord(keymap[keycode // 8]) & (1 << (keycode % 8)))
+        if server_pressed:
+            raise SystemExit(f"X11 still reports {label} pressed after key-up")
+        release_focus = Window()
+        release_revert = ctypes.c_int()
+        x11.XGetInputFocus(
+            display,
+            ctypes.byref(release_focus),
+            ctypes.byref(release_revert),
+        )
+        print(
+            f"DAGGER_X11_KEY_RELEASE_INJECTED label={label} "
+            f"server_pressed=false focus={release_focus.value}"
+        )
+        wait_for_marker(marker, occurrence, timeout)
+        print(
+            f"DAGGER_X11_KEY_RELEASE_OK label={label} "
+            f"marker={marker} occurrence={occurrence}"
         )
 
     def key_cycle(keysym, code, label, marker, occurrence):
