@@ -184,7 +184,10 @@ modularity gate, task 6529):
   authority. See `docs/studio-host.md` for the runnable contract.
 - `apps/dagger-lab` — the first Dagger Lab Angular surface: whole-document
   authoring, live readback, the vitality formula worksheet, and selectable
-  recent calculation inspection. `dagger-native-host` serves it on loopback
+  recent calculation inspection. A browser-local profile shelf stores named
+  copies of the complete lockstep document for quick A/B experiments; storage
+  is an authoring convenience, not runtime authority or a package system.
+  `dagger-native-host` serves the Lab on loopback
   beside the real Engine-rendered game and routes read/evaluate/apply/reset/play
   commands to the same `DaggerRuntime` receiving physical input. Worksheet
   evaluation is side-effect-free; Reset & Play restores the named start and
@@ -224,6 +227,11 @@ modularity gate, task 6529):
   readback. Reset/retry is explicit. Per-field revisions, merges, package
   dependency resolution, compatibility migrations, and schema governance are
   out of scope.
+- **Named profiles are local drafts.** Save As, duplicate, rename, and delete
+  operate on complete documents in Dagger Lab browser storage. Selecting a
+  profile only loads its draft; the UI calls it active only after Rust admits
+  the complete document and returns matching authoritative readback. Profiles
+  have no revisions, lineage, merge behavior, or compatibility promise.
 - **Useful validation only.** Reject unknown fields, unsupported schema values,
   non-finite values, clearly unusable ranges, and invalid derived results.
   Focused formula examples and regressions are enough; there is no exhaustive

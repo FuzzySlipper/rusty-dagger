@@ -16,6 +16,113 @@ const browser = await chromium.launch({
 try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await page.goto('http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
+  await waitForConnection(page);
+
+  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
+  assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
+  assert.equal(await page.getByTestId('profile-count').innerText(), '1 PROFILES');
+  await page.getByTestId('active-profile').filter({ hasText: "Privateer's Hold starter" }).waitFor();
+  const spawnPosition = await page.getByTestId('player-position').innerText();
+
+  // The worksheet calls the same Rust authority without applying or adding a
+  // live history record.
+  await page.getByTestId('worksheet-base').fill('20');
+  await page.getByTestId('worksheet-endurance').fill('70');
+  await page.getByTestId('worksheet-rate').fill('2');
+  await page.getByTestId('evaluate').click();
+  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
+  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
+  assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
+
+  await page.getByTestId('worksheet-base').fill('-1');
+  await page.getByTestId('evaluate').click();
+  await page.getByTestId('worksheet-error').filter({ hasText: 'player.vitality.baseHealth' }).waitFor();
+  assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
+  await page.getByTestId('worksheet-base').fill('20');
+  await page.getByTestId('evaluate').click();
+  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
+
+  // Profile A is authored from the draft, saved locally, admitted by Rust,
+  // reset, and physically played.
+  await page.getByTestId('movement-speed').fill('4');
+  await page.getByTestId('endurance').fill('50');
+  await page.getByTestId('profile-name').fill('Measured pace');
+  await page.getByTestId('save-as-profile').click();
+  await page.getByTestId('profile-count').filter({ hasText: '2 profiles' }).waitFor();
+  await page.getByTestId('activate-profile').click();
+  await page.getByTestId('active-profile').filter({ hasText: 'Measured pace' }).waitFor();
+  await page.getByTestId('live-speed').filter({ hasText: '4.00' }).waitFor();
+  await page.getByTestId('max-health').filter({ hasText: '100.00' }).waitFor();
+  await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
+  const profileAMove = await resetAndPhysicallyMove(page, spawnPosition);
+
+  // Profile B starts as a duplicate, is renamed and edited in place, then is
+  // admitted and physically played as a meaningfully different alternative.
+  await page.getByTestId('duplicate-profile').click();
+  await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
+  await page.getByTestId('profile-name').fill('Fast and hardy');
+  await page.getByTestId('rename-profile').click();
+  await page.getByTestId('movement-speed').fill('9');
+  await page.getByTestId('endurance').fill('70');
+  await page.getByTestId('save-profile').click();
+  await page.getByTestId('activate-profile').click();
+  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
+  await page.getByTestId('live-speed').filter({ hasText: '9.00' }).waitFor();
+  await page.getByTestId('max-health').filter({ hasText: '130.00' }).waitFor();
+  await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
+  const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
+
+  // Local profiles survive a page reload, while the active label is restored
+  // only by matching the document the still-running Rust session reports.
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await waitForConnection(page);
+  await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
+  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
+  assert.equal(await page.getByTestId('live-speed').innerText(), '9.00');
+  assert.equal(await page.getByTestId('max-health').innerText(), '130.00');
+
+  // Invalid documents may be kept as drafts, but activating one must surface
+  // the Rust author error and preserve the prior active session and history.
+  await page.getByTestId('movement-speed').fill('0');
+  await page.getByTestId('profile-name').fill('Broken draft');
+  await page.getByTestId('save-as-profile').click();
+  await page.getByTestId('profile-count').filter({ hasText: '4 profiles' }).waitFor();
+  await page.getByTestId('activate-profile').click();
+  await page.getByTestId('command-error').filter({ hasText: 'player.movement.speedUnitsPerSecond' }).waitFor();
+  assert.equal(await page.getByTestId('active-profile').innerText(), 'Fast and hardy');
+  assert.equal(await page.getByTestId('live-speed').innerText(), '9.00');
+  assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByTestId('delete-profile').click();
+  await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
+  assert.equal(await page.getByTestId('active-profile').innerText(), 'Fast and hardy');
+
+  await page.getByTestId('history-filter').fill('#2');
+  await page.getByTestId('history-2').click();
+  await page.getByTestId('history-detail').filter({ hasText: 'Why record #2' }).waitFor();
+  assert.equal(await page.getByTestId('trace-result').innerText(), '100.00');
+  await page.getByTestId('history-filter').fill('');
+  await page.screenshot({ path: `${output}/profiles-desktop.png`, fullPage: true });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByTestId('profile-list').scrollIntoViewIfNeeded();
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
+    true,
+    'narrow Dagger Lab overflows horizontally',
+  );
+  await page.getByTestId('history-detail').waitFor();
+  await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
+
+  console.log(
+    `DAGGER_LAB_BROWSER_OK profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=9.00/130.00 preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+  );
+} finally {
+  await browser.close();
+}
+
+async function waitForConnection(page) {
   await page.getByTestId('connection').waitFor({ timeout: 30_000 });
   try {
     await page.getByTestId('connection').filter({ hasText: 'Connected' }).waitFor({ timeout: 30_000 });
@@ -23,49 +130,16 @@ try {
     console.error(`DAGGER_LAB_BROWSER_STATE ${await page.locator('body').innerText()}`);
     throw error;
   }
+}
 
-  const initialHealth = await page.getByTestId('max-health').innerText();
-  const initialHistory = await page.getByTestId('history-count').innerText();
-  assert.equal(initialHealth, '85.00');
-  assert.equal(initialHistory, '1 RECORDS');
-
-  await page.getByTestId('worksheet-base').fill('20');
-  await page.getByTestId('worksheet-endurance').fill('70');
-  await page.getByTestId('worksheet-rate').fill('2');
-  await page.getByTestId('evaluate').click();
-  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
-  assert.equal(await page.getByTestId('max-health').innerText(), initialHealth);
-  assert.equal(await page.getByTestId('history-count').innerText(), initialHistory);
-
-  await page.getByTestId('worksheet-base').fill('-1');
-  await page.getByTestId('evaluate').click();
-  await page.getByTestId('worksheet-error').filter({ hasText: 'player.vitality.baseHealth' }).waitFor();
-  assert.equal(await page.getByTestId('max-health').innerText(), initialHealth);
-  assert.equal(await page.getByTestId('history-count').innerText(), initialHistory);
-  await page.getByTestId('worksheet-base').fill('20');
-  await page.getByTestId('evaluate').click();
-  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
-
-  await page.getByTestId('movement-speed').fill('8');
-  await page.getByTestId('endurance').fill('60');
-  await page.getByTestId('apply').click();
-  await page.getByTestId('live-speed').filter({ hasText: '8.00' }).waitFor();
-  await page.getByTestId('max-health').filter({ hasText: '115.00' }).waitFor();
-  await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
-
-  await page.getByTestId('endurance').fill('50');
-  await page.getByTestId('apply').click();
-  await page.getByTestId('max-health').filter({ hasText: '100.00' }).waitFor();
-  await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
-
-  await page.getByTestId('history-filter').fill('#2');
-  await page.getByTestId('history-2').click();
-  await page.getByTestId('history-detail').filter({ hasText: 'Why record #2' }).waitFor();
-  assert.equal(await page.getByTestId('trace-result').innerText(), '115.00');
-  await page.getByTestId('history-filter').fill('');
-
+async function resetAndPhysicallyMove(page, spawnPosition) {
   await page.getByTestId('play').click();
-  const resetPosition = await page.getByTestId('player-position').innerText();
+  const resetDeadline = Date.now() + 10_000;
+  while (await page.getByTestId('player-position').innerText() !== spawnPosition) {
+    assert.ok(Date.now() < resetDeadline, 'Reset & Play did not restore the authoritative start');
+    await page.waitForTimeout(100);
+  }
+  const resetPosition = spawnPosition;
   await page.waitForTimeout(500);
   let movedPosition = resetPosition;
   for (let attempt = 1; attempt <= 3 && movedPosition === resetPosition; attempt += 1) {
@@ -77,33 +151,5 @@ try {
     }
   }
   assert.notEqual(movedPosition, resetPosition, 'physical W input did not change Rust position');
-  await page.screenshot({ path: `${output}/workbench-desktop.png`, fullPage: true });
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByTestId('worksheet-result').scrollIntoViewIfNeeded();
-  assert.equal(
-    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
-    true,
-    'narrow Dagger Lab overflows horizontally',
-  );
-  await page.getByTestId('history-detail').waitFor();
-  await page.screenshot({ path: `${output}/workbench-narrow.png`, fullPage: true });
-
-  await page.getByTestId('reset').click();
-  const resetDeadline = Date.now() + 10_000;
-  while (await page.getByTestId('player-position').innerText() !== resetPosition) {
-    assert.ok(Date.now() < resetDeadline, 'reset did not restore the authoritative start position');
-    await page.waitForTimeout(100);
-  }
-  await page.getByTestId('movement-speed').fill('0');
-  await page.getByTestId('apply').click();
-  await page.getByTestId('command-error').filter({ hasText: 'player.movement.speedUnitsPerSecond' }).waitFor();
-  assert.equal(await page.getByTestId('live-speed').innerText(), '8.00');
-  assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
-
-  console.log(
-    `DAGGER_LAB_BROWSER_OK preview=160.00 active=100.00 history=3 inspected=#2 reset=${JSON.stringify(resetPosition)} moved=${JSON.stringify(movedPosition)} desktop=${output}/workbench-desktop.png narrow=${output}/workbench-narrow.png`,
-  );
-} finally {
-  await browser.close();
+  return { resetPosition, movedPosition };
 }
