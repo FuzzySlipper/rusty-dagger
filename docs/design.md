@@ -190,12 +190,17 @@ modularity gate, task 6529):
   recent calculation inspection. A browser-local profile shelf stores named
   copies of the complete lockstep document for quick A/B experiments; storage
   is an authoring convenience, not runtime authority or a package system.
-  `dagger-native-host` serves the Lab on loopback
-  beside the real Engine-rendered game and routes read/evaluate/apply/reset/play
-  commands to the same `DaggerRuntime` receiving physical input. Worksheet
-  evaluation is side-effect-free; Reset & Play restores the named start and
-  focuses the native window. The app calls Rust for every evaluation or
-  mutation and never imports or mounts Engine renderer implementation.
+  `dagger-native-host` owns one Lab HTTP companion beside the real
+  Engine-rendered game and routes read/evaluate/apply/reset/play commands to
+  the same `DaggerRuntime` receiving physical input. The native window makes
+  `L` discoverable and opens the companion through a Dagger-owned system
+  browser action; no browser tab owns or starts gameplay authority. Closing
+  and reopening a tab therefore reconnects to the same native session.
+  Loopback is the default bind and an explicit LAN bind remains trusted,
+  unauthenticated development mode. Worksheet evaluation is side-effect-free;
+  Reset & Play restores the named start and focuses the native window. The app
+  calls Rust for every evaluation or mutation and never imports or mounts
+  Engine renderer implementation.
   The connected content browser searches the 43 committed enemy identities,
   keeps decoded Arena2 reference fields distinct from authored player rules
   and live patrol state, and asks Rust to choose a navigable grounded approach

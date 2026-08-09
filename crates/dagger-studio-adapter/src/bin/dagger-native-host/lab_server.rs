@@ -78,6 +78,10 @@ impl LabServer {
         self.port
     }
 
+    pub(crate) fn local_url(&self) -> String {
+        format!("http://127.0.0.1:{}/", self.port)
+    }
+
     pub(crate) fn try_recv(&self) -> Result<LabCommand, mpsc::TryRecvError> {
         self.commands.try_recv()
     }

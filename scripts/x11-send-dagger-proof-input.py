@@ -266,6 +266,17 @@ try:
         key_cycle(keysym, code, label, marker, occurrence)
     print("DAGGER_X11_DIAGNOSTIC_TOGGLES_OK")
 
+    # The Lab is a companion to this exact native session. Exercise the
+    # discoverable product shortcut through Engine physical-input readback;
+    # proof mode acknowledges the route without spawning a desktop browser.
+    key_cycle(
+        ord("l"),
+        "KeyL",
+        "L-open-lab",
+        "DAGGER_LAB_OPENED",
+        1,
+    )
+
     key_cycle(
         0xFF0D,
         "Enter",

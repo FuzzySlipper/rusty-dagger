@@ -49,6 +49,11 @@ if [[ "$(grep -Fc 'DAGGER_NATIVE_INPUT_RELEASED code=Enter' "$proof_output")" -n
   echo 'native proof did not observe exactly one Enter release transition' >&2
   exit 1
 fi
+if [[ "$(grep -Fc 'DAGGER_NATIVE_INPUT_RELEASED code=KeyL' "$proof_output")" -ne 1 ]]; then
+  echo 'native proof did not observe exactly one KeyL release transition' >&2
+  exit 1
+fi
+grep -F 'DAGGER_LAB_OPENED url=http://127.0.0.1:' "$proof_output"
 grep -E \
   'DAGGER_(DIAGNOSTIC_CONTROL|NATIVE_ACTION_APPLIED|NATIVE_INPUT_RELEASED)' \
   "$proof_output"
@@ -56,7 +61,7 @@ grep -F \
   'DAGGER_NATIVE_PROOF_OK frame=true views=true camera=true resize=true resources=true' \
   "$proof_output"
 grep -F \
-  'input_authority=true input_noop=true pick_authority=true pick_miss=true state=true render=true' \
+  'input_authority=true input_noop=true pick_authority=true pick_miss=true state=true render=true lab_opened=true' \
   "$proof_output"
 grep -F \
   'diagnostics_enabled=true diagnostics_disabled=true animation_advanced=true patrol_moved=true stale_handle_replaced=true diagnostics_disposed=true' \

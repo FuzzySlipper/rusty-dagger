@@ -3,6 +3,7 @@ use std::{
     env,
     io::{self, Write},
     path::Path,
+    process::Command,
     time::{Duration, Instant},
 };
 
@@ -178,9 +179,7 @@ impl NativeApplication {
         let window = event_loop
             .create_window(
                 Window::default_attributes()
-                    .with_title(
-                        "Privateer's Hold — Rust-native Engine renderer — G patrol, N navgrid",
-                    )
+                    .with_title("Privateer's Hold — L Dagger Lab — G patrol — N navgrid")
                     .with_inner_size(winit::dpi::LogicalSize::new(1100, 720)),
             )
             .context("create Privateer's Hold product window")?;
@@ -293,7 +292,30 @@ impl NativeApplication {
         // the renderer before the physical release is observed.
         self.pressed_codes
             .iter()
-            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "Enter"))
+            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "KeyL" | "Enter"))
+    }
+
+    fn open_lab(&mut self) -> Result<()> {
+        let url = match self.lab_server.as_ref() {
+            Some(server) => server.local_url(),
+            None => {
+                println!("DAGGER_LAB_OPEN_UNAVAILABLE reason=disabled");
+                io::stdout().flush()?;
+                return Ok(());
+            }
+        };
+        if self.options.proof {
+            self.proof.lab_opened = true;
+            println!("DAGGER_LAB_OPENED url={url} launcher=proof");
+            io::stdout().flush()?;
+            return Ok(());
+        }
+        match launch_external_url(&url) {
+            Ok(()) => println!("DAGGER_LAB_OPENED url={url} launcher=system"),
+            Err(error) => println!("DAGGER_LAB_OPEN_FAILED url={url} error={error:#}"),
+        }
+        io::stdout().flush()?;
+        Ok(())
     }
 
     fn apply_input(&mut self, input: &RendererPhysicalInputReadout) -> Result<()> {
@@ -361,6 +383,9 @@ impl NativeApplication {
                 println!("DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled={enabled}");
                 io::stdout().flush()?;
             }
+        }
+        if pressed.contains("KeyL") && !self.pressed_codes.contains("KeyL") {
+            self.open_lab()?;
         }
         if pressed.contains("Enter") && !self.pressed_codes.contains("Enter") {
             self.runtime
@@ -631,7 +656,7 @@ impl NativeApplication {
                     .map(|resource| resource.bytes.len())
                     .sum::<usize>();
                 println!(
-                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} diagnostics_enabled={} diagnostics_disabled={} animation_advanced={} patrol_moved={} stale_handle_replaced={} diagnostics_disposed={} max_animation_updates={} max_retained_overlays={} lifecycle=disposed boundary=rust_facade",
+                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} lab_opened={} diagnostics_enabled={} diagnostics_disabled={} animation_advanced={} patrol_moved={} stale_handle_replaced={} diagnostics_disposed={} max_animation_updates={} max_retained_overlays={} lifecycle=disposed boundary=rust_facade",
                     self.proof.frame,
                     self.proof.views,
                     self.proof.camera,
@@ -646,6 +671,7 @@ impl NativeApplication {
                     self.proof.pick_miss,
                     self.proof.state,
                     self.proof.render,
+                    self.proof.lab_opened,
                     self.proof.diagnostics_enabled,
                     self.proof.diagnostics_disabled,
                     self.proof.animation_advanced,
@@ -683,6 +709,39 @@ impl NativeApplication {
         self.failure = Some(error.to_string());
         event_loop.exit();
     }
+}
+
+fn launch_external_url(url: &str) -> Result<()> {
+    if let Some(command) = env::var_os("DAGGER_LAB_OPEN_COMMAND") {
+        let status = Command::new(command)
+            .arg(url)
+            .status()
+            .context("run configured Dagger Lab browser command")?;
+        if !status.success() {
+            bail!("configured Dagger Lab browser command exited with {status}");
+        }
+        return Ok(());
+    }
+    #[cfg(target_os = "linux")]
+    let mut command = Command::new("xdg-open");
+    #[cfg(target_os = "macos")]
+    let mut command = Command::new("open");
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut command = Command::new("cmd");
+        command.args(["/C", "start", ""]);
+        command
+    };
+    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
+    bail!("opening Dagger Lab is unsupported on this operating system");
+    let status = command
+        .arg(url)
+        .status()
+        .context("open Dagger Lab in the system browser")?;
+    if !status.success() {
+        bail!("system browser command exited with {status}");
+    }
+    Ok(())
 }
 
 impl ApplicationHandler for NativeApplication {

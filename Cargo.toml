@@ -23,7 +23,7 @@ winit = "0.30"
 
 [workspace.metadata.rusty-engine]
 repository = "https://github.com/FuzzySlipper/rusty-engine.git"
-revision = "d0b5e672b83d463bff71d8d35c877f770142ff3c"
+revision = "0503830d22bd982bdeb68681849cf6a0b67db355"
 
 [workspace.lints.rust]
 warnings = "warn"
