@@ -13,6 +13,8 @@ x11.XOpenDisplay.argtypes = [ctypes.c_char_p]
 x11.XOpenDisplay.restype = Display
 x11.XDefaultRootWindow.argtypes = [Display]
 x11.XDefaultRootWindow.restype = Window
+x11.XDefaultScreen.argtypes = [Display]
+x11.XDefaultScreen.restype = ctypes.c_int
 x11.XQueryTree.argtypes = [
     Display,
     Window,
@@ -28,6 +30,29 @@ x11.XFree.argtypes = [ctypes.c_void_p]
 x11.XMapRaised.argtypes = [Display, Window]
 x11.XSetInputFocus.argtypes = [Display, Window, ctypes.c_int, ctypes.c_ulong]
 x11.XGetInputFocus.argtypes = [Display, ctypes.POINTER(Window), ctypes.POINTER(ctypes.c_int)]
+x11.XGetGeometry.argtypes = [
+    Display,
+    Window,
+    ctypes.POINTER(Window),
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(ctypes.c_uint),
+    ctypes.POINTER(ctypes.c_uint),
+    ctypes.POINTER(ctypes.c_uint),
+    ctypes.POINTER(ctypes.c_uint),
+]
+x11.XGetGeometry.restype = ctypes.c_int
+x11.XTranslateCoordinates.argtypes = [
+    Display,
+    Window,
+    Window,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(ctypes.c_int),
+    ctypes.POINTER(Window),
+]
+x11.XTranslateCoordinates.restype = ctypes.c_int
 x11.XSync.argtypes = [Display, ctypes.c_int]
 x11.XKeysymToKeycode.argtypes = [Display, ctypes.c_ulong]
 x11.XKeysymToKeycode.restype = ctypes.c_uint
@@ -35,6 +60,16 @@ x11.XFlush.argtypes = [Display]
 x11.XCloseDisplay.argtypes = [Display]
 xtst.XTestFakeKeyEvent.argtypes = [Display, ctypes.c_uint, ctypes.c_int, ctypes.c_ulong]
 xtst.XTestFakeKeyEvent.restype = ctypes.c_int
+xtst.XTestFakeMotionEvent.argtypes = [
+    Display,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_ulong,
+]
+xtst.XTestFakeMotionEvent.restype = ctypes.c_int
+xtst.XTestFakeButtonEvent.argtypes = [Display, ctypes.c_uint, ctypes.c_int, ctypes.c_ulong]
+xtst.XTestFakeButtonEvent.restype = ctypes.c_int
 
 
 def window_name(display, window):
@@ -101,13 +136,64 @@ try:
             f"Dagger native window did not receive focus: wanted {window}, got {focused.value}"
         )
     print(f"DAGGER_X11_FOCUS_OK window={window}")
+    geometry_root = Window()
+    window_x = ctypes.c_int()
+    window_y = ctypes.c_int()
+    width = ctypes.c_uint()
+    height = ctypes.c_uint()
+    border_width = ctypes.c_uint()
+    depth = ctypes.c_uint()
+    if not x11.XGetGeometry(
+        display,
+        window,
+        ctypes.byref(geometry_root),
+        ctypes.byref(window_x),
+        ctypes.byref(window_y),
+        ctypes.byref(width),
+        ctypes.byref(height),
+        ctypes.byref(border_width),
+        ctypes.byref(depth),
+    ):
+        raise SystemExit("XGetGeometry(Dagger native window) failed")
+    root_x = ctypes.c_int()
+    root_y = ctypes.c_int()
+    child = Window()
+    root = x11.XDefaultRootWindow(display)
+    if not x11.XTranslateCoordinates(
+        display,
+        window,
+        root,
+        int(width.value // 2),
+        int(height.value // 2),
+        ctypes.byref(root_x),
+        ctypes.byref(root_y),
+        ctypes.byref(child),
+    ):
+        raise SystemExit("XTranslateCoordinates(Dagger native window) failed")
+    if not xtst.XTestFakeMotionEvent(
+        display,
+        x11.XDefaultScreen(display),
+        root_x.value,
+        root_y.value,
+        0,
+    ):
+        raise SystemExit("XTest pointer motion failed")
+    if not xtst.XTestFakeButtonEvent(display, 1, 1, 0):
+        raise SystemExit("XTest pointer-down injection failed")
+    x11.XFlush(display)
+    time.sleep(0.2)
+    if not xtst.XTestFakeButtonEvent(display, 1, 0, 0):
+        raise SystemExit("XTest pointer-up injection failed")
+    x11.XFlush(display)
+    time.sleep(0.3)
+    print(f"DAGGER_X11_SURFACE_CLICK_OK x={root_x.value} y={root_y.value}")
     keycode = x11.XKeysymToKeycode(display, 0xFF0D)  # XK_Return
     if not keycode:
         raise SystemExit("XKeysymToKeycode(XK_Return) failed")
     if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
         raise SystemExit("XTest key-down injection failed")
     x11.XFlush(display)
-    time.sleep(0.4)
+    time.sleep(3.0)
     if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
         raise SystemExit("XTest key-up injection failed")
     x11.XFlush(display)
