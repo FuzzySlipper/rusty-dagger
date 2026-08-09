@@ -2,7 +2,12 @@
 """Focus the native Dagger product and send one physical W press."""
 
 import ctypes
+import sys
 import time
+
+key = sys.argv[1].lower() if len(sys.argv) > 1 else "w"
+if key not in {"w", "a", "s", "d"}:
+    raise SystemExit(f"unsupported movement key: {key}")
 
 Display = ctypes.c_void_p
 Window = ctypes.c_ulong
@@ -144,19 +149,19 @@ try:
         raise SystemExit("physical pointer-up failed")
     x11.XSync(display, 0)
     time.sleep(0.20)
-    keycode = x11.XKeysymToKeycode(display, ord("w"))
+    keycode = x11.XKeysymToKeycode(display, ord(key))
     if not keycode:
-        raise SystemExit("XKeysymToKeycode(w) failed")
+        raise SystemExit(f"XKeysymToKeycode({key}) failed")
     if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
-        raise SystemExit("physical W key-down injection failed")
+        raise SystemExit(f"physical {key.upper()} key-down injection failed")
     x11.XSync(display, 0)
     # Software-rendered CI can take several input polling intervals to return
     # one webview readback. Keep this a real physical hold long enough for the
     # native host to observe it under load.
     time.sleep(0.75)
     if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
-        raise SystemExit("physical W key-up injection failed")
+        raise SystemExit(f"physical {key.upper()} key-up injection failed")
     x11.XSync(display, 0)
-    print(f"DAGGER_LAB_PHYSICAL_MOVE_OK window={window}")
+    print(f"DAGGER_LAB_PHYSICAL_MOVE_OK key={key.upper()} window={window}")
 finally:
     x11.XCloseDisplay(display)

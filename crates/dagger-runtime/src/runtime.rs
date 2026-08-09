@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 
 use dagger_rpg::{AdmittedExperiment, CalculationRecord, ExperimentDocument, ExperimentError};
 use rusty_engine::core_ids::EntityId;
@@ -14,13 +14,20 @@ use crate::player::{
     apply_player_action, player_view, PlayerControlReceipt, PlayerControllerConfig,
     PlayerControllerState, PlayerError, ResolvedPlayerAction,
 };
-use crate::project::{AdmittedProject, ProjectAdmissionError};
+use crate::project::{AdmittedProject, ContentEntity, ProjectAdmissionError, PLAYER_HALF_EXTENTS};
 
 #[derive(Debug)]
 pub enum RuntimeError {
     Admission(ProjectAdmissionError),
     Experiment(ExperimentError),
     Player(PlayerError),
+    Content(ContentError),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContentError {
+    UnknownEntity(u64),
+    NoGroundedApproach(u64),
 }
 
 impl std::fmt::Display for RuntimeError {
@@ -44,6 +51,9 @@ pub struct DaggerRuntime {
     calculation_sequence: u64,
     calculation_history: VecDeque<SessionCalculationRecord>,
     dungeon_bounds: Option<([f64; 3], [f64; 3])>,
+    content_entities: Vec<ContentEntity>,
+    content_live_positions: BTreeMap<u64, [f32; 3]>,
+    focused_content_id: Option<u64>,
 }
 
 pub const STARTER_EXPERIMENT_JSON: &str =
@@ -60,6 +70,36 @@ pub struct ExperimentReadout {
     pub player_position: [f32; 3],
     pub player_yaw_degrees: f32,
     pub calculations: Vec<SessionCalculationRecord>,
+    pub content: Vec<ContentEntityReadout>,
+    pub focused_content_id: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContentEntityReadout {
+    pub id: u64,
+    pub kind: &'static str,
+    pub name: String,
+    pub reference: EnemyReferenceReadout,
+    pub live: ContentLiveReadout,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnemyReferenceReadout {
+    pub mobile_id: u8,
+    pub mobile_name: String,
+    pub texture_archive: u16,
+    pub flying: bool,
+    pub sprite_asset: String,
+    pub authored_position: [f32; 3],
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ContentLiveReadout {
+    pub position: [f32; 3],
+    pub distance_from_player: f32,
 }
 
 /// A side-effect-free evaluation through the same admission and calculation
@@ -138,6 +178,11 @@ impl DaggerRuntime {
         let player_start = admitted.player_start;
         let player_start_state = admitted.player_state;
         let player_health = experiment.player.max_health;
+        let content_live_positions = admitted
+            .content_entities
+            .iter()
+            .map(|entity| (entity.id, entity.authored_position))
+            .collect();
         Ok(Self {
             entities: admitted.entities,
             collision_scene,
@@ -151,6 +196,9 @@ impl DaggerRuntime {
             calculation_sequence: 1,
             calculation_history: VecDeque::from([initial_calculation]),
             dungeon_bounds: admitted.dungeon_bounds,
+            content_entities: admitted.content_entities,
+            content_live_positions,
+            focused_content_id: None,
         })
     }
 
@@ -219,11 +267,123 @@ impl DaggerRuntime {
         self.set_player_position(self.player_start)?;
         self.player_state = self.player_start_state;
         self.player_health = self.experiment.player.max_health;
+        self.focused_content_id = None;
         self.experiment_readout()
+    }
+
+    /// Publish Dagger-owned live entity positions from the native patrol
+    /// authority. Unknown renderer handles are ignored rather than becoming
+    /// content identities through this synchronization seam.
+    pub fn sync_content_live_positions(
+        &mut self,
+        positions: impl IntoIterator<Item = (u64, [f32; 3])>,
+    ) {
+        for (id, position) in positions {
+            if self.content_live_positions.contains_key(&id)
+                && position.iter().all(|component| component.is_finite())
+            {
+                self.content_live_positions.insert(id, position);
+            }
+        }
+    }
+
+    /// Reset the player beside one admitted live content entity and face it.
+    /// The collision scene chooses the floor; Angular never supplies a raw
+    /// teleport coordinate.
+    pub fn jump_to_content(&mut self, id: u64) -> Result<ExperimentReadout, RuntimeError> {
+        let target = self
+            .content_live_positions
+            .get(&id)
+            .copied()
+            .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
+        let original_position = self.player_position()?;
+        let original_state = self.player_state;
+        let original_focus = self.focused_content_id;
+        for [offset_x, offset_z] in [[0.0, 1.5], [1.5, 0.0], [0.0, -1.5], [-1.5, 0.0]] {
+            let approach_probe = [target[0] + offset_x, target[1] + 2.0, target[2] + offset_z];
+            let Some(grounding) =
+                crate::navgrid::ground_spawn(&self.collision_scene, approach_probe, 6.0)
+            else {
+                continue;
+            };
+            let position = Vec3::new(
+                approach_probe[0],
+                grounding.support_y + PLAYER_HALF_EXTENTS.y + 0.3,
+                approach_probe[2],
+            );
+            self.set_player_position(position)?;
+            let mut facing_state = self.player_start_state;
+            let delta_x = target[0] - position.x;
+            let delta_z = target[2] - position.z;
+            facing_state.yaw_degrees = (-delta_x).atan2(-delta_z).to_degrees();
+            self.player_state = facing_state;
+
+            let navigable = [
+                ResolvedPlayerAction::Move {
+                    forward: 0.0,
+                    right: 1.0,
+                },
+                ResolvedPlayerAction::Move {
+                    forward: -1.0,
+                    right: 0.0,
+                },
+            ]
+            .into_iter()
+            .any(|action| {
+                let _ = self.set_player_position(position);
+                self.player_state = facing_state;
+                self.apply_player_action(action).is_ok_and(|_| {
+                    self.player_position().is_ok_and(|after| {
+                        (after.x - position.x).hypot(after.z - position.z) > 0.01
+                    })
+                })
+            });
+            if navigable {
+                self.set_player_position(position)?;
+                self.player_state = facing_state;
+                self.player_health = self.experiment.player.max_health;
+                self.focused_content_id = Some(id);
+                return self.experiment_readout();
+            }
+        }
+        self.set_player_position(original_position)?;
+        self.player_state = original_state;
+        self.focused_content_id = original_focus;
+        Err(RuntimeError::Content(ContentError::NoGroundedApproach(id)))
     }
 
     pub fn experiment_readout(&self) -> Result<ExperimentReadout, RuntimeError> {
         let position = self.player_position()?;
+        let content = self
+            .content_entities
+            .iter()
+            .map(|entity| {
+                let live_position = self
+                    .content_live_positions
+                    .get(&entity.id)
+                    .copied()
+                    .unwrap_or(entity.authored_position);
+                ContentEntityReadout {
+                    id: entity.id,
+                    kind: "enemy",
+                    name: entity.name.clone(),
+                    reference: EnemyReferenceReadout {
+                        mobile_id: entity.mobile_id,
+                        mobile_name: entity.mobile_name.clone(),
+                        texture_archive: entity.texture_archive,
+                        flying: entity.flying,
+                        sprite_asset: entity.sprite_asset.clone(),
+                        authored_position: entity.authored_position,
+                    },
+                    live: ContentLiveReadout {
+                        position: live_position,
+                        distance_from_player: (live_position[0] - position.x)
+                            .hypot(live_position[1] - position.y)
+                            .hypot(live_position[2] - position.z),
+                    },
+                }
+            })
+            .collect();
         Ok(ExperimentReadout {
             document: self.experiment.document.clone(),
             move_speed_units_per_second: self.player_controller.move_speed_units_per_second,
@@ -232,6 +392,8 @@ impl DaggerRuntime {
             player_position: [position.x, position.y, position.z],
             player_yaw_degrees: self.player_state.yaw_degrees,
             calculations: self.calculation_history.iter().cloned().collect(),
+            content,
+            focused_content_id: self.focused_content_id,
         })
     }
 

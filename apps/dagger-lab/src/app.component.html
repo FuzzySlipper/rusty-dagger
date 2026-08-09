@@ -51,6 +51,52 @@
       </div>
     </article>
 
+    <article class="panel content-browser" *ngIf="readout as live">
+      <div class="panel-heading">
+        <div><p class="kicker">Committed Privateer's Hold scene</p><h2>Live content browser</h2></div>
+        <span class="schema" data-testid="content-count">{{ live.content.length }} enemies</span>
+      </div>
+      <label class="filter"><span>Find a name or mobile ID</span>
+        <input data-testid="content-filter" type="search" placeholder="thief or 138" [(ngModel)]="contentFilter" />
+      </label>
+      <div class="content-layout">
+        <nav data-testid="content-list" aria-label="Imported scene content">
+          <button *ngFor="let entity of filteredContent()" type="button"
+            [class.selected]="selectedContent()?.id === entity.id"
+            [class.active]="live.focusedContentId === entity.id"
+            [attr.data-testid]="'content-' + entity.id" (click)="selectContent(entity)">
+            <span>{{ entity.reference.mobileName }}</span>
+            <small>#{{ entity.id }} · mobile {{ entity.reference.mobileId }} · {{ format(entity.live.distanceFromPlayer) }}u</small>
+          </button>
+          <p *ngIf="filteredContent().length === 0" class="muted">No imported enemy matches that search.</p>
+        </nav>
+        <section class="content-detail" *ngIf="selectedContent() as entity" data-testid="content-detail">
+          <div class="content-title">
+            <div><p class="kicker">Decoded Arena2 reference</p><h3 data-testid="content-name">{{ entity.reference.mobileName }}</h3></div>
+            <span class="pulse" *ngIf="live.focusedContentId === entity.id">focused</span>
+          </div>
+          <dl class="reference-grid">
+            <div><dt>Scene identity</dt><dd>{{ entity.name }} · #{{ entity.id }}</dd></div>
+            <div><dt>Mobile ID</dt><dd data-testid="content-mobile-id">{{ entity.reference.mobileId }}</dd></div>
+            <div><dt>Texture archive</dt><dd>{{ entity.reference.textureArchive }}</dd></div>
+            <div><dt>Movement type</dt><dd>{{ entity.reference.flying ? 'Flying' : 'Grounded' }}</dd></div>
+            <div><dt>Sprite asset</dt><dd><code>{{ entity.reference.spriteAsset }}</code></dd></div>
+            <div><dt>Authored spawn</dt><dd><code data-testid="content-authored-position">{{ format(entity.reference.authoredPosition[0]) }}, {{ format(entity.reference.authoredPosition[1]) }}, {{ format(entity.reference.authoredPosition[2]) }}</code></dd></div>
+          </dl>
+          <div class="live-content" data-testid="content-live-position">
+            <span>Authoritative live patrol position</span>
+            <code>{{ format(entity.live.position[0]) }}, {{ format(entity.live.position[1]) }}, {{ format(entity.live.position[2]) }}</code>
+          </div>
+          <div class="authored-link">
+            <div><p class="kicker">Authored gameplay</p><p>Enemy combat fields are not authored yet. This encounter uses the active player experiment: {{ format(live.moveSpeedUnitsPerSecond) }} speed and {{ format(live.maxHealth) }} max health.</p></div>
+            <button type="button" data-testid="edit-content-rules" (click)="focusPlayerRules()">Edit active player rules</button>
+          </div>
+          <button type="button" class="primary jump" data-testid="jump-content" [disabled]="pending" (click)="jumpToSelectedContent()">Jump beside live enemy &amp; play</button>
+          <p class="play-note">Rust chooses a grounded approach beside the selected live patrol position, resets the player, faces the enemy, and focuses the native game.</p>
+        </section>
+      </div>
+    </article>
+
     <article class="panel editor">
       <div class="panel-heading">
         <div><p class="kicker">Active experiment draft</p><h2>Player rules</h2></div>

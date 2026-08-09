@@ -33,6 +33,10 @@ pub(crate) enum LabCommand {
     Play {
         reply: Sender<LabReply>,
     },
+    Jump {
+        id: u64,
+        reply: Sender<LabReply>,
+    },
 }
 
 pub(crate) struct LabReply {
@@ -140,6 +144,22 @@ fn handle_request(
         },
         ("POST", "/api/dagger-lab/reset") => LabCommand::Reset { reply: send_reply },
         ("POST", "/api/dagger-lab/play") => LabCommand::Play { reply: send_reply },
+        ("POST", "/api/dagger-lab/content/jump") => {
+            let body: JumpRequest =
+                match serde_json::from_str(&request.body) {
+                    Ok(body) => body,
+                    Err(error) => return write_response(
+                        stream,
+                        400,
+                        &serde_json::json!({ "error": format!("invalid content jump: {error}") })
+                            .to_string(),
+                    ),
+                };
+            LabCommand::Jump {
+                id: body.id,
+                reply: send_reply,
+            }
+        }
         _ => {
             return write_response(stream, 404, r#"{"error":"unknown Dagger Lab route"}"#);
         }
@@ -151,6 +171,11 @@ fn handle_request(
         .recv_timeout(Duration::from_secs(3))
         .context("wait for Dagger runtime reply")?;
     write_response(stream, reply.status, &reply.body)
+}
+
+#[derive(serde::Deserialize)]
+struct JumpRequest {
+    id: u64,
 }
 
 fn serve_static(stream: &mut TcpStream, root: &Path, request_path: &str) -> Result<()> {

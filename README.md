@@ -124,7 +124,12 @@ scripts/check-studio-browser.sh
   `maxHealth = baseHealth + endurance * healthPerEndurance`, retains the latest
   16 calculations, resets the playable run to the committed start, and exposes
   live authoritative position/health/controller readback. Invalid candidates
-  leave the active experiment untouched.
+  leave the active experiment untouched. Its live content browser exposes the
+  committed enemy catalog through Rust: decoded mobile ID/name/archive and
+  authored spawn remain separate from live patrol position and active player
+  experiment values. Jump-to-play names an admitted entity; `dagger-runtime`
+  chooses a grounded navigable approach and focuses the native product rather
+  than accepting browser-authored coordinates.
 
 ## Data provenance & conventions
 

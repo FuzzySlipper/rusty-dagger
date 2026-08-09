@@ -59,6 +59,19 @@ pub struct AdmittedProject {
     pub dungeon_bounds: Option<DungeonBounds>,
     pub collision_scene: VoxelCollisionScene,
     pub entities: EntityState,
+    pub content_entities: Vec<ContentEntity>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ContentEntity {
+    pub id: u64,
+    pub name: String,
+    pub mobile_id: u8,
+    pub mobile_name: String,
+    pub texture_archive: u16,
+    pub flying: bool,
+    pub sprite_asset: String,
+    pub authored_position: [f32; 3],
 }
 
 impl AdmittedProject {
@@ -170,6 +183,32 @@ impl AdmittedProject {
         .with_collision(true, false)
         .with_kinematic(PLAYER_HALF_EXTENTS, Vec3::ZERO)])
         .map_err(|error| ProjectAdmissionError::InvalidEntityState(error.to_string()))?;
+        let content_entities = scene
+            .entities
+            .iter()
+            .filter_map(|entity| {
+                let asset = entity.sprite.as_ref()?.asset.as_str();
+                let mobile_id = asset
+                    .strip_prefix("texture/enemy-")?
+                    .strip_suffix("-atlas")?
+                    .parse::<u8>()
+                    .ok()?;
+                let mobile = arena2::mobile::mobile_type(mobile_id)?;
+                Some(ContentEntity {
+                    id: entity.id,
+                    name: entity
+                        .name
+                        .clone()
+                        .unwrap_or_else(|| format!("enemy-{mobile_id}-{}", entity.id)),
+                    mobile_id,
+                    mobile_name: mobile.name.to_string(),
+                    texture_archive: mobile.texture_archive,
+                    flying: mobile.flying,
+                    sprite_asset: asset.to_string(),
+                    authored_position: entity.translation,
+                })
+            })
+            .collect();
 
         Ok(Self {
             schema_version: project.schema_version,
@@ -183,6 +222,7 @@ impl AdmittedProject {
             dungeon_bounds,
             collision_scene,
             entities,
+            content_entities,
         })
     }
 }
@@ -270,6 +310,12 @@ struct EntityDocument {
     name: Option<String>,
     translation: [f32; 3],
     player_controller: Option<PlayerControllerDocument>,
+    sprite: Option<SpriteDocument>,
+}
+
+#[derive(Debug, Deserialize)]
+struct SpriteDocument {
+    asset: String,
 }
 
 #[derive(Debug, Deserialize)]

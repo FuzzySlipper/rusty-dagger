@@ -24,6 +24,33 @@ try {
   await page.getByTestId('active-profile').filter({ hasText: "Privateer's Hold starter" }).waitFor();
   const spawnPosition = await page.getByTestId('player-position').innerText();
 
+  // Browse a real committed enemy, inspect decoded reference and live patrol
+  // state separately, then let Rust choose a grounded approach and physically
+  // interact from the native game window.
+  assert.equal(await page.getByTestId('content-count').innerText(), '43 ENEMIES');
+  await page.getByTestId('content-filter').fill('thief');
+  await page.getByTestId('content-2001').click();
+  await page.getByTestId('content-name').filter({ hasText: 'Thief' }).waitFor();
+  assert.equal(await page.getByTestId('content-name').innerText(), 'Thief');
+  assert.equal(await page.getByTestId('content-mobile-id').innerText(), '138');
+  assert.equal(await page.getByTestId('content-authored-position').innerText(), '11.07, 33.02, -6.88');
+  const thiefLivePosition = await page.getByTestId('content-live-position').innerText();
+  assert.match(thiefLivePosition, /Authoritative live patrol position/i);
+  await page.getByTestId('edit-content-rules').click();
+  assert.equal(await page.getByTestId('movement-speed').evaluate((element) => element === document.activeElement), true);
+  await page.getByTestId('jump-content').click();
+  await page.getByTestId('content-detail').filter({ hasText: 'focused' }).waitFor();
+  const jumpDeadline = Date.now() + 10_000;
+  while (await page.getByTestId('player-position').innerText() === spawnPosition) {
+    assert.ok(Date.now() < jumpDeadline, 'content jump did not reposition the authoritative player');
+    await page.waitForTimeout(100);
+  }
+  const jumpPosition = await page.getByTestId('player-position').innerText();
+  assert.notEqual(jumpPosition, spawnPosition);
+  await page.getByTestId('reset').click();
+  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  await page.getByTestId('content-filter').fill('');
+
   // The worksheet calls the same Rust authority without applying or adding a
   // live history record.
   await page.getByTestId('worksheet-base').fill('20');
@@ -55,6 +82,7 @@ try {
   await page.getByTestId('max-health').filter({ hasText: '100.00' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
   const profileAMove = await resetAndPhysicallyMove(page, spawnPosition);
+  const profileAContentMove = await jumpAndPhysicallyMove(page, 2001, spawnPosition);
 
   // Profile B starts as a duplicate, is renamed and edited in place, then is
   // admitted and physically played as a meaningfully different alternative.
@@ -120,6 +148,9 @@ try {
   await page.getByTestId('history-detail').filter({ hasText: 'Why record #2' }).waitFor();
   assert.equal(await page.getByTestId('trace-result').innerText(), '100.00');
   await page.getByTestId('history-filter').fill('');
+  await page.getByTestId('content-filter').fill('thief');
+  await page.getByTestId('content-2001').click();
+  await page.getByTestId('content-name').filter({ hasText: 'Thief' }).waitFor();
   await page.screenshot({ path: `${output}/profiles-desktop.png`, fullPage: true });
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -133,7 +164,7 @@ try {
   await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
 
   console.log(
-    `DAGGER_LAB_BROWSER_OK profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_LAB_BROWSER_OK content=thief-2001/mobile-138 profileAContentMove=${JSON.stringify(profileAContentMove)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -158,9 +189,29 @@ async function resetAndPhysicallyMove(page, spawnPosition) {
   }
   const resetPosition = spawnPosition;
   await page.waitForTimeout(500);
+  return physicallyMove(page, resetPosition);
+}
+
+async function jumpAndPhysicallyMove(page, contentId, spawnPosition) {
+  await page.getByTestId(`content-${contentId}`).click();
+  await page.getByTestId('jump-content').click();
+  const jumpDeadline = Date.now() + 10_000;
+  while (await page.getByTestId('player-position').innerText() === spawnPosition) {
+    assert.ok(Date.now() < jumpDeadline, 'content jump did not reposition the authoritative player');
+    await page.waitForTimeout(100);
+  }
+  const jumpPosition = await page.getByTestId('player-position').innerText();
+  const move = await physicallyMove(page, jumpPosition, ['a', 'd', 's']);
+  await page.getByTestId('reset').click();
+  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  return move;
+}
+
+async function physicallyMove(page, resetPosition, keys = ['w', 'w', 'w']) {
   let movedPosition = resetPosition;
-  for (let attempt = 1; attempt <= 3 && movedPosition === resetPosition; attempt += 1) {
-    execFileSync('python3', ['scripts/x11-send-dagger-move.py'], { stdio: 'inherit' });
+  for (const key of keys) {
+    if (movedPosition !== resetPosition) break;
+    execFileSync('python3', ['scripts/x11-send-dagger-move.py', key], { stdio: 'inherit' });
     const movementDeadline = Date.now() + 5_000;
     while (movedPosition === resetPosition && Date.now() < movementDeadline) {
       await page.waitForTimeout(100);

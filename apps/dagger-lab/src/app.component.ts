@@ -10,6 +10,7 @@ import {
 } from './profile-store.service';
 import {
   CalculationRecord,
+  ContentEntityReadout,
   ExperimentDocument,
   ExperimentEvaluation,
   ExperimentReadout,
@@ -57,6 +58,8 @@ export class AppComponent implements OnInit, OnDestroy {
   activeProfileId: string | undefined;
   profileName = '';
   profileError = '';
+  contentFilter = '';
+  selectedContentId: number | undefined;
 
   ngOnInit(): void {
     this.profiles = this.profileStore.load();
@@ -259,6 +262,43 @@ export class AppComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
+  filteredContent(): readonly ContentEntityReadout[] {
+    const filter = this.contentFilter.trim().toLowerCase();
+    const content = this.readout?.content ?? [];
+    if (filter === '') return content;
+    return content.filter((entity) =>
+      [entity.name, entity.reference.mobileName, String(entity.reference.mobileId)]
+        .some((value) => value.toLowerCase().includes(filter)),
+    );
+  }
+
+  selectedContent(): ContentEntityReadout | undefined {
+    const content = this.readout?.content ?? [];
+    return (
+      content.find((entity) => entity.id === this.selectedContentId) ??
+      content.find((entity) => entity.id === this.readout?.focusedContentId) ??
+      content.at(0)
+    );
+  }
+
+  selectContent(entity: ContentEntityReadout): void {
+    this.selectedContentId = entity.id;
+    this.commandError = '';
+  }
+
+  async jumpToSelectedContent(): Promise<void> {
+    const selected = this.selectedContent();
+    if (selected === undefined) return;
+    const succeeded = await this.runCommand(() => this.api.jumpToContent(selected.id));
+    if (succeeded) this.selectedContentId = selected.id;
+  }
+
+  focusPlayerRules(): void {
+    const input = document.querySelector<HTMLInputElement>('[data-testid="movement-speed"]');
+    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input?.focus();
+  }
+
   private async refresh(syncDraft: boolean): Promise<void> {
     if (this.loading || this.pending) return;
     this.loading = true;
@@ -296,6 +336,9 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private acceptReadout(readout: ExperimentReadout): void {
     this.readout = readout;
+    if (this.selectedContentId === undefined) {
+      this.selectedContentId = readout.focusedContentId ?? readout.content.at(0)?.id;
+    }
     const active = this.activeProfile();
     if (active && !documentsEqual(active.document, readout.document)) {
       this.activeProfileId = undefined;

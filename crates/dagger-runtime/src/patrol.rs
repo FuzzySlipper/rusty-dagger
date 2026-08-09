@@ -159,16 +159,21 @@ impl PatrolService {
                 .is_walkable(spawn[0], spawn[2], spawn[1])
                 .unwrap_or_else(|| {
                     // Search for nearest walkable cell at any level near spawn
-                    let cx = (spawn[0] / CELL_SIZE).round() as i32;
-                    let cz = (spawn[2] / CELL_SIZE).round() as i32;
+                    let cx = (spawn[0] / CELL_SIZE).floor() as i32;
+                    let cz = (spawn[2] / CELL_SIZE).floor() as i32;
                     let mut best = spawn[1];
-                    let mut best_dist = f32::MAX;
+                    let mut best_horizontal = i32::MAX;
+                    let mut best_vertical = f32::MAX;
                     for &(x, z, _level, sy) in navgrid_cells.iter() {
                         let x = x as i32;
                         let z = z as i32;
-                        let d = ((x - cx).pow(2) + (z - cz).pow(2)) as f32;
-                        if d < best_dist {
-                            best_dist = d;
+                        let horizontal = (x - cx).pow(2) + (z - cz).pow(2);
+                        let vertical = (spawn[1] - sy as f32).abs();
+                        if horizontal < best_horizontal
+                            || (horizontal == best_horizontal && vertical < best_vertical)
+                        {
+                            best_horizontal = horizontal;
+                            best_vertical = vertical;
                             best = sy as f32;
                         }
                     }
@@ -355,6 +360,18 @@ mod tests {
             "NPC should be grounded, got y={}",
             pos[1]
         );
+    }
+
+    #[test]
+    fn multilevel_spawn_uses_nearest_floor_in_its_column() {
+        let cells = vec![
+            (0.0, 0.0, 4.0, 1.0),
+            (0.0, 0.0, 40.0, 10.0),
+            (1.0, 0.0, 128.0, 32.0),
+        ];
+        let svc = PatrolService::new(&cells, &[(2001, [0.1, 11.0, 0.1])]);
+        let positions = svc.positions();
+        assert_eq!(positions[0].1[1], 10.0);
     }
 
     #[test]
