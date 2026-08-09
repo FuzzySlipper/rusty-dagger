@@ -5,7 +5,7 @@
 //! numeric = 8B entries (u32 id + i32 size). Records contiguous from offset 4
 //! in directory order.
 
-use crate::Cursor;
+use crate::{require_range, Cursor};
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -28,6 +28,7 @@ impl BsaArchive {
     }
 
     pub fn parse(data: Vec<u8>) -> Result<Self, String> {
+        require_range(&data, 0, 4, "BSA header")?;
         let mut c = Cursor::new(&data);
         let count = c.i16() as i64;
         let dir_type = c.u16();
@@ -39,32 +40,70 @@ impl BsaArchive {
         let mut pos = 4usize;
         match dir_type {
             0x0100 => {
-                let base = data.len() - 18 * count;
+                let directory_len = 18usize
+                    .checked_mul(count)
+                    .ok_or_else(|| "named BSA directory size overflow".to_string())?;
+                let base = data
+                    .len()
+                    .checked_sub(directory_len)
+                    .ok_or_else(|| "named BSA directory exceeds file".to_string())?;
                 for i in 0..count {
-                    let mut d = Cursor::at(&data, base + i * 18);
+                    let entry = base + i * 18;
+                    require_range(&data, entry, 18, "named BSA directory entry")?;
+                    let mut d = Cursor::at(&data, entry);
                     let name = d.cstring(14);
-                    d.seek(base + i * 18 + 14);
-                    let size = d.i32() as usize;
+                    d.seek(entry + 14);
+                    let size = d.i32();
+                    if size < 0 {
+                        return Err(format!("negative size for BSA record {name:?}"));
+                    }
+                    let size = size as usize;
                     records.push(Record {
                         name,
                         offset: pos,
                         size,
                     });
-                    pos += size;
+                    pos = pos
+                        .checked_add(size)
+                        .ok_or_else(|| "BSA record offsets overflow".to_string())?;
+                }
+                if pos != base {
+                    return Err(format!(
+                        "named BSA records end at {pos}, directory starts at {base}"
+                    ));
                 }
             }
             0x0200 => {
-                let base = data.len() - 8 * count;
+                let directory_len = 8usize
+                    .checked_mul(count)
+                    .ok_or_else(|| "numeric BSA directory size overflow".to_string())?;
+                let base = data
+                    .len()
+                    .checked_sub(directory_len)
+                    .ok_or_else(|| "numeric BSA directory exceeds file".to_string())?;
                 for i in 0..count {
-                    let mut d = Cursor::at(&data, base + i * 8);
+                    let entry = base + i * 8;
+                    require_range(&data, entry, 8, "numeric BSA directory entry")?;
+                    let mut d = Cursor::at(&data, entry);
                     let id = d.u32();
-                    let size = d.i32() as usize;
+                    let size = d.i32();
+                    if size < 0 {
+                        return Err(format!("negative size for BSA record {id}"));
+                    }
+                    let size = size as usize;
                     records.push(Record {
                         name: id.to_string(),
                         offset: pos,
                         size,
                     });
-                    pos += size;
+                    pos = pos
+                        .checked_add(size)
+                        .ok_or_else(|| "BSA record offsets overflow".to_string())?;
+                }
+                if pos != base {
+                    return Err(format!(
+                        "numeric BSA records end at {pos}, directory starts at {base}"
+                    ));
                 }
             }
             other => return Err(format!("unknown BSA directory type {other:#x}")),
@@ -114,26 +153,31 @@ impl BsaArchive {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arena2_dir;
+    use crate::test_fixtures::{named_bsa, numeric_bsa};
 
     #[test]
-    fn blocks_bsa_record_counts() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        let bsa = BsaArchive::load(&arena2_dir().join("BLOCKS.BSA")).unwrap();
-        assert_eq!(bsa.len(), 1295);
-        assert!(bsa.contains("S0000999.RDB"));
-        assert_eq!(bsa.get("S0000999.RDB").unwrap().len(), 34490);
+    fn named_records_decode_from_bounded_fixture() {
+        let data = named_bsa(&[("ONE.DAT", b"one"), ("TWO.DAT", b"twice")]);
+        let bsa = BsaArchive::parse(data).unwrap();
+        assert_eq!(bsa.len(), 2);
+        assert_eq!(bsa.names().collect::<Vec<_>>(), ["ONE.DAT", "TWO.DAT"]);
+        assert_eq!(bsa.get("TWO.DAT"), Some(b"twice".as_slice()));
     }
 
     #[test]
-    fn arch3d_numeric_records() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        let bsa = BsaArchive::load(&arena2_dir().join("ARCH3D.BSA")).unwrap();
-        assert_eq!(bsa.len(), 10251);
-        assert!(bsa.contains("61000"));
+    fn numeric_records_decode_and_malformed_archives_fail_closed() {
+        let data = numeric_bsa(&[(42, b"mesh"), (61000, b"geometry")]);
+        let bsa = BsaArchive::parse(data).unwrap();
+        assert_eq!(bsa.get("42"), Some(b"mesh".as_slice()));
+        assert_eq!(bsa.get("61000"), Some(b"geometry".as_slice()));
+
+        assert!(BsaArchive::parse(vec![]).err().unwrap().contains("header"));
+        let mut truncated = numeric_bsa(&[(42, b"mesh")]);
+        truncated.pop();
+        assert!(BsaArchive::parse(truncated).is_err());
+        let mut negative_size = numeric_bsa(&[(42, b"mesh")]);
+        let size_at = negative_size.len() - 4;
+        negative_size[size_at..].copy_from_slice(&(-1i32).to_le_bytes());
+        assert!(BsaArchive::parse(negative_size).is_err());
     }
 }

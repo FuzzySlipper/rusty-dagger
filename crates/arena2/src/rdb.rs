@@ -11,7 +11,7 @@
 //!   model resource @resourceOffset: i32 xrot, i32 yrot, i32 zrot, u16 modelIndex,
 //!     u32 triggerFlag, u8 soundIndex, i32 actionOffset
 
-use crate::Cursor;
+use crate::{require_range, Cursor};
 
 /// An RDB model action record (DFU BlocksFile.ReadRdbModelActionRecords):
 /// 8 bytes at the model's actionOffset — axis, duration, magnitude,
@@ -172,9 +172,16 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
     let height = c.u32();
     let object_root_offset = c.u32() as usize;
     let _unk2 = c.u32();
-    if width == 0 || height == 0 || width * height > 4096 {
+    let cell_count = width
+        .checked_mul(height)
+        .ok_or_else(|| format!("RDB dimensions overflow {width}x{height}"))?;
+    if width == 0 || height == 0 || cell_count > 4096 {
         return Err(format!("bad RDB dimensions {width}x{height}"));
     }
+    let root_bytes = (cell_count as usize)
+        .checked_mul(4)
+        .ok_or_else(|| "RDB object root list overflow".to_string())?;
+    require_range(data, object_root_offset, root_bytes, "RDB object root list")?;
 
     let mut model_ids = Vec::with_capacity(750);
     let mut descriptions = Vec::with_capacity(750);
@@ -198,7 +205,7 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
         height,
         ..Default::default()
     };
-    for cell in 0..(width * height) as usize {
+    for cell in 0..cell_count as usize {
         let root = Cursor::at(data, object_root_offset + cell * 4).i32();
         if root < 0 {
             continue;
@@ -222,6 +229,7 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
             let resource_offset = n.u32() as usize;
             match obj_type {
                 0x01 => {
+                    require_range(data, resource_offset, 23, "RDB model resource")?;
                     let mut r = Cursor::at(data, resource_offset);
                     let x_rot = r.i32();
                     let y_rot = r.i32();
@@ -232,6 +240,7 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                     let action_offset = r.i32();
                     let mi = model_index as usize;
                     let action = if action_offset > 0 {
+                        require_range(data, action_offset as usize, 10, "RDB action resource")?;
                         let mut ar = Cursor::at(data, action_offset as usize);
                         let axis = ar.u8();
                         let duration = ar.u16();
@@ -248,6 +257,9 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                     } else {
                         None
                     };
+                    if mi >= model_ids.len() {
+                        return Err(format!("RDB model index {mi} out of bounds"));
+                    }
                     block.models.push(RdbModelObject {
                         x,
                         y,
@@ -256,13 +268,14 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                         y_rot,
                         z_rot,
                         model_index,
-                        model_id: model_ids.get(mi).cloned().unwrap_or_default(),
-                        description: descriptions.get(mi).cloned().unwrap_or_default(),
+                        model_id: model_ids[mi].clone(),
+                        description: descriptions[mi].clone(),
                         has_action: action_offset > 0,
                         action,
                     });
                 }
                 0x02 => {
+                    require_range(data, resource_offset, 10, "RDB light resource")?;
                     let mut r = Cursor::at(data, resource_offset);
                     let _unk1 = r.u32();
                     let _unk2 = r.u32();
@@ -276,6 +289,7 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
                     // synthesized from (Magnitude, SoundIndex), not read
                     // separately — reading it as a distinct u16 overruns the
                     // final flat record in border blocks by 2 bytes.
+                    require_range(data, resource_offset, 11, "RDB flat resource")?;
                     let mut r = Cursor::at(data, resource_offset);
                     let bitfield = r.u16();
                     let flags = r.u16();
@@ -316,25 +330,93 @@ pub fn parse_rdb(data: &[u8]) -> Result<RdbBlock, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arena2_dir;
-    use crate::bsa::BsaArchive;
+
+    fn write_node(
+        data: &mut [u8],
+        offset: usize,
+        next: i32,
+        position: [i32; 3],
+        object_type: u8,
+        resource_offset: u32,
+    ) {
+        data[offset..offset + 4].copy_from_slice(&next.to_le_bytes());
+        data[offset + 4..offset + 8].copy_from_slice(&(-1i32).to_le_bytes());
+        for (axis, value) in position.into_iter().enumerate() {
+            let start = offset + 8 + axis * 4;
+            data[start..start + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        data[offset + 20] = object_type;
+        data[offset + 21..offset + 25].copy_from_slice(&resource_offset.to_le_bytes());
+    }
+
+    fn rdb_fixture() -> Vec<u8> {
+        const ROOTS: usize = 6020;
+        const MODEL_NODE: usize = 6024;
+        const FLAT_NODE: usize = 6049;
+        const LIGHT_NODE: usize = 6074;
+        const MODEL_RESOURCE: usize = 6099;
+        const FLAT_RESOURCE: usize = 6122;
+        const LIGHT_RESOURCE: usize = 6133;
+        let mut data = vec![0u8; 6143];
+        data[4..8].copy_from_slice(&1u32.to_le_bytes());
+        data[8..12].copy_from_slice(&1u32.to_le_bytes());
+        data[12..16].copy_from_slice(&(ROOTS as u32).to_le_bytes());
+        data[20..23].copy_from_slice(b"42\0");
+        data[25..28].copy_from_slice(b"DOR");
+        data[ROOTS..ROOTS + 4].copy_from_slice(&(MODEL_NODE as i32).to_le_bytes());
+        write_node(
+            &mut data,
+            MODEL_NODE,
+            FLAT_NODE as i32,
+            [100, -200, 300],
+            0x01,
+            MODEL_RESOURCE as u32,
+        );
+        write_node(
+            &mut data,
+            FLAT_NODE,
+            LIGHT_NODE as i32,
+            [10, -20, 30],
+            0x03,
+            FLAT_RESOURCE as u32,
+        );
+        write_node(
+            &mut data,
+            LIGHT_NODE,
+            -1,
+            [1, -2, 3],
+            0x02,
+            LIGHT_RESOURCE as u32,
+        );
+        data[MODEL_RESOURCE + 12..MODEL_RESOURCE + 14].copy_from_slice(&0u16.to_le_bytes());
+        let flat = (EDITOR_FLATS_ARCHIVE << 7) | START_MARKER_RECORD;
+        data[FLAT_RESOURCE..FLAT_RESOURCE + 2].copy_from_slice(&flat.to_le_bytes());
+        data[FLAT_RESOURCE + 4] = 7;
+        data[FLAT_RESOURCE + 6..FLAT_RESOURCE + 10].copy_from_slice(&(-1i32).to_le_bytes());
+        data[LIGHT_RESOURCE + 8..LIGHT_RESOURCE + 10].copy_from_slice(&512u16.to_le_bytes());
+        data
+    }
 
     #[test]
-    fn s0000999_model_count() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        let dir = arena2_dir();
-        let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
-        let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
-        assert_eq!((block.width, block.height), (8, 8));
-        assert_eq!(block.models.len(), 209);
-        // Object raw positions must stay within the 2048-unit block (Y negative down)
-        for m in &block.models {
-            assert!((0..=2048).contains(&m.x), "x {} out of range", m.x);
-            assert!((-2048..=0).contains(&m.y), "y {} out of range", m.y);
-            assert!((0..=2048).contains(&m.z), "z {} out of range", m.z);
-        }
+    fn bounded_object_chain_decodes_and_bad_offsets_fail_closed() {
+        let fixture = rdb_fixture();
+        let block = parse_rdb(&fixture).unwrap();
+        assert_eq!((block.width, block.height), (1, 1));
+        assert_eq!(block.models.len(), 1);
+        assert_eq!(block.models[0].model_id, "42");
+        assert!(block.models[0].is_action_door());
+        assert_eq!(block.flats.len(), 1);
+        assert!(block.flats[0].is_enemy());
+        assert_eq!(
+            block.start_marker().map(|(_, pos)| pos),
+            Some([10, -20, 30])
+        );
+        assert_eq!(block.lights[0].radius, 512);
+
+        assert!(parse_rdb(&fixture[..6140]).is_err());
+        let mut bad_roots = fixture;
+        bad_roots[12..16].copy_from_slice(&u32::MAX.to_le_bytes());
+        assert!(parse_rdb(&bad_roots).is_err());
     }
 }
 
@@ -379,65 +461,5 @@ mod billboard_tests {
         assert!(flat(210, 16).is_visible_billboard());
         assert!(flat(210, 15).is_visible_billboard());
         assert!(flat(213, 16).is_visible_billboard());
-    }
-}
-
-#[cfg(test)]
-mod marker_tests {
-    use super::*;
-    use crate::arena2_dir;
-    use crate::bsa::BsaArchive;
-
-    #[test]
-    fn s0000999_start_marker_exists() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        let dir = arena2_dir();
-        let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
-        let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
-        assert!(!block.flats.is_empty(), "expected flats in start block");
-        let (flat, pos) = block
-            .start_marker()
-            .expect("start marker flat (199/10) must exist in S0000999");
-        assert_eq!(flat.texture_archive, EDITOR_FLATS_ARCHIVE);
-        assert_eq!(flat.texture_record, START_MARKER_RECORD);
-        // Marker must sit inside the block's raw extents
-        assert!((0..=2048).contains(&pos[0]), "x {} out of block", pos[0]);
-        assert!((-2048..=0).contains(&pos[1]), "y {} out of block", pos[1]);
-        assert!((0..=2048).contains(&pos[2]), "z {} out of block", pos[2]);
-        println!(
-            "start marker raw: {pos:?} lights={} flats={}",
-            block.lights.len(),
-            block.flats.len()
-        );
-    }
-
-    #[test]
-    fn s0000999_enemy_flats_match_known_inventory() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        // 6595: the start block carries 26 enemy flats — 25 fixed markers
-        // (199/16) plus one 206/2 flat with a mobile id — across the mobile
-        // ids {0, 1, 3, 4, 7, 15, 138, 141} (all resolvable in MOBILE_TYPES).
-        let dir = arena2_dir();
-        let bsa = BsaArchive::load(&dir.join("BLOCKS.BSA")).unwrap();
-        let block = parse_rdb(bsa.get("S0000999.RDB").unwrap()).unwrap();
-        let enemies: Vec<&RdbFlatObject> = block.flats.iter().filter(|f| f.is_enemy()).collect();
-        assert_eq!(enemies.len(), 26, "start-block enemy flat count");
-        let mut ids: Vec<u8> = enemies
-            .iter()
-            .map(|f| (f.faction_or_mobile_id & 0xFF) as u8)
-            .collect();
-        ids.sort_unstable();
-        ids.dedup();
-        assert_eq!(ids, [0, 1, 3, 4, 7, 15, 138, 141]);
-        for id in ids {
-            assert!(
-                crate::mobile::mobile_type(id).is_some(),
-                "mobile id {id} must resolve to a known enemy type"
-            );
-        }
     }
 }

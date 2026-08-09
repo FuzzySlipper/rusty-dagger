@@ -15,7 +15,7 @@
 //! accumulation + FaceUVTool.ComputeFaceUVCoordinates) in `fix_plane_uvs`.
 
 use crate::bsa::BsaArchive;
-use crate::Cursor;
+use crate::{require_range, Cursor};
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy)]
@@ -208,8 +208,14 @@ pub fn parse_mesh(data: &[u8], record_id: u32) -> Result<Mesh, String> {
     }
     let mut c = Cursor::new(data);
     let version = c.cstring(4);
-    let _point_count = c.i32();
-    let plane_count = c.i32() as usize;
+    let point_count = c.i32();
+    let plane_count = c.i32();
+    if point_count < 0 || plane_count < 0 {
+        return Err(format!(
+            "negative ARCH3D counts: points {point_count}, planes {plane_count}"
+        ));
+    }
+    let plane_count = plane_count as usize;
     let _radius = c.u32();
     let _null1 = c.u64();
     let _plane_data_offset = c.i32();
@@ -217,10 +223,20 @@ pub fn parse_mesh(data: &[u8], record_id: u32) -> Result<Mesh, String> {
     let _object_data_count = c.i32();
     let _unk2 = c.u32();
     let _null2 = c.u64();
-    let point_list_offset = c.i32() as usize;
-    let _normal_list_offset = c.i32() as usize;
+    let point_list_offset = c.i32();
+    let _normal_list_offset = c.i32();
     let _unk3 = c.u32();
-    let plane_list_offset = c.i32() as usize;
+    let plane_list_offset = c.i32();
+    if point_list_offset < 0 || plane_list_offset < 0 {
+        return Err("negative ARCH3D list offset".into());
+    }
+    let point_list_offset = point_list_offset as usize;
+    let plane_list_offset = plane_list_offset as usize;
+    if plane_count > data.len() / 8 {
+        return Err(format!(
+            "ARCH3D plane count {plane_count} exceeds record bounds"
+        ));
+    }
 
     let is_v25 = version == "v2.5";
     let mut mesh = Mesh::default();
@@ -241,22 +257,34 @@ pub fn parse_mesh(data: &[u8], record_id: u32) -> Result<Mesh, String> {
         };
         let mut q = p + 8;
         for _ in 0..point_count {
+            require_range(data, q, 8, "ARCH3D plane point")?;
             let mut pc = Cursor::at(data, q);
-            let point_offset = pc.i32() as usize;
+            let point_offset = pc.i32();
+            if point_offset < 0 {
+                return Err("negative ARCH3D point offset".into());
+            }
+            let point_offset = point_offset as usize;
             let u = pc.i16() as i32;
             let v = pc.i16() as i32;
+            let relative = if is_v25 {
+                point_offset
+                    .checked_mul(3)
+                    .ok_or_else(|| "ARCH3D v2.5 point offset overflow".to_string())?
+            } else {
+                point_offset
+            };
             let ppos = point_list_offset
-                + if is_v25 {
-                    point_offset * 3
-                } else {
-                    point_offset
-                };
+                .checked_add(relative)
+                .ok_or_else(|| "ARCH3D point position overflow".to_string())?;
+            require_range(data, ppos, 12, "ARCH3D point coordinates")?;
             let mut vc = Cursor::at(data, ppos);
             let x = vc.i32();
             let y = vc.i32();
             let z = vc.i32();
             plane.points.push(MeshPoint { x, y, z, u, v });
-            q += 8;
+            q = q
+                .checked_add(8)
+                .ok_or_else(|| "ARCH3D plane point offset overflow".to_string())?;
         }
         fix_plane_uvs(&mut plane.points, record_id);
         mesh.planes.push(plane);
@@ -268,24 +296,59 @@ pub fn parse_mesh(data: &[u8], record_id: u32) -> Result<Mesh, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arena2_dir;
+
+    fn mesh_fixture() -> Vec<u8> {
+        let mut data = vec![0u8; 132];
+        data[..4].copy_from_slice(b"v2.6");
+        data[4..8].copy_from_slice(&3i32.to_le_bytes());
+        data[8..12].copy_from_slice(&1i32.to_le_bytes());
+        data[48..52].copy_from_slice(&64i32.to_le_bytes());
+        data[60..64].copy_from_slice(&100i32.to_le_bytes());
+        for (offset, coords) in [
+            (64, [0i32, 0, 0]),
+            (76, [256i32, 0, 0]),
+            (88, [256i32, 256, 0]),
+        ] {
+            for (axis, value) in coords.into_iter().enumerate() {
+                let start = offset + axis * 4;
+                data[start..start + 4].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        data[100] = 3;
+        data[102..104].copy_from_slice(&((2u16 << 7) | 3).to_le_bytes());
+        for (index, (point_offset, u, v)) in [(0i32, 10i16, 20i16), (12, 5, 6), (24, 7, 8)]
+            .into_iter()
+            .enumerate()
+        {
+            let start = 108 + index * 8;
+            data[start..start + 4].copy_from_slice(&point_offset.to_le_bytes());
+            data[start + 4..start + 6].copy_from_slice(&u.to_le_bytes());
+            data[start + 6..start + 8].copy_from_slice(&v.to_le_bytes());
+        }
+        data
+    }
 
     #[test]
-    fn mesh_61000_layout() {
-        if !crate::have_arena2_data() {
-            return;
-        }
-        let dir = arena2_dir();
-        let arch = Arch3dFile::load(&dir.join("ARCH3D.BSA")).unwrap();
-        let mesh = arch.mesh("61000").unwrap();
-        assert_eq!(mesh.planes.len(), 22);
-        // Max |coord| verified against the binary record
-        let max = mesh
-            .planes
-            .iter()
-            .flat_map(|p| p.points.iter())
-            .fold(0, |m, p| m.max(p.x.abs()).max(p.y.abs()).max(p.z.abs()));
-        assert_eq!(max, 32768);
+    fn bounded_mesh_decodes_and_truncation_fails_closed() {
+        let fixture = mesh_fixture();
+        let mesh = parse_mesh(&fixture, 61000).unwrap();
+        assert_eq!(mesh.planes.len(), 1);
+        assert_eq!(
+            (
+                mesh.planes[0].texture_archive,
+                mesh.planes[0].texture_record
+            ),
+            (2, 3)
+        );
+        let points = &mesh.planes[0].points;
+        assert_eq!(points.len(), 3);
+        assert_eq!((points[1].x, points[1].y, points[1].z), (256, 0, 0));
+        assert_eq!((points[2].u, points[2].v), (22, 34));
+
+        assert!(parse_mesh(&fixture[..120], 61000).is_err());
+        let mut bad_point = fixture;
+        bad_point[108..112].copy_from_slice(&i32::MAX.to_le_bytes());
+        assert!(parse_mesh(&bad_point, 61000).is_err());
     }
 
     #[test]

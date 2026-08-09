@@ -23,6 +23,9 @@ pub mod rdb;
 pub mod texture;
 pub mod texture_table;
 
+#[cfg(test)]
+pub(crate) mod test_fixtures;
+
 /// MeshReader.GlobalScale — raw Daggerfall units to meters.
 pub const GLOBAL_SCALE: f32 = 0.025;
 /// Arch3dFile pointDivisor — ARCH3D mesh coords are 1/256 sub-units.
@@ -108,20 +111,19 @@ impl<'a> Cursor<'a> {
     }
 }
 
-/// Test data root: $ARENA2_DIR or <repo>/local/arena2 (gitignored classic data copy).
-#[cfg(test)]
-pub(crate) fn arena2_dir() -> std::path::PathBuf {
-    std::env::var("ARENA2_DIR")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| {
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2")
-        })
-}
-
-/// True when classic Daggerfall Arena2 data is present locally. CI has no
-/// data; data-dependent tests early-return (pass) when this is false and run
-/// the full assertion suite when data exists.
-#[cfg(test)]
-pub(crate) fn have_arena2_data() -> bool {
-    arena2_dir().join("BLOCKS.BSA").exists()
+pub(crate) fn require_range<'a>(
+    data: &'a [u8],
+    start: usize,
+    len: usize,
+    context: &str,
+) -> Result<&'a [u8], String> {
+    let end = start
+        .checked_add(len)
+        .ok_or_else(|| format!("{context} range overflow"))?;
+    data.get(start..end).ok_or_else(|| {
+        format!(
+            "{context} at {start}..{end} out of bounds (len {})",
+            data.len()
+        )
+    })
 }

@@ -54,16 +54,24 @@ impl Palette {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::arena2_dir;
 
     #[test]
-    fn pal_pal_loads() {
-        if !crate::have_arena2_data() {
-            return;
+    fn bounded_palette_decodes_and_bad_sizes_fail_closed() {
+        let mut bytes = vec![0u8; 768];
+        for (index, byte) in bytes.iter_mut().enumerate() {
+            *byte = (index % 256) as u8;
         }
-        let dir = arena2_dir();
-        let pal = Palette::load(&dir.join("PAL.PAL")).unwrap();
-        // Palette contains full-range values (verified max byte 255)
-        assert!(pal.colors.iter().any(|c| c.iter().any(|&v| v > 63)));
+        let palette = Palette::parse(&bytes).unwrap();
+        assert_eq!(palette.colors[0], [0, 1, 2]);
+        assert_eq!(palette.colors[255], [253, 254, 255]);
+        assert_eq!(
+            palette.to_rgba(&[0, 255]),
+            [0, 1, 2, 255, 253, 254, 255, 255]
+        );
+        assert_eq!(
+            palette.to_rgba_transparent(&[0, 1]),
+            [0, 1, 2, 0, 3, 4, 5, 255]
+        );
+        assert!(Palette::parse(&bytes[..767]).is_err());
     }
 }
