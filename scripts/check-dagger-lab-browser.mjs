@@ -67,13 +67,15 @@ try {
   await page.getByTestId('play').click();
   const resetPosition = await page.getByTestId('player-position').innerText();
   await page.waitForTimeout(500);
-  execFileSync('python3', ['scripts/x11-send-dagger-move.py'], { stdio: 'inherit' });
-  const movementDeadline = Date.now() + 10_000;
-  while (await page.getByTestId('player-position').innerText() === resetPosition) {
-    if (Date.now() >= movementDeadline) break;
-    await page.waitForTimeout(100);
+  let movedPosition = resetPosition;
+  for (let attempt = 1; attempt <= 3 && movedPosition === resetPosition; attempt += 1) {
+    execFileSync('python3', ['scripts/x11-send-dagger-move.py'], { stdio: 'inherit' });
+    const movementDeadline = Date.now() + 5_000;
+    while (movedPosition === resetPosition && Date.now() < movementDeadline) {
+      await page.waitForTimeout(100);
+      movedPosition = await page.getByTestId('player-position').innerText();
+    }
   }
-  const movedPosition = await page.getByTestId('player-position').innerText();
   assert.notEqual(movedPosition, resetPosition, 'physical W input did not change Rust position');
   await page.screenshot({ path: `${output}/workbench-desktop.png`, fullPage: true });
 
