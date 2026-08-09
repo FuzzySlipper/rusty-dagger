@@ -122,11 +122,13 @@ scripts/check-studio-browser.sh
   cells. The X11 proof covers on/off replacement and disposal.
 - Gameplay lab: the Angular surface edits the same schema-1 document as
   `data/experiments/privateers-hold-starter.json`. Rust atomically admits the
-  complete candidate, installs movement speed, calculates and explains
-  `maxHealth = baseHealth + endurance * healthPerEndurance`, retains the latest
-  16 calculations, resets the playable run to the committed start, and exposes
-  live authoritative position/health/controller readback. Invalid candidates
-  leave the active experiment untouched. Its live content browser exposes the
+  complete candidate, installs movement speed plus player/Rat stats, calculates
+  and explains fixed health, stamina, and magicka rules, retains the latest 16
+  Apply calculations, resets the playable run to the committed start, and
+  exposes live authoritative position/resource/controller readback. Rat
+  gameplay values key to Arena2 mobile ID 0 without duplicating classic
+  identity data in `dagger-rpg`. Invalid candidates leave the active experiment
+  untouched. Its live content browser exposes the
   committed enemy catalog through Rust: decoded mobile ID/name/archive and
   authored spawn remain separate from live patrol position and active player
   experiment values. Jump-to-play names an admitted entity; `dagger-runtime`

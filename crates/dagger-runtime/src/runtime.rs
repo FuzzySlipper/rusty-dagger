@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, VecDeque};
 
-use dagger_rpg::{AdmittedExperiment, CalculationRecord, ExperimentDocument, ExperimentError};
+use dagger_rpg::{
+    AdmittedActorValues, AdmittedEnemyValues, AdmittedExperiment, CalculationRecord,
+    ExperimentDocument, ExperimentError,
+};
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
 use rusty_engine::engine_spatial::VoxelCollisionScene;
@@ -47,7 +50,8 @@ pub struct DaggerRuntime {
     player_start: Vec3,
     player_start_state: PlayerControllerState,
     experiment: AdmittedExperiment,
-    player_health: f32,
+    player_resources: LiveActorResources,
+    enemy_resources: BTreeMap<u64, LiveActorResources>,
     calculation_sequence: u64,
     calculation_history: VecDeque<SessionCalculationRecord>,
     dungeon_bounds: Option<([f64; 3], [f64; 3])>,
@@ -67,6 +71,8 @@ pub struct ExperimentReadout {
     pub move_speed_units_per_second: f32,
     pub max_health: f32,
     pub current_health: f32,
+    pub player_stats: ActorGameplayReadout,
+    pub enemy_stats: Vec<EnemyStatsReadout>,
     pub player_position: [f32; 3],
     pub player_yaw_degrees: f32,
     pub calculations: Vec<SessionCalculationRecord>,
@@ -100,6 +106,45 @@ pub struct EnemyReferenceReadout {
 pub struct ContentLiveReadout {
     pub position: [f32; 3],
     pub distance_from_player: f32,
+    pub resources: Option<LiveActorResources>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LiveActorResources {
+    pub current_health: f32,
+    pub current_stamina: f32,
+    pub current_magicka: f32,
+}
+
+impl LiveActorResources {
+    fn full(stats: &AdmittedActorValues) -> Self {
+        Self {
+            current_health: stats.max_health,
+            current_stamina: stats.max_stamina,
+            current_magicka: stats.max_magicka,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ActorGameplayReadout {
+    pub attributes: dagger_rpg::ActorAttributes,
+    pub max_health: f32,
+    pub max_stamina: f32,
+    pub max_magicka: f32,
+    pub current_health: f32,
+    pub current_stamina: f32,
+    pub current_magicka: f32,
+    pub calculations: Vec<CalculationRecord>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EnemyStatsReadout {
+    pub mobile_id: u8,
+    pub stats: AdmittedActorValues,
 }
 
 /// A side-effect-free evaluation through the same admission and calculation
@@ -111,6 +156,8 @@ pub struct ExperimentEvaluation {
     pub move_speed_units_per_second: f32,
     pub max_health: f32,
     pub calculation: CalculationRecord,
+    pub player_stats: AdmittedActorValues,
+    pub enemy_stats: Vec<AdmittedEnemyValues>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -147,6 +194,7 @@ impl DaggerRuntime {
         admitted: AdmittedProject,
         experiment: AdmittedExperiment,
     ) -> Result<Self, RuntimeError> {
+        validate_enemy_definitions(&admitted.content_entities, &experiment)?;
         let mut collision_scene = admitted.collision_scene;
         // Register the dungeon trimesh collider so the kinematic motion sweep
         // blocks on the full dungeon geometry (floors, walls, ramps) with no
@@ -173,11 +221,12 @@ impl DaggerRuntime {
             experiment.player.move_speed_units_per_second;
         let initial_calculation = SessionCalculationRecord {
             sequence: 1,
-            calculation: experiment.calculation.clone(),
+            calculation: player_health_calculation(&experiment).clone(),
         };
         let player_start = admitted.player_start;
         let player_start_state = admitted.player_state;
-        let player_health = experiment.player.max_health;
+        let player_resources = LiveActorResources::full(&experiment.player.stats);
+        let enemy_resources = reset_enemy_resources(&admitted.content_entities, &experiment);
         let content_live_positions = admitted
             .content_entities
             .iter()
@@ -192,7 +241,8 @@ impl DaggerRuntime {
             player_start,
             player_start_state,
             experiment,
-            player_health,
+            player_resources,
+            enemy_resources,
             calculation_sequence: 1,
             calculation_history: VecDeque::from([initial_calculation]),
             dungeon_bounds: admitted.dungeon_bounds,
@@ -230,14 +280,17 @@ impl DaggerRuntime {
         document: &str,
     ) -> Result<ExperimentReadout, RuntimeError> {
         let admitted = dagger_rpg::admit_json(document).map_err(RuntimeError::Experiment)?;
+        validate_enemy_definitions(&self.content_entities, &admitted)?;
+        let enemy_resources = reset_enemy_resources(&self.content_entities, &admitted);
         self.calculation_sequence = self.calculation_sequence.saturating_add(1);
         self.player_controller.move_speed_units_per_second =
             admitted.player.move_speed_units_per_second;
-        self.player_health = admitted.player.max_health;
+        self.player_resources = LiveActorResources::full(&admitted.player.stats);
+        self.enemy_resources = enemy_resources;
         self.calculation_history
             .push_back(SessionCalculationRecord {
                 sequence: self.calculation_sequence,
-                calculation: admitted.calculation.clone(),
+                calculation: player_health_calculation(&admitted).clone(),
             });
         while self.calculation_history.len() > CALCULATION_HISTORY_LIMIT {
             self.calculation_history.pop_front();
@@ -253,11 +306,14 @@ impl DaggerRuntime {
         document: &str,
     ) -> Result<ExperimentEvaluation, RuntimeError> {
         let admitted = dagger_rpg::admit_json(document).map_err(RuntimeError::Experiment)?;
+        validate_enemy_definitions(&self.content_entities, &admitted)?;
         Ok(ExperimentEvaluation {
-            document: admitted.document,
+            document: admitted.document.clone(),
             move_speed_units_per_second: admitted.player.move_speed_units_per_second,
-            max_health: admitted.player.max_health,
-            calculation: admitted.calculation,
+            max_health: admitted.player.stats.max_health,
+            calculation: player_health_calculation(&admitted).clone(),
+            player_stats: admitted.player.stats,
+            enemy_stats: admitted.enemies,
         })
     }
 
@@ -266,7 +322,8 @@ impl DaggerRuntime {
     pub fn reset_play_session(&mut self) -> Result<ExperimentReadout, RuntimeError> {
         self.set_player_position(self.player_start)?;
         self.player_state = self.player_start_state;
-        self.player_health = self.experiment.player.max_health;
+        self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
+        self.enemy_resources = reset_enemy_resources(&self.content_entities, &self.experiment);
         self.focused_content_id = None;
         self.experiment_readout()
     }
@@ -341,7 +398,9 @@ impl DaggerRuntime {
             if navigable {
                 self.set_player_position(position)?;
                 self.player_state = facing_state;
-                self.player_health = self.experiment.player.max_health;
+                self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
+                self.enemy_resources =
+                    reset_enemy_resources(&self.content_entities, &self.experiment);
                 self.focused_content_id = Some(id);
                 return self.experiment_readout();
             }
@@ -380,6 +439,7 @@ impl DaggerRuntime {
                         distance_from_player: (live_position[0] - position.x)
                             .hypot(live_position[1] - position.y)
                             .hypot(live_position[2] - position.z),
+                        resources: self.enemy_resources.get(&entity.id).copied(),
                     },
                 }
             })
@@ -387,8 +447,18 @@ impl DaggerRuntime {
         Ok(ExperimentReadout {
             document: self.experiment.document.clone(),
             move_speed_units_per_second: self.player_controller.move_speed_units_per_second,
-            max_health: self.experiment.player.max_health,
-            current_health: self.player_health,
+            max_health: self.experiment.player.stats.max_health,
+            current_health: self.player_resources.current_health,
+            player_stats: actor_readout(&self.experiment.player.stats, self.player_resources),
+            enemy_stats: self
+                .experiment
+                .enemies
+                .iter()
+                .map(|enemy| EnemyStatsReadout {
+                    mobile_id: enemy.mobile_id,
+                    stats: enemy.stats.clone(),
+                })
+                .collect(),
             player_position: [position.x, position.y, position.z],
             player_yaw_degrees: self.player_state.yaw_degrees,
             calculations: self.calculation_history.iter().cloned().collect(),
@@ -447,5 +517,61 @@ impl DaggerRuntime {
         )
         .map_err(RuntimeError::Player)?;
         Ok(result)
+    }
+}
+
+fn player_health_calculation(experiment: &AdmittedExperiment) -> &CalculationRecord {
+    experiment
+        .player
+        .stats
+        .calculations
+        .first()
+        .expect("admitted player stats always include max-health calculation")
+}
+
+fn validate_enemy_definitions(
+    content_entities: &[ContentEntity],
+    experiment: &AdmittedExperiment,
+) -> Result<(), RuntimeError> {
+    for definition in &experiment.enemies {
+        if !content_entities
+            .iter()
+            .any(|entity| entity.mobile_id == definition.mobile_id)
+        {
+            return Err(RuntimeError::Experiment(ExperimentError::InvalidValue {
+                path: format!("enemies[mobileId={}].mobileId", definition.mobile_id),
+                reason: "does not identify an enemy in the admitted project".to_string(),
+            }));
+        }
+    }
+    Ok(())
+}
+
+fn reset_enemy_resources(
+    content_entities: &[ContentEntity],
+    experiment: &AdmittedExperiment,
+) -> BTreeMap<u64, LiveActorResources> {
+    content_entities
+        .iter()
+        .filter_map(|entity| {
+            experiment
+                .enemies
+                .iter()
+                .find(|enemy| enemy.mobile_id == entity.mobile_id)
+                .map(|enemy| (entity.id, LiveActorResources::full(&enemy.stats)))
+        })
+        .collect()
+}
+
+fn actor_readout(stats: &AdmittedActorValues, current: LiveActorResources) -> ActorGameplayReadout {
+    ActorGameplayReadout {
+        attributes: stats.attributes.clone(),
+        max_health: stats.max_health,
+        max_stamina: stats.max_stamina,
+        max_magicka: stats.max_magicka,
+        current_health: current.current_health,
+        current_stamina: current.current_stamina,
+        current_magicka: current.current_magicka,
+        calculations: stats.calculations.clone(),
     }
 }

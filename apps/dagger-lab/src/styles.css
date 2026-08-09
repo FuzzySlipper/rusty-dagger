@@ -31,6 +31,7 @@ input { grid-column: 2; grid-row: 1 / span 2; width: 124px; min-width: 0; border
 input:focus { border-color: #c7a96a; box-shadow: 0 0 0 3px rgba(199, 169, 106, .12); }
 .formula { margin: 24px 0 8px; padding: 16px; border-left: 2px solid #c7a96a; background: #10191a; }
 .formula code, .expression { display: block; margin-top: 8px; color: #d9e0dc; white-space: normal; overflow-wrap: anywhere; }
+.field-kicker { margin-top: 22px; }
 .field-grid, .worksheet-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .field-grid label, .worksheet-grid label { display: flex; flex-direction: column; align-items: stretch; gap: 8px; color: #9facaa; font-size: .78rem; }
 .field-grid input, .worksheet-grid input { width: 100%; text-align: left; }
@@ -87,6 +88,14 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
 .metrics strong { font: 500 1.35rem ui-monospace, monospace; color: #f1e9d9; }
 .position { display: flex; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #293638; }
 .position code { color: #b9cbc7; overflow-wrap: anywhere; }
+.derived-grid { display: grid; gap: 8px; margin-top: 16px; }
+.derived-grid article { display: grid; grid-template-columns: 1fr auto; gap: 5px 14px; padding: 12px; border: 1px solid #293638; border-radius: 8px; background: #101718; }
+.derived-grid span { color: #8ca09d; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+.derived-grid strong { color: #c7a96a; font: 500 1rem ui-monospace, monospace; }
+.derived-grid code { grid-column: 1 / -1; color: #b9cbc7; overflow-wrap: anywhere; }
+.derived-inputs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+.derived-inputs small { padding: 4px 6px; border-radius: 5px; background: #1d2829; color: #aebdb9; font: .68rem ui-monospace, monospace; }
+.derived-grid ol { grid-column: 1 / -1; display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: #839391; font: .68rem ui-monospace, monospace; }
 .history { grid-column: 1 / -1; }
 .filter { display: flex; justify-content: space-between; gap: 16px; margin: 0 0 16px; color: #9facaa; font-size: .8rem; }
 .filter input { width: min(290px, 55%); text-align: left; }

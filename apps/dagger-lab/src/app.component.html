@@ -91,10 +91,20 @@
             <span>Authoritative live patrol position</span>
             <code>{{ format(entity.live.position[0]) }}, {{ format(entity.live.position[1]) }}, {{ format(entity.live.position[2]) }}</code>
           </div>
-          <div class="authored-link">
-            <div><p class="kicker">Authored gameplay</p><p>Enemy combat fields are not authored yet. This encounter uses the active player experiment: {{ format(live.moveSpeedUnitsPerSecond) }} speed and {{ format(live.maxHealth) }} max health.</p></div>
-            <button type="button" data-testid="edit-content-rules" (click)="focusPlayerRules()">Edit active player rules</button>
+          <div class="authored-link" *ngIf="selectedEnemyStats() as gameplay; else playerOnlyGameplay">
+            <div>
+              <p class="kicker">Authored gameplay · mobile {{ entity.reference.mobileId }}</p>
+              <p data-testid="content-gameplay-stats">{{ format(gameplay.maxHealth) }} health · {{ format(gameplay.maxStamina) }} stamina · {{ format(gameplay.maxMagicka) }} magicka</p>
+              <p *ngIf="entity.live.resources as resources" data-testid="content-live-resources">Live {{ format(resources.currentHealth) }} H · {{ format(resources.currentStamina) }} S · {{ format(resources.currentMagicka) }} M</p>
+            </div>
+            <button *ngIf="entity.reference.mobileId === 0" type="button" data-testid="edit-content-rules" (click)="focusRatRules()">Edit Rat stats</button>
           </div>
+          <ng-template #playerOnlyGameplay>
+            <div class="authored-link">
+              <div><p class="kicker">Player experiment only</p><p>This enemy has no authored gameplay definition yet. The active player has {{ format(live.playerStats.maxHealth) }} health, {{ format(live.playerStats.maxStamina) }} stamina, and {{ format(live.playerStats.maxMagicka) }} magicka.</p></div>
+              <button type="button" data-testid="edit-content-rules" (click)="focusPlayerRules()">Edit player stats</button>
+            </div>
+          </ng-template>
           <button type="button" class="primary jump" data-testid="jump-content" [disabled]="pending" (click)="jumpToSelectedContent()">Jump beside live enemy &amp; play</button>
           <p class="play-note">Rust chooses a grounded approach beside the selected live patrol position, resets the player, faces the enemy, and focuses the native game.</p>
         </section>
@@ -114,17 +124,35 @@
       </label>
 
       <div class="formula">
-        <p class="kicker">Named Rust rule</p>
-        <code>maxHealth = baseHealth + endurance × healthPerEndurance</code>
+        <p class="kicker">Fixed Rust resource rules</p>
+        <code>health = base + endurance × rate</code>
+        <code>stamina = base + (strength + endurance) × rate</code>
+        <code>magicka = base + intelligence × rate</code>
       </div>
 
+      <p class="kicker field-kicker">Attributes</p>
       <div class="field-grid">
-        <label><span>Base health</span><input data-testid="base-health" type="number" min="0" step="1"
-          [(ngModel)]="draft.player.vitality.baseHealth" (ngModelChange)="markDirty()" /></label>
+        <label><span>Strength</span><input data-testid="strength" type="number" min="0" step="1"
+          [(ngModel)]="draft.player.stats.attributes.strength" (ngModelChange)="markDirty()" /></label>
         <label><span>Endurance</span><input data-testid="endurance" type="number" min="0" step="1"
-          [(ngModel)]="draft.player.vitality.endurance" (ngModelChange)="markDirty()" /></label>
+          [(ngModel)]="draft.player.stats.attributes.endurance" (ngModelChange)="markDirty()" /></label>
+        <label><span>Intelligence</span><input data-testid="intelligence" type="number" min="0" step="1"
+          [(ngModel)]="draft.player.stats.attributes.intelligence" (ngModelChange)="markDirty()" /></label>
+      </div>
+      <p class="kicker field-kicker">Resource terms</p>
+      <div class="field-grid resource-terms">
+        <label><span>Base health</span><input data-testid="base-health" type="number" min="0" step="1"
+          [(ngModel)]="draft.player.stats.resources.baseHealth" (ngModelChange)="markDirty()" /></label>
         <label><span>Health / endurance</span><input data-testid="health-per-endurance" type="number" min="0" step="0.1"
-          [(ngModel)]="draft.player.vitality.healthPerEndurance" (ngModelChange)="markDirty()" /></label>
+          [(ngModel)]="draft.player.stats.resources.healthPerEndurance" (ngModelChange)="markDirty()" /></label>
+        <label><span>Base stamina</span><input data-testid="base-stamina" type="number" min="0" step="1"
+          [(ngModel)]="draft.player.stats.resources.baseStamina" (ngModelChange)="markDirty()" /></label>
+        <label><span>Stamina / attribute</span><input data-testid="stamina-per-attribute" type="number" min="0" step="0.1"
+          [(ngModel)]="draft.player.stats.resources.staminaPerAttribute" (ngModelChange)="markDirty()" /></label>
+        <label><span>Base magicka</span><input data-testid="base-magicka" type="number" min="0" step="1"
+          [(ngModel)]="draft.player.stats.resources.baseMagicka" (ngModelChange)="markDirty()" /></label>
+        <label><span>Magicka / intelligence</span><input data-testid="magicka-per-intelligence" type="number" min="0" step="0.1"
+          [(ngModel)]="draft.player.stats.resources.magickaPerIntelligence" (ngModelChange)="markDirty()" /></label>
       </div>
 
       <div class="actions">
@@ -135,16 +163,40 @@
       <p class="play-note">Reset &amp; play restores the start and focuses the native game. Use W/A/S/D; position below is live Rust readback.</p>
     </article>
 
+    <article class="panel editor rat-rules" *ngIf="ratDraft() as rat" data-testid="rat-rules">
+      <div class="panel-heading">
+        <div><p class="kicker">Arena2 mobile 0 · gameplay definition</p><h2>Rat rules</h2></div>
+        <span class="schema">Rust admitted</span>
+      </div>
+      <p class="muted">Arena2 owns the Rat identity and sprite. This profile supplies only swappable gameplay values keyed to that mobile ID.</p>
+      <p class="kicker field-kicker">Attributes</p>
+      <div class="field-grid">
+        <label><span>Strength</span><input data-testid="rat-strength" type="number" min="0" step="1" [(ngModel)]="rat.attributes.strength" (ngModelChange)="markDirty()" /></label>
+        <label><span>Endurance</span><input data-testid="rat-endurance" type="number" min="0" step="1" [(ngModel)]="rat.attributes.endurance" (ngModelChange)="markDirty()" /></label>
+        <label><span>Intelligence</span><input data-testid="rat-intelligence" type="number" min="0" step="1" [(ngModel)]="rat.attributes.intelligence" (ngModelChange)="markDirty()" /></label>
+      </div>
+      <p class="kicker field-kicker">Resource terms</p>
+      <div class="field-grid resource-terms">
+        <label><span>Base health</span><input data-testid="rat-base-health" type="number" min="0" step="1" [(ngModel)]="rat.resources.baseHealth" (ngModelChange)="markDirty()" /></label>
+        <label><span>Health / endurance</span><input data-testid="rat-health-per-endurance" type="number" min="0" step="0.1" [(ngModel)]="rat.resources.healthPerEndurance" (ngModelChange)="markDirty()" /></label>
+        <label><span>Base stamina</span><input data-testid="rat-base-stamina" type="number" min="0" step="1" [(ngModel)]="rat.resources.baseStamina" (ngModelChange)="markDirty()" /></label>
+        <label><span>Stamina / attribute</span><input data-testid="rat-stamina-per-attribute" type="number" min="0" step="0.1" [(ngModel)]="rat.resources.staminaPerAttribute" (ngModelChange)="markDirty()" /></label>
+        <label><span>Base magicka</span><input data-testid="rat-base-magicka" type="number" min="0" step="1" [(ngModel)]="rat.resources.baseMagicka" (ngModelChange)="markDirty()" /></label>
+        <label><span>Magicka / intelligence</span><input data-testid="rat-magicka-per-intelligence" type="number" min="0" step="0.1" [(ngModel)]="rat.resources.magickaPerIntelligence" (ngModelChange)="markDirty()" /></label>
+      </div>
+      <p class="play-note">Apply the whole profile above, jump beside a Rat in the content browser, and compare the admitted live resources while moving in the native game.</p>
+    </article>
+
     <article class="panel worksheet">
       <div class="panel-heading">
-        <div><p class="kicker">Side-effect-free worksheet</p><h2>Try vitality inputs</h2></div>
+        <div><p class="kicker">Side-effect-free worksheet</p><h2>Try player health inputs</h2></div>
         <span class="schema">Rust eval</span>
       </div>
       <p class="muted">Test numbers without changing the active player or adding a history record.</p>
       <div class="worksheet-grid">
-        <label><span>Base health</span><input data-testid="worksheet-base" type="number" [(ngModel)]="worksheet.baseHealth" /></label>
-        <label><span>Endurance</span><input data-testid="worksheet-endurance" type="number" [(ngModel)]="worksheet.endurance" /></label>
-        <label><span>Rate</span><input data-testid="worksheet-rate" type="number" step="0.1" [(ngModel)]="worksheet.healthPerEndurance" /></label>
+        <label><span>Base health</span><input data-testid="worksheet-base" type="number" [(ngModel)]="worksheet.resources.baseHealth" /></label>
+        <label><span>Endurance</span><input data-testid="worksheet-endurance" type="number" [(ngModel)]="worksheet.attributes.endurance" /></label>
+        <label><span>Rate</span><input data-testid="worksheet-rate" type="number" step="0.1" [(ngModel)]="worksheet.resources.healthPerEndurance" /></label>
       </div>
       <button data-testid="evaluate" class="primary evaluate" [disabled]="evaluating" (click)="evaluateWorksheet()">
         {{ evaluating ? 'Evaluating…' : 'Evaluate through Rust' }}
@@ -171,12 +223,43 @@
       <div class="metrics">
         <div><span>Move speed</span><strong data-testid="live-speed">{{ format(live.moveSpeedUnitsPerSecond) }}</strong></div>
         <div><span>Max health</span><strong data-testid="max-health">{{ format(live.maxHealth) }}</strong></div>
+        <div><span>Stamina</span><strong data-testid="player-stamina">{{ format(live.playerStats.currentStamina) }} / {{ format(live.playerStats.maxStamina) }}</strong></div>
+        <div><span>Magicka</span><strong data-testid="player-magicka">{{ format(live.playerStats.currentMagicka) }} / {{ format(live.playerStats.maxMagicka) }}</strong></div>
         <div><span>Current health</span><strong>{{ format(live.currentHealth) }}</strong></div>
-        <div><span>Yaw</span><strong>{{ format(live.playerYawDegrees) }}°</strong></div>
+        <div><span>STR · END · INT</span><strong>{{ format(live.playerStats.attributes.strength) }} · {{ format(live.playerStats.attributes.endurance) }} · {{ format(live.playerStats.attributes.intelligence) }}</strong></div>
       </div>
       <div class="position" data-testid="player-position">
         <span>position</span>
         <code>{{ format(live.playerPosition[0]) }}, {{ format(live.playerPosition[1]) }}, {{ format(live.playerPosition[2]) }}</code>
+      </div>
+      <div class="derived-grid" data-testid="player-derived-traces">
+        <article *ngFor="let calculation of live.playerStats.calculations">
+          <span>{{ calculation.rule }}</span><strong>{{ format(calculation.result) }}</strong>
+          <code>{{ calculation.expression }}</code>
+          <div class="derived-inputs"><small *ngFor="let input of calculation.inputs">{{ input.name }} = {{ format(input.value) }}</small></div>
+          <ol><li *ngFor="let step of calculation.steps">{{ step.operation }} · {{ format(step.left) }} · {{ format(step.right) }} → {{ format(step.result) }}</li></ol>
+        </article>
+      </div>
+    </article>
+
+    <article class="panel live rat-live" *ngIf="ratStats() as rat" data-testid="rat-live-stats">
+      <div class="panel-heading">
+        <div><p class="kicker">Authoritative archetype readback</p><h2>Running Rat · mobile 0</h2></div>
+        <span class="pulse">live</span>
+      </div>
+      <div class="metrics">
+        <div><span>Max health</span><strong data-testid="rat-max-health">{{ format(rat.maxHealth) }}</strong></div>
+        <div><span>Max stamina</span><strong data-testid="rat-max-stamina">{{ format(rat.maxStamina) }}</strong></div>
+        <div><span>Max magicka</span><strong data-testid="rat-max-magicka">{{ format(rat.maxMagicka) }}</strong></div>
+        <div><span>STR · END · INT</span><strong>{{ format(rat.attributes.strength) }} · {{ format(rat.attributes.endurance) }} · {{ format(rat.attributes.intelligence) }}</strong></div>
+      </div>
+      <div class="derived-grid" data-testid="rat-derived-traces">
+        <article *ngFor="let calculation of rat.calculations">
+          <span>{{ calculation.rule }}</span><strong>{{ format(calculation.result) }}</strong>
+          <code>{{ calculation.expression }}</code>
+          <div class="derived-inputs"><small *ngFor="let input of calculation.inputs">{{ input.name }} = {{ format(input.value) }}</small></div>
+          <ol><li *ngFor="let step of calculation.steps">{{ step.operation }} · {{ format(step.left) }} · {{ format(step.right) }} → {{ format(step.result) }}</li></ol>
+        </article>
       </div>
     </article>
 
