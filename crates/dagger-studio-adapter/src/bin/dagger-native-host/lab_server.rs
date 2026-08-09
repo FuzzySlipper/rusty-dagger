@@ -1,6 +1,6 @@
 use std::{
     io::{Read, Write},
-    net::{TcpListener, TcpStream},
+    net::{IpAddr, TcpListener, TcpStream},
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -52,9 +52,9 @@ pub(crate) struct LabServer {
 }
 
 impl LabServer {
-    pub(crate) fn start(port: u16, static_root: PathBuf) -> Result<Self> {
-        let listener = TcpListener::bind(("127.0.0.1", port))
-            .with_context(|| format!("bind Dagger Lab bridge on 127.0.0.1:{port}"))?;
+    pub(crate) fn start(host: IpAddr, port: u16, static_root: PathBuf) -> Result<Self> {
+        let listener = TcpListener::bind((host, port))
+            .with_context(|| format!("bind Dagger Lab bridge on {host}:{port}"))?;
         listener
             .set_nonblocking(true)
             .context("make Dagger Lab bridge nonblocking")?;
@@ -127,6 +127,9 @@ fn handle_request(
     let request = read_request(stream)?;
     if request.method == "OPTIONS" {
         return write_response(stream, 204, "");
+    }
+    if request.method == "GET" && request.path == "/healthz" {
+        return write_response(stream, 200, r#"{"status":"ok","project":"rusty-dagger"}"#);
     }
     if request.method == "GET" && !request.path.starts_with("/api/") {
         return serve_static(stream, static_root, &request.path);
