@@ -37,6 +37,21 @@ xvfb-run -a env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET \
   GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 \
   ./target/debug/dagger-native-host --proof-corrupt-resource >"$rejection_output" 2>&1
 
+if [[ "$(grep -Fc 'DAGGER_NATIVE_INPUT_RELEASED code=KeyG' "$proof_output")" -ne 3 ]]; then
+  echo 'native proof did not observe exactly three KeyG release transitions' >&2
+  exit 1
+fi
+if [[ "$(grep -Fc 'DAGGER_NATIVE_INPUT_RELEASED code=KeyN' "$proof_output")" -ne 3 ]]; then
+  echo 'native proof did not observe exactly three KeyN release transitions' >&2
+  exit 1
+fi
+if [[ "$(grep -Fc 'DAGGER_NATIVE_INPUT_RELEASED code=Enter' "$proof_output")" -ne 1 ]]; then
+  echo 'native proof did not observe exactly one Enter release transition' >&2
+  exit 1
+fi
+grep -E \
+  'DAGGER_(DIAGNOSTIC_CONTROL|NATIVE_ACTION_APPLIED|NATIVE_INPUT_RELEASED)' \
+  "$proof_output"
 grep -F \
   'DAGGER_NATIVE_PROOF_OK frame=true views=true camera=true resize=true resources=true' \
   "$proof_output"

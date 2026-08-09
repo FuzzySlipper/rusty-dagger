@@ -202,52 +202,69 @@ try:
         raise SystemExit("XTest pointer motion failed")
     if not xtst.XTestFakeButtonEvent(display, 1, 1, 0):
         raise SystemExit("XTest pointer-down injection failed")
-    x11.XFlush(display)
+    x11.XSync(display, 0)
     time.sleep(0.2)
     if not xtst.XTestFakeButtonEvent(display, 1, 0, 0):
         raise SystemExit("XTest pointer-up injection failed")
-    x11.XFlush(display)
+    x11.XSync(display, 0)
     time.sleep(0.3)
     print(f"DAGGER_X11_SURFACE_CLICK_OK x={root_x.value} y={root_y.value}")
-    release_occurrence = 0
 
-    def key_cycle(keysym, label, marker, occurrence):
+    def release_key(keycode, label, marker, occurrence, timeout=15.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
+                raise SystemExit(f"XTest {label} key-up injection failed")
+            # Wait until the X server has processed the release before asking
+            # the Rust host to observe the renderer's physical-input state.
+            x11.XSync(display, 0)
+            receipt_deadline = min(deadline, time.monotonic() + 0.5)
+            while time.monotonic() < receipt_deadline:
+                if marker_count(marker) >= occurrence:
+                    print(
+                        f"DAGGER_X11_KEY_RELEASE_OK label={label} "
+                        f"marker={marker} occurrence={occurrence}"
+                    )
+                    return
+                time.sleep(0.05)
+        raise SystemExit(
+            f"timed out waiting for physical {label} release marker "
+            f"{marker!r} occurrence {occurrence}"
+        )
+
+    def key_cycle(keysym, code, label, marker, occurrence):
         keycode = x11.XKeysymToKeycode(display, keysym)
         if not keycode:
             raise SystemExit(f"XKeysymToKeycode({label}) failed")
+        release_marker = f"DAGGER_NATIVE_INPUT_RELEASED code={code}"
+        release_occurrence = marker_count(release_marker) + 1
         if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
             raise SystemExit(f"XTest {label} key-down injection failed")
-        x11.XFlush(display)
+        x11.XSync(display, 0)
         wait_for_marker(marker, occurrence)
-        if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
-            raise SystemExit(f"XTest {label} key-up injection failed")
-        x11.XFlush(display)
-        return
+        release_key(keycode, label, release_marker, release_occurrence)
 
     # Turn both diagnostic families on, off, and on again. The native proof
     # observes renderer receipts for each retained transition and proves that
     # the replacement handle differs from the retired one.
     controls = [
-        (ord("g"), "G-on", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=true", 1),
-        (ord("n"), "N-on", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=true", 1),
-        (ord("g"), "G-off", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=false", 1),
-        (ord("n"), "N-off", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=false", 1),
-        (ord("g"), "G-reenabled", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=true", 2),
-        (ord("n"), "N-reenabled", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=true", 2),
+        (ord("g"), "KeyG", "G-on", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=true", 1),
+        (ord("n"), "KeyN", "N-on", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=true", 1),
+        (ord("g"), "KeyG", "G-off", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=false", 1),
+        (ord("n"), "KeyN", "N-off", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=false", 1),
+        (ord("g"), "KeyG", "G-reenabled", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=true", 2),
+        (ord("n"), "KeyN", "N-reenabled", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=true", 2),
     ]
-    for keysym, label, marker, occurrence in controls:
-        release_occurrence += 1
-        key_cycle(keysym, label, marker, occurrence)
-        wait_for_marker("DAGGER_NATIVE_INPUT_RELEASED", release_occurrence)
+    for keysym, code, label, marker, occurrence in controls:
+        key_cycle(keysym, code, label, marker, occurrence)
     print("DAGGER_X11_DIAGNOSTIC_TOGGLES_OK")
 
-    release_occurrence += 1
     key_cycle(
         0xFF0D,
+        "Enter",
         "Return",
         "DAGGER_NATIVE_ACTION_APPLIED kind=look",
         1,
     )  # XK_Return
-    wait_for_marker("DAGGER_NATIVE_INPUT_RELEASED", release_occurrence)
 finally:
     x11.XCloseDisplay(display)

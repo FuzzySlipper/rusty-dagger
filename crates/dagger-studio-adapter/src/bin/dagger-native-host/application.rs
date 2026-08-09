@@ -209,13 +209,18 @@ impl NativeApplication {
     fn apply_input(&mut self, input: &RendererPhysicalInputReadout) -> Result<()> {
         let pressed = input.pressed_codes.iter().cloned().collect::<BTreeSet<_>>();
         let state_before = self.runtime.player_state();
+        if self.options.proof {
+            let released = self.pressed_codes.difference(&pressed).collect::<Vec<_>>();
+            for code in &released {
+                println!("DAGGER_NATIVE_INPUT_RELEASED code={code}");
+            }
+            if !released.is_empty() {
+                io::stdout().flush()?;
+            }
+        }
         if pressed.is_empty() && input.pointer.buttons == 0 {
             let first_noop = !self.proof.input_noop;
             self.proof.input_noop |= self.runtime.player_state() == state_before;
-            if !self.pressed_codes.is_empty() && self.options.proof {
-                println!("DAGGER_NATIVE_INPUT_RELEASED");
-                io::stdout().flush()?;
-            }
             if first_noop && self.proof.input_noop && self.options.proof {
                 println!("DAGGER_NATIVE_INPUT_ARMED");
                 io::stdout().flush()?;
