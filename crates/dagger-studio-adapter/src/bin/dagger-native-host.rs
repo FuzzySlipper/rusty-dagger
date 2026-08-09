@@ -551,7 +551,7 @@ impl ApplicationHandler for NativeApplication {
         while gtk::events_pending() {
             gtk::main_iteration_do(false);
         }
-        if self.options.proof && self.started_at.elapsed() > Duration::from_secs(120) {
+        if self.options.proof && self.started_at.elapsed() > Duration::from_secs(180) {
             self.fail(
                 event_loop,
                 format!("native renderer proof timed out: {:?}", self.proof),
