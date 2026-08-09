@@ -72,18 +72,6 @@ impl NativeApplication {
             .context("admit checked Privateer's Hold project")?;
         let diagnostics = NativeDiagnostics::from_documents(PROJECT, NAVGRID)?;
         let bundle = build_render_bundle(root, PROJECT).map_err(anyhow::Error::msg)?;
-        let lab_server = options
-            .lab_port
-            .map(|port| LabServer::start(port, root.join("dist/apps/dagger-lab/browser")))
-            .transpose()?;
-        if let Some(server) = &lab_server {
-            println!(
-                "DAGGER_LAB_READY api=http://127.0.0.1:{}/api/dagger-lab ui=http://127.0.0.1:{}",
-                server.port(),
-                server.port()
-            );
-            io::stdout().flush()?;
-        }
         Ok(Self {
             options,
             runtime,
@@ -105,8 +93,30 @@ impl NativeApplication {
             ready: false,
             proof: Proof::default(),
             failure: None,
-            lab_server,
+            lab_server: None,
         })
+    }
+
+    fn start_lab_server(&mut self) -> Result<()> {
+        let Some(port) = self.options.lab_port else {
+            return Ok(());
+        };
+        if !self.ready {
+            bail!("refuse to advertise Dagger Lab before renderer readiness");
+        }
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .context("resolve Rusty Dagger workspace root")?;
+        let server = LabServer::start(port, root.join("dist/apps/dagger-lab/browser"))?;
+        println!(
+            "DAGGER_LAB_READY api=http://127.0.0.1:{}/api/dagger-lab ui=http://127.0.0.1:{}",
+            server.port(),
+            server.port()
+        );
+        io::stdout().flush()?;
+        self.lab_server = Some(server);
+        Ok(())
     }
 
     fn drain_lab_commands(&mut self) -> Result<()> {
@@ -118,41 +128,38 @@ impl NativeApplication {
                     bail!("Dagger Lab bridge disconnected")
                 }
             };
-            let (reply, reset_camera, focus_game) = match command {
+            let focus_game = match command {
                 LabCommand::Read { reply } => {
                     let result = self.runtime.experiment_readout();
-                    (send_lab_result(reply, result), false, false)
+                    send_lab_result(reply, result)?;
+                    false
                 }
                 LabCommand::Apply { document, reply } => {
                     let result = self.runtime.apply_experiment_json(&document);
-                    (send_lab_result(reply, result), false, false)
+                    send_lab_result(reply, result)?;
+                    false
                 }
                 LabCommand::Evaluate { document, reply } => {
                     let result = self.runtime.evaluate_experiment_json(&document);
-                    (send_lab_result(reply, result), false, false)
+                    send_lab_result(reply, result)?;
+                    false
                 }
                 LabCommand::Reset { reply } => {
                     let result = self.runtime.reset_play_session();
-                    let succeeded = result.is_ok();
-                    (send_lab_result(reply, result), succeeded, false)
+                    complete_camera_synced_lab_result(reply, result, || self.update_camera())?;
+                    false
                 }
                 LabCommand::Play { reply } => {
                     let result = self.runtime.reset_play_session();
-                    let succeeded = result.is_ok();
-                    (send_lab_result(reply, result), succeeded, succeeded)
+                    complete_camera_synced_lab_result(reply, result, || self.update_camera())?
                 }
                 LabCommand::Jump { id, reply } => {
                     self.runtime
                         .sync_content_live_positions(self.diagnostics.live_content_positions());
                     let result = self.runtime.jump_to_content(id);
-                    let succeeded = result.is_ok();
-                    (send_lab_result(reply, result), succeeded, succeeded)
+                    complete_camera_synced_lab_result(reply, result, || self.update_camera())?
                 }
             };
-            reply?;
-            if reset_camera && self.ready {
-                self.update_camera()?;
-            }
             if focus_game {
                 self.window
                     .as_ref()
@@ -555,8 +562,9 @@ impl NativeApplication {
                 if self.options.corrupt_resource {
                     bail!("corrupt resource unexpectedly reached ready state");
                 }
-                self.ready = true;
                 self.initialize_renderer()?;
+                self.ready = true;
+                self.start_lab_server()?;
                 if self.options.proof {
                     println!("DAGGER_NATIVE_READY_FOR_INPUT");
                     io::stdout().flush()?;
@@ -795,6 +803,33 @@ fn send_lab_result<T: serde::Serialize>(
     Ok(())
 }
 
+fn complete_camera_synced_lab_result<T: serde::Serialize>(
+    reply: std::sync::mpsc::Sender<LabReply>,
+    result: Result<T, dagger_runtime::RuntimeError>,
+    submit_camera: impl FnOnce() -> Result<()>,
+) -> Result<bool> {
+    let value = match result {
+        Ok(value) => value,
+        Err(error) => {
+            send_lab_result::<T>(reply, Err(error))?;
+            return Ok(false);
+        }
+    };
+    if let Err(error) = submit_camera() {
+        let response = LabReply {
+            status: 500,
+            body: serde_json::to_string(&serde_json::json!({
+                "error": format!("camera synchronization failed: {error}")
+            }))
+            .context("serialize Dagger Lab camera error")?,
+        };
+        let _ = reply.send(response);
+        return Err(error);
+    }
+    send_lab_result(reply, Ok(value))?;
+    Ok(true)
+}
+
 pub(crate) fn run(options: Options) -> Result<()> {
     let event_loop = EventLoop::new().context("create Privateer's Hold event loop")?;
     event_loop.set_control_flow(ControlFlow::Poll);
@@ -806,4 +841,78 @@ pub(crate) fn run(options: Options) -> Result<()> {
         bail!(failure);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        net::{SocketAddr, TcpListener, TcpStream},
+        sync::mpsc,
+        time::Duration,
+    };
+
+    use anyhow::anyhow;
+
+    use super::*;
+
+    fn unused_local_port() -> u16 {
+        TcpListener::bind(("127.0.0.1", 0))
+            .expect("reserve local port")
+            .local_addr()
+            .expect("read local port")
+            .port()
+    }
+
+    #[test]
+    fn lab_endpoint_is_unavailable_until_native_renderer_is_ready() {
+        let port = unused_local_port();
+        let mut application = NativeApplication::new(Options {
+            proof: false,
+            corrupt_resource: false,
+            lab_port: Some(port),
+        })
+        .expect("construct native host");
+
+        let address = SocketAddr::from(([127, 0, 0, 1], port));
+        assert!(TcpStream::connect_timeout(&address, Duration::from_millis(100)).is_err());
+        let error = application
+            .start_lab_server()
+            .expect_err("pre-ready Lab activation must fail closed");
+        assert!(error.to_string().contains("before renderer readiness"));
+        assert!(application.lab_server.is_none());
+        assert!(TcpStream::connect_timeout(&address, Duration::from_millis(100)).is_err());
+    }
+
+    #[test]
+    fn camera_synced_reply_never_reports_success_before_camera_acceptance() {
+        let (send_failure, receive_failure) = mpsc::channel();
+        let error = complete_camera_synced_lab_result(
+            send_failure,
+            Ok(serde_json::json!({ "position": [1, 2, 3] })),
+            || {
+                assert!(receive_failure.try_recv().is_err());
+                Err(anyhow!("renderer rejected camera pose"))
+            },
+        )
+        .expect_err("camera rejection must fail the host command");
+        assert!(error.to_string().contains("renderer rejected camera pose"));
+        let failure = receive_failure.recv().expect("camera failure reply");
+        assert_eq!(failure.status, 500);
+        assert!(failure.body.contains("camera synchronization failed"));
+
+        let (send_success, receive_success) = mpsc::channel();
+        let focused = complete_camera_synced_lab_result(
+            send_success,
+            Ok(serde_json::json!({ "position": [4, 5, 6] })),
+            || {
+                assert!(receive_success.try_recv().is_err());
+                Ok(())
+            },
+        )
+        .expect("accepted camera pose");
+        assert!(focused);
+        let success = receive_success.recv().expect("successful readback reply");
+        assert_eq!(success.status, 200);
+        assert!(success.body.contains("[4,5,6]"));
+    }
 }

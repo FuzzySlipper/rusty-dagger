@@ -195,12 +195,13 @@ async function resetAndPhysicallyMove(page, spawnPosition) {
 async function jumpAndPhysicallyMove(page, contentId, spawnPosition) {
   await page.getByTestId(`content-${contentId}`).click();
   await page.getByTestId('jump-content').click();
-  const jumpDeadline = Date.now() + 10_000;
-  while (await page.getByTestId('player-position').innerText() === spawnPosition) {
-    assert.ok(Date.now() < jumpDeadline, 'content jump did not reposition the authoritative player');
-    await page.waitForTimeout(100);
-  }
+  await page.waitForFunction(
+    (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
+    contentId,
+    { timeout: 10_000 },
+  );
   const jumpPosition = await page.getByTestId('player-position').innerText();
+  assert.notEqual(jumpPosition, spawnPosition, 'content jump did not reposition the authoritative player');
   const move = await physicallyMove(page, jumpPosition, ['a', 'd', 's']);
   await page.getByTestId('reset').click();
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
