@@ -26,9 +26,10 @@ pub use player::{
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
-    ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime, EnemyReferenceReadout,
-    ExperimentEvaluation, ExperimentReadout, RuntimeError, SessionCalculationRecord,
-    CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
+    ActorGameplayReadout, ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
+    EnemyReferenceReadout, EnemyStatsReadout, ExperimentEvaluation, ExperimentReadout,
+    LiveActorResources, RuntimeError, SessionCalculationRecord, CALCULATION_HISTORY_LIMIT,
+    STARTER_EXPERIMENT_JSON,
 };
 
 #[cfg(test)]
@@ -135,13 +136,24 @@ mod tests {
         let mut experiment: serde_json::Value =
             serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
         experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(7.0);
-        experiment["player"]["vitality"]["endurance"] = serde_json::Value::from(60.0);
+        experiment["player"]["stats"]["attributes"]["endurance"] = serde_json::Value::from(60.0);
+        experiment["enemies"][0]["stats"]["attributes"]["strength"] = serde_json::Value::from(20.0);
+        experiment["enemies"][0]["stats"]["resources"]["baseHealth"] = serde_json::Value::from(4.0);
 
         let readout = runtime
             .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
             .expect("apply experiment");
         assert_eq!(readout.move_speed_units_per_second, 7.0);
         assert_eq!(readout.max_health, 115.0);
+        assert_eq!(readout.player_stats.max_stamina, 110.0);
+        let rat_stats = readout
+            .enemy_stats
+            .iter()
+            .find(|enemy| enemy.mobile_id == 0)
+            .expect("Rat gameplay definition");
+        assert_eq!(rat_stats.stats.attributes.strength, 20.0);
+        assert_eq!(rat_stats.stats.max_health, 5.0);
+        assert_eq!(rat_stats.stats.max_stamina, 15.0);
         assert_eq!(readout.calculations.last().unwrap().sequence, 2);
 
         runtime
@@ -151,6 +163,7 @@ mod tests {
         assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
         assert_eq!(reset.move_speed_units_per_second, 7.0);
         assert_eq!(reset.current_health, 115.0);
+        assert_eq!(reset.player_stats.current_stamina, 110.0);
     }
 
     #[test]
@@ -171,6 +184,16 @@ mod tests {
         assert_eq!(thief.reference.mobile_id, 138);
         assert_eq!(thief.reference.mobile_name, "Thief");
         assert_eq!(thief.reference.texture_archive, 484);
+        assert_eq!(thief.live.resources, None);
+        let rat = initial
+            .content
+            .iter()
+            .find(|entity| entity.reference.mobile_id == 0)
+            .expect("committed Rat identity");
+        let rat_resources = rat.live.resources.expect("Rat live resources");
+        assert_eq!(rat.reference.mobile_name, "Rat");
+        assert_eq!(rat_resources.current_health, 3.0);
+        assert_eq!(rat_resources.current_stamina, 10.0);
 
         let live_thief = [11.25, 33.025, -6.75];
         runtime.sync_content_live_positions([(2001, live_thief), (999_999, [0.0; 3])]);
@@ -212,9 +235,10 @@ mod tests {
         let mut experiment: serde_json::Value =
             serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
         experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(8.0);
-        experiment["player"]["vitality"]["baseHealth"] = serde_json::Value::from(20.0);
-        experiment["player"]["vitality"]["endurance"] = serde_json::Value::from(70.0);
-        experiment["player"]["vitality"]["healthPerEndurance"] = serde_json::Value::from(2.0);
+        experiment["player"]["stats"]["resources"]["baseHealth"] = serde_json::Value::from(20.0);
+        experiment["player"]["stats"]["attributes"]["endurance"] = serde_json::Value::from(70.0);
+        experiment["player"]["stats"]["resources"]["healthPerEndurance"] =
+            serde_json::Value::from(2.0);
 
         let evaluation = runtime
             .evaluate_experiment_json(&serde_json::to_string(&experiment).unwrap())
@@ -222,12 +246,13 @@ mod tests {
         assert_eq!(evaluation.move_speed_units_per_second, 8.0);
         assert_eq!(evaluation.max_health, 160.0);
         assert_eq!(evaluation.calculation.result, 160.0);
+        assert_eq!(evaluation.player_stats.max_stamina, 120.0);
+        assert_eq!(evaluation.enemy_stats[0].stats.max_health, 3.0);
         assert_eq!(runtime.experiment_readout().unwrap(), before);
 
+        experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(0.0);
         let error = runtime
-            .evaluate_experiment_json(
-                r#"{"schemaVersion":1,"player":{"movement":{"speedUnitsPerSecond":0},"vitality":{"baseHealth":25,"endurance":40,"healthPerEndurance":1.5}}}"#,
-            )
+            .evaluate_experiment_json(&serde_json::to_string(&experiment).unwrap())
             .expect_err("invalid preview must fail closed");
         assert!(matches!(error, RuntimeError::Experiment(_)));
         assert_eq!(runtime.experiment_readout().unwrap(), before);
@@ -240,10 +265,11 @@ mod tests {
         let before = runtime
             .experiment_readout()
             .expect("readout before rejection");
+        let mut invalid: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        invalid["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(0.0);
         let error = runtime
-            .apply_experiment_json(
-                r#"{"schemaVersion":1,"player":{"movement":{"speedUnitsPerSecond":0},"vitality":{"baseHealth":25,"endurance":40,"healthPerEndurance":1.5}}}"#,
-            )
+            .apply_experiment_json(&serde_json::to_string(&invalid).unwrap())
             .expect_err("zero speed must be rejected");
         assert!(matches!(error, RuntimeError::Experiment(_)));
         assert_eq!(
@@ -252,6 +278,15 @@ mod tests {
                 .expect("readout after rejection"),
             before
         );
+
+        let mut missing_mobile: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        missing_mobile["enemies"][0]["mobileId"] = serde_json::Value::from(254);
+        let error = runtime
+            .apply_experiment_json(&serde_json::to_string(&missing_mobile).unwrap())
+            .expect_err("unknown project mobile must be rejected");
+        assert!(format!("{error}").contains("does not identify an enemy"));
+        assert_eq!(runtime.experiment_readout().unwrap(), before);
 
         for speed_tenths in 1..=(CALCULATION_HISTORY_LIMIT + 4) {
             let speed = 1.0 + speed_tenths as f32 / 10.0;

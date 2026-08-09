@@ -6,25 +6,29 @@
 
 #![forbid(unsafe_code)]
 
+use std::collections::BTreeSet;
+
 use serde::{Deserialize, Serialize};
 
 pub const EXPERIMENT_SCHEMA_VERSION: u32 = 1;
 pub const MIN_MOVE_SPEED_UNITS_PER_SECOND: f32 = 0.1;
 pub const MAX_MOVE_SPEED_UNITS_PER_SECOND: f32 = 50.0;
-pub const MAX_VITALITY_INPUT: f32 = 10_000.0;
+pub const MAX_STAT_INPUT: f32 = 10_000.0;
+pub const MAX_ENEMY_DEFINITIONS: usize = 64;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ExperimentDocument {
     pub schema_version: u32,
     pub player: PlayerExperiment,
+    pub enemies: Vec<EnemyExperiment>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PlayerExperiment {
     pub movement: PlayerMovementExperiment,
-    pub vitality: PlayerVitalityExperiment,
+    pub stats: ActorStatsExperiment,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -33,17 +37,47 @@ pub struct PlayerMovementExperiment {
     pub speed_units_per_second: f32,
 }
 
-/// Named inputs for the deliberately small first gameplay formula.
+/// One gameplay definition keyed to the classic identity owned by `arena2`.
 ///
-/// Rust owns the formula `base_health + endurance * health_per_endurance`.
-/// The authoring document exposes its useful design knobs without defining a
-/// general expression language or allowing TypeScript to evaluate gameplay.
+/// This crate deliberately stores no mobile name, sprite, or identity table.
+/// The Dagger runtime joins this authored gameplay definition to an admitted
+/// project through `mobile_id`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct PlayerVitalityExperiment {
-    pub base_health: f32,
+pub struct EnemyExperiment {
+    pub mobile_id: u8,
+    pub stats: ActorStatsExperiment,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ActorStatsExperiment {
+    pub attributes: ActorAttributes,
+    pub resources: ActorResourceTerms,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ActorAttributes {
+    pub strength: f32,
     pub endurance: f32,
+    pub intelligence: f32,
+}
+
+/// Named inputs for the three fixed resource formulas required by the first
+/// player-versus-Rat experiment.
+///
+/// Rust owns these formula shapes. The document exposes useful knobs without
+/// defining an expression language or allowing TypeScript to evaluate them.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ActorResourceTerms {
+    pub base_health: f32,
     pub health_per_endurance: f32,
+    pub base_stamina: f32,
+    pub stamina_per_attribute: f32,
+    pub base_magicka: f32,
+    pub magicka_per_intelligence: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -51,14 +85,31 @@ pub struct PlayerVitalityExperiment {
 pub struct AdmittedExperiment {
     pub document: ExperimentDocument,
     pub player: AdmittedPlayerValues,
-    pub calculation: CalculationRecord,
+    pub enemies: Vec<AdmittedEnemyValues>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AdmittedPlayerValues {
     pub move_speed_units_per_second: f32,
+    pub stats: AdmittedActorValues,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdmittedEnemyValues {
+    pub mobile_id: u8,
+    pub stats: AdmittedActorValues,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AdmittedActorValues {
+    pub attributes: ActorAttributes,
     pub max_health: f32,
+    pub max_stamina: f32,
+    pub max_magicka: f32,
+    pub calculations: Vec<CalculationRecord>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -91,7 +142,7 @@ pub struct CalculationStep {
 pub enum ExperimentError {
     Json(String),
     UnsupportedSchema { actual: u32, expected: u32 },
-    InvalidValue { path: &'static str, reason: String },
+    InvalidValue { path: String, reason: String },
 }
 
 impl std::fmt::Display for ExperimentError {
@@ -127,76 +178,49 @@ impl ExperimentDocument {
             MIN_MOVE_SPEED_UNITS_PER_SECOND,
             MAX_MOVE_SPEED_UNITS_PER_SECOND,
         )?;
-        finite_in_range(
-            "player.vitality.baseHealth",
-            self.player.vitality.base_health,
-            0.0,
-            MAX_VITALITY_INPUT,
-        )?;
-        finite_in_range(
-            "player.vitality.endurance",
-            self.player.vitality.endurance,
-            0.0,
-            MAX_VITALITY_INPUT,
-        )?;
-        finite_in_range(
-            "player.vitality.healthPerEndurance",
-            self.player.vitality.health_per_endurance,
-            0.0,
-            MAX_VITALITY_INPUT,
-        )?;
-
-        let vitality = &self.player.vitality;
-        let endurance_health = vitality.endurance * vitality.health_per_endurance;
-        let max_health = vitality.base_health + endurance_health;
-        if !max_health.is_finite() || max_health > MAX_VITALITY_INPUT {
+        if self.enemies.len() > MAX_ENEMY_DEFINITIONS {
             return Err(ExperimentError::InvalidValue {
-                path: "player.vitality",
-                reason: format!(
-                    "derived maxHealth must be finite and no greater than {MAX_VITALITY_INPUT}"
-                ),
+                path: "enemies".to_string(),
+                reason: format!("must contain no more than {MAX_ENEMY_DEFINITIONS} definitions"),
             });
         }
-        let calculation = CalculationRecord {
-            rule: "player.maxHealth".to_string(),
-            expression: "baseHealth + endurance * healthPerEndurance".to_string(),
-            inputs: vec![
-                CalculationInput {
-                    name: "baseHealth".to_string(),
-                    value: vitality.base_health,
-                },
-                CalculationInput {
-                    name: "endurance".to_string(),
-                    value: vitality.endurance,
-                },
-                CalculationInput {
-                    name: "healthPerEndurance".to_string(),
-                    value: vitality.health_per_endurance,
-                },
-            ],
-            steps: vec![
-                CalculationStep {
-                    operation: "multiply".to_string(),
-                    left: vitality.endurance,
-                    right: vitality.health_per_endurance,
-                    result: endurance_health,
-                },
-                CalculationStep {
-                    operation: "add".to_string(),
-                    left: vitality.base_health,
-                    right: endurance_health,
-                    result: max_health,
-                },
-            ],
-            result: max_health,
-        };
+
+        let mut mobile_ids = BTreeSet::new();
+        for (index, enemy) in self.enemies.iter().enumerate() {
+            if !mobile_ids.insert(enemy.mobile_id) {
+                return Err(ExperimentError::InvalidValue {
+                    path: format!("enemies[{index}].mobileId"),
+                    reason: format!(
+                        "duplicate gameplay definition for mobile {}",
+                        enemy.mobile_id
+                    ),
+                });
+            }
+        }
+
+        let player_stats = admit_actor_stats("player", "player.stats", &self.player.stats)?;
+        let enemies = self
+            .enemies
+            .iter()
+            .enumerate()
+            .map(|(index, enemy)| {
+                Ok(AdmittedEnemyValues {
+                    mobile_id: enemy.mobile_id,
+                    stats: admit_actor_stats(
+                        &format!("enemy.mobile{}", enemy.mobile_id),
+                        &format!("enemies[{index}].stats"),
+                        &enemy.stats,
+                    )?,
+                })
+            })
+            .collect::<Result<Vec<_>, ExperimentError>>()?;
         Ok(AdmittedExperiment {
             player: AdmittedPlayerValues {
                 move_speed_units_per_second: self.player.movement.speed_units_per_second,
-                max_health,
+                stats: player_stats,
             },
+            enemies,
             document: self,
-            calculation,
         })
     }
 }
@@ -205,8 +229,167 @@ pub fn admit_json(document: &str) -> Result<AdmittedExperiment, ExperimentError>
     ExperimentDocument::from_json(document)?.admit()
 }
 
+fn admit_actor_stats(
+    rule_prefix: &str,
+    document_prefix: &str,
+    stats: &ActorStatsExperiment,
+) -> Result<AdmittedActorValues, ExperimentError> {
+    for (name, value) in [
+        ("attributes.strength", stats.attributes.strength),
+        ("attributes.endurance", stats.attributes.endurance),
+        ("attributes.intelligence", stats.attributes.intelligence),
+        ("resources.baseHealth", stats.resources.base_health),
+        (
+            "resources.healthPerEndurance",
+            stats.resources.health_per_endurance,
+        ),
+        ("resources.baseStamina", stats.resources.base_stamina),
+        (
+            "resources.staminaPerAttribute",
+            stats.resources.stamina_per_attribute,
+        ),
+        ("resources.baseMagicka", stats.resources.base_magicka),
+        (
+            "resources.magickaPerIntelligence",
+            stats.resources.magicka_per_intelligence,
+        ),
+    ] {
+        finite_in_range(
+            format!("{document_prefix}.{name}"),
+            value,
+            0.0,
+            MAX_STAT_INPUT,
+        )?;
+    }
+
+    let attributes = &stats.attributes;
+    let resources = &stats.resources;
+    let endurance_health = attributes.endurance * resources.health_per_endurance;
+    let max_health = resources.base_health + endurance_health;
+    let stamina_attributes = attributes.strength + attributes.endurance;
+    let attribute_stamina = stamina_attributes * resources.stamina_per_attribute;
+    let max_stamina = resources.base_stamina + attribute_stamina;
+    let intelligence_magicka = attributes.intelligence * resources.magicka_per_intelligence;
+    let max_magicka = resources.base_magicka + intelligence_magicka;
+    for (name, value) in [
+        ("maxHealth", max_health),
+        ("maxStamina", max_stamina),
+        ("maxMagicka", max_magicka),
+    ] {
+        if !value.is_finite() || value > MAX_STAT_INPUT {
+            return Err(ExperimentError::InvalidValue {
+                path: document_prefix.to_string(),
+                reason: format!(
+                    "derived {name} must be finite and no greater than {MAX_STAT_INPUT}"
+                ),
+            });
+        }
+    }
+
+    let calculations = vec![
+        CalculationRecord {
+            rule: format!("{rule_prefix}.maxHealth"),
+            expression: "baseHealth + endurance * healthPerEndurance".to_string(),
+            inputs: vec![
+                input("baseHealth", resources.base_health),
+                input("endurance", attributes.endurance),
+                input("healthPerEndurance", resources.health_per_endurance),
+            ],
+            steps: vec![
+                step(
+                    "multiply",
+                    attributes.endurance,
+                    resources.health_per_endurance,
+                    endurance_health,
+                ),
+                step("add", resources.base_health, endurance_health, max_health),
+            ],
+            result: max_health,
+        },
+        CalculationRecord {
+            rule: format!("{rule_prefix}.maxStamina"),
+            expression: "baseStamina + (strength + endurance) * staminaPerAttribute".to_string(),
+            inputs: vec![
+                input("baseStamina", resources.base_stamina),
+                input("strength", attributes.strength),
+                input("endurance", attributes.endurance),
+                input("staminaPerAttribute", resources.stamina_per_attribute),
+            ],
+            steps: vec![
+                step(
+                    "add attributes",
+                    attributes.strength,
+                    attributes.endurance,
+                    stamina_attributes,
+                ),
+                step(
+                    "multiply",
+                    stamina_attributes,
+                    resources.stamina_per_attribute,
+                    attribute_stamina,
+                ),
+                step(
+                    "add",
+                    resources.base_stamina,
+                    attribute_stamina,
+                    max_stamina,
+                ),
+            ],
+            result: max_stamina,
+        },
+        CalculationRecord {
+            rule: format!("{rule_prefix}.maxMagicka"),
+            expression: "baseMagicka + intelligence * magickaPerIntelligence".to_string(),
+            inputs: vec![
+                input("baseMagicka", resources.base_magicka),
+                input("intelligence", attributes.intelligence),
+                input("magickaPerIntelligence", resources.magicka_per_intelligence),
+            ],
+            steps: vec![
+                step(
+                    "multiply",
+                    attributes.intelligence,
+                    resources.magicka_per_intelligence,
+                    intelligence_magicka,
+                ),
+                step(
+                    "add",
+                    resources.base_magicka,
+                    intelligence_magicka,
+                    max_magicka,
+                ),
+            ],
+            result: max_magicka,
+        },
+    ];
+
+    Ok(AdmittedActorValues {
+        attributes: attributes.clone(),
+        max_health,
+        max_stamina,
+        max_magicka,
+        calculations,
+    })
+}
+
+fn input(name: &str, value: f32) -> CalculationInput {
+    CalculationInput {
+        name: name.to_string(),
+        value,
+    }
+}
+
+fn step(operation: &str, left: f32, right: f32, result: f32) -> CalculationStep {
+    CalculationStep {
+        operation: operation.to_string(),
+        left,
+        right,
+        result,
+    }
+}
+
 fn finite_in_range(
-    path: &'static str,
+    path: impl Into<String>,
     value: f32,
     minimum: f32,
     maximum: f32,
@@ -215,7 +398,7 @@ fn finite_in_range(
         Ok(())
     } else {
         Err(ExperimentError::InvalidValue {
-            path,
+            path: path.into(),
             reason: format!("must be finite and between {minimum} and {maximum}"),
         })
     }
@@ -225,6 +408,24 @@ fn finite_in_range(
 mod tests {
     use super::*;
 
+    fn stats(strength: f32, endurance: f32, intelligence: f32) -> ActorStatsExperiment {
+        ActorStatsExperiment {
+            attributes: ActorAttributes {
+                strength,
+                endurance,
+                intelligence,
+            },
+            resources: ActorResourceTerms {
+                base_health: 25.0,
+                health_per_endurance: 1.5,
+                base_stamina: 0.0,
+                stamina_per_attribute: 1.0,
+                base_magicka: 0.0,
+                magicka_per_intelligence: 1.0,
+            },
+        }
+    }
+
     fn starter() -> ExperimentDocument {
         ExperimentDocument {
             schema_version: EXPERIMENT_SCHEMA_VERSION,
@@ -232,33 +433,64 @@ mod tests {
                 movement: PlayerMovementExperiment {
                     speed_units_per_second: 3.5,
                 },
-                vitality: PlayerVitalityExperiment {
-                    base_health: 25.0,
-                    endurance: 40.0,
-                    health_per_endurance: 1.5,
-                },
+                stats: stats(50.0, 40.0, 50.0),
             },
+            enemies: vec![EnemyExperiment {
+                mobile_id: 0,
+                stats: ActorStatsExperiment {
+                    attributes: ActorAttributes {
+                        strength: 10.0,
+                        endurance: 10.0,
+                        intelligence: 0.0,
+                    },
+                    resources: ActorResourceTerms {
+                        base_health: 2.0,
+                        health_per_endurance: 0.1,
+                        base_stamina: 0.0,
+                        stamina_per_attribute: 0.5,
+                        base_magicka: 0.0,
+                        magicka_per_intelligence: 0.0,
+                    },
+                },
+            }],
         }
     }
 
     #[test]
-    fn admits_named_inputs_and_explains_the_rust_owned_formula() {
+    fn admits_player_and_rat_stats_and_explains_rust_owned_formulas() {
         let admitted = starter().admit().expect("admit starter experiment");
         assert_eq!(admitted.player.move_speed_units_per_second, 3.5);
-        assert_eq!(admitted.player.max_health, 85.0);
-        assert_eq!(admitted.calculation.steps.len(), 2);
-        assert_eq!(admitted.calculation.steps[0].operation, "multiply");
-        assert_eq!(admitted.calculation.steps[1].result, 85.0);
+        assert_eq!(admitted.player.stats.max_health, 85.0);
+        assert_eq!(admitted.player.stats.max_stamina, 90.0);
+        assert_eq!(admitted.player.stats.max_magicka, 50.0);
+        assert_eq!(admitted.enemies[0].mobile_id, 0);
+        assert_eq!(admitted.enemies[0].stats.max_health, 3.0);
+        assert_eq!(admitted.enemies[0].stats.max_stamina, 10.0);
+        assert_eq!(admitted.enemies[0].stats.max_magicka, 0.0);
+        assert_eq!(admitted.player.stats.calculations.len(), 3);
+        assert_eq!(admitted.enemies[0].stats.calculations.len(), 3);
+        assert_eq!(
+            admitted.player.stats.calculations[0].rule,
+            "player.maxHealth"
+        );
+        assert_eq!(
+            admitted.enemies[0].stats.calculations[0].rule,
+            "enemy.mobile0.maxHealth"
+        );
     }
 
     #[test]
-    fn rejects_unknown_fields_and_invalid_values() {
+    fn rejects_unknown_fields_invalid_values_and_duplicate_mobile_ids() {
         let json = r#"{
             "schemaVersion": 1,
             "player": {
                 "movement": { "speedUnitsPerSecond": 3.5, "hidden": true },
-                "vitality": { "baseHealth": 25, "endurance": 40, "healthPerEndurance": 1.5 }
-            }
+                "stats": {
+                    "attributes": { "strength": 50, "endurance": 40, "intelligence": 50 },
+                    "resources": { "baseHealth": 25, "healthPerEndurance": 1.5, "baseStamina": 0, "staminaPerAttribute": 1, "baseMagicka": 0, "magickaPerIntelligence": 1 }
+                }
+            },
+            "enemies": []
         }"#;
         assert!(matches!(admit_json(json), Err(ExperimentError::Json(_))));
 
@@ -266,24 +498,26 @@ mod tests {
         document.player.movement.speed_units_per_second = 0.0;
         assert!(matches!(
             document.admit(),
-            Err(ExperimentError::InvalidValue {
-                path: "player.movement.speedUnitsPerSecond",
-                ..
-            })
+            Err(ExperimentError::InvalidValue { path, .. })
+                if path == "player.movement.speedUnitsPerSecond"
+        ));
+
+        let mut document = starter();
+        document.enemies.push(document.enemies[0].clone());
+        assert!(matches!(
+            document.admit(),
+            Err(ExperimentError::InvalidValue { path, .. }) if path == "enemies[1].mobileId"
         ));
     }
 
     #[test]
     fn rejects_a_derived_value_outside_the_bounded_gameplay_range() {
         let mut document = starter();
-        document.player.vitality.base_health = MAX_VITALITY_INPUT;
-        document.player.vitality.endurance = 1.0;
+        document.player.stats.resources.base_health = MAX_STAT_INPUT;
+        document.player.stats.attributes.endurance = 1.0;
         assert!(matches!(
             document.admit(),
-            Err(ExperimentError::InvalidValue {
-                path: "player.vitality",
-                ..
-            })
+            Err(ExperimentError::InvalidValue { path, .. }) if path == "player.stats"
         ));
     }
 }

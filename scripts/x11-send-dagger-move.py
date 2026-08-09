@@ -6,6 +6,7 @@ import sys
 import time
 
 key = sys.argv[1].lower() if len(sys.argv) > 1 else "w"
+expected_title = sys.argv[2] if len(sys.argv) > 2 else None
 if key not in {"w", "a", "s", "d", "l"}:
     raise SystemExit(f"unsupported Dagger key: {key}")
 
@@ -113,6 +114,11 @@ try:
             time.sleep(0.05)
     if window is None:
         raise SystemExit("Dagger native window not found")
+    title = window_name(display, window)
+    if expected_title is not None and expected_title not in title:
+        raise SystemExit(
+            f"Dagger native title does not contain {expected_title!r}: {title!r}"
+        )
     x11.XMapRaised(display, window)
     x11.XSetInputFocus(display, window, 2, 0)
     x11.XSync(display, 0)
@@ -167,6 +173,6 @@ try:
     # followed by a late movement readout would immediately leave the spawn.
     time.sleep(0.75)
     marker = "DAGGER_LAB_PHYSICAL_OPEN_OK" if key == "l" else "DAGGER_LAB_PHYSICAL_MOVE_OK"
-    print(f"{marker} key={key.upper()} window={window}")
+    print(f"{marker} key={key.upper()} window={window} title={title!r}")
 finally:
     x11.XCloseDisplay(display)

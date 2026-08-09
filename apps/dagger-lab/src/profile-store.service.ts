@@ -55,13 +55,7 @@ export function documentsEqual(
   left: ExperimentDocument,
   right: ExperimentDocument,
 ): boolean {
-  return (
-    left.schemaVersion === right.schemaVersion &&
-    left.player.movement.speedUnitsPerSecond === right.player.movement.speedUnitsPerSecond &&
-    left.player.vitality.baseHealth === right.player.vitality.baseHealth &&
-    left.player.vitality.endurance === right.player.vitality.endurance &&
-    left.player.vitality.healthPerEndurance === right.player.vitality.healthPerEndurance
-  );
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 function cloneProfile(profile: ExperimentProfile): ExperimentProfile {
@@ -93,21 +87,53 @@ function isExperimentDocument(value: unknown): value is ExperimentDocument {
   }
   const playerRecord = player as Record<string, unknown>;
   const movement = playerRecord['movement'];
-  const vitality = playerRecord['vitality'];
+  const stats = playerRecord['stats'];
+  const enemies = document['enemies'];
   if (
     typeof movement !== 'object' ||
     movement === null ||
-    typeof vitality !== 'object' ||
-    vitality === null
+    !isActorStats(stats) ||
+    !Array.isArray(enemies)
   ) {
     return false;
   }
   const movementRecord = movement as Record<string, unknown>;
-  const vitalityRecord = vitality as Record<string, unknown>;
   return (
     typeof movementRecord['speedUnitsPerSecond'] === 'number' &&
-    typeof vitalityRecord['baseHealth'] === 'number' &&
-    typeof vitalityRecord['endurance'] === 'number' &&
-    typeof vitalityRecord['healthPerEndurance'] === 'number'
+    enemies.every((enemy) => {
+      if (typeof enemy !== 'object' || enemy === null) return false;
+      const enemyRecord = enemy as Record<string, unknown>;
+      return typeof enemyRecord['mobileId'] === 'number' && isActorStats(enemyRecord['stats']);
+    })
+  );
+}
+
+function isActorStats(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const stats = value as Record<string, unknown>;
+  const attributes = stats['attributes'];
+  const resources = stats['resources'];
+  if (
+    typeof attributes !== 'object' ||
+    attributes === null ||
+    typeof resources !== 'object' ||
+    resources === null
+  ) {
+    return false;
+  }
+  const attributeRecord = attributes as Record<string, unknown>;
+  const resourceRecord = resources as Record<string, unknown>;
+  return (
+    ['strength', 'endurance', 'intelligence'].every(
+      (key) => typeof attributeRecord[key] === 'number',
+    ) &&
+    [
+      'baseHealth',
+      'healthPerEndurance',
+      'baseStamina',
+      'staminaPerAttribute',
+      'baseMagicka',
+      'magickaPerIntelligence',
+    ].every((key) => typeof resourceRecord[key] === 'number')
   );
 }

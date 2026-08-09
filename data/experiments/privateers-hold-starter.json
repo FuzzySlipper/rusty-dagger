@@ -4,10 +4,40 @@
     "movement": {
       "speedUnitsPerSecond": 3.5
     },
-    "vitality": {
-      "baseHealth": 25.0,
-      "endurance": 40.0,
-      "healthPerEndurance": 1.5
+    "stats": {
+      "attributes": {
+        "strength": 50.0,
+        "endurance": 40.0,
+        "intelligence": 50.0
+      },
+      "resources": {
+        "baseHealth": 25.0,
+        "healthPerEndurance": 1.5,
+        "baseStamina": 0.0,
+        "staminaPerAttribute": 1.0,
+        "baseMagicka": 0.0,
+        "magickaPerIntelligence": 1.0
+      }
     }
-  }
+  },
+  "enemies": [
+    {
+      "mobileId": 0,
+      "stats": {
+        "attributes": {
+          "strength": 10.0,
+          "endurance": 10.0,
+          "intelligence": 0.0
+        },
+        "resources": {
+          "baseHealth": 2.0,
+          "healthPerEndurance": 0.1,
+          "baseStamina": 0.0,
+          "staminaPerAttribute": 0.5,
+          "baseMagicka": 0.0,
+          "magickaPerIntelligence": 0.0
+        }
+      }
+    }
+  ]
 }

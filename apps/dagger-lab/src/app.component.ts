@@ -9,14 +9,15 @@ import {
   documentsEqual,
 } from './profile-store.service';
 import {
+  ActorStatsDraft,
+  AdmittedActorStats,
   CalculationRecord,
   ContentEntityReadout,
   ExperimentDocument,
   ExperimentEvaluation,
   ExperimentReadout,
-  VitalityDraft,
+  cloneActorStats,
   cloneExperiment,
-  cloneVitality,
   documentFromDraft,
 } from './lab-contract';
 
@@ -24,8 +25,34 @@ const EMPTY_DOCUMENT: ExperimentDocument = {
   schemaVersion: 1,
   player: {
     movement: { speedUnitsPerSecond: 3.5 },
-    vitality: { baseHealth: 25, endurance: 40, healthPerEndurance: 1.5 },
+    stats: {
+      attributes: { strength: 50, endurance: 40, intelligence: 50 },
+      resources: {
+        baseHealth: 25,
+        healthPerEndurance: 1.5,
+        baseStamina: 0,
+        staminaPerAttribute: 1,
+        baseMagicka: 0,
+        magickaPerIntelligence: 1,
+      },
+    },
   },
+  enemies: [
+    {
+      mobileId: 0,
+      stats: {
+        attributes: { strength: 10, endurance: 10, intelligence: 0 },
+        resources: {
+          baseHealth: 2,
+          healthPerEndurance: 0.1,
+          baseStamina: 0,
+          staminaPerAttribute: 0.5,
+          baseMagicka: 0,
+          magickaPerIntelligence: 0,
+        },
+      },
+    },
+  ],
 };
 
 @Component({
@@ -42,7 +69,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private profilesInitialized = false;
 
   draft = cloneExperiment(EMPTY_DOCUMENT);
-  worksheet: VitalityDraft = cloneVitality(EMPTY_DOCUMENT.player.vitality);
+  worksheet: ActorStatsDraft = cloneActorStats(EMPTY_DOCUMENT.player.stats);
   evaluation: ExperimentEvaluation | undefined;
   readout: ExperimentReadout | undefined;
   connectionError = '';
@@ -82,7 +109,7 @@ export class AppComponent implements OnInit, OnDestroy {
       const document = documentFromDraft(this.draft);
       const candidate: ExperimentDocument = {
         ...document,
-        player: { ...document.player, vitality: cloneVitality(this.worksheet) },
+        player: { ...document.player, stats: cloneActorStats(this.worksheet) },
       };
       this.evaluation = await this.api.evaluate(candidate);
     } catch (error: unknown) {
@@ -262,6 +289,19 @@ export class AppComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
+  ratDraft(): ActorStatsDraft | undefined {
+    return this.draft.enemies.find((enemy) => enemy.mobileId === 0)?.stats;
+  }
+
+  ratStats(): AdmittedActorStats | undefined {
+    return this.readout?.enemyStats.find((enemy) => enemy.mobileId === 0)?.stats;
+  }
+
+  selectedEnemyStats(): AdmittedActorStats | undefined {
+    const mobileId = this.selectedContent()?.reference.mobileId;
+    return this.readout?.enemyStats.find((enemy) => enemy.mobileId === mobileId)?.stats;
+  }
+
   filteredContent(): readonly ContentEntityReadout[] {
     const filter = this.contentFilter.trim().toLowerCase();
     const content = this.readout?.content ?? [];
@@ -299,6 +339,12 @@ export class AppComponent implements OnInit, OnDestroy {
     input?.focus();
   }
 
+  focusRatRules(): void {
+    const input = document.querySelector<HTMLInputElement>('[data-testid="rat-strength"]');
+    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    input?.focus();
+  }
+
   private async refresh(syncDraft: boolean): Promise<void> {
     if (this.loading || this.pending) return;
     this.loading = true;
@@ -309,7 +355,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.connectionError = '';
       if (syncDraft && !this.dirty) {
         this.draft = cloneExperiment(readout.document);
-        this.worksheet = cloneVitality(readout.document.player.vitality);
+        this.worksheet = cloneActorStats(readout.document.player.stats);
       }
     } catch (error: unknown) {
       this.connectionError = errorMessage(error);

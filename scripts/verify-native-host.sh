@@ -54,6 +54,7 @@ if [[ "$(grep -Fc 'DAGGER_NATIVE_INPUT_RELEASED code=KeyL' "$proof_output")" -ne
   exit 1
 fi
 grep -F 'DAGGER_LAB_OPENED url=http://127.0.0.1:' "$proof_output"
+grep -F "DAGGER_NATIVE_STATS title=Privateer's Hold — Player H 85 S 90 M 50" "$proof_output"
 grep -E \
   'DAGGER_(DIAGNOSTIC_CONTROL|NATIVE_ACTION_APPLIED|NATIVE_INPUT_RELEASED)' \
   "$proof_output"

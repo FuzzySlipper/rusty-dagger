@@ -165,6 +165,7 @@ impl NativeApplication {
                     complete_camera_synced_lab_result(reply, result, || self.update_camera())?
                 }
             };
+            self.update_window_title()?;
             if focus_game {
                 self.window
                     .as_ref()
@@ -176,10 +177,11 @@ impl NativeApplication {
     }
 
     fn mount(&mut self, event_loop: &ActiveEventLoop) -> Result<()> {
+        let title = self.native_window_title()?;
         let window = event_loop
             .create_window(
                 Window::default_attributes()
-                    .with_title("Privateer's Hold — L Dagger Lab — G patrol — N navgrid")
+                    .with_title(title)
                     .with_inner_size(winit::dpi::LogicalSize::new(1100, 720)),
             )
             .context("create Privateer's Hold product window")?;
@@ -217,6 +219,47 @@ impl NativeApplication {
         .map_err(|error| anyhow::anyhow!("mount Engine-owned renderer: {error:?}"))?;
         self.window = Some(window);
         self.renderer = Some(renderer);
+        self.update_window_title()?;
+        Ok(())
+    }
+
+    fn native_window_title(&self) -> Result<String> {
+        let readout = self.runtime.experiment_readout()?;
+        let player = &readout.player_stats;
+        let mut title = format!(
+            "Privateer's Hold — Player H {:.0} S {:.0} M {:.0}",
+            player.current_health, player.current_stamina, player.current_magicka
+        );
+        if let Some(focused_id) = readout.focused_content_id {
+            if let Some(entity) = readout
+                .content
+                .iter()
+                .find(|entity| entity.id == focused_id)
+            {
+                if let Some(resources) = entity.live.resources {
+                    title.push_str(&format!(
+                        " — {} H {:.0} S {:.0} M {:.0}",
+                        entity.reference.mobile_name,
+                        resources.current_health,
+                        resources.current_stamina,
+                        resources.current_magicka
+                    ));
+                }
+            }
+        }
+        title.push_str(" — L Lab — G patrol — N navgrid");
+        Ok(title)
+    }
+
+    fn update_window_title(&self) -> Result<()> {
+        let title = self.native_window_title()?;
+        if let Some(window) = &self.window {
+            window.set_title(&title);
+        }
+        if self.options.proof {
+            println!("DAGGER_NATIVE_STATS title={title}");
+            io::stdout().flush()?;
+        }
         Ok(())
     }
 

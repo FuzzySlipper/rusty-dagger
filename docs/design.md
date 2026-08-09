@@ -186,7 +186,7 @@ modularity gate, task 6529):
   per-project user settings. It is transport/presentation glue, not gameplay
   authority. See `docs/studio-host.md` for the runnable contract.
 - `apps/dagger-lab` — the first Dagger Lab Angular surface: whole-document
-  authoring, live readback, the vitality formula worksheet, and selectable
+  authoring, live readback, the player resource worksheet, and selectable
   recent calculation inspection. A browser-local profile shelf stores named
   copies of the complete lockstep document for quick A/B experiments; storage
   is an authoring convenience, not runtime authority or a package system.
@@ -202,10 +202,12 @@ modularity gate, task 6529):
   calls Rust for every evaluation or mutation and never imports or mounts
   Engine renderer implementation.
   The connected content browser searches the 43 committed enemy identities,
-  keeps decoded Arena2 reference fields distinct from authored player rules
-  and live patrol state, and asks Rust to choose a navigable grounded approach
-  before focusing the native game. It is deliberately not a generic Arena2
-  editor or a raw-coordinate teleport surface.
+  keeps decoded Arena2 reference fields distinct from authored player/Rat rules
+  and live patrol/resource state, and asks Rust to choose a navigable grounded
+  approach before focusing the native game. Rat gameplay keys to Arena2 mobile
+  ID 0; `dagger-rpg` does not own a duplicate classic identity roster. It is
+  deliberately not a generic Arena2 editor or a raw-coordinate teleport
+  surface.
 - `data/` — optional committed, hand-authored JSON defaults for the experiment
   document. TS authoring modules may be preferable when builders materially
   improve readability. `content/` is committed generated output from
@@ -221,15 +223,16 @@ modularity gate, task 6529):
   has no renderer TypeScript, HTML canvas bootstrap, or renderer package
   imports.
 
-### Gameplay authoring shape (program 6682, tasks 6683 and 6689)
+### Gameplay authoring shape (program 6682, tasks 6683, 6689, and 6684)
 
 - **TypeScript/Angular authors; Rust means and acts.** Immutable TS builders,
   simple JSON defaults, and Angular forms may assemble supported values. They
   all produce one compact internal experiment document. The first document
-  exposes movement speed plus named vitality inputs; Rust owns the fixed
-  `baseHealth + endurance * healthPerEndurance` formula. `dagger-rpg` admits
-  and evaluates it; `dagger-runtime` applies it to live state. There is no TS
-  evaluator, expression AST, or callback escape hatch.
+  exposes movement speed plus named player and Rat attribute/resource inputs.
+  Rust owns fixed health, stamina, and magicka formula shapes. `dagger-rpg`
+  admits and evaluates them; `dagger-runtime` applies player values and
+  constructs per-entity Rat resources for admitted mobile ID 0 entities. There
+  is no TS evaluator, expression AST, or callback escape hatch.
 - **Small vocabulary, grown by play.** Begin with the first movement/derived
   value experiment. Add reads, arithmetic, rolls, conditions, effects, or
   content fields only for a named interactive slice. Do not create a general
