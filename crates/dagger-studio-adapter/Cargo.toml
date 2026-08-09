@@ -26,4 +26,4 @@ path = "src/bin/dagger-studio-adapter.rs"
 
 [[bin]]
 name = "dagger-native-host"
-path = "src/bin/dagger-native-host.rs"
+path = "src/bin/dagger-native-host/main.rs"

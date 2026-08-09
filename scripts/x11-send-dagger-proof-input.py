@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focus the Dagger window and inject one real X11 Return key cycle."""
+"""Focus Dagger and exercise real X11 diagnostic toggles plus Return."""
 
 import ctypes
 import time
@@ -187,16 +187,33 @@ try:
     x11.XFlush(display)
     time.sleep(0.3)
     print(f"DAGGER_X11_SURFACE_CLICK_OK x={root_x.value} y={root_y.value}")
-    keycode = x11.XKeysymToKeycode(display, 0xFF0D)  # XK_Return
-    if not keycode:
-        raise SystemExit("XKeysymToKeycode(XK_Return) failed")
-    if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
-        raise SystemExit("XTest key-down injection failed")
-    x11.XFlush(display)
-    time.sleep(3.0)
-    if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
-        raise SystemExit("XTest key-up injection failed")
-    x11.XFlush(display)
-    time.sleep(0.2)
+    def key_cycle(keysym, label, hold=1.0, settle=1.0):
+        keycode = x11.XKeysymToKeycode(display, keysym)
+        if not keycode:
+            raise SystemExit(f"XKeysymToKeycode({label}) failed")
+        if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
+            raise SystemExit(f"XTest {label} key-down injection failed")
+        x11.XFlush(display)
+        time.sleep(hold)
+        if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
+            raise SystemExit(f"XTest {label} key-up injection failed")
+        x11.XFlush(display)
+        time.sleep(settle)
+
+    # Turn both diagnostic families on, off, and on again. The native proof
+    # observes renderer receipts for each retained transition and proves that
+    # the replacement handle differs from the retired one.
+    for keysym, label in [
+        (ord("g"), "G-on"),
+        (ord("n"), "N-on"),
+        (ord("g"), "G-off"),
+        (ord("n"), "N-off"),
+        (ord("g"), "G-reenabled"),
+        (ord("n"), "N-reenabled"),
+    ]:
+        key_cycle(keysym, label)
+    print("DAGGER_X11_DIAGNOSTIC_TOGGLES_OK")
+
+    key_cycle(0xFF0D, "Return", hold=3.0, settle=0.25)  # XK_Return
 finally:
     x11.XCloseDisplay(display)
