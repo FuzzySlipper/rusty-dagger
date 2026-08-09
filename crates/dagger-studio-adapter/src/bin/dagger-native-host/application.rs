@@ -212,6 +212,10 @@ impl NativeApplication {
         if pressed.is_empty() && input.pointer.buttons == 0 {
             let first_noop = !self.proof.input_noop;
             self.proof.input_noop |= self.runtime.player_state() == state_before;
+            if !self.pressed_codes.is_empty() && self.options.proof {
+                println!("DAGGER_NATIVE_INPUT_RELEASED");
+                io::stdout().flush()?;
+            }
             if first_noop && self.proof.input_noop && self.options.proof {
                 println!("DAGGER_NATIVE_INPUT_ARMED");
                 io::stdout().flush()?;
@@ -253,12 +257,14 @@ impl NativeApplication {
             let enabled = self.diagnostics.toggle_sprite_overlay();
             if self.options.proof {
                 println!("DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled={enabled}");
+                io::stdout().flush()?;
             }
         }
         if pressed.contains("KeyN") && !self.pressed_codes.contains("KeyN") {
             let enabled = self.diagnostics.toggle_nav_overlay();
             if self.options.proof {
                 println!("DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled={enabled}");
+                io::stdout().flush()?;
             }
         }
         if pressed.contains("Enter") && !self.pressed_codes.contains("Enter") {
@@ -268,6 +274,10 @@ impl NativeApplication {
                     pitch_delta: 0.0,
                 })?;
             self.proof.input_authority = self.runtime.player_state() != state_before;
+            if self.proof.input_authority && self.options.proof {
+                println!("DAGGER_NATIVE_ACTION_APPLIED kind=look");
+                io::stdout().flush()?;
+            }
             self.update_camera()?;
             if self.pending_pick.is_none() {
                 self.request_pick(PickKind::Miss)?;
@@ -618,7 +628,7 @@ impl ApplicationHandler for NativeApplication {
         while gtk::events_pending() {
             gtk::main_iteration_do(false);
         }
-        if self.options.proof && self.started_at.elapsed() > Duration::from_secs(180) {
+        if self.options.proof && self.started_at.elapsed() > Duration::from_secs(300) {
             self.fail(
                 event_loop,
                 format!("native renderer proof timed out: {:?}", self.proof),

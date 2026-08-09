@@ -2,7 +2,9 @@
 """Focus Dagger and exercise real X11 diagnostic toggles plus Return."""
 
 import ctypes
+import sys
 import time
+from pathlib import Path
 
 
 Display = ctypes.c_void_p
@@ -117,6 +119,26 @@ display = x11.XOpenDisplay(None)
 if not display:
     raise SystemExit("XOpenDisplay failed")
 try:
+    if len(sys.argv) != 2:
+        raise SystemExit("usage: x11-send-dagger-proof-input.py PROOF_LOG")
+    proof_log = Path(sys.argv[1])
+
+    def marker_count(marker):
+        try:
+            return proof_log.read_text(errors="replace").count(marker)
+        except FileNotFoundError:
+            return 0
+
+    def wait_for_marker(marker, occurrence, timeout=60.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if marker_count(marker) >= occurrence:
+                return
+            time.sleep(0.05)
+        raise SystemExit(
+            f"timed out waiting for proof marker {marker!r} occurrence {occurrence}"
+        )
+
     deadline = time.monotonic() + 5.0
     window = None
     while window is None and time.monotonic() < deadline:
@@ -187,33 +209,45 @@ try:
     x11.XFlush(display)
     time.sleep(0.3)
     print(f"DAGGER_X11_SURFACE_CLICK_OK x={root_x.value} y={root_y.value}")
-    def key_cycle(keysym, label, hold=1.0, settle=1.0):
+    release_occurrence = 0
+
+    def key_cycle(keysym, label, marker, occurrence):
         keycode = x11.XKeysymToKeycode(display, keysym)
         if not keycode:
             raise SystemExit(f"XKeysymToKeycode({label}) failed")
         if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
             raise SystemExit(f"XTest {label} key-down injection failed")
         x11.XFlush(display)
-        time.sleep(hold)
+        wait_for_marker(marker, occurrence)
         if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
             raise SystemExit(f"XTest {label} key-up injection failed")
         x11.XFlush(display)
-        time.sleep(settle)
+        return
 
     # Turn both diagnostic families on, off, and on again. The native proof
     # observes renderer receipts for each retained transition and proves that
     # the replacement handle differs from the retired one.
-    for keysym, label in [
-        (ord("g"), "G-on"),
-        (ord("n"), "N-on"),
-        (ord("g"), "G-off"),
-        (ord("n"), "N-off"),
-        (ord("g"), "G-reenabled"),
-        (ord("n"), "N-reenabled"),
-    ]:
-        key_cycle(keysym, label)
+    controls = [
+        (ord("g"), "G-on", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=true", 1),
+        (ord("n"), "N-on", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=true", 1),
+        (ord("g"), "G-off", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=false", 1),
+        (ord("n"), "N-off", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=false", 1),
+        (ord("g"), "G-reenabled", "DAGGER_DIAGNOSTIC_CONTROL kind=patrol enabled=true", 2),
+        (ord("n"), "N-reenabled", "DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled=true", 2),
+    ]
+    for keysym, label, marker, occurrence in controls:
+        release_occurrence += 1
+        key_cycle(keysym, label, marker, occurrence)
+        wait_for_marker("DAGGER_NATIVE_INPUT_RELEASED", release_occurrence)
     print("DAGGER_X11_DIAGNOSTIC_TOGGLES_OK")
 
-    key_cycle(0xFF0D, "Return", hold=3.0, settle=0.25)  # XK_Return
+    release_occurrence += 1
+    key_cycle(
+        0xFF0D,
+        "Return",
+        "DAGGER_NATIVE_ACTION_APPLIED kind=look",
+        1,
+    )  # XK_Return
+    wait_for_marker("DAGGER_NATIVE_INPUT_RELEASED", release_occurrence)
 finally:
     x11.XCloseDisplay(display)
