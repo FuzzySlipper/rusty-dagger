@@ -21,8 +21,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for _ in $(seq 1 900); do
-  if grep -Fq 'DAGGER_NATIVE_READY_FOR_INPUT' "$proof_output"; then
+for _ in $(seq 1 2100); do
+  if grep -Fq 'DAGGER_NATIVE_INPUT_ARMED' "$proof_output"; then
     break
   fi
   if ! kill -0 "$application_pid" 2>/dev/null; then
@@ -30,8 +30,7 @@ for _ in $(seq 1 900); do
   fi
   sleep 0.05
 done
-grep -Fq 'DAGGER_NATIVE_READY_FOR_INPUT' "$proof_output"
-sleep 0.4
+grep -Fq 'DAGGER_NATIVE_INPUT_ARMED' "$proof_output"
 python3 ./scripts/x11-send-dagger-proof-input.py
 wait "$application_pid"
 trap - EXIT

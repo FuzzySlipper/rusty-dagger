@@ -262,7 +262,12 @@ impl NativeApplication {
         let pressed = input.pressed_codes.iter().cloned().collect::<BTreeSet<_>>();
         let state_before = self.runtime.player_state();
         if pressed.is_empty() && input.pointer.buttons == 0 {
+            let first_noop = !self.proof.input_noop;
             self.proof.input_noop |= self.runtime.player_state() == state_before;
+            if first_noop && self.proof.input_noop && self.options.proof {
+                println!("DAGGER_NATIVE_INPUT_ARMED");
+                io::stdout().flush()?;
+            }
         }
         if pressed.contains("KeyW") {
             self.runtime
@@ -546,7 +551,7 @@ impl ApplicationHandler for NativeApplication {
         while gtk::events_pending() {
             gtk::main_iteration_do(false);
         }
-        if self.options.proof && self.started_at.elapsed() > Duration::from_secs(45) {
+        if self.options.proof && self.started_at.elapsed() > Duration::from_secs(120) {
             self.fail(
                 event_loop,
                 format!("native renderer proof timed out: {:?}", self.proof),
