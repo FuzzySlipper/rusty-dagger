@@ -19,9 +19,11 @@
         "magickaPerIntelligence": 1.0
       }
     },
-    "combat": {
-      "attackRange": 2.25,
-      "hitBonus": 35.0,
+      "combat": {
+        "attackRange": 2.25,
+        "attackCooldownSeconds": 0.75,
+        "staminaCost": 10.0,
+        "hitBonus": 35.0,
       "baseDamage": 1.0,
       "damagePerStrength": 0.1
     }

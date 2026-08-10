@@ -606,7 +606,7 @@ mod tests {
         let mut movement = false;
         let mut animation = false;
         for _ in 0..40 {
-            let updates = runtime.tick_encounters(0.1).expect("encounter tick");
+            let updates = runtime.tick_play_session(0.1).expect("encounter tick");
             let frame = diagnostics
                 .tick(
                     0.1,

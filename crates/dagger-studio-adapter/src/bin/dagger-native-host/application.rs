@@ -258,6 +258,22 @@ impl NativeApplication {
                 title.push_str(" DEAD");
             }
         }
+        if let Some(attempt) = readout.combat_attempts.last() {
+            if !attempt.accepted {
+                if attempt.outcome == "cooldown" {
+                    if readout.player_attack_cooldown_remaining > 0.0 {
+                        title.push_str(&format!(
+                            " — COOLDOWN {:.1}s — stamina {:.0}",
+                            readout.player_attack_cooldown_remaining, attempt.stamina_after
+                        ));
+                    } else {
+                        title.push_str(&format!(" — READY — stamina {:.0}", attempt.stamina_after));
+                    }
+                } else {
+                    title.push_str(&format!(" — REJECTED {}", attempt.outcome));
+                }
+            }
+        }
         if let Some(decision) = readout.encounter_decisions.last() {
             if let Some(damage) = decision.damage {
                 title.push_str(&format!(" — {} attacks {:.0}", decision.enemy_name, damage));
@@ -265,7 +281,7 @@ impl NativeApplication {
                 title.push_str(&format!(" — {} {state}", decision.enemy_name));
             }
         }
-        title.push_str(" — Space attack — L Lab — G patrol — N navgrid");
+        title.push_str(" — Space attack — R reset — L Lab — G patrol — N navgrid");
         Ok(title)
     }
 
@@ -351,9 +367,12 @@ impl NativeApplication {
         // Keep a control's falling edge ahead of the next diagnostic batch so
         // constrained hosts cannot latch the Rust semantic edge or dispose
         // the renderer before the physical release is observed.
-        self.pressed_codes
-            .iter()
-            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "KeyL" | "Enter" | "Space"))
+        self.pressed_codes.iter().any(|code| {
+            matches!(
+                code.as_str(),
+                "KeyG" | "KeyN" | "KeyL" | "KeyR" | "Enter" | "Space"
+            )
+        })
     }
 
     fn open_lab(&mut self) -> Result<()> {
@@ -448,10 +467,26 @@ impl NativeApplication {
         if pressed.contains("KeyL") && !self.pressed_codes.contains("KeyL") {
             self.open_lab()?;
         }
+        if pressed.contains("KeyR") && !self.pressed_codes.contains("KeyR") {
+            self.runtime.reset_play_session()?;
+            self.update_camera()?;
+            println!("DAGGER_COMBAT_RESET source=physical-KeyR");
+            io::stdout().flush()?;
+            self.update_window_title()?;
+        }
         if pressed.contains("Space") && !self.pressed_codes.contains("Space") {
             match self.runtime.attack_focused_target() {
                 Ok(readout) => {
-                    if let Some(combat) = readout.combat.last() {
+                    let attempt = readout.combat_attempts.last();
+                    if let Some(attempt) = attempt.filter(|attempt| !attempt.accepted) {
+                        println!(
+                            "DAGGER_COMBAT_REJECTED sequence={} reason={} cooldown={:.2} stamina={:.1}",
+                            attempt.sequence,
+                            attempt.outcome,
+                            attempt.cooldown_before,
+                            attempt.stamina_before,
+                        );
+                    } else if let Some(combat) = readout.combat.last() {
                         println!(
                             "DAGGER_COMBAT_APPLIED sequence={} target={} roll={} total={:.1} defense={:.1} hit={} damage={:.1} health={:.1}->{:.1} died={}",
                             combat.sequence,
@@ -500,8 +535,12 @@ impl NativeApplication {
         self.last_diagnostic_tick = now;
         let pose = self.camera_pose()?;
         let encounter_sequence = self.runtime.encounter_sequence();
-        let encounter_updates = self.runtime.tick_encounters(dt)?;
-        if self.runtime.encounter_sequence() != encounter_sequence {
+        let attack_cooldown_before = self.runtime.player_attack_cooldown_remaining();
+        let encounter_updates = self.runtime.tick_play_session(dt)?;
+        let attack_cooldown_after = self.runtime.player_attack_cooldown_remaining();
+        if self.runtime.encounter_sequence() != encounter_sequence
+            || (attack_cooldown_before > 0.0 && attack_cooldown_after == 0.0)
+        {
             self.update_window_title()?;
         }
         let encounter_positions = self.runtime.encounter_positions();

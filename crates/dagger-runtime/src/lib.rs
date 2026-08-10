@@ -26,10 +26,10 @@ pub use player::{
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
-    ActorGameplayReadout, CombatRecord, ContentEntityReadout, ContentError, ContentLiveReadout,
-    DaggerRuntime, EnemyReferenceReadout, EnemyStatsReadout, ExperimentEvaluation,
-    ExperimentReadout, LiveActorResources, RuntimeError, SessionCalculationRecord,
-    CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
+    ActorGameplayReadout, CombatAttemptRecord, CombatRecord, ContentEntityReadout, ContentError,
+    ContentLiveReadout, DaggerRuntime, EnemyReferenceReadout, EnemyStatsReadout,
+    ExperimentEvaluation, ExperimentReadout, LiveActorResources, RuntimeError,
+    SessionCalculationRecord, CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
 };
 
 #[cfg(test)]
@@ -171,6 +171,9 @@ mod tests {
     fn browses_real_enemy_identity_and_jumps_using_live_runtime_state() {
         let mut runtime =
             DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        runtime
+            .install_encounter_navigation_json(NAVGRID)
+            .expect("install committed live navigation");
         let spawn = runtime.player_position().expect("spawn position");
         let initial = runtime
             .experiment_readout()
@@ -186,6 +189,7 @@ mod tests {
         assert_eq!(thief.reference.mobile_name, "Thief");
         assert_eq!(thief.reference.texture_archive, 484);
         assert_eq!(thief.live.resources, None);
+        let live_thief = thief.live.position;
         let rat = initial
             .content
             .iter()
@@ -196,8 +200,6 @@ mod tests {
         assert_eq!(rat_resources.current_health, 3.0);
         assert_eq!(rat_resources.current_stamina, 10.0);
 
-        let live_thief = [11.25, 33.025, -6.75];
-        runtime.sync_content_live_positions([(2001, live_thief), (999_999, [0.0; 3])]);
         let jumped = runtime.jump_to_content(2001).expect("jump beside thief");
         assert_eq!(jumped.focused_content_id, Some(2001));
         let focused = jumped
@@ -251,6 +253,15 @@ mod tests {
         assert!(record.resolution.died);
         assert_eq!(record.resolution.health_before, 3.0);
         assert_eq!(record.resolution.health_after, 0.0);
+        let accepted = attacked
+            .combat_attempts
+            .last()
+            .expect("accepted physical attack attempt");
+        assert!(accepted.accepted);
+        assert_eq!(accepted.outcome, "killed");
+        assert_eq!(accepted.stamina_before, 90.0);
+        assert_eq!(accepted.stamina_after, 80.0);
+        assert_eq!(accepted.cooldown_after, 0.75);
         let rat = attacked
             .content
             .iter()
@@ -258,12 +269,29 @@ mod tests {
             .expect("attacked Rat readout");
         assert_eq!(rat.live.resources.unwrap().current_health, 0.0);
 
+        let rejected = runtime
+            .attack_focused_target()
+            .expect("cooldown rejection remains readable");
+        let rejected = rejected
+            .combat_attempts
+            .last()
+            .expect("cooldown attempt record");
+        assert!(!rejected.accepted);
+        assert_eq!(rejected.outcome, "cooldown");
+        assert_eq!(rejected.stamina_before, rejected.stamina_after);
+        for _ in 0..3 {
+            runtime
+                .tick_play_session(0.25)
+                .expect("advance authoritative attack cooldown");
+        }
         assert!(matches!(
             runtime.attack_focused_target(),
             Err(RuntimeError::Content(super::ContentError::TargetDead(2007)))
         ));
         let reset = runtime.reset_play_session().expect("reset combat run");
         assert!(reset.combat.is_empty());
+        assert!(reset.combat_attempts.is_empty());
+        assert_eq!(reset.player_attack_cooldown_remaining, 0.0);
         assert_eq!(
             reset
                 .content
@@ -276,6 +304,26 @@ mod tests {
                 .current_health,
             3.0
         );
+
+        experiment["player"]["combat"]["staminaCost"] = serde_json::Value::from(100.0);
+        runtime
+            .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
+            .expect("apply exhausting profile");
+        runtime
+            .jump_to_content(2007)
+            .expect("jump beside Rat with exhausting profile");
+        let exhausted = runtime
+            .attack_focused_target()
+            .expect("stamina rejection remains readable");
+        assert!(exhausted.combat.is_empty());
+        let exhausted = exhausted
+            .combat_attempts
+            .last()
+            .expect("insufficient-stamina attempt");
+        assert!(!exhausted.accepted);
+        assert_eq!(exhausted.outcome, "insufficient stamina");
+        assert_eq!(exhausted.stamina_before, 90.0);
+        assert_eq!(exhausted.stamina_after, 90.0);
     }
 
     #[test]
@@ -288,7 +336,7 @@ mod tests {
 
         runtime.jump_to_content(2007).expect("jump beside Rat");
         for _ in 0..20 {
-            runtime.tick_encounters(0.1).expect("Rat encounter tick");
+            runtime.tick_play_session(0.1).expect("Rat encounter tick");
             if runtime
                 .experiment_readout()
                 .unwrap()
@@ -320,7 +368,7 @@ mod tests {
             .expect("jump beside Skeletal Warrior");
         for _ in 0..20 {
             runtime
-                .tick_encounters(0.1)
+                .tick_play_session(0.1)
                 .expect("Skeletal Warrior encounter tick");
             if runtime
                 .experiment_readout()
@@ -355,7 +403,7 @@ mod tests {
             .jump_to_content(2007)
             .expect("jump beside quiet Rat");
         for _ in 0..20 {
-            runtime.tick_encounters(0.1).expect("quiet Rat tick");
+            runtime.tick_play_session(0.1).expect("quiet Rat tick");
         }
         let quiet = runtime.experiment_readout().expect("quiet Rat readout");
         assert_eq!(quiet.player_stats.current_health, 85.0);

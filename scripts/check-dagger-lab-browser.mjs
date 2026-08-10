@@ -52,8 +52,9 @@ try {
   }
   const jumpPosition = await page.getByTestId('player-position').innerText();
   assert.notEqual(jumpPosition, spawnPosition);
-  await page.getByTestId('reset').click();
+  execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'r'], { stdio: 'inherit' });
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  assert.equal(await page.getByTestId('combat-count').innerText(), '0 ATTACKS');
   await page.getByTestId('content-filter').fill('rat');
   await page.getByTestId('content-2007').click();
   await page.getByTestId('content-name').filter({ hasText: 'Rat' }).waitFor();
@@ -92,6 +93,8 @@ try {
   await page.getByTestId('rat-strength').fill('20');
   await page.getByTestId('rat-base-health').fill('4');
   await page.getByTestId('attack-range').fill('4');
+  await page.getByTestId('player-attack-cooldown').fill('4');
+  await page.getByTestId('player-stamina-cost').fill('5');
   await page.getByTestId('hit-bonus').fill('-100');
   await page.getByTestId('rat-defense').fill('200');
   await page.getByTestId('enemy-detection-range').fill('0.5');
@@ -108,7 +111,15 @@ try {
   await page.getByTestId('rat-max-stamina').filter({ hasText: '15.00' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
   const profileAMove = await resetAndPhysicallyMove(page, spawnPosition);
-  const profileACombat = await jumpAndPhysicallyAttack(page, 2007, spawnPosition, 'MISS', '5.00 → 5.00');
+  const profileACombat = await jumpAndPhysicallyAttack(
+    page,
+    2007,
+    spawnPosition,
+    'MISS',
+    '5.00 → 5.00',
+    '100.00 → 95.00',
+    true,
+  );
 
   // Profile B starts as a duplicate, is renamed and edited in place, then is
   // admitted and physically played as a meaningfully different alternative.
@@ -127,6 +138,8 @@ try {
   await page.getByTestId('rat-health-per-endurance').fill('0.3');
   await page.getByTestId('hit-bonus').fill('100');
   await page.getByTestId('base-damage').fill('10');
+  await page.getByTestId('player-attack-cooldown').fill('0.2');
+  await page.getByTestId('player-stamina-cost').fill('20');
   await page.getByTestId('rat-defense').fill('0');
   await page.getByTestId('rat-armor').fill('0');
   await page.getByTestId('content-filter').fill('skeletal');
@@ -147,7 +160,15 @@ try {
   await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
   const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
   await page.getByTestId('content-filter').fill('rat');
-  const profileBCombat = await jumpAndPhysicallyAttack(page, 2007, spawnPosition, 'HIT', '7.00 → 0.00');
+  const profileBCombat = await jumpAndPhysicallyAttack(
+    page,
+    2007,
+    spawnPosition,
+    'HIT',
+    '7.00 → 0.00',
+    '120.00 → 100.00',
+    false,
+  );
   await page.getByTestId('content-filter').fill('skeletal');
   const skeletonEncounter = await jumpAndObserveEnemyAttack(page, 2000, spawnPosition, 12);
 
@@ -270,7 +291,15 @@ async function jumpAndPhysicallyMove(page, contentId, spawnPosition) {
   return move;
 }
 
-async function jumpAndPhysicallyAttack(page, contentId, spawnPosition, outcome, healthText) {
+async function jumpAndPhysicallyAttack(
+  page,
+  contentId,
+  spawnPosition,
+  outcome,
+  healthText,
+  staminaText,
+  expectCooldownRejection,
+) {
   await page.getByTestId(`content-${contentId}`).click();
   await page.getByTestId('jump-content').click();
   await page.waitForFunction(
@@ -286,14 +315,35 @@ async function jumpAndPhysicallyAttack(page, contentId, spawnPosition, outcome, 
   await record.filter({ hasText: outcome }).waitFor();
   await record.filter({ hasText: healthText }).waitFor();
   const text = await record.innerText();
+  const acceptedAttempt = page.getByTestId('combat-attempt-1');
+  await acceptedAttempt.filter({ hasText: 'ACCEPTED' }).waitFor();
+  await acceptedAttempt.filter({ hasText: staminaText }).waitFor();
+  const acceptedAttemptText = await acceptedAttempt.innerText();
+  let cooldownRejection;
+  if (expectCooldownRejection) {
+    execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'space', 'Rat H', 'COOLDOWN'], {
+      stdio: 'inherit',
+    });
+    const rejectedAttempt = page.getByTestId('combat-attempt-2');
+    await rejectedAttempt.filter({ hasText: 'REJECTED · cooldown' }).waitFor({ timeout: 10_000 });
+    await rejectedAttempt.filter({ hasText: 'stamina 95.00 → 95.00' }).waitFor();
+    cooldownRejection = await rejectedAttempt.innerText();
+    assert.equal(await page.getByTestId('combat-count').innerText(), '1 ATTACKS');
+    await page.screenshot({ path: `${output}/combat-cooldown-desktop.png`, fullPage: true });
+  }
   assert.match(text, /d100 \d+ .* defense/i);
   assert.match(text, /line of sight clear/i);
   if (outcome === 'HIT') {
     await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
   }
-  await page.getByTestId('reset').click();
+  execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'r'], { stdio: 'inherit' });
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
-  return text;
+  assert.equal(await page.getByTestId('combat-count').innerText(), '0 ATTACKS');
+  return {
+    resolution: text,
+    acceptedAttempt: acceptedAttemptText,
+    cooldownRejection,
+  };
 }
 
 async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage) {

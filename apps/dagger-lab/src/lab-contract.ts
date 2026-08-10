@@ -34,6 +34,8 @@ export interface EnemyExperimentDraft {
 
 export interface PlayerCombatTerms {
   readonly attackRange: number;
+  readonly attackCooldownSeconds: number;
+  readonly staminaCost: number;
   readonly hitBonus: number;
   readonly baseDamage: number;
   readonly damagePerStrength: number;
@@ -41,6 +43,8 @@ export interface PlayerCombatTerms {
 
 export interface PlayerCombatTermsDraft {
   attackRange: number;
+  attackCooldownSeconds: number;
+  staminaCost: number;
   hitBonus: number;
   baseDamage: number;
   damagePerStrength: number;
@@ -164,6 +168,8 @@ export interface ExperimentReadout {
   readonly playerYawDegrees: number;
   readonly calculations: readonly CalculationRecord[];
   readonly combat: readonly CombatRecord[];
+  readonly combatAttempts: readonly CombatAttemptRecord[];
+  readonly playerAttackCooldownRemaining: number;
   readonly encounterDecisions: readonly EncounterDecisionRecord[];
   readonly content: readonly ContentEntityReadout[];
   readonly focusedContentId: number | null;
@@ -207,6 +213,19 @@ export interface CombatRecord {
   readonly healthBefore: number;
   readonly healthAfter: number;
   readonly died: boolean;
+}
+
+export interface CombatAttemptRecord {
+  readonly sequence: number;
+  readonly targetId: number | null;
+  readonly accepted: boolean;
+  readonly outcome: string;
+  readonly cooldownBefore: number;
+  readonly cooldownAfter: number;
+  readonly cooldownDuration: number;
+  readonly staminaBefore: number;
+  readonly staminaCost: number;
+  readonly staminaAfter: number;
 }
 
 export interface ContentEntityReadout {
