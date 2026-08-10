@@ -26,10 +26,10 @@ pub use player::{
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
-    ActorGameplayReadout, ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
-    EnemyReferenceReadout, EnemyStatsReadout, ExperimentEvaluation, ExperimentReadout,
-    LiveActorResources, RuntimeError, SessionCalculationRecord, CALCULATION_HISTORY_LIMIT,
-    STARTER_EXPERIMENT_JSON,
+    ActorGameplayReadout, CombatRecord, ContentEntityReadout, ContentError, ContentLiveReadout,
+    DaggerRuntime, EnemyReferenceReadout, EnemyStatsReadout, ExperimentEvaluation,
+    ExperimentReadout, LiveActorResources, RuntimeError, SessionCalculationRecord,
+    CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
 };
 
 #[cfg(test)]
@@ -224,6 +224,57 @@ mod tests {
             .expect("reset after content jump");
         assert_eq!(reset.focused_content_id, None);
         assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
+    }
+
+    #[test]
+    fn fights_a_real_privateers_hold_rat_and_resets_death_authoritatively() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let mut experiment: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        experiment["player"]["combat"]["hitBonus"] = serde_json::Value::from(100.0);
+        experiment["player"]["combat"]["baseDamage"] = serde_json::Value::from(10.0);
+        experiment["enemies"][0]["combat"]["armor"] = serde_json::Value::from(0.0);
+        runtime
+            .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
+            .expect("apply lethal profile");
+        runtime.jump_to_content(2007).expect("jump beside real Rat");
+
+        let attacked = runtime
+            .attack_focused_target()
+            .expect("attack focused real Rat");
+        let record = attacked.combat.last().expect("semantic combat record");
+        assert_eq!(record.target_id, 2007);
+        assert!(record.line_of_sight_clear);
+        assert!(record.resolution.hit);
+        assert!(record.resolution.died);
+        assert_eq!(record.resolution.health_before, 3.0);
+        assert_eq!(record.resolution.health_after, 0.0);
+        let rat = attacked
+            .content
+            .iter()
+            .find(|entity| entity.id == 2007)
+            .expect("attacked Rat readout");
+        assert_eq!(rat.live.resources.unwrap().current_health, 0.0);
+
+        assert!(matches!(
+            runtime.attack_focused_target(),
+            Err(RuntimeError::Content(super::ContentError::TargetDead(2007)))
+        ));
+        let reset = runtime.reset_play_session().expect("reset combat run");
+        assert!(reset.combat.is_empty());
+        assert_eq!(
+            reset
+                .content
+                .iter()
+                .find(|entity| entity.id == 2007)
+                .unwrap()
+                .live
+                .resources
+                .unwrap()
+                .current_health,
+            3.0
+        );
     }
 
     #[test]

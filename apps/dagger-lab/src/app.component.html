@@ -155,12 +155,24 @@
           [(ngModel)]="draft.player.stats.resources.magickaPerIntelligence" (ngModelChange)="markDirty()" /></label>
       </div>
 
+      <p class="kicker field-kicker">Melee terms</p>
+      <div class="formula">
+        <code>hit = d100 + bonus ≥ defense</code>
+        <code>damage = max(0, base + strength × rate − armor)</code>
+      </div>
+      <div class="field-grid">
+        <label><span>Attack range</span><input data-testid="attack-range" type="number" min="0.1" max="10" step="0.05" [(ngModel)]="draft.player.combat.attackRange" (ngModelChange)="markDirty()" /></label>
+        <label><span>Hit bonus</span><input data-testid="hit-bonus" type="number" min="-100" max="100" step="1" [(ngModel)]="draft.player.combat.hitBonus" (ngModelChange)="markDirty()" /></label>
+        <label><span>Base damage</span><input data-testid="base-damage" type="number" min="0" step="0.5" [(ngModel)]="draft.player.combat.baseDamage" (ngModelChange)="markDirty()" /></label>
+        <label><span>Damage / strength</span><input data-testid="damage-per-strength" type="number" min="0" step="0.05" [(ngModel)]="draft.player.combat.damagePerStrength" (ngModelChange)="markDirty()" /></label>
+      </div>
+
       <div class="actions">
         <button data-testid="apply" class="primary" [disabled]="pending" (click)="apply()">Apply experiment</button>
         <button data-testid="reset" [disabled]="pending" (click)="reset()">Reset run</button>
         <button data-testid="play" class="play" [disabled]="pending" (click)="resetAndPlay()">Reset &amp; play</button>
       </div>
-      <p class="play-note">Reset &amp; play restores the start and focuses the native game. Use W/A/S/D; position below is live Rust readback.</p>
+      <p class="play-note">Reset &amp; play restores the start and focuses the native game. Use W/A/S/D and Space to attack; position and combat below are live Rust readback.</p>
     </article>
 
     <article class="panel editor rat-rules" *ngIf="ratDraft() as rat" data-testid="rat-rules">
@@ -184,7 +196,14 @@
         <label><span>Base magicka</span><input data-testid="rat-base-magicka" type="number" min="0" step="1" [(ngModel)]="rat.resources.baseMagicka" (ngModelChange)="markDirty()" /></label>
         <label><span>Magicka / intelligence</span><input data-testid="rat-magicka-per-intelligence" type="number" min="0" step="0.1" [(ngModel)]="rat.resources.magickaPerIntelligence" (ngModelChange)="markDirty()" /></label>
       </div>
-      <p class="play-note">Apply the whole profile above, jump beside a Rat in the content browser, and compare the admitted live resources while moving in the native game.</p>
+      <ng-container *ngIf="ratExperimentDraft() as ratExperiment">
+        <p class="kicker field-kicker">Melee defense</p>
+        <div class="field-grid">
+          <label><span>Defense</span><input data-testid="rat-defense" type="number" min="0" max="200" step="1" [(ngModel)]="ratExperiment.combat.defense" (ngModelChange)="markDirty()" /></label>
+          <label><span>Armor</span><input data-testid="rat-armor" type="number" min="0" step="0.5" [(ngModel)]="ratExperiment.combat.armor" (ngModelChange)="markDirty()" /></label>
+        </div>
+      </ng-container>
+      <p class="play-note">Apply the whole profile, jump beside a Rat, then attack with Space in the native game. This page follows the authoritative health and combat trace.</p>
     </article>
 
     <article class="panel worksheet">
@@ -259,6 +278,28 @@
           <code>{{ calculation.expression }}</code>
           <div class="derived-inputs"><small *ngFor="let input of calculation.inputs">{{ input.name }} = {{ format(input.value) }}</small></div>
           <ol><li *ngFor="let step of calculation.steps">{{ step.operation }} · {{ format(step.left) }} · {{ format(step.right) }} → {{ format(step.result) }}</li></ol>
+        </article>
+      </div>
+    </article>
+
+    <article class="panel combat" *ngIf="readout as live" data-testid="combat-panel">
+      <div class="panel-heading">
+        <div><p class="kicker">Physical play session</p><h2>Melee resolution</h2></div>
+        <span class="schema" data-testid="combat-count">{{ live.combat.length }} attacks</span>
+      </div>
+      <p class="muted" *ngIf="live.combat.length === 0">Jump beside a Rat and press Space in the native game. Range, line of sight, rolls, damage, and health mutation stay in Rust.</p>
+      <div class="derived-grid combat-records" *ngIf="live.combat.length > 0">
+        <article *ngFor="let combat of live.combat" [attr.data-testid]="'combat-' + combat.sequence">
+          <span>#{{ combat.sequence }} · {{ combat.actor }} → {{ combat.target }}</span>
+          <strong>{{ combat.hit ? 'HIT' : 'MISS' }} · {{ format(combat.finalDamage) }} damage</strong>
+          <code>d100 {{ combat.rawRoll }} + {{ format(combat.hitBonus) }} = {{ format(combat.attackTotal) }} vs defense {{ format(combat.targetDefense) }}</code>
+          <div class="derived-inputs">
+            <small>range {{ format(combat.range) }} / {{ format(combat.attackRange) }}</small>
+            <small>line of sight {{ combat.lineOfSightClear ? 'clear' : 'blocked' }}</small>
+            <small>base {{ format(combat.baseDamage) }} + STR {{ format(combat.strength) }} × {{ format(combat.damagePerStrength) }}</small>
+            <small>armor {{ format(combat.armor) }}</small>
+          </div>
+          <p data-testid="combat-health">Health {{ format(combat.healthBefore) }} → {{ format(combat.healthAfter) }} <strong *ngIf="combat.died">· DEAD</strong></p>
         </article>
       </div>
     </article>

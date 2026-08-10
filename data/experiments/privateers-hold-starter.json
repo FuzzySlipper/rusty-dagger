@@ -18,6 +18,12 @@
         "baseMagicka": 0.0,
         "magickaPerIntelligence": 1.0
       }
+    },
+    "combat": {
+      "attackRange": 2.25,
+      "hitBonus": 35.0,
+      "baseDamage": 1.0,
+      "damagePerStrength": 0.1
     }
   },
   "enemies": [
@@ -37,6 +43,10 @@
           "baseMagicka": 0.0,
           "magickaPerIntelligence": 0.0
         }
+      },
+      "combat": {
+        "defense": 50.0,
+        "armor": 1.0
       }
     }
   ]

@@ -85,6 +85,9 @@ try {
   await page.getByTestId('endurance').fill('50');
   await page.getByTestId('rat-strength').fill('20');
   await page.getByTestId('rat-base-health').fill('4');
+  await page.getByTestId('attack-range').fill('4');
+  await page.getByTestId('hit-bonus').fill('-100');
+  await page.getByTestId('rat-defense').fill('200');
   await page.getByTestId('profile-name').fill('Measured pace');
   await page.getByTestId('save-as-profile').click();
   await page.getByTestId('profile-count').filter({ hasText: '2 profiles' }).waitFor();
@@ -96,7 +99,7 @@ try {
   await page.getByTestId('rat-max-stamina').filter({ hasText: '15.00' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
   const profileAMove = await resetAndPhysicallyMove(page, spawnPosition);
-  const profileAContentMove = await jumpAndPhysicallyMove(page, 2007, spawnPosition);
+  const profileACombat = await jumpAndPhysicallyAttack(page, 2007, spawnPosition, 'MISS', '5.00 → 5.00');
 
   // Profile B starts as a duplicate, is renamed and edited in place, then is
   // admitted and physically played as a meaningfully different alternative.
@@ -113,6 +116,10 @@ try {
   await page.getByTestId('endurance').fill('70');
   await page.getByTestId('rat-strength').fill('30');
   await page.getByTestId('rat-health-per-endurance').fill('0.3');
+  await page.getByTestId('hit-bonus').fill('100');
+  await page.getByTestId('base-damage').fill('10');
+  await page.getByTestId('rat-defense').fill('0');
+  await page.getByTestId('rat-armor').fill('0');
   await page.getByTestId('save-profile').click();
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
@@ -124,6 +131,7 @@ try {
   await page.getByTestId('rat-derived-traces').filter({ hasText: 'healthPerEndurance = 0.30' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
   const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
+  const profileBCombat = await jumpAndPhysicallyAttack(page, 2007, spawnPosition, 'HIT', '7.00 → 0.00');
 
   // Closing the companion tab must not create, reset, or dispose the native
   // Rust session. Reopen it in the same browser profile and reattach to the
@@ -199,7 +207,7 @@ try {
   await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
 
   console.log(
-    `DAGGER_LAB_BROWSER_OK lifecycle=tab-closed-reopened/same-native-session content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth profileAContentMove=${JSON.stringify(profileAContentMove)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_LAB_BROWSER_OK lifecycle=tab-closed-reopened/same-native-session content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -242,6 +250,32 @@ async function jumpAndPhysicallyMove(page, contentId, spawnPosition) {
   await page.getByTestId('reset').click();
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   return move;
+}
+
+async function jumpAndPhysicallyAttack(page, contentId, spawnPosition, outcome, healthText) {
+  await page.getByTestId(`content-${contentId}`).click();
+  await page.getByTestId('jump-content').click();
+  await page.waitForFunction(
+    (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
+    contentId,
+    { timeout: 10_000 },
+  );
+  execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'space', 'Rat H', outcome], {
+    stdio: 'inherit',
+  });
+  await page.getByTestId('combat-count').filter({ hasText: '1 attack' }).waitFor({ timeout: 10_000 });
+  const record = page.getByTestId('combat-1');
+  await record.filter({ hasText: outcome }).waitFor();
+  await record.filter({ hasText: healthText }).waitFor();
+  const text = await record.innerText();
+  assert.match(text, /d100 \d+ .* defense/i);
+  assert.match(text, /line of sight clear/i);
+  if (outcome === 'HIT') {
+    await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
+  }
+  await page.getByTestId('reset').click();
+  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  return text;
 }
 
 async function physicallyMove(page, resetPosition, keys = ['w', 'w', 'w'], expectedTitle) {

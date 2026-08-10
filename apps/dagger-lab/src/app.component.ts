@@ -13,6 +13,7 @@ import {
   AdmittedActorStats,
   CalculationRecord,
   ContentEntityReadout,
+  EnemyExperimentDraft,
   ExperimentDocument,
   ExperimentEvaluation,
   ExperimentReadout,
@@ -36,6 +37,7 @@ const EMPTY_DOCUMENT: ExperimentDocument = {
         magickaPerIntelligence: 1,
       },
     },
+    combat: { attackRange: 2.25, hitBonus: 35, baseDamage: 1, damagePerStrength: 0.1 },
   },
   enemies: [
     {
@@ -51,6 +53,7 @@ const EMPTY_DOCUMENT: ExperimentDocument = {
           magickaPerIntelligence: 0,
         },
       },
+      combat: { defense: 50, armor: 1 },
     },
   ],
 };
@@ -291,6 +294,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ratDraft(): ActorStatsDraft | undefined {
     return this.draft.enemies.find((enemy) => enemy.mobileId === 0)?.stats;
+  }
+
+  ratExperimentDraft(): EnemyExperimentDraft | undefined {
+    return this.draft.enemies.find((enemy) => enemy.mobileId === 0);
   }
 
   ratStats(): AdmittedActorStats | undefined {

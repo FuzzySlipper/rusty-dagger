@@ -7,7 +7,8 @@ import time
 
 key = sys.argv[1].lower() if len(sys.argv) > 1 else "w"
 expected_title = sys.argv[2] if len(sys.argv) > 2 else None
-if key not in {"w", "a", "s", "d", "l"}:
+expected_after_title = sys.argv[3] if len(sys.argv) > 3 else None
+if key not in {"w", "a", "s", "d", "l", "space"}:
     raise SystemExit(f"unsupported Dagger key: {key}")
 
 Display = ctypes.c_void_p
@@ -155,7 +156,8 @@ try:
         raise SystemExit("physical pointer-up failed")
     x11.XSync(display, 0)
     time.sleep(0.20)
-    keycode = x11.XKeysymToKeycode(display, ord(key))
+    keysym = 0x20 if key == "space" else ord(key)
+    keycode = x11.XKeysymToKeycode(display, keysym)
     if not keycode:
         raise SystemExit(f"XKeysymToKeycode({key}) failed")
     if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
@@ -165,6 +167,12 @@ try:
     # one webview readback. Keep this a real physical hold long enough for the
     # native host to observe it under load.
     time.sleep(0.75)
+    final_title = window_name(display, window)
+    if expected_after_title is not None and expected_after_title not in final_title:
+        raise SystemExit(
+            f"Dagger native title does not contain {expected_after_title!r} after input: "
+            f"{final_title!r}"
+        )
     if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
         raise SystemExit(f"physical {key.upper()} key-up injection failed")
     x11.XSync(display, 0)
@@ -172,7 +180,13 @@ try:
     # physical-input readback for this falling edge. In particular, a reset
     # followed by a late movement readout would immediately leave the spawn.
     time.sleep(0.75)
-    marker = "DAGGER_LAB_PHYSICAL_OPEN_OK" if key == "l" else "DAGGER_LAB_PHYSICAL_MOVE_OK"
-    print(f"{marker} key={key.upper()} window={window} title={title!r}")
+    marker = (
+        "DAGGER_LAB_PHYSICAL_OPEN_OK"
+        if key == "l"
+        else "DAGGER_LAB_PHYSICAL_ATTACK_OK"
+        if key == "space"
+        else "DAGGER_LAB_PHYSICAL_MOVE_OK"
+    )
+    print(f"{marker} key={key.upper()} window={window} title={final_title!r}")
 finally:
     x11.XCloseDisplay(display)
