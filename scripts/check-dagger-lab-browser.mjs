@@ -307,9 +307,7 @@ async function jumpAndPhysicallyAttack(
     contentId,
     { timeout: 10_000 },
   );
-  execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'space', 'Rat H', outcome], {
-    stdio: 'inherit',
-  });
+  runPhysicalAttack('Rat H', outcome);
   await page.getByTestId('combat-count').filter({ hasText: '1 attack' }).waitFor({ timeout: 10_000 });
   const record = page.getByTestId('combat-1');
   await record.filter({ hasText: outcome }).waitFor();
@@ -321,9 +319,7 @@ async function jumpAndPhysicallyAttack(
   const acceptedAttemptText = await acceptedAttempt.innerText();
   let cooldownRejection;
   if (expectCooldownRejection) {
-    execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'space', 'Rat H', 'COOLDOWN'], {
-      stdio: 'inherit',
-    });
+    runPhysicalAttack('Rat H', 'COOLDOWN');
     const rejectedAttempt = page.getByTestId('combat-attempt-2');
     await rejectedAttempt.filter({ hasText: 'REJECTED · cooldown' }).waitFor({ timeout: 10_000 });
     await rejectedAttempt.filter({ hasText: 'stamina 95.00 → 95.00' }).waitFor();
@@ -344,6 +340,24 @@ async function jumpAndPhysicallyAttack(
     acceptedAttempt: acceptedAttemptText,
     cooldownRejection,
   };
+}
+
+function runPhysicalAttack(expectedTitle, outcome) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      execFileSync(
+        'python3',
+        ['scripts/x11-send-dagger-move.py', 'space', expectedTitle, outcome],
+        { stdio: 'inherit' },
+      );
+      return;
+    } catch (error) {
+      if (attempt === 3) {
+        throw error;
+      }
+      console.error(`physical Space action not observed after attempt ${attempt}; retrying`);
+    }
+  }
 }
 
 async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage) {
