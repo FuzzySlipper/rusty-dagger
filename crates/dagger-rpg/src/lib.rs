@@ -29,6 +29,7 @@ pub struct ExperimentDocument {
 pub struct PlayerExperiment {
     pub movement: PlayerMovementExperiment,
     pub stats: ActorStatsExperiment,
+    pub combat: PlayerCombatExperiment,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -47,6 +48,25 @@ pub struct PlayerMovementExperiment {
 pub struct EnemyExperiment {
     pub mobile_id: u8,
     pub stats: ActorStatsExperiment,
+    pub combat: EnemyCombatExperiment,
+}
+
+/// The editable terms for the first player melee experiment. Rust owns the
+/// closed hit and damage formula shapes; authoring changes only named inputs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PlayerCombatExperiment {
+    pub attack_range: f32,
+    pub hit_bonus: f32,
+    pub base_damage: f32,
+    pub damage_per_strength: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct EnemyCombatExperiment {
+    pub defense: f32,
+    pub armor: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -93,6 +113,7 @@ pub struct AdmittedExperiment {
 pub struct AdmittedPlayerValues {
     pub move_speed_units_per_second: f32,
     pub stats: AdmittedActorValues,
+    pub combat: PlayerCombatExperiment,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -100,6 +121,42 @@ pub struct AdmittedPlayerValues {
 pub struct AdmittedEnemyValues {
     pub mobile_id: u8,
     pub stats: AdmittedActorValues,
+    pub combat: EnemyCombatExperiment,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct MeleeResolutionInput<'a> {
+    pub actor: &'a str,
+    pub target: &'a str,
+    pub raw_roll: u8,
+    pub player: &'a AdmittedPlayerValues,
+    pub enemy: &'a AdmittedEnemyValues,
+    pub target_health_before: f32,
+}
+
+/// Designer-facing semantic record for one legal melee attack. Range and
+/// collision admission are runtime concerns and are recorded alongside this
+/// result by the Dagger runtime.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeleeResolutionRecord {
+    pub actor: String,
+    pub action: String,
+    pub target: String,
+    pub raw_roll: u8,
+    pub hit_bonus: f32,
+    pub attack_total: f32,
+    pub target_defense: f32,
+    pub hit: bool,
+    pub base_damage: f32,
+    pub strength: f32,
+    pub damage_per_strength: f32,
+    pub damage_before_armor: f32,
+    pub armor: f32,
+    pub final_damage: f32,
+    pub health_before: f32,
+    pub health_after: f32,
+    pub died: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -178,6 +235,34 @@ impl ExperimentDocument {
             MIN_MOVE_SPEED_UNITS_PER_SECOND,
             MAX_MOVE_SPEED_UNITS_PER_SECOND,
         )?;
+        for (path, value, minimum, maximum) in [
+            (
+                "player.combat.attackRange",
+                self.player.combat.attack_range,
+                0.1,
+                10.0,
+            ),
+            (
+                "player.combat.hitBonus",
+                self.player.combat.hit_bonus,
+                -100.0,
+                100.0,
+            ),
+            (
+                "player.combat.baseDamage",
+                self.player.combat.base_damage,
+                0.0,
+                MAX_STAT_INPUT,
+            ),
+            (
+                "player.combat.damagePerStrength",
+                self.player.combat.damage_per_strength,
+                0.0,
+                100.0,
+            ),
+        ] {
+            finite_in_range(path, value, minimum, maximum)?;
+        }
         if self.enemies.len() > MAX_ENEMY_DEFINITIONS {
             return Err(ExperimentError::InvalidValue {
                 path: "enemies".to_string(),
@@ -196,6 +281,18 @@ impl ExperimentDocument {
                     ),
                 });
             }
+            finite_in_range(
+                format!("enemies[{index}].combat.defense"),
+                enemy.combat.defense,
+                0.0,
+                200.0,
+            )?;
+            finite_in_range(
+                format!("enemies[{index}].combat.armor"),
+                enemy.combat.armor,
+                0.0,
+                MAX_STAT_INPUT,
+            )?;
         }
 
         let player_stats = admit_actor_stats("player", "player.stats", &self.player.stats)?;
@@ -206,6 +303,7 @@ impl ExperimentDocument {
             .map(|(index, enemy)| {
                 Ok(AdmittedEnemyValues {
                     mobile_id: enemy.mobile_id,
+                    combat: enemy.combat.clone(),
                     stats: admit_actor_stats(
                         &format!("enemy.mobile{}", enemy.mobile_id),
                         &format!("enemies[{index}].stats"),
@@ -218,6 +316,7 @@ impl ExperimentDocument {
             player: AdmittedPlayerValues {
                 move_speed_units_per_second: self.player.movement.speed_units_per_second,
                 stats: player_stats,
+                combat: self.player.combat.clone(),
             },
             enemies,
             document: self,
@@ -227,6 +326,43 @@ impl ExperimentDocument {
 
 pub fn admit_json(document: &str) -> Result<AdmittedExperiment, ExperimentError> {
     ExperimentDocument::from_json(document)?.admit()
+}
+
+/// Resolve one already-admitted melee attempt. The roll is supplied by the
+/// runtime so this semantic authority stays host-neutral and easy to exercise
+/// with ordinary formula examples.
+pub fn resolve_melee_attack(input: MeleeResolutionInput<'_>) -> MeleeResolutionRecord {
+    let player = &input.player;
+    let enemy = &input.enemy;
+    let attack_total = f32::from(input.raw_roll) + player.combat.hit_bonus;
+    let hit = attack_total >= enemy.combat.defense;
+    let strength_damage = player.stats.attributes.strength * player.combat.damage_per_strength;
+    let damage_before_armor = player.combat.base_damage + strength_damage;
+    let final_damage = if hit {
+        (damage_before_armor - enemy.combat.armor).max(0.0)
+    } else {
+        0.0
+    };
+    let health_after = (input.target_health_before - final_damage).max(0.0);
+    MeleeResolutionRecord {
+        actor: input.actor.to_string(),
+        action: "melee attack".to_string(),
+        target: input.target.to_string(),
+        raw_roll: input.raw_roll,
+        hit_bonus: player.combat.hit_bonus,
+        attack_total,
+        target_defense: enemy.combat.defense,
+        hit,
+        base_damage: player.combat.base_damage,
+        strength: player.stats.attributes.strength,
+        damage_per_strength: player.combat.damage_per_strength,
+        damage_before_armor,
+        armor: enemy.combat.armor,
+        final_damage,
+        health_before: input.target_health_before,
+        health_after,
+        died: input.target_health_before > 0.0 && health_after <= 0.0,
+    }
 }
 
 fn admit_actor_stats(
@@ -434,6 +570,12 @@ mod tests {
                     speed_units_per_second: 3.5,
                 },
                 stats: stats(50.0, 40.0, 50.0),
+                combat: PlayerCombatExperiment {
+                    attack_range: 2.25,
+                    hit_bonus: 35.0,
+                    base_damage: 1.0,
+                    damage_per_strength: 0.1,
+                },
             },
             enemies: vec![EnemyExperiment {
                 mobile_id: 0,
@@ -451,6 +593,10 @@ mod tests {
                         base_magicka: 0.0,
                         magicka_per_intelligence: 0.0,
                     },
+                },
+                combat: EnemyCombatExperiment {
+                    defense: 50.0,
+                    armor: 1.0,
                 },
             }],
         }
@@ -519,5 +665,39 @@ mod tests {
             document.admit(),
             Err(ExperimentError::InvalidValue { path, .. }) if path == "player.stats"
         ));
+    }
+
+    #[test]
+    fn resolves_hit_miss_armor_health_and_death_as_semantic_records() {
+        let admitted = starter().admit().expect("admit combat experiment");
+        let miss = resolve_melee_attack(MeleeResolutionInput {
+            actor: "Player",
+            target: "Rat 2007",
+            raw_roll: 10,
+            player: &admitted.player,
+            enemy: &admitted.enemies[0],
+            target_health_before: 3.0,
+        });
+        assert!(!miss.hit);
+        assert_eq!(miss.final_damage, 0.0);
+        assert_eq!(miss.health_after, 3.0);
+
+        let hit = resolve_melee_attack(MeleeResolutionInput {
+            raw_roll: 20,
+            target_health_before: 3.0,
+            ..MeleeResolutionInput {
+                actor: "Player",
+                target: "Rat 2007",
+                raw_roll: 10,
+                player: &admitted.player,
+                enemy: &admitted.enemies[0],
+                target_health_before: 3.0,
+            }
+        });
+        assert!(hit.hit);
+        assert_eq!(hit.damage_before_armor, 6.0);
+        assert_eq!(hit.final_damage, 5.0);
+        assert_eq!(hit.health_after, 0.0);
+        assert!(hit.died);
     }
 }

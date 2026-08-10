@@ -33,16 +33,16 @@ current task state in the Den `rusty-dagger` project.
     legacy average-color fallback for A/B mood comparison.
 - `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
   the committed Privateer's Hold project, owns the first-person controller,
-  applies admitted experiments, owns reset/readback and bounded calculation
-  history, and provides the real-project collision walkthrough without
+  applies admitted experiments, owns reset/readback, bounded calculation and
+  combat history, and provides the real-project collision walkthrough without
   importing the loading-bay game.
 - `crates/dagger-rpg` — host-neutral Rust authority for the compact gameplay
-  experiment document, validation, derived values, and designer-facing
-  calculation records.
+  experiment document, validation, derived values, melee resolution, and
+  designer-facing semantic records.
 - `apps/dagger-lab` — Dagger-owned Angular authoring/readback surface. It is
   served by `dagger-native-host`, submits whole documents and side-effect-free
-  formula worksheets to Rust, exposes live player state plus selectable recent
-  calculations, and keeps a small browser-local shelf of named complete
+  formula worksheets to Rust, exposes live player/combat state plus semantic
+  calculation and attack records, and keeps a small browser-local shelf of named complete
   experiment profiles. Profile activation still goes through Rust admission;
   the app has no gameplay evaluator or Engine renderer dependency.
 - `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
@@ -137,6 +137,12 @@ scripts/check-studio-browser.sh
   and handles `L` through Engine physical-input readback to open the Lab for
   that session. Closing and reopening the companion tab reattaches to the same
   Rust runtime rather than creating a second gameplay authority.
+- Melee experiment: the same document exposes bounded player reach/hit/damage
+  terms and mobile-0 Rat defense/armor. With a Rat focused, physical `Space`
+  enters Rust, which checks live range and Engine collision line of sight,
+  rolls, resolves hit/damage/armor, mutates Rat health/death, and emits a flat
+  designer-readable record. Applying a profile or resetting play restores
+  resources and clears the combat run; Angular never rolls or mutates combat.
 
 ## Data provenance & conventions
 

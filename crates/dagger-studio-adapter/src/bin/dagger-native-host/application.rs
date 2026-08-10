@@ -247,7 +247,17 @@ impl NativeApplication {
                 }
             }
         }
-        title.push_str(" — L Lab — G patrol — N navgrid");
+        if let Some(combat) = readout.combat.last() {
+            title.push_str(&format!(
+                " — {} {:.0}",
+                if combat.resolution.hit { "HIT" } else { "MISS" },
+                combat.resolution.final_damage
+            ));
+            if combat.resolution.died {
+                title.push_str(" DEAD");
+            }
+        }
+        title.push_str(" — Space attack — L Lab — G patrol — N navgrid");
         Ok(title)
     }
 
@@ -335,7 +345,7 @@ impl NativeApplication {
         // the renderer before the physical release is observed.
         self.pressed_codes
             .iter()
-            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "KeyL" | "Enter"))
+            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "KeyL" | "Enter" | "Space"))
     }
 
     fn open_lab(&mut self) -> Result<()> {
@@ -429,6 +439,30 @@ impl NativeApplication {
         }
         if pressed.contains("KeyL") && !self.pressed_codes.contains("KeyL") {
             self.open_lab()?;
+        }
+        if pressed.contains("Space") && !self.pressed_codes.contains("Space") {
+            match self.runtime.attack_focused_target() {
+                Ok(readout) => {
+                    if let Some(combat) = readout.combat.last() {
+                        println!(
+                            "DAGGER_COMBAT_APPLIED sequence={} target={} roll={} total={:.1} defense={:.1} hit={} damage={:.1} health={:.1}->{:.1} died={}",
+                            combat.sequence,
+                            combat.target_id,
+                            combat.resolution.raw_roll,
+                            combat.resolution.attack_total,
+                            combat.resolution.target_defense,
+                            combat.resolution.hit,
+                            combat.resolution.final_damage,
+                            combat.resolution.health_before,
+                            combat.resolution.health_after,
+                            combat.resolution.died,
+                        );
+                    }
+                }
+                Err(error) => println!("DAGGER_COMBAT_REJECTED error={error}"),
+            }
+            io::stdout().flush()?;
+            self.update_window_title()?;
         }
         if pressed.contains("Enter") && !self.pressed_codes.contains("Enter") {
             self.runtime

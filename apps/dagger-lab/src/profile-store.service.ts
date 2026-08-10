@@ -88,11 +88,13 @@ function isExperimentDocument(value: unknown): value is ExperimentDocument {
   const playerRecord = player as Record<string, unknown>;
   const movement = playerRecord['movement'];
   const stats = playerRecord['stats'];
+  const combat = playerRecord['combat'];
   const enemies = document['enemies'];
   if (
     typeof movement !== 'object' ||
     movement === null ||
     !isActorStats(stats) ||
+    !hasNumberFields(combat, ['attackRange', 'hitBonus', 'baseDamage', 'damagePerStrength']) ||
     !Array.isArray(enemies)
   ) {
     return false;
@@ -103,9 +105,19 @@ function isExperimentDocument(value: unknown): value is ExperimentDocument {
     enemies.every((enemy) => {
       if (typeof enemy !== 'object' || enemy === null) return false;
       const enemyRecord = enemy as Record<string, unknown>;
-      return typeof enemyRecord['mobileId'] === 'number' && isActorStats(enemyRecord['stats']);
+      return (
+        typeof enemyRecord['mobileId'] === 'number' &&
+        isActorStats(enemyRecord['stats']) &&
+        hasNumberFields(enemyRecord['combat'], ['defense', 'armor'])
+      );
     })
   );
+}
+
+function hasNumberFields(value: unknown, fields: readonly string[]): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return fields.every((field) => typeof record[field] === 'number');
 }
 
 function isActorStats(value: unknown): boolean {

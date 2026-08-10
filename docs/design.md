@@ -223,16 +223,20 @@ modularity gate, task 6529):
   has no renderer TypeScript, HTML canvas bootstrap, or renderer package
   imports.
 
-### Gameplay authoring shape (program 6682, tasks 6683, 6689, and 6684)
+### Gameplay authoring shape (program 6682, tasks 6683, 6689, 6684, and 6685)
 
 - **TypeScript/Angular authors; Rust means and acts.** Immutable TS builders,
   simple JSON defaults, and Angular forms may assemble supported values. They
   all produce one compact internal experiment document. The first document
-  exposes movement speed plus named player and Rat attribute/resource inputs.
-  Rust owns fixed health, stamina, and magicka formula shapes. `dagger-rpg`
+  exposes movement speed, named player and Rat attribute/resource inputs, and
+  the bounded melee inputs needed for player-versus-Rat play. Rust owns fixed
+  resource, hit, and damage formula shapes. `dagger-rpg`
   admits and evaluates them; `dagger-runtime` applies player values and
-  constructs per-entity Rat resources for admitted mobile ID 0 entities. There
-  is no TS evaluator, expression AST, or callback escape hatch.
+  constructs per-entity Rat resources for admitted mobile ID 0 entities. It
+  derives the focused target, checks live planar reach and Engine collision
+  line of sight, mutates health/death, and retains semantic attack records.
+  There is no TS evaluator, expression AST, callback escape hatch, or replay
+  contract.
 - **Small vocabulary, grown by play.** Begin with the first movement/derived
   value experiment. Add reads, arithmetic, rolls, conditions, effects, or
   content fields only for a named interactive slice. Do not create a general

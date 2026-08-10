@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, VecDeque};
 
 use dagger_rpg::{
     AdmittedActorValues, AdmittedEnemyValues, AdmittedExperiment, CalculationRecord,
-    ExperimentDocument, ExperimentError,
+    ExperimentDocument, ExperimentError, MeleeResolutionInput, MeleeResolutionRecord,
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
-use rusty_engine::engine_spatial::VoxelCollisionScene;
+use rusty_engine::engine_spatial::{SpatialCollisionHit, VoxelCollisionScene};
 use rusty_engine::entity_state::EntityState;
 use rusty_engine::svc_collision::{
     StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
@@ -31,6 +31,15 @@ pub enum RuntimeError {
 pub enum ContentError {
     UnknownEntity(u64),
     NoGroundedApproach(u64),
+    NoFocusedTarget,
+    NoCombatDefinition(u64),
+    TargetDead(u64),
+    OutOfRange {
+        id: u64,
+        distance: f32,
+        maximum: f32,
+    },
+    Occluded(u64),
 }
 
 impl std::fmt::Display for RuntimeError {
@@ -54,6 +63,8 @@ pub struct DaggerRuntime {
     enemy_resources: BTreeMap<u64, LiveActorResources>,
     calculation_sequence: u64,
     calculation_history: VecDeque<SessionCalculationRecord>,
+    combat_sequence: u64,
+    combat_history: VecDeque<CombatRecord>,
     dungeon_bounds: Option<([f64; 3], [f64; 3])>,
     content_entities: Vec<ContentEntity>,
     content_live_positions: BTreeMap<u64, [f32; 3]>,
@@ -63,6 +74,7 @@ pub struct DaggerRuntime {
 pub const STARTER_EXPERIMENT_JSON: &str =
     include_str!("../../../data/experiments/privateers-hold-starter.json");
 pub const CALCULATION_HISTORY_LIMIT: usize = 16;
+pub const COMBAT_HISTORY_LIMIT: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,6 +88,7 @@ pub struct ExperimentReadout {
     pub player_position: [f32; 3],
     pub player_yaw_degrees: f32,
     pub calculations: Vec<SessionCalculationRecord>,
+    pub combat: Vec<CombatRecord>,
     pub content: Vec<ContentEntityReadout>,
     pub focused_content_id: Option<u64>,
 }
@@ -145,6 +158,18 @@ pub struct ActorGameplayReadout {
 pub struct EnemyStatsReadout {
     pub mobile_id: u8,
     pub stats: AdmittedActorValues,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CombatRecord {
+    pub sequence: u64,
+    pub target_id: u64,
+    pub range: f32,
+    pub attack_range: f32,
+    pub line_of_sight_clear: bool,
+    #[serde(flatten)]
+    pub resolution: MeleeResolutionRecord,
 }
 
 /// A side-effect-free evaluation through the same admission and calculation
@@ -245,6 +270,8 @@ impl DaggerRuntime {
             enemy_resources,
             calculation_sequence: 1,
             calculation_history: VecDeque::from([initial_calculation]),
+            combat_sequence: 0,
+            combat_history: VecDeque::new(),
             dungeon_bounds: admitted.dungeon_bounds,
             content_entities: admitted.content_entities,
             content_live_positions,
@@ -287,6 +314,8 @@ impl DaggerRuntime {
             admitted.player.move_speed_units_per_second;
         self.player_resources = LiveActorResources::full(&admitted.player.stats);
         self.enemy_resources = enemy_resources;
+        self.combat_sequence = 0;
+        self.combat_history.clear();
         self.calculation_history
             .push_back(SessionCalculationRecord {
                 sequence: self.calculation_sequence,
@@ -324,6 +353,8 @@ impl DaggerRuntime {
         self.player_state = self.player_start_state;
         self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
         self.enemy_resources = reset_enemy_resources(&self.content_entities, &self.experiment);
+        self.combat_sequence = 0;
+        self.combat_history.clear();
         self.focused_content_id = None;
         self.experiment_readout()
     }
@@ -401,6 +432,8 @@ impl DaggerRuntime {
                 self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
                 self.enemy_resources =
                     reset_enemy_resources(&self.content_entities, &self.experiment);
+                self.combat_sequence = 0;
+                self.combat_history.clear();
                 self.focused_content_id = Some(id);
                 return self.experiment_readout();
             }
@@ -409,6 +442,102 @@ impl DaggerRuntime {
         self.player_state = original_state;
         self.focused_content_id = original_focus;
         Err(RuntimeError::Content(ContentError::NoGroundedApproach(id)))
+    }
+
+    /// Attack the focused live enemy through Dagger's authoritative gameplay
+    /// and collision state. The native renderer supplies only the physical
+    /// input edge; it does not choose a target or resolve combat.
+    pub fn attack_focused_target(&mut self) -> Result<ExperimentReadout, RuntimeError> {
+        let id = self
+            .focused_content_id
+            .ok_or(RuntimeError::Content(ContentError::NoFocusedTarget))?;
+        let entity = self
+            .content_entities
+            .iter()
+            .find(|entity| entity.id == id)
+            .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
+        let enemy = self
+            .experiment
+            .enemies
+            .iter()
+            .find(|enemy| enemy.mobile_id == entity.mobile_id)
+            .ok_or(RuntimeError::Content(ContentError::NoCombatDefinition(id)))?;
+        let target_position = self
+            .content_live_positions
+            .get(&id)
+            .copied()
+            .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
+        let player_position = self.player_position()?;
+        let delta = [
+            target_position[0] - player_position.x,
+            target_position[1] - player_position.y,
+            target_position[2] - player_position.z,
+        ];
+        // Melee reach is planar: imported mobile anchors sit at floor-relative
+        // heights that are not comparable to the player's collider center.
+        let distance = delta[0].hypot(delta[2]);
+        let attack_range = self.experiment.player.combat.attack_range;
+        if distance > attack_range {
+            return Err(RuntimeError::Content(ContentError::OutOfRange {
+                id,
+                distance,
+                maximum: attack_range,
+            }));
+        }
+        if distance > 0.4 {
+            let direction = [
+                f64::from(delta[0] / distance),
+                0.0,
+                f64::from(delta[2] / distance),
+            ];
+            let origin = [
+                f64::from(player_position.x),
+                f64::from(player_position.y),
+                f64::from(player_position.z),
+            ];
+            let clear_distance = f64::from((distance - 0.35).max(0.0));
+            if self
+                .collision_scene
+                .raycast_world(origin, direction, clear_distance)
+                .is_some_and(|hit| collision_hit_distance(hit) + 0.05 < clear_distance)
+            {
+                return Err(RuntimeError::Content(ContentError::Occluded(id)));
+            }
+        }
+        let health_before = self
+            .enemy_resources
+            .get(&id)
+            .ok_or(RuntimeError::Content(ContentError::NoCombatDefinition(id)))?
+            .current_health;
+        if health_before <= 0.0 {
+            return Err(RuntimeError::Content(ContentError::TargetDead(id)));
+        }
+        let raw_roll = next_combat_roll(self.combat_sequence, id);
+        let resolution = dagger_rpg::resolve_melee_attack(MeleeResolutionInput {
+            actor: "Player",
+            target: &format!("{} {id}", entity.mobile_name),
+            raw_roll,
+            player: &self.experiment.player,
+            enemy,
+            target_health_before: health_before,
+        });
+        self.enemy_resources
+            .get_mut(&id)
+            .expect("combat definition checked above")
+            .current_health = resolution.health_after;
+        self.combat_sequence = self.combat_sequence.saturating_add(1);
+        self.combat_history.push_back(CombatRecord {
+            sequence: self.combat_sequence,
+            target_id: id,
+            range: distance,
+            attack_range,
+            line_of_sight_clear: true,
+            resolution,
+        });
+        while self.combat_history.len() > COMBAT_HISTORY_LIMIT {
+            self.combat_history.pop_front();
+        }
+        self.experiment_readout()
     }
 
     pub fn experiment_readout(&self) -> Result<ExperimentReadout, RuntimeError> {
@@ -462,6 +591,7 @@ impl DaggerRuntime {
             player_position: [position.x, position.y, position.z],
             player_yaw_degrees: self.player_state.yaw_degrees,
             calculations: self.calculation_history.iter().cloned().collect(),
+            combat: self.combat_history.iter().cloned().collect(),
             content,
             focused_content_id: self.focused_content_id,
         })
@@ -574,4 +704,23 @@ fn actor_readout(stats: &AdmittedActorValues, current: LiveActorResources) -> Ac
         current_magicka: current.current_magicka,
         calculations: stats.calculations.clone(),
     }
+}
+
+fn collision_hit_distance(hit: SpatialCollisionHit) -> f64 {
+    match hit {
+        SpatialCollisionHit::Voxel(hit) => hit.distance,
+        SpatialCollisionHit::StaticMesh(hit) => hit.distance,
+    }
+}
+
+fn next_combat_roll(sequence: u64, target_id: u64) -> u8 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |duration| u64::from(duration.subsec_nanos()));
+    let mut value = nanos ^ sequence.rotate_left(17) ^ target_id.rotate_left(31);
+    value ^= value >> 12;
+    value ^= value << 25;
+    value ^= value >> 27;
+    ((value.wrapping_mul(0x2545_F491_4F6C_DD1D) % 100) + 1) as u8
 }

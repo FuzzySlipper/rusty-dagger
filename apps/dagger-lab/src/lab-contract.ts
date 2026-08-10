@@ -3,6 +3,7 @@ export interface ExperimentDocument {
   readonly player: {
     readonly movement: { readonly speedUnitsPerSecond: number };
     readonly stats: ActorStatsInputs;
+    readonly combat: PlayerCombatTerms;
   };
   readonly enemies: readonly EnemyExperiment[];
 }
@@ -12,6 +13,7 @@ export interface ExperimentDraft {
   player: {
     movement: { speedUnitsPerSecond: number };
     stats: ActorStatsDraft;
+    combat: PlayerCombatTermsDraft;
   };
   enemies: EnemyExperimentDraft[];
 }
@@ -19,11 +21,37 @@ export interface ExperimentDraft {
 export interface EnemyExperiment {
   readonly mobileId: number;
   readonly stats: ActorStatsInputs;
+  readonly combat: EnemyCombatTerms;
 }
 
 export interface EnemyExperimentDraft {
   mobileId: number;
   stats: ActorStatsDraft;
+  combat: EnemyCombatTermsDraft;
+}
+
+export interface PlayerCombatTerms {
+  readonly attackRange: number;
+  readonly hitBonus: number;
+  readonly baseDamage: number;
+  readonly damagePerStrength: number;
+}
+
+export interface PlayerCombatTermsDraft {
+  attackRange: number;
+  hitBonus: number;
+  baseDamage: number;
+  damagePerStrength: number;
+}
+
+export interface EnemyCombatTerms {
+  readonly defense: number;
+  readonly armor: number;
+}
+
+export interface EnemyCombatTermsDraft {
+  defense: number;
+  armor: number;
 }
 
 export interface ActorStatsInputs {
@@ -115,8 +143,34 @@ export interface ExperimentReadout {
   readonly playerPosition: readonly [number, number, number];
   readonly playerYawDegrees: number;
   readonly calculations: readonly CalculationRecord[];
+  readonly combat: readonly CombatRecord[];
   readonly content: readonly ContentEntityReadout[];
   readonly focusedContentId: number | null;
+}
+
+export interface CombatRecord {
+  readonly sequence: number;
+  readonly targetId: number;
+  readonly range: number;
+  readonly attackRange: number;
+  readonly lineOfSightClear: boolean;
+  readonly actor: string;
+  readonly action: string;
+  readonly target: string;
+  readonly rawRoll: number;
+  readonly hitBonus: number;
+  readonly attackTotal: number;
+  readonly targetDefense: number;
+  readonly hit: boolean;
+  readonly baseDamage: number;
+  readonly strength: number;
+  readonly damagePerStrength: number;
+  readonly damageBeforeArmor: number;
+  readonly armor: number;
+  readonly finalDamage: number;
+  readonly healthBefore: number;
+  readonly healthAfter: number;
+  readonly died: boolean;
 }
 
 export interface ContentEntityReadout {
@@ -148,10 +202,12 @@ export function cloneExperiment(document: ExperimentDocument): ExperimentDraft {
     player: {
       movement: { speedUnitsPerSecond: document.player.movement.speedUnitsPerSecond },
       stats: cloneActorStats(document.player.stats),
+      combat: { ...document.player.combat },
     },
     enemies: document.enemies.map((enemy) => ({
       mobileId: enemy.mobileId,
       stats: cloneActorStats(enemy.stats),
+      combat: { ...enemy.combat },
     })),
   };
 }
@@ -169,10 +225,12 @@ export function documentFromDraft(draft: ExperimentDraft): ExperimentDocument {
     player: {
       movement: { speedUnitsPerSecond: draft.player.movement.speedUnitsPerSecond },
       stats: cloneActorStats(draft.player.stats),
+      combat: { ...draft.player.combat },
     },
     enemies: draft.enemies.map((enemy) => ({
       mobileId: enemy.mobileId,
       stats: cloneActorStats(enemy.stats),
+      combat: { ...enemy.combat },
     })),
   };
 }
