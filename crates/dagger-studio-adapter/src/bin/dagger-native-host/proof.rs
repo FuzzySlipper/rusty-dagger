@@ -17,8 +17,7 @@ impl Options {
         let mut browser_product = false;
         let mut corrupt_resource = false;
         let mut requested_lab_port = None;
-        let mut lab_host = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
-        let mut no_lab = false;
+        let mut requested_lab_host = None;
         for argument in env::args().skip(1) {
             match argument.as_str() {
                 "--browser-product" => browser_product = true,
@@ -27,7 +26,6 @@ impl Options {
                     proof = true;
                     corrupt_resource = true;
                 }
-                "--no-lab" => no_lab = true,
                 value if value.starts_with("--lab-port=") => {
                     requested_lab_port = Some(
                         value["--lab-port=".len()..]
@@ -36,23 +34,24 @@ impl Options {
                     );
                 }
                 value if value.starts_with("--lab-host=") => {
-                    lab_host = value["--lab-host=".len()..]
-                        .parse::<IpAddr>()
-                        .map_err(|_| anyhow::anyhow!("invalid Lab bind address in {value}"))?;
+                    requested_lab_host = Some(
+                        value["--lab-host=".len()..]
+                            .parse::<IpAddr>()
+                            .map_err(|_| anyhow::anyhow!("invalid Lab bind address in {value}"))?,
+                    );
                 }
                 _ => bail!("unknown argument {argument}"),
             }
         }
-        if !browser_product && requested_lab_port.is_some() {
-            bail!("--lab-port requires --browser-product");
+        if !browser_product && (requested_lab_port.is_some() || requested_lab_host.is_some()) {
+            bail!("--lab-host/--lab-port require --browser-product");
         }
-        let lab_port = if no_lab {
-            None
-        } else if browser_product {
+        let lab_port = if browser_product {
             Some(requested_lab_port.unwrap_or(4274))
         } else {
             None
         };
+        let lab_host = requested_lab_host.unwrap_or(IpAddr::V4(std::net::Ipv4Addr::LOCALHOST));
         Ok(Self {
             browser_product,
             proof,
