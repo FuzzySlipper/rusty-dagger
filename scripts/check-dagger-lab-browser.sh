@@ -66,7 +66,7 @@ if [[ "$(cat "$open_capture")" != "http://127.0.0.1:4274/" ]]; then
   exit 1
 fi
 grep -F 'DAGGER_LAB_OPENED url=http://127.0.0.1:4274/ launcher=system' "$host_log"
-node scripts/check-dagger-lab-browser.mjs
+DAGGER_NATIVE_HOST_LOG="$host_log" node scripts/check-dagger-lab-browser.mjs
 
 trap - EXIT
 cleanup
