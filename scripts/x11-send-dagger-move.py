@@ -8,7 +8,7 @@ import time
 key = sys.argv[1].lower() if len(sys.argv) > 1 else "w"
 expected_title = sys.argv[2] if len(sys.argv) > 2 else None
 expected_after_title = sys.argv[3] if len(sys.argv) > 3 else None
-if key not in {"w", "a", "s", "d", "l", "space"}:
+if key not in {"w", "a", "s", "d", "l", "r", "space"}:
     raise SystemExit(f"unsupported Dagger key: {key}")
 
 Display = ctypes.c_void_p
@@ -184,10 +184,12 @@ try:
     # Do not let the next Lab command race ahead of Engine's asynchronous
     # physical-input readback for this falling edge. In particular, a reset
     # followed by a late movement readout would immediately leave the spawn.
-    time.sleep(0.75)
+    time.sleep(1.50)
     marker = (
         "DAGGER_LAB_PHYSICAL_OPEN_OK"
         if key == "l"
+        else "DAGGER_LAB_PHYSICAL_RESET_OK"
+        if key == "r"
         else "DAGGER_LAB_PHYSICAL_ATTACK_OK"
         if key == "space"
         else "DAGGER_LAB_PHYSICAL_MOVE_OK"

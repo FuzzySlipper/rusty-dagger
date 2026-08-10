@@ -58,6 +58,8 @@ pub struct EnemyExperiment {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PlayerCombatExperiment {
     pub attack_range: f32,
+    pub attack_cooldown_seconds: f32,
+    pub stamina_cost: f32,
     pub hit_bonus: f32,
     pub base_damage: f32,
     pub damage_per_strength: f32,
@@ -254,6 +256,18 @@ impl ExperimentDocument {
                 self.player.combat.attack_range,
                 0.1,
                 10.0,
+            ),
+            (
+                "player.combat.attackCooldownSeconds",
+                self.player.combat.attack_cooldown_seconds,
+                0.05,
+                10.0,
+            ),
+            (
+                "player.combat.staminaCost",
+                self.player.combat.stamina_cost,
+                0.0,
+                MAX_STAT_INPUT,
             ),
             (
                 "player.combat.hitBonus",
@@ -611,6 +625,8 @@ mod tests {
                 stats: stats(50.0, 40.0, 50.0),
                 combat: PlayerCombatExperiment {
                     attack_range: 2.25,
+                    attack_cooldown_seconds: 0.75,
+                    stamina_cost: 10.0,
                     hit_bonus: 35.0,
                     base_damage: 1.0,
                     damage_per_strength: 0.1,

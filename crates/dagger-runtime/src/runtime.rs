@@ -67,6 +67,9 @@ pub struct DaggerRuntime {
     calculation_history: VecDeque<SessionCalculationRecord>,
     combat_sequence: u64,
     combat_history: VecDeque<CombatRecord>,
+    combat_attempt_sequence: u64,
+    combat_attempt_history: VecDeque<CombatAttemptRecord>,
+    player_attack_cooldown_remaining: f32,
     encounter_sequence: u64,
     encounter_history: VecDeque<EncounterDecisionRecord>,
     dungeon_bounds: Option<([f64; 3], [f64; 3])>,
@@ -95,6 +98,8 @@ pub struct ExperimentReadout {
     pub player_yaw_degrees: f32,
     pub calculations: Vec<SessionCalculationRecord>,
     pub combat: Vec<CombatRecord>,
+    pub combat_attempts: Vec<CombatAttemptRecord>,
+    pub player_attack_cooldown_remaining: f32,
     pub encounter_decisions: Vec<EncounterDecisionRecord>,
     pub content: Vec<ContentEntityReadout>,
     pub focused_content_id: Option<u64>,
@@ -178,6 +183,21 @@ pub struct CombatRecord {
     pub line_of_sight_clear: bool,
     #[serde(flatten)]
     pub resolution: MeleeResolutionRecord,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CombatAttemptRecord {
+    pub sequence: u64,
+    pub target_id: Option<u64>,
+    pub accepted: bool,
+    pub outcome: String,
+    pub cooldown_before: f32,
+    pub cooldown_after: f32,
+    pub cooldown_duration: f32,
+    pub stamina_before: f32,
+    pub stamina_cost: f32,
+    pub stamina_after: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -297,6 +317,9 @@ impl DaggerRuntime {
             calculation_history: VecDeque::from([initial_calculation]),
             combat_sequence: 0,
             combat_history: VecDeque::new(),
+            combat_attempt_sequence: 0,
+            combat_attempt_history: VecDeque::new(),
+            player_attack_cooldown_remaining: 0.0,
             encounter_sequence: 0,
             encounter_history: VecDeque::new(),
             dungeon_bounds: admitted.dungeon_bounds,
@@ -367,12 +390,14 @@ impl DaggerRuntime {
         Ok(())
     }
 
-    pub fn tick_encounters(&mut self, dt: f32) -> Result<Vec<PositionUpdate>, RuntimeError> {
+    pub fn tick_play_session(&mut self, dt: f32) -> Result<Vec<PositionUpdate>, RuntimeError> {
         if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
             return Err(RuntimeError::Encounter(
-                "encounter tick must be finite and bounded to 0.25 seconds".to_string(),
+                "play-session tick must be finite and bounded to 0.25 seconds".to_string(),
             ));
         }
+        self.player_attack_cooldown_remaining =
+            (self.player_attack_cooldown_remaining - dt).max(0.0);
         let player = self.player_position()?;
         let behaviors = self
             .content_entities
@@ -516,6 +541,10 @@ impl DaggerRuntime {
         self.encounter_sequence
     }
 
+    pub fn player_attack_cooldown_remaining(&self) -> f32 {
+        self.player_attack_cooldown_remaining
+    }
+
     /// Admit and apply one complete authoring document. Admission and all
     /// calculations happen before live state changes, so a rejected edit
     /// cannot partially mutate the running experiment.
@@ -533,6 +562,9 @@ impl DaggerRuntime {
         self.enemy_resources = enemy_resources;
         self.combat_sequence = 0;
         self.combat_history.clear();
+        self.combat_attempt_sequence = 0;
+        self.combat_attempt_history.clear();
+        self.player_attack_cooldown_remaining = 0.0;
         self.encounter_sequence = 0;
         self.encounter_history.clear();
         self.calculation_history
@@ -574,6 +606,9 @@ impl DaggerRuntime {
         self.enemy_resources = reset_enemy_resources(&self.content_entities, &self.experiment);
         self.combat_sequence = 0;
         self.combat_history.clear();
+        self.combat_attempt_sequence = 0;
+        self.combat_attempt_history.clear();
+        self.player_attack_cooldown_remaining = 0.0;
         self.encounter_sequence = 0;
         self.encounter_history.clear();
         if let Some(patrol) = self.patrol.as_mut() {
@@ -586,22 +621,6 @@ impl DaggerRuntime {
         }
         self.focused_content_id = None;
         self.experiment_readout()
-    }
-
-    /// Publish Dagger-owned live entity positions from the native patrol
-    /// authority. Unknown renderer handles are ignored rather than becoming
-    /// content identities through this synchronization seam.
-    pub fn sync_content_live_positions(
-        &mut self,
-        positions: impl IntoIterator<Item = (u64, [f32; 3])>,
-    ) {
-        for (id, position) in positions {
-            if self.content_live_positions.contains_key(&id)
-                && position.iter().all(|component| component.is_finite())
-            {
-                self.content_live_positions.insert(id, position);
-            }
-        }
     }
 
     /// Reset the player beside one admitted live content entity and face it.
@@ -663,6 +682,9 @@ impl DaggerRuntime {
                     reset_enemy_resources(&self.content_entities, &self.experiment);
                 self.combat_sequence = 0;
                 self.combat_history.clear();
+                self.combat_attempt_sequence = 0;
+                self.combat_attempt_history.clear();
+                self.player_attack_cooldown_remaining = 0.0;
                 self.encounter_sequence = 0;
                 self.encounter_history.clear();
                 self.focused_content_id = Some(id);
@@ -679,6 +701,41 @@ impl DaggerRuntime {
     /// and collision state. The native renderer supplies only the physical
     /// input edge; it does not choose a target or resolve combat.
     pub fn attack_focused_target(&mut self) -> Result<ExperimentReadout, RuntimeError> {
+        let target_id = self.focused_content_id;
+        let cooldown_before = self.player_attack_cooldown_remaining;
+        let stamina_before = self.player_resources.current_stamina;
+        let cooldown_duration = self.experiment.player.combat.attack_cooldown_seconds;
+        let stamina_cost = self.experiment.player.combat.stamina_cost;
+        if cooldown_before > 0.0 {
+            self.push_combat_attempt(CombatAttemptRecord {
+                sequence: 0,
+                target_id,
+                accepted: false,
+                outcome: "cooldown".to_string(),
+                cooldown_before,
+                cooldown_after: cooldown_before,
+                cooldown_duration,
+                stamina_before,
+                stamina_cost,
+                stamina_after: stamina_before,
+            });
+            return self.experiment_readout();
+        }
+        if stamina_before < stamina_cost {
+            self.push_combat_attempt(CombatAttemptRecord {
+                sequence: 0,
+                target_id,
+                accepted: false,
+                outcome: "insufficient stamina".to_string(),
+                cooldown_before,
+                cooldown_after: cooldown_before,
+                cooldown_duration,
+                stamina_before,
+                stamina_cost,
+                stamina_after: stamina_before,
+            });
+            return self.experiment_readout();
+        }
         let id = self
             .focused_content_id
             .ok_or(RuntimeError::Content(ContentError::NoFocusedTarget))?;
@@ -756,6 +813,27 @@ impl DaggerRuntime {
             .get_mut(&id)
             .expect("combat definition checked above")
             .current_health = resolution.health_after;
+        self.player_resources.current_stamina = (stamina_before - stamina_cost).max(0.0);
+        self.player_attack_cooldown_remaining = cooldown_duration;
+        let outcome = if resolution.died {
+            "killed"
+        } else if resolution.hit {
+            "hit"
+        } else {
+            "miss"
+        };
+        self.push_combat_attempt(CombatAttemptRecord {
+            sequence: 0,
+            target_id: Some(id),
+            accepted: true,
+            outcome: outcome.to_string(),
+            cooldown_before,
+            cooldown_after: cooldown_duration,
+            cooldown_duration,
+            stamina_before,
+            stamina_cost,
+            stamina_after: self.player_resources.current_stamina,
+        });
         self.combat_sequence = self.combat_sequence.saturating_add(1);
         self.combat_history.push_back(CombatRecord {
             sequence: self.combat_sequence,
@@ -769,6 +847,15 @@ impl DaggerRuntime {
             self.combat_history.pop_front();
         }
         self.experiment_readout()
+    }
+
+    fn push_combat_attempt(&mut self, mut record: CombatAttemptRecord) {
+        self.combat_attempt_sequence = self.combat_attempt_sequence.saturating_add(1);
+        record.sequence = self.combat_attempt_sequence;
+        self.combat_attempt_history.push_back(record);
+        while self.combat_attempt_history.len() > COMBAT_HISTORY_LIMIT {
+            self.combat_attempt_history.pop_front();
+        }
     }
 
     pub fn experiment_readout(&self) -> Result<ExperimentReadout, RuntimeError> {
@@ -835,6 +922,8 @@ impl DaggerRuntime {
             player_yaw_degrees: self.player_state.yaw_degrees,
             calculations: self.calculation_history.iter().cloned().collect(),
             combat: self.combat_history.iter().cloned().collect(),
+            combat_attempts: self.combat_attempt_history.iter().cloned().collect(),
+            player_attack_cooldown_remaining: self.player_attack_cooldown_remaining,
             encounter_decisions: self.encounter_history.iter().cloned().collect(),
             content,
             focused_content_id: self.focused_content_id,

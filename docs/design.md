@@ -228,7 +228,7 @@ modularity gate, task 6529):
   has no renderer TypeScript, HTML canvas bootstrap, or renderer package
   imports.
 
-### Gameplay authoring shape (program 6682, tasks 6683, 6689, 6684, 6685, and 6687)
+### Gameplay authoring shape (program 6682, tasks 6683, 6689, 6684, 6685, 6687, and 6690)
 
 - **TypeScript/Angular authors; Rust means and acts.** Immutable TS builders,
   simple JSON defaults, and Angular forms may assemble supported values. They
@@ -240,6 +240,11 @@ modularity gate, task 6529):
   constructs per-entity Rat resources for admitted mobile ID 0 entities. It
   derives the focused target, checks live planar reach and Engine collision
   line of sight, mutates health/death, and retains semantic attack records.
+  Player melee cooldown and stamina cost are authored terms, but the timer,
+  resource admission/mutation, physical input edge, and accepted/rejected
+  attempt records stay in `dagger-runtime`. Cooldown advances only through the
+  native play-session tick; physical `R` and the Lab reset command both call
+  the same runtime reset that restores resources and timing state.
   The same admitted document supplies bounded behavior terms for named Rat and
   Skeletal Warrior encounters. `dagger-runtime` owns their nav-aware
   patrol/detect/chase/attack loop, cooldowns, Engine collision line of sight,
@@ -271,6 +276,8 @@ modularity gate, task 6529):
   expose only the fields they genuinely possess; actor/action/target filtering
   arrives with interactive resolutions that carry those identities. Store a
   bounded recent-session history and add copy/export only when it serves play.
+  Combat attempts add only designer-facing timing/resource facts: accepted or
+  rejected outcome, cooldown before/after, and stamina before/cost/after.
 - **Daggerfall is a preset.** Arena2 and classic/DFU knowledge help populate
   useful defaults. The lab does not track per-value provenance or require exact
   fidelity before an experiment can proceed.

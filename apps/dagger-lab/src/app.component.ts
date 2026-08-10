@@ -37,7 +37,14 @@ const EMPTY_DOCUMENT: ExperimentDocument = {
         magickaPerIntelligence: 1,
       },
     },
-    combat: { attackRange: 2.25, hitBonus: 35, baseDamage: 1, damagePerStrength: 0.1 },
+    combat: {
+      attackRange: 2.25,
+      attackCooldownSeconds: 0.75,
+      staminaCost: 10,
+      hitBonus: 35,
+      baseDamage: 1,
+      damagePerStrength: 0.1,
+    },
   },
   enemies: [
     {

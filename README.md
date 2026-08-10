@@ -76,7 +76,8 @@ pnpm install
 pnpm lab:build
 cargo run -p dagger-studio-adapter --bin dagger-native-host
 # Press L in the native product to open its connected Dagger Lab. Play with
-# W/A/S/D, use G for patrol diagnostics, and N for navgrid diagnostics.
+# W/A/S/D, Space to attack, R to reset, G for patrol diagnostics, and N for
+# navgrid diagnostics.
 # The Lab is also directly reachable at http://127.0.0.1:4274 while this
 # native session is running; closing its browser tab does not stop play.
 ./scripts/check-dagger-lab-browser.sh # profiles/preview/apply/explain/A-B play + responsive proof
@@ -139,11 +140,14 @@ scripts/check-studio-browser.sh
   that session. Closing and reopening the companion tab reattaches to the same
   Rust runtime rather than creating a second gameplay authority.
 - Melee experiment: the same document exposes bounded player reach/hit/damage
-  terms and mobile-0 Rat defense/armor. With a Rat focused, physical `Space`
+  terms, attack cooldown, stamina cost, and mobile-0 Rat defense/armor. With a
+  Rat focused, physical `Space`
   enters Rust, which checks live range and Engine collision line of sight,
-  rolls, resolves hit/damage/armor, mutates Rat health/death, and emits a flat
-  designer-readable record. Applying a profile or resetting play restores
-  resources and clears the combat run; Angular never rolls or mutates combat.
+  admits authoritative cooldown/stamina, rolls, resolves hit/damage/armor,
+  mutates resources and Rat health/death, and emits flat designer-readable
+  resolution and accepted/rejected attempt records. Applying a profile or
+  resetting play restores resources/timers and clears the combat run; Angular
+  never runs a timer, rolls, or mutates combat.
 - Encounter experiment: Rat and Skeletal Warrior profiles expose bounded
   detection, patrol/chase speed, attack range/cooldown, and damage terms.
   `dagger-runtime` uses the committed navgrid and Engine collision line of sight

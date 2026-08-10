@@ -94,7 +94,14 @@ function isExperimentDocument(value: unknown): value is ExperimentDocument {
     typeof movement !== 'object' ||
     movement === null ||
     !isActorStats(stats) ||
-    !hasNumberFields(combat, ['attackRange', 'hitBonus', 'baseDamage', 'damagePerStrength']) ||
+    !hasNumberFields(combat, [
+      'attackRange',
+      'attackCooldownSeconds',
+      'staminaCost',
+      'hitBonus',
+      'baseDamage',
+      'damagePerStrength',
+    ]) ||
     !Array.isArray(enemies)
   ) {
     return false;

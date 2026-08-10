@@ -210,7 +210,9 @@ generic execution trace as the product explanation.
   target/range/collision admission, rolls, health/death mutation, and explicit
   reset/retry. It also owns committed-navgrid patrol, detect/chase/attack modes,
   attack cooldowns, Engine line of sight, player damage, and bounded concise
-  decision records. There is no per-field revision or replay protocol.
+  decision records. Player melee timing and stamina costs similarly remain
+  Rust session state, with concise accepted/rejected attempt records rather
+  than a generic input log. There is no per-field revision or replay protocol.
 - The Angular Dagger Lab stays attached to the running native game. The first
   surface has movement/resource/melee plus named encounter editors, live
   position/controller/resource readback, a Rust-backed formula worksheet,
