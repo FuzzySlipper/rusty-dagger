@@ -13,6 +13,7 @@ use rusty_engine::svc_collision::{
 };
 use serde::Serialize;
 
+use crate::patrol::{EnemyAiMode, PatrolService, PositionUpdate};
 use crate::player::{
     apply_player_action, player_view, PlayerControlReceipt, PlayerControllerConfig,
     PlayerControllerState, PlayerError, ResolvedPlayerAction,
@@ -25,6 +26,7 @@ pub enum RuntimeError {
     Experiment(ExperimentError),
     Player(PlayerError),
     Content(ContentError),
+    Encounter(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -65,16 +67,20 @@ pub struct DaggerRuntime {
     calculation_history: VecDeque<SessionCalculationRecord>,
     combat_sequence: u64,
     combat_history: VecDeque<CombatRecord>,
+    encounter_sequence: u64,
+    encounter_history: VecDeque<EncounterDecisionRecord>,
     dungeon_bounds: Option<([f64; 3], [f64; 3])>,
     content_entities: Vec<ContentEntity>,
     content_live_positions: BTreeMap<u64, [f32; 3]>,
     focused_content_id: Option<u64>,
+    patrol: Option<PatrolService>,
 }
 
 pub const STARTER_EXPERIMENT_JSON: &str =
     include_str!("../../../data/experiments/privateers-hold-starter.json");
 pub const CALCULATION_HISTORY_LIMIT: usize = 16;
 pub const COMBAT_HISTORY_LIMIT: usize = 32;
+pub const ENCOUNTER_HISTORY_LIMIT: usize = 32;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -89,6 +95,7 @@ pub struct ExperimentReadout {
     pub player_yaw_degrees: f32,
     pub calculations: Vec<SessionCalculationRecord>,
     pub combat: Vec<CombatRecord>,
+    pub encounter_decisions: Vec<EncounterDecisionRecord>,
     pub content: Vec<ContentEntityReadout>,
     pub focused_content_id: Option<u64>,
 }
@@ -120,6 +127,7 @@ pub struct ContentLiveReadout {
     pub position: [f32; 3],
     pub distance_from_player: f32,
     pub resources: Option<LiveActorResources>,
+    pub ai_state: Option<&'static str>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
@@ -170,6 +178,23 @@ pub struct CombatRecord {
     pub line_of_sight_clear: bool,
     #[serde(flatten)]
     pub resolution: MeleeResolutionRecord,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EncounterDecisionRecord {
+    pub sequence: u64,
+    pub enemy_id: u64,
+    pub enemy_name: String,
+    pub decision: String,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub distance_to_player: f32,
+    pub damage: Option<f32>,
+    pub line_of_sight_clear: Option<bool>,
+    pub player_health_before: Option<f32>,
+    pub player_health_after: Option<f32>,
+    pub player_died: bool,
 }
 
 /// A side-effect-free evaluation through the same admission and calculation
@@ -272,10 +297,13 @@ impl DaggerRuntime {
             calculation_history: VecDeque::from([initial_calculation]),
             combat_sequence: 0,
             combat_history: VecDeque::new(),
+            encounter_sequence: 0,
+            encounter_history: VecDeque::new(),
             dungeon_bounds: admitted.dungeon_bounds,
             content_entities: admitted.content_entities,
             content_live_positions,
             focused_content_id: None,
+            patrol: None,
         })
     }
 
@@ -299,6 +327,195 @@ impl DaggerRuntime {
         self.player_state
     }
 
+    /// Install the committed navigation artifact as the live enemy movement
+    /// authority. The runtime owns the resulting service; native diagnostics
+    /// only project its positions.
+    pub fn install_encounter_navigation_json(
+        &mut self,
+        navgrid_document: &str,
+    ) -> Result<(), RuntimeError> {
+        #[derive(serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct EncounterNavGrid {
+            cells: Vec<(f64, f64, f64, f64)>,
+        }
+        let navgrid: EncounterNavGrid =
+            serde_json::from_str(navgrid_document).map_err(|error| {
+                RuntimeError::Encounter(format!("invalid encounter navgrid: {error}"))
+            })?;
+        let spawns = self
+            .content_entities
+            .iter()
+            .map(|entity| {
+                let handle = u32::try_from(entity.id).map_err(|_| {
+                    RuntimeError::Encounter(format!(
+                        "content entity {} cannot be used as a patrol handle",
+                        entity.id
+                    ))
+                })?;
+                Ok((handle, entity.authored_position))
+            })
+            .collect::<Result<Vec<_>, RuntimeError>>()?;
+        let patrol = PatrolService::new(&navgrid.cells, &spawns);
+        patrol.validate().map_err(RuntimeError::Encounter)?;
+        self.content_live_positions = patrol
+            .positions()
+            .into_iter()
+            .map(|(handle, position, _)| (u64::from(handle), position))
+            .collect();
+        self.patrol = Some(patrol);
+        Ok(())
+    }
+
+    pub fn tick_encounters(&mut self, dt: f32) -> Result<Vec<PositionUpdate>, RuntimeError> {
+        if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
+            return Err(RuntimeError::Encounter(
+                "encounter tick must be finite and bounded to 0.25 seconds".to_string(),
+            ));
+        }
+        let player = self.player_position()?;
+        let behaviors = self
+            .content_entities
+            .iter()
+            .filter_map(|entity| {
+                self.experiment
+                    .enemies
+                    .iter()
+                    .find(|enemy| enemy.mobile_id == entity.mobile_id)
+                    .and_then(|enemy| {
+                        u32::try_from(entity.id)
+                            .ok()
+                            .map(|handle| (handle, enemy.behavior.clone()))
+                    })
+            })
+            .collect::<BTreeMap<_, _>>();
+        let dead = self
+            .enemy_resources
+            .iter()
+            .filter_map(|(id, resources)| {
+                (resources.current_health <= 0.0)
+                    .then(|| u32::try_from(*id).ok())
+                    .flatten()
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        let Some(patrol) = self.patrol.as_mut() else {
+            return Ok(Vec::new());
+        };
+        let evaluation =
+            patrol.evaluate_encounters(dt, [player.x, player.y, player.z], &behaviors, &dead);
+        for update in &evaluation.positions {
+            self.content_live_positions
+                .insert(u64::from(update.handle), update.translation);
+        }
+        for decision in evaluation.decisions {
+            let id = u64::from(decision.handle);
+            self.push_encounter_record(EncounterDecisionRecord {
+                sequence: 0,
+                enemy_id: id,
+                enemy_name: self.enemy_name(id),
+                decision: "state changed".to_string(),
+                from: Some(ai_mode_name(decision.from).to_string()),
+                to: Some(ai_mode_name(decision.to).to_string()),
+                distance_to_player: decision.distance_to_player,
+                damage: None,
+                line_of_sight_clear: None,
+                player_health_before: None,
+                player_health_after: None,
+                player_died: false,
+            });
+        }
+        for attack in evaluation.attacks {
+            let id = u64::from(attack.handle);
+            let before = self.player_resources.current_health;
+            let line_of_sight_clear = self.enemy_line_of_sight_clear(id, player);
+            let damage = if before > 0.0 && line_of_sight_clear {
+                attack.damage
+            } else {
+                0.0
+            };
+            let after = (before - damage).max(0.0);
+            self.player_resources.current_health = after;
+            self.push_encounter_record(EncounterDecisionRecord {
+                sequence: 0,
+                enemy_id: id,
+                enemy_name: self.enemy_name(id),
+                decision: if line_of_sight_clear {
+                    "melee attack"
+                } else {
+                    "attack blocked"
+                }
+                .to_string(),
+                from: None,
+                to: None,
+                distance_to_player: attack.distance_to_player,
+                damage: Some(damage),
+                line_of_sight_clear: Some(line_of_sight_clear),
+                player_health_before: Some(before),
+                player_health_after: Some(after),
+                player_died: before > 0.0 && after <= 0.0,
+            });
+        }
+        Ok(evaluation.positions)
+    }
+
+    fn enemy_name(&self, id: u64) -> String {
+        self.content_entities
+            .iter()
+            .find(|entity| entity.id == id)
+            .map_or_else(
+                || format!("Enemy {id}"),
+                |entity| entity.mobile_name.clone(),
+            )
+    }
+
+    fn enemy_line_of_sight_clear(&self, id: u64, player: Vec3) -> bool {
+        let Some(enemy) = self.content_live_positions.get(&id) else {
+            return false;
+        };
+        let delta = [player.x - enemy[0], player.z - enemy[2]];
+        let distance = delta[0].hypot(delta[1]);
+        if distance <= 0.4 {
+            return true;
+        }
+        let direction = [
+            f64::from(delta[0] / distance),
+            0.0,
+            f64::from(delta[1] / distance),
+        ];
+        let clear_distance = f64::from((distance - 0.35).max(0.0));
+        !self
+            .collision_scene
+            .raycast_world(
+                [
+                    f64::from(enemy[0]),
+                    f64::from(player.y),
+                    f64::from(enemy[2]),
+                ],
+                direction,
+                clear_distance,
+            )
+            .is_some_and(|hit| collision_hit_distance(hit) + 0.05 < clear_distance)
+    }
+
+    fn push_encounter_record(&mut self, mut record: EncounterDecisionRecord) {
+        self.encounter_sequence = self.encounter_sequence.saturating_add(1);
+        record.sequence = self.encounter_sequence;
+        self.encounter_history.push_back(record);
+        while self.encounter_history.len() > ENCOUNTER_HISTORY_LIMIT {
+            self.encounter_history.pop_front();
+        }
+    }
+
+    pub fn encounter_positions(&self) -> Vec<(u32, [f32; 3], bool)> {
+        self.patrol
+            .as_ref()
+            .map_or_else(Vec::new, PatrolService::positions)
+    }
+
+    pub fn encounter_sequence(&self) -> u64 {
+        self.encounter_sequence
+    }
+
     /// Admit and apply one complete authoring document. Admission and all
     /// calculations happen before live state changes, so a rejected edit
     /// cannot partially mutate the running experiment.
@@ -316,6 +533,8 @@ impl DaggerRuntime {
         self.enemy_resources = enemy_resources;
         self.combat_sequence = 0;
         self.combat_history.clear();
+        self.encounter_sequence = 0;
+        self.encounter_history.clear();
         self.calculation_history
             .push_back(SessionCalculationRecord {
                 sequence: self.calculation_sequence,
@@ -355,6 +574,16 @@ impl DaggerRuntime {
         self.enemy_resources = reset_enemy_resources(&self.content_entities, &self.experiment);
         self.combat_sequence = 0;
         self.combat_history.clear();
+        self.encounter_sequence = 0;
+        self.encounter_history.clear();
+        if let Some(patrol) = self.patrol.as_mut() {
+            patrol.reset();
+            self.content_live_positions = patrol
+                .positions()
+                .into_iter()
+                .map(|(handle, position, _)| (u64::from(handle), position))
+                .collect();
+        }
         self.focused_content_id = None;
         self.experiment_readout()
     }
@@ -434,6 +663,8 @@ impl DaggerRuntime {
                     reset_enemy_resources(&self.content_entities, &self.experiment);
                 self.combat_sequence = 0;
                 self.combat_history.clear();
+                self.encounter_sequence = 0;
+                self.encounter_history.clear();
                 self.focused_content_id = Some(id);
                 return self.experiment_readout();
             }
@@ -542,6 +773,17 @@ impl DaggerRuntime {
 
     pub fn experiment_readout(&self) -> Result<ExperimentReadout, RuntimeError> {
         let position = self.player_position()?;
+        let encounter_states = self
+            .patrol
+            .as_ref()
+            .map(|patrol| {
+                patrol
+                    .states()
+                    .into_iter()
+                    .map(|(handle, mode)| (u64::from(handle), ai_mode_name(mode)))
+                    .collect::<BTreeMap<_, _>>()
+            })
+            .unwrap_or_default();
         let content = self
             .content_entities
             .iter()
@@ -569,6 +811,7 @@ impl DaggerRuntime {
                             .hypot(live_position[1] - position.y)
                             .hypot(live_position[2] - position.z),
                         resources: self.enemy_resources.get(&entity.id).copied(),
+                        ai_state: encounter_states.get(&entity.id).copied(),
                     },
                 }
             })
@@ -592,6 +835,7 @@ impl DaggerRuntime {
             player_yaw_degrees: self.player_state.yaw_degrees,
             calculations: self.calculation_history.iter().cloned().collect(),
             combat: self.combat_history.iter().cloned().collect(),
+            encounter_decisions: self.encounter_history.iter().cloned().collect(),
             content,
             focused_content_id: self.focused_content_id,
         })
@@ -710,6 +954,15 @@ fn collision_hit_distance(hit: SpatialCollisionHit) -> f64 {
     match hit {
         SpatialCollisionHit::Voxel(hit) => hit.distance,
         SpatialCollisionHit::StaticMesh(hit) => hit.distance,
+    }
+}
+
+fn ai_mode_name(mode: EnemyAiMode) -> &'static str {
+    match mode {
+        EnemyAiMode::Patrol => "patrol",
+        EnemyAiMode::Chase => "chase",
+        EnemyAiMode::Attack => "attack",
+        EnemyAiMode::Dead => "dead",
     }
 }
 

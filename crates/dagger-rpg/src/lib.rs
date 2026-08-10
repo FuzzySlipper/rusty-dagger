@@ -49,6 +49,7 @@ pub struct EnemyExperiment {
     pub mobile_id: u8,
     pub stats: ActorStatsExperiment,
     pub combat: EnemyCombatExperiment,
+    pub behavior: EnemyBehaviorExperiment,
 }
 
 /// The editable terms for the first player melee experiment. Rust owns the
@@ -67,6 +68,17 @@ pub struct PlayerCombatExperiment {
 pub struct EnemyCombatExperiment {
     pub defense: f32,
     pub armor: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct EnemyBehaviorExperiment {
+    pub detection_range: f32,
+    pub patrol_speed: f32,
+    pub chase_speed: f32,
+    pub attack_range: f32,
+    pub attack_cooldown_seconds: f32,
+    pub attack_damage: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -122,6 +134,7 @@ pub struct AdmittedEnemyValues {
     pub mobile_id: u8,
     pub stats: AdmittedActorValues,
     pub combat: EnemyCombatExperiment,
+    pub behavior: EnemyBehaviorExperiment,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -287,6 +300,31 @@ impl ExperimentDocument {
                 0.0,
                 200.0,
             )?;
+            for (name, value, minimum, maximum) in [
+                ("detectionRange", enemy.behavior.detection_range, 0.1, 100.0),
+                ("patrolSpeed", enemy.behavior.patrol_speed, 0.0, 20.0),
+                ("chaseSpeed", enemy.behavior.chase_speed, 0.1, 20.0),
+                ("attackRange", enemy.behavior.attack_range, 0.1, 10.0),
+                (
+                    "attackCooldownSeconds",
+                    enemy.behavior.attack_cooldown_seconds,
+                    0.1,
+                    60.0,
+                ),
+                (
+                    "attackDamage",
+                    enemy.behavior.attack_damage,
+                    0.0,
+                    MAX_STAT_INPUT,
+                ),
+            ] {
+                finite_in_range(
+                    format!("enemies[{index}].behavior.{name}"),
+                    value,
+                    minimum,
+                    maximum,
+                )?;
+            }
             finite_in_range(
                 format!("enemies[{index}].combat.armor"),
                 enemy.combat.armor,
@@ -304,6 +342,7 @@ impl ExperimentDocument {
                 Ok(AdmittedEnemyValues {
                     mobile_id: enemy.mobile_id,
                     combat: enemy.combat.clone(),
+                    behavior: enemy.behavior.clone(),
                     stats: admit_actor_stats(
                         &format!("enemy.mobile{}", enemy.mobile_id),
                         &format!("enemies[{index}].stats"),
@@ -597,6 +636,14 @@ mod tests {
                 combat: EnemyCombatExperiment {
                     defense: 50.0,
                     armor: 1.0,
+                },
+                behavior: EnemyBehaviorExperiment {
+                    detection_range: 6.0,
+                    patrol_speed: 1.0,
+                    chase_speed: 2.0,
+                    attack_range: 1.25,
+                    attack_cooldown_seconds: 1.5,
+                    attack_damage: 4.0,
                 },
             }],
         }

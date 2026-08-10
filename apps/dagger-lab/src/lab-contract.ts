@@ -22,12 +22,14 @@ export interface EnemyExperiment {
   readonly mobileId: number;
   readonly stats: ActorStatsInputs;
   readonly combat: EnemyCombatTerms;
+  readonly behavior: EnemyBehaviorTerms;
 }
 
 export interface EnemyExperimentDraft {
   mobileId: number;
   stats: ActorStatsDraft;
   combat: EnemyCombatTermsDraft;
+  behavior: EnemyBehaviorTermsDraft;
 }
 
 export interface PlayerCombatTerms {
@@ -52,6 +54,24 @@ export interface EnemyCombatTerms {
 export interface EnemyCombatTermsDraft {
   defense: number;
   armor: number;
+}
+
+export interface EnemyBehaviorTerms {
+  readonly detectionRange: number;
+  readonly patrolSpeed: number;
+  readonly chaseSpeed: number;
+  readonly attackRange: number;
+  readonly attackCooldownSeconds: number;
+  readonly attackDamage: number;
+}
+
+export interface EnemyBehaviorTermsDraft {
+  detectionRange: number;
+  patrolSpeed: number;
+  chaseSpeed: number;
+  attackRange: number;
+  attackCooldownSeconds: number;
+  attackDamage: number;
 }
 
 export interface ActorStatsInputs {
@@ -144,8 +164,24 @@ export interface ExperimentReadout {
   readonly playerYawDegrees: number;
   readonly calculations: readonly CalculationRecord[];
   readonly combat: readonly CombatRecord[];
+  readonly encounterDecisions: readonly EncounterDecisionRecord[];
   readonly content: readonly ContentEntityReadout[];
   readonly focusedContentId: number | null;
+}
+
+export interface EncounterDecisionRecord {
+  readonly sequence: number;
+  readonly enemyId: number;
+  readonly enemyName: string;
+  readonly decision: string;
+  readonly from: string | null;
+  readonly to: string | null;
+  readonly distanceToPlayer: number;
+  readonly damage: number | null;
+  readonly lineOfSightClear: boolean | null;
+  readonly playerHealthBefore: number | null;
+  readonly playerHealthAfter: number | null;
+  readonly playerDied: boolean;
 }
 
 export interface CombatRecord {
@@ -193,6 +229,7 @@ export interface ContentEntityReadout {
       readonly currentStamina: number;
       readonly currentMagicka: number;
     } | null;
+    readonly aiState: string | null;
   };
 }
 
@@ -208,6 +245,7 @@ export function cloneExperiment(document: ExperimentDocument): ExperimentDraft {
       mobileId: enemy.mobileId,
       stats: cloneActorStats(enemy.stats),
       combat: { ...enemy.combat },
+      behavior: { ...enemy.behavior },
     })),
   };
 }
@@ -231,6 +269,7 @@ export function documentFromDraft(draft: ExperimentDraft): ExperimentDocument {
       mobileId: enemy.mobileId,
       stats: cloneActorStats(enemy.stats),
       combat: { ...enemy.combat },
+      behavior: { ...enemy.behavior },
     })),
   };
 }

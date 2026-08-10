@@ -168,11 +168,16 @@ try:
     # native host to observe it under load.
     time.sleep(0.75)
     final_title = window_name(display, window)
-    if expected_after_title is not None and expected_after_title not in final_title:
-        raise SystemExit(
-            f"Dagger native title does not contain {expected_after_title!r} after input: "
-            f"{final_title!r}"
-        )
+    if expected_after_title is not None:
+        title_deadline = time.monotonic() + 5
+        while expected_after_title not in final_title and time.monotonic() < title_deadline:
+            time.sleep(0.10)
+            final_title = window_name(display, window)
+        if expected_after_title not in final_title:
+            raise SystemExit(
+                f"Dagger native title does not contain {expected_after_title!r} after input: "
+                f"{final_title!r}"
+            )
     if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
         raise SystemExit(f"physical {key.upper()} key-up injection failed")
     x11.XSync(display, 0)

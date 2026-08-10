@@ -60,6 +60,12 @@ try {
   assert.equal(await page.getByTestId('content-mobile-id').innerText(), '0');
   assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /3\.00 health · 10\.00 stamina · 0\.00 magicka/i);
   assert.match(await page.getByTestId('content-live-resources').innerText(), /Live 3\.00 H · 10\.00 S · 0\.00 M/i);
+  await page.getByTestId('content-filter').fill('skeletal');
+  await page.getByTestId('content-2000').click();
+  await page.getByTestId('content-name').filter({ hasText: 'SkeletalWarrior' }).waitFor();
+  assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /20\.00 health/i);
+  await page.getByTestId('content-filter').fill('rat');
+  await page.getByTestId('content-2007').click();
 
   // The worksheet calls the same Rust authority without applying or adding a
   // live history record.
@@ -88,6 +94,9 @@ try {
   await page.getByTestId('attack-range').fill('4');
   await page.getByTestId('hit-bonus').fill('-100');
   await page.getByTestId('rat-defense').fill('200');
+  await page.getByTestId('enemy-detection-range').fill('0.5');
+  await page.getByTestId('enemy-patrol-speed').fill('0');
+  await page.getByTestId('enemy-attack-range').fill('0.4');
   await page.getByTestId('profile-name').fill('Measured pace');
   await page.getByTestId('save-as-profile').click();
   await page.getByTestId('profile-count').filter({ hasText: '2 profiles' }).waitFor();
@@ -120,6 +129,12 @@ try {
   await page.getByTestId('base-damage').fill('10');
   await page.getByTestId('rat-defense').fill('0');
   await page.getByTestId('rat-armor').fill('0');
+  await page.getByTestId('content-filter').fill('skeletal');
+  await page.getByTestId('content-2000').click();
+  await page.getByTestId('enemy-detection-range').fill('100');
+  await page.getByTestId('enemy-attack-range').fill('4');
+  await page.getByTestId('enemy-attack-cooldown').fill('0.5');
+  await page.getByTestId('enemy-attack-damage').fill('12');
   await page.getByTestId('save-profile').click();
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
@@ -131,7 +146,10 @@ try {
   await page.getByTestId('rat-derived-traces').filter({ hasText: 'healthPerEndurance = 0.30' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
   const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
+  await page.getByTestId('content-filter').fill('rat');
   const profileBCombat = await jumpAndPhysicallyAttack(page, 2007, spawnPosition, 'HIT', '7.00 → 0.00');
+  await page.getByTestId('content-filter').fill('skeletal');
+  const skeletonEncounter = await jumpAndObserveEnemyAttack(page, 2000, spawnPosition, 12);
 
   // Closing the companion tab must not create, reset, or dispose the native
   // Rust session. Reopen it in the same browser profile and reattach to the
@@ -207,7 +225,7 @@ try {
   await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
 
   console.log(
-    `DAGGER_LAB_BROWSER_OK lifecycle=tab-closed-reopened/same-native-session content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_LAB_BROWSER_OK lifecycle=tab-closed-reopened/same-native-session content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -273,6 +291,34 @@ async function jumpAndPhysicallyAttack(page, contentId, spawnPosition, outcome, 
   if (outcome === 'HIT') {
     await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
   }
+  await page.getByTestId('reset').click();
+  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  return text;
+}
+
+async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage) {
+  await page.getByTestId(`content-${contentId}`).click();
+  await page.getByTestId('jump-content').click();
+  await page.waitForFunction(
+    (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
+    contentId,
+    { timeout: 10_000 },
+  );
+  const attack = page
+    .locator('[data-testid^="encounter-"]:not([data-testid="encounter-panel"])')
+    .filter({ hasText: 'melee attack' })
+    .filter({ hasText: 'player 130.00 → 118.00' })
+    .first();
+  await attack.filter({ hasText: `damage ${damage.toFixed(2)}` }).waitFor({ timeout: 10_000 });
+  await attack.filter({ hasText: 'LOS clear' }).waitFor();
+  execFileSync(
+    'python3',
+    ['scripts/x11-send-dagger-move.py', 'a', 'SkeletalWarrior', `attacks ${damage}`],
+    { stdio: 'inherit' },
+  );
+  const text = await attack.innerText();
+  assert.match(text, /player 130\.00 → 118\.00/i);
+  await page.screenshot({ path: `${output}/skeleton-encounter-desktop.png`, fullPage: true });
   await page.getByTestId('reset').click();
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   return text;

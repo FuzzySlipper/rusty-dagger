@@ -41,6 +41,7 @@ mod tests {
     use rusty_engine::core_math::Vec3;
 
     const PROJECT: &str = include_str!("../../../content/projects/privateers-hold.project.json");
+    const NAVGRID: &str = include_str!("../../../content/projects/privateers-hold.navgrid.json");
 
     fn adversarial_wall_project() -> String {
         // Inject an additive voxelEnvironment carrying a tall wall in front of
@@ -275,6 +276,93 @@ mod tests {
                 .current_health,
             3.0
         );
+    }
+
+    #[test]
+    fn runtime_owns_tunable_rat_and_skeletal_warrior_encounters() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        runtime
+            .install_encounter_navigation_json(NAVGRID)
+            .expect("install committed navigation");
+
+        runtime.jump_to_content(2007).expect("jump beside Rat");
+        for _ in 0..20 {
+            runtime.tick_encounters(0.1).expect("Rat encounter tick");
+            if runtime
+                .experiment_readout()
+                .unwrap()
+                .player_stats
+                .current_health
+                < 85.0
+            {
+                break;
+            }
+        }
+        let rat = runtime.experiment_readout().expect("Rat encounter readout");
+        assert!(rat
+            .encounter_decisions
+            .iter()
+            .any(|record| record.enemy_id == 2007 && record.to.as_deref() == Some("chase")));
+        assert!(rat.encounter_decisions.iter().any(|record| {
+            record.enemy_id == 2007
+                && record.decision == "melee attack"
+                && record.damage == Some(4.0)
+                && record.line_of_sight_clear == Some(true)
+        }));
+        assert_eq!(rat.player_stats.current_health, 81.0);
+
+        runtime
+            .reset_play_session()
+            .expect("reset before Skeletal Warrior");
+        runtime
+            .jump_to_content(2000)
+            .expect("jump beside Skeletal Warrior");
+        for _ in 0..20 {
+            runtime
+                .tick_encounters(0.1)
+                .expect("Skeletal Warrior encounter tick");
+            if runtime
+                .experiment_readout()
+                .unwrap()
+                .player_stats
+                .current_health
+                < 85.0
+            {
+                break;
+            }
+        }
+        let skeleton = runtime
+            .experiment_readout()
+            .expect("Skeletal Warrior encounter readout");
+        assert!(skeleton.encounter_decisions.iter().any(|record| {
+            record.enemy_id == 2000
+                && record.decision == "melee attack"
+                && record.damage == Some(8.0)
+        }));
+        assert_eq!(skeleton.player_stats.current_health, 77.0);
+
+        let mut quiet: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        quiet["enemies"][0]["behavior"]["detectionRange"] = serde_json::Value::from(0.5);
+        quiet["enemies"][0]["behavior"]["attackRange"] = serde_json::Value::from(0.4);
+        quiet["enemies"][0]["behavior"]["patrolSpeed"] = serde_json::Value::from(0.0);
+        runtime
+            .apply_experiment_json(&serde_json::to_string(&quiet).unwrap())
+            .expect("apply quiet Rat behavior");
+        runtime.reset_play_session().expect("reset quiet run");
+        runtime
+            .jump_to_content(2007)
+            .expect("jump beside quiet Rat");
+        for _ in 0..20 {
+            runtime.tick_encounters(0.1).expect("quiet Rat tick");
+        }
+        let quiet = runtime.experiment_readout().expect("quiet Rat readout");
+        assert_eq!(quiet.player_stats.current_health, 85.0);
+        assert!(quiet
+            .encounter_decisions
+            .iter()
+            .all(|record| record.enemy_id != 2007 || record.decision != "melee attack"));
     }
 
     #[test]

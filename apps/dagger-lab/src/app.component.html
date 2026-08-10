@@ -90,6 +90,7 @@
           <div class="live-content" data-testid="content-live-position">
             <span>Authoritative live patrol position</span>
             <code>{{ format(entity.live.position[0]) }}, {{ format(entity.live.position[1]) }}, {{ format(entity.live.position[2]) }}</code>
+            <strong *ngIf="entity.live.aiState" data-testid="content-ai-state">{{ entity.live.aiState }}</strong>
           </div>
           <div class="authored-link" *ngIf="selectedEnemyStats() as gameplay; else playerOnlyGameplay">
             <div>
@@ -109,6 +110,23 @@
           <p class="play-note">Rust chooses a grounded approach beside the selected live patrol position, resets the player, faces the enemy, and focuses the native game.</p>
         </section>
       </div>
+    </article>
+
+    <article class="panel editor encounter-rules" *ngIf="selectedEnemyDraft() as enemy" data-testid="encounter-rules">
+      <div class="panel-heading">
+        <div><p class="kicker">Selected mobile {{ enemy.mobileId }} · live AI inputs</p><h2>{{ selectedContent()?.reference?.mobileName }} encounter</h2></div>
+        <span class="schema">Rust admitted</span>
+      </div>
+      <p class="muted">Tune only the selected archetype. Rust owns patrol, detection, chase, navigation, attack cooldowns, and player damage.</p>
+      <div class="field-grid">
+        <label><span>Detection range</span><input data-testid="enemy-detection-range" type="number" min="0.1" step="0.5" [(ngModel)]="enemy.behavior.detectionRange" (ngModelChange)="markDirty()" /></label>
+        <label><span>Patrol speed</span><input data-testid="enemy-patrol-speed" type="number" min="0" step="0.1" [(ngModel)]="enemy.behavior.patrolSpeed" (ngModelChange)="markDirty()" /></label>
+        <label><span>Chase speed</span><input data-testid="enemy-chase-speed" type="number" min="0.1" step="0.1" [(ngModel)]="enemy.behavior.chaseSpeed" (ngModelChange)="markDirty()" /></label>
+        <label><span>Attack range</span><input data-testid="enemy-attack-range" type="number" min="0.1" step="0.1" [(ngModel)]="enemy.behavior.attackRange" (ngModelChange)="markDirty()" /></label>
+        <label><span>Attack cooldown</span><input data-testid="enemy-attack-cooldown" type="number" min="0.1" step="0.1" [(ngModel)]="enemy.behavior.attackCooldownSeconds" (ngModelChange)="markDirty()" /></label>
+        <label><span>Attack damage</span><input data-testid="enemy-attack-damage" type="number" min="0" step="0.5" [(ngModel)]="enemy.behavior.attackDamage" (ngModelChange)="markDirty()" /></label>
+      </div>
+      <p class="play-note">Apply, jump beside this enemy, and return to the native game. Decision records below capture state changes and attacks, not every AI tick.</p>
     </article>
 
     <article class="panel editor">
@@ -300,6 +318,23 @@
             <small>armor {{ format(combat.armor) }}</small>
           </div>
           <p data-testid="combat-health">Health {{ format(combat.healthBefore) }} → {{ format(combat.healthAfter) }} <strong *ngIf="combat.died">· DEAD</strong></p>
+        </article>
+      </div>
+    </article>
+
+    <article class="panel encounter" *ngIf="readout as live" data-testid="encounter-panel">
+      <div class="panel-heading">
+        <div><p class="kicker">Concise Rust decisions</p><h2>Encounter activity</h2></div>
+        <span class="schema" data-testid="encounter-count">{{ live.encounterDecisions.length }} records</span>
+      </div>
+      <p class="muted" *ngIf="live.encounterDecisions.length === 0">Approach a configured Rat or Skeletal Warrior to trigger detection, chase, and attacks.</p>
+      <div class="derived-grid encounter-records" *ngIf="live.encounterDecisions.length > 0">
+        <article *ngFor="let decision of live.encounterDecisions" [attr.data-testid]="'encounter-' + decision.sequence">
+          <span>#{{ decision.sequence }} · {{ decision.enemyName }} {{ decision.enemyId }}</span>
+          <strong>{{ decision.decision }}</strong>
+          <code *ngIf="decision.from">{{ decision.from }} → {{ decision.to }} at {{ format(decision.distanceToPlayer) }}u</code>
+          <code *ngIf="decision.damage !== null">damage {{ format(decision.damage) }} · player {{ format(decision.playerHealthBefore ?? 0) }} → {{ format(decision.playerHealthAfter ?? 0) }} · LOS {{ decision.lineOfSightClear ? 'clear' : 'blocked' }}</code>
+          <p *ngIf="decision.playerDied"><strong>PLAYER DEAD</strong></p>
         </article>
       </div>
     </article>

@@ -168,8 +168,9 @@ modularity gate, task 6529):
 - `dagger-runtime` — Daggerfall-owned project admission, player controller,
   real-project collision walkthrough, experiment application/reset, and live
   gameplay state. It also admits the small supported enemy-reference catalog
-  used by the Lab, accepts live patrol position snapshots from the native
-  composition root, and owns grounded jump-to-content commands. It consumes
+  used by the Lab, installs the committed navgrid, and owns grounded patrol,
+  detection, chase, attack cooldowns, line-of-sight admission, enemy attacks,
+  and jump-to-content commands. It consumes
   only the public `rusty_engine` Rust facade and
   local `dagger-rpg`; it does not import sibling game products. It owns
   authoritative session mutation and exposes readback plus bounded semantic
@@ -178,9 +179,9 @@ modularity gate, task 6529):
   render projection for the committed Privateer's Hold project, plus native
   product composition for that projection. The adapter reuses
   `dagger-runtime`; it rejects mutations until a Dagger-owned authority
-  exists. `dagger-native-host` calls the runtime animation and patrol services
-  directly and visualizes the committed navgrid through bounded retained
-  frames; Engine privately owns the webview renderer.
+  exists. `dagger-native-host` ticks the runtime authority, presents its live
+  transforms and encounter decisions, and visualizes the committed navgrid
+  through bounded retained frames; Engine privately owns the webview renderer.
 - `scripts/studio-host.mjs` — bounded HTTP/static host for the Engine Studio
   app, adapter lifecycle, normalized host-file browsing, and atomic
   per-project user settings. It is transport/presentation glue, not gameplay
@@ -203,9 +204,13 @@ modularity gate, task 6529):
   Engine renderer implementation.
   The connected content browser searches the 43 committed enemy identities,
   keeps decoded Arena2 reference fields distinct from authored player/Rat rules
-  and live patrol/resource state, and asks Rust to choose a navigable grounded
-  approach before focusing the native game. Rat gameplay keys to Arena2 mobile
-  ID 0; `dagger-rpg` does not own a duplicate classic identity roster. It is
+  and live patrol/resource/AI state, and asks Rust to choose a navigable grounded
+  approach before focusing the native game. The encounter editor exposes only
+  the supported per-archetype detection, patrol/chase speed, attack range,
+  cooldown, and damage terms; concise state-change and attack records explain
+  the current play session. Rat gameplay keys to Arena2 mobile ID 0 and the
+  Skeletal Warrior profile to mobile ID 15; `dagger-rpg` does not own a
+  duplicate classic identity roster. It is
   deliberately not a generic Arena2 editor or a raw-coordinate teleport
   surface.
 - `data/` — optional committed, hand-authored JSON defaults for the experiment
@@ -223,7 +228,7 @@ modularity gate, task 6529):
   has no renderer TypeScript, HTML canvas bootstrap, or renderer package
   imports.
 
-### Gameplay authoring shape (program 6682, tasks 6683, 6689, 6684, and 6685)
+### Gameplay authoring shape (program 6682, tasks 6683, 6689, 6684, 6685, and 6687)
 
 - **TypeScript/Angular authors; Rust means and acts.** Immutable TS builders,
   simple JSON defaults, and Angular forms may assemble supported values. They
@@ -235,6 +240,11 @@ modularity gate, task 6529):
   constructs per-entity Rat resources for admitted mobile ID 0 entities. It
   derives the focused target, checks live planar reach and Engine collision
   line of sight, mutates health/death, and retains semantic attack records.
+  The same admitted document supplies bounded behavior terms for named Rat and
+  Skeletal Warrior encounters. `dagger-runtime` owns their nav-aware
+  patrol/detect/chase/attack loop, cooldowns, Engine collision line of sight,
+  player-health mutation, and concise decision history; the native host only
+  ticks and presents those effects.
   There is no TS evaluator, expression AST, callback escape hatch, or replay
   contract.
 - **Small vocabulary, grown by play.** Begin with the first movement/derived
