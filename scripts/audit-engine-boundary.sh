@@ -15,19 +15,18 @@ engine_dependencies = [
     (name, spec)
     for name, spec in workspace["dependencies"].items()
     if isinstance(spec, dict)
-    and spec.get("git") == "https://github.com/FuzzySlipper/rusty-engine.git"
+    and name == "rusty-engine"
 ]
 if engine_dependencies != [
     (
         "rusty-engine",
         {
-            "git": "https://github.com/FuzzySlipper/rusty-engine.git",
-            "branch": "main",
+            "path": "../rusty-engine/rust/crates/rusty-engine",
         },
     )
 ]:
     raise SystemExit(
-        "workspace must expose exactly one rolling rusty-engine facade dependency"
+        "workspace must expose exactly one adjacent rusty-engine facade dependency"
     )
 
 for manifest in root.glob("crates/*/Cargo.toml"):
@@ -59,9 +58,9 @@ for source in root.glob("crates/**/*.rs"):
 PY
 
 if git grep -n -E \
-  '@rusty-engine/(render-contracts|render-projection|renderer-host|renderer-three)' \
+  '@rusty-engine/(render-contracts|render-projection|renderer-host|renderer-three|studio-[a-z-]+)' \
   -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.html' 'package.json'; then
-  echo 'downstream source imports Engine renderer implementation packages' >&2
+  echo 'downstream source imports Engine Studio or renderer implementation packages' >&2
   exit 1
 fi
 

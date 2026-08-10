@@ -15,15 +15,11 @@ edition = "2021"
 [workspace.dependencies]
 anyhow = "1"
 gtk = "0.18"
-rusty-engine = { git = "https://github.com/FuzzySlipper/rusty-engine.git", branch = "main" }
+rusty-engine = { path = "../rusty-engine/rust/crates/rusty-engine" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sha2 = "0.10"
 winit = "0.30"
-
-[workspace.metadata.rusty-engine]
-repository = "https://github.com/FuzzySlipper/rusty-engine.git"
-revision = "0503830d22bd982bdeb68681849cf6a0b67db355"
 
 [workspace.lints.rust]
 warnings = "warn"
