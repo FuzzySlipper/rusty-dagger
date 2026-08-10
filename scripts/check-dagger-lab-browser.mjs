@@ -103,36 +103,36 @@ try {
 
   // The worksheet calls the same Rust authority without applying or adding a
   // live history record.
-  await page.getByTestId('worksheet-base').fill('20');
-  await page.getByTestId('worksheet-endurance').fill('70');
-  await page.getByTestId('worksheet-rate').fill('2');
+  await fillExact(page, 'worksheet-base', '20');
+  await fillExact(page, 'worksheet-endurance', '70');
+  await fillExact(page, 'worksheet-rate', '2');
   await page.getByTestId('evaluate').click();
   await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
   assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
 
-  await page.getByTestId('worksheet-base').fill('-1');
+  await fillExact(page, 'worksheet-base', '-1');
   await page.getByTestId('evaluate').click();
   await page.getByTestId('worksheet-error').filter({ hasText: 'player.stats.resources.baseHealth' }).waitFor();
   assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
-  await page.getByTestId('worksheet-base').fill('20');
+  await fillExact(page, 'worksheet-base', '20');
   await page.getByTestId('evaluate').click();
   await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
 
   // Profile A is authored from the draft, saved locally, admitted by Rust,
   // reset, and physically played.
-  await page.getByTestId('movement-speed').fill('4');
-  await page.getByTestId('endurance').fill('50');
-  await page.getByTestId('rat-strength').fill('20');
-  await page.getByTestId('rat-base-health').fill('4');
-  await page.getByTestId('attack-range').fill('4');
-  await page.getByTestId('player-attack-cooldown').fill('4');
-  await page.getByTestId('player-stamina-cost').fill('5');
-  await page.getByTestId('hit-bonus').fill('-100');
-  await page.getByTestId('rat-defense').fill('200');
-  await page.getByTestId('enemy-detection-range').fill('0.5');
-  await page.getByTestId('enemy-patrol-speed').fill('0');
-  await page.getByTestId('enemy-attack-range').fill('0.4');
+  await fillExact(page, 'movement-speed', '4');
+  await fillExact(page, 'endurance', '50');
+  await fillExact(page, 'rat-strength', '20');
+  await fillExact(page, 'rat-base-health', '4');
+  await fillExact(page, 'attack-range', '4');
+  await fillExact(page, 'player-attack-cooldown', '4');
+  await fillExact(page, 'player-stamina-cost', '5');
+  await fillExact(page, 'hit-bonus', '-100');
+  await fillExact(page, 'rat-defense', '200');
+  await fillExact(page, 'enemy-detection-range', '0.5');
+  await fillExact(page, 'enemy-patrol-speed', '0');
+  await fillExact(page, 'enemy-attack-range', '0.4');
   await page.getByTestId('profile-name').fill('Measured pace');
   await page.getByTestId('save-as-profile').click();
   await page.getByTestId('profile-count').filter({ hasText: '2 profiles' }).waitFor();
@@ -165,29 +165,22 @@ try {
   // not discard the active profile identity.
   const authoredProfileBSpeed = 9.123456789;
   const admittedProfileBSpeed = Math.fround(authoredProfileBSpeed);
-  await page.getByTestId('movement-speed').fill(String(authoredProfileBSpeed));
-  await page.getByTestId('endurance').fill('70');
-  await page.getByTestId('rat-strength').fill('30');
-  await page.getByTestId('rat-health-per-endurance').fill('0.3');
-  await page.getByTestId('hit-bonus').fill('100');
-  await page.getByTestId('base-damage').fill('10');
-  await page.getByTestId('player-attack-cooldown').fill('0.2');
-  await page.getByTestId('player-stamina-cost').fill('20');
-  await page.getByTestId('rat-defense').fill('0');
-  await page.getByTestId('rat-armor').fill('0');
+  await fillExact(page, 'movement-speed', String(authoredProfileBSpeed));
+  await fillExact(page, 'endurance', '70');
+  await fillExact(page, 'rat-strength', '30');
+  await fillExact(page, 'rat-health-per-endurance', '0.3');
+  await fillExact(page, 'hit-bonus', '100');
+  await fillExact(page, 'base-damage', '10');
+  await fillExact(page, 'player-attack-cooldown', '0.2');
+  await fillExact(page, 'player-stamina-cost', '20');
+  await fillExact(page, 'rat-defense', '0');
+  await fillExact(page, 'rat-armor', '0');
   await page.getByTestId('content-filter').fill('skeletal');
   await page.getByTestId('content-2000').click();
-  await page.getByTestId('enemy-detection-range').fill('100');
-  await page.getByTestId('enemy-attack-range').fill('4');
-  await page.getByTestId('enemy-attack-cooldown').fill('0.5');
-  const enemyAttackDamage = page.getByTestId('enemy-attack-damage');
-  await enemyAttackDamage.fill('12');
-  await enemyAttackDamage.blur();
-  assert.equal(
-    await enemyAttackDamage.inputValue(),
-    '12',
-    'browser authoring did not commit the exact enemy attack damage',
-  );
+  await fillExact(page, 'enemy-detection-range', '100');
+  await fillExact(page, 'enemy-attack-range', '4');
+  await fillExact(page, 'enemy-attack-cooldown', '0.5');
+  await fillExact(page, 'enemy-attack-damage', '12');
   await page.getByTestId('save-profile').click();
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
@@ -250,7 +243,7 @@ try {
 
   // Invalid documents may be kept as drafts, but activating one must surface
   // the Rust author error and preserve the prior active session and history.
-  await page.getByTestId('movement-speed').fill('0');
+  await fillExact(page, 'movement-speed', '0');
   await page.getByTestId('profile-name').fill('Broken draft');
   await page.getByTestId('save-as-profile').click();
   await page.getByTestId('profile-count').filter({ hasText: '4 profiles' }).waitFor();
@@ -339,6 +332,24 @@ async function pressPhysical(page, code) {
   await page.keyboard.down(key);
   await page.waitForTimeout(80);
   await page.keyboard.up(key);
+}
+
+async function fillExact(page, testId, value) {
+  const input = page.getByTestId(testId);
+  // A slow change-detection pass can restore the prior number between the
+  // clear and replacement events used by Playwright. Only continue once the
+  // blurred control confirms the authored value, with a bounded retry.
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await input.fill(value);
+    await input.blur();
+    await page.waitForTimeout(100);
+    if (await input.inputValue() === value) return;
+  }
+  assert.equal(
+    await input.inputValue(),
+    value,
+    `browser authoring did not commit the exact ${testId} value`,
+  );
 }
 
 async function openInterface(page) {
