@@ -168,23 +168,35 @@ try:
     # native host to observe it under load.
     time.sleep(0.75)
     final_title = window_name(display, window)
-    if expected_after_title is not None:
-        title_deadline = time.monotonic() + 5
-        while expected_after_title not in final_title and time.monotonic() < title_deadline:
-            time.sleep(0.10)
-            final_title = window_name(display, window)
-        if expected_after_title not in final_title:
-            raise SystemExit(
-                f"Dagger native title does not contain {expected_after_title!r} after input: "
-                f"{final_title!r}"
-            )
-    if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
-        raise SystemExit(f"physical {key.upper()} key-up injection failed")
-    x11.XSync(display, 0)
+    title_error = None
+    release_error = None
+    try:
+        if expected_after_title is not None:
+            # A combat edge is harmless while held because Rust admits only
+            # the rising transition. Give the software-rendered CI host enough
+            # time to observe that physical state before releasing it.
+            title_wait_seconds = 15 if key == "space" else 5
+            title_deadline = time.monotonic() + title_wait_seconds
+            while expected_after_title not in final_title and time.monotonic() < title_deadline:
+                time.sleep(0.10)
+                final_title = window_name(display, window)
+            if expected_after_title not in final_title:
+                title_error = (
+                    f"Dagger native title does not contain {expected_after_title!r} after input: "
+                    f"{final_title!r}"
+                )
+    finally:
+        if not xtst.XTestFakeKeyEvent(display, keycode, 0, 0):
+            release_error = f"physical {key.upper()} key-up injection failed"
+        x11.XSync(display, 0)
     # Do not let the next Lab command race ahead of Engine's asynchronous
     # physical-input readback for this falling edge. In particular, a reset
     # followed by a late movement readout would immediately leave the spawn.
     time.sleep(1.50)
+    if release_error is not None:
+        raise SystemExit(release_error)
+    if title_error is not None:
+        raise SystemExit(title_error)
     marker = (
         "DAGGER_LAB_PHYSICAL_OPEN_OK"
         if key == "l"
