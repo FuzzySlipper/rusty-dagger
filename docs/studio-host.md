@@ -1,91 +1,67 @@
-# Rusty Dagger Studio host
+# Rusty Dagger Studio integration
 
-The `dagger-studio-adapter` and `scripts/studio-host.mjs` pair are the
-downstream Studio boundary for Privateer's Hold. The adapter is the authority
-for project admission and readback; the Node process is only an HTTP transport,
-bounded host-file/settings service, static-file server, and adapter lifecycle
-owner. It does not import loading-bay gameplay or invent a TypeScript mutation
-authority.
+Rusty Studio is an Engine-hosted product. Rusty Dagger does not install,
+import, build, bundle, copy, or serve Studio or its renderer implementation.
+This repository's complete ordinary Studio boundary is:
 
-## Runtime
+- committed project data under `content/projects/`;
+- the trusted root-local `.rusty-studio.json` bootstrap; and
+- `dagger-studio-adapter`, the project-owned Rust protocol authority.
 
-The host serves any local Rusty Engine Studio production build — the engine
-moves fast, so drift is fixed forward rather than gated behind exact-revision
-provenance checks. The conventional default is the sibling checkout's build at
-`/home/dev/rusty-engine/studio/dist/apps/studio-app/browser`; point
-`RUSTY_ENGINE_STUDIO_STATIC_ROOT` at any other build:
+The bootstrap tells the generic Engine host how to start the adapter. The
+adapter admits Dagger project data, projects canonical readback and exact
+resources, and fails unsupported mutations closed. Engine owns the Studio
+service, browser application, host-file/settings transport, renderer, and
+browser-level integration tests without acquiring Dagger project or gameplay
+meaning.
 
-```sh
-RUSTY_ENGINE_STUDIO_STATIC_ROOT=/home/dev/rusty-engine-head/studio/dist/apps/studio-app/browser \
-  scripts/serve-studio.sh
-```
+## Normal interactive entrypoint
 
-Build the static app from an engine checkout with:
+On a machine with the persistent Engine service installed, confirm its health:
 
 ```sh
-cd /home/dev/rusty-engine/studio
-npx --yes pnpm@11.7.0 install --frozen-lockfile --prefer-offline
-npx --yes pnpm@11.7.0 run build
+systemctl --user status rusty-studio.service
+curl http://127.0.0.1:4310/health
 ```
 
-The default host is `127.0.0.1:4173`.
-The startup page can be opened directly
-with the canonical project:
+Then open `http://127.0.0.1:4310/` and select this repository root plus
+`content/projects/privateers-hold.project.json`. Studio reads the root-local
+bootstrap and starts the adapter from the repository working directory.
 
-```
-http://127.0.0.1:4173/?root=/home/dev/rusty-dagger&project=content/projects/privateers-hold.project.json
-```
+Service installation, update, rollback, binding, and health are Engine
+operator concerns documented in
+`../rusty-engine/docs/topics/studio-service.md`. Downstream work must not
+update the service or fetch, pull, reset, clean, checkout, or otherwise mutate
+the sibling Engine checkout as an incidental setup step.
 
-`/api/studio-status` reports the consumer commit, adapter
-identity/protocol, and adapter binary hash. The host serves only normalized
-static paths and bounded regular render resources whose admitted SHA-256 hash
-matches the request. Host-file browsing excludes symlinks and caps one
-response at 512 entries. User settings are stored outside the repository under
-the per-project XDG config key and are written atomically with an expected-hash
-check.
+The persistent service currently has one process-wide active project. Use it
+for one interactive authoring session at a time. Concurrent automation needs
+an isolated Engine host on a unique loopback port and a separate settings
+root; separate project copies or explicit coordination are also required for
+concurrent mutation.
 
-## Focused checks
+## Dagger-owned checks
 
-These checks are intentionally smaller than the full Studio CI suite:
+The focused checks in this repository stop at its actual ownership boundary:
 
 ```sh
 cargo build -p dagger-studio-adapter
 python3 scripts/check-adapter.py
-node scripts/check-studio-host.mjs # while scripts/serve-studio.sh is running
-scripts/check-studio-browser.sh   # Chromium + SwiftShader, same host
 ```
 
-For a human-visible browser proof, use Chromium at desktop and narrow sizes
-against the startup URL above. `scripts/check-studio-browser.sh` opens the
-project, waits for the renderer's texture-resource traffic to settle, disables
-the editor grid through the visible View menu, double-clicks
-`privateers-hold-dungeon` through the normal visible hierarchy, and performs a
-bounded normal viewport orbit before capturing the renderer canvas, the full
-page, and the DOM. Beyond the DOM/readout assertions (title, >= 160 authored
-assets, ready renderer, pre/post-focus pixel change), the proof now audits the
-textured render itself (pure-Node PNG metrics in
-`scripts/studio-frame-metrics.mjs`; no PIL):
+`scripts/check-adapter.py` proves local stdio open/read/close behavior.
+`RUSTY_STUDIO_ADAPTER` remains an explicit diagnostic override; normal
+regeneration builds and checks the local adapter. Engine owns service and
+real-browser Studio certification.
 
-- **Texture fetch/hash audit**: every `/api/studio-render-resource` response in
-  the run must be HTTP 200 whose body SHA-256 equals the admitted
-  `contentHash`; every `sourcePath` must stay under `content/textures/`; at
-  least 60 unique texture resources must be fetched (today all 80).
-- **Non-flat-texture assertions**: occupancy >= 0.02 vs the renderer clear
-  color, >= 800 unique geometry colors and >= 1 texel-frequency grid cell
-  (luminance stddev >= 6) — gates the average-color fallback (~100-500
-  colors, no such cells) cannot pass.
-- **Independent boundary**: the Studio browser proof certifies Engine Studio's
-  own renderer path. Rusty Dagger's separate renderer certification is the
-  Rust-native `dagger-native-host`; the Studio check does not depend on a
-  downstream-owned browser renderer or its screenshots.
+The connected Dagger product and the fixed native renderer diagnostic are
+separate from Studio:
 
-Per-viewport metric reports land in `*-metrics.json` next to the screenshots
-in the artifact directory. The authored dungeon is intentionally a large world
-mesh; the focused canvas captures are the useful visual artifact. A renderer
-context failure under `--disable-gpu` is not a product result; use the normal
-host or an explicit SwiftShader WebGL mode when the environment has no
-hardware GPU.
+```sh
+./scripts/check-dagger-lab-browser.sh
+./scripts/verify-native-host.sh
+```
 
-`python3 scripts/check-adapter.py` remains the stdio open/read/close proof.
-`RUSTY_STUDIO_ADAPTER` is retained only as an explicit diagnostic escape hatch;
-normal regeneration always builds and checks the local adapter.
+Those gates prove the Dagger gameplay/application-host product and Engine's
+public native renderer facade respectively; neither makes Dagger a Studio or
+renderer implementation owner.

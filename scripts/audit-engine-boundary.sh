@@ -55,7 +55,45 @@ for source in root.glob("crates/**/*.rs"):
         without_facade = text.replace(f"rusty_engine::{namespace}::", "")
         if f"{namespace}::" in without_facade:
             raise SystemExit(f"{source}: bypasses rusty_engine::{namespace}")
+
+active_docs = [root / "README.md", *sorted((root / "docs").rglob("*.md"))]
+retired_paths = (
+    "scripts/check-engine-freshness.py",
+    "scripts/serve-studio.sh",
+    "scripts/studio-host.mjs",
+    "scripts/check-studio-host.mjs",
+    "scripts/check-studio-browser.sh",
+)
+retired_dependency_claims = (
+    "follows the provider's public `main` branch",
+    "resolved by `Cargo.lock`",
+)
+for document in active_docs:
+    text = document.read_text()
+    for retired in (*retired_paths, *retired_dependency_claims):
+        if retired in text:
+            raise SystemExit(f"{document}: retired Engine/Studio guidance remains: {retired}")
+
+provenance = (root / "docs/source-provenance.md").read_text()
+if "../rusty-engine/rust/crates/rusty-engine" not in provenance:
+    raise SystemExit("source provenance must name the adjacent rusty-engine facade")
+studio_guidance = (root / "docs/studio-host.md").read_text()
+for required in ("Engine-hosted product", ".rusty-studio.json", "dagger-studio-adapter"):
+    if required not in studio_guidance:
+        raise SystemExit(f"Studio guidance is missing current ownership: {required}")
 PY
+
+for retired_path in \
+  scripts/check-engine-freshness.py \
+  scripts/serve-studio.sh \
+  scripts/studio-host.mjs \
+  scripts/check-studio-host.mjs \
+  scripts/check-studio-browser.sh; do
+  if [[ -e "$retired_path" ]]; then
+    echo "$retired_path: retired Engine/Studio path exists" >&2
+    exit 1
+  fi
+done
 
 if git grep -n -E \
   '@rusty-engine/(render-contracts|render-projection|renderer-host|renderer-three|studio-[a-z-]+)' \
