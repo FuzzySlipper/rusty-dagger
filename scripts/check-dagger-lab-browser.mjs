@@ -25,6 +25,9 @@ try {
   assert.ok(initialHost.resourceCount > 0);
   assert.ok(initialHost.resourceBytes > 0);
   assert.equal(await page.locator('canvas').count(), 1, 'Engine must own the sole product canvas');
+  assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
+  assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
+  await assertFixedApplicationShell(page, 1280, 900);
   assert.ok(await renderedPixelVariety(page), 'real Rust resource-backed scene did not render visible pixels');
   const initialCanvas = await page.locator('canvas').elementHandle();
   assert.ok(initialCanvas);
@@ -36,7 +39,11 @@ try {
     'atomic replacement did not retire the old canvas',
   );
   assert.equal(await page.locator('canvas').count(), 1, 'replacement created split renderer authority');
-  await page.getByTestId('return-to-play').click();
+  await page.getByTestId('open-lab').click();
+  await page.waitForFunction(() => document.querySelector('[data-testid="lab-page"]')?.classList.contains('is-open'));
+  assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'lab');
+  assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), null);
+  await assertFixedApplicationShell(page, 1280, 900, true);
 
   assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   assert.equal(await page.getByTestId('player-stamina').innerText(), '90.00 / 90.00');
@@ -47,11 +54,16 @@ try {
   assert.equal(await page.getByTestId('profile-count').innerText(), '1 PROFILES');
   await page.getByTestId('active-profile').filter({ hasText: "Privateer's Hold starter" }).waitFor();
   const spawnPosition = await page.getByTestId('player-position').innerText();
+  const contentRevisionBeforePlay = (await applicationReadout(page)).contentRevision;
+  await page.getByTestId('return-to-play').click();
+  await page.waitForFunction(() => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'gameplay');
+  assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
+  assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
   const connectedMove = await physicallyMove(page, spawnPosition);
   await pressPhysical(page, 'KeyR');
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   await openInterface(page);
-  await page.getByTestId('open-lab').click();
+  assert.equal((await applicationReadout(page)).contentRevision, contentRevisionBeforePlay);
   const interfacePosition = await page.getByTestId('player-position').innerText();
   await pressPhysical(page, 'KeyW');
   await page.waitForTimeout(300);
@@ -213,6 +225,7 @@ try {
   page = await context.newPage();
   await page.goto(process.env.DAGGER_PRODUCT_URL ?? 'http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
   await waitForConnection(page);
+  await openLabFromGameplay(page);
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
   assert.equal(await page.getByTestId('max-health').innerText(), '130.00');
@@ -236,6 +249,7 @@ try {
   // only by matching the document the still-running Rust session reports.
   await page.reload({ waitUntil: 'domcontentloaded' });
   await waitForConnection(page);
+  await openLabFromGameplay(page);
   await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
@@ -270,6 +284,7 @@ try {
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByTestId('profile-list').scrollIntoViewIfNeeded();
+  await assertFixedApplicationShell(page, 390, 844, true);
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
     true,
@@ -357,6 +372,62 @@ async function openInterface(page) {
   await page.waitForFunction(
     () => window.__daggerApplicationHost?.readout().interactionMode === 'interface',
   );
+  await page.waitForFunction(() => document.querySelector('[data-testid="lab-page"]')?.classList.contains('is-open'));
+  assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'lab');
+}
+
+async function openLabFromGameplay(page) {
+  await page.getByTestId('open-lab').click();
+  await page.waitForFunction(() => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'lab');
+}
+
+async function assertFixedApplicationShell(page, width, height, exerciseLabScroll = false) {
+  const readBounds = () => page.evaluate(() => {
+    const selectors = [
+      '#application',
+      '[data-rusty-application-host]',
+      '[data-rusty-application-ui]',
+      '[data-rusty-application-renderer]',
+      'dagger-root',
+      '.product-shell',
+    ];
+    return {
+      document: {
+        clientWidth: document.documentElement.clientWidth,
+        clientHeight: document.documentElement.clientHeight,
+        scrollWidth: document.documentElement.scrollWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+        scrollX: window.scrollX,
+        scrollY: window.scrollY,
+      },
+      elements: Object.fromEntries(selectors.map((selector) => {
+        const element = document.querySelector(selector);
+        if (element === null) throw new Error(`fixed shell element missing: ${selector}`);
+        const bounds = element.getBoundingClientRect();
+        return [selector, { width: bounds.width, height: bounds.height }];
+      })),
+    };
+  });
+  const before = await readBounds();
+  assert.equal(before.document.clientWidth, width);
+  assert.equal(before.document.clientHeight, height);
+  assert.ok(before.document.scrollWidth <= width + 1, 'application document scrolls horizontally');
+  assert.ok(before.document.scrollHeight <= height + 1, 'application document grows with Lab content');
+  assert.equal(before.document.scrollX, 0);
+  assert.equal(before.document.scrollY, 0);
+  for (const [selector, bounds] of Object.entries(before.elements)) {
+    assert.ok(Math.abs(bounds.width - width) <= 1, `${selector} width escaped fixed application bounds`);
+    assert.ok(Math.abs(bounds.height - height) <= 1, `${selector} height escaped fixed application bounds`);
+  }
+  if (!exerciseLabScroll) return;
+  const scroller = page.getByTestId('lab-scroll');
+  const scrollRange = await scroller.evaluate((element) => element.scrollHeight - element.clientHeight);
+  assert.ok(scrollRange > 0, 'Lab workspace does not have an internal scroll range');
+  await scroller.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await page.waitForTimeout(50);
+  const after = await readBounds();
+  assert.deepEqual(after, before, 'Lab scrolling changed fixed application or renderer bounds');
+  await scroller.evaluate((element) => { element.scrollTop = 0; });
 }
 
 async function resetAndPhysicallyMove(page, spawnPosition) {

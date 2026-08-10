@@ -1,12 +1,19 @@
-<main>
+<main class="product-shell" [attr.data-product-mode]="labOpen ? 'lab' : 'gameplay'">
   <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport">
     <div class="game-hud" data-rusty-ui-interactive>
       <div><span>Privateer's Hold</span><strong>Rust-authoritative connected product</strong></div>
       <button type="button" data-testid="open-lab" (click)="openLab()">Open Dagger Lab</button>
       <button type="button" data-testid="refresh-scene" (click)="refreshScene()">Refresh scene</button>
-      <button type="button" data-testid="return-to-play" (click)="returnToPlay()">Return to play</button>
     </div>
   </section>
+  <section class="lab-page" [class.is-open]="labOpen" [attr.aria-hidden]="labOpen ? null : 'true'"
+    [attr.inert]="labOpen ? null : ''" data-testid="lab-page" data-rusty-ui-interactive>
+    <div class="lab-toolbar">
+      <div><span>Dagger Lab</span><strong>Experiment workspace</strong></div>
+      <button type="button" data-testid="return-to-play" (click)="returnToPlay()">Return to play</button>
+    </div>
+    <div class="lab-scroll" data-testid="lab-scroll">
+      <div class="lab-content">
   <header>
     <div>
       <p class="eyebrow">Privateer's Hold · attached to live Rust authority</p>
@@ -393,5 +400,8 @@
         </section>
       </div>
     </article>
+  </section>
+      </div>
+    </div>
   </section>
 </main>

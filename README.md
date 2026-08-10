@@ -78,10 +78,11 @@ cargo run -p dagger-runtime --bin dagger-walkthrough
 pnpm install
 pnpm lab:build
 cargo run -p dagger-studio-adapter --bin dagger-native-host -- --browser-product
-# Open http://127.0.0.1:4274. The Engine application host owns the sole canvas
-# and rich Angular UI root; Rust owns the connected runtime, content bundle,
-# input meaning, and authoritative readback. Escape opens interface mode and
-# Return to play restores gameplay focus.
+# Open http://127.0.0.1:4274. The fixed application window starts in gameplay;
+# Open Dagger Lab or Escape switches to the internally scrolling Lab page
+# without resizing the Engine-owned canvas. Rust owns the connected runtime,
+# content bundle, input meaning, and authoritative readback. Return to play
+# restores gameplay focus in the same session.
 ./scripts/check-dagger-lab-browser.sh # profiles/preview/apply/explain/A-B play + responsive proof
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Engine-hosted Studio is normally the persistent sibling Engine service:
@@ -124,7 +125,9 @@ curl http://127.0.0.1:4310/health
   Angular application and one 121-resource, 21,483,557-byte Rust-authored
   Privateer's Hold content bundle to Engine's public application host. Engine
   owns the sole canvas, renderer cadence, exact resource admission, atomic
-  replacement, and UI/gameplay input arbitration. The browser proof samples
+  replacement, stable viewport bounds, and UI/gameplay input arbitration.
+  Gameplay and Lab are distinct modes inside one fixed application shell; Lab
+  content scrolls internally and cannot grow the document or canvas. The browser proof samples
   the real resource-backed pixels, replaces the whole content aggregate,
   proves physical W input changes Rust authority while interface-mode W is a
   no-op, and reopens against the same Rust session. No X11 display is involved;

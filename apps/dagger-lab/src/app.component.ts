@@ -111,6 +111,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private loading = false;
   private profilesInitialized = false;
   private commandGeneration = 0;
+  private readonly openLabRequest = (): void => this.openLab();
 
   draft = cloneExperiment(EMPTY_DOCUMENT);
   worksheet: ActorStatsDraft = cloneActorStats(EMPTY_DOCUMENT.player.stats);
@@ -132,23 +133,31 @@ export class AppComponent implements OnInit, OnDestroy {
   profileError = '';
   contentFilter = '';
   selectedContentId: number | undefined;
+  labOpen = false;
 
   ngOnInit(): void {
+    window.addEventListener('dagger-open-lab', this.openLabRequest);
     this.profiles = this.profileStore.load();
     void this.refresh(true);
     this.pollTimer = setInterval(() => void this.refresh(false), 250);
   }
 
   ngOnDestroy(): void {
+    window.removeEventListener('dagger-open-lab', this.openLabRequest);
     if (this.pollTimer !== undefined) clearInterval(this.pollTimer);
   }
 
   openLab(): void {
+    this.labOpen = true;
     this.application.ui.setInteractionMode('interface');
-    document.querySelector('[data-testid="profile-list"]')?.scrollIntoView({ block: 'start' });
+    requestAnimationFrame(() => {
+      const scroller = document.querySelector<HTMLElement>('[data-testid="lab-scroll"]');
+      if (scroller !== null) scroller.scrollTop = 0;
+    });
   }
 
   returnToPlay(): void {
+    this.labOpen = false;
     this.application.ui.setInteractionMode('gameplay');
     this.application.ui.focusGameplay();
   }
