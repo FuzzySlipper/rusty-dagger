@@ -307,7 +307,7 @@ async function jumpAndPhysicallyAttack(
     contentId,
     { timeout: 10_000 },
   );
-  runPhysicalAttack('Rat H', outcome);
+  await runPhysicalAttack(page, contentId, 'Rat H', outcome);
   await page.getByTestId('combat-count').filter({ hasText: '1 attack' }).waitFor({ timeout: 10_000 });
   const record = page.getByTestId('combat-1');
   await record.filter({ hasText: outcome }).waitFor();
@@ -319,7 +319,7 @@ async function jumpAndPhysicallyAttack(
   const acceptedAttemptText = await acceptedAttempt.innerText();
   let cooldownRejection;
   if (expectCooldownRejection) {
-    runPhysicalAttack('Rat H', 'COOLDOWN');
+    await runPhysicalAttack(page, contentId, 'Rat H', 'COOLDOWN');
     const rejectedAttempt = page.getByTestId('combat-attempt-2');
     await rejectedAttempt.filter({ hasText: 'REJECTED · cooldown' }).waitFor({ timeout: 10_000 });
     await rejectedAttempt.filter({ hasText: 'stamina 95.00 → 95.00' }).waitFor();
@@ -342,8 +342,17 @@ async function jumpAndPhysicallyAttack(
   };
 }
 
-function runPhysicalAttack(expectedTitle, outcome) {
+async function runPhysicalAttack(page, contentId, expectedTitle, outcome) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
+    if (attempt > 1) {
+      await page.getByTestId(`content-${contentId}`).click();
+      await page.getByTestId('jump-content').click();
+      await page.waitForFunction(
+        (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
+        contentId,
+        { timeout: 10_000 },
+      );
+    }
     try {
       execFileSync(
         'python3',
