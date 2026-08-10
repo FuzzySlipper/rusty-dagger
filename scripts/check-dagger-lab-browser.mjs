@@ -180,7 +180,14 @@ try {
   await page.getByTestId('enemy-detection-range').fill('100');
   await page.getByTestId('enemy-attack-range').fill('4');
   await page.getByTestId('enemy-attack-cooldown').fill('0.5');
-  await page.getByTestId('enemy-attack-damage').fill('12');
+  const enemyAttackDamage = page.getByTestId('enemy-attack-damage');
+  await enemyAttackDamage.fill('12');
+  await enemyAttackDamage.blur();
+  assert.equal(
+    await enemyAttackDamage.inputValue(),
+    '12',
+    'browser authoring did not commit the exact enemy attack damage',
+  );
   await page.getByTestId('save-profile').click();
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
@@ -457,7 +464,18 @@ async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage)
     .filter({ hasText: 'melee attack' })
     .filter({ hasText: `damage ${damage.toFixed(2)}` })
     .first();
-  await attack.waitFor({ timeout: 20_000 });
+  try {
+    await attack.waitFor({ timeout: 20_000 });
+  } catch (error) {
+    const records = await page
+      .locator('[data-testid^="encounter-"]:not([data-testid="encounter-panel"])')
+      .allInnerTexts();
+    const position = await page.getByTestId('player-position').innerText();
+    throw new Error(
+      `enemy ${contentId} did not produce damage ${damage.toFixed(2)} at ${JSON.stringify(position)}; records=${JSON.stringify(records)}`,
+      { cause: error },
+    );
+  }
   await attack.filter({ hasText: 'LOS clear' }).waitFor();
   await pressPhysical(page, 'KeyA');
   const text = await attack.innerText();

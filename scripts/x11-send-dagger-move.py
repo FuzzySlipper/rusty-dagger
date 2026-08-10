@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focus the native Dagger product and send one physical gameplay key."""
+"""Focus the native Dagger diagnostic and send one physical gameplay key."""
 
 import ctypes
 import os
@@ -10,7 +10,7 @@ import time
 key = sys.argv[1].lower() if len(sys.argv) > 1 else "w"
 expected_title = sys.argv[2] if len(sys.argv) > 2 else None
 expected_after_title = sys.argv[3] if len(sys.argv) > 3 else None
-if key not in {"w", "a", "s", "d", "l", "r", "space"}:
+if key not in {"w", "a", "s", "d", "r", "space"}:
     raise SystemExit(f"unsupported Dagger key: {key}")
 
 Display = ctypes.c_void_p
@@ -226,9 +226,7 @@ try:
     if title_error is not None:
         raise SystemExit(title_error)
     marker = (
-        "DAGGER_LAB_PHYSICAL_OPEN_OK"
-        if key == "l"
-        else "DAGGER_LAB_PHYSICAL_RESET_OK"
+        "DAGGER_LAB_PHYSICAL_RESET_OK"
         if key == "r"
         else "DAGGER_LAB_PHYSICAL_ATTACK_OK"
         if key == "space"

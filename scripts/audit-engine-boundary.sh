@@ -70,7 +70,7 @@ grep -F 'renderer_webview_host::{' \
   'crates/dagger-studio-adapter/src/bin/dagger-native-host/application.rs' >/dev/null
 native_main='crates/dagger-studio-adapter/src/bin/dagger-native-host/main.rs'
 if (($(wc -l <"$native_main") > 30)); then
-  echo "$native_main: native composition root grew beyond bounded wiring" >&2
+  echo "$native_main: product/diagnostic dispatch grew beyond bounded wiring" >&2
   exit 1
 fi
 grep -F 'let options = proof::Options::parse()?;' "$native_main" >/dev/null

@@ -831,7 +831,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
     let mut application = NativeApplication::new(options)?;
     event_loop
         .run_app(&mut application)
-        .context("run Privateer's Hold native product")?;
+        .context("run Privateer's Hold native diagnostic")?;
     if let Some(failure) = application.failure {
         bail!(failure);
     }

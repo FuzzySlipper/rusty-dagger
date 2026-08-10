@@ -186,7 +186,7 @@ generic execution trace as the product explanation.
   responsive Angular layout, and first-person controls where they remain
   dependency-clean.
 - Reuse gameplay service shapes only as references. Dagger Rust owns Daggerfall
-  semantics and the native composition root.
+  semantics and connected product/runtime orchestration.
 - Never import or mount sibling/Engine renderer implementation from Dagger TS.
   Current Engine is consumed through the public Rust facade.
 

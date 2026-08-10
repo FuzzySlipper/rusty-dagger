@@ -474,7 +474,7 @@ Ownership split:
   There is no browser-side clock or per-sprite polling.
 
 `dagger-sprite-frames --serve` remains a headless inspection tool for per-step
-camera poses. The native product calls `AnimationService::evaluate` directly;
+camera poses. The native diagnostic calls `AnimationService::evaluate` directly;
 the service's elapsed-time state never crosses the renderer boundary.
 
 **Fidelity**: classic torches/flames carry 4-5 frames at 5fps (DFU
