@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Provision adjacent Rusty Engine checkout
+        run: git clone --depth 1 https://github.com/FuzzySlipper/rusty-engine.git ../rusty-engine
       - name: Install native renderer prerequisites
         run: |
           sudo apt-get update
