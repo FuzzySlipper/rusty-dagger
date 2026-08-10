@@ -185,10 +185,11 @@ modularity gate, task 6529):
   and proves physical input, pick, resize, resource admission, lifecycle, and
   disposal through Engine's public Rust facade. Engine privately owns the
   webview renderer.
-- `scripts/studio-host.mjs` — bounded HTTP/static host for the Engine Studio
-  app, adapter lifecycle, normalized host-file browsing, and atomic
-  per-project user settings. It is transport/presentation glue, not gameplay
-  authority. See `docs/studio-host.md` for the runnable contract.
+- `.rusty-studio.json` — trusted root-local registration for the Engine-hosted
+  Studio product. Dagger supplies project data and its Rust adapter; Engine
+  owns the service, browser application, renderer, host-file transport, and
+  user-settings machinery. See `docs/studio-host.md` for the runnable
+  boundary.
 - `apps/dagger-lab` — the first Dagger Lab Angular surface: whole-document
   authoring, live readback, the player resource worksheet, and selectable
   recent calculation inspection. A browser-local profile shelf stores named

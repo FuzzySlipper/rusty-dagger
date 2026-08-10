@@ -1,11 +1,12 @@
 # Source provenance
 
 This repository is a downstream Rusty Engine consumer. Exactly one normal
-dependency, the public `rusty-engine` Rust facade, follows the provider's
-public `main` branch and is resolved by `Cargo.lock`. Owner namespaces remain
-visible under `rusty_engine::<owner>`. `scripts/check-engine-freshness.py`
-fails loudly when the lock is no longer current; moving forward is an ordinary
-dependency update, not a pin-maintenance ritual.
+dependency points at the adjacent public Rust facade:
+`../rusty-engine/rust/crates/rusty-engine`. Owner namespaces remain visible
+under `rusty_engine::<owner>`. Dagger consumes that sibling checkout exactly as
+it stands and never fetches, pulls, resets, pins, or otherwise manages it.
+Interface drift is fixed forward; exact commits are review evidence rather
+than a source-dependency protocol.
 
 The Engine renderer implementation, TypeScript packages, Three backend,
 webview bridge, bootstrap document, and generated private artifact remain
@@ -54,11 +55,12 @@ mesh); once doors open, `dagger-derive-route`
 the real `DaggerRuntime`. The retired `scripts/find-route.py` (a parallel,
 approximate collision model) and the committed `*.route.json` are gone.
 
-## Studio host
+## Studio integration
 
-The Studio adapter and bounded browser host landed in Den task 6564.
-`scripts/check-adapter.py` is the stdio open/read/close proof against the
-local adapter; `scripts/serve-studio.sh` + `scripts/check-studio-host.mjs` +
-`scripts/check-studio-browser.sh` cover the HTTP host and the real-Chromium
-textured render against a local Studio static build (see
-`docs/studio-host.md`).
+The Studio adapter first landed in Den task 6564. The later downstream
+HTTP/browser host was retired when Studio became an Engine-hosted product.
+Rusty Dagger now owns only `.rusty-studio.json`, its project data and storage
+policy, and `dagger-studio-adapter`. `scripts/check-adapter.py` is the focused
+stdio open/read/close proof against that local Rust adapter. Engine owns the
+Studio service, browser application, renderer implementation, and their
+integration gates; see `docs/studio-host.md`.

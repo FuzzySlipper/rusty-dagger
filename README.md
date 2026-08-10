@@ -28,8 +28,8 @@ current task state in the Den `rusty-dagger` project.
     per-material texture references** (upstream 6515 consumed: `uvs` stream +
     `materials[].texture` -> `texture/<slug>` catalog entries). `--texture-dir
     content/textures` publishes the decoded PNGs + a sha256 manifest that
-    generate-project.py stamps into the catalog so the studio host can serve
-    them as exact content-addressed render resources. `--untextured` keeps the
+    generate-project.py stamps into the catalog so Engine hosts can serve them
+    as exact content-addressed render resources. `--untextured` keeps the
     legacy average-color fallback for A/B mood comparison.
 - `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
   the committed Privateer's Hold project, owns the first-person controller,
@@ -52,8 +52,9 @@ current task state in the Den `rusty-dagger` project.
   by the read-only protocol-14 Studio adapter and `dagger-native-host`. It
   strictly decodes Dagger projection into Engine's public retained-frame
   types; unsupported Studio mutations fail closed until Dagger owns them.
-- `scripts/studio-host.mjs` / `scripts/serve-studio.sh` — bounded local HTTP
-  bridge for the exact Engine Studio static app and the local adapter.
+- `.rusty-studio.json` — trusted root-local registration that lets the
+  Engine-hosted Studio start Dagger's Rust adapter. See
+  [docs/studio-host.md](docs/studio-host.md).
 - `content/` — generated assets (privateers-hold.glb, privateers-hold.mesh.json,
   imported/ engine artifacts)
 - `engine-render-check/` — migration pointer only. Dagger no longer owns
@@ -83,13 +84,10 @@ cargo run -p dagger-studio-adapter --bin dagger-native-host -- --browser-product
 # Return to play restores gameplay focus.
 ./scripts/check-dagger-lab-browser.sh # profiles/preview/apply/explain/A-B play + responsive proof
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
-# Human-visible Studio host (uses a local Rusty Engine Studio build; set
-# RUSTY_ENGINE_STUDIO_STATIC_ROOT to override the conventional sibling path):
-scripts/serve-studio.sh
-# Focused HTTP/adapter check while the host is running:
-node scripts/check-studio-host.mjs
-# Real Chromium desktop+narrow render proof while the host is running:
-scripts/check-studio-browser.sh
+# Engine-hosted Studio is normally the persistent sibling Engine service:
+curl http://127.0.0.1:4310/health
+# Then open the Dagger root/project through Studio; this repository supplies
+# only .rusty-studio.json, project data, and dagger-studio-adapter.
 ```
 
 ## Verification status (2026-08-08)
@@ -196,10 +194,10 @@ Tracked as Den tasks in the `rusty-dagger` project (dependencies wired):
   docs/companion-reuse.md.
 - **6563** Self-contained downstream runtime: local controller/admission and
   real-project `dagger-walkthrough` now live here.
-- **6564** Standalone Studio adapter/browser host: local Rust admission,
-  protocol-14 readout, and HTTP bridge are now in this repository. The host
-  serves the Engine Studio build selected by
-  `RUSTY_ENGINE_STUDIO_STATIC_ROOT` (or the conventional sibling build path).
+- **6564** Historical Studio integration milestone: local Rust admission and
+  protocol-14 readout landed here. The former downstream HTTP/browser host was
+  later retired; current Studio is Engine-hosted and reaches this repository
+  only through `.rusty-studio.json`, project data, and the Rust adapter.
 - **6521** Textured engine-native chain (landed): mesh-json carries real UVs
   and per-material texture references (upstream 6515); the studio adapter
   projects `defineTexture` ops + a protocol-14 `textureResources` manifest so
