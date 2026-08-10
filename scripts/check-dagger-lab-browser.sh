@@ -48,12 +48,18 @@ for _ in $(seq 1 600); do
 done
 curl --silent --fail http://127.0.0.1:4274/api/dagger-lab >/dev/null
 curl --silent --fail http://127.0.0.1:4274/ >/dev/null
-python3 scripts/x11-send-dagger-move.py l
-for _ in $(seq 1 100); do
-  if [[ -s "$open_capture" ]]; then
-    break
-  fi
-  sleep 0.05
+for attempt in $(seq 1 3); do
+  python3 scripts/x11-send-dagger-move.py l
+  for _ in $(seq 1 100); do
+    if [[ -s "$open_capture" ]]; then
+      break 2
+    fi
+    if ! kill -0 "$host_pid" 2>/dev/null; then
+      exit 1
+    fi
+    sleep 0.05
+  done
+  echo "native Lab action not observed after physical attempt $attempt; retrying" >&2
 done
 if [[ "$(cat "$open_capture")" != "http://127.0.0.1:4274/" ]]; then
   echo 'native Lab action did not launch the connected session URL' >&2
