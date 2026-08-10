@@ -2,6 +2,8 @@
 """Focus the native Dagger product and send one physical gameplay key."""
 
 import ctypes
+import os
+from pathlib import Path
 import sys
 import time
 
@@ -103,6 +105,13 @@ def find_dagger_window(display):
     return None
 
 
+def marker_occurrences(path, marker):
+    try:
+        return Path(path).read_text(errors="replace").count(marker)
+    except FileNotFoundError:
+        return 0
+
+
 display = x11.XOpenDisplay(None)
 if not display:
     raise SystemExit("XOpenDisplay failed")
@@ -160,6 +169,11 @@ try:
     keycode = x11.XKeysymToKeycode(display, keysym)
     if not keycode:
         raise SystemExit(f"XKeysymToKeycode({key}) failed")
+    host_log = os.environ.get("DAGGER_NATIVE_HOST_LOG")
+    release_marker = f"DAGGER_NATIVE_INPUT_RELEASED code={'Space' if key == 'space' else 'Key' + key.upper()}"
+    release_occurrences_before = (
+        marker_occurrences(host_log, release_marker) if host_log and key == "space" else None
+    )
     if not xtst.XTestFakeKeyEvent(display, keycode, 1, 0):
         raise SystemExit(f"physical {key.upper()} key-down injection failed")
     x11.XSync(display, 0)
@@ -190,9 +204,23 @@ try:
             release_error = f"physical {key.upper()} key-up injection failed"
         x11.XSync(display, 0)
     # Do not let the next Lab command race ahead of Engine's asynchronous
-    # physical-input readback for this falling edge. In particular, a reset
-    # followed by a late movement readout would immediately leave the spawn.
-    time.sleep(1.50)
+    # physical-input readback for this falling edge. Consecutive Space presses
+    # specifically need Rust to acknowledge the release before the next rising
+    # edge can be meaningful.
+    if release_occurrences_before is not None:
+        release_deadline = time.monotonic() + 10
+        while (
+            marker_occurrences(host_log, release_marker) <= release_occurrences_before
+            and time.monotonic() < release_deadline
+        ):
+            time.sleep(0.10)
+        if marker_occurrences(host_log, release_marker) <= release_occurrences_before:
+            release_error = f"native host did not acknowledge physical {key.upper()} key-up"
+        time.sleep(0.20)
+    else:
+        # In particular, a reset followed by a late movement readout would
+        # immediately leave the spawn.
+        time.sleep(1.50)
     if release_error is not None:
         raise SystemExit(release_error)
     if title_error is not None:
