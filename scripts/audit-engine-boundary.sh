@@ -98,12 +98,43 @@ def claims_engine_dependency_carrier(sentence: str) -> bool:
     return historical is None and explicit_non_authority is None
 
 
+def dependency_clauses(sentence: str) -> list[str]:
+    return [
+        clause.strip()
+        for clause in re.split(
+            r"\s*(?:;|,\s*(?:but|however|yet|and)|"
+            r"\b(?:but|however|yet|although|though|whereas|while)\b)\s*",
+            sentence,
+            flags=re.IGNORECASE,
+        )
+        if clause.strip()
+    ]
+
+
+def sentence_claims_engine_dependency_carrier(sentence: str) -> bool:
+    normalized = sentence.lower().replace("`", "")
+    carries_engine_context = (
+        re.search(r"\b(?:rusty[ -]engine|engine)\b", normalized) is not None
+        and re.search(r"\b(?:facade|dependenc\w*|source|provider)\b", normalized) is not None
+    )
+    for clause in dependency_clauses(sentence):
+        candidate = clause
+        if carries_engine_context:
+            candidate = f"Rusty Engine facade dependency {candidate}"
+        if claims_engine_dependency_carrier(candidate):
+            return True
+    return False
+
+
 rejected_dependency_claims = (
     "The public Rusty Engine facade tracks the provider main branch through the Cargo lockfile.",
     "Through the Cargo lockfile, the provider main branch supplies the Rusty Engine facade dependency.",
+    "Historical notes describe an older setup, but the Rusty Engine facade tracks the provider main branch through Cargo.lock.",
+    "Exact Rusty Engine commits are review evidence, but the facade dependency follows the provider main branch through Cargo.lock.",
+    "The Rusty Engine facade dependency follows provider main through Cargo.lock, although the older setup is historical.",
 )
 for claim in rejected_dependency_claims:
-    if not claims_engine_dependency_carrier(claim):
+    if not sentence_claims_engine_dependency_carrier(claim):
         raise SystemExit(f"Engine dependency-carrier regression was not rejected: {claim}")
 
 allowed_dependency_guidance = (
@@ -112,7 +143,7 @@ allowed_dependency_guidance = (
     "Exact Rusty Engine facade commits are review evidence, not a source-dependency protocol.",
 )
 for guidance in allowed_dependency_guidance:
-    if claims_engine_dependency_carrier(guidance):
+    if sentence_claims_engine_dependency_carrier(guidance):
         raise SystemExit(f"valid Engine dependency guidance was rejected: {guidance}")
 
 for document in active_docs:
@@ -124,7 +155,7 @@ for document in active_docs:
     for paragraph in paragraphs:
         joined = " ".join(line.strip() for line in paragraph.splitlines())
         for sentence in re.split(r"(?<=[.!?])\s+", joined):
-            if claims_engine_dependency_carrier(sentence):
+            if sentence_claims_engine_dependency_carrier(sentence):
                 raise SystemExit(
                     f"{document}: active Engine dependency carrier claim remains: {sentence}"
                 )
