@@ -315,8 +315,9 @@ the source of truth that later tasks (6684..6690) follow.
 - `core-ids`, `core-math`, `core-space`, `engine-spatial` (KinematicMotionSystem),
   `entity-state` (EntityState/EntityView), `svc-collision` (StaticMeshColliderAsset,
   replace_static_mesh_colliders), `gameplay-mechanics`/`gameplay-rules` (mechanics catalog,
-  admitted packages), `svc-rng`, `svc-volume`, `svc-pathfinding`. See `../rusty-engine`
-  for exact revisions (tracked in `engine-source.json` of siblings).
+  admitted packages), `svc-rng`, `svc-volume`, `svc-pathfinding`. The adjacent
+  `../rusty-engine` checkout supplies these namespaces through the single
+  facade; exact commits are review evidence, not a source-dependency protocol.
 
 ### What to copy, what to avoid — per repo
 
