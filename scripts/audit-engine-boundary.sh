@@ -66,9 +66,11 @@ retired_paths = (
     "scripts/check-studio-browser.sh",
 )
 
-def claims_engine_dependency_carrier(sentence: str) -> bool:
+def claims_engine_dependency_carrier(
+    sentence: str, *, assume_engine_dependency: bool = False
+) -> bool:
     normalized = sentence.lower().replace("`", "")
-    owns_dependency = (
+    owns_dependency = assume_engine_dependency or (
         re.search(r"\b(?:rusty[ -]engine|engine)\b", normalized) is not None
         and re.search(r"\b(?:facade|dependenc\w*|source|provider)\b", normalized) is not None
     )
@@ -79,7 +81,7 @@ def claims_engine_dependency_carrier(sentence: str) -> bool:
     )
     authority_relation = re.search(
         r"\b(?:track\w*|follow\w*|resolv\w*|pin\w*|lock\w*|suppl\w*|"
-        r"provid\w*|manag\w*|consum\w*|use[sd]?|using|through|"
+        r"provid\w*|depend\w*|manag\w*|consum\w*|use[sd]?|using|through|"
         r"comes? from|source of truth|carrier)\b",
         normalized,
     )
@@ -118,10 +120,9 @@ def sentence_claims_engine_dependency_carrier(sentence: str) -> bool:
         and re.search(r"\b(?:facade|dependenc\w*|source|provider)\b", normalized) is not None
     )
     for clause in dependency_clauses(sentence):
-        candidate = clause
-        if carries_engine_context:
-            candidate = f"Rusty Engine facade dependency {candidate}"
-        if claims_engine_dependency_carrier(candidate):
+        if claims_engine_dependency_carrier(
+            clause, assume_engine_dependency=carries_engine_context
+        ):
             return True
     return False
 
@@ -136,6 +137,9 @@ rejected_dependency_claims = (
     "Exact Rusty Engine commits are review evidence and the facade dependency follows the provider main branch through Cargo.lock.",
     "The Rusty Engine facade tracks provider main through Cargo.lock and the previous setup is historical.",
     "The Rusty Engine facade dependency follows provider main through Cargo.lock and exact commits are review evidence.",
+    "The Rusty Engine facade depends on revision abcdef1.",
+    "The Rusty Engine provider depended on commit abcdef1.",
+    "Revision abcdef1 is what the Rusty Engine facade depends on.",
 )
 for claim in rejected_dependency_claims:
     if not sentence_claims_engine_dependency_carrier(claim):
