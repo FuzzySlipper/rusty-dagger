@@ -79,7 +79,7 @@ def claims_engine_dependency_carrier(sentence: str) -> bool:
     )
     authority_relation = re.search(
         r"\b(?:track\w*|follow\w*|resolv\w*|pin\w*|lock\w*|suppl\w*|"
-        r"provid\w*|depend\w*|manag\w*|consum\w*|use[sd]?|using|through|"
+        r"provid\w*|manag\w*|consum\w*|use[sd]?|using|through|"
         r"comes? from|source of truth|carrier)\b",
         normalized,
     )
@@ -103,7 +103,7 @@ def dependency_clauses(sentence: str) -> list[str]:
         clause.strip()
         for clause in re.split(
             r"\s*(?:;|,\s*(?:but|however|yet|and)|"
-            r"\b(?:but|however|yet|although|though|whereas|while)\b)\s*",
+            r"\b(?:and|or|nor|but|however|yet|although|though|whereas|while)\b)\s*",
             sentence,
             flags=re.IGNORECASE,
         )
@@ -132,6 +132,10 @@ rejected_dependency_claims = (
     "Historical notes describe an older setup, but the Rusty Engine facade tracks the provider main branch through Cargo.lock.",
     "Exact Rusty Engine commits are review evidence, but the facade dependency follows the provider main branch through Cargo.lock.",
     "The Rusty Engine facade dependency follows provider main through Cargo.lock, although the older setup is historical.",
+    "Historical notes describe an older setup and the Rusty Engine facade tracks the provider main branch through Cargo.lock.",
+    "Exact Rusty Engine commits are review evidence and the facade dependency follows the provider main branch through Cargo.lock.",
+    "The Rusty Engine facade tracks provider main through Cargo.lock and the previous setup is historical.",
+    "The Rusty Engine facade dependency follows provider main through Cargo.lock and exact commits are review evidence.",
 )
 for claim in rejected_dependency_claims:
     if not sentence_claims_engine_dependency_carrier(claim):
