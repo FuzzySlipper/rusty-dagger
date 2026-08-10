@@ -69,8 +69,11 @@ impl NativeApplication {
             .parent()
             .and_then(Path::parent)
             .context("resolve Rusty Dagger workspace root")?;
-        let runtime = DaggerRuntime::from_project_json(PROJECT)
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT)
             .context("admit checked Privateer's Hold project")?;
+        runtime
+            .install_encounter_navigation_json(NAVGRID)
+            .context("install committed encounter navigation")?;
         let diagnostics = NativeDiagnostics::from_documents(PROJECT, NAVGRID)?;
         let bundle = build_render_bundle(root, PROJECT).map_err(anyhow::Error::msg)?;
         Ok(Self {
@@ -159,8 +162,6 @@ impl NativeApplication {
                     complete_camera_synced_lab_result(reply, result, || self.update_camera())?
                 }
                 LabCommand::Jump { id, reply } => {
-                    self.runtime
-                        .sync_content_live_positions(self.diagnostics.live_content_positions());
                     let result = self.runtime.jump_to_content(id);
                     complete_camera_synced_lab_result(reply, result, || self.update_camera())?
                 }
@@ -255,6 +256,13 @@ impl NativeApplication {
             ));
             if combat.resolution.died {
                 title.push_str(" DEAD");
+            }
+        }
+        if let Some(decision) = readout.encounter_decisions.last() {
+            if let Some(damage) = decision.damage {
+                title.push_str(&format!(" — {} attacks {:.0}", decision.enemy_name, damage));
+            } else if let Some(state) = &decision.to {
+                title.push_str(&format!(" — {} {state}", decision.enemy_name));
             }
         }
         title.push_str(" — Space attack — L Lab — G patrol — N navgrid");
@@ -491,6 +499,12 @@ impl NativeApplication {
             .min(0.25);
         self.last_diagnostic_tick = now;
         let pose = self.camera_pose()?;
+        let encounter_sequence = self.runtime.encounter_sequence();
+        let encounter_updates = self.runtime.tick_encounters(dt)?;
+        if self.runtime.encounter_sequence() != encounter_sequence {
+            self.update_window_title()?;
+        }
+        let encounter_positions = self.runtime.encounter_positions();
         let diagnostic = self.diagnostics.tick(
             dt,
             [
@@ -498,9 +512,9 @@ impl NativeApplication {
                 pose.position[1] as f32,
                 pose.position[2] as f32,
             ],
+            &encounter_positions,
+            &encounter_updates,
         )?;
-        self.runtime
-            .sync_content_live_positions(self.diagnostics.live_content_positions());
         if diagnostic.frame.ops.is_empty() {
             return Ok(());
         }

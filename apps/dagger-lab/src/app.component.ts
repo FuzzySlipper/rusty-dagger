@@ -54,6 +54,37 @@ const EMPTY_DOCUMENT: ExperimentDocument = {
         },
       },
       combat: { defense: 50, armor: 1 },
+      behavior: {
+        detectionRange: 6,
+        patrolSpeed: 1,
+        chaseSpeed: 2,
+        attackRange: 1.25,
+        attackCooldownSeconds: 1.5,
+        attackDamage: 4,
+      },
+    },
+    {
+      mobileId: 15,
+      stats: {
+        attributes: { strength: 35, endurance: 30, intelligence: 0 },
+        resources: {
+          baseHealth: 5,
+          healthPerEndurance: 0.5,
+          baseStamina: 0,
+          staminaPerAttribute: 0.5,
+          baseMagicka: 0,
+          magickaPerIntelligence: 0,
+        },
+      },
+      combat: { defense: 65, armor: 3 },
+      behavior: {
+        detectionRange: 8,
+        patrolSpeed: 0.8,
+        chaseSpeed: 1.5,
+        attackRange: 1.5,
+        attackCooldownSeconds: 2,
+        attackDamage: 8,
+      },
     },
   ],
 };
@@ -70,6 +101,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | undefined;
   private loading = false;
   private profilesInitialized = false;
+  private commandGeneration = 0;
 
   draft = cloneExperiment(EMPTY_DOCUMENT);
   worksheet: ActorStatsDraft = cloneActorStats(EMPTY_DOCUMENT.player.stats);
@@ -300,6 +332,11 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.draft.enemies.find((enemy) => enemy.mobileId === 0);
   }
 
+  selectedEnemyDraft(): EnemyExperimentDraft | undefined {
+    const mobileId = this.selectedContent()?.reference.mobileId;
+    return this.draft.enemies.find((enemy) => enemy.mobileId === mobileId);
+  }
+
   ratStats(): AdmittedActorStats | undefined {
     return this.readout?.enemyStats.find((enemy) => enemy.mobileId === 0)?.stats;
   }
@@ -355,8 +392,10 @@ export class AppComponent implements OnInit, OnDestroy {
   private async refresh(syncDraft: boolean): Promise<void> {
     if (this.loading || this.pending) return;
     this.loading = true;
+    const commandGeneration = this.commandGeneration;
     try {
       const readout = await this.api.read();
+      if (commandGeneration !== this.commandGeneration) return;
       this.acceptReadout(readout);
       this.initializeProfiles(readout);
       this.connectionError = '';
@@ -373,6 +412,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private async runCommand(command: () => Promise<ExperimentReadout>): Promise<boolean> {
+    this.commandGeneration += 1;
     this.pending = true;
     this.commandError = '';
     try {

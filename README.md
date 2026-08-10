@@ -34,16 +34,17 @@ current task state in the Den `rusty-dagger` project.
 - `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
   the committed Privateer's Hold project, owns the first-person controller,
   applies admitted experiments, owns reset/readback, bounded calculation and
-  combat history, and provides the real-project collision walkthrough without
-  importing the loading-bay game.
+  combat/encounter history, and provides the real-project collision walkthrough
+  plus nav-aware patrol/detect/chase/attack authority without importing the
+  loading-bay game.
 - `crates/dagger-rpg` — host-neutral Rust authority for the compact gameplay
   experiment document, validation, derived values, melee resolution, and
   designer-facing semantic records.
 - `apps/dagger-lab` — Dagger-owned Angular authoring/readback surface. It is
   served by `dagger-native-host`, submits whole documents and side-effect-free
   formula worksheets to Rust, exposes live player/combat state plus semantic
-  calculation and attack records, and keeps a small browser-local shelf of named complete
-  experiment profiles. Profile activation still goes through Rust admission;
+  calculation, attack, and encounter-decision records, and keeps a small
+  browser-local shelf of named complete experiment profiles. Profile activation still goes through Rust admission;
   the app has no gameplay evaluator or Engine renderer dependency.
 - `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
   by the read-only protocol-14 Studio adapter and `dagger-native-host`. It
@@ -143,6 +144,12 @@ scripts/check-studio-browser.sh
   rolls, resolves hit/damage/armor, mutates Rat health/death, and emits a flat
   designer-readable record. Applying a profile or resetting play restores
   resources and clears the combat run; Angular never rolls or mutates combat.
+- Encounter experiment: Rat and Skeletal Warrior profiles expose bounded
+  detection, patrol/chase speed, attack range/cooldown, and damage terms.
+  `dagger-runtime` uses the committed navgrid and Engine collision line of sight
+  to own patrol, detect, chase, melee attack, cooldown, and player-health
+  mutation. Angular edits/readbacks and the native title present concise Rust
+  decisions; neither owns AI state or timing.
 
 ## Data provenance & conventions
 

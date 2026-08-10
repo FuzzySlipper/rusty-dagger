@@ -12,7 +12,9 @@
 //! wander behavior — its AI is detection-based. A deterministic seeded
 //! random-walk is sufficient and simpler for this demo.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+
+use dagger_rpg::EnemyBehaviorExperiment;
 
 /// Cell size from the nav grid (0.5m).
 const CELL_SIZE: f32 = 0.5;
@@ -124,6 +126,21 @@ struct PatrolNpc {
     /// Smoothly interpolated toward the target heading for natural turns.
     heading: f32,
     rng: PatrolRng,
+    mode: EnemyAiMode,
+    attack_cooldown_remaining: f32,
+}
+
+impl PatrolNpc {
+    fn reset(&mut self) {
+        self.position = self.spawn;
+        self.target = None;
+        self.is_moving = false;
+        self.idle_timer = 0.5;
+        self.heading = 0.0;
+        self.rng = PatrolRng::new(self.handle);
+        self.mode = EnemyAiMode::Patrol;
+        self.attack_cooldown_remaining = 0.0;
+    }
 }
 
 /// A position update from the patrol service.
@@ -133,6 +150,36 @@ pub struct PositionUpdate {
     pub translation: [f32; 3],
     pub heading: f32,
     pub is_moving: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EnemyAiMode {
+    Patrol,
+    Chase,
+    Attack,
+    Dead,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EnemyDecision {
+    pub handle: u32,
+    pub from: EnemyAiMode,
+    pub to: EnemyAiMode,
+    pub distance_to_player: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct EnemyAttackIntent {
+    pub handle: u32,
+    pub damage: f32,
+    pub distance_to_player: f32,
+}
+
+#[derive(Debug, Default)]
+pub struct PatrolEvaluation {
+    pub positions: Vec<PositionUpdate>,
+    pub decisions: Vec<EnemyDecision>,
+    pub attacks: Vec<EnemyAttackIntent>,
 }
 
 /// The NPC patrol authority. Owns all NPC state and advances it per tick.
@@ -193,6 +240,8 @@ impl PatrolService {
                 idle_timer: 0.5,
                 heading: 0.0,
                 rng: PatrolRng::new(handle),
+                mode: EnemyAiMode::Patrol,
+                attack_cooldown_remaining: 0.0,
             });
         }
 
@@ -202,68 +251,76 @@ impl PatrolService {
     /// Advance all NPCs by `dt` seconds. Returns position updates for NPCs
     /// that moved this tick.
     pub fn evaluate(&mut self, dt: f32) -> Vec<PositionUpdate> {
+        self.evaluate_encounters(dt, [f32::INFINITY; 3], &BTreeMap::new(), &BTreeSet::new())
+            .positions
+    }
+
+    pub fn evaluate_encounters(
+        &mut self,
+        dt: f32,
+        player_position: [f32; 3],
+        behaviors: &BTreeMap<u32, EnemyBehaviorExperiment>,
+        dead: &BTreeSet<u32>,
+    ) -> PatrolEvaluation {
         let mut updates = Vec::new();
+        let mut decisions = Vec::new();
+        let mut attacks = Vec::new();
         for npc in &mut self.npcs {
             let was_moving = npc.is_moving;
-
-            if npc.idle_timer > 0.0 {
-                npc.idle_timer -= dt;
-                npc.is_moving = false;
-                if npc.idle_timer <= 0.0 {
-                    // Pick a new waypoint
-                    npc.target = self.grid.random_walkable_near(
-                        npc.spawn,
-                        PATROL_RADIUS_CELLS,
-                        npc.level,
-                        &mut npc.rng,
-                    );
-                    npc.is_moving = npc.target.is_some();
-                }
-            } else if let Some(target) = npc.target {
-                // Move toward target
-                let dx = target[0] - npc.position[0];
-                let dz = target[2] - npc.position[2];
-                let dist = (dx * dx + dz * dz).sqrt();
-                npc.is_moving = true;
-
-                // Smoothly rotate heading toward target direction (max 3 rad/s)
-                let target_heading = dz.atan2(dx);
-                let mut diff = target_heading - npc.heading;
-                while diff > std::f32::consts::PI {
-                    diff -= std::f32::consts::TAU;
-                }
-                while diff < -std::f32::consts::PI {
-                    diff += std::f32::consts::TAU;
-                }
-                let turn_rate = 3.0; // rad/s
-                let turn = diff.clamp(-turn_rate * dt, turn_rate * dt);
-                npc.heading += turn;
-
-                if dist < 0.1 {
-                    // Reached target
-                    npc.position = target;
-                    npc.target = None;
-                    npc.idle_timer = IDLE_DURATION;
-                    npc.is_moving = false;
+            let distance_to_player =
+                (player_position[0] - npc.position[0]).hypot(player_position[2] - npc.position[2]);
+            let behavior = behaviors.get(&npc.handle);
+            let next_mode = if dead.contains(&npc.handle) {
+                EnemyAiMode::Dead
+            } else if let Some(behavior) = behavior {
+                if distance_to_player <= behavior.attack_range {
+                    EnemyAiMode::Attack
+                } else if distance_to_player <= behavior.detection_range {
+                    EnemyAiMode::Chase
                 } else {
-                    let step = WALK_SPEED * dt;
-                    let ratio = (step / dist).min(1.0);
-                    let new_x = npc.position[0] + dx * ratio;
-                    let new_z = npc.position[2] + dz * ratio;
-
-                    // Check walkability: snap Y to floor support at new position
-                    if let Some(sy) = self.grid.is_walkable(new_x, new_z, npc.position[1]) {
-                        npc.position = [new_x, sy, new_z];
-                    } else {
-                        // Blocked — pick a new target
-                        npc.target = None;
-                        npc.idle_timer = IDLE_DURATION * 0.5;
-                        npc.is_moving = false;
-                    }
+                    EnemyAiMode::Patrol
                 }
             } else {
-                npc.is_moving = false;
-                npc.idle_timer = IDLE_DURATION;
+                EnemyAiMode::Patrol
+            };
+            if next_mode != npc.mode {
+                decisions.push(EnemyDecision {
+                    handle: npc.handle,
+                    from: npc.mode,
+                    to: next_mode,
+                    distance_to_player,
+                });
+                npc.mode = next_mode;
+                npc.target = None;
+                npc.idle_timer = 0.0;
+            }
+
+            match (npc.mode, behavior) {
+                (EnemyAiMode::Dead, _) => {
+                    npc.is_moving = false;
+                }
+                (EnemyAiMode::Attack, Some(behavior)) => {
+                    npc.is_moving = false;
+                    npc.attack_cooldown_remaining -= dt;
+                    if npc.attack_cooldown_remaining <= 0.0 {
+                        attacks.push(EnemyAttackIntent {
+                            handle: npc.handle,
+                            damage: behavior.attack_damage,
+                            distance_to_player,
+                        });
+                        npc.attack_cooldown_remaining = behavior.attack_cooldown_seconds;
+                    }
+                }
+                (EnemyAiMode::Chase, Some(behavior)) => {
+                    npc.attack_cooldown_remaining = 0.0;
+                    move_toward(npc, &self.grid, player_position, behavior.chase_speed, dt);
+                }
+                (EnemyAiMode::Patrol, behavior) => {
+                    npc.attack_cooldown_remaining = 0.0;
+                    let speed = behavior.map_or(WALK_SPEED, |behavior| behavior.patrol_speed);
+                    evaluate_patrol(npc, &self.grid, speed, dt);
+                }
+                _ => unreachable!("admitted encounter mode requires behavior"),
             }
 
             // Emit update if moving or state changed — includes heading so gizmos track rotation
@@ -276,7 +333,11 @@ impl PatrolService {
                 });
             }
         }
-        updates
+        PatrolEvaluation {
+            positions: updates,
+            decisions,
+            attacks,
+        }
     }
 
     /// Current positions of all NPCs (for animation service updates).
@@ -285,6 +346,16 @@ impl PatrolService {
             .iter()
             .map(|n| (n.handle, n.position, n.is_moving))
             .collect()
+    }
+
+    pub fn states(&self) -> Vec<(u32, EnemyAiMode)> {
+        self.npcs.iter().map(|npc| (npc.handle, npc.mode)).collect()
+    }
+
+    pub fn reset(&mut self) {
+        for npc in &mut self.npcs {
+            npc.reset();
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -328,6 +399,64 @@ impl PatrolService {
             ));
         }
         Ok(())
+    }
+}
+
+fn evaluate_patrol(npc: &mut PatrolNpc, grid: &PatrolGrid, speed: f32, dt: f32) {
+    if speed <= 0.0 {
+        npc.is_moving = false;
+        return;
+    }
+    if npc.idle_timer > 0.0 {
+        npc.idle_timer -= dt;
+        npc.is_moving = false;
+        if npc.idle_timer <= 0.0 {
+            npc.target =
+                grid.random_walkable_near(npc.spawn, PATROL_RADIUS_CELLS, npc.level, &mut npc.rng);
+            npc.is_moving = npc.target.is_some();
+        }
+    } else if let Some(target) = npc.target {
+        move_toward(npc, grid, target, speed, dt);
+        if (target[0] - npc.position[0]).hypot(target[2] - npc.position[2]) < 0.1 {
+            npc.position = target;
+            npc.target = None;
+            npc.idle_timer = IDLE_DURATION;
+            npc.is_moving = false;
+        }
+    } else {
+        npc.is_moving = false;
+        npc.idle_timer = IDLE_DURATION;
+    }
+}
+
+fn move_toward(npc: &mut PatrolNpc, grid: &PatrolGrid, target: [f32; 3], speed: f32, dt: f32) {
+    let dx = target[0] - npc.position[0];
+    let dz = target[2] - npc.position[2];
+    let distance = dx.hypot(dz);
+    if distance <= 0.001 {
+        npc.is_moving = false;
+        return;
+    }
+    let target_heading = dz.atan2(dx);
+    let mut difference = target_heading - npc.heading;
+    while difference > std::f32::consts::PI {
+        difference -= std::f32::consts::TAU;
+    }
+    while difference < -std::f32::consts::PI {
+        difference += std::f32::consts::TAU;
+    }
+    let turn = difference.clamp(-3.0 * dt, 3.0 * dt);
+    npc.heading += turn;
+    let ratio = (speed * dt / distance).min(1.0);
+    let new_x = npc.position[0] + dx * ratio;
+    let new_z = npc.position[2] + dz * ratio;
+    if let Some(support_y) = grid.is_walkable(new_x, new_z, npc.position[1]) {
+        npc.position = [new_x, support_y, new_z];
+        npc.is_moving = true;
+    } else {
+        npc.target = None;
+        npc.idle_timer = IDLE_DURATION * 0.5;
+        npc.is_moving = false;
     }
 }
 

@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{bail, Context, Result};
-use dagger_runtime::{AnimationService, PatrolService};
+use dagger_runtime::{AnimationService, PositionUpdate};
 use rusty_engine::{
     render_model::{
         Geometry, Material, RenderDiff, RenderFrameDiff, RenderHandle, RenderLayer, RenderMetadata,
@@ -63,7 +63,6 @@ struct NavOverlayCell {
 
 pub(crate) struct NativeDiagnostics {
     animation: AnimationService,
-    patrol: PatrolService,
     nav_cell_size: f32,
     nav_cells: Vec<NavCellDocument>,
     sprite_overlays: Vec<SpriteOverlay>,
@@ -152,17 +151,9 @@ impl NativeDiagnostics {
             bail!("real diagnostic project produced no patrol or animation authorities");
         }
 
-        let patrol_cells = navgrid
-            .cells
-            .iter()
-            .map(|cell| (cell.0, cell.1, cell.2, cell.3))
-            .collect::<Vec<_>>();
-        let patrol = PatrolService::new(&patrol_cells, &enemy_spawns);
-        patrol.validate().map_err(anyhow::Error::msg)?;
-        let live_sprites = patrol
-            .positions()
+        let live_sprites = enemy_spawns
             .into_iter()
-            .map(|(handle, translation, _)| {
+            .map(|(handle, translation)| {
                 (
                     handle,
                     LiveSprite {
@@ -175,7 +166,6 @@ impl NativeDiagnostics {
 
         Ok(Self {
             animation,
-            patrol,
             nav_cell_size: navgrid.cell_size,
             nav_cells: navgrid.cells,
             sprite_overlays,
@@ -219,14 +209,13 @@ impl NativeDiagnostics {
         self.nav_overlay_enabled
     }
 
-    pub(crate) fn live_content_positions(&self) -> Vec<(u64, [f32; 3])> {
-        self.live_sprites
-            .iter()
-            .map(|(handle, live)| (u64::from(*handle), live.translation))
-            .collect()
-    }
-
-    pub(crate) fn tick(&mut self, dt: f32, camera: [f32; 3]) -> Result<DiagnosticFrame> {
+    pub(crate) fn tick(
+        &mut self,
+        dt: f32,
+        camera: [f32; 3],
+        encounter_positions: &[(u32, [f32; 3], bool)],
+        encounter_updates: &[PositionUpdate],
+    ) -> Result<DiagnosticFrame> {
         if self.disposed {
             bail!("native diagnostics were disposed");
         }
@@ -234,18 +223,17 @@ impl NativeDiagnostics {
             bail!("diagnostic tick must be finite and bounded to 0.25 seconds");
         }
 
-        let patrol_updates = self.patrol.evaluate(dt);
-        for update in &patrol_updates {
+        for update in encounter_updates {
             if let Some(live) = self.live_sprites.get_mut(&update.handle) {
                 live.translation = update.translation;
                 live.heading = update.heading;
             }
         }
-        self.animation.update_enemies(&self.patrol.positions());
+        self.animation.update_enemies(encounter_positions);
         let animation_updates = self.animation.evaluate(dt, camera);
 
-        let mut ops = Vec::with_capacity(animation_updates.len() + patrol_updates.len());
-        for update in &patrol_updates {
+        let mut ops = Vec::with_capacity(animation_updates.len() + encounter_updates.len());
+        for update in encounter_updates {
             if let Some(authored) = self
                 .sprite_overlays
                 .iter()
@@ -552,6 +540,7 @@ struct NavGridDocument {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dagger_runtime::DaggerRuntime;
 
     const PROJECT: &str =
         include_str!("../../../../../content/projects/privateers-hold.project.json");
@@ -562,10 +551,19 @@ mod tests {
     fn real_diagnostics_batch_authorities_and_replace_retired_overlay_handles() {
         let mut diagnostics =
             NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
+        runtime
+            .install_encounter_navigation_json(NAVGRID)
+            .expect("install encounter navigation");
         assert!(diagnostics.toggle_sprite_overlay());
         assert!(diagnostics.toggle_nav_overlay());
         let first = diagnostics
-            .tick(0.0, [25.6, 2.35, -25.6])
+            .tick(
+                0.0,
+                [25.6, 2.35, -25.6],
+                &runtime.encounter_positions(),
+                &[],
+            )
             .expect("first diagnostic frame");
         assert!(first.readout.retained_overlays > 40);
         assert!(first.readout.animation_updates > 40);
@@ -578,7 +576,12 @@ mod tests {
         assert!(!diagnostics.toggle_sprite_overlay());
         assert!(!diagnostics.toggle_nav_overlay());
         let disabled = diagnostics
-            .tick(0.1, [25.6, 2.35, -25.6])
+            .tick(
+                0.1,
+                [25.6, 2.35, -25.6],
+                &runtime.encounter_positions(),
+                &[],
+            )
             .expect("disabled frame");
         assert!(disabled.readout.overlays_disabled);
         assert!(disabled
@@ -590,7 +593,12 @@ mod tests {
         assert!(diagnostics.toggle_sprite_overlay());
         assert!(diagnostics.toggle_nav_overlay());
         let replaced = diagnostics
-            .tick(0.1, [25.6, 2.35, -25.6])
+            .tick(
+                0.1,
+                [25.6, 2.35, -25.6],
+                &runtime.encounter_positions(),
+                &[],
+            )
             .expect("replacement frame");
         assert!(replaced.readout.overlays_enabled);
         assert!(replaced.readout.stale_handle_replaced);
@@ -598,8 +606,14 @@ mod tests {
         let mut movement = false;
         let mut animation = false;
         for _ in 0..40 {
+            let updates = runtime.tick_encounters(0.1).expect("encounter tick");
             let frame = diagnostics
-                .tick(0.1, [25.6, 2.35, -25.6])
+                .tick(
+                    0.1,
+                    [25.6, 2.35, -25.6],
+                    &runtime.encounter_positions(),
+                    &updates,
+                )
                 .expect("live diagnostic frame");
             movement |= frame.readout.patrol_moved;
             animation |= frame.readout.animation_advanced;
@@ -616,15 +630,17 @@ mod tests {
             .ops
             .iter()
             .all(|op| matches!(op, RenderDiff::Destroy { .. })));
-        assert!(diagnostics.tick(0.1, [0.0; 3]).is_err());
+        assert!(diagnostics.tick(0.1, [0.0; 3], &[], &[]).is_err());
     }
 
     #[test]
     fn tick_rejects_unbounded_time_steps_without_mutation() {
         let mut diagnostics =
             NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
-        assert!(diagnostics.tick(0.251, [0.0; 3]).is_err());
-        let first = diagnostics.tick(0.0, [0.0; 3]).expect("bounded tick");
+        assert!(diagnostics.tick(0.251, [0.0; 3], &[], &[]).is_err());
+        let first = diagnostics
+            .tick(0.0, [0.0; 3], &[], &[])
+            .expect("bounded tick");
         assert!(!first.frame.ops.is_empty());
     }
 }

@@ -202,17 +202,19 @@ generic execution trace as the product explanation.
 
 - TS/JSON defaults and Angular edits produce the same immutable experiment
   document.
-- `dagger-rpg` currently admits movement plus named player/Rat stat and melee
-  inputs, evaluates fixed Rust-owned resource/hit/damage formulas, and emits
-  semantic calculation and combat records. Later vocabulary grows only with
-  playable experiments.
+- `dagger-rpg` currently admits movement plus named player/Rat/Skeletal Warrior
+  stat, melee, and bounded encounter-behavior inputs, evaluates fixed Rust-owned
+  resource/hit/damage formulas, and emits semantic calculation and combat
+  records. Later vocabulary grows only with playable experiments.
 - `dagger-runtime` installs a complete admitted experiment, owns live state,
   target/range/collision admission, rolls, health/death mutation, and explicit
-  reset/retry. There is no per-field revision or replay protocol.
+  reset/retry. It also owns committed-navgrid patrol, detect/chase/attack modes,
+  attack cooldowns, Engine line of sight, player damage, and bounded concise
+  decision records. There is no per-field revision or replay protocol.
 - The Angular Dagger Lab stays attached to the running native game. The first
-  surface has movement/resource/melee and Rat editors, live
+  surface has movement/resource/melee plus named encounter editors, live
   position/controller/resource readback, a Rust-backed formula worksheet,
-  bounded calculation and combat histories, named profiles, and
+  bounded calculation/combat/encounter histories, named profiles, and
   experiment-driven content browsing.
 - `arena2` remains read-only format/reference knowledge. In particular,
   `arena2::mobile` owns classic mobile identity, sprite, animation, and facing

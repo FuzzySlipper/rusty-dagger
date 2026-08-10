@@ -108,7 +108,15 @@ function isExperimentDocument(value: unknown): value is ExperimentDocument {
       return (
         typeof enemyRecord['mobileId'] === 'number' &&
         isActorStats(enemyRecord['stats']) &&
-        hasNumberFields(enemyRecord['combat'], ['defense', 'armor'])
+        hasNumberFields(enemyRecord['combat'], ['defense', 'armor']) &&
+        hasNumberFields(enemyRecord['behavior'], [
+          'detectionRange',
+          'patrolSpeed',
+          'chaseSpeed',
+          'attackRange',
+          'attackCooldownSeconds',
+          'attackDamage',
+        ])
       );
     })
   );
