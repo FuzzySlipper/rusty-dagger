@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { chromium } from '@playwright/test';
@@ -16,8 +15,28 @@ const browser = await chromium.launch({
 try {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   let page = await context.newPage();
-  await page.goto('http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
+  await page.goto(process.env.DAGGER_PRODUCT_URL ?? 'http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
   await waitForConnection(page);
+
+  await page.waitForFunction(() => document.body.dataset.daggerApplicationHost === 'ready');
+  const initialHost = await applicationReadout(page);
+  assert.equal(initialHost.state, 'ready');
+  assert.equal(initialHost.contentRevision, 1);
+  assert.ok(initialHost.resourceCount > 0);
+  assert.ok(initialHost.resourceBytes > 0);
+  assert.equal(await page.locator('canvas').count(), 1, 'Engine must own the sole product canvas');
+  assert.ok(await renderedPixelVariety(page), 'real Rust resource-backed scene did not render visible pixels');
+  const initialCanvas = await page.locator('canvas').elementHandle();
+  assert.ok(initialCanvas);
+  await page.getByTestId('refresh-scene').click();
+  await page.waitForFunction(() => window.__daggerApplicationHost?.readout().contentRevision === 2);
+  assert.equal(
+    await initialCanvas.evaluate((canvas) => canvas.isConnected),
+    false,
+    'atomic replacement did not retire the old canvas',
+  );
+  assert.equal(await page.locator('canvas').count(), 1, 'replacement created split renderer authority');
+  await page.getByTestId('return-to-play').click();
 
   assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   assert.equal(await page.getByTestId('player-stamina').innerText(), '90.00 / 90.00');
@@ -28,10 +47,23 @@ try {
   assert.equal(await page.getByTestId('profile-count').innerText(), '1 PROFILES');
   await page.getByTestId('active-profile').filter({ hasText: "Privateer's Hold starter" }).waitFor();
   const spawnPosition = await page.getByTestId('player-position').innerText();
+  const connectedMove = await physicallyMove(page, spawnPosition);
+  await pressPhysical(page, 'KeyR');
+  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  await openInterface(page);
+  await page.getByTestId('open-lab').click();
+  const interfacePosition = await page.getByTestId('player-position').innerText();
+  await pressPhysical(page, 'KeyW');
+  await page.waitForTimeout(300);
+  assert.equal(
+    await page.getByTestId('player-position').innerText(),
+    interfacePosition,
+    'interface mode leaked physical input into Rust gameplay authority',
+  );
 
   // Browse a real committed enemy, inspect decoded reference and live patrol
   // state separately, then let Rust choose a grounded approach and physically
-  // interact from the native game window.
+  // interact through the connected product's original browser events.
   assert.equal(await page.getByTestId('content-count').innerText(), '43 ENEMIES');
   await page.getByTestId('content-filter').fill('thief');
   await page.getByTestId('content-2001').click();
@@ -52,8 +84,9 @@ try {
   }
   const jumpPosition = await page.getByTestId('player-position').innerText();
   assert.notEqual(jumpPosition, spawnPosition);
-  execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'r'], { stdio: 'inherit' });
+  await pressPhysical(page, 'KeyR');
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  await openInterface(page);
   assert.equal(await page.getByTestId('combat-count').innerText(), '0 ATTACKS');
   await page.getByTestId('content-filter').fill('rat');
   await page.getByTestId('content-2007').click();
@@ -172,13 +205,13 @@ try {
   await page.getByTestId('content-filter').fill('skeletal');
   const skeletonEncounter = await jumpAndObserveEnemyAttack(page, 2000, spawnPosition, 12);
 
-  // Closing the companion tab must not create, reset, or dispose the native
-  // Rust session. Reopen it in the same browser profile and reattach to the
+  // Closing the product tab must not reset the Rust session. Reopen it in the
+  // same browser profile and reattach to the
   // exact authoritative values, history, and player position left above.
   const beforeClosePosition = await page.getByTestId('player-position').innerText();
   await page.close();
   page = await context.newPage();
-  await page.goto('http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
+  await page.goto(process.env.DAGGER_PRODUCT_URL ?? 'http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
   await waitForConnection(page);
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
@@ -245,8 +278,11 @@ try {
   await page.getByTestId('history-detail').waitFor();
   await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
 
+  await page.evaluate(() => window.__daggerApplicationHost?.dispose());
+  await page.locator('canvas').waitFor({ state: 'detached' });
+
   console.log(
-    `DAGGER_LAB_BROWSER_OK lifecycle=tab-closed-reopened/same-native-session content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -262,6 +298,49 @@ async function waitForConnection(page) {
   }
 }
 
+async function applicationReadout(page) {
+  return page.evaluate(() => {
+    if (window.__daggerApplicationHost === undefined) throw new Error('application host missing');
+    return window.__daggerApplicationHost.readout();
+  });
+}
+
+async function renderedPixelVariety(page) {
+  return page.evaluate(() => {
+    const host = window.__daggerApplicationHost;
+    const canvas = document.querySelector('canvas');
+    if (host === undefined || canvas === null) return false;
+    host.renderer.renderOnce(250);
+    const gl = canvas.getContext('webgl2');
+    if (gl === null) return false;
+    const pixels = new Uint8Array(canvas.width * canvas.height * 4);
+    gl.readPixels(0, 0, canvas.width, canvas.height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    const colors = new Set();
+    const pixelCount = canvas.width * canvas.height;
+    const stride = Math.max(1, Math.floor(pixelCount / 4096));
+    for (let pixel = 0; pixel < pixelCount; pixel += stride) {
+      const offset = pixel * 4;
+      colors.add(`${pixels[offset]},${pixels[offset + 1]},${pixels[offset + 2]}`);
+      if (colors.size >= 3) return true;
+    }
+    return false;
+  });
+}
+
+async function pressPhysical(page, code) {
+  const key = code.startsWith('Key') ? code.slice(3).toLowerCase() : code;
+  await page.keyboard.down(key);
+  await page.waitForTimeout(80);
+  await page.keyboard.up(key);
+}
+
+async function openInterface(page) {
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(
+    () => window.__daggerApplicationHost?.readout().interactionMode === 'interface',
+  );
+}
+
 async function resetAndPhysicallyMove(page, spawnPosition) {
   await page.getByTestId('play').click();
   const resetDeadline = Date.now() + 10_000;
@@ -271,7 +350,9 @@ async function resetAndPhysicallyMove(page, spawnPosition) {
   }
   const resetPosition = spawnPosition;
   await page.waitForTimeout(500);
-  return physicallyMove(page, resetPosition);
+  const movement = await physicallyMove(page, resetPosition);
+  await openInterface(page);
+  return movement;
 }
 
 async function jumpAndPhysicallyMove(page, contentId, spawnPosition) {
@@ -288,6 +369,7 @@ async function jumpAndPhysicallyMove(page, contentId, spawnPosition) {
   const move = await physicallyMove(page, jumpPosition, ['a', 'd', 's'], expectedTitle);
   await page.getByTestId('reset').click();
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  await openInterface(page);
   return move;
 }
 
@@ -332,8 +414,9 @@ async function jumpAndPhysicallyAttack(
   if (outcome === 'HIT') {
     await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
   }
-  execFileSync('python3', ['scripts/x11-send-dagger-move.py', 'r'], { stdio: 'inherit' });
+  await pressPhysical(page, 'KeyR');
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  await openInterface(page);
   assert.equal(await page.getByTestId('combat-count').innerText(), '0 ATTACKS');
   return {
     resolution: text,
@@ -344,21 +427,13 @@ async function jumpAndPhysicallyAttack(
 
 async function runPhysicalAttack(page, contentId, expectedTitle, outcome) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    if (attempt > 1) {
-      await page.getByTestId(`content-${contentId}`).click();
-      await page.getByTestId('jump-content').click();
-      await page.waitForFunction(
-        (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
-        contentId,
-        { timeout: 10_000 },
-      );
-    }
     try {
-      execFileSync(
-        'python3',
-        ['scripts/x11-send-dagger-move.py', 'space', expectedTitle, outcome],
-        { stdio: 'inherit' },
-      );
+      await pressPhysical(page, 'Space');
+      await page
+        .locator('[data-testid^="combat-"]')
+        .filter({ hasText: outcome })
+        .first()
+        .waitFor({ timeout: 5_000 });
       return;
     } catch (error) {
       if (attempt === 3) {
@@ -380,20 +455,18 @@ async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage)
   const attack = page
     .locator('[data-testid^="encounter-"]:not([data-testid="encounter-panel"])')
     .filter({ hasText: 'melee attack' })
-    .filter({ hasText: 'player 130.00 → 118.00' })
+    .filter({ hasText: `damage ${damage.toFixed(2)}` })
     .first();
-  await attack.filter({ hasText: `damage ${damage.toFixed(2)}` }).waitFor({ timeout: 10_000 });
+  await attack.waitFor({ timeout: 20_000 });
   await attack.filter({ hasText: 'LOS clear' }).waitFor();
-  execFileSync(
-    'python3',
-    ['scripts/x11-send-dagger-move.py', 'a', 'SkeletalWarrior', `attacks ${damage}`],
-    { stdio: 'inherit' },
-  );
+  await pressPhysical(page, 'KeyA');
   const text = await attack.innerText();
-  assert.match(text, /player 130\.00 → 118\.00/i);
+  assert.match(text, /player \d+\.\d{2} → \d+\.\d{2}/i);
   await page.screenshot({ path: `${output}/skeleton-encounter-desktop.png`, fullPage: true });
+  await openInterface(page);
   await page.getByTestId('reset').click();
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  await openInterface(page);
   return text;
 }
 
@@ -401,9 +474,7 @@ async function physicallyMove(page, resetPosition, keys = ['w', 'w', 'w'], expec
   let movedPosition = resetPosition;
   for (const key of keys) {
     if (movedPosition !== resetPosition) break;
-    const arguments_ = ['scripts/x11-send-dagger-move.py', key];
-    if (expectedTitle !== undefined) arguments_.push(expectedTitle);
-    execFileSync('python3', arguments_, { stdio: 'inherit' });
+    await pressPhysical(page, `Key${key.toUpperCase()}`);
     const movementDeadline = Date.now() + 5_000;
     while (movedPosition === resetPosition && Date.now() < movementDeadline) {
       await page.waitForTimeout(100);

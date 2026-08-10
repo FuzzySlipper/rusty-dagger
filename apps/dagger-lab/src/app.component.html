@@ -1,4 +1,12 @@
 <main>
+  <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport">
+    <div class="game-hud" data-rusty-ui-interactive>
+      <div><span>Privateer's Hold</span><strong>Rust-authoritative connected product</strong></div>
+      <button type="button" data-testid="open-lab" (click)="openLab()">Open Dagger Lab</button>
+      <button type="button" data-testid="refresh-scene" (click)="refreshScene()">Refresh scene</button>
+      <button type="button" data-testid="return-to-play" (click)="returnToPlay()">Return to play</button>
+    </div>
+  </section>
   <header>
     <div>
       <p class="eyebrow">Privateer's Hold · attached to live Rust authority</p>
@@ -8,13 +16,14 @@
     <div class="connection" [class.offline]="connectionError !== ''" data-testid="connection">
       <span></span>
       <div>
-        <strong>{{ connectionError === '' && readout ? 'Connected to native session' : 'Waiting for native host' }}</strong>
-        <small>Closing this tab leaves play running</small>
+        <strong>{{ connectionError === '' && readout ? 'Connected to Rust session' : 'Waiting for product host' }}</strong>
+        <small>Engine owns the sole renderer surface</small>
       </div>
     </div>
   </header>
 
   <p *ngIf="connectionError" class="error" role="alert">{{ connectionError }}</p>
+  <p *ngIf="sceneError" class="error" role="alert" data-testid="scene-error">{{ sceneError }}</p>
   <p *ngIf="commandError" class="error" role="alert" data-testid="command-error">{{ commandError }}</p>
 
   <section class="workspace">
@@ -107,7 +116,7 @@
             </div>
           </ng-template>
           <button type="button" class="primary jump" data-testid="jump-content" [disabled]="pending" (click)="jumpToSelectedContent()">Jump beside live enemy &amp; play</button>
-          <p class="play-note">Rust chooses a grounded approach beside the selected live patrol position, resets the player, faces the enemy, and focuses the native game.</p>
+          <p class="play-note">Rust chooses a grounded approach beside the selected live patrol position, resets the player, faces the enemy, and focuses the Engine-owned gameplay surface.</p>
         </section>
       </div>
     </article>
@@ -126,7 +135,7 @@
         <label><span>Attack cooldown</span><input data-testid="enemy-attack-cooldown" type="number" min="0.1" step="0.1" [(ngModel)]="enemy.behavior.attackCooldownSeconds" (ngModelChange)="markDirty()" /></label>
         <label><span>Attack damage</span><input data-testid="enemy-attack-damage" type="number" min="0" step="0.5" [(ngModel)]="enemy.behavior.attackDamage" (ngModelChange)="markDirty()" /></label>
       </div>
-      <p class="play-note">Apply, jump beside this enemy, and return to the native game. Decision records below capture state changes and attacks, not every AI tick.</p>
+      <p class="play-note">Apply, jump beside this enemy, and return to the gameplay surface. Decision records below capture state changes and attacks, not every AI tick.</p>
     </article>
 
     <article class="panel editor">
@@ -192,7 +201,7 @@
         <button data-testid="reset" [disabled]="pending" (click)="reset()">Reset run</button>
         <button data-testid="play" class="play" [disabled]="pending" (click)="resetAndPlay()">Reset &amp; play</button>
       </div>
-      <p class="play-note">Reset &amp; play restores the start and focuses the native game. Use W/A/S/D and Space to attack; position and combat below are live Rust readback.</p>
+      <p class="play-note">Reset &amp; play restores the start and focuses the gameplay surface. Use W/A/S/D and Space to attack; position and combat below are live Rust readback.</p>
     </article>
 
     <article class="panel editor rat-rules" *ngIf="ratDraft() as rat" data-testid="rat-rules">
@@ -223,7 +232,7 @@
           <label><span>Armor</span><input data-testid="rat-armor" type="number" min="0" step="0.5" [(ngModel)]="ratExperiment.combat.armor" (ngModelChange)="markDirty()" /></label>
         </div>
       </ng-container>
-      <p class="play-note">Apply the whole profile, jump beside a Rat, then attack with Space in the native game. This page follows the authoritative health and combat trace.</p>
+      <p class="play-note">Apply the whole profile, jump beside a Rat, then attack with Space on the gameplay surface. This page follows the authoritative health and combat trace.</p>
     </article>
 
     <article class="panel worksheet">
@@ -307,7 +316,7 @@
         <div><p class="kicker">Physical play session</p><h2>Melee resolution</h2></div>
         <span class="schema" data-testid="combat-count">{{ live.combat.length }} attacks</span>
       </div>
-      <p class="muted" *ngIf="live.combat.length === 0">Jump beside a Rat and press Space in the native game. Range, line of sight, rolls, damage, and health mutation stay in Rust.</p>
+      <p class="muted" *ngIf="live.combat.length === 0">Jump beside a Rat and press Space on the gameplay surface. Range, line of sight, rolls, damage, and health mutation stay in Rust.</p>
       <div class="live-content" data-testid="combat-cooldown-readback">
         <span>Authoritative attack cooldown</span>
         <strong>{{ format(live.playerAttackCooldownRemaining) }} seconds</strong>

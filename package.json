@@ -11,6 +11,7 @@
     "lab:check": "pnpm lab:typecheck && pnpm lab:build"
   },
   "dependencies": {
+    "@rusty-engine/application-host": "file:../rusty-engine/render/artifacts/application-host",
     "@angular/common": "~21.2.0",
     "@angular/compiler": "~21.2.0",
     "@angular/core": "~21.2.0",

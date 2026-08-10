@@ -10,6 +10,5 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
 pnpm lab:build
-exec xvfb-run -a env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET \
-  cargo run -p dagger-studio-adapter --bin dagger-native-host -- \
-    "--lab-host=$1" "--lab-port=$2"
+exec cargo run -p dagger-studio-adapter --bin dagger-native-host -- \
+  --browser-product "--lab-host=$1" "--lab-port=$2"

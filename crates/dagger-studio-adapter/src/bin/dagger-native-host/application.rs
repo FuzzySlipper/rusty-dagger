@@ -3,7 +3,6 @@ use std::{
     env,
     io::{self, Write},
     path::Path,
-    process::Command,
     time::{Duration, Instant},
 };
 
@@ -30,7 +29,6 @@ use winit::{
 
 use crate::{
     diagnostics::{DiagnosticFrameReadout, NativeDiagnostics},
-    lab_server::{LabCommand, LabReply, LabServer},
     proof::{Options, PendingPick, PickKind, Proof},
     view::{dagger_views, window_bounds},
 };
@@ -60,7 +58,6 @@ struct NativeApplication {
     ready: bool,
     proof: Proof,
     failure: Option<String>,
-    lab_server: Option<LabServer>,
 }
 
 impl NativeApplication {
@@ -97,84 +94,7 @@ impl NativeApplication {
             ready: false,
             proof: Proof::default(),
             failure: None,
-            lab_server: None,
         })
-    }
-
-    fn start_lab_server(&mut self) -> Result<()> {
-        let Some(port) = self.options.lab_port else {
-            return Ok(());
-        };
-        if !self.ready {
-            bail!("refuse to advertise Dagger Lab before renderer readiness");
-        }
-        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .and_then(Path::parent)
-            .context("resolve Rusty Dagger workspace root")?;
-        let server = LabServer::start(
-            self.options.lab_host,
-            port,
-            root.join("dist/apps/dagger-lab/browser"),
-        )?;
-        println!(
-            "DAGGER_LAB_READY api=http://127.0.0.1:{}/api/dagger-lab ui=http://127.0.0.1:{}",
-            server.port(),
-            server.port()
-        );
-        io::stdout().flush()?;
-        self.lab_server = Some(server);
-        Ok(())
-    }
-
-    fn drain_lab_commands(&mut self) -> Result<()> {
-        loop {
-            let command = match self.lab_server.as_ref().map(LabServer::try_recv) {
-                Some(Ok(command)) => command,
-                Some(Err(std::sync::mpsc::TryRecvError::Empty)) | None => break,
-                Some(Err(std::sync::mpsc::TryRecvError::Disconnected)) => {
-                    bail!("Dagger Lab bridge disconnected")
-                }
-            };
-            let focus_game = match command {
-                LabCommand::Read { reply } => {
-                    let result = self.runtime.experiment_readout();
-                    send_lab_result(reply, result)?;
-                    false
-                }
-                LabCommand::Apply { document, reply } => {
-                    let result = self.runtime.apply_experiment_json(&document);
-                    send_lab_result(reply, result)?;
-                    false
-                }
-                LabCommand::Evaluate { document, reply } => {
-                    let result = self.runtime.evaluate_experiment_json(&document);
-                    send_lab_result(reply, result)?;
-                    false
-                }
-                LabCommand::Reset { reply } => {
-                    let result = self.runtime.reset_play_session();
-                    complete_camera_synced_lab_result(reply, result, || self.update_camera())?;
-                    false
-                }
-                LabCommand::Play { reply } => {
-                    let result = self.runtime.reset_play_session();
-                    complete_camera_synced_lab_result(reply, result, || self.update_camera())?
-                }
-                LabCommand::Jump { id, reply } => {
-                    let result = self.runtime.jump_to_content(id);
-                    complete_camera_synced_lab_result(reply, result, || self.update_camera())?
-                }
-            };
-            self.update_window_title()?;
-            if focus_game {
-                self.window
-                    .as_ref()
-                    .context("native game window unavailable")?
-                    .focus_window();
-            }
-        }
-        Ok(())
     }
 
     fn mount(&mut self, event_loop: &ActiveEventLoop) -> Result<()> {
@@ -281,7 +201,7 @@ impl NativeApplication {
                 title.push_str(&format!(" — {} {state}", decision.enemy_name));
             }
         }
-        title.push_str(" — Space attack — R reset — L Lab — G patrol — N navgrid");
+        title.push_str(" — Space attack — R reset — G patrol — N navgrid");
         Ok(title)
     }
 
@@ -367,35 +287,9 @@ impl NativeApplication {
         // Keep a control's falling edge ahead of the next diagnostic batch so
         // constrained hosts cannot latch the Rust semantic edge or dispose
         // the renderer before the physical release is observed.
-        self.pressed_codes.iter().any(|code| {
-            matches!(
-                code.as_str(),
-                "KeyG" | "KeyN" | "KeyL" | "KeyR" | "Enter" | "Space"
-            )
-        })
-    }
-
-    fn open_lab(&mut self) -> Result<()> {
-        let url = match self.lab_server.as_ref() {
-            Some(server) => server.local_url(),
-            None => {
-                println!("DAGGER_LAB_OPEN_UNAVAILABLE reason=disabled");
-                io::stdout().flush()?;
-                return Ok(());
-            }
-        };
-        if self.options.proof {
-            self.proof.lab_opened = true;
-            println!("DAGGER_LAB_OPENED url={url} launcher=proof");
-            io::stdout().flush()?;
-            return Ok(());
-        }
-        match launch_external_url(&url) {
-            Ok(()) => println!("DAGGER_LAB_OPENED url={url} launcher=system"),
-            Err(error) => println!("DAGGER_LAB_OPEN_FAILED url={url} error={error:#}"),
-        }
-        io::stdout().flush()?;
-        Ok(())
+        self.pressed_codes
+            .iter()
+            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "KeyR" | "Enter" | "Space"))
     }
 
     fn apply_input(&mut self, input: &RendererPhysicalInputReadout) -> Result<()> {
@@ -461,9 +355,6 @@ impl NativeApplication {
                 println!("DAGGER_DIAGNOSTIC_CONTROL kind=navgrid enabled={enabled}");
                 io::stdout().flush()?;
             }
-        }
-        if pressed.contains("KeyL") && !self.pressed_codes.contains("KeyL") {
-            self.open_lab()?;
         }
         if pressed.contains("KeyR") && !self.pressed_codes.contains("KeyR") {
             self.runtime.reset_play_session()?;
@@ -721,7 +612,6 @@ impl NativeApplication {
                 }
                 self.initialize_renderer()?;
                 self.ready = true;
-                self.start_lab_server()?;
                 if self.options.proof {
                     println!("DAGGER_NATIVE_READY_FOR_INPUT");
                     io::stdout().flush()?;
@@ -784,7 +674,7 @@ impl NativeApplication {
                     .map(|resource| resource.bytes.len())
                     .sum::<usize>();
                 println!(
-                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} lab_opened={} diagnostics_enabled={} diagnostics_disabled={} animation_advanced={} patrol_moved={} stale_handle_replaced={} diagnostics_disposed={} max_animation_updates={} max_retained_overlays={} lifecycle=disposed boundary=rust_facade",
+                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} diagnostics_enabled={} diagnostics_disabled={} animation_advanced={} patrol_moved={} stale_handle_replaced={} diagnostics_disposed={} max_animation_updates={} max_retained_overlays={} lifecycle=disposed boundary=rust_facade",
                     self.proof.frame,
                     self.proof.views,
                     self.proof.camera,
@@ -799,7 +689,6 @@ impl NativeApplication {
                     self.proof.pick_miss,
                     self.proof.state,
                     self.proof.render,
-                    self.proof.lab_opened,
                     self.proof.diagnostics_enabled,
                     self.proof.diagnostics_disabled,
                     self.proof.animation_advanced,
@@ -837,39 +726,6 @@ impl NativeApplication {
         self.failure = Some(error.to_string());
         event_loop.exit();
     }
-}
-
-fn launch_external_url(url: &str) -> Result<()> {
-    if let Some(command) = env::var_os("DAGGER_LAB_OPEN_COMMAND") {
-        let status = Command::new(command)
-            .arg(url)
-            .status()
-            .context("run configured Dagger Lab browser command")?;
-        if !status.success() {
-            bail!("configured Dagger Lab browser command exited with {status}");
-        }
-        return Ok(());
-    }
-    #[cfg(target_os = "linux")]
-    let mut command = Command::new("xdg-open");
-    #[cfg(target_os = "macos")]
-    let mut command = Command::new("open");
-    #[cfg(target_os = "windows")]
-    let mut command = {
-        let mut command = Command::new("cmd");
-        command.args(["/C", "start", ""]);
-        command
-    };
-    #[cfg(not(any(target_os = "linux", target_os = "macos", target_os = "windows")))]
-    bail!("opening Dagger Lab is unsupported on this operating system");
-    let status = command
-        .arg(url)
-        .status()
-        .context("open Dagger Lab in the system browser")?;
-    if !status.success() {
-        bail!("system browser command exited with {status}");
-    }
-    Ok(())
 }
 
 impl ApplicationHandler for NativeApplication {
@@ -912,10 +768,6 @@ impl ApplicationHandler for NativeApplication {
         #[cfg(target_os = "linux")]
         while gtk::events_pending() {
             gtk::main_iteration_do(false);
-        }
-        if let Err(error) = self.drain_lab_commands() {
-            self.fail(event_loop, error);
-            return;
         }
         if self.options.proof && self.started_at.elapsed() > Duration::from_secs(300) {
             self.fail(
@@ -973,54 +825,6 @@ impl ApplicationHandler for NativeApplication {
     }
 }
 
-fn send_lab_result<T: serde::Serialize>(
-    reply: std::sync::mpsc::Sender<LabReply>,
-    result: Result<T, dagger_runtime::RuntimeError>,
-) -> Result<()> {
-    let response = match result {
-        Ok(value) => LabReply {
-            status: 200,
-            body: serde_json::to_string(&value).context("serialize Dagger Lab response")?,
-        },
-        Err(error) => LabReply {
-            status: 400,
-            body: serde_json::to_string(&serde_json::json!({ "error": error.to_string() }))
-                .context("serialize Dagger Lab error")?,
-        },
-    };
-    // A closed browser tab may abandon its one-shot reply channel. That is a
-    // transport disconnect, not a reason to stop the authoritative game.
-    let _ = reply.send(response);
-    Ok(())
-}
-
-fn complete_camera_synced_lab_result<T: serde::Serialize>(
-    reply: std::sync::mpsc::Sender<LabReply>,
-    result: Result<T, dagger_runtime::RuntimeError>,
-    submit_camera: impl FnOnce() -> Result<()>,
-) -> Result<bool> {
-    let value = match result {
-        Ok(value) => value,
-        Err(error) => {
-            send_lab_result::<T>(reply, Err(error))?;
-            return Ok(false);
-        }
-    };
-    if let Err(error) = submit_camera() {
-        let response = LabReply {
-            status: 500,
-            body: serde_json::to_string(&serde_json::json!({
-                "error": format!("camera synchronization failed: {error}")
-            }))
-            .context("serialize Dagger Lab camera error")?,
-        };
-        let _ = reply.send(response);
-        return Err(error);
-    }
-    send_lab_result(reply, Ok(value))?;
-    Ok(true)
-}
-
 pub(crate) fn run(options: Options) -> Result<()> {
     let event_loop = EventLoop::new().context("create Privateer's Hold event loop")?;
     event_loop.set_control_flow(ControlFlow::Poll);
@@ -1032,79 +836,4 @@ pub(crate) fn run(options: Options) -> Result<()> {
         bail!(failure);
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use std::{
-        net::{SocketAddr, TcpListener, TcpStream},
-        sync::mpsc,
-        time::Duration,
-    };
-
-    use anyhow::anyhow;
-
-    use super::*;
-
-    fn unused_local_port() -> u16 {
-        TcpListener::bind(("127.0.0.1", 0))
-            .expect("reserve local port")
-            .local_addr()
-            .expect("read local port")
-            .port()
-    }
-
-    #[test]
-    fn lab_endpoint_is_unavailable_until_native_renderer_is_ready() {
-        let port = unused_local_port();
-        let mut application = NativeApplication::new(Options {
-            proof: false,
-            corrupt_resource: false,
-            lab_host: std::net::IpAddr::V4(std::net::Ipv4Addr::LOCALHOST),
-            lab_port: Some(port),
-        })
-        .expect("construct native host");
-
-        let address = SocketAddr::from(([127, 0, 0, 1], port));
-        assert!(TcpStream::connect_timeout(&address, Duration::from_millis(100)).is_err());
-        let error = application
-            .start_lab_server()
-            .expect_err("pre-ready Lab activation must fail closed");
-        assert!(error.to_string().contains("before renderer readiness"));
-        assert!(application.lab_server.is_none());
-        assert!(TcpStream::connect_timeout(&address, Duration::from_millis(100)).is_err());
-    }
-
-    #[test]
-    fn camera_synced_reply_never_reports_success_before_camera_acceptance() {
-        let (send_failure, receive_failure) = mpsc::channel();
-        let error = complete_camera_synced_lab_result(
-            send_failure,
-            Ok(serde_json::json!({ "position": [1, 2, 3] })),
-            || {
-                assert!(receive_failure.try_recv().is_err());
-                Err(anyhow!("renderer rejected camera pose"))
-            },
-        )
-        .expect_err("camera rejection must fail the host command");
-        assert!(error.to_string().contains("renderer rejected camera pose"));
-        let failure = receive_failure.recv().expect("camera failure reply");
-        assert_eq!(failure.status, 500);
-        assert!(failure.body.contains("camera synchronization failed"));
-
-        let (send_success, receive_success) = mpsc::channel();
-        let focused = complete_camera_synced_lab_result(
-            send_success,
-            Ok(serde_json::json!({ "position": [4, 5, 6] })),
-            || {
-                assert!(receive_success.try_recv().is_err());
-                Ok(())
-            },
-        )
-        .expect("accepted camera pose");
-        assert!(focused);
-        let success = receive_success.recv().expect("successful readback reply");
-        assert_eq!(success.status, 200);
-        assert!(success.body.contains("[4,5,6]"));
-    }
 }

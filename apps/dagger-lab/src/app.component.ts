@@ -21,6 +21,7 @@ import {
   cloneExperiment,
   documentFromDraft,
 } from './lab-contract';
+import { DAGGER_APPLICATION_CONTEXT, loadDaggerProductBootstrap } from './product-runtime';
 
 const EMPTY_DOCUMENT: ExperimentDocument = {
   schemaVersion: 1,
@@ -102,6 +103,7 @@ const EMPTY_DOCUMENT: ExperimentDocument = {
   templateUrl: './app.component.html',
 })
 export class AppComponent implements OnInit, OnDestroy {
+  private readonly application = inject(DAGGER_APPLICATION_CONTEXT);
   private readonly api = inject(LabApiService);
   private readonly profileStore = inject(ProfileStoreService);
   private readonly changeDetector = inject(ChangeDetectorRef);
@@ -115,6 +117,7 @@ export class AppComponent implements OnInit, OnDestroy {
   evaluation: ExperimentEvaluation | undefined;
   readout: ExperimentReadout | undefined;
   connectionError = '';
+  sceneError = '';
   commandError = '';
   worksheetError = '';
   pending = false;
@@ -138,6 +141,33 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.pollTimer !== undefined) clearInterval(this.pollTimer);
+  }
+
+  openLab(): void {
+    this.application.ui.setInteractionMode('interface');
+    document.querySelector('[data-testid="profile-list"]')?.scrollIntoView({ block: 'start' });
+  }
+
+  returnToPlay(): void {
+    this.application.ui.setInteractionMode('gameplay');
+    this.application.ui.focusGameplay();
+  }
+
+  async refreshScene(): Promise<void> {
+    this.sceneError = '';
+    try {
+      const bootstrap = await loadDaggerProductBootstrap();
+      const receipt = await this.application.renderer.replaceContent(bootstrap.content);
+      if (!receipt.applied) {
+        throw new Error(receipt.diagnostics.map((diagnostic) => diagnostic.message).join('; '));
+      }
+      this.application.renderer.setCameraPose(bootstrap.camera);
+      this.application.renderer.renderOnce();
+    } catch (error: unknown) {
+      this.sceneError = errorMessage(error);
+    } finally {
+      this.changeDetector.markForCheck();
+    }
   }
 
   markDirty(): void {
@@ -176,7 +206,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async resetAndPlay(): Promise<void> {
-    await this.runCommand(() => this.api.play());
+    if (await this.runCommand(() => this.api.play())) this.returnToPlay();
   }
 
   selectedProfile(): ExperimentProfile | undefined {
@@ -381,7 +411,10 @@ export class AppComponent implements OnInit, OnDestroy {
     const selected = this.selectedContent();
     if (selected === undefined) return;
     const succeeded = await this.runCommand(() => this.api.jumpToContent(selected.id));
-    if (succeeded) this.selectedContentId = selected.id;
+    if (succeeded) {
+      this.selectedContentId = selected.id;
+      this.returnToPlay();
+    }
   }
 
   focusPlayerRules(): void {

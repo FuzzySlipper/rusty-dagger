@@ -4,12 +4,7 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
-if [[ -z "${DISPLAY:-}" ]]; then
-  exec xvfb-run -a "$0" "$@"
-fi
-
-host_log=$(mktemp -t dagger-lab-native.XXXXXX.log)
-open_capture=$(mktemp -t dagger-lab-open.XXXXXX.txt)
+host_log=$(mktemp -t dagger-product-host.XXXXXX.log)
 cleanup() {
   status=$?
   for pid in "${host_pid:-}"; do
@@ -21,7 +16,7 @@ cleanup() {
   if ((status != 0)); then
     tail -n 120 "$host_log" >&2 || true
   fi
-  rm -f "$host_log" "$open_capture"
+  rm -f "$host_log"
   trap - EXIT
   exit "$status"
 }
@@ -30,11 +25,7 @@ trap cleanup EXIT
 pnpm lab:build
 cargo build -p dagger-studio-adapter --bin dagger-native-host --locked
 
-env -u WAYLAND_DISPLAY -u WAYLAND_SOCKET \
-  GDK_BACKEND=x11 LIBGL_ALWAYS_SOFTWARE=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 \
-  DAGGER_LAB_OPEN_COMMAND="$repo_root/scripts/capture-dagger-lab-open.sh" \
-  DAGGER_LAB_OPEN_CAPTURE="$open_capture" \
-  ./target/debug/dagger-native-host --lab-port=4274 >"$host_log" 2>&1 &
+./target/debug/dagger-native-host --browser-product --lab-port=4274 >"$host_log" 2>&1 &
 host_pid=$!
 for _ in $(seq 1 600); do
   if curl --silent --fail http://127.0.0.1:4274/api/dagger-lab >/dev/null \
@@ -48,25 +39,8 @@ for _ in $(seq 1 600); do
 done
 curl --silent --fail http://127.0.0.1:4274/api/dagger-lab >/dev/null
 curl --silent --fail http://127.0.0.1:4274/ >/dev/null
-for attempt in $(seq 1 3); do
-  python3 scripts/x11-send-dagger-move.py l
-  for _ in $(seq 1 100); do
-    if [[ -s "$open_capture" ]]; then
-      break 2
-    fi
-    if ! kill -0 "$host_pid" 2>/dev/null; then
-      exit 1
-    fi
-    sleep 0.05
-  done
-  echo "native Lab action not observed after physical attempt $attempt; retrying" >&2
-done
-if [[ "$(cat "$open_capture")" != "http://127.0.0.1:4274/" ]]; then
-  echo 'native Lab action did not launch the connected session URL' >&2
-  exit 1
-fi
-grep -F 'DAGGER_LAB_OPENED url=http://127.0.0.1:4274/ launcher=system' "$host_log"
-DAGGER_NATIVE_HOST_LOG="$host_log" node scripts/check-dagger-lab-browser.mjs
+grep -F 'DAGGER_PRODUCT_READY api=http://127.0.0.1:4274/api/dagger-product/bootstrap' "$host_log"
+DAGGER_PRODUCT_HOST_LOG="$host_log" node scripts/check-dagger-lab-browser.mjs
 
 trap - EXIT
 cleanup

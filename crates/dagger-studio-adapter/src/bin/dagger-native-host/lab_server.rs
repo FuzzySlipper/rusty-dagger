@@ -16,6 +16,16 @@ use anyhow::{Context, Result};
 const MAX_REQUEST_BYTES: usize = 64 * 1024;
 
 pub(crate) enum LabCommand {
+    ProductBootstrap {
+        reply: Sender<LabReply>,
+    },
+    ProductState {
+        reply: Sender<LabReply>,
+    },
+    ProductInput {
+        input: ProductInput,
+        reply: Sender<LabReply>,
+    },
     Read {
         reply: Sender<LabReply>,
     },
@@ -37,6 +47,14 @@ pub(crate) enum LabCommand {
         id: u64,
         reply: Sender<LabReply>,
     },
+}
+
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct ProductInput {
+    pub(crate) pressed_codes: Vec<String>,
+    pub(crate) pointer_delta: [f32; 2],
+    pub(crate) buttons: u16,
 }
 
 pub(crate) struct LabReply {
@@ -76,10 +94,6 @@ impl LabServer {
 
     pub(crate) fn port(&self) -> u16 {
         self.port
-    }
-
-    pub(crate) fn local_url(&self) -> String {
-        format!("http://127.0.0.1:{}/", self.port)
     }
 
     pub(crate) fn try_recv(&self) -> Result<LabCommand, mpsc::TryRecvError> {
@@ -139,21 +153,40 @@ fn handle_request(
         return serve_static(stream, static_root, &request.path);
     }
     let (send_reply, receive_reply) = mpsc::channel();
-    let command = match (request.method.as_str(), request.path.as_str()) {
-        ("GET", "/api/dagger-lab") => LabCommand::Read { reply: send_reply },
-        ("PUT", "/api/dagger-lab/experiment") => LabCommand::Apply {
-            document: request.body,
-            reply: send_reply,
-        },
-        ("POST", "/api/dagger-lab/evaluate") => LabCommand::Evaluate {
-            document: request.body,
-            reply: send_reply,
-        },
-        ("POST", "/api/dagger-lab/reset") => LabCommand::Reset { reply: send_reply },
-        ("POST", "/api/dagger-lab/play") => LabCommand::Play { reply: send_reply },
-        ("POST", "/api/dagger-lab/content/jump") => {
-            let body: JumpRequest =
-                match serde_json::from_str(&request.body) {
+    let command =
+        match (request.method.as_str(), request.path.as_str()) {
+            ("GET", "/api/dagger-product/bootstrap") => {
+                LabCommand::ProductBootstrap { reply: send_reply }
+            }
+            ("GET", "/api/dagger-product/state") => LabCommand::ProductState { reply: send_reply },
+            ("POST", "/api/dagger-product/input") => {
+                let input = match serde_json::from_str(&request.body) {
+                    Ok(input) => input,
+                    Err(error) => return write_response(
+                        stream,
+                        400,
+                        &serde_json::json!({ "error": format!("invalid product input: {error}") })
+                            .to_string(),
+                    ),
+                };
+                LabCommand::ProductInput {
+                    input,
+                    reply: send_reply,
+                }
+            }
+            ("GET", "/api/dagger-lab") => LabCommand::Read { reply: send_reply },
+            ("PUT", "/api/dagger-lab/experiment") => LabCommand::Apply {
+                document: request.body,
+                reply: send_reply,
+            },
+            ("POST", "/api/dagger-lab/evaluate") => LabCommand::Evaluate {
+                document: request.body,
+                reply: send_reply,
+            },
+            ("POST", "/api/dagger-lab/reset") => LabCommand::Reset { reply: send_reply },
+            ("POST", "/api/dagger-lab/play") => LabCommand::Play { reply: send_reply },
+            ("POST", "/api/dagger-lab/content/jump") => {
+                let body: JumpRequest = match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
                         stream,
@@ -162,15 +195,15 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-            LabCommand::Jump {
-                id: body.id,
-                reply: send_reply,
+                LabCommand::Jump {
+                    id: body.id,
+                    reply: send_reply,
+                }
             }
-        }
-        _ => {
-            return write_response(stream, 404, r#"{"error":"unknown Dagger Lab route"}"#);
-        }
-    };
+            _ => {
+                return write_response(stream, 404, r#"{"error":"unknown Dagger Lab route"}"#);
+            }
+        };
     commands
         .send(command)
         .context("send command to Dagger runtime")?;

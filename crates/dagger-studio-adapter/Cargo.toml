@@ -6,6 +6,7 @@ description = "Rusty Dagger protocol-14 Studio adapter and renderer projection"
 
 [dependencies]
 anyhow.workspace = true
+base64.workspace = true
 dagger-runtime = { path = "../dagger-runtime" }
 rusty-engine.workspace = true
 serde.workspace = true
