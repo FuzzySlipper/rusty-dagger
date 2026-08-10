@@ -4,6 +4,7 @@ use anyhow::{bail, Result};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Options {
+    pub(crate) browser_product: bool,
     pub(crate) proof: bool,
     pub(crate) corrupt_resource: bool,
     pub(crate) lab_host: IpAddr,
@@ -13,12 +14,14 @@ pub(crate) struct Options {
 impl Options {
     pub(crate) fn parse() -> Result<Self> {
         let mut proof = false;
+        let mut browser_product = false;
         let mut corrupt_resource = false;
         let mut requested_lab_port = None;
         let mut lab_host = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
         let mut no_lab = false;
         for argument in env::args().skip(1) {
             match argument.as_str() {
+                "--browser-product" => browser_product = true,
                 "--proof" => proof = true,
                 "--proof-corrupt-resource" => {
                     proof = true;
@@ -40,12 +43,18 @@ impl Options {
                 _ => bail!("unknown argument {argument}"),
             }
         }
+        if !browser_product && requested_lab_port.is_some() {
+            bail!("--lab-port requires --browser-product");
+        }
         let lab_port = if no_lab {
             None
+        } else if browser_product {
+            Some(requested_lab_port.unwrap_or(4274))
         } else {
-            Some(requested_lab_port.unwrap_or(if proof { 0 } else { 4274 }))
+            None
         };
         Ok(Self {
+            browser_product,
             proof,
             corrupt_resource,
             lab_host,
@@ -67,7 +76,6 @@ pub(crate) struct Proof {
     pub(crate) pick_miss: bool,
     pub(crate) state: bool,
     pub(crate) render: bool,
-    pub(crate) lab_opened: bool,
     pub(crate) diagnostics_enabled: bool,
     pub(crate) diagnostics_disabled: bool,
     pub(crate) animation_advanced: bool,
@@ -91,7 +99,6 @@ impl Proof {
             && self.pick_miss
             && self.state
             && self.render
-            && self.lab_opened
             && self.diagnostics_enabled
             && self.diagnostics_disabled
             && self.animation_advanced

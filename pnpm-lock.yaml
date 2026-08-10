@@ -23,6 +23,9 @@ importers:
       '@angular/platform-browser':
         specifier: ~21.2.0
         version: 21.2.19(@angular/common@21.2.19(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2))(rxjs@7.8.2))(@angular/core@21.2.19(@angular/compiler@21.2.19)(rxjs@7.8.2))
+      '@rusty-engine/application-host':
+        specifier: file:../rusty-engine/render/artifacts/application-host
+        version: file:../rusty-engine/render/artifacts/application-host
       rxjs:
         specifier: ~7.8.0
         version: 7.8.2
@@ -1200,6 +1203,9 @@ packages:
     resolution: {integrity: sha512-zD6NdeWEByGE9QF9vCrlJ5YQB4oq9q91kPZS37Jwj5hOkvR1lTBSpsKhKDw4IJtbQ35LsTS1HD9DZYGKIshU1Q==}
     cpu: [x64]
     os: [win32]
+
+  '@rusty-engine/application-host@file:../rusty-engine/render/artifacts/application-host':
+    resolution: {directory: ../rusty-engine/render/artifacts/application-host, type: directory}
 
   '@schematics/angular@21.2.20':
     resolution: {integrity: sha512-D0MFRofD144Gn+LMPgrRQKazv3sNxfB11kbdU19yN8JyXyRqmB3C8/k3lLA/+LyXVeyLwzIKs7Cw/PSzPUaAxA==}
@@ -3395,6 +3401,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.4':
     optional: true
+
+  '@rusty-engine/application-host@file:../rusty-engine/render/artifacts/application-host': {}
 
   '@schematics/angular@21.2.20(chokidar@5.0.0)':
     dependencies:

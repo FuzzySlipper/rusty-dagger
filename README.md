@@ -40,12 +40,14 @@ current task state in the Den `rusty-dagger` project.
 - `crates/dagger-rpg` — host-neutral Rust authority for the compact gameplay
   experiment document, validation, derived values, melee resolution, and
   designer-facing semantic records.
-- `apps/dagger-lab` — Dagger-owned Angular authoring/readback surface. It is
-  served by `dagger-native-host`, submits whole documents and side-effect-free
+- `apps/dagger-lab` — Dagger-owned Angular authoring/readback surface mounted
+  into Engine's public application host. It submits whole documents and side-effect-free
   formula worksheets to Rust, exposes live player/combat state plus semantic
   calculation, attack, and encounter-decision records, and keeps a small
-  browser-local shelf of named complete experiment profiles. Profile activation still goes through Rust admission;
-  the app has no gameplay evaluator or Engine renderer dependency.
+  browser-local shelf of named complete experiment profiles. Profile
+  activation still goes through Rust admission;
+  the app has no gameplay evaluator and depends only on the bundled
+  `@rusty-engine/application-host`, never renderer implementation packages.
 - `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
   by the read-only protocol-14 Studio adapter and `dagger-native-host`. It
   strictly decodes Dagger projection into Engine's public retained-frame
@@ -74,14 +76,12 @@ cargo run -p dagger-runtime --bin dagger-walkthrough
 ./scripts/verify-native-host.sh # real Engine host, X11 input, pick, resources, lifecycle
 pnpm install
 pnpm lab:build
-cargo run -p dagger-studio-adapter --bin dagger-native-host
-# Press L in the native product to open its connected Dagger Lab. Play with
-# W/A/S/D, Space to attack, R to reset, G for patrol diagnostics, and N for
-# navgrid diagnostics.
-# The Lab is also directly reachable at http://127.0.0.1:4274 while this
-# native session is running; closing its browser tab does not stop play.
+cargo run -p dagger-studio-adapter --bin dagger-native-host -- --browser-product
+# Open http://127.0.0.1:4274. The Engine application host owns the sole canvas
+# and rich Angular UI root; Rust owns the connected runtime, content bundle,
+# input meaning, and authoritative readback. Escape opens interface mode and
+# Return to play restores gameplay focus.
 ./scripts/check-dagger-lab-browser.sh # profiles/preview/apply/explain/A-B play + responsive proof
-./scripts/check-engine-freshness.py # fail loudly when Engine main has moved
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Human-visible Studio host (uses a local Rusty Engine Studio build; set
 # RUSTY_ENGINE_STUDIO_STATIC_ROOT to override the conventional sibling path):
@@ -122,6 +122,15 @@ scripts/check-studio-browser.sh
   authoritative patrol transforms, and bounded retained overlays. `G` toggles
   authored/live sprite and heading facts; `N` toggles nearby committed navgrid
   cells. The X11 proof covers on/off replacement and disposal.
+- Connected browser product: `dagger-native-host --browser-product` serves the
+  Angular application and one 121-resource, 21,483,557-byte Rust-authored
+  Privateer's Hold content bundle to Engine's public application host. Engine
+  owns the sole canvas, renderer cadence, exact resource admission, atomic
+  replacement, and UI/gameplay input arbitration. The browser proof samples
+  the real resource-backed pixels, replaces the whole content aggregate,
+  proves physical W input changes Rust authority while interface-mode W is a
+  no-op, and reopens against the same Rust session. No X11 display is involved;
+  the X11 native host remains the separate fixed-surface diagnostic above.
 - Gameplay lab: the Angular surface edits the same schema-1 document as
   `data/experiments/privateers-hold-starter.json`. Rust atomically admits the
   complete candidate, installs movement speed plus player/Rat stats, calculates
@@ -134,11 +143,10 @@ scripts/check-studio-browser.sh
   committed enemy catalog through Rust: decoded mobile ID/name/archive and
   authored spawn remain separate from live patrol position and active player
   experiment values. Jump-to-play names an admitted entity; `dagger-runtime`
-  chooses a grounded navigable approach and focuses the native product rather
-  than accepting browser-authored coordinates. The native window advertises
-  and handles `L` through Engine physical-input readback to open the Lab for
-  that session. Closing and reopening the companion tab reattaches to the same
-  Rust runtime rather than creating a second gameplay authority.
+  chooses a grounded navigable approach and returns the connected application
+  to gameplay mode rather than accepting browser-authored coordinates. Closing
+  and reopening the product tab reattaches to the same Rust runtime rather
+  than creating a second gameplay authority.
 - Melee experiment: the same document exposes bounded player reach/hit/damage
   terms, attack cooldown, stamina cost, and mobile-0 Rat defense/armor. With a
   Rat focused, physical `Space`

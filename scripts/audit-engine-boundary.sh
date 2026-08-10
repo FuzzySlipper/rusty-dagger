@@ -73,5 +73,7 @@ if (($(wc -l <"$native_main") > 30)); then
   echo "$native_main: native composition root grew beyond bounded wiring" >&2
   exit 1
 fi
-grep -F 'application::run(proof::Options::parse()?)' "$native_main" >/dev/null
+grep -F 'let options = proof::Options::parse()?;' "$native_main" >/dev/null
+grep -F 'return connected_application::run(options);' "$native_main" >/dev/null
+grep -F 'application::run(options)' "$native_main" >/dev/null
 echo 'Engine boundary audit passed'

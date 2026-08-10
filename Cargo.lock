@@ -580,6 +580,7 @@ name = "dagger-studio-adapter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base64",
  "dagger-runtime",
  "gtk",
  "rusty-engine",

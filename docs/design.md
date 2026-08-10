@@ -26,7 +26,7 @@ ready-made content. Its central loop is:
 The construction-kit and rules-workbench surfaces serve that loop. They are not
 separate proof products or comprehensive editors built ahead of use. A rule,
 content field, inspector, editor, or abstraction earns its place by supporting
-a named experiment in the real native Privateer's Hold product.
+a named experiment in the connected Privateer's Hold product.
 
 This changes how work is sliced. Crate and authority boundaries remain strict,
 but tasks are vertical: authored values, Rust authority, live state,
@@ -60,7 +60,7 @@ Consequences for how this repo is built:
    without dragging the whole demo along. Crates stay small enough that their
    public surface fits in one paragraph.
 2. **Playable vertical experiments.** Clean systems are proven by using them in
-   the native game, not by postponing integration. Modularity means stable
+   the connected game, not by postponing integration. Modularity means stable
    ownership and dependency direction, not a queue of headless models followed
    by UI and play at the end.
 3. **Lessons in code.** Parser edge cases, format gotchas, scale constants,
@@ -176,12 +176,15 @@ modularity gate, task 6529):
   authoritative session mutation and exposes readback plus bounded semantic
   resolution history to Dagger-owned presentation/tooling.
 - `dagger-studio-adapter` — Rust-owned protocol-14 read-only admission and
-  render projection for the committed Privateer's Hold project, plus native
-  product composition for that projection. The adapter reuses
-  `dagger-runtime`; it rejects mutations until a Dagger-owned authority
-  exists. `dagger-native-host` ticks the runtime authority, presents its live
-  transforms and encounter decisions, and visualizes the committed navgrid
-  through bounded retained frames; Engine privately owns the webview renderer.
+  render projection for the committed Privateer's Hold project, plus the
+  exact-resource bundle consumed by Dagger product and diagnostic hosts. The
+  adapter reuses `dagger-runtime`; it rejects mutations until a Dagger-owned
+  authority exists. `dagger-native-host` remains a first-class native
+  diagnostic: it ticks the runtime authority, presents live transforms and encounter
+  decisions, visualizes the committed navgrid through bounded retained frames,
+  and proves physical input, pick, resize, resource admission, lifecycle, and
+  disposal through Engine's public Rust facade. Engine privately owns the
+  webview renderer.
 - `scripts/studio-host.mjs` — bounded HTTP/static host for the Engine Studio
   app, adapter lifecycle, normalized host-file browsing, and atomic
   per-project user settings. It is transport/presentation glue, not gameplay
@@ -191,21 +194,32 @@ modularity gate, task 6529):
   recent calculation inspection. A browser-local profile shelf stores named
   copies of the complete lockstep document for quick A/B experiments; storage
   is an authoring convenience, not runtime authority or a package system.
-  `dagger-native-host` owns one Lab HTTP companion beside the real
-  Engine-rendered game and routes read/evaluate/apply/reset/play commands to
-  the same `DaggerRuntime` receiving physical input. The native window makes
-  `L` discoverable and opens the companion through a Dagger-owned system
-  browser action; no browser tab owns or starts gameplay authority. Closing
-  and reopening a tab therefore reconnects to the same native session.
+  The target product composition mounts this Angular surface only into the UI
+  root supplied by Engine's `@rusty-engine/application-host`. That host owns
+  the sole gameplay canvas, UI root, render cadence/lifecycle, and input
+  arbitration. A Dagger-owned Rust transport supplies admitted frames, exact
+  content-addressed resources, camera updates, live state, and semantic
+  intents; Angular does not own or start gameplay authority. Opening the Lab
+  changes the host interaction mode rather than mounting a second renderer or
+  runtime, and returning to play restores gameplay focus through the bounded
+  host port.
+
+  `dagger-native-host --browser-product` owns the connected Rust session and
+  serves the Angular product, its complete Rust-projected frame, exact
+  content-addressed resource bytes, authoritative camera/state, semantic input
+  endpoint, and Lab API. The ordinary `dagger-native-host` mode remains an X11
+  renderer diagnostic rather than a second product surface. Closing and
+  reopening the browser product reconnects to the same Rust session.
   Loopback is the default bind and an explicit LAN bind remains trusted,
   unauthenticated development mode. Worksheet evaluation is side-effect-free;
-  Reset & Play restores the named start and focuses the native window. The app
+  Reset & Play restores the named start and focuses the Engine-owned gameplay surface. The app
   calls Rust for every evaluation or mutation and never imports or mounts
   Engine renderer implementation.
   The connected content browser searches the 43 committed enemy identities,
   keeps decoded Arena2 reference fields distinct from authored player/Rat rules
   and live patrol/resource/AI state, and asks Rust to choose a navigable grounded
-  approach before focusing the native game. The encounter editor exposes only
+  approach before returning focus to the Engine-owned gameplay surface. The
+  encounter editor exposes only
   the supported per-archetype detection, patrol/chase speed, attack range,
   cooldown, and damage terms; concise state-change and attack records explain
   the current play session. Rat gameplay keys to Arena2 mobile ID 0 and the
@@ -227,6 +241,26 @@ modularity gate, task 6529):
   Engine privately owns the Rust-to-webview/Three boundary. Downstream source
   has no renderer TypeScript, HTML canvas bootstrap, or renderer package
   imports.
+
+### Product renderer and UI composition
+
+Rich product UI follows Engine's downstream application-host contract:
+
+`index.html -> main.ts -> mountRustyApplication -> mount Angular UI`
+
+The downstream package may depend on `@rusty-engine/application-host`, but not
+on renderer-host, renderer-three, render-projection, private webview code, or a
+second canvas bootstrap. Rust remains authoritative for project admission,
+gameplay, presentation meaning, and the resource manifest/bytes supplied to
+Engine. TypeScript adapts transport and mounts Angular into the supplied UI
+root; it may classify original host events through the application interaction
+port before forwarding semantic input to Rust.
+
+The application host must admit the same content-addressed resource-backed
+frame used by the native diagnostic. An empty, untextured, inline-only, or
+proof-specific browser frame is not a substitute for the playable product.
+Engine Studio remains a separate Engine-hosted tool and reaches this repository
+only through `.rusty-studio.json` and the Rust adapter.
 
 ### Gameplay authoring shape (program 6682, tasks 6683, 6689, 6684, 6685, 6687, and 6690)
 
