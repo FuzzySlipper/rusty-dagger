@@ -1,13 +1,26 @@
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #f2eadc; background: #0c1113; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; min-height: 100vh; background: #090d0f; }
+html, body, #application { height: 100%; min-height: 0; overflow: hidden; }
+body { margin: 0; min-width: 320px; background: #090d0f; }
+#application { inset: 0; position: fixed; }
+[data-rusty-application-host] { height: 100% !important; min-height: 0 !important; overflow: hidden !important; }
+[data-rusty-application-ui] { height: 100% !important; min-height: 0 !important; overflow: hidden !important; }
+dagger-root { display: block; height: 100%; min-height: 0; overflow: hidden; }
 button, input { font: inherit; }
-main { width: min(1220px, calc(100% - 32px)); margin: 0 auto; padding: 42px 0 64px; }
-.game-stage { height: min(70vh, 680px); min-height: 420px; margin-bottom: 28px; pointer-events: none; position: relative; }
+.product-shell { height: 100%; min-height: 0; overflow: hidden; position: relative; width: 100%; }
+.game-stage { inset: 0; pointer-events: none; position: absolute; }
 .game-hud { align-items: center; display: flex; gap: 10px; justify-content: flex-end; left: 18px; pointer-events: auto; position: absolute; right: 18px; top: 18px; }
 .game-hud div { display: grid; gap: 3px; margin-right: auto; padding: 10px 13px; border: 1px solid rgba(199,169,106,.55); border-radius: 9px; background: rgba(9,13,15,.82); }
 .game-hud span { color: #c7a96a; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .game-hud strong { font-size: .82rem; }
+.lab-page { background: #090d0f; display: grid; grid-template-rows: auto minmax(0, 1fr); inset: 0; opacity: 0; pointer-events: none; position: absolute; z-index: 2; }
+.lab-page.is-open { opacity: 1; pointer-events: auto; }
+.lab-toolbar { align-items: center; background: #101719; border-bottom: 1px solid #2b393b; display: flex; gap: 18px; justify-content: space-between; min-height: 64px; padding: 10px 18px; }
+.lab-toolbar div { display: grid; gap: 2px; }
+.lab-toolbar span { color: #c7a96a; font-size: .68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.lab-toolbar strong { font-size: .88rem; }
+.lab-scroll { min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+.lab-content { margin: 0 auto; padding: 36px 0 64px; width: min(1220px, calc(100% - 32px)); }
 header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-family: Georgia, serif; font-size: clamp(2.3rem, 6vw, 4.7rem); font-weight: 500; letter-spacing: -.05em; }
@@ -124,7 +137,9 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
 }
 
 @media (max-width: 520px) {
-  main { width: min(100% - 20px, 1220px); padding-top: 24px; }
+  .lab-content { padding-top: 24px; width: min(100% - 20px, 1220px); }
+  .game-hud { align-items: flex-end; flex-direction: column; }
+  .game-hud div { margin-right: 0; }
   .panel { padding: 18px; }
   .field-grid, .worksheet-grid, .metrics { grid-template-columns: 1fr; }
   .actions button { width: 100%; }

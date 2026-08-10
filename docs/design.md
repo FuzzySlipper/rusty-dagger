@@ -203,7 +203,12 @@ modularity gate, task 6529):
   intents; Angular does not own or start gameplay authority. Opening the Lab
   changes the host interaction mode rather than mounting a second renderer or
   runtime, and returning to play restores gameplay focus through the bounded
-  host port.
+  host port. The browser product is a fixed application window: gameplay uses
+  the stable renderer viewport, while the Lab is a distinct opaque workspace
+  with its own bounded scroll container. Lab content never participates in
+  document, application-host, or renderer sizing. This matches the layout
+  contract expected from a later native wrapper without making the wrapper the
+  owner of product composition.
 
   `dagger-native-host --browser-product` owns the connected Rust session and
   serves the Angular product, its complete Rust-projected frame, exact

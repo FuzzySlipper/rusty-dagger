@@ -124,6 +124,7 @@ export function mountDaggerProductRuntime(
       pressed.clear();
       buttons = 0;
       context.ui.setInteractionMode('interface');
+      window.dispatchEvent(new Event('dagger-open-lab'));
       submit([0, 0], 0);
       return;
     }
