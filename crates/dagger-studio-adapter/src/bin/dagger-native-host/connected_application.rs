@@ -10,7 +10,7 @@ use std::{
 
 use anyhow::{bail, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-use dagger_runtime::{DaggerRuntime, ResolvedPlayerAction};
+use dagger_runtime::{DaggerRuntime, MeleePresentationReadout, ResolvedPlayerAction};
 use dagger_studio_adapter::{build_render_bundle, DaggerRenderBundle};
 use rusty_engine::render_host_contracts::RendererCameraPose;
 use rusty_engine::render_model::{RenderDiff, RenderFrameDiff, RenderHandle};
@@ -235,6 +235,9 @@ struct ProductState {
     frame: rusty_engine::render_model::RenderFrameDiff,
     patrol_debug_enabled: bool,
     nav_debug_enabled: bool,
+    melee_presentation: Option<MeleePresentationReadout>,
+    player_stamina: f32,
+    player_max_stamina: f32,
 }
 
 #[derive(Serialize)]
@@ -244,6 +247,9 @@ struct ProductInputState {
     player_position: [f32; 3],
     patrol_debug_enabled: bool,
     nav_debug_enabled: bool,
+    melee_presentation: Option<MeleePresentationReadout>,
+    player_stamina: f32,
+    player_max_stamina: f32,
 }
 
 fn product_state(
@@ -253,6 +259,7 @@ fn product_state(
 ) -> Result<ProductState, dagger_runtime::RuntimeError> {
     let position = runtime.player_position()?;
     let state = runtime.player_state();
+    let stamina = runtime.player_stamina();
     Ok(ProductState {
         camera: RendererCameraPose {
             position: [
@@ -267,6 +274,9 @@ fn product_state(
         frame,
         patrol_debug_enabled: presentation.sprite_overlay_enabled(),
         nav_debug_enabled: presentation.nav_overlay_enabled(),
+        melee_presentation: runtime.melee_presentation(),
+        player_stamina: stamina.0,
+        player_max_stamina: stamina.1,
     })
 }
 
@@ -276,11 +286,15 @@ fn product_input_state(
 ) -> Result<ProductInputState, dagger_runtime::RuntimeError> {
     let position = runtime.player_position()?;
     let camera = camera_pose(runtime)?;
+    let stamina = runtime.player_stamina();
     Ok(ProductInputState {
         camera,
         player_position: [position.x, position.y, position.z],
         patrol_debug_enabled: presentation.sprite_overlay_enabled(),
         nav_debug_enabled: presentation.nav_overlay_enabled(),
+        melee_presentation: runtime.melee_presentation(),
+        player_stamina: stamina.0,
+        player_max_stamina: stamina.1,
     })
 }
 
@@ -291,6 +305,9 @@ fn tick_presentation(
 ) -> Result<RenderFrameDiff> {
     let encounter_updates = runtime.tick_play_session(dt)?;
     let positions = runtime.encounter_positions();
+    let dead_encounters = runtime.dead_encounter_ids();
+    let melee_action = runtime.melee_presentation();
+    let stamina = runtime.player_stamina();
     let camera = camera_pose(runtime)?;
     let frame = presentation.tick(
         dt,
@@ -301,6 +318,9 @@ fn tick_presentation(
         ],
         &positions,
         &encounter_updates,
+        &dead_encounters,
+        melee_action.as_ref(),
+        stamina,
     )?;
     Ok(frame.frame)
 }
@@ -458,6 +478,44 @@ mod tests {
         );
         let mut codes = BTreeSet::new();
         let mut buttons = 0;
+        runtime
+            .set_player_position(rusty_engine::core_math::Vec3::new(-5.0, 0.35, -5.75))
+            .expect("place player in ordinary melee range for input proof");
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut codes,
+            &mut buttons,
+            ProductInput {
+                pressed_codes: vec!["Space".to_owned()],
+                pointer_delta: [0.0, 0.0],
+                buttons: 0,
+            },
+        )
+        .expect("ordinary gallery attack without Lab focus");
+        assert_eq!(
+            runtime
+                .experiment_readout()
+                .expect("gallery readout")
+                .combat_attempts
+                .len(),
+            1
+        );
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut codes,
+            &mut buttons,
+            ProductInput {
+                pressed_codes: Vec::new(),
+                pointer_delta: [0.0, 0.0],
+                buttons: 0,
+            },
+        )
+        .expect("release gallery attack");
+        runtime
+            .reset_play_session()
+            .expect("reset gallery after attack");
         for code in ["KeyW"; 30].into_iter().chain(["KeyA"; 30]) {
             apply_product_input(
                 &mut runtime,

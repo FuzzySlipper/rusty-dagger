@@ -433,6 +433,9 @@ impl NativeApplication {
             self.update_window_title()?;
         }
         let encounter_positions = self.runtime.encounter_positions();
+        let dead_encounters = self.runtime.dead_encounter_ids();
+        let melee_action = self.runtime.melee_presentation();
+        let stamina = self.runtime.player_stamina();
         let diagnostic = self.diagnostics.tick(
             dt,
             [
@@ -442,6 +445,9 @@ impl NativeApplication {
             ],
             &encounter_positions,
             &encounter_updates,
+            &dead_encounters,
+            melee_action.as_ref(),
+            stamina,
         )?;
         if diagnostic.frame.ops.is_empty() {
             return Ok(());
@@ -461,12 +467,14 @@ impl NativeApplication {
             self.proof.animation_advanced,
             self.proof.patrol_moved,
             self.proof.stale_handle_replaced,
+            self.proof.viewmodel_present,
         );
         self.proof.animation_advanced |= readout.animation_advanced;
         self.proof.patrol_moved |= readout.patrol_moved;
         self.proof.diagnostics_enabled |= readout.overlays_enabled;
         self.proof.diagnostics_disabled |= readout.overlays_disabled;
         self.proof.stale_handle_replaced |= readout.stale_handle_replaced;
+        self.proof.viewmodel_present |= readout.viewmodel_present;
         self.proof.max_animation_updates = self
             .proof
             .max_animation_updates
@@ -481,15 +489,17 @@ impl NativeApplication {
             self.proof.animation_advanced,
             self.proof.patrol_moved,
             self.proof.stale_handle_replaced,
+            self.proof.viewmodel_present,
         );
         if self.options.proof && before != after {
             println!(
-                "DAGGER_DIAGNOSTIC_APPLIED enabled={} disabled={} animation={} patrol={} replacement={} retained={}",
+                "DAGGER_DIAGNOSTIC_APPLIED enabled={} disabled={} animation={} patrol={} replacement={} viewmodel={} retained={}",
                 after.0,
                 after.1,
                 after.2,
                 after.3,
                 after.4,
+                after.5,
                 self.proof.max_retained_overlays,
             );
         }
@@ -674,7 +684,7 @@ impl NativeApplication {
                     .map(|resource| resource.bytes.len())
                     .sum::<usize>();
                 println!(
-                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} diagnostics_enabled={} diagnostics_disabled={} animation_advanced={} patrol_moved={} stale_handle_replaced={} diagnostics_disposed={} max_animation_updates={} max_retained_overlays={} lifecycle=disposed boundary=rust_facade",
+                    "DAGGER_NATIVE_PROOF_OK frame={} views={} camera={} resize={} resources={} resource_count={} resource_bytes={} source_entities={} input_authority={} input_noop={} pick_authority={} pick_miss={} state={} render={} diagnostics_enabled={} diagnostics_disabled={} animation_advanced={} patrol_moved={} stale_handle_replaced={} viewmodel_present={} diagnostics_disposed={} max_animation_updates={} max_retained_overlays={} lifecycle=disposed boundary=rust_facade",
                     self.proof.frame,
                     self.proof.views,
                     self.proof.camera,
@@ -694,6 +704,7 @@ impl NativeApplication {
                     self.proof.animation_advanced,
                     self.proof.patrol_moved,
                     self.proof.stale_handle_replaced,
+                    self.proof.viewmodel_present,
                     self.proof.diagnostics_disposed,
                     self.proof.max_animation_updates,
                     self.proof.max_retained_overlays,

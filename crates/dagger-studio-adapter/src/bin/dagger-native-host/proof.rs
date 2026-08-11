@@ -87,6 +87,7 @@ pub(crate) struct Proof {
     pub(crate) animation_advanced: bool,
     pub(crate) patrol_moved: bool,
     pub(crate) stale_handle_replaced: bool,
+    pub(crate) viewmodel_present: bool,
     pub(crate) diagnostics_disposed: bool,
     pub(crate) max_animation_updates: usize,
     pub(crate) max_retained_overlays: usize,
@@ -110,6 +111,7 @@ impl Proof {
             && self.animation_advanced
             && self.patrol_moved
             && self.stale_handle_replaced
+            && self.viewmodel_present
     }
 }
 

@@ -28,8 +28,10 @@ pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
     ActorGameplayReadout, CombatAttemptRecord, CombatRecord, ContentEntityReadout, ContentError,
     ContentLiveReadout, DaggerRuntime, EnemyReferenceReadout, EnemyStatsReadout,
-    ExperimentEvaluation, ExperimentReadout, LiveActorResources, RuntimeError,
-    SessionCalculationRecord, CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
+    ExperimentEvaluation, ExperimentReadout, LiveActorResources, MeleePresentationPhase,
+    MeleePresentationReadout, RuntimeError, SessionCalculationRecord, CALCULATION_HISTORY_LIMIT,
+    MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS,
+    MELEE_REJECTION_SECONDS, STARTER_EXPERIMENT_JSON,
 };
 
 #[cfg(test)]
@@ -262,12 +264,32 @@ mod tests {
         assert_eq!(accepted.stamina_before, 90.0);
         assert_eq!(accepted.stamina_after, 80.0);
         assert_eq!(accepted.cooldown_after, 0.75);
+        let melee = attacked
+            .melee_presentation
+            .as_ref()
+            .expect("accepted attack starts visible Rust action state");
+        assert_eq!(melee.phase, super::MeleePresentationPhase::Anticipation);
+        assert_eq!(melee.target_id, Some(2007));
+        assert_eq!(melee.target_health_before, Some(3.0));
+        assert_eq!(melee.target_health_after, Some(0.0));
+        assert_eq!(melee.target_max_health, Some(3.0));
+        assert_eq!(melee.final_damage, Some(15.0));
+        assert!(melee.died);
         let rat = attacked
             .content
             .iter()
             .find(|entity| entity.id == 2007)
             .expect("attacked Rat readout");
         assert_eq!(rat.live.resources.unwrap().current_health, 0.0);
+
+        let contact = runtime
+            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+            .and_then(|_| runtime.experiment_readout())
+            .expect("advance melee action to deterministic contact");
+        assert_eq!(
+            contact.melee_presentation.unwrap().phase,
+            super::MeleePresentationPhase::Contact
+        );
 
         let rejected = runtime
             .attack_focused_target()
@@ -279,6 +301,10 @@ mod tests {
         assert!(!rejected.accepted);
         assert_eq!(rejected.outcome, "cooldown");
         assert_eq!(rejected.stamina_before, rejected.stamina_after);
+        assert_eq!(
+            runtime.melee_presentation().unwrap().phase,
+            super::MeleePresentationPhase::Rejected
+        );
         for _ in 0..3 {
             runtime
                 .tick_play_session(0.25)
@@ -292,6 +318,7 @@ mod tests {
         assert!(reset.combat.is_empty());
         assert!(reset.combat_attempts.is_empty());
         assert_eq!(reset.player_attack_cooldown_remaining, 0.0);
+        assert!(reset.melee_presentation.is_none());
         assert_eq!(
             reset
                 .content

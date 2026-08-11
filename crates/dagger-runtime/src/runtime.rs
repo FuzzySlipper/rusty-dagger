@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
     AdmittedActorValues, AdmittedEnemyValues, AdmittedExperiment, CalculationRecord,
@@ -70,6 +70,7 @@ pub struct DaggerRuntime {
     combat_attempt_sequence: u64,
     combat_attempt_history: VecDeque<CombatAttemptRecord>,
     player_attack_cooldown_remaining: f32,
+    melee_presentation: Option<ActiveMeleePresentation>,
     encounter_sequence: u64,
     encounter_history: VecDeque<EncounterDecisionRecord>,
     dungeon_bounds: Option<([f64; 3], [f64; 3])>,
@@ -84,6 +85,11 @@ pub const STARTER_EXPERIMENT_JSON: &str =
 pub const CALCULATION_HISTORY_LIMIT: usize = 16;
 pub const COMBAT_HISTORY_LIMIT: usize = 32;
 pub const ENCOUNTER_HISTORY_LIMIT: usize = 32;
+pub const MELEE_ANTICIPATION_SECONDS: f32 = 0.22;
+pub const MELEE_CONTACT_SECONDS: f32 = 0.32;
+pub const MELEE_RECOVERY_SECONDS: f32 = 0.72;
+pub const MELEE_REJECTION_SECONDS: f32 = 0.72;
+const MELEE_AIM_MIN_DOT: f32 = 0.64;
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -100,6 +106,7 @@ pub struct ExperimentReadout {
     pub combat: Vec<CombatRecord>,
     pub combat_attempts: Vec<CombatAttemptRecord>,
     pub player_attack_cooldown_remaining: f32,
+    pub melee_presentation: Option<MeleePresentationReadout>,
     pub encounter_decisions: Vec<EncounterDecisionRecord>,
     pub content: Vec<ContentEntityReadout>,
     pub focused_content_id: Option<u64>,
@@ -198,6 +205,109 @@ pub struct CombatAttemptRecord {
     pub stamina_before: f32,
     pub stamina_cost: f32,
     pub stamina_after: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum MeleePresentationPhase {
+    Anticipation,
+    Contact,
+    Recovery,
+    Rejected,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeleePresentationReadout {
+    pub attempt_sequence: u64,
+    pub phase: MeleePresentationPhase,
+    pub phase_progress: f32,
+    pub accepted: bool,
+    pub outcome: String,
+    pub target_id: Option<u64>,
+    pub stamina_before: f32,
+    pub stamina_after: f32,
+    pub target_health_before: Option<f32>,
+    pub target_health_after: Option<f32>,
+    pub target_max_health: Option<f32>,
+    pub final_damage: Option<f32>,
+    pub died: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ActiveMeleePresentation {
+    attempt_sequence: u64,
+    elapsed: f32,
+    accepted: bool,
+    outcome: String,
+    target_id: Option<u64>,
+    stamina_before: f32,
+    stamina_after: f32,
+    target_health_before: Option<f32>,
+    target_health_after: Option<f32>,
+    target_max_health: Option<f32>,
+    final_damage: Option<f32>,
+    died: bool,
+}
+
+impl ActiveMeleePresentation {
+    fn readout(&self) -> MeleePresentationReadout {
+        let (phase, phase_progress) = if !self.accepted {
+            (
+                MeleePresentationPhase::Rejected,
+                normalized_progress(self.elapsed, MELEE_REJECTION_SECONDS),
+            )
+        } else if self.elapsed < MELEE_ANTICIPATION_SECONDS {
+            (
+                MeleePresentationPhase::Anticipation,
+                normalized_progress(self.elapsed, MELEE_ANTICIPATION_SECONDS),
+            )
+        } else if self.elapsed < MELEE_ANTICIPATION_SECONDS + MELEE_CONTACT_SECONDS {
+            (
+                MeleePresentationPhase::Contact,
+                normalized_progress(
+                    self.elapsed - MELEE_ANTICIPATION_SECONDS,
+                    MELEE_CONTACT_SECONDS,
+                ),
+            )
+        } else {
+            (
+                MeleePresentationPhase::Recovery,
+                normalized_progress(
+                    self.elapsed - MELEE_ANTICIPATION_SECONDS - MELEE_CONTACT_SECONDS,
+                    MELEE_RECOVERY_SECONDS,
+                ),
+            )
+        };
+        MeleePresentationReadout {
+            attempt_sequence: self.attempt_sequence,
+            phase,
+            phase_progress,
+            accepted: self.accepted,
+            outcome: self.outcome.clone(),
+            target_id: self.target_id,
+            stamina_before: self.stamina_before,
+            stamina_after: self.stamina_after,
+            target_health_before: self.target_health_before,
+            target_health_after: self.target_health_after,
+            target_max_health: self.target_max_health,
+            final_damage: self.final_damage,
+            died: self.died,
+        }
+    }
+
+    fn is_complete(&self) -> bool {
+        let duration = if self.accepted {
+            MELEE_ANTICIPATION_SECONDS + MELEE_CONTACT_SECONDS + MELEE_RECOVERY_SECONDS
+        } else {
+            MELEE_REJECTION_SECONDS
+        };
+        self.elapsed >= duration
+    }
+}
+
+fn normalized_progress(elapsed: f32, duration: f32) -> f32 {
+    (elapsed / duration).clamp(0.0, 1.0)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -320,6 +430,7 @@ impl DaggerRuntime {
             combat_attempt_sequence: 0,
             combat_attempt_history: VecDeque::new(),
             player_attack_cooldown_remaining: 0.0,
+            melee_presentation: None,
             encounter_sequence: 0,
             encounter_history: VecDeque::new(),
             dungeon_bounds: admitted.dungeon_bounds,
@@ -398,6 +509,12 @@ impl DaggerRuntime {
         }
         self.player_attack_cooldown_remaining =
             (self.player_attack_cooldown_remaining - dt).max(0.0);
+        if let Some(presentation) = &mut self.melee_presentation {
+            presentation.elapsed += dt;
+            if presentation.is_complete() {
+                self.melee_presentation = None;
+            }
+        }
         let player = self.player_position()?;
         let behaviors = self
             .content_entities
@@ -545,6 +662,30 @@ impl DaggerRuntime {
         self.player_attack_cooldown_remaining
     }
 
+    pub fn melee_presentation(&self) -> Option<MeleePresentationReadout> {
+        self.melee_presentation
+            .as_ref()
+            .map(ActiveMeleePresentation::readout)
+    }
+
+    pub fn player_stamina(&self) -> (f32, f32) {
+        (
+            self.player_resources.current_stamina,
+            self.experiment.player.stats.max_stamina,
+        )
+    }
+
+    pub fn dead_encounter_ids(&self) -> BTreeSet<u32> {
+        self.enemy_resources
+            .iter()
+            .filter_map(|(&id, resources)| {
+                (resources.current_health <= 0.0)
+                    .then(|| u32::try_from(id).ok())
+                    .flatten()
+            })
+            .collect()
+    }
+
     /// Admit and apply one complete authoring document. Admission and all
     /// calculations happen before live state changes, so a rejected edit
     /// cannot partially mutate the running experiment.
@@ -565,6 +706,7 @@ impl DaggerRuntime {
         self.combat_attempt_sequence = 0;
         self.combat_attempt_history.clear();
         self.player_attack_cooldown_remaining = 0.0;
+        self.melee_presentation = None;
         self.encounter_sequence = 0;
         self.encounter_history.clear();
         self.calculation_history
@@ -609,6 +751,7 @@ impl DaggerRuntime {
         self.combat_attempt_sequence = 0;
         self.combat_attempt_history.clear();
         self.player_attack_cooldown_remaining = 0.0;
+        self.melee_presentation = None;
         self.encounter_sequence = 0;
         self.encounter_history.clear();
         if let Some(patrol) = self.patrol.as_mut() {
@@ -685,6 +828,7 @@ impl DaggerRuntime {
                 self.combat_attempt_sequence = 0;
                 self.combat_attempt_history.clear();
                 self.player_attack_cooldown_remaining = 0.0;
+                self.melee_presentation = None;
                 self.encounter_sequence = 0;
                 self.encounter_history.clear();
                 self.focused_content_id = Some(id);
@@ -707,7 +851,7 @@ impl DaggerRuntime {
         let cooldown_duration = self.experiment.player.combat.attack_cooldown_seconds;
         let stamina_cost = self.experiment.player.combat.stamina_cost;
         if cooldown_before > 0.0 {
-            self.push_combat_attempt(CombatAttemptRecord {
+            let sequence = self.push_combat_attempt(CombatAttemptRecord {
                 sequence: 0,
                 target_id,
                 accepted: false,
@@ -719,10 +863,24 @@ impl DaggerRuntime {
                 stamina_cost,
                 stamina_after: stamina_before,
             });
+            self.melee_presentation = Some(ActiveMeleePresentation {
+                attempt_sequence: sequence,
+                elapsed: 0.0,
+                accepted: false,
+                outcome: "cooldown".to_string(),
+                target_id,
+                stamina_before,
+                stamina_after: stamina_before,
+                target_health_before: None,
+                target_health_after: None,
+                target_max_health: None,
+                final_damage: None,
+                died: false,
+            });
             return self.experiment_readout();
         }
         if stamina_before < stamina_cost {
-            self.push_combat_attempt(CombatAttemptRecord {
+            let sequence = self.push_combat_attempt(CombatAttemptRecord {
                 sequence: 0,
                 target_id,
                 accepted: false,
@@ -734,11 +892,36 @@ impl DaggerRuntime {
                 stamina_cost,
                 stamina_after: stamina_before,
             });
+            self.melee_presentation = Some(ActiveMeleePresentation {
+                attempt_sequence: sequence,
+                elapsed: 0.0,
+                accepted: false,
+                outcome: "insufficient stamina".to_string(),
+                target_id,
+                stamina_before,
+                stamina_after: stamina_before,
+                target_health_before: None,
+                target_health_after: None,
+                target_max_health: None,
+                final_damage: None,
+                died: false,
+            });
             return self.experiment_readout();
         }
-        let id = self
-            .focused_content_id
+        let attack_range = self.experiment.player.combat.attack_range;
+        let player_position = self.player_position()?;
+        let aimed_target = select_aimed_melee_target(
+            player_position,
+            self.player_state.yaw_degrees,
+            attack_range,
+            &self.content_entities,
+            &self.content_live_positions,
+            &self.enemy_resources,
+        );
+        let id = aimed_target
+            .or(self.focused_content_id)
             .ok_or(RuntimeError::Content(ContentError::NoFocusedTarget))?;
+        self.focused_content_id = Some(id);
         let entity = self
             .content_entities
             .iter()
@@ -750,12 +933,12 @@ impl DaggerRuntime {
             .iter()
             .find(|enemy| enemy.mobile_id == entity.mobile_id)
             .ok_or(RuntimeError::Content(ContentError::NoCombatDefinition(id)))?;
+        let target_max_health = enemy.stats.max_health;
         let target_position = self
             .content_live_positions
             .get(&id)
             .copied()
             .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
-        let player_position = self.player_position()?;
         let delta = [
             target_position[0] - player_position.x,
             target_position[1] - player_position.y,
@@ -764,7 +947,6 @@ impl DaggerRuntime {
         // Melee reach is planar: imported mobile anchors sit at floor-relative
         // heights that are not comparable to the player's collider center.
         let distance = delta[0].hypot(delta[2]);
-        let attack_range = self.experiment.player.combat.attack_range;
         if distance > attack_range {
             return Err(RuntimeError::Content(ContentError::OutOfRange {
                 id,
@@ -822,7 +1004,8 @@ impl DaggerRuntime {
         } else {
             "miss"
         };
-        self.push_combat_attempt(CombatAttemptRecord {
+        let stamina_after = self.player_resources.current_stamina;
+        let attempt_sequence = self.push_combat_attempt(CombatAttemptRecord {
             sequence: 0,
             target_id: Some(id),
             accepted: true,
@@ -832,7 +1015,21 @@ impl DaggerRuntime {
             cooldown_duration,
             stamina_before,
             stamina_cost,
-            stamina_after: self.player_resources.current_stamina,
+            stamina_after,
+        });
+        self.melee_presentation = Some(ActiveMeleePresentation {
+            attempt_sequence,
+            elapsed: 0.0,
+            accepted: true,
+            outcome: outcome.to_string(),
+            target_id: Some(id),
+            stamina_before,
+            stamina_after,
+            target_health_before: Some(resolution.health_before),
+            target_health_after: Some(resolution.health_after),
+            target_max_health: Some(target_max_health),
+            final_damage: Some(resolution.final_damage),
+            died: resolution.died,
         });
         self.combat_sequence = self.combat_sequence.saturating_add(1);
         self.combat_history.push_back(CombatRecord {
@@ -849,13 +1046,14 @@ impl DaggerRuntime {
         self.experiment_readout()
     }
 
-    fn push_combat_attempt(&mut self, mut record: CombatAttemptRecord) {
+    fn push_combat_attempt(&mut self, mut record: CombatAttemptRecord) -> u64 {
         self.combat_attempt_sequence = self.combat_attempt_sequence.saturating_add(1);
         record.sequence = self.combat_attempt_sequence;
         self.combat_attempt_history.push_back(record);
         while self.combat_attempt_history.len() > COMBAT_HISTORY_LIMIT {
             self.combat_attempt_history.pop_front();
         }
+        self.combat_attempt_sequence
     }
 
     pub fn experiment_readout(&self) -> Result<ExperimentReadout, RuntimeError> {
@@ -924,6 +1122,7 @@ impl DaggerRuntime {
             combat: self.combat_history.iter().cloned().collect(),
             combat_attempts: self.combat_attempt_history.iter().cloned().collect(),
             player_attack_cooldown_remaining: self.player_attack_cooldown_remaining,
+            melee_presentation: self.melee_presentation(),
             encounter_decisions: self.encounter_history.iter().cloned().collect(),
             content,
             focused_content_id: self.focused_content_id,
@@ -981,6 +1180,44 @@ impl DaggerRuntime {
         .map_err(RuntimeError::Player)?;
         Ok(result)
     }
+}
+
+fn select_aimed_melee_target(
+    player_position: Vec3,
+    yaw_degrees: f32,
+    attack_range: f32,
+    entities: &[ContentEntity],
+    live_positions: &BTreeMap<u64, [f32; 3]>,
+    resources: &BTreeMap<u64, LiveActorResources>,
+) -> Option<u64> {
+    let yaw = yaw_degrees.to_radians();
+    let forward = [-yaw.sin(), -yaw.cos()];
+    entities
+        .iter()
+        .filter_map(|entity| {
+            let position = live_positions.get(&entity.id)?;
+            let resources = resources.get(&entity.id)?;
+            if resources.current_health <= 0.0 {
+                return None;
+            }
+            let delta = [
+                position[0] - player_position.x,
+                position[2] - player_position.z,
+            ];
+            let distance = delta[0].hypot(delta[1]);
+            if distance <= 0.001 || distance > attack_range {
+                return None;
+            }
+            let dot = (delta[0] * forward[0] + delta[1] * forward[1]) / distance;
+            (dot >= MELEE_AIM_MIN_DOT).then_some((entity.id, dot, distance))
+        })
+        .max_by(|left, right| {
+            left.1
+                .total_cmp(&right.1)
+                .then_with(|| right.2.total_cmp(&left.2))
+                .then_with(|| right.0.cmp(&left.0))
+        })
+        .map(|candidate| candidate.0)
 }
 
 fn player_health_calculation(experiment: &AdmittedExperiment) -> &CalculationRecord {
@@ -1065,4 +1302,102 @@ fn next_combat_roll(sequence: u64, target_id: u64) -> u8 {
     value ^= value << 25;
     value ^= value >> 27;
     ((value.wrapping_mul(0x2545_F491_4F6C_DD1D) % 100) + 1) as u8
+}
+
+#[cfg(test)]
+mod aimed_melee_tests {
+    use super::*;
+
+    fn entity(id: u64) -> ContentEntity {
+        ContentEntity {
+            id,
+            name: format!("enemy-{id}"),
+            mobile_id: 0,
+            mobile_name: "Rat".to_string(),
+            texture_archive: 0,
+            flying: false,
+            sprite_asset: "rat".to_string(),
+            authored_position: [0.0; 3],
+        }
+    }
+
+    #[test]
+    fn ordinary_melee_aim_selects_a_live_target_in_front_without_lab_focus() {
+        let entities = vec![entity(1), entity(2), entity(3)];
+        let positions = BTreeMap::from([
+            (1, [0.2, 0.0, -1.5]),
+            (2, [1.0, 0.0, -1.2]),
+            (3, [0.0, 0.0, 1.0]),
+        ]);
+        let resources = BTreeMap::from([
+            (
+                1,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                2,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                3,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+        ]);
+        assert_eq!(
+            select_aimed_melee_target(Vec3::ZERO, 0.0, 2.0, &entities, &positions, &resources,),
+            Some(1),
+        );
+    }
+
+    #[test]
+    fn ordinary_melee_aim_ignores_dead_out_of_cone_and_out_of_range_targets() {
+        let entities = vec![entity(1), entity(2), entity(3)];
+        let positions = BTreeMap::from([
+            (1, [0.0, 0.0, -1.0]),
+            (2, [1.5, 0.0, 0.0]),
+            (3, [0.0, 0.0, -3.0]),
+        ]);
+        let resources = BTreeMap::from([
+            (
+                1,
+                LiveActorResources {
+                    current_health: 0.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                2,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                3,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+        ]);
+        assert_eq!(
+            select_aimed_melee_target(Vec3::ZERO, 0.0, 2.0, &entities, &positions, &resources,),
+            None,
+        );
+    }
 }
