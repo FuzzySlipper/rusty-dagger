@@ -38,4 +38,8 @@ jobs:
           node-version: 24
           cache: pnpm
       - name: Verify Rust provider, Engine boundary, and native host
+        env:
+          # Native still owns the retained-content replacement proof. The
+          # software-rendered Chromium runner focuses on visible product flows.
+          DAGGER_SKIP_BROWSER_REMOUNT: '1'
         run: ./scripts/verify.sh
