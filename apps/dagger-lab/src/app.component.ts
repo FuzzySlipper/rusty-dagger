@@ -457,6 +457,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.worksheet = cloneActorStats(readout.document.player.stats);
       }
     } catch (error: unknown) {
+      if (commandGeneration !== this.commandGeneration) return;
       this.connectionError = errorMessage(error);
     } finally {
       this.loading = false;

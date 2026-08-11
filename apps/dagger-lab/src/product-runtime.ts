@@ -79,7 +79,7 @@ export function mountDaggerProductRuntime(
   context: RustyApplicationUiContext,
 ): { readonly dispose: () => void } {
   const pressed = new Set<string>();
-  let pending: DaggerPhysicalInputWire | null = null;
+  const pending: DaggerPhysicalInputWire[] = [];
   let sending = false;
   let disposed = false;
   let buttons = 0;
@@ -134,9 +134,9 @@ export function mountDaggerProductRuntime(
     if (sending || disposed) return;
     sending = true;
     try {
-      while (pending !== null && !disposed) {
-        const input = pending;
-        pending = null;
+      while (pending.length > 0 && !disposed) {
+        const input = pending.shift();
+        if (input === undefined) break;
         const response = await fetch('/api/dagger-product/input', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -153,15 +153,32 @@ export function mountDaggerProductRuntime(
         error instanceof Error ? error.message : String(error);
     } finally {
       sending = false;
-      if (pending !== null && !disposed) void drain();
+      if (pending.length > 0 && !disposed) void drain();
     }
   };
   const submit = (pointerDelta: readonly [number, number], buttons: number): void => {
-    pending = {
+    const input = {
       pressedCodes: [...pressed].sort(),
       pointerDelta,
       buttons,
     };
+    const previous = pending.at(-1);
+    if (
+      previous !== undefined
+      && previous.buttons === input.buttons
+      && previous.pressedCodes.length === input.pressedCodes.length
+      && previous.pressedCodes.every((code, index) => code === input.pressedCodes[index])
+    ) {
+      pending[pending.length - 1] = {
+        ...input,
+        pointerDelta: [
+          previous.pointerDelta[0] + input.pointerDelta[0],
+          previous.pointerDelta[1] + input.pointerDelta[1],
+        ],
+      };
+    } else {
+      pending.push(input);
+    }
     void drain();
   };
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -223,7 +240,7 @@ export function mountDaggerProductRuntime(
   return {
     dispose: () => {
       disposed = true;
-      pending = null;
+      pending.length = 0;
       window.clearInterval(inputTick);
       window.clearInterval(poll);
       window.removeEventListener('keydown', onKeyDown);

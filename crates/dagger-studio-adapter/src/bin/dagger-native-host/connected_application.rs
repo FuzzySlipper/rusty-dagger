@@ -24,6 +24,10 @@ use crate::{
 
 const PROJECT: &str = include_str!("../../../../../content/projects/privateers-hold.project.json");
 const NAVGRID: &str = include_str!("../../../../../content/projects/privateers-hold.navgrid.json");
+const ENCOUNTER_GALLERY_PROJECT: &str =
+    include_str!("../../../../../content/projects/encounter-gallery.project.json");
+const ENCOUNTER_GALLERY_NAVGRID: &str =
+    include_str!("../../../../../content/projects/encounter-gallery.navgrid.json");
 
 pub(crate) fn run(options: Options) -> Result<()> {
     if options.proof || options.corrupt_resource {
@@ -36,22 +40,32 @@ pub(crate) fn run(options: Options) -> Result<()> {
         .parent()
         .and_then(Path::parent)
         .context("resolve Rusty Dagger workspace root")?;
-    let mut runtime = DaggerRuntime::from_project_json(PROJECT)
-        .context("admit checked Privateer's Hold project")?;
+    let (project, navgrid, product_name) = if options.encounter_gallery {
+        (
+            ENCOUNTER_GALLERY_PROJECT,
+            ENCOUNTER_GALLERY_NAVGRID,
+            "encounter-gallery",
+        )
+    } else {
+        (PROJECT, NAVGRID, "privateers-hold")
+    };
+    let mut runtime = DaggerRuntime::from_project_json(project)
+        .with_context(|| format!("admit checked {product_name} project"))?;
     runtime
-        .install_encounter_navigation_json(NAVGRID)
+        .install_encounter_navigation_json(navgrid)
         .context("install committed encounter navigation")?;
-    let mut presentation = NativeDiagnostics::from_documents(PROJECT, NAVGRID)?;
+    let mut presentation = NativeDiagnostics::from_documents(project, navgrid)?;
     let mut pending_presentation = PendingPresentation::default();
     pending_presentation.merge(tick_presentation(&mut runtime, &mut presentation, 0.0)?)?;
-    let bundle = build_render_bundle(root, PROJECT).map_err(anyhow::Error::msg)?;
+    let bundle = build_render_bundle(root, project).map_err(anyhow::Error::msg)?;
     let server = LabServer::start(
         options.lab_host,
         port,
         root.join("dist/apps/dagger-lab/browser"),
     )?;
     println!(
-        "DAGGER_PRODUCT_READY api=http://127.0.0.1:{}/api/dagger-product/bootstrap ui=http://127.0.0.1:{} resources={} source_entities={}",
+        "DAGGER_PRODUCT_READY product={} api=http://127.0.0.1:{}/api/dagger-product/bootstrap ui=http://127.0.0.1:{} resources={} source_entities={}",
+        product_name,
         server.port(),
         server.port(),
         bundle.resources.len(),
@@ -425,6 +439,45 @@ mod tests {
         let frame = pending.take().expect("take coalesced frame");
         assert_eq!(frame.ops, vec![update(2)]);
         assert!(pending.take().expect("take drained frame").ops.is_empty());
+    }
+
+    #[test]
+    fn encounter_gallery_floor_supports_bounded_player_movement() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(ENCOUNTER_GALLERY_PROJECT).expect("gallery runtime");
+        runtime
+            .install_encounter_navigation_json(ENCOUNTER_GALLERY_NAVGRID)
+            .expect("gallery navgrid");
+        let mut diagnostics =
+            NativeDiagnostics::from_documents(ENCOUNTER_GALLERY_PROJECT, ENCOUNTER_GALLERY_NAVGRID)
+                .expect("gallery diagnostics");
+        assert_eq!(
+            runtime.player_position().expect("gallery spawn").y,
+            0.35,
+            "gallery must start at its stable grounded height"
+        );
+        let mut codes = BTreeSet::new();
+        let mut buttons = 0;
+        for code in ["KeyW"; 30].into_iter().chain(["KeyA"; 30]) {
+            apply_product_input(
+                &mut runtime,
+                &mut diagnostics,
+                &mut codes,
+                &mut buttons,
+                ProductInput {
+                    pressed_codes: vec![code.to_owned()],
+                    pointer_delta: [0.0, 0.0],
+                    buttons: 0,
+                },
+            )
+            .expect("bounded gallery movement");
+        }
+        let position = runtime.player_position().expect("gallery player");
+        assert!(position.x < -10.0 && position.z < -6.0);
+        assert!(
+            position.y > 0.2,
+            "gallery floor must prevent falling: {position:?}"
+        );
     }
 
     #[test]

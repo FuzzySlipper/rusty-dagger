@@ -441,7 +441,8 @@ fn publish_billboard_textures(
 /// Decode and pack one directional sprite atlas per unique enemy mobile id:
 /// 8 orientations × M move-state frames in a horizontal strip (orientation *
 /// M + anim_frame layout), plus an enemy-manifest.json mapping each atlas to
-/// its PNG sourcePath/hash/dims, per-frame UV rects, and DFU world sizes.
+/// its PNG sourcePath/hash/dims, per-frame UV rects, source DFU world sizes,
+/// and one normalized world size for the complete atlas.
 /// generate-project.py consumes this to stamp enemy sprite resources and atlas
 /// frame descriptors. The AnimationService uses the 8×M layout so direction
 /// changes preserve the current anim frame position.
@@ -528,9 +529,67 @@ fn publish_enemy_atlases(
             continue;
         }
 
+        // Classic record scale metadata is not consistent enough to drive
+        // live geometry (Rat and Imp are especially divergent). Convert each
+        // frame to visible RGBA, crop transparent margins, and normalize its
+        // visible height plus the median width of its direction with
+        // nearest-neighbor sampling. Every animation frame then shares one
+        // bottom-center pivot and one fixed world-space quad.
+        type NormalizedEnemyFrame = (usize, usize, Vec<u8>, [f32; 2]);
+        let mut visible = Vec::with_capacity(decoded.len());
+        for (flip, w, h, indexed, source_size) in decoded {
+            let mut rgba = palette.to_rgba_transparent(&indexed);
+            if flip {
+                flip_rgba_columns(&mut rgba, w, h);
+            }
+            let (trimmed_w, trimmed_h, trimmed) = crop_visible_rgba(&rgba, w, h);
+            visible.push((trimmed_w, trimmed_h, trimmed, source_size));
+        }
+        let target_h = visible
+            .iter()
+            .map(|frame| frame.1)
+            .max()
+            .unwrap_or(1)
+            .max(1);
+        let orientation_widths = visible
+            .chunks(anim_frame_count)
+            .map(|frames| {
+                let mut widths = frames
+                    .iter()
+                    .map(|frame| {
+                        ((frame.0 as f64 * target_h as f64 / frame.1.max(1) as f64).round()
+                            as usize)
+                            .max(1)
+                    })
+                    .collect::<Vec<_>>();
+                widths.sort_unstable();
+                widths[(widths.len() - 1) / 2]
+            })
+            .collect::<Vec<_>>();
+        let mut normalized: Vec<NormalizedEnemyFrame> = Vec::with_capacity(visible.len());
+        for (index, (w, h, rgba, source_size)) in visible.into_iter().enumerate() {
+            let target_w = orientation_widths[index / anim_frame_count];
+            normalized.push((
+                target_w,
+                target_h,
+                resize_rgba_nearest(&rgba, w, h, target_w, target_h),
+                source_size,
+            ));
+        }
+
         let total_cells = 8 * anim_frame_count;
-        let cell_w: usize = decoded.iter().map(|d| d.1).max().unwrap_or(0);
-        let cell_h: usize = decoded.iter().map(|d| d.2).max().unwrap_or(0);
+        let cell_w: usize = normalized.iter().map(|d| d.0).max().unwrap_or(1);
+        let cell_h = target_h;
+        let mut source_heights = normalized
+            .iter()
+            .map(|frame| frame.3[1])
+            .collect::<Vec<_>>();
+        source_heights.sort_by(f32::total_cmp);
+        let normalized_world_h = source_heights[source_heights.len() / 2];
+        let normalized_size = [
+            normalized_world_h * cell_w as f32 / cell_h as f32,
+            normalized_world_h,
+        ];
         // Engine's public texture contract bounds either dimension at 4096.
         // Classic enemies can have enough directional animation frames to
         // exceed that width in a historical one-row atlas, so pack a bounded
@@ -542,17 +601,7 @@ fn publish_enemy_atlases(
         let atlas_h: usize = cell_h * rows;
         let mut atlas = vec![0u8; atlas_w * atlas_h * 4];
         let mut frame_entries: Vec<String> = Vec::new();
-        for (idx, (flip, w, h, indexed, size)) in decoded.iter().enumerate() {
-            let mut rgba = palette.to_rgba_transparent(indexed);
-            if *flip {
-                for row in rgba.chunks_mut(w * 4) {
-                    for px in 0..w / 2 {
-                        for c in 0..4 {
-                            row.swap(px * 4 + c, (w - 1 - px) * 4 + c);
-                        }
-                    }
-                }
-            }
+        for (idx, (w, h, rgba, source_size)) in normalized.iter().enumerate() {
             let x0 = (idx % columns) * cell_w;
             let y0 = (idx / columns) * cell_h;
             let dx = x0 + (cell_w - w) / 2;
@@ -562,13 +611,13 @@ fn publish_enemy_atlases(
                 atlas[dst..dst + w * 4].copy_from_slice(row);
             }
             frame_entries.push(format!(
-                "      {{\"frame\":{idx},\"uvMin\":[{},{}],\"uvMax\":[{},{}],\"size\":[{:?},{:?}]}}",
+                "      {{\"frame\":{idx},\"uvMin\":[{},{}],\"uvMax\":[{},{}],\"sourceSize\":[{:?},{:?}]}}",
                 x0 as f64 / atlas_w as f64,
                 y0 as f64 / atlas_h as f64,
                 (x0 + cell_w) as f64 / atlas_w as f64,
                 (y0 + cell_h) as f64 / atlas_h as f64,
-                size[0],
-                size[1]
+                source_size[0],
+                source_size[1]
             ));
         }
         let png = {
@@ -581,9 +630,10 @@ fn publish_enemy_atlases(
         std::fs::write(dir.join(&file), &png).expect("write enemy atlas png");
         let hash = format!("sha256:{:x}", Sha256::digest(&png));
         entries.push(format!(
-            "    {{\"mobileId\":{},\"name\":\"{}\",\"archive\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{atlas_w},\"height\":{atlas_h},\"frames\":[\n{}\n    ]}}",
+            "    {{\"mobileId\":{},\"name\":\"{}\",\"archive\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{atlas_w},\"height\":{atlas_h},\"normalizedSize\":[{:?},{:?}],\"frames\":[\n{}\n    ]}}",
             mobile.id, mobile.name, mobile.texture_archive,
             png.len(),
+            normalized_size[0], normalized_size[1],
             frame_entries.join(",\n")
         ));
         count += 1;
@@ -597,4 +647,67 @@ fn publish_enemy_atlases(
         "enemies:     {} atlases ({} decode failures)",
         count, failures
     );
+}
+
+fn flip_rgba_columns(rgba: &mut [u8], width: usize, height: usize) {
+    for row in rgba.chunks_mut(width * 4).take(height) {
+        for x in 0..width / 2 {
+            for channel in 0..4 {
+                row.swap(x * 4 + channel, (width - 1 - x) * 4 + channel);
+            }
+        }
+    }
+}
+
+fn crop_visible_rgba(rgba: &[u8], width: usize, height: usize) -> (usize, usize, Vec<u8>) {
+    let mut min_x = width;
+    let mut min_y = height;
+    let mut max_x = 0usize;
+    let mut max_y = 0usize;
+    let mut found = false;
+    for y in 0..height {
+        for x in 0..width {
+            if rgba[(y * width + x) * 4 + 3] == 0 {
+                continue;
+            }
+            found = true;
+            min_x = min_x.min(x);
+            min_y = min_y.min(y);
+            max_x = max_x.max(x);
+            max_y = max_y.max(y);
+        }
+    }
+    if !found {
+        return (1, 1, vec![0; 4]);
+    }
+    let cropped_w = max_x - min_x + 1;
+    let cropped_h = max_y - min_y + 1;
+    let mut cropped = vec![0; cropped_w * cropped_h * 4];
+    for y in 0..cropped_h {
+        let source = ((min_y + y) * width + min_x) * 4;
+        let destination = y * cropped_w * 4;
+        cropped[destination..destination + cropped_w * 4]
+            .copy_from_slice(&rgba[source..source + cropped_w * 4]);
+    }
+    (cropped_w, cropped_h, cropped)
+}
+
+fn resize_rgba_nearest(
+    rgba: &[u8],
+    source_w: usize,
+    source_h: usize,
+    target_w: usize,
+    target_h: usize,
+) -> Vec<u8> {
+    let mut resized = vec![0; target_w * target_h * 4];
+    for y in 0..target_h {
+        let source_y = y * source_h / target_h;
+        for x in 0..target_w {
+            let source_x = x * source_w / target_w;
+            let source = (source_y * source_w + source_x) * 4;
+            let destination = (y * target_w + x) * 4;
+            resized[destination..destination + 4].copy_from_slice(&rgba[source..source + 4]);
+        }
+    }
+    resized
 }

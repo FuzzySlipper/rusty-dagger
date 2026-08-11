@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "project": "rusty-dagger",
+  "scenario": "directional-sprite-encounter-gallery",
+  "mission": "Judge separately whether Rat and Imp remain visible with stable scale and feet pivots while animating, face their movement through directional artwork, and select plausible front, side, and back views as the player changes position; verify ordinary movement remains supported by the gallery floor.",
+  "controls": [
+    {
+      "input": "Click the rendered world, then move with W, A, S, and D",
+      "purpose": "Change the player's position and viewing relationship to the wandering enemies"
+    },
+    {
+      "input": "Move the mouse while the rendered world has pointer lock",
+      "purpose": "Look across the encounter line and compare directional artwork"
+    },
+    {
+      "input": "Press R",
+      "purpose": "Reset the authoritative play session for one bounded reproduction"
+    }
+  ],
+  "artifacts": {
+    "screenshots": "before-and-after",
+    "frameBurst": {
+      "count": 6,
+      "intervalMs": 120
+    },
+    "trace": true,
+    "video": false
+  },
+  "reproductionLimit": 1,
+  "notes": "Use repeated visible observations for motion and facing judgement. Treat application state only as labeled diagnostic evidence."
+}

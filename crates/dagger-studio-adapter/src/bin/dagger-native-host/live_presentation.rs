@@ -289,3 +289,98 @@ fn default_sprite_size() -> [f32; 2] {
 fn default_sprite_pivot() -> [f32; 2] {
     [0.5, 0.0]
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const GALLERY: &str =
+        include_str!("../../../../../content/projects/encounter-gallery.project.json");
+
+    #[test]
+    fn gallery_rat_changes_direction_rows_without_changing_its_instance_size() {
+        let mut presentation = LivePresentation::from_project(GALLERY).expect("gallery");
+        let rat = presentation
+            .sprite_descriptors()
+            .iter()
+            .find(|sprite| sprite.handle == 2000)
+            .expect("gallery Rat")
+            .clone();
+        assert!(rat.size[0] > 0.0 && rat.size[1] > 0.0);
+
+        let position = rat.authored;
+        let frame_for = |frame: &LivePresentationFrame| {
+            frame.frame.ops.iter().find_map(|op| match op {
+                RenderDiff::UpdateSprite { handle, frame, .. } if handle.raw() == 2000 => *frame,
+                _ => None,
+            })
+        };
+        let front = presentation
+            .tick(
+                0.0,
+                [position[0], position[1] + 1.5, position[2] - 4.0],
+                &[(2000, position, 0.0, false)],
+                &[],
+            )
+            .expect("front tick");
+        assert_eq!(frame_for(&front), Some(0));
+        let side = presentation
+            .tick(
+                0.0,
+                [position[0] + 4.0, position[1] + 1.5, position[2]],
+                &[(2000, position, 0.0, false)],
+                &[],
+            )
+            .expect("side tick");
+        assert_eq!(frame_for(&side), Some(48));
+        let back = presentation
+            .tick(
+                0.0,
+                [position[0], position[1] + 1.5, position[2] + 4.0],
+                &[(2000, position, 0.0, false)],
+                &[],
+            )
+            .expect("back tick");
+        assert_eq!(frame_for(&back), Some(32));
+    }
+
+    #[test]
+    fn gallery_rat_heading_selects_opposite_side_rows_for_opposite_motion() {
+        let mut presentation = LivePresentation::from_project(GALLERY).expect("gallery");
+        let position = presentation
+            .sprite_descriptors()
+            .iter()
+            .find(|sprite| sprite.handle == 2000)
+            .expect("gallery Rat")
+            .authored;
+        let camera = [position[0], position[1] + 1.5, position[2] - 4.0];
+        let row = |frame: &LivePresentationFrame| {
+            frame.frame.ops.iter().find_map(|op| match op {
+                RenderDiff::UpdateSprite {
+                    handle,
+                    frame: Some(frame),
+                    ..
+                } if handle.raw() == 2000 => Some(frame / 8),
+                _ => None,
+            })
+        };
+        let right = presentation
+            .tick(
+                0.0,
+                camera,
+                &[(2000, position, std::f32::consts::FRAC_PI_2, false)],
+                &[],
+            )
+            .expect("right-facing tick");
+        let left = presentation
+            .tick(
+                0.0,
+                camera,
+                &[(2000, position, -std::f32::consts::FRAC_PI_2, false)],
+                &[],
+            )
+            .expect("left-facing tick");
+        assert_eq!(row(&right), Some(2));
+        assert_eq!(row(&left), Some(6));
+    }
+}

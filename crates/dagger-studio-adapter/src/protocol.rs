@@ -298,6 +298,7 @@ fn rejected(request_id: Option<&str>, code: &str, message: impl Into<String>) ->
 mod tests {
     use super::*;
     use crate::presentation::{build_render_bundle, projection, texture_resources};
+    use rusty_engine::render_model::RenderDiff;
     use sha2::{Digest, Sha256};
     use std::path::Path;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -467,5 +468,41 @@ mod tests {
         assert!(!bundle.frame.ops.is_empty());
         assert!(!bundle.resources.is_empty());
         assert!(bundle.source_entity_count > 0);
+        for atlas_id in ["sprite/enemy-0-atlas", "sprite/enemy-1-atlas"] {
+            let atlas = bundle
+                .frame
+                .ops
+                .iter()
+                .find_map(|op| match op {
+                    RenderDiff::DefineSpriteAtlas { atlas } if atlas.id == atlas_id => Some(atlas),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("missing canonical atlas {atlas_id}"));
+            assert!(atlas.frames.iter().all(|frame| frame.size.is_none()));
+        }
+        let rat = bundle
+            .frame
+            .ops
+            .iter()
+            .find_map(|op| match op {
+                RenderDiff::CreateSprite { handle, sprite, .. } if handle.raw() == 2007 => {
+                    Some(sprite)
+                }
+                _ => None,
+            })
+            .expect("canonical Rat sprite");
+        assert!(rat.size[0] > 0.0 && rat.size[1] > 0.0);
+        let rat_atlas = bundle
+            .frame
+            .ops
+            .iter()
+            .find_map(|op| match op {
+                RenderDiff::DefineSpriteAtlas { atlas } if atlas.id == "sprite/enemy-0-atlas" => {
+                    Some(atlas)
+                }
+                _ => None,
+            })
+            .expect("Rat atlas");
+        assert!(rat_atlas.frames.iter().all(|frame| frame.size.is_none()));
     }
 }

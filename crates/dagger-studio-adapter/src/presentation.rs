@@ -133,11 +133,33 @@ pub(crate) fn projection(root: &Path, project: &Map<String, Value>, entities: &[
                         frames
                             .iter()
                             .map(|frame| {
-                                json!({
-                                    "frame": frame.get("frame").and_then(Value::as_u64).unwrap_or(0),
-                                    "uvMin": frame.get("uvMin").cloned().unwrap_or_else(|| json!([0.0, 0.0])),
-                                    "uvMax": frame.get("uvMax").cloned().unwrap_or_else(|| json!([1.0, 1.0])),
-                                })
+                                let mut projected = Map::from_iter([
+                                    (
+                                        "frame".to_owned(),
+                                        json!(frame
+                                            .get("frame")
+                                            .and_then(Value::as_u64)
+                                            .unwrap_or(0)),
+                                    ),
+                                    (
+                                        "uvMin".to_owned(),
+                                        frame
+                                            .get("uvMin")
+                                            .cloned()
+                                            .unwrap_or_else(|| json!([0.0, 0.0])),
+                                    ),
+                                    (
+                                        "uvMax".to_owned(),
+                                        frame
+                                            .get("uvMax")
+                                            .cloned()
+                                            .unwrap_or_else(|| json!([1.0, 1.0])),
+                                    ),
+                                ]);
+                                if let Some(size) = frame.get("size") {
+                                    projected.insert("size".to_owned(), size.clone());
+                                }
+                                Value::Object(projected)
                             })
                             .collect::<Vec<_>>()
                     })
@@ -203,6 +225,29 @@ pub(crate) fn projection(root: &Path, project: &Map<String, Value>, entities: &[
         let id = entity.get("id").and_then(Value::as_u64).unwrap_or(0);
         let light = entity.get("light").unwrap_or(&Value::Null);
         ops.push(json!({"op":"createLight","handle":id,"parent":null,"light":{"kind":"point","color":light.get("color").cloned().unwrap_or_else(|| json!([1.0,1.0,1.0])),"intensity":light.get("intensity").and_then(Value::as_f64).unwrap_or(0.8),"enabled":light.get("enabled").and_then(Value::as_bool).unwrap_or(true),"position":entity.get("translation").cloned().unwrap_or_else(|| json!([0.0,0.0,0.0])),"range":light.get("range").cloned().unwrap_or(Value::Null),"decay":light.get("decay").and_then(Value::as_f64).unwrap_or(2.0),"shadowIntent":"disabled"}}));
+    }
+    for entity in entities
+        .iter()
+        .filter(|entity| entity.get("primitive").is_some())
+    {
+        let id = entity.get("id").and_then(Value::as_u64).unwrap_or(0);
+        let primitive = entity.get("primitive").unwrap_or(&Value::Null);
+        ops.push(json!({
+            "op": "create",
+            "handle": id,
+            "parent": null,
+            "node": {
+                "geometry": {"kind": primitive.get("geometry").and_then(Value::as_str).unwrap_or("cube")},
+                "material": {
+                    "color": primitive.get("color").cloned().unwrap_or_else(|| json!([0.35, 0.38, 0.42, 1.0])),
+                    "wireframe": primitive.get("wireframe").and_then(Value::as_bool).unwrap_or(false),
+                },
+                "transform": transform(entity),
+                "visible": true,
+                "layer": "scene",
+                "metadata": {"sourceEntity": id, "sourceSceneNode": id, "tags": [], "label": entity.get("name").and_then(Value::as_str)},
+            }
+        }));
     }
     for entity in entities
         .iter()
