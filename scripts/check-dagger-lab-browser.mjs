@@ -292,7 +292,15 @@ try {
   assert.equal(await page.getByTestId('active-profile').innerText(), 'Fast and hardy');
 
   await page.getByTestId('history-filter').fill('#2');
-  await page.getByTestId('history-2').click();
+  // Live Rust polling refreshes this list every 100 ms. Resolve and click the
+  // current button atomically so Playwright does not wait for a DOM node that
+  // Angular legitimately replaces before its stability check completes.
+  await page.waitForFunction(() => document.querySelector('[data-testid="history-2"]') instanceof HTMLButtonElement);
+  await page.evaluate(() => {
+    const history = document.querySelector('[data-testid="history-2"]');
+    if (!(history instanceof HTMLButtonElement)) throw new Error('history record #2 is unavailable');
+    history.click();
+  });
   await page.getByTestId('history-detail').filter({ hasText: 'Why record #2' }).waitFor();
   assert.equal(await page.getByTestId('trace-result').innerText(), '100.00');
   await page.getByTestId('history-filter').fill('');
