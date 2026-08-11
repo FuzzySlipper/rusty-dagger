@@ -22,6 +22,8 @@ REPO = Path(__file__).resolve().parent.parent
 IMPORTED = REPO / "content" / "imported"
 TEXTURES = REPO / "content" / "textures"
 OUT = REPO / "content" / "projects" / "privateers-hold.project.json"
+GALLERY_OUT = REPO / "content" / "projects" / "encounter-gallery.project.json"
+GALLERY_NAV_OUT = REPO / "content" / "projects" / "encounter-gallery.navgrid.json"
 
 SCHEMA_VERSION = 24
 PROJECT_ID = "privateers-hold"
@@ -172,9 +174,9 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
     # Enemy directional sprite atlases (6595). One texture asset per unique
     # enemy mobile id; the importer-packed, Engine-bounded PNG holds the
     # orientation/animation frames (mirrored sides baked) and the manifest
-    # carries per-frame UV rects plus Dagger-owned DFU world sizes. The Engine
-    # retained atlas consumes only frame/UV identity; runtime sprite updates
-    # apply the selected Dagger size separately.
+    # carries per-frame UV rects and source DFU sizes as provenance. Import has
+    # already cropped and nearest-neighbor normalized the visible pixels into
+    # uniform bottom-centered cells, so runtime geometry stays fixed.
     for enemy in enemy_manifest.get("enemies", []):
         slug = f"enemy-{enemy['mobileId']}-atlas"
         assets.append({
@@ -194,12 +196,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
                 "alphaCutout": True,
                 "spriteAtlas": {
                     "frames": [
-                        {
-                            "frame": f["frame"],
-                            "uvMin": f["uvMin"],
-                            "uvMax": f["uvMax"],
-                            "size": f["size"],
-                        }
+                        {"frame": f["frame"], "uvMin": f["uvMin"], "uvMax": f["uvMax"]}
                         for f in enemy["frames"]
                     ],
                 },
@@ -314,9 +311,8 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
 
     # Enemy directional sprite entities (6595). One sprite per RDB enemy flat;
     # the runtime driver steps the 8-orientation frame from camera bearing.
-    # The quad is sized to the LARGEST orientation frame per axis (frames vary
-    # per orientation and the renderer cannot resize a live sprite), feet at
-    # the authored flat position.
+    # Import normalizes visible frame pixels to one height and bottom-center
+    # pivot per enemy. The quad therefore has one fixed size for every frame.
     enemy_entities = []
     enemy_frames = {e["mobileId"]: e["frames"] for e in enemy_manifest.get("enemies", [])}
     if scene_meta and scene_meta.get("enemies"):
@@ -325,8 +321,11 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
             if not frames:
                 continue  # atlas decode failed at import; warning already emitted
             slug = f"enemy-{e['mobileId']}-atlas"
-            max_w = max(f["size"][0] for f in frames)
-            max_h = max(f["size"][1] for f in frames)
+            normalized_size = next(
+                enemy["normalizedSize"]
+                for enemy in enemy_manifest.get("enemies", [])
+                if enemy["mobileId"] == e["mobileId"]
+            )
             enemy_entities.append({
                 "id": 2000 + index,
                 "name": f"enemy-{e['name'].lower()}-{index}",
@@ -335,7 +334,7 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
                     "asset": f"texture/{slug}",
                     "frame": 0,
                     "pivot": [0.5, 0.0],
-                    "size": [max_w, max_h],
+                    "size": normalized_size,
                     "billboard": "cylindrical",
                     "sizeMode": "world",
                     "shading": "lit",
@@ -394,25 +393,108 @@ def build_project() -> dict:
     }
 
 
+def build_encounter_gallery(project: dict, enemy_manifest: dict) -> tuple[dict, dict]:
+    """Small product scene for inspecting real directional enemy presentation.
+
+    It uses the same generated Daggerfall atlases, Rust runtime, animation
+    authority, Engine facade, and browser application host as Privateer's Hold.
+    Only the authored environment is intentionally simple.
+    """
+    mobile_ids = [0, 15, 1, 0, 15]
+    enemy_entries = {e["mobileId"]: e for e in enemy_manifest.get("enemies", [])}
+    required_assets = {f"texture/enemy-{mobile_id}-atlas" for mobile_id in mobile_ids}
+    default_material = next(asset for asset in project["assets"] if asset["id"] == "material/default")
+    assets = [default_material] + [asset for asset in project["assets"] if asset["id"] in required_assets]
+    gallery_floor = {
+        "id": MESH_ASSET,
+        "catalog": {
+            "version": 1,
+            "hash": hashlib.sha256(b"rusty-dagger-encounter-gallery-floor-v2").hexdigest(),
+            "sourcePath": None,
+            "label": "encounter-gallery-floor",
+            "dependencies": [{"id": "material/default", "version": {"req": "exact", "value": 1}, "hash": default_material["catalog"]["hash"]}],
+        },
+        "staticMesh": {
+            "asset": MESH_ASSET,
+            "payload": {
+                "layout": {"vertexCount": 4, "indexCount": 6, "indexWidth": "u32", "attributes": [{"name": "position", "components": 3, "kind": "f32"}, {"name": "normal", "components": 3, "kind": "f32"}, {"name": "uv", "components": 2, "kind": "f32"}]},
+                "groups": [{"materialSlot": 0, "start": 0, "count": 6}],
+                "bounds": {"min": [-32.0, 0.0, -32.0], "max": [32.0, 0.0, 32.0]},
+                "source": {"kind": "inline", "positions": [-32.0, 0.0, -32.0, 32.0, 0.0, -32.0, 32.0, 0.0, 32.0, -32.0, 0.0, 32.0], "normals": [0.0, 1.0, 0.0] * 4, "uvs": [0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0], "indices": [0, 2, 1, 0, 3, 2]},
+                "provenance": "generated",
+            },
+            "materialSlots": [{"slot": 0, "material": "material/default"}],
+            "collision": {"kind": "trimesh"},
+        },
+    }
+    assets.append(gallery_floor)
+    primitives = [
+        {"id": 11, "name": "gallery-back-wall", "translation": [0.0, 2.5, -12.0], "scale": [16.5, 5.0, 0.25], "primitive": {"geometry": "cube", "color": [0.26, 0.29, 0.34, 1.0]}},
+        {"id": 12, "name": "gallery-left-wall", "translation": [-8.0, 2.5, -2.0], "scale": [0.25, 5.0, 20.0], "primitive": {"geometry": "cube", "color": [0.22, 0.25, 0.3, 1.0]}},
+        {"id": 13, "name": "gallery-right-wall", "translation": [8.0, 2.5, -2.0], "scale": [0.25, 5.0, 20.0], "primitive": {"geometry": "cube", "color": [0.22, 0.25, 0.3, 1.0]}},
+    ]
+    player = {
+        "id": 1,
+        "name": "player",
+        "translation": [0.0, 0.35, 4.0],
+        "collision": {"enabled": True, "staticCollider": False},
+        "kinematic": {"halfExtents": [0.25, 0.25, 0.25], "velocity": [0.0, 0.0, 0.0]},
+        "playerController": {
+            "moveSpeedUnitsPerSecond": 4.0,
+            "moveStepSeconds": 0.1,
+            "lookDegreesPerUnit": 12.0,
+            "initialYawDegrees": 0.0,
+            "initialPitchDegrees": 0.0,
+            "fallSpeedUnitsPerSecond": PLAYER_FALL_SPEED,
+            "stepUpUnits": PLAYER_STEP_UP,
+            "bindings": {"moveForward": "KeyW", "moveBackward": "KeyS", "moveLeft": "KeyA", "moveRight": "KeyD", "mouseLook": "pointer", "primaryFire": "Mouse0"},
+        },
+    }
+    enemies = []
+    for index, mobile_id in enumerate(mobile_ids):
+        size = enemy_entries[mobile_id]["normalizedSize"]
+        enemies.append({
+            "id": 2000 + index,
+            "name": f"gallery-enemy-{mobile_id}-{index}",
+            "translation": [-5.0 + index * 2.5, 0.0, -7.75],
+            "sprite": {"asset": f"texture/enemy-{mobile_id}-atlas", "frame": 0, "pivot": [0.5, 0.0], "size": size, "billboard": "cylindrical", "sizeMode": "world", "shading": "lit", "depth": "default", "visible": True},
+        })
+    scene = {
+        "id": "scene/encounter-gallery",
+        "name": "Directional Sprite Encounter Gallery",
+        "entities": [player, {"id": 10, "name": "gallery-floor", "translation": [0.0, 0.0, 0.0], "collision": {"enabled": True, "staticCollider": True}, "bounds": {"min": [-32.0, 0.0, -32.0], "max": [32.0, 0.0, 32.0]}, "renderable": {"asset": MESH_ASSET, "visible": True}}] + primitives + enemies,
+    }
+    gallery = {"schemaVersion": SCHEMA_VERSION, "projectId": "rusty-dagger-encounter-gallery", "name": "Encounter Gallery", "entryScene": scene["id"], "assets": assets, "itemDefinitions": [], "scenes": [scene]}
+    navgrid = {"cellSize": 0.5, "cells": [[x, -16, 0, 0.0] for x in range(-14, 15)]}
+    return gallery, navgrid
+
+
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "--write"
     project = build_project()
+    enemy_manifest = load_json(TEXTURES / "enemy-manifest.json")
+    gallery, gallery_navgrid = build_encounter_gallery(project, enemy_manifest)
     # Compact separators: deterministic regenerated artifact, and the studio
     # adapter rejects project docs over 8 MiB (the multi-level collision
     # proxy pushes the pretty-printed form past that bound).
     text = json.dumps(project, separators=(",", ":")) + "\n"
+    gallery_text = json.dumps(gallery, separators=(",", ":")) + "\n"
+    gallery_nav_text = json.dumps(gallery_navgrid, separators=(",", ":")) + "\n"
     if mode == "--check":
-        actual = OUT.read_text() if OUT.exists() else ""
-        if actual != text:
-            raise SystemExit(f"{OUT} is stale; run scripts/generate-project.py --write")
-        print(f"{OUT} up to date ({len(project['assets'])} assets)")
+        stale = [path for path, expected in [(OUT, text), (GALLERY_OUT, gallery_text), (GALLERY_NAV_OUT, gallery_nav_text)] if not path.exists() or path.read_text() != expected]
+        if stale:
+            raise SystemExit(f"{', '.join(map(str, stale))} stale; run scripts/generate-project.py --write")
+        print(f"project documents up to date ({len(project['assets'])} dungeon assets, {len(gallery['assets'])} gallery assets)")
         return
     if mode != "--write":
         raise SystemExit(__doc__)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(text)
+    GALLERY_OUT.write_text(gallery_text)
+    GALLERY_NAV_OUT.write_text(gallery_nav_text)
     digest = hashlib.sha256(text.encode()).hexdigest()[:16]
     print(f"wrote {OUT} ({len(text)} bytes, sha256:{digest}, assets={len(project['assets'])})")
+    print(f"wrote {GALLERY_OUT} ({len(gallery_text)} bytes, assets={len(gallery['assets'])})")
 
 
 if __name__ == "__main__":

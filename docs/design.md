@@ -450,10 +450,15 @@ Classic enemies are view-only directional billboards. Ownership split:
   the sector math. The native and connected-product presentation loops submit
   those updates through the same public retained-frame facade. Camera-facing
   stays Engine presentation behavior; Dagger never calls the private renderer.
-- Per-frame world sizes are already authored in the committed atlas content,
-  but cannot yet cross Engine's public Rust facade. Engine task 6782 owns that
-  missing facade field; Dagger task 6780 maps the sizes once it lands. Until
-  then inconsistent Rat and Imp records visibly pulse during animation.
+- Classic Rat and Imp records contain direction-dependent scale metadata that
+  is unsuitable for live geometry. Import retains those source sizes as
+  provenance, but crops each decoded frame to visible pixels, normalizes it to
+  one per-enemy height and one median width per direction with nearest-neighbor
+  sampling, and bottom-centers it in a uniform atlas cell. The project publishes one fixed world size and pivot
+  for every frame; frame changes only select UVs. The generated encounter
+  gallery exercises real Rat, Imp, and Skeletal Warrior atlases, Rust
+  patrol/heading and animation authority, a collidable trimesh floor, and the
+  same Engine application host without requiring dungeon navigation.
 
 ## Sprite animation service (task 6640)
 

@@ -5,6 +5,7 @@ use anyhow::{bail, Result};
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Options {
     pub(crate) browser_product: bool,
+    pub(crate) encounter_gallery: bool,
     pub(crate) proof: bool,
     pub(crate) corrupt_resource: bool,
     pub(crate) lab_host: IpAddr,
@@ -15,12 +16,14 @@ impl Options {
     pub(crate) fn parse() -> Result<Self> {
         let mut proof = false;
         let mut browser_product = false;
+        let mut encounter_gallery = false;
         let mut corrupt_resource = false;
         let mut requested_lab_port = None;
         let mut requested_lab_host = None;
         for argument in env::args().skip(1) {
             match argument.as_str() {
                 "--browser-product" => browser_product = true,
+                "--encounter-gallery" => encounter_gallery = true,
                 "--proof" => proof = true,
                 "--proof-corrupt-resource" => {
                     proof = true;
@@ -46,6 +49,9 @@ impl Options {
         if !browser_product && (requested_lab_port.is_some() || requested_lab_host.is_some()) {
             bail!("--lab-host/--lab-port require --browser-product");
         }
+        if encounter_gallery && !browser_product {
+            bail!("--encounter-gallery requires --browser-product");
+        }
         let lab_port = if browser_product {
             Some(requested_lab_port.unwrap_or(4274))
         } else {
@@ -54,6 +60,7 @@ impl Options {
         let lab_host = requested_lab_host.unwrap_or(IpAddr::V4(std::net::Ipv4Addr::LOCALHOST));
         Ok(Self {
             browser_product,
+            encounter_gallery,
             proof,
             corrupt_resource,
             lab_host,

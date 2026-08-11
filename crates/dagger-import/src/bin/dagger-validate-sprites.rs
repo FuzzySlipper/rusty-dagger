@@ -37,6 +37,8 @@ struct EnemyEntry {
     byte_length: usize,
     width: u32,
     height: u32,
+    #[serde(rename = "normalizedSize")]
+    normalized_size: [f32; 2],
     frames: Vec<EnemyFrame>,
 }
 
@@ -47,7 +49,8 @@ struct EnemyFrame {
     uv_min: [f64; 2],
     #[serde(rename = "uvMax")]
     uv_max: [f64; 2],
-    size: [f32; 2],
+    #[serde(rename = "sourceSize")]
+    source_size: [f32; 2],
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -297,8 +300,8 @@ fn main() {
         let mut max_area = f32::MIN;
         let mut uniq: BTreeSet<(u32, u32)> = BTreeSet::new();
         for f in &enemy.frames {
-            let w = f.size[0];
-            let h = f.size[1];
+            let w = f.source_size[0];
+            let h = f.source_size[1];
             min_w = min_w.min(w);
             max_w = max_w.max(w);
             min_h = min_h.min(h);
@@ -359,7 +362,7 @@ fn main() {
             enemy
                 .frames
                 .iter()
-                .map(|f| f.size[0] as f64 * f.size[1] as f64)
+                .map(|f| f.source_size[0] as f64 * f.source_size[1] as f64)
                 .sum::<f64>()
                 / enemy.frames.len() as f64
         } else {
@@ -378,30 +381,30 @@ fn main() {
         metrics.insert("atlas_h".to_string(), atlas_h as f64);
 
         // Thresholds (tuned from measured Rat variance: Rat area_delta ~0.69, aspect ~2.6)
-        // Per-frame size plumbing now resolves classic variance (rusty-engine 43ba244):
-        // atlases carry per-frame `size` and renderer rebuilds PlaneGeometry per frame.
-        // These metrics remain as info for provenance, not warn, when sizes are plumbed.
-        let per_frame_size_plumbed = true; // dagger-import now emits size per enemy frame (see generate-project.py)
+        // Source size variance remains as donor evidence only. The published
+        // pixels are cropped, normalized to one height, and use one fixed
+        // bottom-centered world-space quad for the complete enemy atlas.
+        let normalized_art = true;
         if area_delta > 0.50 {
             flags.push(Flag {
-                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
+                level: if normalized_art { "info".to_string() } else { "warn".to_string() },
                 metric: "area_delta".to_string(),
                 value: format!("{area_delta:.2}"),
                 threshold: ">0.50".to_string(),
                 reason: format!(
-                    "worldSize area varies {:.0}% across orientations ({} unique sizes) — classic variance, now resolved by per-frame size plumbing (43ba244)",
+                    "source worldSize area varies {:.0}% across orientations ({} unique sizes) — normalized art ignores this donor inconsistency",
                     area_delta * 100.0,
                     uniq.len()
                 ),
             });
         } else if area_delta > 0.25 {
             flags.push(Flag {
-                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
+                level: if normalized_art { "info".to_string() } else { "warn".to_string() },
                 metric: "area_delta".to_string(),
                 value: format!("{area_delta:.2}"),
                 threshold: ">0.25".to_string(),
                 reason: format!(
-                    "worldSize area varies {:.0}% ({} unique) — classic variance, per-frame size handles it",
+                    "source worldSize area varies {:.0}% ({} unique) — normalized art ignores this donor inconsistency",
                     area_delta * 100.0,
                     uniq.len()
                 ),
@@ -409,18 +412,18 @@ fn main() {
         }
         if aspect_drift > 2.0 {
             flags.push(Flag {
-                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
+                level: if normalized_art { "info".to_string() } else { "warn".to_string() },
                 metric: "aspect_drift".to_string(),
                 value: format!("{aspect_drift:.2}"),
                 threshold: ">2.0".to_string(),
                 reason: format!(
-                    "aspect w/h ratio drifts {:.2}× ({}..{}) — classic variance, per-frame size handles it",
+                    "source metadata aspect drifts {:.2}× ({}..{}) — visible pixels retain their decoded aspect after height normalization",
                     aspect_drift, min_aspect, max_aspect
                 ),
             });
         } else if aspect_drift > 1.5 {
             flags.push(Flag {
-                level: if per_frame_size_plumbed {
+                level: if normalized_art {
                     "info".to_string()
                 } else {
                     "warn".to_string()
@@ -429,19 +432,19 @@ fn main() {
                 value: format!("{aspect_drift:.2}"),
                 threshold: ">1.5".to_string(),
                 reason: format!(
-                    "aspect drifts {:.2}× — classic variance, per-frame size handles it",
+                    "source metadata aspect drifts {:.2}× — normalized visible pixels retain decoded aspect",
                     aspect_drift
                 ),
             });
         }
         if waste > 0.70 {
             flags.push(Flag {
-                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
+                level: if normalized_art { "info".to_string() } else { "warn".to_string() },
                 metric: "cell_waste".to_string(),
                 value: format!("{waste:.2}"),
                 threshold: ">0.70".to_string(),
                 reason: format!(
-                    "atlas cell waste {:.0}% (cell {}×{} vs avg frame area) — uniform cells, per-frame size still needed for correct pivot",
+                    "source area variance is {:.0}% (normalized cell {}×{}) — published art uses one fixed scale and pivot",
                     waste * 100.0,
                     cell_w,
                     cell_h
@@ -449,7 +452,7 @@ fn main() {
             });
         } else if waste > 0.50 {
             flags.push(Flag {
-                level: if per_frame_size_plumbed {
+                level: if normalized_art {
                     "info".to_string()
                 } else {
                     "warn".to_string()
@@ -458,19 +461,19 @@ fn main() {
                 value: format!("{waste:.2}"),
                 threshold: ">0.50".to_string(),
                 reason: format!(
-                    "cell waste {:.0}% — uniform cells, per-frame size handles it",
+                    "source area variance is {:.0}% — published art uses one fixed scale",
                     waste * 100.0
                 ),
             });
         }
         if uniq.len() > 3 {
             flags.push(Flag {
-                level: if per_frame_size_plumbed { "info".to_string() } else { "warn".to_string() },
+                level: if normalized_art { "info".to_string() } else { "warn".to_string() },
                 metric: "unique_world_sizes".to_string(),
                 value: uniq.len().to_string(),
                 threshold: ">3".to_string(),
                 reason: format!(
-                    "{} distinct worldSizes across orientations — classic variance, per-frame size plumbing (43ba244) resolves renderer pop",
+                    "{} distinct source worldSizes are retained as provenance but do not drive runtime geometry",
                     uniq.len()
                 ),
             });
@@ -533,7 +536,8 @@ fn main() {
                                 .to_string(),
                     });
                 }
-                // Scale variance — with per-frame sizes the renderer handles it, so info only
+                // Scale variance is donor provenance only; normalized pixels
+                // and one atlas size own runtime presentation.
                 let unique_scales: BTreeSet<[i16; 2]> = scales.iter().cloned().collect();
                 if unique_scales.len() > 1 {
                     flags.push(Flag {
@@ -542,7 +546,7 @@ fn main() {
                         value: format!("{} distinct", unique_scales.len()),
                         threshold: "1".to_string(),
                         reason: format!(
-                            "scale factors vary across orientations {:?} — DFU scales, per-frame size handles it (Rat -128 vs 0)",
+                            "scale factors vary across orientations {:?} — normalized art intentionally ignores them",
                             unique_scales
                         ),
                     });
@@ -552,7 +556,7 @@ fn main() {
                         metric: "nonzero_scale".to_string(),
                         value: format!("{:?}", scales[0]),
                         threshold: "0,0".to_string(),
-                        reason: "all orientations carry non-zero scale (e.g., -128 = 50%) — per-frame size handles it".to_string(),
+                        reason: "all orientations carry non-zero source scale (e.g., -128 = 50%); normalized art intentionally ignores it".to_string(),
                     });
                 }
 
@@ -584,13 +588,13 @@ fn main() {
                         let expected_ws =
                             record_world_size(info.width, info.height, info.scale_x, info.scale_y);
                         let eps = 0.001;
-                        if (f.size[0] - expected_ws[0]).abs() > eps
-                            || (f.size[1] - expected_ws[1]).abs() > eps
+                        if (f.source_size[0] - expected_ws[0]).abs() > eps
+                            || (f.source_size[1] - expected_ws[1]).abs() > eps
                         {
                             flags.push(Flag {
                                 level: "error".to_string(),
                                 metric: "manifest_worldSize_mismatch".to_string(),
-                                value: format!("frame {} got {:?} expected {:?}", idx, f.size, expected_ws),
+                                value: format!("frame {} got {:?} expected {:?}", idx, f.source_size, expected_ws),
                                 threshold: format!("±{eps}"),
                                 reason: format!("manifest worldSize for frame {idx} (orientation {orientation} rec {expected_rec}) does not match DFU record_world_size"),
                             });
@@ -946,7 +950,7 @@ fn generate_html(report: &ValidationReport, out_dir: &Path) {
                 // Use a div with atlas as background, sized to atlas dims
                 let atlas_url = format!("../../textures/{}", er.atlas);
                 html.push_str(&format!("<div class=\"cell{cell_flag}\"><div style=\"width:{}px;height:{}px;background:url('{atlas_url}') no-repeat;background-position:{}px {}px;background-size:{}px {}px;image-rendering:pixelated\"></div><div class=caption>ori {} {} rec {}<br>{:.3}×{:.3} uv [{:.3},{:.3}]..[{:.3},{:.3}]</div></div>",
-                    er.cell_size[0], er.cell_size[1], bg_x, bg_y, er.atlas_size[0], er.atlas_size[1], ori, orientation_name, frame_index_to_record(ori), frame.size[0], frame.size[1], frame.uv_min[0], frame.uv_min[1], frame.uv_max[0], frame.uv_max[1]
+                    er.cell_size[0], er.cell_size[1], bg_x, bg_y, er.atlas_size[0], er.atlas_size[1], ori, orientation_name, frame_index_to_record(ori), frame.source_size[0], frame.source_size[1], frame.uv_min[0], frame.uv_min[1], frame.uv_max[0], frame.uv_max[1]
                 ));
             }
         }

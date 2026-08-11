@@ -39,7 +39,7 @@ for _ in $(seq 1 600); do
 done
 curl --silent --fail http://127.0.0.1:4274/api/dagger-lab >/dev/null
 curl --silent --fail http://127.0.0.1:4274/ >/dev/null
-grep -F 'DAGGER_PRODUCT_READY api=http://127.0.0.1:4274/api/dagger-product/bootstrap' "$host_log"
+grep -F 'DAGGER_PRODUCT_READY product=privateers-hold api=http://127.0.0.1:4274/api/dagger-product/bootstrap' "$host_log"
 DAGGER_PRODUCT_HOST_LOG="$host_log" node scripts/check-dagger-lab-browser.mjs
 
 trap - EXIT

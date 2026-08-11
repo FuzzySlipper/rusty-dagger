@@ -47,6 +47,7 @@ try {
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'lab');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), null);
   await assertFixedApplicationShell(page, 1280, 900, true);
+  await assertStalePollFailureFence(page);
 
   assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   assert.equal(await page.getByTestId('player-stamina').innerText(), '90.00 / 90.00');
@@ -402,6 +403,55 @@ async function assertConnectedDiagnosticKeys(page) {
   await pressPhysical(page, 'KeyN');
   await page.waitForFunction(() => document.body.dataset.daggerNavDebug === 'false');
   return { patrol: 'G', navgrid: 'N', lifecycle: 'on/off' };
+}
+
+async function assertStalePollFailureFence(page) {
+  let releaseStalePoll;
+  let stalePollStarted;
+  const stalePollReleased = new Promise((resolve) => { releaseStalePoll = resolve; });
+  const stalePollIntercepted = new Promise((resolve) => { stalePollStarted = resolve; });
+  let interceptStalePoll = true;
+  const staleHandler = async (route) => {
+    if (interceptStalePoll && route.request().method() === 'GET') {
+      interceptStalePoll = false;
+      stalePollStarted();
+      await stalePollReleased;
+      await route.abort('failed');
+      return;
+    }
+    await route.continue();
+  };
+  await page.route('**/api/dagger-lab', staleHandler);
+  await stalePollIntercepted;
+  await page.getByTestId('reset').click();
+  await page.getByTestId('connection').filter({ hasText: 'Connected' }).waitFor();
+  releaseStalePoll();
+  await page.waitForTimeout(500);
+  assert.equal(
+    await page.locator('[role="alert"]').filter({ hasText: 'Http failure' }).count(),
+    0,
+    'stale poll rejection overwrote a newer successful command',
+  );
+  await page.unroute('**/api/dagger-lab', staleHandler);
+
+  let interceptCurrentPoll = true;
+  let currentPollStarted;
+  const currentPollIntercepted = new Promise((resolve) => { currentPollStarted = resolve; });
+  const currentHandler = async (route) => {
+    if (interceptCurrentPoll && route.request().method() === 'GET') {
+      interceptCurrentPoll = false;
+      currentPollStarted();
+      await route.abort('failed');
+      return;
+    }
+    await route.continue();
+  };
+  await page.route('**/api/dagger-lab', currentHandler);
+  await currentPollIntercepted;
+  await page.getByTestId('connection').filter({ hasText: 'Waiting for product host' }).waitFor();
+  assert.ok(await page.locator('[role="alert"]').count() > 0, 'current poll failure was hidden');
+  await page.unroute('**/api/dagger-lab', currentHandler);
+  await page.getByTestId('connection').filter({ hasText: 'Connected' }).waitFor();
 }
 
 async function pressPhysical(page, code) {
