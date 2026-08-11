@@ -142,7 +142,9 @@ try {
   await fillExact(page, 'rat-strength', '20');
   await fillExact(page, 'rat-base-health', '4');
   await fillExact(page, 'attack-range', '4');
-  await fillExact(page, 'player-attack-cooldown', '4');
+  // Keep the cooldown open across a loaded CI runner's projection latency so
+  // the following physical retry still proves authoritative rejection.
+  await fillExact(page, 'player-attack-cooldown', '10');
   await fillExact(page, 'player-stamina-cost', '5');
   await fillExact(page, 'hit-bonus', '-100');
   await fillExact(page, 'rat-defense', '200');
