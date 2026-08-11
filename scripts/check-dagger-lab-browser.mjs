@@ -436,13 +436,15 @@ async function assertStalePollFailureFence(page) {
   );
   await page.unroute('**/api/dagger-lab', staleHandler);
 
-  let interceptCurrentPoll = true;
+  let currentPollObserved = false;
   let currentPollStarted;
   const currentPollIntercepted = new Promise((resolve) => { currentPollStarted = resolve; });
   const currentHandler = async (route) => {
-    if (interceptCurrentPoll && route.request().method() === 'GET') {
-      interceptCurrentPoll = false;
-      currentPollStarted();
+    if (route.request().method() === 'GET') {
+      if (!currentPollObserved) {
+        currentPollObserved = true;
+        currentPollStarted();
+      }
       await route.abort('failed');
       return;
     }
