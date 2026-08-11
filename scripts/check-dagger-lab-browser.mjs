@@ -603,8 +603,14 @@ async function jumpAndPhysicallyAttack(
   let cooldownRejection;
   if (expectCooldownRejection) {
     await runPhysicalAttack(page, contentId, 'Rat H', 'COOLDOWN');
-    const rejectedAttempt = page.getByTestId('combat-attempt-2');
-    await rejectedAttempt.filter({ hasText: 'REJECTED · cooldown' }).waitFor({ timeout: 10_000 });
+    // A loaded CI runner can delay the projection long enough for the physical
+    // input helper to retry. Assert the authoritative cooldown outcome without
+    // coupling the proof to the retry-dependent attempt sequence number.
+    const rejectedAttempt = page
+      .locator('[data-testid^="combat-attempt-"]')
+      .filter({ hasText: 'REJECTED · cooldown' })
+      .first();
+    await rejectedAttempt.waitFor({ timeout: 10_000 });
     await rejectedAttempt.filter({ hasText: 'stamina 95.00 → 95.00' }).waitFor();
     cooldownRejection = await rejectedAttempt.innerText();
     assert.equal(await page.getByTestId('combat-count').innerText(), '1 ATTACKS');
