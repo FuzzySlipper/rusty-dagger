@@ -442,14 +442,18 @@ Classic enemies are view-only directional billboards. Ownership split:
 - The per-camera-tick directional authority is consumer-side by engine design
   ("projection-driven, never renderer wall-clock") and lives in
   `dagger-runtime::directional` (`evaluate_directional`, arena2::mobile
-  semantics): camera pose -> per-enemy orientation frame. Consumers apply the
+  semantics): camera pose + the Rust patrol heading -> per-enemy orientation
+  frame. A moving actor snaps to its actual displacement heading because the
+  current movement model is not turn-rate constrained. Consumers apply the
   frames (`updateSprite` ops) and never re-implement the math — the
   Rust tests and `dagger-sprite-frames` consume them without reimplementing
-  the sector math. A future Dagger-native presentation loop can submit those
-  updates through the same public retained-frame facade. Camera-facing stays
-  Engine presentation behavior; Dagger never calls the private renderer.
-- Static-size limitation: a sprite's quad size is fixed at creation (front
-  record), while DFU scales per orientation record; accepted for view-only.
+  the sector math. The native and connected-product presentation loops submit
+  those updates through the same public retained-frame facade. Camera-facing
+  stays Engine presentation behavior; Dagger never calls the private renderer.
+- Per-frame world sizes are already authored in the committed atlas content,
+  but cannot yet cross Engine's public Rust facade. Engine task 6782 owns that
+  missing facade field; Dagger task 6780 maps the sizes once it lands. Until
+  then inconsistent Rat and Imp records visibly pulse during animation.
 
 ## Sprite animation service (task 6640)
 
@@ -481,9 +485,9 @@ Ownership split:
   `evaluate(dt, camera)` call per tick walks all entries and emits only
   changed frames as a `Vec<FrameUpdate>`. Two `SpriteKind`s:
   - `Env { frame_count, fps }`: time-cycled, frame = `(elapsed * fps) % frame_count`.
-  - `Enemy { position, mobile_id }`: camera-driven orientation via
-    `evaluate_directional` (idle, this task); move-state cycling
-    (orientation × anim_frame) arrives with the patrol task (6641).
+  - `Enemy { position, heading, mobile_id }`: actor-relative camera-driven
+    orientation via `evaluate_directional`; move-state cycling uses
+    `orientation × anim_frame`.
 - `AnimationService` remains the sole per-tick authority and is covered in
   Rust. `dagger-native-host` composes its consolidated updates with patrol
   transforms in one bounded Rust tick and submits them through the facade.
@@ -528,11 +532,14 @@ spawns float (0.5–1.8m). The nav grid is how runtime grounding and patrol
   committed `content/projects/privateers-hold.navgrid.json`; regenerate.sh
   keeps it fresh.
 - The committed navgrid and grounding behavior are certified headlessly in
-  Rust. The native `N` overlay selects at most 512 nearby same-level cells
+  Rust. The native and connected-product `N` overlay selects at most 512
+  nearby same-level cells
   from this artifact and submits retained debug cubes through the facade. The
   `G` overlay similarly shows authored spawns, live grounded patrol positions,
   sprite bounds, and Rust-owned headings. Both controls are opt-in and their
-  off/on lifecycle destroys and replaces retired handles. Adjacency (walls
+  off/on lifecycle destroys and replaces retired handles. The connected game
+  ports the same Rust diagnostic owner and keys rather than rebuilding overlay
+  meaning in TypeScript. Adjacency (walls
   between columns) is deliberately not modeled here — path connectivity is
   the upstream seam's job (6642/6643).
 

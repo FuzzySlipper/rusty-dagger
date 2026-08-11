@@ -384,7 +384,7 @@ impl DaggerRuntime {
         self.content_live_positions = patrol
             .positions()
             .into_iter()
-            .map(|(handle, position, _)| (u64::from(handle), position))
+            .map(|(handle, position, _, _)| (u64::from(handle), position))
             .collect();
         self.patrol = Some(patrol);
         Ok(())
@@ -531,7 +531,7 @@ impl DaggerRuntime {
         }
     }
 
-    pub fn encounter_positions(&self) -> Vec<(u32, [f32; 3], bool)> {
+    pub fn encounter_positions(&self) -> Vec<(u32, [f32; 3], f32, bool)> {
         self.patrol
             .as_ref()
             .map_or_else(Vec::new, PatrolService::positions)
@@ -616,7 +616,7 @@ impl DaggerRuntime {
             self.content_live_positions = patrol
                 .positions()
                 .into_iter()
-                .map(|(handle, position, _)| (u64::from(handle), position))
+                .map(|(handle, position, _, _)| (u64::from(handle), position))
                 .collect();
         }
         self.focused_content_id = None;

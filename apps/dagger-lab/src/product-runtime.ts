@@ -34,6 +34,8 @@ interface DaggerProductStateWire {
   readonly camera: DaggerProductCamera;
   readonly playerPosition: readonly [number, number, number];
   readonly frame?: Readonly<Record<string, unknown>>;
+  readonly patrolDebugEnabled: boolean;
+  readonly navDebugEnabled: boolean;
 }
 
 interface DaggerPhysicalInputWire {
@@ -125,6 +127,8 @@ export function mountDaggerProductRuntime(
     }
     renderer.setCameraPose(state.camera);
     document.body.dataset['daggerAuthoritativePosition'] = state.playerPosition.join(',');
+    document.body.dataset['daggerPatrolDebug'] = String(state.patrolDebugEnabled);
+    document.body.dataset['daggerNavDebug'] = String(state.navDebugEnabled);
   };
   const drain = async (): Promise<void> => {
     if (sending || disposed) return;

@@ -120,15 +120,16 @@ impl LivePresentation {
         &mut self,
         dt: f32,
         camera: [f32; 3],
-        encounter_positions: &[(u32, [f32; 3], bool)],
+        encounter_positions: &[(u32, [f32; 3], f32, bool)],
         encounter_updates: &[PositionUpdate],
     ) -> Result<LivePresentationFrame> {
         if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
             bail!("live presentation tick must be finite and bounded to 0.25 seconds");
         }
-        for &(handle, translation, _) in encounter_positions {
+        for &(handle, translation, heading, _) in encounter_positions {
             if let Some(live) = self.live_sprites.get_mut(&handle) {
                 live.translation = translation;
+                live.heading = heading;
             }
         }
         for update in encounter_updates {
