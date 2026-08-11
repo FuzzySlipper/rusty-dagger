@@ -127,7 +127,10 @@ curl http://127.0.0.1:4310/health
   owns the sole canvas, renderer cadence, exact resource admission, atomic
   replacement, stable viewport bounds, and UI/gameplay input arbitration.
   Gameplay and Lab are distinct modes inside one fixed application shell; Lab
-  content scrolls internally and cannot grow the document or canvas. The browser proof samples
+  content scrolls internally and cannot grow the document or canvas. Rust's
+  live-presentation path continuously projects encounter transforms,
+  directional enemy frames, and animated environmental flats through the same
+  Engine renderer facade. The browser proof samples
   the real resource-backed pixels, replaces the whole content aggregate,
   proves physical W input changes Rust authority while interface-mode W is a
   no-op, and reopens against the same Rust session. No X11 display is involved;

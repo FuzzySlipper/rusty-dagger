@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     env,
     io::{self, Write},
     path::Path,
@@ -13,10 +13,12 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use dagger_runtime::{DaggerRuntime, ResolvedPlayerAction};
 use dagger_studio_adapter::{build_render_bundle, DaggerRenderBundle};
 use rusty_engine::render_host_contracts::RendererCameraPose;
+use rusty_engine::render_model::{RenderDiff, RenderFrameDiff, RenderHandle};
 use serde::Serialize;
 
 use crate::{
     lab_server::{LabCommand, LabReply, LabServer, ProductInput},
+    live_presentation::LivePresentation,
     proof::Options,
 };
 
@@ -39,6 +41,9 @@ pub(crate) fn run(options: Options) -> Result<()> {
     runtime
         .install_encounter_navigation_json(NAVGRID)
         .context("install committed encounter navigation")?;
+    let mut presentation = LivePresentation::from_project(PROJECT)?;
+    let mut pending_presentation = PendingPresentation::default();
+    pending_presentation.merge(tick_presentation(&mut runtime, &mut presentation, 0.0)?)?;
     let bundle = build_render_bundle(root, PROJECT).map_err(anyhow::Error::msg)?;
     let server = LabServer::start(
         options.lab_host,
@@ -69,6 +74,8 @@ pub(crate) fn run(options: Options) -> Result<()> {
             handle_command(
                 command,
                 &mut runtime,
+                &presentation,
+                &mut pending_presentation,
                 &bundle,
                 &mut pressed_codes,
                 &mut pressed_buttons,
@@ -77,7 +84,12 @@ pub(crate) fn run(options: Options) -> Result<()> {
         let now = Instant::now();
         let elapsed = now.saturating_duration_since(last_tick);
         if elapsed >= Duration::from_millis(50) {
-            runtime.tick_play_session(elapsed.as_secs_f32().min(0.25))?;
+            let frame = tick_presentation(
+                &mut runtime,
+                &mut presentation,
+                elapsed.as_secs_f32().min(0.25),
+            )?;
+            pending_presentation.merge(frame)?;
             last_tick = now;
         }
         thread::sleep(Duration::from_millis(4));
@@ -87,18 +99,25 @@ pub(crate) fn run(options: Options) -> Result<()> {
 fn handle_command(
     command: LabCommand,
     runtime: &mut DaggerRuntime,
+    presentation: &LivePresentation,
+    pending_presentation: &mut PendingPresentation,
     bundle: &DaggerRenderBundle,
     pressed_codes: &mut BTreeSet<String>,
     pressed_buttons: &mut u16,
 ) -> Result<()> {
     match command {
         LabCommand::ProductBootstrap { reply } => {
+            pending_presentation.replace(presentation.snapshot()?)?;
             send_json(reply, 200, &ProductBootstrap::new(runtime, bundle)?)
         }
-        LabCommand::ProductState { reply } => send_json(reply, 200, &product_state(runtime)?),
+        LabCommand::ProductState { reply } => send_json(
+            reply,
+            200,
+            &product_state(runtime, pending_presentation.take()?)?,
+        ),
         LabCommand::ProductInput { input, reply } => {
             let result = apply_product_input(runtime, pressed_codes, pressed_buttons, input)
-                .and_then(|()| product_state(runtime));
+                .and_then(|()| product_input_state(runtime));
             send_runtime_result(reply, result)
         }
         LabCommand::Read { reply } => send_runtime_result(reply, runtime.experiment_readout()),
@@ -133,10 +152,7 @@ fn apply_product_input(
         runtime.apply_player_action(ResolvedPlayerAction::Move { forward, right })?;
     }
     if input.pointer_delta != [0.0, 0.0] {
-        runtime.apply_player_action(ResolvedPlayerAction::Look {
-            yaw_delta: input.pointer_delta[0] * 0.05,
-            pitch_delta: input.pointer_delta[1] * 0.05,
-        })?;
+        runtime.apply_player_action(resolve_pointer_look(input.pointer_delta))?;
     }
     if attack_pressed {
         let _ = runtime.attack_focused_target()?;
@@ -192,9 +208,20 @@ struct ProductResource<'a> {
 struct ProductState {
     camera: RendererCameraPose,
     player_position: [f32; 3],
+    frame: rusty_engine::render_model::RenderFrameDiff,
 }
 
-fn product_state(runtime: &DaggerRuntime) -> Result<ProductState, dagger_runtime::RuntimeError> {
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProductInputState {
+    camera: RendererCameraPose,
+    player_position: [f32; 3],
+}
+
+fn product_state(
+    runtime: &DaggerRuntime,
+    frame: RenderFrameDiff,
+) -> Result<ProductState, dagger_runtime::RuntimeError> {
     let position = runtime.player_position()?;
     let state = runtime.player_state();
     Ok(ProductState {
@@ -208,7 +235,86 @@ fn product_state(runtime: &DaggerRuntime) -> Result<ProductState, dagger_runtime
             yaw_degrees: f64::from(state.yaw_degrees),
         },
         player_position: [position.x, position.y, position.z],
+        frame,
     })
+}
+
+fn product_input_state(
+    runtime: &DaggerRuntime,
+) -> Result<ProductInputState, dagger_runtime::RuntimeError> {
+    let position = runtime.player_position()?;
+    let camera = camera_pose(runtime)?;
+    Ok(ProductInputState {
+        camera,
+        player_position: [position.x, position.y, position.z],
+    })
+}
+
+fn tick_presentation(
+    runtime: &mut DaggerRuntime,
+    presentation: &mut LivePresentation,
+    dt: f32,
+) -> Result<RenderFrameDiff> {
+    let encounter_updates = runtime.tick_play_session(dt)?;
+    let positions = runtime.encounter_positions();
+    let camera = camera_pose(runtime)?;
+    let frame = presentation.tick(
+        dt,
+        [
+            camera.position[0] as f32,
+            camera.position[1] as f32,
+            camera.position[2] as f32,
+        ],
+        &positions,
+        &encounter_updates,
+    )?;
+    Ok(frame.frame)
+}
+
+#[derive(Default)]
+struct PendingPresentation {
+    transforms: BTreeMap<RenderHandle, RenderDiff>,
+    sprites: BTreeMap<RenderHandle, RenderDiff>,
+}
+
+impl PendingPresentation {
+    fn merge(&mut self, frame: RenderFrameDiff) -> Result<()> {
+        for op in frame.ops {
+            match &op {
+                RenderDiff::Update { handle, .. } => {
+                    self.transforms.insert(*handle, op);
+                }
+                RenderDiff::UpdateSprite { handle, .. } => {
+                    self.sprites.insert(*handle, op);
+                }
+                _ => bail!("live presentation emitted a non-dynamic retained operation"),
+            }
+        }
+        Ok(())
+    }
+
+    fn replace(&mut self, frame: RenderFrameDiff) -> Result<()> {
+        self.transforms.clear();
+        self.sprites.clear();
+        self.merge(frame)
+    }
+
+    fn take(&mut self) -> Result<RenderFrameDiff, dagger_runtime::RuntimeError> {
+        let ops = std::mem::take(&mut self.transforms)
+            .into_values()
+            .chain(std::mem::take(&mut self.sprites).into_values())
+            .collect();
+        RenderFrameDiff::try_from_ops(ops).map_err(|error| {
+            dagger_runtime::RuntimeError::Encounter(format!("build pending live frame: {error:?}"))
+        })
+    }
+}
+
+fn resolve_pointer_look(pointer_delta: [f32; 2]) -> ResolvedPlayerAction {
+    ResolvedPlayerAction::Look {
+        yaw_delta: -pointer_delta[0] * 0.05,
+        pitch_delta: -pointer_delta[1] * 0.05,
+    }
 }
 
 fn camera_pose(
@@ -248,4 +354,48 @@ fn send_json(reply: Sender<LabReply>, status: u16, value: &impl Serialize) -> Re
     };
     let _ = reply.send(response);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn look(delta: [f32; 2]) -> (f32, f32) {
+        match resolve_pointer_look(delta) {
+            ResolvedPlayerAction::Look {
+                yaw_delta,
+                pitch_delta,
+            } => (yaw_delta, pitch_delta),
+            _ => unreachable!("pointer input always resolves to look"),
+        }
+    }
+
+    #[test]
+    fn pointer_directions_follow_fps_look_convention() {
+        assert!(look([-10.0, 0.0]).0 > 0.0, "mouse-left must turn left");
+        assert!(look([10.0, 0.0]).0 < 0.0, "mouse-right must turn right");
+        assert!(look([0.0, -10.0]).1 > 0.0, "mouse-up must look up");
+        assert!(look([0.0, 10.0]).1 < 0.0, "mouse-down must look down");
+    }
+
+    #[test]
+    fn pending_presentation_coalesces_and_drains_dynamic_updates() {
+        let mut pending = PendingPresentation::default();
+        let update = |frame| RenderDiff::UpdateSprite {
+            handle: RenderHandle::new(1001),
+            frame: Some(frame),
+            tint: None,
+            render_order: None,
+            visible: None,
+        };
+        pending
+            .merge(RenderFrameDiff::try_from_ops(vec![update(1)]).expect("first frame"))
+            .expect("merge first frame");
+        pending
+            .merge(RenderFrameDiff::try_from_ops(vec![update(2)]).expect("second frame"))
+            .expect("merge second frame");
+        let frame = pending.take().expect("take coalesced frame");
+        assert_eq!(frame.ops, vec![update(2)]);
+        assert!(pending.take().expect("take drained frame").ops.is_empty());
+    }
 }

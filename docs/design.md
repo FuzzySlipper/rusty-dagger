@@ -210,6 +210,16 @@ modularity gate, task 6529):
   contract expected from a later native wrapper without making the wrapper the
   owner of product composition.
 
+  The connected product's periodic state is also a Rust-projected retained
+  frame, not camera-only polling. A shared Dagger live-presentation component
+  consumes authoritative encounter positions plus `AnimationService` timing
+  and emits absolute enemy transforms, directional sprite frames, and
+  environmental-flat frames through Engine's application renderer facade.
+  Native diagnostics compose their overlays around that same production
+  component; they are not a separate animation implementation. Pointer deltas
+  remain raw in the browser bridge and acquire Dagger's FPS yaw/pitch meaning
+  once in the Rust product host.
+
   `dagger-native-host --browser-product` owns the connected Rust session and
   serves the Angular product, its complete Rust-projected frame, exact
   content-addressed resource bytes, authoritative camera/state, semantic input

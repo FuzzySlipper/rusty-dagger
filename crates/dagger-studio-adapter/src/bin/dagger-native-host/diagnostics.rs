@@ -1,15 +1,17 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use anyhow::{bail, Context, Result};
-use dagger_runtime::{AnimationService, PositionUpdate};
+use dagger_runtime::PositionUpdate;
 use rusty_engine::{
     render_model::{
-        Geometry, Material, RenderDiff, RenderFrameDiff, RenderHandle, RenderLayer, RenderMetadata,
-        RenderNode, Transform,
+        Geometry, Material, RenderFrameDiff, RenderHandle, RenderLayer, RenderMetadata, RenderNode,
+        Transform,
     },
     render_projection::{RenderHandleNamespace, RetainedNodeProjector},
 };
 use serde::Deserialize;
+
+use crate::live_presentation::{heading_rotation, LivePresentation};
 
 const NAV_RADIUS: f32 = 10.0;
 const NAV_VERTICAL_WINDOW: f32 = 6.0;
@@ -41,20 +43,6 @@ enum OverlayKey {
     NavCell(i32, i32, i32),
 }
 
-#[derive(Debug, Clone)]
-struct SpriteOverlay {
-    handle: u32,
-    authored: [f32; 3],
-    size: [f32; 2],
-    pivot: [f32; 2],
-}
-
-#[derive(Debug, Clone, Copy)]
-struct LiveSprite {
-    translation: [f32; 3],
-    heading: f32,
-}
-
 #[derive(Debug, Clone, Copy)]
 struct NavOverlayCell {
     key: OverlayKey,
@@ -62,11 +50,9 @@ struct NavOverlayCell {
 }
 
 pub(crate) struct NativeDiagnostics {
-    animation: AnimationService,
+    live: LivePresentation,
     nav_cell_size: f32,
     nav_cells: Vec<NavCellDocument>,
-    sprite_overlays: Vec<SpriteOverlay>,
-    live_sprites: BTreeMap<u32, LiveSprite>,
     projector: RetainedNodeProjector<OverlayKey>,
     sprite_overlay_enabled: bool,
     nav_overlay_enabled: bool,
@@ -76,100 +62,25 @@ pub(crate) struct NativeDiagnostics {
     nav_disabled_seen: bool,
     visible_nav_cells: Vec<NavOverlayCell>,
     nav_built_at: Option<[f32; 3]>,
-    last_frames: BTreeMap<u32, u32>,
     retired_sample_handle: Option<RenderHandle>,
     stale_handle_replaced: bool,
-    animation_advanced: bool,
-    patrol_moved: bool,
     disposed: bool,
 }
 
 impl NativeDiagnostics {
     pub(crate) fn from_documents(project_text: &str, navgrid_text: &str) -> Result<Self> {
-        let project: ProjectDocument =
-            serde_json::from_str(project_text).context("decode diagnostic project")?;
         let navgrid: NavGridDocument =
             serde_json::from_str(navgrid_text).context("decode committed navgrid")?;
         if !navgrid.cell_size.is_finite() || navgrid.cell_size <= 0.0 || navgrid.cells.is_empty() {
             bail!("committed navgrid must contain a positive cell size and cells");
         }
 
-        let frame_counts = project
-            .assets
-            .iter()
-            .filter_map(|asset| {
-                asset.texture.as_ref().and_then(|texture| {
-                    texture
-                        .sprite_atlas
-                        .as_ref()
-                        .map(|atlas| (asset.id.as_str(), atlas.frames.len() as u32))
-                })
-            })
-            .collect::<BTreeMap<_, _>>();
-        let scene = project
-            .scenes
-            .iter()
-            .find(|scene| Some(scene.id.as_str()) == project.entry_scene.as_deref())
-            .or_else(|| project.scenes.first())
-            .context("diagnostic project has no scene")?;
-
-        let mut animation = AnimationService::new();
-        let mut enemy_spawns = Vec::new();
-        let mut sprite_overlays = Vec::new();
-        let mut seen_handles = BTreeSet::new();
-        for entity in &scene.entities {
-            let Some(sprite) = &entity.sprite else {
-                continue;
-            };
-            if !seen_handles.insert(entity.id) {
-                bail!("duplicate diagnostic sprite handle {}", entity.id);
-            }
-            let frame_count = frame_counts
-                .get(sprite.asset.as_str())
-                .copied()
-                .unwrap_or(1);
-            if let Some(mobile_id) = enemy_mobile_id(&sprite.asset) {
-                if frame_count < 8 || frame_count % 8 != 0 {
-                    bail!(
-                        "enemy sprite {} has {frame_count} frames; expected 8 directional rows",
-                        sprite.asset
-                    );
-                }
-                animation.add_enemy(entity.id, entity.translation, mobile_id, frame_count / 8);
-                enemy_spawns.push((entity.id, entity.translation));
-                sprite_overlays.push(SpriteOverlay {
-                    handle: entity.id,
-                    authored: entity.translation,
-                    size: sprite.size,
-                    pivot: sprite.pivot,
-                });
-            } else if frame_count > 1 {
-                animation.add_env(entity.id, frame_count);
-            }
-        }
-        if enemy_spawns.is_empty() || animation.is_empty() {
-            bail!("real diagnostic project produced no patrol or animation authorities");
-        }
-
-        let live_sprites = enemy_spawns
-            .into_iter()
-            .map(|(handle, translation)| {
-                (
-                    handle,
-                    LiveSprite {
-                        translation,
-                        heading: 0.0,
-                    },
-                )
-            })
-            .collect();
+        let live = LivePresentation::from_project(project_text)?;
 
         Ok(Self {
-            animation,
+            live,
             nav_cell_size: navgrid.cell_size,
             nav_cells: navgrid.cells,
-            sprite_overlays,
-            live_sprites,
             projector: RetainedNodeProjector::new(RenderHandleNamespace::DEBUG),
             sprite_overlay_enabled: false,
             nav_overlay_enabled: false,
@@ -179,11 +90,8 @@ impl NativeDiagnostics {
             nav_disabled_seen: false,
             visible_nav_cells: Vec::new(),
             nav_built_at: None,
-            last_frames: BTreeMap::new(),
             retired_sample_handle: None,
             stale_handle_replaced: false,
-            animation_advanced: false,
-            patrol_moved: false,
             disposed: false,
         })
     }
@@ -223,54 +131,14 @@ impl NativeDiagnostics {
             bail!("diagnostic tick must be finite and bounded to 0.25 seconds");
         }
 
-        for update in encounter_updates {
-            if let Some(live) = self.live_sprites.get_mut(&update.handle) {
-                live.translation = update.translation;
-                live.heading = update.heading;
-            }
-        }
-        self.animation.update_enemies(encounter_positions);
-        let animation_updates = self.animation.evaluate(dt, camera);
-
-        let mut ops = Vec::with_capacity(animation_updates.len() + encounter_updates.len());
-        for update in encounter_updates {
-            if let Some(authored) = self
-                .sprite_overlays
-                .iter()
-                .find(|sprite| sprite.handle == update.handle)
-                .map(|sprite| sprite.authored)
-            {
-                let moved = (update.translation[0] - authored[0])
-                    .hypot(update.translation[2] - authored[2]);
-                self.patrol_moved |= moved > 0.01;
-            }
-            ops.push(RenderDiff::Update {
-                handle: RenderHandle::new(u64::from(update.handle)),
-                transform: Some(Transform {
-                    translation: update.translation,
-                    rotation: heading_rotation(update.heading),
-                    scale: [1.0, 1.0, 1.0],
-                }),
-                material: None,
-                visible: None,
-                metadata: None,
-            });
-        }
-        for update in &animation_updates {
-            if let Some(previous) = self.last_frames.insert(update.handle, update.frame) {
-                self.animation_advanced |= previous != update.frame;
-            }
-            ops.push(RenderDiff::UpdateSprite {
-                handle: RenderHandle::new(u64::from(update.handle)),
-                frame: Some(update.frame),
-                tint: None,
-                render_order: None,
-                visible: None,
-            });
-        }
+        let live = self
+            .live
+            .tick(dt, camera, encounter_positions, encounter_updates)?;
+        let mut ops = live.frame.ops;
 
         let sample_key = self
-            .sprite_overlays
+            .live
+            .sprite_descriptors()
             .first()
             .map(|sprite| OverlayKey::LiveAnchor(sprite.handle));
         let sample_before = sample_key.and_then(|key| self.projector.handle_of(&key));
@@ -294,12 +162,12 @@ impl NativeDiagnostics {
         Ok(DiagnosticFrame {
             frame,
             readout: DiagnosticFrameReadout {
-                animation_advanced: self.animation_advanced,
-                patrol_moved: self.patrol_moved,
+                animation_advanced: live.animation_advanced,
+                patrol_moved: live.patrol_moved,
                 overlays_enabled: self.sprite_enabled_seen && self.nav_enabled_seen,
                 overlays_disabled: self.sprite_disabled_seen && self.nav_disabled_seen,
                 stale_handle_replaced: self.stale_handle_replaced,
-                animation_updates: animation_updates.len(),
+                animation_updates: live.animation_updates,
                 retained_overlays: self.projector.retained_len(),
             },
         })
@@ -329,8 +197,8 @@ impl NativeDiagnostics {
 
         let mut nodes = BTreeMap::new();
         if self.sprite_overlay_enabled {
-            for sprite in &self.sprite_overlays {
-                let Some(live) = self.live_sprites.get(&sprite.handle) else {
+            for sprite in self.live.sprite_descriptors() {
+                let Some(live) = self.live.live_sprite(sprite.handle) else {
                     continue;
                 };
                 nodes.insert(
@@ -431,18 +299,6 @@ impl NativeDiagnostics {
     }
 }
 
-fn enemy_mobile_id(asset: &str) -> Option<u8> {
-    asset
-        .strip_prefix("texture/enemy-")?
-        .strip_suffix("-atlas")?
-        .parse()
-        .ok()
-}
-
-fn heading_rotation(heading: f32) -> [f32; 4] {
-    [0.0, -(heading * 0.5).sin(), 0.0, (heading * 0.5).cos()]
-}
-
 fn cube_node(
     translation: [f32; 3],
     scale: [f32; 3],
@@ -471,62 +327,6 @@ fn cube_node(
     }
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ProjectDocument {
-    entry_scene: Option<String>,
-    assets: Vec<AssetDocument>,
-    scenes: Vec<SceneDocument>,
-}
-
-#[derive(Deserialize)]
-struct AssetDocument {
-    id: String,
-    texture: Option<TextureDocument>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct TextureDocument {
-    sprite_atlas: Option<SpriteAtlasDocument>,
-}
-
-#[derive(Deserialize)]
-struct SpriteAtlasDocument {
-    frames: Vec<serde_json::Value>,
-}
-
-#[derive(Deserialize)]
-struct SceneDocument {
-    id: String,
-    entities: Vec<EntityDocument>,
-}
-
-#[derive(Deserialize)]
-struct EntityDocument {
-    id: u32,
-    translation: [f32; 3],
-    sprite: Option<SpriteDocument>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SpriteDocument {
-    asset: String,
-    #[serde(default = "default_sprite_size")]
-    size: [f32; 2],
-    #[serde(default = "default_sprite_pivot")]
-    pivot: [f32; 2],
-}
-
-fn default_sprite_size() -> [f32; 2] {
-    [1.0, 1.0]
-}
-
-fn default_sprite_pivot() -> [f32; 2] {
-    [0.5, 0.0]
-}
-
 #[derive(Debug, Clone, Copy, Deserialize)]
 struct NavCellDocument(f64, f64, f64, f64);
 
@@ -541,6 +341,7 @@ struct NavGridDocument {
 mod tests {
     use super::*;
     use dagger_runtime::DaggerRuntime;
+    use rusty_engine::render_model::RenderDiff;
 
     const PROJECT: &str =
         include_str!("../../../../../content/projects/privateers-hold.project.json");
