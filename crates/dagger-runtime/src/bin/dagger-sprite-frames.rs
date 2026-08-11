@@ -165,7 +165,7 @@ fn assignments_json(positions: &[[f32; 3]], camera: [f32; 3]) -> String {
         .map(|(index, position)| {
             format!(
                 "{{\"index\":{index},\"frame\":{}}}",
-                evaluate_directional(*position, camera)
+                evaluate_directional(*position, 0.0, camera)
             )
         })
         .collect();

@@ -53,6 +53,7 @@ pub enum SpriteKind {
     /// frame position — only the orientation base shifts.
     Enemy {
         position: [f32; 3],
+        heading: f32,
         mobile_id: u8,
         /// Frames per orientation in the atlas (M). All 8 orientations
         /// carry the same count (DFU move records are uniform per enemy).
@@ -113,6 +114,7 @@ impl AnimationService {
             handle,
             kind: SpriteKind::Enemy {
                 position,
+                heading: 0.0,
                 mobile_id,
                 anim_frame_count,
                 anim_fps,
@@ -124,12 +126,18 @@ impl AnimationService {
 
     /// Update enemy positions and move/idle state from the patrol service.
     /// Called before evaluate() each tick so the animation tracks patrol movement.
-    pub fn update_enemies(&mut self, updates: &[(u32, [f32; 3], bool)]) {
-        for &(handle, pos, is_moving) in updates {
+    pub fn update_enemies(&mut self, updates: &[(u32, [f32; 3], f32, bool)]) {
+        for &(handle, pos, heading, is_moving) in updates {
             for entry in &mut self.entries {
                 if entry.handle == handle {
-                    if let SpriteKind::Enemy { position, .. } = &mut entry.kind {
+                    if let SpriteKind::Enemy {
+                        position,
+                        heading: actor_heading,
+                        ..
+                    } = &mut entry.kind
+                    {
                         *position = pos;
+                        *actor_heading = heading;
                     }
                     entry.is_moving = is_moving;
                     break;
@@ -168,12 +176,13 @@ impl AnimationService {
                 }
                 SpriteKind::Enemy {
                     position,
+                    heading,
                     anim_frame_count,
                     anim_fps,
                     ..
                 } => {
                     // Orientation from camera (0-7 DFU sectors).
-                    let orientation = evaluate_directional(*position, camera) as u32;
+                    let orientation = evaluate_directional(*position, *heading, camera) as u32;
                     // Anim frame: when moving, cycle at DFU speed; when idle,
                     // freeze at 0 (most enemy idle records are 1-frame).
                     let anim_frame = if !entry.is_moving || *anim_frame_count <= 1 {
@@ -323,7 +332,7 @@ mod tests {
         // SkeletalWarrior: 4 move frames, 6fps.
         let mut svc = AnimationService::new();
         svc.add_enemy(500, [10.0, 33.0, -7.0], 15, 4);
-        svc.update_enemies(&[(500, [10.0, 33.0, -7.0], true)]);
+        svc.update_enemies(&[(500, [10.0, 33.0, -7.0], 0.0, true)]);
 
         // Advance ~0.35s → anim_frame = floor(0.35 * 6) % 4 = 2
         svc.evaluate(0.35, [10.5, 34.4, -11.0]); // front, frame = 0*4+2=2
@@ -346,7 +355,7 @@ mod tests {
         // SkeletalWarrior: 4 move frames, 6fps. Camera stays in front.
         let mut svc = AnimationService::new();
         svc.add_enemy(600, [10.0, 33.0, -7.0], 15, 4);
-        svc.update_enemies(&[(600, [10.0, 33.0, -7.0], true)]);
+        svc.update_enemies(&[(600, [10.0, 33.0, -7.0], 0.0, true)]);
 
         // t=0: orientation 0, anim_frame 0 → frame 0
         let _ = svc.evaluate(0.0, [10.5, 34.4, -11.0]);
@@ -375,7 +384,7 @@ mod tests {
         let mut svc = AnimationService::new();
         svc.add_env(1, 4); // torch: 4 frames at 5fps
         svc.add_enemy(2, [10.0, 33.0, -7.0], 15, 4); // enemy: 4 frames at 6fps
-        svc.update_enemies(&[(2, [10.0, 33.0, -7.0], true)]);
+        svc.update_enemies(&[(2, [10.0, 33.0, -7.0], 0.0, true)]);
 
         // t=0: both emit their initial frame
         let u = svc.evaluate(0.0, [10.5, 34.4, -11.0]);
@@ -400,6 +409,20 @@ mod tests {
             handle: 2,
             frame: 1
         }));
+    }
+
+    #[test]
+    fn enemy_heading_changes_directional_frame() {
+        let mut svc = AnimationService::new();
+        svc.add_enemy(700, [0.0, 0.0, 0.0], 0, 1);
+        svc.update_enemies(&[(700, [0.0, 0.0, 0.0], std::f32::consts::PI, false)]);
+        assert_eq!(
+            svc.evaluate(0.0, [0.0, 1.0, -4.0]),
+            vec![FrameUpdate {
+                handle: 700,
+                frame: 4,
+            }]
+        );
     }
 
     #[test]

@@ -30,6 +30,7 @@ try {
   await assertFixedApplicationShell(page, 1280, 900);
   const connectedPresentation = await assertConnectedDynamicPresentation(page);
   const semanticLook = await assertSemanticPointerDirections(page);
+  const connectedDiagnostics = await assertConnectedDiagnosticKeys(page);
   assert.ok(await renderedPixelVariety(page), 'real Rust resource-backed scene did not render visible pixels');
   const initialCanvas = await page.locator('canvas').elementHandle();
   assert.ok(initialCanvas);
@@ -299,7 +300,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -382,6 +383,25 @@ async function assertSemanticPointerDirections(page) {
     up: up.camera.pitchDegrees - left.camera.pitchDegrees,
     down: down.camera.pitchDegrees - up.camera.pitchDegrees,
   };
+}
+
+async function assertConnectedDiagnosticKeys(page) {
+  await page.waitForFunction(() => document.body.dataset.daggerPatrolDebug === 'false');
+  const sequenceBefore = Number(await page.locator('body').getAttribute('data-dagger-dynamic-frame-sequence'));
+  await pressPhysical(page, 'KeyG');
+  await page.waitForFunction(() => document.body.dataset.daggerPatrolDebug === 'true');
+  await pressPhysical(page, 'KeyN');
+  await page.waitForFunction(() => document.body.dataset.daggerNavDebug === 'true');
+  await page.waitForFunction(
+    (before) => Number(document.body.dataset.daggerDynamicFrameSequence ?? '0') > before,
+    sequenceBefore,
+  );
+  assert.equal(await page.locator('body').getAttribute('data-dagger-product-input-error'), null);
+  await pressPhysical(page, 'KeyG');
+  await page.waitForFunction(() => document.body.dataset.daggerPatrolDebug === 'false');
+  await pressPhysical(page, 'KeyN');
+  await page.waitForFunction(() => document.body.dataset.daggerNavDebug === 'false');
+  return { patrol: 'G', navgrid: 'N', lifecycle: 'on/off' };
 }
 
 async function pressPhysical(page, code) {

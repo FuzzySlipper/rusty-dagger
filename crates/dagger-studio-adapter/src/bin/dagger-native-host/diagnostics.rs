@@ -117,11 +117,23 @@ impl NativeDiagnostics {
         self.nav_overlay_enabled
     }
 
+    pub(crate) fn sprite_overlay_enabled(&self) -> bool {
+        self.sprite_overlay_enabled
+    }
+
+    pub(crate) fn nav_overlay_enabled(&self) -> bool {
+        self.nav_overlay_enabled
+    }
+
+    pub(crate) fn snapshot(&self) -> Result<RenderFrameDiff> {
+        self.live.snapshot()
+    }
+
     pub(crate) fn tick(
         &mut self,
         dt: f32,
         camera: [f32; 3],
-        encounter_positions: &[(u32, [f32; 3], bool)],
+        encounter_positions: &[(u32, [f32; 3], f32, bool)],
         encounter_updates: &[PositionUpdate],
     ) -> Result<DiagnosticFrame> {
         if self.disposed {

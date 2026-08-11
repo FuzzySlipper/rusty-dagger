@@ -17,8 +17,8 @@ use rusty_engine::render_model::{RenderDiff, RenderFrameDiff, RenderHandle};
 use serde::Serialize;
 
 use crate::{
+    diagnostics::NativeDiagnostics,
     lab_server::{LabCommand, LabReply, LabServer, ProductInput},
-    live_presentation::LivePresentation,
     proof::Options,
 };
 
@@ -41,7 +41,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
     runtime
         .install_encounter_navigation_json(NAVGRID)
         .context("install committed encounter navigation")?;
-    let mut presentation = LivePresentation::from_project(PROJECT)?;
+    let mut presentation = NativeDiagnostics::from_documents(PROJECT, NAVGRID)?;
     let mut pending_presentation = PendingPresentation::default();
     pending_presentation.merge(tick_presentation(&mut runtime, &mut presentation, 0.0)?)?;
     let bundle = build_render_bundle(root, PROJECT).map_err(anyhow::Error::msg)?;
@@ -74,7 +74,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
             handle_command(
                 command,
                 &mut runtime,
-                &presentation,
+                &mut presentation,
                 &mut pending_presentation,
                 &bundle,
                 &mut pressed_codes,
@@ -99,7 +99,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
 fn handle_command(
     command: LabCommand,
     runtime: &mut DaggerRuntime,
-    presentation: &LivePresentation,
+    presentation: &mut NativeDiagnostics,
     pending_presentation: &mut PendingPresentation,
     bundle: &DaggerRenderBundle,
     pressed_codes: &mut BTreeSet<String>,
@@ -113,11 +113,12 @@ fn handle_command(
         LabCommand::ProductState { reply } => send_json(
             reply,
             200,
-            &product_state(runtime, pending_presentation.take()?)?,
+            &product_state(runtime, presentation, pending_presentation.take()?)?,
         ),
         LabCommand::ProductInput { input, reply } => {
-            let result = apply_product_input(runtime, pressed_codes, pressed_buttons, input)
-                .and_then(|()| product_input_state(runtime));
+            let result =
+                apply_product_input(runtime, presentation, pressed_codes, pressed_buttons, input)
+                    .and_then(|()| product_input_state(runtime, presentation));
             send_runtime_result(reply, result)
         }
         LabCommand::Read { reply } => send_runtime_result(reply, runtime.experiment_readout()),
@@ -136,6 +137,7 @@ fn handle_command(
 
 fn apply_product_input(
     runtime: &mut DaggerRuntime,
+    presentation: &mut NativeDiagnostics,
     previous_codes: &mut BTreeSet<String>,
     previous_buttons: &mut u16,
     input: ProductInput,
@@ -144,6 +146,8 @@ fn apply_product_input(
     let attack_pressed = pressed.contains("Space") && !previous_codes.contains("Space")
         || input.buttons & 1 != 0 && *previous_buttons & 1 == 0;
     let reset_pressed = pressed.contains("KeyR") && !previous_codes.contains("KeyR");
+    let patrol_debug_pressed = pressed.contains("KeyG") && !previous_codes.contains("KeyG");
+    let nav_debug_pressed = pressed.contains("KeyN") && !previous_codes.contains("KeyN");
     *previous_codes = pressed.clone();
     *previous_buttons = input.buttons;
     let forward = f32::from(pressed.contains("KeyW")) - f32::from(pressed.contains("KeyS"));
@@ -159,6 +163,12 @@ fn apply_product_input(
     }
     if reset_pressed {
         runtime.reset_play_session()?;
+    }
+    if patrol_debug_pressed {
+        presentation.toggle_sprite_overlay();
+    }
+    if nav_debug_pressed {
+        presentation.toggle_nav_overlay();
     }
     Ok(())
 }
@@ -209,6 +219,8 @@ struct ProductState {
     camera: RendererCameraPose,
     player_position: [f32; 3],
     frame: rusty_engine::render_model::RenderFrameDiff,
+    patrol_debug_enabled: bool,
+    nav_debug_enabled: bool,
 }
 
 #[derive(Serialize)]
@@ -216,10 +228,13 @@ struct ProductState {
 struct ProductInputState {
     camera: RendererCameraPose,
     player_position: [f32; 3],
+    patrol_debug_enabled: bool,
+    nav_debug_enabled: bool,
 }
 
 fn product_state(
     runtime: &DaggerRuntime,
+    presentation: &NativeDiagnostics,
     frame: RenderFrameDiff,
 ) -> Result<ProductState, dagger_runtime::RuntimeError> {
     let position = runtime.player_position()?;
@@ -236,23 +251,28 @@ fn product_state(
         },
         player_position: [position.x, position.y, position.z],
         frame,
+        patrol_debug_enabled: presentation.sprite_overlay_enabled(),
+        nav_debug_enabled: presentation.nav_overlay_enabled(),
     })
 }
 
 fn product_input_state(
     runtime: &DaggerRuntime,
+    presentation: &NativeDiagnostics,
 ) -> Result<ProductInputState, dagger_runtime::RuntimeError> {
     let position = runtime.player_position()?;
     let camera = camera_pose(runtime)?;
     Ok(ProductInputState {
         camera,
         player_position: [position.x, position.y, position.z],
+        patrol_debug_enabled: presentation.sprite_overlay_enabled(),
+        nav_debug_enabled: presentation.nav_overlay_enabled(),
     })
 }
 
 fn tick_presentation(
     runtime: &mut DaggerRuntime,
-    presentation: &mut LivePresentation,
+    presentation: &mut NativeDiagnostics,
     dt: f32,
 ) -> Result<RenderFrameDiff> {
     let encounter_updates = runtime.tick_play_session(dt)?;
@@ -275,6 +295,7 @@ fn tick_presentation(
 struct PendingPresentation {
     transforms: BTreeMap<RenderHandle, RenderDiff>,
     sprites: BTreeMap<RenderHandle, RenderDiff>,
+    lifecycle: Vec<RenderDiff>,
 }
 
 impl PendingPresentation {
@@ -287,7 +308,12 @@ impl PendingPresentation {
                 RenderDiff::UpdateSprite { handle, .. } => {
                     self.sprites.insert(*handle, op);
                 }
-                _ => bail!("live presentation emitted a non-dynamic retained operation"),
+                RenderDiff::Destroy { handle } => {
+                    self.transforms.remove(handle);
+                    self.sprites.remove(handle);
+                    self.lifecycle.push(op);
+                }
+                _ => self.lifecycle.push(op),
             }
         }
         Ok(())
@@ -296,12 +322,14 @@ impl PendingPresentation {
     fn replace(&mut self, frame: RenderFrameDiff) -> Result<()> {
         self.transforms.clear();
         self.sprites.clear();
+        self.lifecycle.clear();
         self.merge(frame)
     }
 
     fn take(&mut self) -> Result<RenderFrameDiff, dagger_runtime::RuntimeError> {
-        let ops = std::mem::take(&mut self.transforms)
-            .into_values()
+        let ops = std::mem::take(&mut self.lifecycle)
+            .into_iter()
+            .chain(std::mem::take(&mut self.transforms).into_values())
             .chain(std::mem::take(&mut self.sprites).into_values())
             .collect();
         RenderFrameDiff::try_from_ops(ops).map_err(|error| {
@@ -397,5 +425,48 @@ mod tests {
         let frame = pending.take().expect("take coalesced frame");
         assert_eq!(frame.ops, vec![update(2)]);
         assert!(pending.take().expect("take drained frame").ops.is_empty());
+    }
+
+    #[test]
+    fn connected_product_ports_native_debug_keys() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
+        runtime
+            .install_encounter_navigation_json(NAVGRID)
+            .expect("real navgrid");
+        let mut diagnostics =
+            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+        let mut codes = BTreeSet::new();
+        let mut buttons = 0;
+
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut codes,
+            &mut buttons,
+            ProductInput {
+                pressed_codes: vec!["KeyG".into(), "KeyN".into()],
+                pointer_delta: [0.0, 0.0],
+                buttons: 0,
+            },
+        )
+        .expect("toggle diagnostics");
+        assert!(diagnostics.sprite_overlay_enabled());
+        assert!(diagnostics.nav_overlay_enabled());
+
+        // Held keys are edge-triggered and must not toggle repeatedly.
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut codes,
+            &mut buttons,
+            ProductInput {
+                pressed_codes: vec!["KeyG".into(), "KeyN".into()],
+                pointer_delta: [0.0, 0.0],
+                buttons: 0,
+            },
+        )
+        .expect("hold diagnostics");
+        assert!(diagnostics.sprite_overlay_enabled());
+        assert!(diagnostics.nav_overlay_enabled());
     }
 }

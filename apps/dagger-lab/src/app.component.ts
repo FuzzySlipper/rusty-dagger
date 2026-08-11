@@ -135,6 +135,10 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedContentId: number | undefined;
   labOpen = false;
 
+  trackContent(_index: number, entity: ContentEntityReadout): number {
+    return entity.id;
+  }
+
   ngOnInit(): void {
     window.addEventListener('dagger-open-lab', this.openLabRequest);
     this.profiles = this.profileStore.load();

@@ -341,10 +341,10 @@ impl PatrolService {
     }
 
     /// Current positions of all NPCs (for animation service updates).
-    pub fn positions(&self) -> Vec<(u32, [f32; 3], bool)> {
+    pub fn positions(&self) -> Vec<(u32, [f32; 3], f32, bool)> {
         self.npcs
             .iter()
-            .map(|n| (n.handle, n.position, n.is_moving))
+            .map(|n| (n.handle, n.position, n.heading, n.is_moving))
             .collect()
     }
 
@@ -437,16 +437,10 @@ fn move_toward(npc: &mut PatrolNpc, grid: &PatrolGrid, target: [f32; 3], speed: 
         npc.is_moving = false;
         return;
     }
-    let target_heading = dz.atan2(dx);
-    let mut difference = target_heading - npc.heading;
-    while difference > std::f32::consts::PI {
-        difference -= std::f32::consts::TAU;
-    }
-    while difference < -std::f32::consts::PI {
-        difference += std::f32::consts::TAU;
-    }
-    let turn = difference.clamp(-3.0 * dt, 3.0 * dt);
-    npc.heading += turn;
+    // Movement is not turn-rate constrained, so presentation must face the
+    // displacement immediately. Heading zero is glTF -Z, matching authored
+    // Dagger sprites and the renderer transform convention.
+    npc.heading = dx.atan2(-dz);
     let ratio = (speed * dt / distance).min(1.0);
     let new_x = npc.position[0] + dx * ratio;
     let new_z = npc.position[2] + dz * ratio;
@@ -482,7 +476,7 @@ mod tests {
         let svc = PatrolService::new(&grid, &spawns);
         assert_eq!(svc.len(), 1);
         // Should be grounded to y=0
-        let (handle, pos, _) = svc.positions()[0];
+        let (handle, pos, _, _) = svc.positions()[0];
         assert_eq!(handle, 100);
         assert!(
             (pos[1] - 0.0).abs() < 0.1,
@@ -578,5 +572,29 @@ mod tests {
             }
         }
         assert!(moved, "NPC should have moved from spawn after 20s");
+    }
+
+    #[test]
+    fn moving_npc_heading_matches_displacement() {
+        let grid = make_grid();
+        let mut svc = PatrolService::new(&grid, &[(1, [0.25, 0.0, 0.25])]);
+        let mut previous = svc.positions()[0].1;
+        for _ in 0..200 {
+            for update in svc.evaluate(0.1) {
+                let dx = update.translation[0] - previous[0];
+                let dz = update.translation[2] - previous[2];
+                if dx.hypot(dz) > 0.001 {
+                    let expected = dx.atan2(-dz);
+                    assert!(
+                        (update.heading - expected).abs() < 0.001,
+                        "heading {} did not face displacement ({dx}, {dz})",
+                        update.heading
+                    );
+                    return;
+                }
+                previous = update.translation;
+            }
+        }
+        panic!("NPC did not move during heading proof");
     }
 }
