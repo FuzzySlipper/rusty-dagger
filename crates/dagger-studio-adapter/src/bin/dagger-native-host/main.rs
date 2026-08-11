@@ -2,6 +2,7 @@ mod application;
 mod connected_application;
 mod diagnostics;
 mod lab_server;
+mod live_presentation;
 mod proof;
 mod view;
 

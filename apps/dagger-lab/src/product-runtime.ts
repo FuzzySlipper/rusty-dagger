@@ -33,6 +33,7 @@ interface DaggerProductBootstrapWire {
 interface DaggerProductStateWire {
   readonly camera: DaggerProductCamera;
   readonly playerPosition: readonly [number, number, number];
+  readonly frame?: Readonly<Record<string, unknown>>;
 }
 
 interface DaggerPhysicalInputWire {
@@ -80,8 +81,48 @@ export function mountDaggerProductRuntime(
   let sending = false;
   let disposed = false;
   let buttons = 0;
+  let dynamicFrameSequence = 0;
+  const environmentFrames = new Map<number, number>();
+  const enemyTransforms = new Map<number, string>();
 
   const applyState = (state: DaggerProductStateWire): void => {
+    if (state.frame !== undefined) {
+      const ops = state.frame['ops'];
+      const opCount = Array.isArray(ops) ? ops.length : 0;
+      const receipt = renderer.applyFrame(state.frame);
+      if (!receipt.applied) {
+        throw new Error(
+          `Dagger dynamic frame rejected: ${receipt.diagnostics.map((entry) => entry.message).join('; ')}`,
+        );
+      }
+      if (opCount > 0) {
+        for (const candidate of ops as unknown[]) {
+          if (typeof candidate !== 'object' || candidate === null) continue;
+          const op = candidate as Record<string, unknown>;
+          const handle = op['handle'];
+          if (typeof handle !== 'number') continue;
+          if (op['op'] === 'updateSprite' && handle < 2000 && typeof op['frame'] === 'number') {
+            const previous = environmentFrames.get(handle);
+            environmentFrames.set(handle, op['frame']);
+            if (previous !== undefined && previous !== op['frame']) {
+              document.body.dataset['daggerAnimatedEnvironmentHandle'] = String(handle);
+            }
+          }
+          if (op['op'] === 'update' && handle >= 2000 && op['transform'] !== undefined) {
+            const transform = JSON.stringify(op['transform']);
+            const previous = enemyTransforms.get(handle);
+            enemyTransforms.set(handle, transform);
+            if (previous !== undefined && previous !== transform) {
+              document.body.dataset['daggerMovedEnemyHandle'] = String(handle);
+            }
+          }
+        }
+        renderer.renderOnce();
+        dynamicFrameSequence += 1;
+        document.body.dataset['daggerDynamicFrameSequence'] = String(dynamicFrameSequence);
+        document.body.dataset['daggerDynamicOpCount'] = String(opCount);
+      }
+    }
     renderer.setCameraPose(state.camera);
     document.body.dataset['daggerAuthoritativePosition'] = state.playerPosition.join(',');
   };

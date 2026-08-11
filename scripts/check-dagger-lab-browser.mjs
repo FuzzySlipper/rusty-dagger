@@ -28,6 +28,8 @@ try {
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
   await assertFixedApplicationShell(page, 1280, 900);
+  const connectedPresentation = await assertConnectedDynamicPresentation(page);
+  const semanticLook = await assertSemanticPointerDirections(page);
   assert.ok(await renderedPixelVariety(page), 'real Rust resource-backed scene did not render visible pixels');
   const initialCanvas = await page.locator('canvas').elementHandle();
   assert.ok(initialCanvas);
@@ -297,7 +299,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -340,6 +342,46 @@ async function renderedPixelVariety(page) {
     }
     return false;
   });
+}
+
+async function assertConnectedDynamicPresentation(page) {
+  await page.waitForFunction(() => document.body.dataset.daggerAnimatedEnvironmentHandle !== undefined);
+  await page.waitForFunction(() => document.body.dataset.daggerMovedEnemyHandle !== undefined);
+  await page.waitForFunction(() => Number(document.body.dataset.daggerDynamicFrameSequence ?? '0') >= 2);
+  assert.ok(Number(await page.locator('body').getAttribute('data-dagger-dynamic-op-count')) > 0);
+  assert.equal(await page.locator('body').getAttribute('data-dagger-product-input-error'), null);
+  return {
+    changedEnvironment: Number(await page.locator('body').getAttribute('data-dagger-animated-environment-handle')),
+    movedEnemy: Number(await page.locator('body').getAttribute('data-dagger-moved-enemy-handle')),
+  };
+}
+
+async function assertSemanticPointerDirections(page) {
+  const input = (pointerDelta) => page.evaluate(async (delta) => {
+    const response = await fetch('/api/dagger-product/input', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pressedCodes: [], pointerDelta: delta, buttons: 0 }),
+    });
+    if (!response.ok) throw new Error(`pointer input failed with ${String(response.status)}`);
+    return response.json();
+  }, pointerDelta);
+  const angleDelta = (from, to) => ((to - from + 540) % 360) - 180;
+  const before = await input([0, 0]);
+  const right = await input([10, 0]);
+  const left = await input([-10, 0]);
+  const up = await input([0, -10]);
+  const down = await input([0, 10]);
+  assert.ok(angleDelta(before.camera.yawDegrees, right.camera.yawDegrees) < 0, 'mouse-right did not turn right');
+  assert.ok(angleDelta(right.camera.yawDegrees, left.camera.yawDegrees) > 0, 'mouse-left did not turn left');
+  assert.ok(up.camera.pitchDegrees > left.camera.pitchDegrees, 'mouse-up did not look up');
+  assert.ok(down.camera.pitchDegrees < up.camera.pitchDegrees, 'mouse-down did not look down');
+  return {
+    right: angleDelta(before.camera.yawDegrees, right.camera.yawDegrees),
+    left: angleDelta(right.camera.yawDegrees, left.camera.yawDegrees),
+    up: up.camera.pitchDegrees - left.camera.pitchDegrees,
+    down: down.camera.pitchDegrees - up.camera.pitchDegrees,
+  };
 }
 
 async function pressPhysical(page, code) {
