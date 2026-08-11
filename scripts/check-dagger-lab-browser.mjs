@@ -35,7 +35,13 @@ try {
   const initialCanvas = await page.locator('canvas').elementHandle();
   assert.ok(initialCanvas);
   await page.getByTestId('refresh-scene').click();
-  await page.waitForFunction(() => window.__daggerApplicationHost?.readout().contentRevision === 2);
+  // A full resource-backed remount can exceed Playwright's 30 second default
+  // on software-rendered CI while still making steady progress.
+  await page.waitForFunction(
+    () => window.__daggerApplicationHost?.readout().contentRevision === 2,
+    undefined,
+    { timeout: 120_000 },
+  );
   assert.equal(
     await initialCanvas.evaluate((canvas) => canvas.isConnected),
     false,
