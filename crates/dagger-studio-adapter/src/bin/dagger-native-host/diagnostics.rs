@@ -135,6 +135,9 @@ impl NativeDiagnostics {
         combine_frames([self.live.snapshot()?, self.melee.snapshot()?])
     }
 
+    // This production composition boundary keeps the independently owned live
+    // encounter, melee, camera, and resource inputs explicit at the call site.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn tick(
         &mut self,
         dt: f32,
