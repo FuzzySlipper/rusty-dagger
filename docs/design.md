@@ -220,6 +220,17 @@ modularity gate, task 6529):
   remain raw in the browser bridge and acquire Dagger's FPS yaw/pitch meaning
   once in the Rust product host.
 
+  First-person melee presentation follows the same boundary. `dagger-runtime`
+  owns the anticipation, contact, recovery, and rejected phases and attaches
+  the exact accepted attempt, outcome, stamina change, target-health change,
+  and death result to that bounded action state. Dagger's retained
+  presentation maps those facts to a camera-relative weapon, stamina and
+  target-health feedback, distinct miss/hit/kill/rejection effects, and
+  contact-timed target disappearance through Engine's public `viewmodel`
+  layer. TypeScript only transports diagnostic readback used by browser gates;
+  it does not time or reinterpret the action. Reset clears the action and
+  restores encounter visibility from the same Rust session authority.
+
   `dagger-native-host --browser-product` owns the connected Rust session and
   serves the Angular product, its complete Rust-projected frame, exact
   content-addressed resource bytes, authoritative camera/state, semantic input

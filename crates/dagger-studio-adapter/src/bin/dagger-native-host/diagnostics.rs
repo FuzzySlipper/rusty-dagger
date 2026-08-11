@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{bail, Context, Result};
-use dagger_runtime::PositionUpdate;
+use dagger_runtime::{MeleePresentationReadout, PositionUpdate};
 use rusty_engine::{
     render_model::{
         Geometry, Material, RenderFrameDiff, RenderHandle, RenderLayer, RenderMetadata, RenderNode,
@@ -11,7 +11,10 @@ use rusty_engine::{
 };
 use serde::Deserialize;
 
-use crate::live_presentation::{heading_rotation, LivePresentation};
+use crate::{
+    live_presentation::{heading_rotation, LivePresentation},
+    melee_presentation::MeleePresentation,
+};
 
 const NAV_RADIUS: f32 = 10.0;
 const NAV_VERTICAL_WINDOW: f32 = 6.0;
@@ -25,6 +28,7 @@ pub(crate) struct DiagnosticFrameReadout {
     pub(crate) overlays_enabled: bool,
     pub(crate) overlays_disabled: bool,
     pub(crate) stale_handle_replaced: bool,
+    pub(crate) viewmodel_present: bool,
     pub(crate) animation_updates: usize,
     pub(crate) retained_overlays: usize,
 }
@@ -51,6 +55,7 @@ struct NavOverlayCell {
 
 pub(crate) struct NativeDiagnostics {
     live: LivePresentation,
+    melee: MeleePresentation,
     nav_cell_size: f32,
     nav_cells: Vec<NavCellDocument>,
     projector: RetainedNodeProjector<OverlayKey>,
@@ -79,6 +84,7 @@ impl NativeDiagnostics {
 
         Ok(Self {
             live,
+            melee: MeleePresentation::new(),
             nav_cell_size: navgrid.cell_size,
             nav_cells: navgrid.cells,
             projector: RetainedNodeProjector::new(RenderHandleNamespace::DEBUG),
@@ -126,7 +132,7 @@ impl NativeDiagnostics {
     }
 
     pub(crate) fn snapshot(&self) -> Result<RenderFrameDiff> {
-        self.live.snapshot()
+        combine_frames([self.live.snapshot()?, self.melee.snapshot()?])
     }
 
     pub(crate) fn tick(
@@ -135,6 +141,9 @@ impl NativeDiagnostics {
         camera: [f32; 3],
         encounter_positions: &[(u32, [f32; 3], f32, bool)],
         encounter_updates: &[PositionUpdate],
+        dead_encounters: &BTreeSet<u32>,
+        melee_action: Option<&MeleePresentationReadout>,
+        stamina: (f32, f32),
     ) -> Result<DiagnosticFrame> {
         if self.disposed {
             bail!("native diagnostics were disposed");
@@ -143,10 +152,16 @@ impl NativeDiagnostics {
             bail!("diagnostic tick must be finite and bounded to 0.25 seconds");
         }
 
-        let live = self
-            .live
-            .tick(dt, camera, encounter_positions, encounter_updates)?;
+        let live = self.live.tick(
+            dt,
+            camera,
+            encounter_positions,
+            encounter_updates,
+            dead_encounters,
+            melee_action,
+        )?;
         let mut ops = live.frame.ops;
+        ops.extend(self.melee.tick(melee_action, stamina.0, stamina.1)?.ops);
 
         let sample_key = self
             .live
@@ -179,6 +194,7 @@ impl NativeDiagnostics {
                 overlays_enabled: self.sprite_enabled_seen && self.nav_enabled_seen,
                 overlays_disabled: self.sprite_disabled_seen && self.nav_disabled_seen,
                 stale_handle_replaced: self.stale_handle_replaced,
+                viewmodel_present: self.melee.retained_len() >= 4,
                 animation_updates: live.animation_updates,
                 retained_overlays: self.projector.retained_len(),
             },
@@ -192,10 +208,11 @@ impl NativeDiagnostics {
         self.sprite_overlay_enabled = false;
         self.nav_overlay_enabled = false;
         self.visible_nav_cells.clear();
-        let frame = self
+        let overlay_frame = self
             .projector
             .project(BTreeMap::new())
             .map_err(|error| anyhow::anyhow!("dispose retained diagnostics: {error:?}"))?;
+        let frame = combine_frames([overlay_frame, self.melee.dispose()?])?;
         self.disposed = true;
         Ok(frame)
     }
@@ -311,6 +328,12 @@ impl NativeDiagnostics {
     }
 }
 
+fn combine_frames<const N: usize>(frames: [RenderFrameDiff; N]) -> Result<RenderFrameDiff> {
+    let ops = frames.into_iter().flat_map(|frame| frame.ops).collect();
+    RenderFrameDiff::try_from_ops(ops)
+        .map_err(|error| anyhow::anyhow!("combine retained presentation frame: {error:?}"))
+}
+
 fn cube_node(
     translation: [f32; 3],
     scale: [f32; 3],
@@ -376,6 +399,9 @@ mod tests {
                 [25.6, 2.35, -25.6],
                 &runtime.encounter_positions(),
                 &[],
+                &BTreeSet::new(),
+                runtime.melee_presentation().as_ref(),
+                runtime.player_stamina(),
             )
             .expect("first diagnostic frame");
         assert!(first.readout.retained_overlays > 40);
@@ -394,6 +420,9 @@ mod tests {
                 [25.6, 2.35, -25.6],
                 &runtime.encounter_positions(),
                 &[],
+                &BTreeSet::new(),
+                runtime.melee_presentation().as_ref(),
+                runtime.player_stamina(),
             )
             .expect("disabled frame");
         assert!(disabled.readout.overlays_disabled);
@@ -411,6 +440,9 @@ mod tests {
                 [25.6, 2.35, -25.6],
                 &runtime.encounter_positions(),
                 &[],
+                &BTreeSet::new(),
+                runtime.melee_presentation().as_ref(),
+                runtime.player_stamina(),
             )
             .expect("replacement frame");
         assert!(replaced.readout.overlays_enabled);
@@ -426,6 +458,9 @@ mod tests {
                     [25.6, 2.35, -25.6],
                     &runtime.encounter_positions(),
                     &updates,
+                    &runtime.dead_encounter_ids(),
+                    runtime.melee_presentation().as_ref(),
+                    runtime.player_stamina(),
                 )
                 .expect("live diagnostic frame");
             movement |= frame.readout.patrol_moved;
@@ -443,16 +478,44 @@ mod tests {
             .ops
             .iter()
             .all(|op| matches!(op, RenderDiff::Destroy { .. })));
-        assert!(diagnostics.tick(0.1, [0.0; 3], &[], &[]).is_err());
+        assert!(diagnostics
+            .tick(
+                0.1,
+                [0.0; 3],
+                &[],
+                &[],
+                &BTreeSet::new(),
+                None,
+                (90.0, 90.0),
+            )
+            .is_err());
     }
 
     #[test]
     fn tick_rejects_unbounded_time_steps_without_mutation() {
         let mut diagnostics =
             NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
-        assert!(diagnostics.tick(0.251, [0.0; 3], &[], &[]).is_err());
+        assert!(diagnostics
+            .tick(
+                0.251,
+                [0.0; 3],
+                &[],
+                &[],
+                &BTreeSet::new(),
+                None,
+                (90.0, 90.0),
+            )
+            .is_err());
         let first = diagnostics
-            .tick(0.0, [0.0; 3], &[], &[])
+            .tick(
+                0.0,
+                [0.0; 3],
+                &[],
+                &[],
+                &BTreeSet::new(),
+                None,
+                (90.0, 90.0),
+            )
             .expect("bounded tick");
         assert!(!first.frame.ops.is_empty());
     }

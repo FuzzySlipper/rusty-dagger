@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{bail, Context, Result};
-use dagger_runtime::{AnimationService, PositionUpdate};
+use dagger_runtime::{
+    AnimationService, MeleePresentationPhase, MeleePresentationReadout, PositionUpdate,
+};
 use rusty_engine::render_model::{RenderDiff, RenderFrameDiff, RenderHandle, Transform};
 use serde::Deserialize;
 
@@ -36,6 +38,7 @@ pub(crate) struct LivePresentation {
     sprite_descriptors: Vec<SpriteDescriptor>,
     live_sprites: BTreeMap<u32, LiveSprite>,
     current_frames: BTreeMap<u32, u32>,
+    current_visibility: BTreeMap<u32, bool>,
     animation_advanced: bool,
     patrol_moved: bool,
 }
@@ -111,6 +114,7 @@ impl LivePresentation {
             sprite_descriptors,
             live_sprites,
             current_frames: BTreeMap::new(),
+            current_visibility: BTreeMap::new(),
             animation_advanced: false,
             patrol_moved: false,
         })
@@ -122,6 +126,8 @@ impl LivePresentation {
         camera: [f32; 3],
         encounter_positions: &[(u32, [f32; 3], f32, bool)],
         encounter_updates: &[PositionUpdate],
+        dead_encounters: &BTreeSet<u32>,
+        melee_action: Option<&MeleePresentationReadout>,
     ) -> Result<LivePresentationFrame> {
         if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
             bail!("live presentation tick must be finite and bounded to 0.25 seconds");
@@ -158,11 +164,26 @@ impl LivePresentation {
                 update.heading,
             ));
         }
+        let mut sprite_changes = BTreeMap::<u32, (Option<u32>, Option<bool>)>::new();
         for update in &animation_updates {
             if let Some(previous) = self.current_frames.insert(update.handle, update.frame) {
                 self.animation_advanced |= previous != update.frame;
             }
-            ops.push(sprite_update(update.handle, update.frame));
+            sprite_changes.entry(update.handle).or_default().0 = Some(update.frame);
+        }
+        for &handle in self.live_sprites.keys() {
+            let hold_for_contact = melee_action.is_some_and(|action| {
+                action.died
+                    && action.target_id == Some(u64::from(handle))
+                    && action.phase == MeleePresentationPhase::Anticipation
+            });
+            let visible = !dead_encounters.contains(&handle) || hold_for_contact;
+            if self.current_visibility.insert(handle, visible) != Some(visible) {
+                sprite_changes.entry(handle).or_default().1 = Some(visible);
+            }
+        }
+        for (handle, (frame, visible)) in sprite_changes {
+            ops.push(sprite_update(handle, frame, visible));
         }
         Ok(LivePresentationFrame {
             frame: frame_from_ops(ops)?,
@@ -180,7 +201,11 @@ impl LivePresentation {
             ops.push(transform_update(handle, live.translation, live.heading));
         }
         for (&handle, &frame) in &self.current_frames {
-            ops.push(sprite_update(handle, frame));
+            ops.push(sprite_update(
+                handle,
+                Some(frame),
+                self.current_visibility.get(&handle).copied(),
+            ));
         }
         frame_from_ops(ops)
     }
@@ -208,13 +233,13 @@ fn transform_update(handle: u32, translation: [f32; 3], heading: f32) -> RenderD
     }
 }
 
-fn sprite_update(handle: u32, frame: u32) -> RenderDiff {
+fn sprite_update(handle: u32, frame: Option<u32>, visible: Option<bool>) -> RenderDiff {
     RenderDiff::UpdateSprite {
         handle: RenderHandle::new(u64::from(handle)),
-        frame: Some(frame),
+        frame,
         tint: None,
         render_order: None,
-        visible: None,
+        visible,
     }
 }
 
@@ -321,6 +346,8 @@ mod tests {
                 [position[0], position[1] + 1.5, position[2] - 4.0],
                 &[(2000, position, 0.0, false)],
                 &[],
+                &BTreeSet::new(),
+                None,
             )
             .expect("front tick");
         assert_eq!(frame_for(&front), Some(0));
@@ -330,6 +357,8 @@ mod tests {
                 [position[0] + 4.0, position[1] + 1.5, position[2]],
                 &[(2000, position, 0.0, false)],
                 &[],
+                &BTreeSet::new(),
+                None,
             )
             .expect("side tick");
         assert_eq!(frame_for(&side), Some(48));
@@ -339,6 +368,8 @@ mod tests {
                 [position[0], position[1] + 1.5, position[2] + 4.0],
                 &[(2000, position, 0.0, false)],
                 &[],
+                &BTreeSet::new(),
+                None,
             )
             .expect("back tick");
         assert_eq!(frame_for(&back), Some(32));
@@ -370,6 +401,8 @@ mod tests {
                 camera,
                 &[(2000, position, std::f32::consts::FRAC_PI_2, false)],
                 &[],
+                &BTreeSet::new(),
+                None,
             )
             .expect("right-facing tick");
         let left = presentation
@@ -378,9 +411,82 @@ mod tests {
                 camera,
                 &[(2000, position, -std::f32::consts::FRAC_PI_2, false)],
                 &[],
+                &BTreeSet::new(),
+                None,
             )
             .expect("left-facing tick");
         assert_eq!(row(&right), Some(2));
         assert_eq!(row(&left), Some(6));
+    }
+
+    #[test]
+    fn lethal_target_stays_visible_until_contact_and_reset_restores_it() {
+        let mut presentation = LivePresentation::from_project(GALLERY).expect("gallery");
+        let position = presentation
+            .sprite_descriptors()
+            .iter()
+            .find(|sprite| sprite.handle == 2000)
+            .expect("gallery Rat")
+            .authored;
+        let mut action = MeleePresentationReadout {
+            attempt_sequence: 1,
+            phase: MeleePresentationPhase::Anticipation,
+            phase_progress: 0.5,
+            accepted: true,
+            outcome: "killed".to_string(),
+            target_id: Some(2000),
+            stamina_before: 90.0,
+            stamina_after: 80.0,
+            target_health_before: Some(3.0),
+            target_health_after: Some(0.0),
+            target_max_health: Some(3.0),
+            final_damage: Some(15.0),
+            died: true,
+        };
+        let dead = BTreeSet::from([2000]);
+        let visibility = |frame: &LivePresentationFrame| {
+            frame.frame.ops.iter().find_map(|op| match op {
+                RenderDiff::UpdateSprite {
+                    handle, visible, ..
+                } if handle.raw() == 2000 => *visible,
+                _ => None,
+            })
+        };
+        let anticipation = presentation
+            .tick(
+                0.0,
+                [position[0], position[1] + 1.5, position[2] - 4.0],
+                &[(2000, position, 0.0, false)],
+                &[],
+                &dead,
+                Some(&action),
+            )
+            .expect("anticipation frame");
+        assert_eq!(visibility(&anticipation), Some(true));
+
+        action.phase = MeleePresentationPhase::Contact;
+        let contact = presentation
+            .tick(
+                0.0,
+                [position[0], position[1] + 1.5, position[2] - 4.0],
+                &[(2000, position, 0.0, false)],
+                &[],
+                &dead,
+                Some(&action),
+            )
+            .expect("contact frame");
+        assert_eq!(visibility(&contact), Some(false));
+
+        let reset = presentation
+            .tick(
+                0.0,
+                [position[0], position[1] + 1.5, position[2] - 4.0],
+                &[(2000, position, 0.0, false)],
+                &[],
+                &BTreeSet::new(),
+                None,
+            )
+            .expect("reset frame");
+        assert_eq!(visibility(&reset), Some(true));
     }
 }

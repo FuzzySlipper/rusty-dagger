@@ -36,6 +36,25 @@ interface DaggerProductStateWire {
   readonly frame?: Readonly<Record<string, unknown>>;
   readonly patrolDebugEnabled: boolean;
   readonly navDebugEnabled: boolean;
+  readonly meleePresentation: DaggerMeleePresentationWire | null;
+  readonly playerStamina: number;
+  readonly playerMaxStamina: number;
+}
+
+interface DaggerMeleePresentationWire {
+  readonly attemptSequence: number;
+  readonly phase: 'anticipation' | 'contact' | 'recovery' | 'rejected';
+  readonly phaseProgress: number;
+  readonly accepted: boolean;
+  readonly outcome: string;
+  readonly targetId: number | null;
+  readonly staminaBefore: number;
+  readonly staminaAfter: number;
+  readonly targetHealthBefore: number | null;
+  readonly targetHealthAfter: number | null;
+  readonly targetMaxHealth: number | null;
+  readonly finalDamage: number | null;
+  readonly died: boolean;
 }
 
 interface DaggerPhysicalInputWire {
@@ -129,6 +148,27 @@ export function mountDaggerProductRuntime(
     document.body.dataset['daggerAuthoritativePosition'] = state.playerPosition.join(',');
     document.body.dataset['daggerPatrolDebug'] = String(state.patrolDebugEnabled);
     document.body.dataset['daggerNavDebug'] = String(state.navDebugEnabled);
+    document.body.dataset['daggerPlayerStamina'] = String(state.playerStamina);
+    document.body.dataset['daggerPlayerMaxStamina'] = String(state.playerMaxStamina);
+    const melee = state.meleePresentation;
+    if (melee === null) {
+      delete document.body.dataset['daggerMeleeSequence'];
+      delete document.body.dataset['daggerMeleePhase'];
+      delete document.body.dataset['daggerMeleeOutcome'];
+      delete document.body.dataset['daggerMeleeTarget'];
+      delete document.body.dataset['daggerMeleeHealth'];
+      delete document.body.dataset['daggerMeleeDamage'];
+      delete document.body.dataset['daggerMeleeDied'];
+    } else {
+      document.body.dataset['daggerMeleeSequence'] = String(melee.attemptSequence);
+      document.body.dataset['daggerMeleePhase'] = melee.phase;
+      document.body.dataset['daggerMeleeOutcome'] = melee.outcome;
+      document.body.dataset['daggerMeleeTarget'] = String(melee.targetId ?? 'none');
+      document.body.dataset['daggerMeleeHealth'] =
+        `${String(melee.targetHealthBefore ?? 'none')}->${String(melee.targetHealthAfter ?? 'none')}`;
+      document.body.dataset['daggerMeleeDamage'] = String(melee.finalDamage ?? 'none');
+      document.body.dataset['daggerMeleeDied'] = String(melee.died);
+    }
   };
   const drain = async (): Promise<void> => {
     if (sending || disposed) return;

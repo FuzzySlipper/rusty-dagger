@@ -167,6 +167,7 @@ try {
     2007,
     spawnPosition,
     'MISS',
+    'miss',
     '5.00 → 5.00',
     '100.00 → 95.00',
     true,
@@ -210,12 +211,24 @@ try {
   await page.getByTestId('rat-derived-traces').filter({ hasText: 'healthPerEndurance = 0.30' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
   const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
+  await page.getByTestId('content-filter').fill('skeletal');
+  const profileBHit = await jumpAndPhysicallyAttack(
+    page,
+    2000,
+    spawnPosition,
+    'HIT',
+    'hit',
+    '20.00 → 8.00',
+    '120.00 → 100.00',
+    false,
+  );
   await page.getByTestId('content-filter').fill('rat');
   const profileBCombat = await jumpAndPhysicallyAttack(
     page,
     2007,
     spawnPosition,
     'HIT',
+    'killed',
     '7.00 → 0.00',
     '120.00 → 100.00',
     false,
@@ -303,7 +316,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -583,6 +596,7 @@ async function jumpAndPhysicallyAttack(
   contentId,
   spawnPosition,
   outcome,
+  presentationOutcome,
   healthText,
   staminaText,
   expectCooldownRejection,
@@ -594,7 +608,8 @@ async function jumpAndPhysicallyAttack(
     contentId,
     { timeout: 10_000 },
   );
-  await runPhysicalAttack(page, contentId, 'Rat H', outcome);
+  const expectedTitle = contentId === 2007 ? 'Rat H' : 'SkeletalWarrior H';
+  await runPhysicalAttack(page, contentId, expectedTitle, outcome, presentationOutcome);
   await page.getByTestId('combat-count').filter({ hasText: '1 attack' }).waitFor({ timeout: 10_000 });
   const record = page.getByTestId('combat-1');
   await record.filter({ hasText: outcome }).waitFor();
@@ -606,7 +621,7 @@ async function jumpAndPhysicallyAttack(
   const acceptedAttemptText = await acceptedAttempt.innerText();
   let cooldownRejection;
   if (expectCooldownRejection) {
-    await runPhysicalAttack(page, contentId, 'Rat H', 'COOLDOWN');
+    await runPhysicalAttack(page, contentId, expectedTitle, 'COOLDOWN', 'cooldown');
     // A loaded CI runner can delay the projection long enough for the physical
     // input helper to retry. Assert the authoritative cooldown outcome without
     // coupling the proof to the retry-dependent attempt sequence number.
@@ -625,6 +640,11 @@ async function jumpAndPhysicallyAttack(
   if (outcome === 'HIT') {
     await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
   }
+  await page.waitForFunction(
+    () => document.body.dataset.daggerMeleeSequence === undefined,
+    undefined,
+    { timeout: 5_000 },
+  );
   await pressPhysical(page, 'KeyR');
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   await openInterface(page);
@@ -636,10 +656,30 @@ async function jumpAndPhysicallyAttack(
   };
 }
 
-async function runPhysicalAttack(page, contentId, expectedTitle, outcome) {
+async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presentationOutcome) {
+  const expectedPhase = presentationOutcome === 'cooldown' ? 'rejected' : 'contact';
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
+      const priorSequence = await page.locator('body').getAttribute('data-dagger-melee-sequence');
       await pressPhysical(page, 'Space');
+      await page.waitForFunction(
+        ({ previous, expected, phase }) => {
+          const body = document.body.dataset;
+          return body.daggerMeleeSequence !== previous
+            && body.daggerMeleeOutcome === expected
+            && body.daggerMeleePhase === phase;
+        },
+        { previous: priorSequence, expected: presentationOutcome, phase: expectedPhase },
+        { timeout: 5_000 },
+      );
+      // The authoritative phase and retained renderer frame share one Rust
+      // tick but arrive across the HTTP/app-host boundary. Give the browser
+      // one visible cadence to paint the just-observed phase before capture.
+      await page.waitForTimeout(80);
+      await page.screenshot({
+        path: `${output}/melee-${presentationOutcome}-${expectedPhase}.png`,
+        fullPage: true,
+      });
       await page
         .locator('[data-testid^="combat-"]')
         .filter({ hasText: outcome })
