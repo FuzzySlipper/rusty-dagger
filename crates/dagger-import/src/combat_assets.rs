@@ -119,7 +119,7 @@ fn publish_weapon(texture_dir: &Path, arena2_dir: &Path) -> Result<Value, String
         "byteLength": atlas.png.len(),
         "width": atlas.width,
         "height": atlas.height,
-        "pivot": [0.5, 1.0],
+        "pivot": [0.5, 0.0],
         "frames": atlas.frames,
         "animations": animations,
     }))
