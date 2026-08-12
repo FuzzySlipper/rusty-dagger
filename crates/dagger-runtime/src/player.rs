@@ -167,8 +167,8 @@ impl PlayerControllerState {
 
     pub(crate) fn engine_look_state(self) -> FirstPersonLookState {
         FirstPersonLookState {
-            yaw_radians: -self.yaw_degrees.to_radians(),
-            pitch_radians: -self.pitch_degrees.to_radians(),
+            yaw_radians: self.yaw_degrees.to_radians(),
+            pitch_radians: self.pitch_degrees.to_radians(),
         }
     }
 }
@@ -253,10 +253,12 @@ pub(crate) fn apply_player_action(
                 },
             )?;
             *look_state = receipt.after;
-            // RendererCameraPose and Daggerfall aim use the historical camera
-            // degree convention, opposite Engine's canonical basis signs.
-            state.yaw_degrees = -receipt.after.yaw_radians.to_degrees();
-            state.pitch_degrees = -receipt.after.pitch_radians.to_degrees();
+            // Keep Dagger's public camera readout in the same canonical basis
+            // used by the Engine controller. Product adapters own device-axis
+            // inversion; carrying a second yaw convention here makes visible
+            // camera facing disagree with camera-relative movement.
+            state.yaw_degrees = receipt.after.yaw_radians.to_degrees();
+            state.pitch_degrees = receipt.after.pitch_radians.to_degrees();
             Ok(PlayerControlReceipt {
                 action,
                 facts: vec![PlayerControlFact::LookChanged {

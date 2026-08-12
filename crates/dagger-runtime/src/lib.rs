@@ -148,17 +148,52 @@ mod tests {
             .expect("canonical look");
         let changed = runtime.player_state();
         assert_ne!(changed.yaw_degrees, initial.yaw_degrees);
-        assert!(changed.pitch_degrees < initial.pitch_degrees);
+        assert!(changed.pitch_degrees > initial.pitch_degrees);
         for _ in 0..20 {
             runtime
                 .apply_player_action(ResolvedPlayerAction::Look {
                     yaw_delta: 0.0,
-                    pitch_delta: -1.0,
+                    pitch_delta: 1.0,
                 })
                 .expect("bounded pitch");
         }
         assert!((runtime.player_state().pitch_degrees - 89.0).abs() < 0.001);
         assert!((-180.0..180.0).contains(&runtime.player_state().yaw_degrees));
+    }
+
+    #[test]
+    fn canonical_look_heading_drives_camera_relative_forward_motion() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let yaw_before = runtime.player_state().yaw_degrees;
+        runtime
+            .apply_player_action(ResolvedPlayerAction::Look {
+                yaw_delta: 1.0,
+                pitch_delta: 0.0,
+            })
+            .expect("turn right");
+        let yaw = runtime.player_state().yaw_degrees.to_radians();
+        let yaw_delta =
+            (runtime.player_state().yaw_degrees - yaw_before + 540.0).rem_euclid(360.0) - 180.0;
+        assert!(
+            yaw_delta > 0.0,
+            "positive horizontal look must publish positive yaw"
+        );
+        let receipt = runtime
+            .apply_player_action(ResolvedPlayerAction::Move {
+                forward: 1.0,
+                right: 0.0,
+            })
+            .expect("move in the camera heading");
+        let wish = receipt
+            .motion
+            .expect("canonical movement receipt")
+            .wish_velocity;
+        let expected_forward = rusty_engine::core_math::Vec3::new(yaw.sin(), 0.0, -yaw.cos());
+        assert!(
+            wish.dot(expected_forward) > 0.0,
+            "W wish velocity {wish:?} must follow camera forward {expected_forward:?}"
+        );
     }
 
     #[test]

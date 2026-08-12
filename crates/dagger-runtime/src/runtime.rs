@@ -828,7 +828,7 @@ impl DaggerRuntime {
             let mut facing_state = self.player_start_state;
             let delta_x = target[0] - position.x;
             let delta_z = target[2] - position.z;
-            facing_state.set_yaw_degrees((-delta_x).atan2(-delta_z).to_degrees());
+            facing_state.set_yaw_degrees(delta_x.atan2(-delta_z).to_degrees());
             self.player_state = facing_state;
             self.player_look_state = facing_state.engine_look_state();
 
@@ -1240,7 +1240,7 @@ fn select_aimed_melee_target(
     resources: &BTreeMap<u64, LiveActorResources>,
 ) -> Option<u64> {
     let yaw = yaw_degrees.to_radians();
-    let forward = [-yaw.sin(), -yaw.cos()];
+    let forward = [yaw.sin(), -yaw.cos()];
     entities
         .iter()
         .filter_map(|entity| {
