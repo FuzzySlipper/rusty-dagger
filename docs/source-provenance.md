@@ -44,7 +44,9 @@ Daggerfall Unity's MIT-licensed `CifRciFile.cs`, `SndFile.cs`,
 `WeaponBasics.cs`, `FPSWeapon.cs`, `WeaponManager.cs`, `EnemyBlood.cs`,
 `EnemyBasics.cs`, and `DaggerfallMobileUnit.cs` at donor commit
 `81e89e90c27bc3c1a7a61871e545fad129174dec` are evidence for file
-interpretation and clone behavior. In particular, the mobile tables establish
+interpretation and clone behavior. `WeaponManager` starts the screen weapon
+action before target resolution and applies saturating fatigue loss at the hit
+frame; low fatigue is not an attack-input rejection. The mobile tables establish
 directional move records 0-4, attack records 5-9 at 10 fps, hurt records 10-14
 at 4 fps, and idle records 15-19. The generated
 manifest retains source file/record metadata as provenance while exposing

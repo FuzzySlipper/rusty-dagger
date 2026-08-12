@@ -881,21 +881,10 @@ impl DaggerRuntime {
             });
             return self.experiment_readout();
         }
-        if stamina_before < stamina_cost {
-            self.push_combat_attempt(CombatAttemptRecord {
-                sequence: 0,
-                target_id: None,
-                accepted: false,
-                outcome: "insufficient stamina".to_string(),
-                cooldown_before,
-                cooldown_after: cooldown_before,
-                cooldown_duration,
-                stamina_before,
-                stamina_cost,
-                stamina_after: stamina_before,
-            });
-            return self.experiment_readout();
-        }
+        // Classic/DFU starts the weapon action and then applies bounded
+        // fatigue loss; low fatigue does not suppress the visible swing. Keep
+        // the authored cost in the semantic record while saturating the live
+        // resource at zero.
         self.player_resources.current_stamina = (stamina_before - stamina_cost).max(0.0);
         self.player_attack_cooldown_remaining = cooldown_duration;
         let stamina_after = self.player_resources.current_stamina;

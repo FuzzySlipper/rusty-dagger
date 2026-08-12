@@ -373,16 +373,36 @@ mod tests {
             .expect("jump beside Rat with exhausting profile");
         let exhausted = runtime
             .attack_focused_target()
-            .expect("stamina rejection remains readable");
+            .expect("low stamina still starts the classic swing");
         assert!(exhausted.combat.is_empty());
         let exhausted = exhausted
             .combat_attempts
             .last()
-            .expect("insufficient-stamina attempt");
-        assert!(!exhausted.accepted);
-        assert_eq!(exhausted.outcome, "insufficient stamina");
+            .expect("low-stamina attempt");
+        assert!(exhausted.accepted);
+        assert_eq!(exhausted.outcome, "swinging");
         assert_eq!(exhausted.stamina_before, 90.0);
-        assert_eq!(exhausted.stamina_after, 90.0);
+        assert_eq!(exhausted.stamina_after, 0.0);
+        assert_eq!(
+            runtime.melee_presentation().unwrap().phase,
+            super::MeleePresentationPhase::Anticipation
+        );
+        for _ in 0..3 {
+            runtime
+                .tick_play_session(0.25)
+                .expect("finish low-stamina swing and cooldown");
+        }
+        let zero_stamina = runtime
+            .attack_focused_target()
+            .expect("zero stamina still starts another classic swing");
+        let zero_stamina = zero_stamina
+            .combat_attempts
+            .last()
+            .expect("zero-stamina attempt");
+        assert!(zero_stamina.accepted);
+        assert_eq!(zero_stamina.outcome, "swinging");
+        assert_eq!(zero_stamina.stamina_before, 0.0);
+        assert_eq!(zero_stamina.stamina_after, 0.0);
     }
 
     #[test]
