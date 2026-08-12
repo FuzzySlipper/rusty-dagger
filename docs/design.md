@@ -222,9 +222,13 @@ modularity gate, task 6529):
 
   First-person melee presentation follows the same boundary and is clone-first.
   `dagger-runtime` owns attack direction, contact, recovery, cooldown, stamina,
-  outcome, target health, and death. The generated combat catalog maps
-  semantic weapon/action/effect/audio IDs to classic Arena2 resources. The
-  weapon is intentionally camera-relative through Engine's public `viewmodel`
+  outcome, target health, and death. An attack input starts the Rust-owned
+  swing whenever cooldown and stamina permit; aimed target selection and
+  damage occur only when that action reaches its contact frame, so empty space
+  still produces the same complete weapon motion. Cooldown rejection records
+  the input without replacing or restarting an active swing. The generated
+  combat catalog maps semantic weapon/action/effect/audio IDs to classic
+  Arena2 resources. The weapon is intentionally camera-relative through Engine's public `viewmodel`
   layer, while blood/sparkle belongs at the world impact point through Engine's
   world presentation facade. Fullscreen impact flashes and oversized
   target-health overlays are not the default clone treatment. TypeScript only
