@@ -1,19 +1,18 @@
-use std::collections::BTreeSet;
-
 use rusty_engine::core_ids::EntityId;
-use rusty_engine::core_math::Vec3;
+use rusty_engine::core_math::{Vec2, Vec3};
 use rusty_engine::engine_spatial::{
-    KinematicMotionSystem, MotionAxis, MotionFact, MotionPhaseError, MotionPhaseReceipt,
-    VoxelCollisionScene, MAX_MOTION_DELTA_SECONDS,
+    CharacterControllerCommand, CharacterControllerConfig as EngineConfig,
+    CharacterControllerError, CharacterControllerReceipt, CharacterControllerService,
+    FirstPersonLookCommand, FirstPersonLookConfig, FirstPersonLookError, FirstPersonLookService,
+    FirstPersonLookState,
 };
-use rusty_engine::entity_state::{EntityCommand, EntityCommandBatch, EntityState, EntityView};
+use rusty_engine::entity_state::{EntityState, EntityView};
 use serde::{Deserialize, Serialize};
 
 pub const MAX_PLAYER_SPEED_UNITS_PER_SECOND: f32 = 1_000.0;
 pub const MAX_PLAYER_LOOK_DEGREES_PER_UNIT: f32 = 180.0;
 pub const MAX_PLAYER_STEP_UP_UNITS: f32 = 4.0;
 pub const MAX_INPUT_CONTROL_LENGTH: usize = 64;
-pub const FALL_SUBSTEP_UNITS: f32 = 0.1;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayerInputBindings {
@@ -69,6 +68,10 @@ impl PlayerInputBindings {
     }
 }
 
+/// Dagger policy translated into the canonical Engine controller config.
+///
+/// The legacy fields remain public because they are part of Dagger's admitted
+/// project/readout contract. `engine` is the single movement implementation.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PlayerControllerConfig {
     pub move_speed_units_per_second: f32,
@@ -79,16 +82,54 @@ pub struct PlayerControllerConfig {
     pub fall_speed_units_per_second: Option<f32>,
     pub step_up_units: Option<f32>,
     pub bindings: PlayerInputBindings,
+    pub(crate) engine: EngineConfig,
+    pub(crate) look: FirstPersonLookConfig,
 }
 
 impl PlayerControllerConfig {
+    pub(crate) fn configure_engine(&mut self) {
+        let mut engine = EngineConfig::responsive_fps();
+        // Dagger's authored transform is a capsule center. A full-height
+        // canonical body plus the host's +0.75m eye offset preserves the
+        // established camera height while replacing the old 0.5m cube.
+        engine.shape.standing_height = 1.8;
+        engine.shape.crouched_height = 1.1;
+        engine.shape.radius = 0.25;
+        // Existing Dagger project markers were authored for the retired 0.5m
+        // cube. Permit one bounded canonical recovery of up to a metre so the
+        // full-height capsule settles those unchanged spawn choices safely.
+        engine.recovery.maximum_distance = 1.0;
+        engine.recovery.maximum_speed = 60.0;
+        engine.ground.forward_speed = self.move_speed_units_per_second;
+        engine.ground.backward_speed = self.move_speed_units_per_second;
+        engine.ground.strafe_speed = self.move_speed_units_per_second;
+        engine.air.maximum_speed = self.move_speed_units_per_second;
+        engine.air.wish_speed_cap = self.move_speed_units_per_second;
+        if let Some(speed) = self.fall_speed_units_per_second {
+            // Preserve the Dagger document's terminal fall-speed policy while
+            // Engine owns gravity, grounding, and continuation state.
+            engine.vertical.terminal_fall_speed = speed;
+        }
+        if let Some(height) = self.step_up_units {
+            engine.surface.maximum_step_height = height;
+        }
+        self.engine = engine;
+
+        let radians_per_unit = self.look_degrees_per_unit.to_radians();
+        let mut look = FirstPersonLookConfig::default();
+        look.horizontal_radians_per_unit = radians_per_unit;
+        look.vertical_radians_per_unit = radians_per_unit;
+        look.minimum_pitch_radians = -89.0_f32.to_radians();
+        look.maximum_pitch_radians = 89.0_f32.to_radians();
+        self.look = look;
+    }
+
     pub(crate) fn is_valid(&self) -> bool {
         self.move_speed_units_per_second.is_finite()
             && self.move_speed_units_per_second > 0.0
             && self.move_speed_units_per_second <= MAX_PLAYER_SPEED_UNITS_PER_SECOND
             && self.move_step_seconds.is_finite()
             && self.move_step_seconds > 0.0
-            && self.move_step_seconds <= MAX_MOTION_DELTA_SECONDS
             && self.look_degrees_per_unit.is_finite()
             && self.look_degrees_per_unit > 0.0
             && self.look_degrees_per_unit <= MAX_PLAYER_LOOK_DEGREES_PER_UNIT
@@ -102,6 +143,7 @@ impl PlayerControllerConfig {
                 step.is_finite() && step > 0.0 && step <= MAX_PLAYER_STEP_UP_UNITS
             })
             && self.bindings.is_valid()
+            && self.engine.validate().is_ok()
     }
 }
 
@@ -109,6 +151,26 @@ impl PlayerControllerConfig {
 pub struct PlayerControllerState {
     pub yaw_degrees: f32,
     pub pitch_degrees: f32,
+}
+
+impl PlayerControllerState {
+    pub(crate) fn from_degrees(yaw_degrees: f32, pitch_degrees: f32) -> Self {
+        Self {
+            yaw_degrees,
+            pitch_degrees,
+        }
+    }
+
+    pub(crate) fn set_yaw_degrees(&mut self, yaw_degrees: f32) {
+        self.yaw_degrees = yaw_degrees;
+    }
+
+    pub(crate) fn engine_look_state(self) -> FirstPersonLookState {
+        FirstPersonLookState {
+            yaw_radians: -self.yaw_degrees.to_radians(),
+            pitch_radians: -self.pitch_degrees.to_radians(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -147,14 +209,18 @@ pub enum PlayerControlFact {
 pub struct PlayerControlReceipt {
     pub action: ResolvedPlayerAction,
     pub facts: Vec<PlayerControlFact>,
-    pub motion: Option<MotionPhaseReceipt>,
+    pub motion: Option<CharacterControllerReceipt>,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn apply_player_action(
     entities: &mut EntityState,
-    scene: &VoxelCollisionScene,
+    scene: &rusty_engine::engine_spatial::VoxelCollisionScene,
     player: EntityId,
-    component: &mut PlayerControllerState,
+    state: &mut PlayerControllerState,
+    look_state: &mut FirstPersonLookState,
+    service: &mut CharacterControllerService,
+    command_sequence: &mut u64,
     config: &PlayerControllerConfig,
     action: ResolvedPlayerAction,
     move_delta_seconds: f32,
@@ -165,227 +231,103 @@ pub(crate) fn apply_player_action(
     let entity_view = entities
         .view(player)
         .map_err(|_| PlayerError::UnknownPlayer { player })?;
-    if entity_view.kinematic.is_none() || entity_view.transform.is_none() {
-        return Err(PlayerError::MissingKinematicBody { player });
+    if entity_view.character_motion.is_none() || entity_view.transform.is_none() {
+        return Err(PlayerError::MissingCharacterMotion { player });
     }
-    let half_extents = entity_view
-        .kinematic
-        .expect("admitted player kinematic body")
-        .half_extents;
 
     match action {
         ResolvedPlayerAction::Look {
             yaw_delta,
             pitch_delta,
         } => {
-            let before = *component;
-            component.yaw_degrees =
-                normalize_yaw(before.yaw_degrees + yaw_delta * config.look_degrees_per_unit);
-            component.pitch_degrees = (before.pitch_degrees
-                + pitch_delta * config.look_degrees_per_unit)
-                .clamp(-89.0, 89.0);
+            let before = *state;
+            // Public degree fields remain a stable Dagger readout. Rebuild the
+            // explicit Engine state first because Dagger diagnostics may set a
+            // facing directly before issuing their next semantic command.
+            *look_state = state.engine_look_state();
+            let receipt = FirstPersonLookService.integrate(
+                &config.look,
+                *look_state,
+                FirstPersonLookCommand {
+                    delta: Vec2::new(yaw_delta, pitch_delta),
+                },
+            )?;
+            *look_state = receipt.after;
+            // RendererCameraPose and Daggerfall aim use the historical camera
+            // degree convention, opposite Engine's canonical basis signs.
+            state.yaw_degrees = -receipt.after.yaw_radians.to_degrees();
+            state.pitch_degrees = -receipt.after.pitch_radians.to_degrees();
             Ok(PlayerControlReceipt {
                 action,
                 facts: vec![PlayerControlFact::LookChanged {
                     entity: player,
                     before_yaw_degrees: before.yaw_degrees,
-                    after_yaw_degrees: component.yaw_degrees,
+                    after_yaw_degrees: state.yaw_degrees,
                     before_pitch_degrees: before.pitch_degrees,
-                    after_pitch_degrees: component.pitch_degrees,
+                    after_pitch_degrees: state.pitch_degrees,
                 }],
                 motion: None,
             })
         }
         ResolvedPlayerAction::Move { forward, right } => {
-            let input_length = (forward * forward + right * right).sqrt();
-            if config.fall_speed_units_per_second.is_none()
-                && config.step_up_units.is_none()
-                && input_length == 0.0
-            {
-                return Ok(PlayerControlReceipt {
-                    action,
-                    facts: Vec::new(),
-                    motion: None,
-                });
+            // The project contract predates Engine's bounded fixed-step
+            // command envelope. Preserve the authored action duration by
+            // splitting it into deterministic canonical ticks.
+            let substeps = (move_delta_seconds / (1.0 / 60.0)).ceil().max(1.0) as u32;
+            let step_seconds = move_delta_seconds / substeps as f32;
+            let action_start = entities
+                .transform(player)
+                .ok_or(PlayerError::MissingCharacterMotion { player })?
+                .translation;
+            let mut blocked = false;
+            let mut last_receipt = None;
+            for _ in 0..substeps {
+                *command_sequence = command_sequence
+                    .checked_add(1)
+                    .ok_or(PlayerError::CommandSequenceExhausted)?;
+                let receipt = service.step(
+                    entities,
+                    scene,
+                    player,
+                    &config.engine,
+                    CharacterControllerCommand {
+                        planar_intent: Vec2::new(right, forward),
+                        heading_yaw_radians: look_state.yaw_radians,
+                        step_seconds,
+                        sequence: *command_sequence,
+                        ..CharacterControllerCommand::idle(step_seconds, *command_sequence)
+                    },
+                )?;
+                blocked |= !receipt.blocks.is_empty()
+                    || receipt.contacts.iter().any(|contact| {
+                        matches!(
+                            contact.kind,
+                            rusty_engine::engine_spatial::CharacterContactKind::Wall
+                        )
+                    });
+                last_receipt = Some(receipt);
             }
-
-            let start = player_translation(entities, player)?;
-            let mut blocked_velocity = None;
-            let mut last_motion = None;
-            if input_length > 0.0 {
-                let velocity =
-                    move_velocity(config, component.yaw_degrees, forward, right, input_length);
-                let mut horizontal =
-                    run_player_motion(entities, scene, player, velocity, move_delta_seconds)?;
-                if motion_blocked(&horizontal, player) {
-                    if let Some(step) = config.step_up_units {
-                        let horizontal_after = player_translation(entities, player)?;
-                        // The first sweep may already have slid along an open
-                        // axis. Retry the complete request from the action's
-                        // original position so a successful step cannot apply
-                        // that displacement twice. If the rise is not usable,
-                        // restore the initial horizontal slide below.
-                        entities
-                            .apply_batch(EntityCommandBatch::new([EntityCommand::SetTranslation {
-                                entity: player,
-                                translation: start,
-                            }]))
-                            .map_err(PlayerError::EntityBatch)?;
-                        let rise = run_player_motion(
-                            entities,
-                            scene,
-                            player,
-                            Vec3::new(0.0, step / move_delta_seconds, 0.0),
-                            move_delta_seconds,
-                        )?;
-                        if motion_moved(&rise, player) {
-                            let retry = run_player_motion(
-                                entities,
-                                scene,
-                                player,
-                                velocity,
-                                move_delta_seconds,
-                            )?;
-                            // A retry that made horizontal progress can still
-                            // report a blocked secondary axis while sliding
-                            // around the obstacle. It is only a successful step
-                            // when every axis blocked before the rise is clear.
-                            let original_blocked = [
-                                motion_blocked_on_axis(&horizontal, player, MotionAxis::X),
-                                motion_blocked_on_axis(&horizontal, player, MotionAxis::Y),
-                                motion_blocked_on_axis(&horizontal, player, MotionAxis::Z),
-                            ];
-                            let retry_still_blocked = [
-                                motion_blocked_on_axis(&retry, player, MotionAxis::X),
-                                motion_blocked_on_axis(&retry, player, MotionAxis::Y),
-                                motion_blocked_on_axis(&retry, player, MotionAxis::Z),
-                            ];
-                            let step_succeeded = original_blocked
-                                .iter()
-                                .zip(retry_still_blocked)
-                                .all(|(original, retry)| !(*original && retry));
-                            if !step_succeeded {
-                                let after_retry = player_translation(entities, player)?;
-                                let lowered_retry =
-                                    Vec3::new(after_retry.x, start.y, after_retry.z);
-                                // A raised retry can slide over sloped or
-                                // curved wall geometry even though lowering
-                                // that horizontal result would put the body
-                                // inside the mesh. Committing that embedded
-                                // position makes every later axis sweep look
-                                // blocked, including movement away from the
-                                // wall. Keep the initial sweep's safe slide
-                                // when the lowered retry is not admissible.
-                                let fallback = if translation_overlaps_scene(
-                                    scene,
-                                    lowered_retry,
-                                    half_extents,
-                                ) {
-                                    horizontal_after
-                                } else {
-                                    lowered_retry
-                                };
-                                entities
-                                    .apply_batch(EntityCommandBatch::new([
-                                        EntityCommand::SetTranslation {
-                                            entity: player,
-                                            translation: fallback,
-                                        },
-                                    ]))
-                                    .map_err(PlayerError::EntityBatch)?;
-                            }
-                            horizontal = retry;
-                        } else {
-                            // No usable rise: the initial sweep's partial
-                            // horizontal progress remains authoritative.
-                            entities
-                                .apply_batch(EntityCommandBatch::new([
-                                    EntityCommand::SetTranslation {
-                                        entity: player,
-                                        translation: horizontal_after,
-                                    },
-                                ]))
-                                .map_err(PlayerError::EntityBatch)?;
-                        }
-                    }
-                }
-                if motion_blocked(&horizontal, player) {
-                    blocked_velocity = Some(velocity);
-                }
-                last_motion = Some(horizontal);
-            }
-
-            if let Some(speed) = config.fall_speed_units_per_second {
-                let fall_total = speed * move_delta_seconds;
-                let substeps = ((fall_total / FALL_SUBSTEP_UNITS).ceil() as u32).clamp(1, 64);
-                let sub_velocity = Vec3::new(
-                    0.0,
-                    -(fall_total / substeps as f32) / move_delta_seconds,
-                    0.0,
-                );
-                for _ in 0..substeps {
-                    let motion = run_player_motion(
-                        entities,
-                        scene,
-                        player,
-                        sub_velocity,
-                        move_delta_seconds,
-                    )?;
-                    if motion.facts.iter().any(|fact| {
-                        matches!(fact, MotionFact::Blocked { entity, axis: MotionAxis::Y, .. } if *entity == player)
-                    }) {
-                        break;
-                    }
-                }
-            }
-
-            let attempted_end = player_translation(entities, player)?;
-            let end = if attempted_end != start
-                && !translation_overlaps_scene(scene, start, half_extents)
-                && translation_overlaps_scene(scene, attempted_end, half_extents)
-            {
-                // Maintain the controller invariant that a movement action
-                // cannot transition a valid body into static geometry. This
-                // is a final guard for triangle seams beyond the step retry
-                // above and leaves the player at the action's last known-good
-                // position, where backing or strafing remains possible.
-                entities
-                    .apply_batch(EntityCommandBatch::new([EntityCommand::SetTranslation {
-                        entity: player,
-                        translation: start,
-                    }]))
-                    .map_err(PlayerError::EntityBatch)?;
-                if blocked_velocity.is_none() && input_length > 0.0 {
-                    blocked_velocity = Some(move_velocity(
-                        config,
-                        component.yaw_degrees,
-                        forward,
-                        right,
-                        input_length,
-                    ));
-                }
-                start
-            } else {
-                attempted_end
-            };
+            let receipt = last_receipt.expect("at least one canonical controller substep");
             let mut facts = Vec::new();
-            if end != start {
+            let before = action_start;
+            let after = receipt.transform_after.translation;
+            if before != after {
                 facts.push(PlayerControlFact::Moved {
                     entity: player,
-                    before: start,
-                    after: end,
+                    before,
+                    after,
                 });
             }
-            if let Some(velocity) = blocked_velocity {
+            if blocked {
                 facts.push(PlayerControlFact::Blocked {
                     entity: player,
-                    attempted_velocity: velocity,
+                    attempted_velocity: receipt.wish_velocity,
                 });
             }
             Ok(PlayerControlReceipt {
                 action,
                 facts,
-                motion: last_motion,
+                motion: Some(receipt),
             })
         }
     }
@@ -395,32 +337,33 @@ pub(crate) fn apply_player_action(
 pub enum PlayerError {
     InvalidAction(ResolvedPlayerAction),
     UnknownPlayer { player: EntityId },
-    MissingKinematicBody { player: EntityId },
+    MissingCharacterMotion { player: EntityId },
+    CommandSequenceExhausted,
     EntityBatch(rusty_engine::entity_state::BatchRejection),
-    Motion(MotionPhaseError),
+    MotionPublication(rusty_engine::entity_state::CharacterMotionPublicationError),
+    Controller(CharacterControllerError),
+    Look(FirstPersonLookError),
 }
 
 impl std::fmt::Display for PlayerError {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::InvalidAction(action) => write!(formatter, "invalid player action: {action:?}"),
-            Self::UnknownPlayer { player } => {
-                write!(formatter, "unknown player entity {}", player.raw())
-            }
-            Self::MissingKinematicBody { player } => {
-                write!(
-                    formatter,
-                    "player entity {} has no kinematic body",
-                    player.raw()
-                )
-            }
-            Self::EntityBatch(error) => write!(formatter, "entity batch rejected: {error}"),
-            Self::Motion(error) => write!(formatter, "motion phase failed: {error}"),
-        }
+        write!(formatter, "{self:?}")
     }
 }
 
 impl std::error::Error for PlayerError {}
+
+impl From<CharacterControllerError> for PlayerError {
+    fn from(value: CharacterControllerError) -> Self {
+        Self::Controller(value)
+    }
+}
+
+impl From<FirstPersonLookError> for PlayerError {
+    fn from(value: FirstPersonLookError) -> Self {
+        Self::Look(value)
+    }
+}
 
 fn player_action_is_valid(action: ResolvedPlayerAction) -> bool {
     match action {
@@ -440,95 +383,6 @@ fn player_action_is_valid(action: ResolvedPlayerAction) -> bool {
                 && (-1.0..=1.0).contains(&pitch_delta)
         }
     }
-}
-
-fn normalize_yaw(yaw_degrees: f32) -> f32 {
-    (yaw_degrees + 180.0).rem_euclid(360.0) - 180.0
-}
-
-fn move_velocity(
-    config: &PlayerControllerConfig,
-    yaw_degrees: f32,
-    forward: f32,
-    right: f32,
-    input_length: f32,
-) -> Vec3 {
-    let scale = 1.0 / input_length.max(1.0);
-    let yaw = yaw_degrees.to_radians();
-    let forward_basis = Vec3::new(-yaw.sin(), 0.0, -yaw.cos());
-    let right_basis = Vec3::new(yaw.cos(), 0.0, -yaw.sin());
-    (forward_basis * (forward * scale) + right_basis * (right * scale))
-        * config.move_speed_units_per_second
-}
-
-fn run_player_motion(
-    entities: &mut EntityState,
-    scene: &VoxelCollisionScene,
-    player: EntityId,
-    velocity: Vec3,
-    move_delta_seconds: f32,
-) -> Result<MotionPhaseReceipt, PlayerError> {
-    entities
-        .apply_batch(EntityCommandBatch::new([
-            EntityCommand::SetKinematicVelocity {
-                entity: player,
-                velocity,
-            },
-        ]))
-        .map_err(PlayerError::EntityBatch)?;
-    let result = KinematicMotionSystem::run_selected(
-        entities,
-        scene,
-        move_delta_seconds,
-        &BTreeSet::from([player]),
-    );
-    entities
-        .apply_batch(EntityCommandBatch::new([
-            EntityCommand::SetKinematicVelocity {
-                entity: player,
-                velocity: Vec3::ZERO,
-            },
-        ]))
-        .map_err(PlayerError::EntityBatch)?;
-    result.map_err(PlayerError::Motion)
-}
-
-fn player_translation(entities: &EntityState, player: EntityId) -> Result<Vec3, PlayerError> {
-    entities
-        .view(player)
-        .map_err(|_| PlayerError::UnknownPlayer { player })?
-        .transform
-        .map(|transform| transform.translation)
-        .ok_or(PlayerError::MissingKinematicBody { player })
-}
-
-fn translation_overlaps_scene(
-    scene: &VoxelCollisionScene,
-    translation: Vec3,
-    half_extents: Vec3,
-) -> bool {
-    let min = translation - half_extents;
-    let max = translation + half_extents;
-    scene.aabb_overlaps_solid(min.to_array().map(f64::from), max.to_array().map(f64::from))
-}
-
-fn motion_moved(motion: &MotionPhaseReceipt, player: EntityId) -> bool {
-    motion.facts.iter().any(|fact| {
-        matches!(fact, MotionFact::Moved { entity, before, after } if *entity == player && before != after)
-    })
-}
-
-fn motion_blocked(motion: &MotionPhaseReceipt, player: EntityId) -> bool {
-    motion
-        .facts
-        .iter()
-        .any(|fact| matches!(fact, MotionFact::Blocked { entity, .. } if *entity == player))
-}
-
-fn motion_blocked_on_axis(motion: &MotionPhaseReceipt, player: EntityId, axis: MotionAxis) -> bool {
-    motion.facts.iter().any(|fact| {
-        matches!(fact, MotionFact::Blocked { entity, axis: blocked_axis, .. } if *entity == player && *blocked_axis == axis)
-    })
 }
 
 pub(crate) fn player_view(

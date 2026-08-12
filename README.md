@@ -32,7 +32,8 @@ current task state in the Den `rusty-dagger` project.
     as exact content-addressed render resources. `--untextured` keeps the
     legacy average-color fallback for A/B mood comparison.
 - `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
-  the committed Privateer's Hold project, owns the first-person controller,
+  the committed Privateer's Hold project, adapts Dagger input and policy to
+  Rusty Engine's canonical first-person controller,
   applies admitted experiments, owns reset/readback, bounded calculation and
   combat/encounter history, and provides the real-project collision walkthrough
   plus nav-aware patrol/detect/chase/attack authority without importing the

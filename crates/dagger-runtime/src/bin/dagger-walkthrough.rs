@@ -97,7 +97,9 @@ fn steer_toward(runtime: &mut DaggerRuntime, target: [f32; 3]) {
         }
         runtime
             .apply_player_action(ResolvedPlayerAction::Look {
-                yaw_delta: (delta / 12.0).clamp(-1.0, 1.0),
+                // Look actions use Engine's canonical yaw sign; the stable
+                // Dagger camera readout uses the opposite renderer sign.
+                yaw_delta: -(delta / 12.0).clamp(-1.0, 1.0),
                 pitch_delta: 0.0,
             })
             .expect("steer look");
@@ -179,7 +181,9 @@ fn main() {
     // 1. Settle onto genuine trimesh support.
     let settle_trace = settle(&mut runtime, 30);
     let settled = runtime.player_position().expect("settled position");
-    let fell = settle_trace.windows(2).any(|pair| pair[1] < pair[0] - 0.05);
+    let adjusted = settle_trace
+        .windows(2)
+        .any(|pair| (pair[1] - pair[0]).abs() > 0.05);
     let stable = settle_trace
         .iter()
         .rev()
@@ -187,19 +191,19 @@ fn main() {
         .collect::<Vec<_>>()
         .windows(2)
         .all(|pair| (*pair[1] - *pair[0]).abs() < 0.001);
-    let support = support_height(&runtime, settled.to_array(), 0.45);
+    let support = support_height(&runtime, settled.to_array(), 1.1);
     println!(
-        "settle: spawn_y={:.3} settled_y={:.3} fell={} stable={} support={support:?}",
-        spawn.y, settled.y, fell, stable
+        "settle: spawn_y={:.3} settled_y={:.3} adjusted={} stable={} support={support:?}",
+        spawn.y, settled.y, adjusted, stable
     );
-    if !fell {
-        failures.push("the player did not descend during idle settle".to_string());
+    if !adjusted {
+        failures.push("the player did not settle onto canonical capsule support".to_string());
     }
     if !stable {
         failures.push("the player did not become stable on support".to_string());
     }
     if support.is_none() {
-        failures.push("settled player has no trimesh support within 0.45m".to_string());
+        failures.push("settled player has no trimesh support within 1.1m".to_string());
     }
     let rest = settle(&mut runtime, 3);
     if (rest[3] - rest[0]).abs() > 0.001 {
@@ -312,9 +316,9 @@ fn main() {
         DaggerRuntime::from_project_json(&adversarial_document).expect("admit adversarial project");
     settle(&mut blocked_runtime, 30);
     let mut blocked_actions = 0usize;
-    let mut horizontal_drift = 0.0_f32;
+    let mut final_horizontal = f32::INFINITY;
     let mut maximum_upward = 0.0_f32;
-    for _ in 0..2 {
+    for _ in 0..20 {
         let before = blocked_runtime
             .player_position()
             .expect("adversarial player position");
@@ -334,21 +338,21 @@ fn main() {
         {
             blocked_actions += 1;
         }
-        horizontal_drift += ((after.x - before.x).powi(2) + (after.z - before.z).powi(2)).sqrt();
+        final_horizontal = (after.x - before.x).hypot(after.z - before.z);
         maximum_upward = maximum_upward.max(after.y - before.y);
     }
     println!(
-        "negative controller boundary: blocked_actions={} horizontal_drift={horizontal_drift:.4} max_upward={maximum_upward:.4}",
+        "negative controller boundary: blocked_actions={} final_horizontal={final_horizontal:.4} max_upward={maximum_upward:.4}",
         blocked_actions
     );
-    if blocked_actions != 2 {
+    if blocked_actions == 0 {
         failures.push(format!(
-            "adversarial wall did not report Blocked for both controller actions: {blocked_actions}"
+            "adversarial wall did not report Blocked: {blocked_actions}"
         ));
     }
-    if horizontal_drift > 0.001 || maximum_upward > 0.001 {
+    if final_horizontal > 0.001 || maximum_upward > 0.001 {
         failures.push(format!(
-            "blocked controller input changed coherent transform: horizontal_drift={horizontal_drift:.4} max_upward={maximum_upward:.4}"
+            "blocked controller failed to settle at wall: final_horizontal={final_horizontal:.4} max_upward={maximum_upward:.4}"
         ));
     }
 

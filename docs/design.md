@@ -397,8 +397,21 @@ authority is the dungeon static mesh itself:
 - `voxelEnvironment` is accepted as an optional *additive* authority (used by
   the adversarial controller probes) but is not required; a project with
   neither a trimesh mesh nor any voxels fails closed.
-- The Daggerfall-owned controller keeps its `fallSpeedUnitsPerSecond` /
-  `stepUpUnits` opt-ins (substepped settle, failure-atomic bounded step-up).
+- `dagger-runtime` translates Dagger-owned bindings, speed, spawn, and the
+  admitted `fallSpeedUnitsPerSecond` / `stepUpUnits` policy into Engine's
+  canonical `CharacterControllerConfig`. Engine's `CharacterControllerService`
+  and `CharacterMotionComponent` are the sole movement, gravity, grounding,
+  step, slope, ledge, and wall-slide authority. The authored 0.1s Dagger action
+  cadence is deterministically subdivided into bounded Engine fixed steps. A
+  deliberate 1m / 60m-per-second bounded recovery override admits the existing
+  cube-era spawn markers into the canonical 1.8m capsule without moving spawn
+  selection policy out of Dagger.
+- Camera look is integrated by Engine's `FirstPersonLookService`; Dagger owns
+  pointer-event translation and converts Engine's canonical basis signs to the
+  renderer/Daggerfall camera-degree convention before publishing the stable
+  camera and aim readout. `ResolvedPlayerAction::Look` therefore follows the
+  Engine delta sign, while `PlayerControllerState` remains the compatible
+  renderer/Daggerfall degree readout. No Dagger solver or look fallback remains.
 
 **What the trimesh changes.** The retired proxy only kept up-facing surfaces,
 so walls were incidental and the old walkthrough route silently clipped

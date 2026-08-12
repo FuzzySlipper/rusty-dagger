@@ -1,7 +1,7 @@
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
-use rusty_engine::engine_spatial::{MaterialVoxel, VoxelCollisionScene};
-use rusty_engine::entity_state::{EntityDefinition, EntityState};
+use rusty_engine::engine_spatial::{FirstPersonLookState, MaterialVoxel, VoxelCollisionScene};
+use rusty_engine::entity_state::{CharacterMotionComponent, EntityDefinition, EntityState};
 use rusty_engine::svc_collision::{StaticMeshAssetId, StaticMeshColliderAsset};
 
 pub type DungeonBounds = ([f64; 3], [f64; 3]);
@@ -12,7 +12,8 @@ use crate::player::{PlayerControllerConfig, PlayerControllerState, PlayerInputBi
 
 pub const SUPPORTED_PROJECT_SCHEMA_VERSION: u32 = 24;
 pub const PLAYER_ENTITY_ID: EntityId = EntityId::new(1);
-pub const PLAYER_HALF_EXTENTS: Vec3 = Vec3::new(0.25, 0.25, 0.25);
+/// Conservative AABB for Dagger diagnostics around Engine's standing capsule.
+pub const PLAYER_HALF_EXTENTS: Vec3 = Vec3::new(0.25, 0.9, 0.25);
 /// The dungeon static mesh is the collision authority (rusty-engine task
 /// 6516): one trimesh collider over the full dungeon geometry (floors, walls,
 /// ceilings, ramps). Registered under a fixed asset/instance id at identity.
@@ -51,6 +52,7 @@ pub struct AdmittedProject {
     pub player_start: Vec3,
     pub player_controller: PlayerControllerConfig,
     pub player_state: PlayerControllerState,
+    pub player_look_state: FirstPersonLookState,
     pub material_voxel_count: usize,
     pub dungeon_collider: Option<StaticMeshColliderAsset>,
     /// World-space AABB of the dungeon trimesh payload (min, max), when the
@@ -171,17 +173,18 @@ impl AdmittedProject {
             .as_ref()
             .expect("player controller was selected");
         let player_controller = controller_document.to_runtime_config()?;
-        let player_state = PlayerControllerState {
-            yaw_degrees: player_controller.initial_yaw_degrees,
-            pitch_degrees: player_controller.initial_pitch_degrees,
-        };
+        let player_state = PlayerControllerState::from_degrees(
+            player_controller.initial_yaw_degrees,
+            player_controller.initial_pitch_degrees,
+        );
+        let player_look_state = player_state.engine_look_state();
         let entities = EntityState::from_definitions([EntityDefinition::new(
             player_id,
             player.name.as_deref().unwrap_or("player"),
         )
         .with_transform(translation)
         .with_collision(true, false)
-        .with_kinematic(PLAYER_HALF_EXTENTS, Vec3::ZERO)])
+        .with_character_motion(CharacterMotionComponent::at_rest(translation.y))])
         .map_err(|error| ProjectAdmissionError::InvalidEntityState(error.to_string()))?;
         let content_entities = scene
             .entities
@@ -217,6 +220,7 @@ impl AdmittedProject {
             player_start: translation,
             player_controller,
             player_state,
+            player_look_state,
             material_voxel_count,
             dungeon_collider,
             dungeon_bounds,
@@ -346,7 +350,7 @@ struct PlayerBindingsDocument {
 
 impl PlayerControllerDocument {
     fn to_runtime_config(&self) -> Result<PlayerControllerConfig, ProjectAdmissionError> {
-        let config = PlayerControllerConfig {
+        let mut config = PlayerControllerConfig {
             move_speed_units_per_second: self.move_speed_units_per_second,
             move_step_seconds: self.move_step_seconds,
             look_degrees_per_unit: self.look_degrees_per_unit,
@@ -363,7 +367,10 @@ impl PlayerControllerDocument {
                 self.bindings.primary_fire.clone(),
                 self.bindings.select_weapon.clone(),
             ),
+            engine: Default::default(),
+            look: Default::default(),
         };
+        config.configure_engine();
         if config.is_valid() {
             Ok(config)
         } else {

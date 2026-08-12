@@ -118,6 +118,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn handle_command(
     command: LabCommand,
     runtime: &mut DaggerRuntime,
@@ -428,8 +429,8 @@ fn resequence_presentation(op: PresentationOp, sequence: u32) -> PresentationOp 
 
 fn resolve_pointer_look(pointer_delta: [f32; 2]) -> ResolvedPlayerAction {
     ResolvedPlayerAction::Look {
-        yaw_delta: -pointer_delta[0] * 0.05,
-        pitch_delta: -pointer_delta[1] * 0.05,
+        yaw_delta: pointer_delta[0] * 0.05,
+        pitch_delta: pointer_delta[1] * 0.05,
     }
 }
 
@@ -488,10 +489,22 @@ mod tests {
 
     #[test]
     fn pointer_directions_follow_fps_look_convention() {
-        assert!(look([-10.0, 0.0]).0 > 0.0, "mouse-left must turn left");
-        assert!(look([10.0, 0.0]).0 < 0.0, "mouse-right must turn right");
-        assert!(look([0.0, -10.0]).1 > 0.0, "mouse-up must look up");
-        assert!(look([0.0, 10.0]).1 < 0.0, "mouse-down must look down");
+        assert!(
+            look([-10.0, 0.0]).0 < 0.0,
+            "mouse-left feeds canonical negative yaw"
+        );
+        assert!(
+            look([10.0, 0.0]).0 > 0.0,
+            "mouse-right feeds canonical positive yaw"
+        );
+        assert!(
+            look([0.0, -10.0]).1 < 0.0,
+            "mouse-up feeds canonical negative pitch"
+        );
+        assert!(
+            look([0.0, 10.0]).1 > 0.0,
+            "mouse-down feeds canonical positive pitch"
+        );
     }
 
     #[test]
