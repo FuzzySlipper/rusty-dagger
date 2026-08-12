@@ -104,6 +104,8 @@ export function mountDaggerProductRuntime(
   let sending = false;
   let disposed = false;
   let buttons = 0;
+  let inputDirty = false;
+  let pointerDelta: [number, number] = [0, 0];
   let dynamicFrameSequence = 0;
   const environmentFrames = new Map<number, number>();
   const enemyTransforms = new Map<number, string>();
@@ -236,43 +238,62 @@ export function mountDaggerProductRuntime(
     }
     void drain();
   };
+  const flushInput = (): void => {
+    if (
+      !inputDirty
+      && pressed.size === 0
+      && buttons === 0
+      && pointerDelta[0] === 0
+      && pointerDelta[1] === 0
+    ) return;
+    const sampledPointerDelta: readonly [number, number] = pointerDelta;
+    pointerDelta = [0, 0];
+    inputDirty = false;
+    submit(sampledPointerDelta, buttons);
+  };
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.code === 'Escape') {
       pressed.clear();
       buttons = 0;
       context.ui.setInteractionMode('interface');
       window.dispatchEvent(new Event('dagger-open-lab'));
-      submit([0, 0], 0);
+      inputDirty = true;
+      flushInput();
       return;
     }
     if (event.repeat || !context.ui.allowsGameplayInput(event)) return;
     if (event.code === 'Space') resumeAudioFromGesture();
     pressed.add(event.code);
-    submit([0, 0], buttons);
+    inputDirty = true;
   };
   const onKeyUp = (event: KeyboardEvent): void => {
     pressed.delete(event.code);
-    submit([0, 0], buttons);
+    inputDirty = true;
   };
   const onMouseMove = (event: MouseEvent): void => {
     if (document.pointerLockElement === null || !context.ui.allowsGameplayInput(event)) return;
     buttons = event.buttons;
-    submit([event.movementX, event.movementY], buttons);
+    pointerDelta = [
+      pointerDelta[0] + event.movementX,
+      pointerDelta[1] + event.movementY,
+    ];
+    inputDirty = true;
   };
   const onMouseDown = (event: MouseEvent): void => {
     if (!context.ui.allowsGameplayInput(event)) return;
     if (event.button === 0) resumeAudioFromGesture();
     buttons = event.buttons;
-    submit([0, 0], buttons);
+    inputDirty = true;
   };
   const onMouseUp = (event: MouseEvent): void => {
     buttons = event.buttons;
-    submit([0, 0], buttons);
+    inputDirty = true;
   };
   const onBlur = (): void => {
     pressed.clear();
     buttons = 0;
-    submit([0, 0], 0);
+    inputDirty = true;
+    flushInput();
   };
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
@@ -280,9 +301,7 @@ export function mountDaggerProductRuntime(
   window.addEventListener('mousedown', onMouseDown);
   window.addEventListener('mouseup', onMouseUp);
   window.addEventListener('blur', onBlur);
-  const inputTick = window.setInterval(() => {
-    if (pressed.size > 0 || buttons !== 0) submit([0, 0], buttons);
-  }, 40);
+  const inputTick = window.setInterval(flushInput, 40);
   const poll = window.setInterval(() => {
     void fetch('/api/dagger-product/state', { cache: 'no-store' })
       .then((response) => {

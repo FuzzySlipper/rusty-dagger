@@ -221,7 +221,9 @@ modularity gate, task 6529):
   once in the Rust product host. That adapter maps mouse-right and mouse-up to
   positive canonical Engine yaw and pitch respectively; the retained camera
   readout and character-controller heading share that same yaw basis so WASD
-  movement remains camera-relative.
+  movement remains camera-relative. The browser accumulates raw pointer deltas
+  and samples them with held controls on one 40 ms input cadence; mouse event
+  volume never creates additional movement steps.
 
   First-person melee presentation follows the same boundary and is clone-first.
   `dagger-runtime` owns attack direction, contact, recovery, cooldown, stamina,

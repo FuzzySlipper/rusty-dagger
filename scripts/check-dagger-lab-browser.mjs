@@ -74,6 +74,9 @@ try {
   await page.waitForFunction(() => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'gameplay');
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
+  const inputCadence = await assertMouseLookDoesNotMultiplyMovementTicks(page);
+  await pressPhysical(page, 'KeyR');
+  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   const connectedMove = await physicallyMove(page, spawnPosition);
   await pressPhysical(page, 'KeyR');
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
@@ -335,7 +338,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -418,6 +421,37 @@ async function assertSemanticPointerDirections(page) {
     up: up.camera.pitchDegrees - left.camera.pitchDegrees,
     down: down.camera.pitchDegrees - up.camera.pitchDegrees,
   };
+}
+
+async function assertMouseLookDoesNotMultiplyMovementTicks(page) {
+  let requestCount = 0;
+  const countInput = async (route) => {
+    if (route.request().method() === 'POST') requestCount += 1;
+    await route.continue();
+  };
+  await page.route('**/api/dagger-product/input', countInput);
+  const sample = async (withMouseLook) => {
+    requestCount = 0;
+    await page.keyboard.down('w');
+    if (withMouseLook) {
+      for (let index = 0; index < 32; index += 1) {
+        await page.mouse.move(640 + (index % 2), 450, { steps: 1 });
+      }
+    }
+    await page.waitForTimeout(320);
+    await page.keyboard.up('w');
+    await page.waitForTimeout(100);
+    return requestCount;
+  };
+  const forwardOnly = await sample(false);
+  const forwardAndLook = await sample(true);
+  await page.unroute('**/api/dagger-product/input', countInput);
+  assert.ok(forwardOnly >= 6, `fixed input cadence was too sparse: ${String(forwardOnly)}`);
+  assert.ok(
+    forwardAndLook <= forwardOnly + 2,
+    `mouse events multiplied movement ticks: W=${String(forwardOnly)} W+look=${String(forwardAndLook)}`,
+  );
+  return { forwardOnly, forwardAndLook };
 }
 
 async function assertConnectedDiagnosticKeys(page) {
