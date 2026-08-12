@@ -105,6 +105,8 @@ pub struct OrientationAnim {
 /// DFU EnemyBasics animation speeds (frames per second).
 pub const MOVE_ANIM_SPEED: u32 = 6;
 pub const FLY_ANIM_SPEED: u32 = 10;
+pub const PRIMARY_ATTACK_ANIM_SPEED: u32 = 10;
+pub const HURT_ANIM_SPEED: u32 = 4;
 pub const IDLE_ANIM_SPEED: u32 = 4;
 
 /// DFU DaggerfallBillboard default animation speed (frames per second).
@@ -112,6 +114,10 @@ pub const ENV_BILLBOARD_FPS: u32 = 5;
 
 /// DFU EnemyBasics.MoveAnims (records 0-4, mirrored sides at 5-7).
 pub const MOVE_ANIMS: [OrientationAnim; 8] = anims([0, 1, 2, 3, 4], false);
+/// DFU EnemyBasics.PrimaryAttackAnims (records 5-9).
+pub const PRIMARY_ATTACK_ANIMS: [OrientationAnim; 8] = anims([5, 6, 7, 8, 9], false);
+/// DFU EnemyBasics.HurtAnims (records 10-14).
+pub const HURT_ANIMS: [OrientationAnim; 8] = anims([10, 11, 12, 13, 14], false);
 /// DFU EnemyBasics.IdleAnims (records 15-19, mirrored sides at 5-7).
 pub const IDLE_ANIMS: [OrientationAnim; 8] = anims([15, 16, 17, 18, 19], false);
 /// DFU EnemyBasics.RatIdleAnims — same records, opposite mirroring.
@@ -227,6 +233,10 @@ mod tests {
             }
         );
         assert_eq!(IDLE_ANIMS[0].record, 15);
+        assert_eq!(PRIMARY_ATTACK_ANIMS[0].record, 5);
+        assert_eq!(PRIMARY_ATTACK_ANIMS[7].record, 6);
+        assert_eq!(HURT_ANIMS[0].record, 10);
+        assert_eq!(HURT_ANIMS[7].record, 11);
         assert_eq!(
             IDLE_ANIMS[6],
             OrientationAnim {

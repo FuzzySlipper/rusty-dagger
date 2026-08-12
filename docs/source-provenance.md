@@ -41,8 +41,12 @@ local Arena2 installation. The source game files are not committed.
   PCM records are wrapped losslessly as 11025 Hz, unsigned 8-bit mono WAV.
 
 Daggerfall Unity's MIT-licensed `CifRciFile.cs`, `SndFile.cs`,
-`WeaponBasics.cs`, `FPSWeapon.cs`, `WeaponManager.cs`, and `EnemyBlood.cs` are
-donor evidence for file interpretation and clone behavior. The generated
+`WeaponBasics.cs`, `FPSWeapon.cs`, `WeaponManager.cs`, `EnemyBlood.cs`,
+`EnemyBasics.cs`, and `DaggerfallMobileUnit.cs` at donor commit
+`81e89e90c27bc3c1a7a61871e545fad129174dec` are evidence for file
+interpretation and clone behavior. In particular, the mobile tables establish
+directional move records 0-4, attack records 5-9 at 10 fps, hurt records 10-14
+at 4 fps, and idle records 15-19. The generated
 manifest retains source file/record metadata as provenance while exposing
 semantic IDs (`weapon.dagger.steel`, `effect.*`, `audio.melee.*`) to runtime
 consumers. Gameplay code therefore does not embed Arena2 filenames, record
