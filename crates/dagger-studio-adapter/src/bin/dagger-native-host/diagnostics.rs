@@ -16,6 +16,8 @@ use crate::{
     melee_presentation::MeleePresentation,
 };
 
+const COMBAT_CATALOG: &str = include_str!("../../../../../content/textures/combat-manifest.json");
+
 const NAV_RADIUS: f32 = 10.0;
 const NAV_VERTICAL_WINDOW: f32 = 6.0;
 const NAV_CELL_LIMIT: usize = 512;
@@ -84,7 +86,7 @@ impl NativeDiagnostics {
 
         Ok(Self {
             live,
-            melee: MeleePresentation::new(),
+            melee: MeleePresentation::from_catalog(COMBAT_CATALOG)?,
             nav_cell_size: navgrid.cell_size,
             nav_cells: navgrid.cells,
             projector: RetainedNodeProjector::new(RenderHandleNamespace::DEBUG),
@@ -164,7 +166,20 @@ impl NativeDiagnostics {
             melee_action,
         )?;
         let mut ops = live.frame.ops;
-        ops.extend(self.melee.tick(melee_action, stamina.0, stamina.1)?.ops);
+        let impact_position = melee_action
+            .and_then(|action| action.target_id)
+            .and_then(|target| u32::try_from(target).ok())
+            .and_then(|target| {
+                encounter_positions
+                    .iter()
+                    .find(|(handle, ..)| *handle == target)
+                    .map(|(_, position, ..)| *position)
+            });
+        ops.extend(
+            self.melee
+                .tick(melee_action, stamina.0, stamina.1, impact_position)?
+                .ops,
+        );
 
         let sample_key = self
             .live
@@ -197,7 +212,7 @@ impl NativeDiagnostics {
                 overlays_enabled: self.sprite_enabled_seen && self.nav_enabled_seen,
                 overlays_disabled: self.sprite_disabled_seen && self.nav_disabled_seen,
                 stale_handle_replaced: self.stale_handle_replaced,
-                viewmodel_present: self.melee.retained_len() >= 4,
+                viewmodel_present: self.melee.retained_len() >= 2,
                 animation_updates: live.animation_updates,
                 retained_overlays: self.projector.retained_len(),
             },

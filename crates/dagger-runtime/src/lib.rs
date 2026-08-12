@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 pub mod animation;
+pub mod combat_assets;
 pub mod directional;
 pub mod navgrid;
 pub mod patrol;
@@ -15,6 +16,9 @@ mod project;
 mod runtime;
 
 pub use animation::{AnimationService, FrameUpdate, SpriteEntry, SpriteKind};
+pub use combat_assets::{
+    AudioAsset, CombatAssetCatalog, CombatFrame, EffectAsset, WeaponAnimation, WeaponAsset,
+};
 pub use directional::evaluate_directional;
 pub use navgrid::{derive_nav_grid, ground_spawn, level_of, NavCell, NavGrid, SpawnGrounding};
 pub use patrol::{PatrolGrid, PatrolService, PositionUpdate};

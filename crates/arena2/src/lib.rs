@@ -14,12 +14,14 @@
 
 pub mod arch3d;
 pub mod bsa;
+pub mod cif;
 pub mod dfrandom;
 pub mod maps;
 pub mod mobile;
 pub mod pak;
 pub mod palette;
 pub mod rdb;
+pub mod snd;
 pub mod texture;
 pub mod texture_table;
 
