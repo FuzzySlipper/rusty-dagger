@@ -490,7 +490,9 @@ async function assertMouseLookDoesNotMultiplyMovementTicks(page) {
       { timeout: 10_000 },
     );
     const frames = submittedFrames.slice(firstFrame);
-    const movementFrames = frames.filter((frame) => frame.pressedCodes.includes('KeyW'));
+    const movementFrames = frames.filter(
+      (frame) => frame.pressedCodes.includes('KeyW') || frame.pressedEdges.includes('KeyW'),
+    );
     return {
       requests: frames.length,
       movementRequests: movementFrames.length,
