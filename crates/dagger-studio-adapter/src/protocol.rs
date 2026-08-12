@@ -468,6 +468,18 @@ mod tests {
         assert!(!bundle.frame.ops.is_empty());
         assert!(!bundle.resources.is_empty());
         assert!(bundle.source_entity_count > 0);
+        let audio = bundle
+            .resources
+            .iter()
+            .filter(|resource| resource.media_type == "audio/wav")
+            .collect::<Vec<_>>();
+        assert_eq!(audio.len(), 6, "all classic melee sounds must be admitted");
+        assert!(audio.iter().all(|resource| {
+            resource.identity.starts_with("audio-resource/")
+                && resource.content_hash.starts_with("sha256:")
+                && resource.source_path.starts_with("content/audio/")
+                && !resource.bytes.is_empty()
+        }));
         for atlas_id in ["sprite/enemy-0-atlas", "sprite/enemy-1-atlas"] {
             let atlas = bundle
                 .frame

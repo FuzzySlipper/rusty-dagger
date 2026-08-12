@@ -14,6 +14,9 @@ use dagger_runtime::{DaggerRuntime, MeleePresentationReadout, ResolvedPlayerActi
 use dagger_studio_adapter::{build_render_bundle, DaggerRenderBundle};
 use rusty_engine::render_host_contracts::RendererCameraPose;
 use rusty_engine::render_model::{RenderDiff, RenderFrameDiff, RenderHandle};
+use rusty_engine::render_presentation::{
+    PresentationFrameDiff, PresentationOp, PresentationOpMeta,
+};
 use serde::Serialize;
 
 use crate::{
@@ -56,7 +59,10 @@ pub(crate) fn run(options: Options) -> Result<()> {
         .context("install committed encounter navigation")?;
     let mut presentation = NativeDiagnostics::from_documents(project, navgrid)?;
     let mut pending_presentation = PendingPresentation::default();
-    pending_presentation.merge(tick_presentation(&mut runtime, &mut presentation, 0.0)?)?;
+    let mut pending_audio = PendingAudioPresentation::default();
+    let initial = tick_presentation(&mut runtime, &mut presentation, 0.0)?;
+    pending_presentation.merge(initial.frame)?;
+    pending_audio.merge(initial.presentation);
     let bundle = build_render_bundle(root, project).map_err(anyhow::Error::msg)?;
     let server = LabServer::start(
         options.lab_host,
@@ -90,6 +96,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
                 &mut runtime,
                 &mut presentation,
                 &mut pending_presentation,
+                &mut pending_audio,
                 &bundle,
                 &mut pressed_codes,
                 &mut pressed_buttons,
@@ -103,7 +110,8 @@ pub(crate) fn run(options: Options) -> Result<()> {
                 &mut presentation,
                 elapsed.as_secs_f32().min(0.25),
             )?;
-            pending_presentation.merge(frame)?;
+            pending_presentation.merge(frame.frame)?;
+            pending_audio.merge(frame.presentation);
             last_tick = now;
         }
         thread::sleep(Duration::from_millis(4));
@@ -115,6 +123,7 @@ fn handle_command(
     runtime: &mut DaggerRuntime,
     presentation: &mut NativeDiagnostics,
     pending_presentation: &mut PendingPresentation,
+    pending_audio: &mut PendingAudioPresentation,
     bundle: &DaggerRenderBundle,
     pressed_codes: &mut BTreeSet<String>,
     pressed_buttons: &mut u16,
@@ -122,12 +131,18 @@ fn handle_command(
     match command {
         LabCommand::ProductBootstrap { reply } => {
             pending_presentation.replace(presentation.snapshot()?)?;
+            let _ = pending_audio.take()?;
             send_json(reply, 200, &ProductBootstrap::new(runtime, bundle)?)
         }
         LabCommand::ProductState { reply } => send_json(
             reply,
             200,
-            &product_state(runtime, presentation, pending_presentation.take()?)?,
+            &product_state(
+                runtime,
+                presentation,
+                pending_presentation.take()?,
+                pending_audio.take()?,
+            )?,
         ),
         LabCommand::ProductInput { input, reply } => {
             let result =
@@ -233,6 +248,7 @@ struct ProductState {
     camera: RendererCameraPose,
     player_position: [f32; 3],
     frame: rusty_engine::render_model::RenderFrameDiff,
+    presentation: PresentationFrameDiff,
     patrol_debug_enabled: bool,
     nav_debug_enabled: bool,
     melee_presentation: Option<MeleePresentationReadout>,
@@ -256,6 +272,7 @@ fn product_state(
     runtime: &DaggerRuntime,
     presentation: &NativeDiagnostics,
     frame: RenderFrameDiff,
+    audio: PresentationFrameDiff,
 ) -> Result<ProductState, dagger_runtime::RuntimeError> {
     let position = runtime.player_position()?;
     let state = runtime.player_state();
@@ -272,6 +289,7 @@ fn product_state(
         },
         player_position: [position.x, position.y, position.z],
         frame,
+        presentation: audio,
         patrol_debug_enabled: presentation.sprite_overlay_enabled(),
         nav_debug_enabled: presentation.nav_overlay_enabled(),
         melee_presentation: runtime.melee_presentation(),
@@ -302,14 +320,14 @@ fn tick_presentation(
     runtime: &mut DaggerRuntime,
     presentation: &mut NativeDiagnostics,
     dt: f32,
-) -> Result<RenderFrameDiff> {
+) -> Result<crate::diagnostics::DiagnosticFrame> {
     let encounter_updates = runtime.tick_play_session(dt)?;
     let positions = runtime.encounter_positions();
     let dead_encounters = runtime.dead_encounter_ids();
     let melee_action = runtime.melee_presentation();
     let stamina = runtime.player_stamina();
     let camera = camera_pose(runtime)?;
-    let frame = presentation.tick(
+    presentation.tick(
         dt,
         [
             camera.position[0] as f32,
@@ -321,8 +339,7 @@ fn tick_presentation(
         &dead_encounters,
         melee_action.as_ref(),
         stamina,
-    )?;
-    Ok(frame.frame)
+    )
 }
 
 #[derive(Default)]
@@ -369,6 +386,43 @@ impl PendingPresentation {
         RenderFrameDiff::try_from_ops(ops).map_err(|error| {
             dagger_runtime::RuntimeError::Encounter(format!("build pending live frame: {error:?}"))
         })
+    }
+}
+
+#[derive(Default)]
+struct PendingAudioPresentation {
+    ops: Vec<PresentationOp>,
+}
+
+impl PendingAudioPresentation {
+    fn merge(&mut self, frame: PresentationFrameDiff) {
+        self.ops.extend(frame.ops);
+    }
+
+    fn take(&mut self) -> Result<PresentationFrameDiff, dagger_runtime::RuntimeError> {
+        let ops = std::mem::take(&mut self.ops)
+            .into_iter()
+            .enumerate()
+            .map(|(sequence, op)| resequence_presentation(op, sequence as u32))
+            .collect();
+        PresentationFrameDiff::try_from_ops(ops).map_err(|error| {
+            dagger_runtime::RuntimeError::Encounter(format!(
+                "build pending audio presentation: {error:?}"
+            ))
+        })
+    }
+}
+
+fn resequence_presentation(op: PresentationOp, sequence: u32) -> PresentationOp {
+    let meta = PresentationOpMeta::new(sequence);
+    match op {
+        PresentationOp::Audio { op, .. } => PresentationOp::Audio { meta, op },
+        PresentationOp::Billboard { op, .. } => PresentationOp::Billboard { meta, op },
+        PresentationOp::Particle { op, .. } => PresentationOp::Particle { meta, op },
+        PresentationOp::TelemetryOverlay { op, .. } => {
+            PresentationOp::TelemetryOverlay { meta, op }
+        }
+        PresentationOp::Animation { op, .. } => PresentationOp::Animation { meta, op },
     }
 }
 
@@ -459,6 +513,42 @@ mod tests {
         let frame = pending.take().expect("take coalesced frame");
         assert_eq!(frame.ops, vec![update(2)]);
         assert!(pending.take().expect("take drained frame").ops.is_empty());
+    }
+
+    #[test]
+    fn pending_audio_preserves_one_shots_and_resequences_poll_batches() {
+        use rusty_engine::render_presentation::{
+            AudioBus, AudioClipRef, AudioEmitter, AudioProjectionOp, AudioSourceDescriptor,
+        };
+
+        let emit = |signal: &str| PresentationOp::Audio {
+            meta: PresentationOpMeta::new(0),
+            op: AudioProjectionOp::Emit {
+                signal_id: signal.to_owned(),
+                descriptor: AudioSourceDescriptor {
+                    clip: AudioClipRef {
+                        asset: "audio-resource/example".to_owned(),
+                        content_hash: format!("sha256:{}", "0".repeat(64)),
+                    },
+                    bus: AudioBus::Sfx,
+                    volume: 1.0,
+                    pitch: 1.0,
+                    looping: false,
+                    spatial_blend: 0.0,
+                    attenuation: 1.0,
+                    pan: 0.0,
+                    emitter: AudioEmitter::Global2d,
+                },
+            },
+        };
+        let mut pending = PendingAudioPresentation::default();
+        pending.merge(PresentationFrameDiff::try_from_ops(vec![emit("swing")]).unwrap());
+        pending.merge(PresentationFrameDiff::try_from_ops(vec![emit("hit")]).unwrap());
+        let frame = pending.take().expect("batched audio");
+        assert_eq!(frame.ops.len(), 2);
+        assert_eq!(frame.ops[0].meta().sequence, 0);
+        assert_eq!(frame.ops[1].meta().sequence, 1);
+        assert!(pending.take().expect("drained audio").is_empty());
     }
 
     #[test]

@@ -7,6 +7,7 @@ use rusty_engine::{
         Geometry, Material, RenderFrameDiff, RenderHandle, RenderLayer, RenderMetadata, RenderNode,
         Transform,
     },
+    render_presentation::PresentationFrameDiff,
     render_projection::{RenderHandleNamespace, RetainedNodeProjector},
 };
 use serde::Deserialize;
@@ -37,6 +38,7 @@ pub(crate) struct DiagnosticFrameReadout {
 
 pub(crate) struct DiagnosticFrame {
     pub(crate) frame: RenderFrameDiff,
+    pub(crate) presentation: PresentationFrameDiff,
     pub(crate) readout: DiagnosticFrameReadout,
 }
 
@@ -204,8 +206,10 @@ impl NativeDiagnostics {
         ops.extend(overlay_frame.ops);
         let frame = RenderFrameDiff::try_from_ops(ops)
             .map_err(|error| anyhow::anyhow!("build diagnostic retained frame: {error:?}"))?;
+        let presentation = self.melee.audio_tick(melee_action)?;
         Ok(DiagnosticFrame {
             frame,
+            presentation,
             readout: DiagnosticFrameReadout {
                 animation_advanced: live.animation_advanced,
                 patrol_moved: live.patrol_moved,

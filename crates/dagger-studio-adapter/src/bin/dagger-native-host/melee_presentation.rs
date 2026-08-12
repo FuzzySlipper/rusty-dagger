@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use anyhow::{Context, Result};
 use dagger_runtime::{
-    CombatAssetCatalog, EffectAsset, MeleePresentationPhase, MeleePresentationReadout,
+    AudioAsset, CombatAssetCatalog, EffectAsset, MeleePresentationPhase, MeleePresentationReadout,
     WeaponAnimation,
 };
 use rusty_engine::{
@@ -11,6 +11,10 @@ use rusty_engine::{
         RenderMetadata, RenderNode, SpriteAttachment, SpriteDepthPolicy, SpriteInstanceDescriptor,
         SpriteShading, SpriteSizeMode, Transform,
     },
+    render_presentation::{
+        AudioBus, AudioClipRef, AudioEmitter, AudioProjectionOp, AudioSourceDescriptor,
+        PresentationFrameDiff, PresentationOp, PresentationOpMeta,
+    },
     render_projection::{RenderHandleNamespace, RetainedNodeProjector},
 };
 
@@ -18,6 +22,7 @@ const WEAPON_ID: &str = "weapon.dagger.steel";
 const IDLE_ACTION: &str = "idle";
 const STRIKE_ACTION: &str = "strikeDown";
 const BLOOD_EFFECT_ID: &str = "effect.blood.0";
+const SWING_AUDIO_ID: &str = "audio.melee.dagger.swing";
 const WEAPON_SPRITE_HANDLE: RenderHandle = RenderHandle::new((7_u64 << 40) | 1);
 const IMPACT_SPRITE_HANDLE: RenderHandle = RenderHandle::new((7_u64 << 40) | 2);
 
@@ -38,6 +43,10 @@ pub(crate) struct MeleePresentation {
     idle: WeaponAnimation,
     strike: WeaponAnimation,
     blood: EffectAsset,
+    swing_audio: AudioAsset,
+    hit_audio: Vec<AudioAsset>,
+    swing_emitted_for: Option<u64>,
+    hit_emitted_for: Option<u64>,
     sprite_created: bool,
     current_frame: u32,
     impact_created: bool,
@@ -63,6 +72,19 @@ impl MeleePresentation {
             .effect(BLOOD_EFFECT_ID)
             .with_context(|| format!("combat catalog is missing {BLOOD_EFFECT_ID}"))?
             .clone();
+        let swing_audio = catalog
+            .audio(SWING_AUDIO_ID)
+            .with_context(|| format!("combat catalog is missing {SWING_AUDIO_ID}"))?
+            .clone();
+        let hit_audio = (1..=5)
+            .map(|index| {
+                let id = format!("audio.melee.hit.{index}");
+                catalog
+                    .audio(&id)
+                    .with_context(|| format!("combat catalog is missing {id}"))
+                    .cloned()
+            })
+            .collect::<Result<Vec<_>>>()?;
         let mut root = BTreeMap::new();
         root.insert(MeleeNode::ViewmodelRoot, viewmodel_root());
         Ok(Self {
@@ -75,10 +97,56 @@ impl MeleePresentation {
             strike,
             impact_frame: blood.frames[0].frame,
             blood,
+            swing_audio,
+            hit_audio,
+            swing_emitted_for: None,
+            hit_emitted_for: None,
             sprite_created: false,
             impact_created: false,
             impact_position: [0.0, 0.0, 0.0],
         })
+    }
+
+    /// Project classic one-shot audio from the same Rust-owned melee action
+    /// timeline as the weapon and impact sprites. Signal identity is stable per
+    /// accepted attempt so polling and repeated diagnostic ticks cannot replay
+    /// a sound.
+    pub(crate) fn audio_tick(
+        &mut self,
+        action: Option<&MeleePresentationReadout>,
+    ) -> Result<PresentationFrameDiff> {
+        let Some(action) = action.filter(|action| action.accepted) else {
+            return Ok(PresentationFrameDiff::new());
+        };
+        let mut ops = Vec::new();
+        if self.swing_emitted_for != Some(action.attempt_sequence) {
+            let sequence = u32::try_from(ops.len()).context("too many melee audio operations")?;
+            ops.push(audio_emit(
+                sequence,
+                format!("dagger-swing-{}", action.attempt_sequence),
+                &self.swing_audio,
+                0.85,
+            ));
+            self.swing_emitted_for = Some(action.attempt_sequence);
+        }
+        let hit_active = matches!(action.outcome.as_str(), "hit" | "killed")
+            && matches!(
+                action.phase,
+                MeleePresentationPhase::Contact | MeleePresentationPhase::Recovery
+            );
+        if hit_active && self.hit_emitted_for != Some(action.attempt_sequence) {
+            let index = action.attempt_sequence.saturating_sub(1) as usize % self.hit_audio.len();
+            let sequence = u32::try_from(ops.len()).context("too many melee audio operations")?;
+            ops.push(audio_emit(
+                sequence,
+                format!("dagger-hit-{}", action.attempt_sequence),
+                &self.hit_audio[index],
+                1.0,
+            ));
+            self.hit_emitted_for = Some(action.attempt_sequence);
+        }
+        PresentationFrameDiff::try_from_ops(ops)
+            .map_err(|error| anyhow::anyhow!("build classic melee audio: {error:?}"))
     }
 
     pub(crate) fn tick(
@@ -258,6 +326,33 @@ impl MeleePresentation {
     }
 }
 
+fn audio_emit(sequence: u32, signal_id: String, audio: &AudioAsset, volume: f32) -> PresentationOp {
+    let hash_hex = audio
+        .sha256
+        .strip_prefix("sha256:")
+        .unwrap_or(&audio.sha256);
+    PresentationOp::Audio {
+        meta: PresentationOpMeta::new(sequence),
+        op: AudioProjectionOp::Emit {
+            signal_id,
+            descriptor: AudioSourceDescriptor {
+                clip: AudioClipRef {
+                    asset: format!("audio-resource/{hash_hex}"),
+                    content_hash: audio.sha256.clone(),
+                },
+                bus: AudioBus::Sfx,
+                volume,
+                pitch: 1.0,
+                looping: false,
+                spatial_blend: 0.0,
+                attenuation: 1.0,
+                pan: 0.0,
+                emitter: AudioEmitter::Global2d,
+            },
+        },
+    }
+}
+
 fn weapon_frame(
     idle: &WeaponAnimation,
     strike: &WeaponAnimation,
@@ -308,7 +403,11 @@ fn weapon_sprite(asset: &str, pivot: [f32; 2], frame: u32) -> SpriteInstanceDesc
         shading: SpriteShading::Unlit,
         visible: true,
         transform: Transform {
-            translation: [0.34, -0.64, -1.0],
+            // Place the opaque portion of the classic fixed-cell frame in the
+            // actual lower-right viewmodel quadrant. The transparent source
+            // padding is intentionally retained so every strike frame keeps a
+            // stable footprint.
+            translation: [0.65, -1.0, -1.0],
             rotation: [0.0, 0.0, 0.0, 1.0],
             scale: [1.0, 1.0, 1.0],
         },
@@ -396,6 +495,7 @@ mod tests {
                 if sprite.asset == "sprite/weapon-dagger-steel-atlas"
                     && sprite.frame == 0
                     && sprite.pivot == [0.5, 0.0]
+                    && sprite.transform.translation == [0.65, -1.0, -1.0]
         )));
 
         let contact = presentation
@@ -439,5 +539,56 @@ mod tests {
             op,
             RenderDiff::Destroy { handle } if *handle == IMPACT_SPRITE_HANDLE
         )));
+    }
+
+    #[test]
+    fn classic_audio_emits_swing_once_and_silences_a_miss() {
+        let mut presentation = MeleePresentation::from_catalog(CATALOG).expect("catalog");
+        let anticipation = action(MeleePresentationPhase::Anticipation, 0.0);
+        let first = presentation
+            .audio_tick(Some(&anticipation))
+            .expect("swing audio");
+        assert_eq!(first.ops.len(), 1);
+        assert!(matches!(
+            &first.ops[0],
+            PresentationOp::Audio {
+                op: AudioProjectionOp::Emit { signal_id, descriptor }, ..
+            } if signal_id == "dagger-swing-1"
+                && descriptor.clip.asset.starts_with("audio-resource/")
+                && descriptor.clip.content_hash == presentation.swing_audio.sha256
+        ));
+        assert!(presentation
+            .audio_tick(Some(&anticipation))
+            .expect("held anticipation")
+            .is_empty());
+        assert!(presentation
+            .audio_tick(Some(&action(MeleePresentationPhase::Contact, 0.5)))
+            .expect("contact miss")
+            .is_empty());
+    }
+
+    #[test]
+    fn classic_audio_emits_one_deterministic_hit_at_contact() {
+        let mut presentation = MeleePresentation::from_catalog(CATALOG).expect("catalog");
+        let mut hit = action(MeleePresentationPhase::Contact, 0.0);
+        hit.attempt_sequence = 2;
+        hit.outcome = "hit".to_string();
+        let frame = presentation.audio_tick(Some(&hit)).expect("hit audio");
+        assert_eq!(
+            frame.ops.len(),
+            2,
+            "late observation includes swing and hit"
+        );
+        assert!(matches!(
+            &frame.ops[1],
+            PresentationOp::Audio {
+                op: AudioProjectionOp::Emit { signal_id, descriptor }, ..
+            } if signal_id == "dagger-hit-2"
+                && descriptor.clip.content_hash == presentation.hit_audio[1].sha256
+        ));
+        assert!(presentation
+            .audio_tick(Some(&hit))
+            .expect("held contact")
+            .is_empty());
     }
 }

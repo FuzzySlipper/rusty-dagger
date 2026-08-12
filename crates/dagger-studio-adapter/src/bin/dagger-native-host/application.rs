@@ -449,14 +449,23 @@ impl NativeApplication {
             melee_action.as_ref(),
             stamina,
         )?;
-        if diagnostic.frame.ops.is_empty() {
+        if diagnostic.frame.ops.is_empty() && diagnostic.presentation.is_empty() {
             return Ok(());
         }
         let renderer = self.renderer.as_mut().context("renderer unavailable")?;
-        let request_id = renderer.submit_frame(&diagnostic.frame)?;
+        let request_id = if diagnostic.frame.ops.is_empty() {
+            None
+        } else {
+            Some(renderer.submit_frame(&diagnostic.frame)?)
+        };
+        if !diagnostic.presentation.is_empty() {
+            renderer.submit_presentation(&diagnostic.presentation)?;
+        }
         renderer.render_once(None)?;
-        self.pending_diagnostic_frames
-            .insert(request_id, diagnostic.readout);
+        if let Some(request_id) = request_id {
+            self.pending_diagnostic_frames
+                .insert(request_id, diagnostic.readout);
+        }
         Ok(())
     }
 
