@@ -1,7 +1,7 @@
 {
   "project": "rusty-dagger",
   "serve": {
-    "command": "DAGGER_ENCOUNTER_GALLERY=1 ./scripts/serve-dagger-lab.sh {host} {port}",
+    "command": "./scripts/serve-dagger-lab.sh {host} {port}",
     "preferredPort": 0,
     "healthUrl": "/",
     "readyText": "Dagger Lab",

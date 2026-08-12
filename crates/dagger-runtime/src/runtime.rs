@@ -6,8 +6,13 @@ use dagger_rpg::{
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
-use rusty_engine::engine_spatial::{SpatialCollisionHit, VoxelCollisionScene};
-use rusty_engine::entity_state::EntityState;
+use rusty_engine::engine_spatial::{
+    CharacterControllerService, FirstPersonLookState, SpatialCollisionHit, VoxelCollisionScene,
+};
+use rusty_engine::entity_state::{
+    replace_character_motion_state, CharacterMotionComponent, CharacterMotionStateReplacement,
+    EntityState, TransformComponent,
+};
 use rusty_engine::svc_collision::{
     StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
 };
@@ -58,8 +63,12 @@ pub struct DaggerRuntime {
     player: EntityId,
     player_controller: PlayerControllerConfig,
     player_state: PlayerControllerState,
+    player_look_state: FirstPersonLookState,
+    player_controller_service: CharacterControllerService,
+    player_command_sequence: u64,
     player_start: Vec3,
     player_start_state: PlayerControllerState,
+    player_start_look_state: FirstPersonLookState,
     experiment: AdmittedExperiment,
     player_resources: LiveActorResources,
     enemy_resources: BTreeMap<u64, LiveActorResources>,
@@ -400,12 +409,14 @@ impl DaggerRuntime {
         let mut player_controller = admitted.player_controller;
         player_controller.move_speed_units_per_second =
             experiment.player.move_speed_units_per_second;
+        player_controller.configure_engine();
         let initial_calculation = SessionCalculationRecord {
             sequence: 1,
             calculation: player_health_calculation(&experiment).clone(),
         };
         let player_start = admitted.player_start;
         let player_start_state = admitted.player_state;
+        let player_start_look_state = admitted.player_look_state;
         let player_resources = LiveActorResources::full(&experiment.player.stats);
         let enemy_resources = reset_enemy_resources(&admitted.content_entities, &experiment);
         let content_live_positions = admitted
@@ -419,8 +430,12 @@ impl DaggerRuntime {
             player: admitted.player,
             player_controller,
             player_state: admitted.player_state,
+            player_look_state: admitted.player_look_state,
+            player_controller_service: CharacterControllerService::default(),
+            player_command_sequence: 0,
             player_start,
             player_start_state,
+            player_start_look_state,
             experiment,
             player_resources,
             enemy_resources,
@@ -716,6 +731,7 @@ impl DaggerRuntime {
         self.calculation_sequence = self.calculation_sequence.saturating_add(1);
         self.player_controller.move_speed_units_per_second =
             admitted.player.move_speed_units_per_second;
+        self.player_controller.configure_engine();
         self.player_resources = LiveActorResources::full(&admitted.player.stats);
         self.enemy_resources = enemy_resources;
         self.combat_sequence = 0;
@@ -761,6 +777,7 @@ impl DaggerRuntime {
     pub fn reset_play_session(&mut self) -> Result<ExperimentReadout, RuntimeError> {
         self.set_player_position(self.player_start)?;
         self.player_state = self.player_start_state;
+        self.player_look_state = self.player_start_look_state;
         self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
         self.enemy_resources = reset_enemy_resources(&self.content_entities, &self.experiment);
         self.combat_sequence = 0;
@@ -811,8 +828,9 @@ impl DaggerRuntime {
             let mut facing_state = self.player_start_state;
             let delta_x = target[0] - position.x;
             let delta_z = target[2] - position.z;
-            facing_state.yaw_degrees = (-delta_x).atan2(-delta_z).to_degrees();
+            facing_state.set_yaw_degrees((-delta_x).atan2(-delta_z).to_degrees());
             self.player_state = facing_state;
+            self.player_look_state = facing_state.engine_look_state();
 
             let navigable = [
                 ResolvedPlayerAction::Move {
@@ -828,6 +846,7 @@ impl DaggerRuntime {
             .any(|action| {
                 let _ = self.set_player_position(position);
                 self.player_state = facing_state;
+                self.player_look_state = facing_state.engine_look_state();
                 self.apply_player_action(action).is_ok_and(|_| {
                     self.player_position().is_ok_and(|after| {
                         (after.x - position.x).hypot(after.z - position.z) > 0.01
@@ -837,6 +856,7 @@ impl DaggerRuntime {
             if navigable {
                 self.set_player_position(position)?;
                 self.player_state = facing_state;
+                self.player_look_state = facing_state.engine_look_state();
                 self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
                 self.enemy_resources =
                     reset_enemy_resources(&self.content_entities, &self.experiment);
@@ -854,6 +874,7 @@ impl DaggerRuntime {
         }
         self.set_player_position(original_position)?;
         self.player_state = original_state;
+        self.player_look_state = original_state.engine_look_state();
         self.focused_content_id = original_focus;
         Err(RuntimeError::Content(ContentError::NoGroundedApproach(id)))
     }
@@ -1142,24 +1163,37 @@ impl DaggerRuntime {
     }
 
     /// Authoritatively reposition the player (route derivation / probing).
-    /// Sets the translation and clears vertical velocity so a subsequent
-    /// settle starts cleanly; collision is re-evaluated by the next action.
+    /// Sets the translation and resets canonical continuation state so a
+    /// subsequent settle starts cleanly; collision is re-evaluated next tick.
     pub fn set_player_position(&mut self, translation: Vec3) -> Result<(), RuntimeError> {
-        use rusty_engine::entity_state::{EntityCommand, EntityCommandBatch};
-        self.entities
-            .apply_batch(EntityCommandBatch::new([
-                EntityCommand::SetTranslation {
-                    entity: self.player,
-                    translation,
-                },
-                EntityCommand::SetKinematicVelocity {
-                    entity: self.player,
-                    velocity: Vec3::ZERO,
-                },
-            ]))
-            .map_err(|error| {
-                RuntimeError::Player(crate::player::PlayerError::EntityBatch(error))
-            })?;
+        let transform_revision = self
+            .entities
+            .component_revision::<TransformComponent>(self.player)
+            .expect("admitted player transform revision");
+        let motion_revision = self
+            .entities
+            .component_revision::<CharacterMotionComponent>(self.player)
+            .expect("admitted player motion revision");
+        let mut transform = *self
+            .entities
+            .transform(self.player)
+            .expect("admitted player transform");
+        transform.translation = translation;
+        let mut motion = CharacterMotionComponent::at_rest(translation.y);
+        motion.last_command_sequence = self.player_command_sequence;
+        replace_character_motion_state(
+            &mut self.entities,
+            CharacterMotionStateReplacement {
+                entity: self.player,
+                expected_transform_revision: transform_revision,
+                expected_motion_revision: motion_revision,
+                transform,
+                motion,
+            },
+        )
+        .map_err(|error| {
+            RuntimeError::Player(crate::player::PlayerError::MotionPublication(error))
+        })?;
         Ok(())
     }
 
@@ -1185,6 +1219,9 @@ impl DaggerRuntime {
             &self.collision_scene,
             self.player,
             &mut self.player_state,
+            &mut self.player_look_state,
+            &mut self.player_controller_service,
+            &mut self.player_command_sequence,
             &self.player_controller,
             action,
             self.player_controller.move_step_seconds,

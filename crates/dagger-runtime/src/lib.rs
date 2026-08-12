@@ -25,8 +25,8 @@ pub use patrol::{PatrolGrid, PatrolService, PositionUpdate};
 
 pub use player::{
     PlayerControlFact, PlayerControlReceipt, PlayerControllerConfig, PlayerControllerState,
-    PlayerInputBindings, ResolvedPlayerAction, FALL_SUBSTEP_UNITS,
-    MAX_PLAYER_LOOK_DEGREES_PER_UNIT, MAX_PLAYER_SPEED_UNITS_PER_SECOND, MAX_PLAYER_STEP_UP_UNITS,
+    PlayerInputBindings, ResolvedPlayerAction, MAX_PLAYER_LOOK_DEGREES_PER_UNIT,
+    MAX_PLAYER_SPEED_UNITS_PER_SECOND, MAX_PLAYER_STEP_UP_UNITS,
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
@@ -133,6 +133,72 @@ mod tests {
             .expect_err("out-of-range input must fail closed");
         assert!(format!("{error}").contains("InvalidAction"));
         assert_eq!(runtime.player_position().expect("player position"), before);
+    }
+
+    #[test]
+    fn canonical_look_preserves_signs_wraps_yaw_and_clamps_pitch() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let initial = runtime.player_state();
+        runtime
+            .apply_player_action(ResolvedPlayerAction::Look {
+                yaw_delta: 0.5,
+                pitch_delta: 0.5,
+            })
+            .expect("canonical look");
+        let changed = runtime.player_state();
+        assert_ne!(changed.yaw_degrees, initial.yaw_degrees);
+        assert!(changed.pitch_degrees < initial.pitch_degrees);
+        for _ in 0..20 {
+            runtime
+                .apply_player_action(ResolvedPlayerAction::Look {
+                    yaw_delta: 0.0,
+                    pitch_delta: -1.0,
+                })
+                .expect("bounded pitch");
+        }
+        assert!((runtime.player_state().pitch_degrees - 89.0).abs() < 0.001);
+        assert!((-180.0..180.0).contains(&runtime.player_state().yaw_degrees));
+    }
+
+    #[test]
+    fn canonical_controller_retains_grounded_continuation_across_idle_ticks() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let mut last_sequence = 0;
+        for _ in 0..30 {
+            let receipt = runtime
+                .apply_player_action(ResolvedPlayerAction::Move {
+                    forward: 0.0,
+                    right: 0.0,
+                })
+                .expect("settle tick");
+            let motion = receipt.motion.expect("Engine movement receipt");
+            assert!(motion.command_sequence > last_sequence);
+            last_sequence = motion.command_sequence;
+        }
+        let settled = runtime.player_position().expect("settled position");
+        let motion = runtime
+            .entities()
+            .character_motion(runtime.player())
+            .expect("caller-owned Engine continuation state");
+        assert!(motion.grounded);
+        for _ in 0..10 {
+            runtime
+                .apply_player_action(ResolvedPlayerAction::Move {
+                    forward: 0.0,
+                    right: 0.0,
+                })
+                .expect("stable idle tick");
+        }
+        assert_eq!(runtime.player_position().expect("idle position"), settled);
+        assert!(
+            runtime
+                .entities()
+                .character_motion(runtime.player())
+                .expect("continuation state")
+                .grounded
+        );
     }
 
     #[test]
@@ -591,7 +657,7 @@ mod tests {
     }
 
     #[test]
-    fn blocked_step_up_is_failure_atomic_against_a_real_project_wall() {
+    fn canonical_controller_stops_at_a_real_project_wall_without_rising() {
         let document = adversarial_wall_project();
         let mut runtime = DaggerRuntime::from_project_json(&document).expect("admit project");
         for _ in 0..30 {
@@ -603,7 +669,10 @@ mod tests {
                 .expect("settle action");
         }
 
-        for _ in 0..2 {
+        let settled_y = runtime.player_position().expect("settled position").y;
+        let mut blocked = 0;
+        let mut last_horizontal = f32::INFINITY;
+        for _ in 0..20 {
             let before = runtime.player_position().expect("before position");
             let receipt = runtime
                 .apply_player_action(ResolvedPlayerAction::Move {
@@ -612,18 +681,25 @@ mod tests {
                 })
                 .expect("blocked action");
             let after = runtime.player_position().expect("after position");
-            assert!(receipt
-                .facts
-                .iter()
-                .any(|fact| matches!(fact, PlayerControlFact::Blocked { .. })));
-            assert!(((after.x - before.x).powi(2) + (after.z - before.z).powi(2)).sqrt() < 0.001);
-            assert!(after.y <= before.y + 0.001);
+            blocked += usize::from(
+                receipt
+                    .facts
+                    .iter()
+                    .any(|fact| matches!(fact, PlayerControlFact::Blocked { .. })),
+            );
+            last_horizontal = (after.x - before.x).hypot(after.z - before.z);
+            assert!(after.y <= settled_y + 0.001);
         }
+        assert!(blocked > 0, "canonical receipt never reported wall contact");
+        assert!(
+            last_horizontal < 0.001,
+            "controller did not come to rest at wall"
+        );
     }
 
     #[test]
-    fn blocked_step_up_does_not_keep_rise_when_retry_only_slides() {
-        for (forward, right, action_count) in [(1.0, 1.0, 8), (0.01, 0.02, 64)] {
+    fn canonical_controller_slides_along_wall_without_manufacturing_a_step() {
+        for (forward, right) in [(1.0, 1.0), (0.5, 1.0)] {
             let mut runtime = DaggerRuntime::from_project_json(&adversarial_wall_project())
                 .expect("admit project");
             for _ in 0..30 {
@@ -638,7 +714,8 @@ mod tests {
             let initial_y = runtime.player_position().expect("initial position").y;
             let mut horizontal_slide = 0.0_f32;
             let mut blocked_actions = 0;
-            for _ in 0..action_count {
+            let mut accepted_steps = 0;
+            for _ in 0..40 {
                 let before = runtime.player_position().expect("before position");
                 let receipt = runtime
                     .apply_player_action(ResolvedPlayerAction::Move { forward, right })
@@ -654,15 +731,23 @@ mod tests {
                     blocked_actions += 1;
                     assert!(after.y <= initial_y + 0.001);
                 }
+                accepted_steps += usize::from(
+                    receipt
+                        .motion
+                        .as_ref()
+                        .and_then(|motion| motion.step)
+                        .is_some_and(|step| step.accepted),
+                );
             }
             assert!(
-                blocked_actions >= 2,
-                "diagonal wall regression did not repeat a blocked slide for input ({forward}, {right})"
+                blocked_actions > 0,
+                "diagonal route never contacted the wall for input ({forward}, {right})"
             );
             assert!(
                 horizontal_slide > 0.001,
                 "diagonal slide was lost for input ({forward}, {right})"
             );
+            assert_eq!(accepted_steps, 0, "wall contact became a false up-step");
         }
     }
 }
