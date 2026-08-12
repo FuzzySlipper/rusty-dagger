@@ -50,9 +50,11 @@ Daggerfall-owned runtime/adapter surfaces.
   Unsupported mutations fail closed until a Dagger authority exists; do not
   add speculative write paths.
 - Do not copy Engine implementations into this repository; promote a smaller
-  Engine seam upstream only when reuse is proven. The engine moves fast:
-  consume rusty-engine `main` and fix forward when upstream drift breaks
-  something — do not gate work behind exact-revision provenance rituals.
+  Engine seam upstream only when reuse is proven. Consume the adjacent
+  `../rusty-engine` checkout through the unconditional facade as it stands and
+  fix forward when upstream drift breaks something. Downstream does not fetch,
+  mutate, pin, or enforce freshness for that checkout; operator update policy
+  belongs outside this repository.
 - `content/` is generated output. Regenerate it with `scripts/regenerate.sh`
   rather than hand-editing artifacts.
 
@@ -115,7 +117,6 @@ scripts/regenerate.sh             # extraction -> engine import -> studio projec
 cargo run -p dagger-runtime --bin dagger-walkthrough
 cargo run -p dagger-runtime --bin dagger-navgrid -- --check  # nav grid proof + artifact freshness
 scripts/verify-native-host.sh     # Engine facade/native renderer/input/pick/lifecycle proof
-scripts/check-engine-freshness.py # rolling Engine main must stay current
 python3 scripts/check-adapter.py  # local adapter; env override is diagnostic-only
 ```
 
@@ -123,11 +124,11 @@ Extraction claims require a real native render proof, not only structural
 validation. The proof must reach Engine presentation only through the public
 Rust facade and certify exact checked resources plus authoritative Dagger
 effects. Studio-visible changes additionally require the host gates
-while `scripts/serve-studio.sh` is running:
+while the Engine-owned Studio host is running:
 
 ```bash
-node scripts/check-studio-host.mjs     # focused HTTP/adapter check
-scripts/check-studio-browser.sh        # real Chromium desktop+narrow render proof
+python3 scripts/check-adapter.py       # focused adapter protocol check
+scripts/check-dagger-lab-browser.sh    # real Chromium desktop+narrow render proof
 ```
 
 Report exactly which commands ran and which relevant live checks were skipped.
