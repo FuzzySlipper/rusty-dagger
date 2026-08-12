@@ -234,8 +234,13 @@ fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
         let cell_y = (index / columns) * cell_height;
         let x = cell_x + (cell_width - frame.width) / 2;
         let y = cell_y + cell_height - frame.height;
+        // Engine's retained DataTexture samples v=0 from the first encoded PNG
+        // row. Flip inside each fixed cell while copying so the pixels are
+        // upright without reversing the frame rows of a multi-row atlas.
         for row in 0..frame.height {
-            let source = &frame.rgba[row * frame.width * 4..(row + 1) * frame.width * 4];
+            let source_row = frame.height - 1 - row;
+            let source =
+                &frame.rgba[source_row * frame.width * 4..(source_row + 1) * frame.width * 4];
             let target = ((y + row) * width + x) * 4;
             rgba[target..target + source.len()].copy_from_slice(source);
         }
@@ -250,10 +255,6 @@ fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
             "sourceOffset": frame.source_offset,
         }));
     }
-    // Engine samples v=0 from the first PNG row. Flip the completed atlas,
-    // rather than each cell independently, so multi-row frame UVs keep their
-    // row identity as well as their upright pixel orientation.
-    flip_rgba_rows(&mut rgba, width, height);
     let png = crate::png::encode_rgba(width as u32, height as u32, &rgba);
     Ok(PackedAtlas {
         width,
@@ -261,15 +262,6 @@ fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
         png,
         frames: entries,
     })
-}
-
-fn flip_rgba_rows(rgba: &mut [u8], width: usize, height: usize) {
-    let stride = width * 4;
-    for y in 0..height / 2 {
-        for x in 0..stride {
-            rgba.swap(y * stride + x, (height - 1 - y) * stride + x);
-        }
-    }
 }
 
 fn sha256(bytes: &[u8]) -> String {
