@@ -248,6 +248,7 @@ struct ActiveMeleePresentation {
     target_max_health: Option<f32>,
     final_damage: Option<f32>,
     died: bool,
+    contact_resolved: bool,
 }
 
 impl ActiveMeleePresentation {
@@ -509,11 +510,27 @@ impl DaggerRuntime {
         }
         self.player_attack_cooldown_remaining =
             (self.player_attack_cooldown_remaining - dt).max(0.0);
+        let resolve_contact = self
+            .melee_presentation
+            .as_ref()
+            .is_some_and(|presentation| {
+                presentation.accepted
+                    && !presentation.contact_resolved
+                    && presentation.elapsed < MELEE_ANTICIPATION_SECONDS
+                    && presentation.elapsed + dt >= MELEE_ANTICIPATION_SECONDS
+            });
         if let Some(presentation) = &mut self.melee_presentation {
             presentation.elapsed += dt;
-            if presentation.is_complete() {
-                self.melee_presentation = None;
-            }
+        }
+        if resolve_contact {
+            self.resolve_melee_contact()?;
+        }
+        if self
+            .melee_presentation
+            .as_ref()
+            .is_some_and(ActiveMeleePresentation::is_complete)
+        {
+            self.melee_presentation = None;
         }
         let player = self.player_position()?;
         let behaviors = self
@@ -841,19 +858,18 @@ impl DaggerRuntime {
         Err(RuntimeError::Content(ContentError::NoGroundedApproach(id)))
     }
 
-    /// Attack the focused live enemy through Dagger's authoritative gameplay
-    /// and collision state. The native renderer supplies only the physical
-    /// input edge; it does not choose a target or resolve combat.
+    /// Start a first-person attack from a physical input edge. A target is not
+    /// required to begin the swing; Dagger resolves the aimed contact only
+    /// when the Rust-owned action reaches its contact frame.
     pub fn attack_focused_target(&mut self) -> Result<ExperimentReadout, RuntimeError> {
-        let target_id = self.focused_content_id;
         let cooldown_before = self.player_attack_cooldown_remaining;
         let stamina_before = self.player_resources.current_stamina;
         let cooldown_duration = self.experiment.player.combat.attack_cooldown_seconds;
         let stamina_cost = self.experiment.player.combat.stamina_cost;
         if cooldown_before > 0.0 {
-            let sequence = self.push_combat_attempt(CombatAttemptRecord {
+            self.push_combat_attempt(CombatAttemptRecord {
                 sequence: 0,
-                target_id,
+                target_id: None,
                 accepted: false,
                 outcome: "cooldown".to_string(),
                 cooldown_before,
@@ -862,27 +878,13 @@ impl DaggerRuntime {
                 stamina_before,
                 stamina_cost,
                 stamina_after: stamina_before,
-            });
-            self.melee_presentation = Some(ActiveMeleePresentation {
-                attempt_sequence: sequence,
-                elapsed: 0.0,
-                accepted: false,
-                outcome: "cooldown".to_string(),
-                target_id,
-                stamina_before,
-                stamina_after: stamina_before,
-                target_health_before: None,
-                target_health_after: None,
-                target_max_health: None,
-                final_damage: None,
-                died: false,
             });
             return self.experiment_readout();
         }
         if stamina_before < stamina_cost {
-            let sequence = self.push_combat_attempt(CombatAttemptRecord {
+            self.push_combat_attempt(CombatAttemptRecord {
                 sequence: 0,
-                target_id,
+                target_id: None,
                 accepted: false,
                 outcome: "insufficient stamina".to_string(),
                 cooldown_before,
@@ -892,25 +894,50 @@ impl DaggerRuntime {
                 stamina_cost,
                 stamina_after: stamina_before,
             });
-            self.melee_presentation = Some(ActiveMeleePresentation {
-                attempt_sequence: sequence,
-                elapsed: 0.0,
-                accepted: false,
-                outcome: "insufficient stamina".to_string(),
-                target_id,
-                stamina_before,
-                stamina_after: stamina_before,
-                target_health_before: None,
-                target_health_after: None,
-                target_max_health: None,
-                final_damage: None,
-                died: false,
-            });
             return self.experiment_readout();
         }
+        self.player_resources.current_stamina = (stamina_before - stamina_cost).max(0.0);
+        self.player_attack_cooldown_remaining = cooldown_duration;
+        let stamina_after = self.player_resources.current_stamina;
+        let attempt_sequence = self.push_combat_attempt(CombatAttemptRecord {
+            sequence: 0,
+            target_id: None,
+            accepted: true,
+            outcome: "swinging".to_string(),
+            cooldown_before,
+            cooldown_after: cooldown_duration,
+            cooldown_duration,
+            stamina_before,
+            stamina_cost,
+            stamina_after,
+        });
+        self.melee_presentation = Some(ActiveMeleePresentation {
+            attempt_sequence,
+            elapsed: 0.0,
+            accepted: true,
+            outcome: "swinging".to_string(),
+            target_id: None,
+            stamina_before,
+            stamina_after,
+            target_health_before: None,
+            target_health_after: None,
+            target_max_health: None,
+            final_damage: None,
+            died: false,
+            contact_resolved: false,
+        });
+        self.experiment_readout()
+    }
+
+    fn resolve_melee_contact(&mut self) -> Result<(), RuntimeError> {
+        let attempt_sequence = self
+            .melee_presentation
+            .as_ref()
+            .map(|action| action.attempt_sequence)
+            .ok_or_else(|| RuntimeError::Encounter("melee contact has no active action".into()))?;
         let attack_range = self.experiment.player.combat.attack_range;
         let player_position = self.player_position()?;
-        let aimed_target = select_aimed_melee_target(
+        let target = select_aimed_melee_target(
             player_position,
             self.player_state.yaw_degrees,
             attack_range,
@@ -918,10 +945,10 @@ impl DaggerRuntime {
             &self.content_live_positions,
             &self.enemy_resources,
         );
-        let id = aimed_target
-            .or(self.focused_content_id)
-            .ok_or(RuntimeError::Content(ContentError::NoFocusedTarget))?;
-        self.focused_content_id = Some(id);
+        let Some(id) = target else {
+            self.finish_melee_contact(attempt_sequence, None, "miss", None);
+            return Ok(());
+        };
         let entity = self
             .content_entities
             .iter()
@@ -933,7 +960,6 @@ impl DaggerRuntime {
             .iter()
             .find(|enemy| enemy.mobile_id == entity.mobile_id)
             .ok_or(RuntimeError::Content(ContentError::NoCombatDefinition(id)))?;
-        let target_max_health = enemy.stats.max_health;
         let target_position = self
             .content_live_positions
             .get(&id)
@@ -944,16 +970,7 @@ impl DaggerRuntime {
             target_position[1] - player_position.y,
             target_position[2] - player_position.z,
         ];
-        // Melee reach is planar: imported mobile anchors sit at floor-relative
-        // heights that are not comparable to the player's collider center.
         let distance = delta[0].hypot(delta[2]);
-        if distance > attack_range {
-            return Err(RuntimeError::Content(ContentError::OutOfRange {
-                id,
-                distance,
-                maximum: attack_range,
-            }));
-        }
         if distance > 0.4 {
             let direction = [
                 f64::from(delta[0] / distance),
@@ -971,7 +988,8 @@ impl DaggerRuntime {
                 .raycast_world(origin, direction, clear_distance)
                 .is_some_and(|hit| collision_hit_distance(hit) + 0.05 < clear_distance)
             {
-                return Err(RuntimeError::Content(ContentError::Occluded(id)));
+                self.finish_melee_contact(attempt_sequence, None, "miss", None);
+                return Ok(());
             }
         }
         let health_before = self
@@ -979,9 +997,7 @@ impl DaggerRuntime {
             .get(&id)
             .ok_or(RuntimeError::Content(ContentError::NoCombatDefinition(id)))?
             .current_health;
-        if health_before <= 0.0 {
-            return Err(RuntimeError::Content(ContentError::TargetDead(id)));
-        }
+        let target_max_health = enemy.stats.max_health;
         let raw_roll = next_combat_roll(self.combat_sequence, id);
         let resolution = dagger_rpg::resolve_melee_attack(MeleeResolutionInput {
             actor: "Player",
@@ -995,8 +1011,6 @@ impl DaggerRuntime {
             .get_mut(&id)
             .expect("combat definition checked above")
             .current_health = resolution.health_after;
-        self.player_resources.current_stamina = (stamina_before - stamina_cost).max(0.0);
-        self.player_attack_cooldown_remaining = cooldown_duration;
         let outcome = if resolution.died {
             "killed"
         } else if resolution.hit {
@@ -1004,33 +1018,7 @@ impl DaggerRuntime {
         } else {
             "miss"
         };
-        let stamina_after = self.player_resources.current_stamina;
-        let attempt_sequence = self.push_combat_attempt(CombatAttemptRecord {
-            sequence: 0,
-            target_id: Some(id),
-            accepted: true,
-            outcome: outcome.to_string(),
-            cooldown_before,
-            cooldown_after: cooldown_duration,
-            cooldown_duration,
-            stamina_before,
-            stamina_cost,
-            stamina_after,
-        });
-        self.melee_presentation = Some(ActiveMeleePresentation {
-            attempt_sequence,
-            elapsed: 0.0,
-            accepted: true,
-            outcome: outcome.to_string(),
-            target_id: Some(id),
-            stamina_before,
-            stamina_after,
-            target_health_before: Some(resolution.health_before),
-            target_health_after: Some(resolution.health_after),
-            target_max_health: Some(target_max_health),
-            final_damage: Some(resolution.final_damage),
-            died: resolution.died,
-        });
+        self.focused_content_id = Some(id);
         self.combat_sequence = self.combat_sequence.saturating_add(1);
         self.combat_history.push_back(CombatRecord {
             sequence: self.combat_sequence,
@@ -1038,12 +1026,47 @@ impl DaggerRuntime {
             range: distance,
             attack_range,
             line_of_sight_clear: true,
-            resolution,
+            resolution: resolution.clone(),
         });
         while self.combat_history.len() > COMBAT_HISTORY_LIMIT {
             self.combat_history.pop_front();
         }
-        self.experiment_readout()
+        self.finish_melee_contact(
+            attempt_sequence,
+            Some(id),
+            outcome,
+            Some((resolution, target_max_health)),
+        );
+        Ok(())
+    }
+
+    fn finish_melee_contact(
+        &mut self,
+        attempt_sequence: u64,
+        target_id: Option<u64>,
+        outcome: &str,
+        result: Option<(dagger_rpg::MeleeResolutionRecord, f32)>,
+    ) {
+        if let Some(attempt) = self
+            .combat_attempt_history
+            .iter_mut()
+            .find(|attempt| attempt.sequence == attempt_sequence)
+        {
+            attempt.target_id = target_id;
+            attempt.outcome = outcome.to_string();
+        }
+        if let Some(action) = self.melee_presentation.as_mut() {
+            action.contact_resolved = true;
+            action.outcome = outcome.to_string();
+            action.target_id = target_id;
+            if let Some((resolution, target_max_health)) = result {
+                action.target_health_before = Some(resolution.health_before);
+                action.target_health_after = Some(resolution.health_after);
+                action.target_max_health = Some(target_max_health);
+                action.final_damage = Some(resolution.final_damage);
+                action.died = resolution.died;
+            }
+        }
     }
 
     fn push_combat_attempt(&mut self, mut record: CombatAttemptRecord) -> u64 {

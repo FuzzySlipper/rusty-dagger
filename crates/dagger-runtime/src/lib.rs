@@ -249,9 +249,32 @@ mod tests {
             .expect("apply lethal profile");
         runtime.jump_to_content(2007).expect("jump beside real Rat");
 
-        let attacked = runtime
+        let swinging = runtime
             .attack_focused_target()
             .expect("attack focused real Rat");
+        assert!(swinging.combat.is_empty());
+        let accepted = swinging
+            .combat_attempts
+            .last()
+            .expect("accepted physical attack attempt");
+        assert!(accepted.accepted);
+        assert_eq!(accepted.outcome, "swinging");
+        assert_eq!(accepted.target_id, None);
+        assert_eq!(accepted.stamina_before, 90.0);
+        assert_eq!(accepted.stamina_after, 80.0);
+        assert_eq!(accepted.cooldown_after, 0.75);
+        let melee = swinging
+            .melee_presentation
+            .as_ref()
+            .expect("accepted attack starts visible Rust action state");
+        assert_eq!(melee.phase, super::MeleePresentationPhase::Anticipation);
+        assert_eq!(melee.target_id, None);
+        assert_eq!(melee.target_health_before, None);
+
+        let attacked = runtime
+            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+            .and_then(|_| runtime.experiment_readout())
+            .expect("resolve melee only at deterministic contact");
         let record = attacked.combat.last().expect("semantic combat record");
         assert_eq!(record.target_id, 2007);
         assert!(record.line_of_sight_clear);
@@ -265,14 +288,12 @@ mod tests {
             .expect("accepted physical attack attempt");
         assert!(accepted.accepted);
         assert_eq!(accepted.outcome, "killed");
-        assert_eq!(accepted.stamina_before, 90.0);
-        assert_eq!(accepted.stamina_after, 80.0);
-        assert_eq!(accepted.cooldown_after, 0.75);
+        assert_eq!(accepted.target_id, Some(2007));
         let melee = attacked
             .melee_presentation
             .as_ref()
             .expect("accepted attack starts visible Rust action state");
-        assert_eq!(melee.phase, super::MeleePresentationPhase::Anticipation);
+        assert_eq!(melee.phase, super::MeleePresentationPhase::Contact);
         assert_eq!(melee.target_id, Some(2007));
         assert_eq!(melee.target_health_before, Some(3.0));
         assert_eq!(melee.target_health_after, Some(0.0));
@@ -286,15 +307,6 @@ mod tests {
             .expect("attacked Rat readout");
         assert_eq!(rat.live.resources.unwrap().current_health, 0.0);
 
-        let contact = runtime
-            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
-            .and_then(|_| runtime.experiment_readout())
-            .expect("advance melee action to deterministic contact");
-        assert_eq!(
-            contact.melee_presentation.unwrap().phase,
-            super::MeleePresentationPhase::Contact
-        );
-
         let rejected = runtime
             .attack_focused_target()
             .expect("cooldown rejection remains readable");
@@ -307,17 +319,33 @@ mod tests {
         assert_eq!(rejected.stamina_before, rejected.stamina_after);
         assert_eq!(
             runtime.melee_presentation().unwrap().phase,
-            super::MeleePresentationPhase::Rejected
+            super::MeleePresentationPhase::Contact
         );
         for _ in 0..3 {
             runtime
                 .tick_play_session(0.25)
                 .expect("advance authoritative attack cooldown");
         }
-        assert!(matches!(
-            runtime.attack_focused_target(),
-            Err(RuntimeError::Content(super::ContentError::TargetDead(2007)))
-        ));
+        let empty = runtime
+            .attack_focused_target()
+            .expect("dead target does not suppress a new swing");
+        assert_eq!(
+            empty.melee_presentation.unwrap().phase,
+            super::MeleePresentationPhase::Anticipation
+        );
+        runtime
+            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+            .expect("resolve dead-target swing as empty contact");
+        assert_eq!(
+            runtime
+                .experiment_readout()
+                .unwrap()
+                .combat_attempts
+                .last()
+                .unwrap()
+                .outcome,
+            "miss"
+        );
         let reset = runtime.reset_play_session().expect("reset combat run");
         assert!(reset.combat.is_empty());
         assert!(reset.combat_attempts.is_empty());
