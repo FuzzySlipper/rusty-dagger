@@ -168,6 +168,10 @@ pub(crate) fn apply_player_action(
     if entity_view.kinematic.is_none() || entity_view.transform.is_none() {
         return Err(PlayerError::MissingKinematicBody { player });
     }
+    let half_extents = entity_view
+        .kinematic
+        .expect("admitted player kinematic body")
+        .half_extents;
 
     match action {
         ResolvedPlayerAction::Look {
@@ -262,15 +266,30 @@ pub(crate) fn apply_player_action(
                                 .all(|(original, retry)| !(*original && retry));
                             if !step_succeeded {
                                 let after_retry = player_translation(entities, player)?;
+                                let lowered_retry =
+                                    Vec3::new(after_retry.x, start.y, after_retry.z);
+                                // A raised retry can slide over sloped or
+                                // curved wall geometry even though lowering
+                                // that horizontal result would put the body
+                                // inside the mesh. Committing that embedded
+                                // position makes every later axis sweep look
+                                // blocked, including movement away from the
+                                // wall. Keep the initial sweep's safe slide
+                                // when the lowered retry is not admissible.
+                                let fallback = if translation_overlaps_scene(
+                                    scene,
+                                    lowered_retry,
+                                    half_extents,
+                                ) {
+                                    horizontal_after
+                                } else {
+                                    lowered_retry
+                                };
                                 entities
                                     .apply_batch(EntityCommandBatch::new([
                                         EntityCommand::SetTranslation {
                                             entity: player,
-                                            translation: Vec3::new(
-                                                after_retry.x,
-                                                start.y,
-                                                after_retry.z,
-                                            ),
+                                            translation: fallback,
                                         },
                                     ]))
                                     .map_err(PlayerError::EntityBatch)?;
@@ -320,7 +339,35 @@ pub(crate) fn apply_player_action(
                 }
             }
 
-            let end = player_translation(entities, player)?;
+            let attempted_end = player_translation(entities, player)?;
+            let end = if attempted_end != start
+                && !translation_overlaps_scene(scene, start, half_extents)
+                && translation_overlaps_scene(scene, attempted_end, half_extents)
+            {
+                // Maintain the controller invariant that a movement action
+                // cannot transition a valid body into static geometry. This
+                // is a final guard for triangle seams beyond the step retry
+                // above and leaves the player at the action's last known-good
+                // position, where backing or strafing remains possible.
+                entities
+                    .apply_batch(EntityCommandBatch::new([EntityCommand::SetTranslation {
+                        entity: player,
+                        translation: start,
+                    }]))
+                    .map_err(PlayerError::EntityBatch)?;
+                if blocked_velocity.is_none() && input_length > 0.0 {
+                    blocked_velocity = Some(move_velocity(
+                        config,
+                        component.yaw_degrees,
+                        forward,
+                        right,
+                        input_length,
+                    ));
+                }
+                start
+            } else {
+                attempted_end
+            };
             let mut facts = Vec::new();
             if end != start {
                 facts.push(PlayerControlFact::Moved {
@@ -453,6 +500,16 @@ fn player_translation(entities: &EntityState, player: EntityId) -> Result<Vec3, 
         .transform
         .map(|transform| transform.translation)
         .ok_or(PlayerError::MissingKinematicBody { player })
+}
+
+fn translation_overlaps_scene(
+    scene: &VoxelCollisionScene,
+    translation: Vec3,
+    half_extents: Vec3,
+) -> bool {
+    let min = translation - half_extents;
+    let max = translation + half_extents;
+    scene.aabb_overlaps_solid(min.to_array().map(f64::from), max.to_array().map(f64::from))
 }
 
 fn motion_moved(motion: &MotionPhaseReceipt, player: EntityId) -> bool {
