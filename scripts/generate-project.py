@@ -444,6 +444,11 @@ def build_encounter_gallery(project: dict, enemy_manifest: dict) -> tuple[dict, 
     mobile_ids = [0, 15, 1, 0, 15]
     enemy_entries = {e["mobileId"]: e for e in enemy_manifest.get("enemies", [])}
     required_assets = {f"texture/enemy-{mobile_id}-atlas" for mobile_id in mobile_ids}
+    required_assets.update(
+        asset["id"]
+        for asset in project["assets"]
+        if asset["id"].startswith(("texture/weapon-", "texture/effect-"))
+    )
     default_material = next(asset for asset in project["assets"] if asset["id"] == "material/default")
     assets = [default_material] + [asset for asset in project["assets"] if asset["id"] in required_assets]
     gallery_floor = {
