@@ -221,9 +221,12 @@ modularity gate, task 6529):
   once in the Rust product host. That adapter maps mouse-right and mouse-up to
   positive canonical Engine yaw and pitch respectively; the retained camera
   readout and character-controller heading share that same yaw basis so WASD
-  movement remains camera-relative. The browser accumulates raw pointer deltas
-  and samples them with held controls on one 40 ms input cadence; mouse event
-  volume never creates additional movement steps.
+  movement remains camera-relative. The browser accumulates raw pointer deltas,
+  durable pressed edges, and held controls into sequenced 40 ms physical input
+  frames. Rust admits each newer sequence, bounds accumulated look, applies the
+  complete look before movement at the resulting heading, and advances exactly
+  the frame's declared duration. Mouse event volume therefore cannot create
+  extra movement steps, while short taps cannot disappear between samples.
 
   First-person melee presentation follows the same boundary and is clone-first.
   `dagger-runtime` owns attack direction, contact, recovery, cooldown, stamina,
@@ -406,17 +409,22 @@ authority is the dungeon static mesh itself:
   admitted `fallSpeedUnitsPerSecond` / `stepUpUnits` policy into Engine's
   canonical `CharacterControllerConfig`. Engine's `CharacterControllerService`
   and `CharacterMotionComponent` are the sole movement, gravity, grounding,
-  step, slope, ledge, and wall-slide authority. The authored 0.1s Dagger action
-  cadence is deterministically subdivided into bounded Engine fixed steps. A
+  step, slope, ledge, and wall-slide authority. Legacy semantic actions retain
+  the authored 0.1s duration; product input declares its sampled duration and
+  both paths deterministically subdivide into bounded Engine fixed steps. A
   deliberate 1m / 60m-per-second bounded recovery override admits the existing
   cube-era spawn markers into the canonical 1.8m capsule without moving spawn
   selection policy out of Dagger.
 - Camera look is integrated by Engine's `FirstPersonLookService`; Dagger owns
-  pointer-event translation and converts Engine's canonical basis signs to the
-  renderer/Daggerfall camera-degree convention before publishing the stable
-  camera and aim readout. `ResolvedPlayerAction::Look` therefore follows the
-  Engine delta sign, while `PlayerControllerState` remains the compatible
-  renderer/Daggerfall degree readout. No Dagger solver or look fallback remains.
+  pointer-event translation and publishes Engine's canonical basis directly as
+  renderer/Daggerfall camera degrees. Caller-owned `FirstPersonLookState` is
+  the sole orientation continuation authority. `PlayerControllerState` is only
+  the compatible derived degree readout, never separately stored or merged.
+  Product input uses `ResolvedPlayerFrame` so same-frame movement consumes the
+  post-look heading. Explicit neutral `ResolvedPlayerFrame` calls still advance
+  grounding and gravity, while the browser adapter keeps edge-only gameplay
+  commands at their authored pose instead of manufacturing controller motion.
+  No Dagger solver or look fallback remains.
 
 **What the trimesh changes.** The retired proxy only kept up-facing surfaces,
 so walls were incidental and the old walkthrough route silently clipped

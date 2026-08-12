@@ -32,6 +32,7 @@ interface DaggerProductBootstrapWire {
 }
 
 interface DaggerProductStateWire {
+  readonly inputSequence: number;
   readonly camera: DaggerProductCamera;
   readonly playerPosition: readonly [number, number, number];
   readonly frame?: Readonly<Record<string, unknown>>;
@@ -60,10 +61,19 @@ interface DaggerMeleePresentationWire {
 }
 
 interface DaggerPhysicalInputWire {
+  readonly sequence: number;
+  readonly stepSeconds: number;
   readonly pressedCodes: readonly string[];
+  readonly pressedEdges: readonly string[];
   readonly pointerDelta: readonly [number, number];
   readonly buttons: number;
+  readonly buttonPressedEdges: number;
 }
+
+const INPUT_SAMPLE_INTERVAL_MS = 40;
+const MAX_QUEUED_STEP_SECONDS = 0.25;
+const MAX_SAMPLED_STEP_SECONDS = 0.08;
+const MIN_INPUT_STEP_SECONDS = 0.001;
 
 export interface DaggerProductBootstrap {
   readonly camera: DaggerProductCamera;
@@ -100,17 +110,25 @@ export function mountDaggerProductRuntime(
   context: RustyApplicationUiContext,
 ): { readonly dispose: () => void } {
   const pressed = new Set<string>();
+  const pressedEdges = new Set<string>();
   const pending: DaggerPhysicalInputWire[] = [];
   let sending = false;
+  let polling = false;
   let disposed = false;
   let buttons = 0;
-  let inputDirty = false;
+  let buttonPressedEdges = 0;
   let pointerDelta: [number, number] = [0, 0];
+  let inputSequence = 0;
+  let latestAppliedInputSequence = 0;
+  let lastInputSampleAtMs = performance.now();
+  let inputChanged = false;
   let dynamicFrameSequence = 0;
   const environmentFrames = new Map<number, number>();
   const enemyTransforms = new Map<number, string>();
 
   const applyState = async (state: DaggerProductStateWire): Promise<void> => {
+    const ownsControlState = state.inputSequence >= latestAppliedInputSequence;
+    if (ownsControlState) latestAppliedInputSequence = state.inputSequence;
     if (state.frame !== undefined) {
       const ops = state.frame['ops'];
       const opCount = Array.isArray(ops) ? ops.length : 0;
@@ -161,7 +179,11 @@ export function mountDaggerProductRuntime(
         document.body.dataset['daggerPresentationOpCount'] = String(opCount);
       }
     }
+    if (!ownsControlState || state.inputSequence !== latestAppliedInputSequence) return;
     renderer.setCameraPose(state.camera);
+    document.body.dataset['daggerInputSequence'] = String(state.inputSequence);
+    document.body.dataset['daggerCameraYaw'] = String(state.camera.yawDegrees);
+    document.body.dataset['daggerCameraPitch'] = String(state.camera.pitchDegrees);
     document.body.dataset['daggerAuthoritativePosition'] = state.playerPosition.join(',');
     document.body.dataset['daggerPatrolDebug'] = String(state.patrolDebugEnabled);
     document.body.dataset['daggerNavDebug'] = String(state.navDebugEnabled);
@@ -213,25 +235,43 @@ export function mountDaggerProductRuntime(
       if (pending.length > 0 && !disposed) void drain();
     }
   };
-  const submit = (pointerDelta: readonly [number, number], buttons: number): void => {
+  const submit = (
+    sampledStepSeconds: number,
+    sampledPointerDelta: readonly [number, number],
+    sampledPressedEdges: readonly string[],
+    sampledButtonPressedEdges: number,
+  ): void => {
+    inputSequence += 1;
+    document.body.dataset['daggerSampledInputSequence'] = String(inputSequence);
+    if (sampledPressedEdges.length > 0) {
+      document.body.dataset['daggerLastSampledPressedEdges'] = sampledPressedEdges.join(',');
+    }
     const input = {
+      sequence: inputSequence,
+      stepSeconds: sampledStepSeconds,
       pressedCodes: [...pressed].sort(),
-      pointerDelta,
+      pressedEdges: sampledPressedEdges,
+      pointerDelta: sampledPointerDelta,
       buttons,
+      buttonPressedEdges: sampledButtonPressedEdges,
     };
     const previous = pending.at(-1);
-    if (
+    const canCoalesce =
       previous !== undefined
       && previous.buttons === input.buttons
       && previous.pressedCodes.length === input.pressedCodes.length
       && previous.pressedCodes.every((code, index) => code === input.pressedCodes[index])
-    ) {
+      && previous.stepSeconds + input.stepSeconds <= MAX_QUEUED_STEP_SECONDS;
+    if (canCoalesce) {
       pending[pending.length - 1] = {
         ...input,
+        stepSeconds: previous.stepSeconds + input.stepSeconds,
+        pressedEdges: [...new Set([...previous.pressedEdges, ...input.pressedEdges])].sort(),
         pointerDelta: [
           previous.pointerDelta[0] + input.pointerDelta[0],
           previous.pointerDelta[1] + input.pointerDelta[1],
         ],
+        buttonPressedEdges: previous.buttonPressedEdges | input.buttonPressedEdges,
       };
     } else {
       pending.push(input);
@@ -239,36 +279,54 @@ export function mountDaggerProductRuntime(
     void drain();
   };
   const flushInput = (): void => {
-    if (
-      !inputDirty
-      && pressed.size === 0
-      && buttons === 0
-      && pointerDelta[0] === 0
-      && pointerDelta[1] === 0
-    ) return;
+    const sampledAtMs = performance.now();
+    const sampledStepSeconds = Math.min(
+      MAX_SAMPLED_STEP_SECONDS,
+      Math.max(MIN_INPUT_STEP_SECONDS, (sampledAtMs - lastInputSampleAtMs) / 1_000),
+    );
+    lastInputSampleAtMs = sampledAtMs;
+    const activeInput =
+      pressed.size > 0
+      || buttons !== 0
+      || pressedEdges.size > 0
+      || buttonPressedEdges !== 0
+      || pointerDelta[0] !== 0
+      || pointerDelta[1] !== 0;
+    if (!activeInput && !inputChanged) return;
     const sampledPointerDelta: readonly [number, number] = pointerDelta;
+    const sampledPressedEdges = [...pressedEdges].sort();
+    const sampledButtonPressedEdges = buttonPressedEdges;
     pointerDelta = [0, 0];
-    inputDirty = false;
-    submit(sampledPointerDelta, buttons);
+    pressedEdges.clear();
+    buttonPressedEdges = 0;
+    inputChanged = false;
+    submit(
+      sampledStepSeconds,
+      sampledPointerDelta,
+      sampledPressedEdges,
+      sampledButtonPressedEdges,
+    );
   };
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.code === 'Escape') {
       pressed.clear();
+      pressedEdges.clear();
       buttons = 0;
+      inputChanged = true;
       context.ui.setInteractionMode('interface');
       window.dispatchEvent(new Event('dagger-open-lab'));
-      inputDirty = true;
       flushInput();
       return;
     }
     if (event.repeat || !context.ui.allowsGameplayInput(event)) return;
     if (event.code === 'Space') resumeAudioFromGesture();
+    if (!pressed.has(event.code)) pressedEdges.add(event.code);
     pressed.add(event.code);
-    inputDirty = true;
+    inputChanged = true;
   };
   const onKeyUp = (event: KeyboardEvent): void => {
     pressed.delete(event.code);
-    inputDirty = true;
+    inputChanged = true;
   };
   const onMouseMove = (event: MouseEvent): void => {
     if (document.pointerLockElement === null || !context.ui.allowsGameplayInput(event)) return;
@@ -277,22 +335,25 @@ export function mountDaggerProductRuntime(
       pointerDelta[0] + event.movementX,
       pointerDelta[1] + event.movementY,
     ];
-    inputDirty = true;
+    inputChanged = true;
   };
   const onMouseDown = (event: MouseEvent): void => {
     if (!context.ui.allowsGameplayInput(event)) return;
     if (event.button === 0) resumeAudioFromGesture();
     buttons = event.buttons;
-    inputDirty = true;
+    buttonPressedEdges |= 1 << event.button;
+    inputChanged = true;
   };
   const onMouseUp = (event: MouseEvent): void => {
     buttons = event.buttons;
-    inputDirty = true;
+    inputChanged = true;
   };
   const onBlur = (): void => {
     pressed.clear();
+    pressedEdges.clear();
     buttons = 0;
-    inputDirty = true;
+    buttonPressedEdges = 0;
+    inputChanged = true;
     flushInput();
   };
   window.addEventListener('keydown', onKeyDown);
@@ -301,18 +362,25 @@ export function mountDaggerProductRuntime(
   window.addEventListener('mousedown', onMouseDown);
   window.addEventListener('mouseup', onMouseUp);
   window.addEventListener('blur', onBlur);
-  const inputTick = window.setInterval(flushInput, 40);
-  const poll = window.setInterval(() => {
-    void fetch('/api/dagger-product/state', { cache: 'no-store' })
-      .then((response) => {
+  const inputTick = window.setInterval(flushInput, INPUT_SAMPLE_INTERVAL_MS);
+  const pollState = async (): Promise<void> => {
+    if (polling || disposed) return;
+    polling = true;
+    try {
+      const response = await fetch('/api/dagger-product/state', { cache: 'no-store' });
         if (!response.ok) {
           throw new Error(`Dagger product state failed with ${String(response.status)}`);
         }
-        return response.json() as Promise<DaggerProductStateWire>;
-      })
-      .then((state) => applyState(state))
-      .catch(() => undefined);
-  }, 100);
+      await applyState(await response.json() as DaggerProductStateWire);
+      delete document.body.dataset['daggerProductStateError'];
+    } catch (error: unknown) {
+      document.body.dataset['daggerProductStateError'] =
+        error instanceof Error ? error.message : String(error);
+    } finally {
+      polling = false;
+    }
+  };
+  const poll = window.setInterval(() => void pollState(), 100);
   return {
     dispose: () => {
       disposed = true;

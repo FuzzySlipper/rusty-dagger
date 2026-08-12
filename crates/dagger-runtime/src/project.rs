@@ -8,7 +8,7 @@ pub type DungeonBounds = ([f64; 3], [f64; 3]);
 type DungeonColliderAdmission = (StaticMeshColliderAsset, DungeonBounds);
 use serde::Deserialize;
 
-use crate::player::{PlayerControllerConfig, PlayerControllerState, PlayerInputBindings};
+use crate::player::{PlayerControllerConfig, PlayerInputBindings};
 
 pub const SUPPORTED_PROJECT_SCHEMA_VERSION: u32 = 24;
 pub const PLAYER_ENTITY_ID: EntityId = EntityId::new(1);
@@ -51,7 +51,6 @@ pub struct AdmittedProject {
     pub player: EntityId,
     pub player_start: Vec3,
     pub player_controller: PlayerControllerConfig,
-    pub player_state: PlayerControllerState,
     pub player_look_state: FirstPersonLookState,
     pub material_voxel_count: usize,
     pub dungeon_collider: Option<StaticMeshColliderAsset>,
@@ -173,11 +172,10 @@ impl AdmittedProject {
             .as_ref()
             .expect("player controller was selected");
         let player_controller = controller_document.to_runtime_config()?;
-        let player_state = PlayerControllerState::from_degrees(
-            player_controller.initial_yaw_degrees,
-            player_controller.initial_pitch_degrees,
-        );
-        let player_look_state = player_state.engine_look_state();
+        let player_look_state = FirstPersonLookState {
+            yaw_radians: player_controller.initial_yaw_degrees.to_radians(),
+            pitch_radians: player_controller.initial_pitch_degrees.to_radians(),
+        };
         let entities = EntityState::from_definitions([EntityDefinition::new(
             player_id,
             player.name.as_deref().unwrap_or("player"),
@@ -219,7 +217,6 @@ impl AdmittedProject {
             player: player_id,
             player_start: translation,
             player_controller,
-            player_state,
             player_look_state,
             material_voxel_count,
             dungeon_collider,

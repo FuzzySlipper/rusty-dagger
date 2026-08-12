@@ -52,9 +52,13 @@ pub(crate) enum LabCommand {
 #[derive(Debug, serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct ProductInput {
+    pub(crate) sequence: u64,
+    pub(crate) step_seconds: f32,
     pub(crate) pressed_codes: Vec<String>,
+    pub(crate) pressed_edges: Vec<String>,
     pub(crate) pointer_delta: [f32; 2],
     pub(crate) buttons: u16,
+    pub(crate) button_pressed_edges: u16,
 }
 
 pub(crate) struct LabReply {

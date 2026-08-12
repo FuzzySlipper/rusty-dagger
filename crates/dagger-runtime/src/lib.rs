@@ -25,7 +25,8 @@ pub use patrol::{PatrolGrid, PatrolService, PositionUpdate};
 
 pub use player::{
     PlayerControlFact, PlayerControlReceipt, PlayerControllerConfig, PlayerControllerState,
-    PlayerInputBindings, ResolvedPlayerAction, MAX_PLAYER_LOOK_DEGREES_PER_UNIT,
+    PlayerFrameReceipt, PlayerInputBindings, ResolvedPlayerAction, ResolvedPlayerFrame,
+    MAX_PLAYER_FRAME_LOOK_UNITS, MAX_PLAYER_FRAME_STEP_SECONDS, MAX_PLAYER_LOOK_DEGREES_PER_UNIT,
     MAX_PLAYER_SPEED_UNITS_PER_SECOND, MAX_PLAYER_STEP_UP_UNITS,
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
@@ -42,7 +43,8 @@ pub use runtime::{
 mod tests {
     use super::{
         AdmittedProject, DaggerRuntime, PlayerControlFact, ProjectAdmissionError,
-        ResolvedPlayerAction, RuntimeError, CALCULATION_HISTORY_LIMIT, STARTER_EXPERIMENT_JSON,
+        ResolvedPlayerAction, ResolvedPlayerFrame, RuntimeError, CALCULATION_HISTORY_LIMIT,
+        STARTER_EXPERIMENT_JSON,
     };
     use rusty_engine::core_math::Vec3;
 
@@ -194,6 +196,57 @@ mod tests {
             wish.dot(expected_forward) > 0.0,
             "W wish velocity {wish:?} must follow camera forward {expected_forward:?}"
         );
+    }
+
+    #[test]
+    fn sampled_frame_applies_complete_look_before_declared_duration_motion() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let yaw_before = runtime.player_state().yaw_degrees;
+        let receipt = runtime
+            .apply_player_frame(ResolvedPlayerFrame {
+                forward: 1.0,
+                right: 0.0,
+                yaw_delta: 0.5,
+                pitch_delta: 0.25,
+                step_seconds: 0.04,
+            })
+            .expect("one sampled input frame");
+        let yaw_after = runtime.player_state().yaw_degrees;
+        let yaw_delta = (yaw_after - yaw_before + 540.0).rem_euclid(360.0) - 180.0;
+        let yaw = yaw_after.to_radians();
+        assert!(yaw_delta > 0.0);
+        let expected_forward = rusty_engine::core_math::Vec3::new(yaw.sin(), 0.0, -yaw.cos());
+        assert!(
+            receipt.motion.wish_velocity.dot(expected_forward) > 0.0,
+            "same-frame movement must use the post-look heading"
+        );
+        assert_eq!(
+            receipt.motion.command_sequence, 3,
+            "40ms product frames split into three bounded Engine ticks, not the authored 100ms action duration"
+        );
+        assert!(receipt
+            .facts
+            .iter()
+            .any(|fact| matches!(fact, PlayerControlFact::LookChanged { .. })));
+    }
+
+    #[test]
+    fn sampled_frame_accepts_a_bounded_accumulated_pointer_burst() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        runtime
+            .apply_player_frame(ResolvedPlayerFrame {
+                forward: 0.0,
+                right: 0.0,
+                yaw_delta: 10.0,
+                pitch_delta: 10.0,
+                step_seconds: 0.04,
+            })
+            .expect("accumulated look is deterministically partitioned");
+        let state = runtime.player_state();
+        assert!(state.yaw_degrees.is_finite());
+        assert!((state.pitch_degrees - 89.0).abs() < 0.001);
     }
 
     #[test]
