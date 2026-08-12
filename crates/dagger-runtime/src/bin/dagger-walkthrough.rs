@@ -54,6 +54,21 @@ fn support_height(runtime: &DaggerRuntime, eye: [f32; 3], window: f32) -> Option
     None
 }
 
+fn player_overlaps_world(runtime: &DaggerRuntime, eye: [f32; 3]) -> bool {
+    runtime.collision_scene().aabb_overlaps_solid(
+        [
+            f64::from(eye[0] - BODY_HALF),
+            f64::from(eye[1] - BODY_HALF),
+            f64::from(eye[2] - BODY_HALF),
+        ],
+        [
+            f64::from(eye[0] + BODY_HALF),
+            f64::from(eye[1] + BODY_HALF),
+            f64::from(eye[2] + BODY_HALF),
+        ],
+    )
+}
+
 fn settle(runtime: &mut DaggerRuntime, actions: usize) -> Vec<f32> {
     let mut trace = Vec::with_capacity(actions + 1);
     trace.push(runtime.player_position().expect("player position").y);
@@ -221,6 +236,73 @@ fn main() {
     }
     if end_support.is_none() {
         failures.push("reachable traversal ended without trimesh support".to_string());
+    }
+
+    // 2b. Curved-hallway wall pressure: enter the descending curve while
+    // holding a diagonal into its east wall, then reverse away. This is the
+    // real-project route that previously allowed a failed raised retry to be
+    // lowered into the trimesh, leaving every later movement axis blocked.
+    let mut curve = DaggerRuntime::from_project_json(&document).expect("admit project");
+    curve
+        .set_player_position(Vec3::new(main_floor[0], main_floor[1], main_floor[2]))
+        .expect("position at curved hallway approach");
+    settle(&mut curve, 30);
+    let curve_start = curve.player_position().expect("curve start");
+    steer_toward(&mut curve, [28.25, curve_start.y, -20.85]);
+    let mut curve_blocked = 0usize;
+    let mut curve_overlap = false;
+    for _ in 0..120 {
+        let receipt = curve
+            .apply_player_action(ResolvedPlayerAction::Move {
+                forward: 1.0,
+                right: 1.0,
+            })
+            .expect("curved-wall pressure action");
+        curve_blocked += receipt
+            .facts
+            .iter()
+            .filter(|fact| matches!(fact, PlayerControlFact::Blocked { .. }))
+            .count();
+        curve_overlap |= player_overlaps_world(
+            &curve,
+            curve
+                .player_position()
+                .expect("curve pressure position")
+                .to_array(),
+        );
+        if curve_blocked >= 3 {
+            break;
+        }
+    }
+    let before_escape = curve.player_position().expect("curve escape start");
+    for _ in 0..10 {
+        curve
+            .apply_player_action(ResolvedPlayerAction::Move {
+                forward: -1.0,
+                right: -1.0,
+            })
+            .expect("curved-wall escape action");
+    }
+    let after_escape = curve.player_position().expect("curve escape end");
+    let escaped = (after_escape.x - before_escape.x).hypot(after_escape.z - before_escape.z);
+    let curve_support = support_height(&curve, after_escape.to_array(), 1.0);
+    println!(
+        "curved-wall regression: blocked={curve_blocked} overlap={curve_overlap} escaped={escaped:.3} end=[{:.2}, {:.2}, {:.2}] support={curve_support:?}",
+        after_escape.x, after_escape.y, after_escape.z
+    );
+    if curve_blocked == 0 {
+        failures.push("curved-wall route never contacted the hallway wall".to_string());
+    }
+    if curve_overlap {
+        failures.push("curved-wall contact embedded the player in the trimesh".to_string());
+    }
+    if escaped < 0.5 {
+        failures.push(format!(
+            "player could not reverse away from the curved wall (escaped {escaped:.3}m)"
+        ));
+    }
+    if curve_support.is_none() {
+        failures.push("curved-wall escape ended without floor support".to_string());
     }
 
     // 3a. Adversarial controller boundary: a tall wall blocks without
