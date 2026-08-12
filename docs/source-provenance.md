@@ -27,6 +27,23 @@ changed their durable extraction layout from an unbounded single row to a
 deterministic multi-row grid capped by Engine's public 4096-pixel texture
 dimension, then regenerated the checked project from local Arena2 data.
 
+## Daggerfall Unity donor snapshot
+
+The read-only donor source is available at `/home/research/daggerfall-unity`
+and is indexed locally by Codebase Memory under project `daggerfall-unity`.
+The index is a navigation aid, not provenance authority. The donor checkout has
+no `.git` metadata; claims in this repository continue to use the declared DFU
+revision `81e89e90c27bc3c1a7a61871e545fad129174dec` and must be checked against
+exact source. See the [donor code map](donor-code-map.md) for stable query
+seeds.
+
+For new Daggerfall semantics, inspect the relevant donor entry point, core
+implementation, data model, and meaningful call sites before choosing a local
+design. Preserve sound semantics while re-owning them in Rust; Unity runtime
+topology and incidental implementation constraints are not donor authority.
+Substantial task evidence records the donor files/symbols consulted and whether
+the model was adopted, adapted, rejected, or not found.
+
 ## Classic combat art and audio
 
 `content/textures/combat-manifest.json`, the classic dagger/effect atlas PNGs,
