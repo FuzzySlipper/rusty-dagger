@@ -38,6 +38,35 @@ Daggerfall-owned runtime/adapter surfaces.
   extraction math. Verify against the real data files, not against memory of
   the donor.
 
+## Daggerfall Unity donor consultation
+
+Treat Daggerfall Unity consultation as an early design step whenever work
+touches Daggerfall formats, formulas, gameplay, animation, orientation, AI,
+world assembly, or other classic semantics. Do this before proposing an
+original model, not only after the local approach runs into trouble.
+
+- Use the `consult-donor-code` skill when available.
+- The frozen donor source is `/home/research/daggerfall-unity`; its Codebase
+  Memory project is `daggerfall-unity`. The declared donor revision is recorded
+  in [docs/source-provenance.md](docs/source-provenance.md). The checkout has no
+  `.git` metadata, so do not infer revision identity from the index.
+- Start from [docs/donor-code-map.md](docs/donor-code-map.md), then query the
+  indexed project explicitly. Search using DFU names as well as Rusty terms.
+- Inspect exact source plus meaningful callers/callees. A single search hit or
+  graph summary is not enough to establish the donor model.
+- Classify substantial use as `adopted`, `adapted`, `rejected`, or `not found`,
+  and record donor files/symbols plus deliberate deviations in the Den handoff
+  or review packet.
+- Preserve semantics where they are sound, but adapt them to this repository's
+  Rust authority and Engine boundary. Do not copy Unity ownership, runtime
+  topology, or incidental implementation constraints.
+- If Codebase Memory is unavailable, consult the frozen source directly with
+  `rg` and file reads. If the donor source itself is unavailable, report the
+  missing evidence instead of designing from memory.
+
+This requirement is proportional: unrelated Engine-facade or build-plumbing
+work does not need donor ceremony. New Daggerfall behavior does.
+
 ## Architecture boundaries
 
 - `crates/arena2` is read-only parsing of the classic data files. It must not
