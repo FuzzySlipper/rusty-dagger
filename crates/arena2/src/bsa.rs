@@ -17,6 +17,7 @@ pub struct BsaArchive {
 
 struct Record {
     name: String,
+    id: Option<u32>,
     offset: usize,
     size: usize,
 }
@@ -60,6 +61,7 @@ impl BsaArchive {
                     let size = size as usize;
                     records.push(Record {
                         name,
+                        id: None,
                         offset: pos,
                         size,
                     });
@@ -93,6 +95,7 @@ impl BsaArchive {
                     let size = size as usize;
                     records.push(Record {
                         name: id.to_string(),
+                        id: Some(id),
                         offset: pos,
                         size,
                     });
@@ -148,6 +151,17 @@ impl BsaArchive {
         let r = &self.records[i];
         Some(&self.data[r.offset..r.offset + r.size])
     }
+
+    /// Get record bytes by directory order. DAGGER.SND's public clip enum is
+    /// indexed this way, while its numeric BSA IDs remain provenance.
+    pub fn get_index(&self, index: usize) -> Option<&[u8]> {
+        let r = self.records.get(index)?;
+        Some(&self.data[r.offset..r.offset + r.size])
+    }
+
+    pub fn record_id(&self, index: usize) -> Option<u32> {
+        self.records.get(index)?.id
+    }
 }
 
 #[cfg(test)]
@@ -169,6 +183,8 @@ mod tests {
         let data = numeric_bsa(&[(42, b"mesh"), (61000, b"geometry")]);
         let bsa = BsaArchive::parse(data).unwrap();
         assert_eq!(bsa.get("42"), Some(b"mesh".as_slice()));
+        assert_eq!(bsa.get_index(1), Some(b"geometry".as_slice()));
+        assert_eq!(bsa.record_id(1), Some(61000));
         assert_eq!(bsa.get("61000"), Some(b"geometry".as_slice()));
 
         assert!(BsaArchive::parse(vec![]).err().unwrap().contains("header"));

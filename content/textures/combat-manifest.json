@@ -1,0 +1,1442 @@
+{
+  "audio": [
+    {
+      "byteLength": 1331,
+      "id": "audio.melee.dagger.swing",
+      "mimeType": "audio/wav",
+      "path": "content/audio/audio-melee-dagger-swing.wav",
+      "sha256": "sha256:52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
+      "source": {
+        "encoding": "unsigned-pcm8-mono",
+        "file": "DAGGER.SND",
+        "recordId": 374,
+        "recordIndex": 106,
+        "sampleRate": 11025
+      }
+    },
+    {
+      "byteLength": 2173,
+      "id": "audio.melee.hit.1",
+      "mimeType": "audio/wav",
+      "path": "content/audio/audio-melee-hit-1.wav",
+      "sha256": "sha256:f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
+      "source": {
+        "encoding": "unsigned-pcm8-mono",
+        "file": "DAGGER.SND",
+        "recordId": 378,
+        "recordIndex": 108,
+        "sampleRate": 11025
+      }
+    },
+    {
+      "byteLength": 2460,
+      "id": "audio.melee.hit.2",
+      "mimeType": "audio/wav",
+      "path": "content/audio/audio-melee-hit-2.wav",
+      "sha256": "sha256:3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
+      "source": {
+        "encoding": "unsigned-pcm8-mono",
+        "file": "DAGGER.SND",
+        "recordId": 379,
+        "recordIndex": 109,
+        "sampleRate": 11025
+      }
+    },
+    {
+      "byteLength": 2921,
+      "id": "audio.melee.hit.3",
+      "mimeType": "audio/wav",
+      "path": "content/audio/audio-melee-hit-3.wav",
+      "sha256": "sha256:23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
+      "source": {
+        "encoding": "unsigned-pcm8-mono",
+        "file": "DAGGER.SND",
+        "recordId": 380,
+        "recordIndex": 110,
+        "sampleRate": 11025
+      }
+    },
+    {
+      "byteLength": 2670,
+      "id": "audio.melee.hit.4",
+      "mimeType": "audio/wav",
+      "path": "content/audio/audio-melee-hit-4.wav",
+      "sha256": "sha256:5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
+      "source": {
+        "encoding": "unsigned-pcm8-mono",
+        "file": "DAGGER.SND",
+        "recordId": 381,
+        "recordIndex": 111,
+        "sampleRate": 11025
+      }
+    },
+    {
+      "byteLength": 3557,
+      "id": "audio.melee.hit.5",
+      "mimeType": "audio/wav",
+      "path": "content/audio/audio-melee-hit-5.wav",
+      "sha256": "sha256:7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
+      "source": {
+        "encoding": "unsigned-pcm8-mono",
+        "file": "DAGGER.SND",
+        "recordId": 382,
+        "recordIndex": 112,
+        "sampleRate": 11025
+      }
+    }
+  ],
+  "cloneBaseline": "classic-daggerfall-dfu",
+  "effects": [
+    {
+      "byteLength": 73090,
+      "fps": 10,
+      "frames": [
+        {
+          "frame": 0,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            64,
+            57
+          ],
+          "uvMax": [
+            0.2,
+            1.0
+          ],
+          "uvMin": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            64,
+            57
+          ],
+          "uvMax": [
+            0.4,
+            1.0
+          ],
+          "uvMin": [
+            0.2,
+            0.0
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            64,
+            57
+          ],
+          "uvMax": [
+            0.6,
+            1.0
+          ],
+          "uvMin": [
+            0.4,
+            0.0
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            64,
+            57
+          ],
+          "uvMax": [
+            0.8,
+            1.0
+          ],
+          "uvMin": [
+            0.6,
+            0.0
+          ]
+        },
+        {
+          "frame": 4,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            64,
+            57
+          ],
+          "uvMax": [
+            1.0,
+            1.0
+          ],
+          "uvMin": [
+            0.8,
+            0.0
+          ]
+        }
+      ],
+      "height": 57,
+      "id": "effect.blood.0",
+      "loop": false,
+      "path": "effect-blood-0-atlas.png",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "sha256": "sha256:d3e7aa152975241e224771ed9844365b8a0f02d315828388eaec7d5ee9662ec5",
+      "source": {
+        "archive": 380,
+        "file": "TEXTURE.380",
+        "record": 0
+      },
+      "textureAssetId": "texture/effect-blood-0-atlas",
+      "width": 320
+    },
+    {
+      "byteLength": 12488,
+      "fps": 10,
+      "frames": [
+        {
+          "frame": 0,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            86,
+            36
+          ],
+          "uvMax": [
+            1.0,
+            1.0
+          ],
+          "uvMin": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "height": 36,
+      "id": "effect.blood.1",
+      "loop": false,
+      "path": "effect-blood-1-atlas.png",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "sha256": "sha256:b3d526d2a6842df71651c9bed3073cfdfb0138b9b2fa0cdaaa115144fba9e9b0",
+      "source": {
+        "archive": 380,
+        "file": "TEXTURE.380",
+        "record": 1
+      },
+      "textureAssetId": "texture/effect-blood-1-atlas",
+      "width": 86
+    },
+    {
+      "byteLength": 19939,
+      "fps": 10,
+      "frames": [
+        {
+          "frame": 0,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            32,
+            31
+          ],
+          "uvMax": [
+            0.2,
+            1.0
+          ],
+          "uvMin": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            32,
+            31
+          ],
+          "uvMax": [
+            0.4,
+            1.0
+          ],
+          "uvMin": [
+            0.2,
+            0.0
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            32,
+            31
+          ],
+          "uvMax": [
+            0.6,
+            1.0
+          ],
+          "uvMin": [
+            0.4,
+            0.0
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            32,
+            31
+          ],
+          "uvMax": [
+            0.8,
+            1.0
+          ],
+          "uvMin": [
+            0.6,
+            0.0
+          ]
+        },
+        {
+          "frame": 4,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            32,
+            31
+          ],
+          "uvMax": [
+            1.0,
+            1.0
+          ],
+          "uvMin": [
+            0.8,
+            0.0
+          ]
+        }
+      ],
+      "height": 31,
+      "id": "effect.blood.2",
+      "loop": false,
+      "path": "effect-blood-2-atlas.png",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "sha256": "sha256:35b4bde0695fabab0c8d27b516381540975d2e2e1a4a10c3251ea773e9690fd6",
+      "source": {
+        "archive": 380,
+        "file": "TEXTURE.380",
+        "record": 2
+      },
+      "textureAssetId": "texture/effect-blood-2-atlas",
+      "width": 160
+    },
+    {
+      "byteLength": 188128,
+      "fps": 10,
+      "frames": [
+        {
+          "frame": 0,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.05,
+            1.0
+          ],
+          "uvMin": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "frame": 1,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.1,
+            1.0
+          ],
+          "uvMin": [
+            0.05,
+            0.0
+          ]
+        },
+        {
+          "frame": 2,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.15,
+            1.0
+          ],
+          "uvMin": [
+            0.1,
+            0.0
+          ]
+        },
+        {
+          "frame": 3,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.2,
+            1.0
+          ],
+          "uvMin": [
+            0.15,
+            0.0
+          ]
+        },
+        {
+          "frame": 4,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.25,
+            1.0
+          ],
+          "uvMin": [
+            0.2,
+            0.0
+          ]
+        },
+        {
+          "frame": 5,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.3,
+            1.0
+          ],
+          "uvMin": [
+            0.25,
+            0.0
+          ]
+        },
+        {
+          "frame": 6,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.35,
+            1.0
+          ],
+          "uvMin": [
+            0.3,
+            0.0
+          ]
+        },
+        {
+          "frame": 7,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.4,
+            1.0
+          ],
+          "uvMin": [
+            0.35,
+            0.0
+          ]
+        },
+        {
+          "frame": 8,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.45,
+            1.0
+          ],
+          "uvMin": [
+            0.4,
+            0.0
+          ]
+        },
+        {
+          "frame": 9,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.5,
+            1.0
+          ],
+          "uvMin": [
+            0.45,
+            0.0
+          ]
+        },
+        {
+          "frame": 10,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.55,
+            1.0
+          ],
+          "uvMin": [
+            0.5,
+            0.0
+          ]
+        },
+        {
+          "frame": 11,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.6,
+            1.0
+          ],
+          "uvMin": [
+            0.55,
+            0.0
+          ]
+        },
+        {
+          "frame": 12,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.65,
+            1.0
+          ],
+          "uvMin": [
+            0.6,
+            0.0
+          ]
+        },
+        {
+          "frame": 13,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.7,
+            1.0
+          ],
+          "uvMin": [
+            0.65,
+            0.0
+          ]
+        },
+        {
+          "frame": 14,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.75,
+            1.0
+          ],
+          "uvMin": [
+            0.7,
+            0.0
+          ]
+        },
+        {
+          "frame": 15,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.8,
+            1.0
+          ],
+          "uvMin": [
+            0.75,
+            0.0
+          ]
+        },
+        {
+          "frame": 16,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.85,
+            1.0
+          ],
+          "uvMin": [
+            0.8,
+            0.0
+          ]
+        },
+        {
+          "frame": 17,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.9,
+            1.0
+          ],
+          "uvMin": [
+            0.85,
+            0.0
+          ]
+        },
+        {
+          "frame": 18,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            0.95,
+            1.0
+          ],
+          "uvMin": [
+            0.9,
+            0.0
+          ]
+        },
+        {
+          "frame": 19,
+          "sourceOffset": [
+            0,
+            0
+          ],
+          "sourceSize": [
+            47,
+            50
+          ],
+          "uvMax": [
+            1.0,
+            1.0
+          ],
+          "uvMin": [
+            0.95,
+            0.0
+          ]
+        }
+      ],
+      "height": 50,
+      "id": "effect.sparkle.magic",
+      "loop": false,
+      "path": "effect-sparkle-magic-atlas.png",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "sha256": "sha256:fa457f57d2a0019de72c4e40fce63be210e2587df7f3f35a005e56c79a86bc98",
+      "source": {
+        "archive": 380,
+        "file": "TEXTURE.380",
+        "record": 3
+      },
+      "textureAssetId": "texture/effect-sparkle-magic-atlas",
+      "width": 940
+    }
+  ],
+  "schemaVersion": 1,
+  "weapon": {
+    "animations": [
+      {
+        "action": "idle",
+        "alignment": "right",
+        "fps": 10,
+        "frameCount": 1,
+        "frameStart": 0,
+        "screenOffset": 0.03999999910593033,
+        "sourceRecord": 0
+      },
+      {
+        "action": "strikeDown",
+        "alignment": "right",
+        "fps": 10,
+        "frameCount": 5,
+        "frameStart": 1,
+        "screenOffset": 0.0,
+        "sourceRecord": 1
+      },
+      {
+        "action": "strikeDownLeft",
+        "alignment": "right",
+        "fps": 10,
+        "frameCount": 5,
+        "frameStart": 6,
+        "screenOffset": 0.0,
+        "sourceRecord": 2
+      },
+      {
+        "action": "strikeLeft",
+        "alignment": "right",
+        "fps": 10,
+        "frameCount": 5,
+        "frameStart": 11,
+        "screenOffset": 0.0,
+        "sourceRecord": 3
+      },
+      {
+        "action": "strikeRight",
+        "alignment": "left",
+        "fps": 10,
+        "frameCount": 5,
+        "frameStart": 16,
+        "screenOffset": 0.0,
+        "sourceRecord": 4
+      },
+      {
+        "action": "strikeDownRight",
+        "alignment": "left",
+        "fps": 10,
+        "frameCount": 5,
+        "frameStart": 21,
+        "screenOffset": 0.0,
+        "sourceRecord": 5
+      },
+      {
+        "action": "strikeUp",
+        "alignment": "right",
+        "fps": 10,
+        "frameCount": 5,
+        "frameStart": 26,
+        "screenOffset": 0.0,
+        "sourceRecord": 6
+      }
+    ],
+    "byteLength": 9704608,
+    "frames": [
+      {
+        "frame": 0,
+        "sourceOffset": [
+          230,
+          57
+        ],
+        "sourceSize": [
+          65,
+          143
+        ],
+        "uvMax": [
+          0.07692307692307693,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "frame": 1,
+        "sourceOffset": [
+          158,
+          0
+        ],
+        "sourceSize": [
+          162,
+          200
+        ],
+        "uvMax": [
+          0.15384615384615385,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.07692307692307693,
+          0.0
+        ]
+      },
+      {
+        "frame": 2,
+        "sourceOffset": [
+          158,
+          0
+        ],
+        "sourceSize": [
+          162,
+          200
+        ],
+        "uvMax": [
+          0.23076923076923078,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.15384615384615385,
+          0.0
+        ]
+      },
+      {
+        "frame": 3,
+        "sourceOffset": [
+          158,
+          0
+        ],
+        "sourceSize": [
+          162,
+          200
+        ],
+        "uvMax": [
+          0.3076923076923077,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.23076923076923078,
+          0.0
+        ]
+      },
+      {
+        "frame": 4,
+        "sourceOffset": [
+          158,
+          0
+        ],
+        "sourceSize": [
+          162,
+          200
+        ],
+        "uvMax": [
+          0.38461538461538464,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.3076923076923077,
+          0.0
+        ]
+      },
+      {
+        "frame": 5,
+        "sourceOffset": [
+          158,
+          0
+        ],
+        "sourceSize": [
+          162,
+          200
+        ],
+        "uvMax": [
+          0.46153846153846156,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.38461538461538464,
+          0.0
+        ]
+      },
+      {
+        "frame": 6,
+        "sourceOffset": [
+          24,
+          0
+        ],
+        "sourceSize": [
+          296,
+          200
+        ],
+        "uvMax": [
+          0.5384615384615384,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.46153846153846156,
+          0.0
+        ]
+      },
+      {
+        "frame": 7,
+        "sourceOffset": [
+          24,
+          0
+        ],
+        "sourceSize": [
+          296,
+          200
+        ],
+        "uvMax": [
+          0.6153846153846154,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.5384615384615384,
+          0.0
+        ]
+      },
+      {
+        "frame": 8,
+        "sourceOffset": [
+          24,
+          0
+        ],
+        "sourceSize": [
+          296,
+          200
+        ],
+        "uvMax": [
+          0.6923076923076923,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.6153846153846154,
+          0.0
+        ]
+      },
+      {
+        "frame": 9,
+        "sourceOffset": [
+          24,
+          0
+        ],
+        "sourceSize": [
+          296,
+          200
+        ],
+        "uvMax": [
+          0.7692307692307693,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.6923076923076923,
+          0.0
+        ]
+      },
+      {
+        "frame": 10,
+        "sourceOffset": [
+          24,
+          0
+        ],
+        "sourceSize": [
+          296,
+          200
+        ],
+        "uvMax": [
+          0.8461538461538461,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.7692307692307693,
+          0.0
+        ]
+      },
+      {
+        "frame": 11,
+        "sourceOffset": [
+          9,
+          75
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.9230769230769231,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.8461538461538461,
+          0.0
+        ]
+      },
+      {
+        "frame": 12,
+        "sourceOffset": [
+          9,
+          75
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          1.0,
+          0.3333333333333333
+        ],
+        "uvMin": [
+          0.9230769230769231,
+          0.0
+        ]
+      },
+      {
+        "frame": 13,
+        "sourceOffset": [
+          9,
+          75
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.07692307692307693,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.0,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 14,
+        "sourceOffset": [
+          9,
+          75
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.15384615384615385,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.07692307692307693,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 15,
+        "sourceOffset": [
+          9,
+          75
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.23076923076923078,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.15384615384615385,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 16,
+        "sourceOffset": [
+          0,
+          74
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.3076923076923077,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.23076923076923078,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 17,
+        "sourceOffset": [
+          0,
+          74
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.38461538461538464,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.3076923076923077,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 18,
+        "sourceOffset": [
+          0,
+          74
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.46153846153846156,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.38461538461538464,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 19,
+        "sourceOffset": [
+          0,
+          74
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.5384615384615384,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.46153846153846156,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 20,
+        "sourceOffset": [
+          0,
+          74
+        ],
+        "sourceSize": [
+          311,
+          125
+        ],
+        "uvMax": [
+          0.6153846153846154,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.5384615384615384,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 21,
+        "sourceOffset": [
+          0,
+          0
+        ],
+        "sourceSize": [
+          294,
+          200
+        ],
+        "uvMax": [
+          0.6923076923076923,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.6153846153846154,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 22,
+        "sourceOffset": [
+          0,
+          0
+        ],
+        "sourceSize": [
+          294,
+          200
+        ],
+        "uvMax": [
+          0.7692307692307693,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.6923076923076923,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 23,
+        "sourceOffset": [
+          0,
+          0
+        ],
+        "sourceSize": [
+          294,
+          200
+        ],
+        "uvMax": [
+          0.8461538461538461,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.7692307692307693,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 24,
+        "sourceOffset": [
+          0,
+          0
+        ],
+        "sourceSize": [
+          294,
+          200
+        ],
+        "uvMax": [
+          0.9230769230769231,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.8461538461538461,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 25,
+        "sourceOffset": [
+          0,
+          0
+        ],
+        "sourceSize": [
+          294,
+          200
+        ],
+        "uvMax": [
+          1.0,
+          0.6666666666666666
+        ],
+        "uvMin": [
+          0.9230769230769231,
+          0.3333333333333333
+        ]
+      },
+      {
+        "frame": 26,
+        "sourceOffset": [
+          108,
+          80
+        ],
+        "sourceSize": [
+          184,
+          120
+        ],
+        "uvMax": [
+          0.07692307692307693,
+          1.0
+        ],
+        "uvMin": [
+          0.0,
+          0.6666666666666666
+        ]
+      },
+      {
+        "frame": 27,
+        "sourceOffset": [
+          108,
+          80
+        ],
+        "sourceSize": [
+          184,
+          120
+        ],
+        "uvMax": [
+          0.15384615384615385,
+          1.0
+        ],
+        "uvMin": [
+          0.07692307692307693,
+          0.6666666666666666
+        ]
+      },
+      {
+        "frame": 28,
+        "sourceOffset": [
+          108,
+          80
+        ],
+        "sourceSize": [
+          184,
+          120
+        ],
+        "uvMax": [
+          0.23076923076923078,
+          1.0
+        ],
+        "uvMin": [
+          0.15384615384615385,
+          0.6666666666666666
+        ]
+      },
+      {
+        "frame": 29,
+        "sourceOffset": [
+          108,
+          80
+        ],
+        "sourceSize": [
+          184,
+          120
+        ],
+        "uvMax": [
+          0.3076923076923077,
+          1.0
+        ],
+        "uvMin": [
+          0.23076923076923078,
+          0.6666666666666666
+        ]
+      },
+      {
+        "frame": 30,
+        "sourceOffset": [
+          108,
+          80
+        ],
+        "sourceSize": [
+          184,
+          120
+        ],
+        "uvMax": [
+          0.38461538461538464,
+          1.0
+        ],
+        "uvMin": [
+          0.3076923076923077,
+          0.6666666666666666
+        ]
+      }
+    ],
+    "height": 600,
+    "id": "weapon.dagger.steel",
+    "path": "weapon-dagger-steel-atlas.png",
+    "pivot": [
+      0.5,
+      1.0
+    ],
+    "sha256": "sha256:e93eba12cde7f34cba0aac0be7fa7319b304b2d47117a375fdeac9d6ba54d831",
+    "source": {
+      "file": "WEAPON02.CIF",
+      "palette": "ART_PAL.COL"
+    },
+    "textureAssetId": "texture/weapon-dagger-steel-atlas",
+    "width": 4043
+  }
+}

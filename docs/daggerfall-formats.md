@@ -114,6 +114,40 @@ Per model object: `position = (XPos, -YPos, ZPos) * 0.025`,
 `degrees = -raw / 5.688888…`, matrix = **T · Rz · Rx · Ry** (applied in that multiplication order).
 Per block: `origin = (gridX * 51.2, 0, gridZ * 51.2)`.
 
+### 1.6 First-person weapon CIF records (CifRciFile.cs)
+
+Classic `WEAPON*.CIF` files have no master header. For the non-bow weapons,
+record 0 is one ordinary IMG record:
+
+```text
+i16 xOffset, i16 yOffset, i16 width, i16 height,
+u16 compression (0=raw, 2=RLE), u16 pixelDataLength, pixel bytes
+```
+
+The remaining records are weapon animations. Each starts with:
+
+```text
+u16 width, u16 height, u16 lastFrameWidth,
+i16 xOffset, i16 lastFrameYOffset, i16 dataLength,
+u16 frameOffsets[31], u16 totalSize
+```
+
+Every non-zero frame offset is relative to the animation record start. Frame
+pixels use DFU's byte RLE: codes `0..127` copy `code+1` literal bytes; codes
+`128..255` repeat the following palette index `code-127` times. Output is
+bounded to `width*height`. Weapon images use `ART_PAL.COL`; palette index 0 is
+transparent. `WEAPON02.CIF` is the classic dagger: one idle frame followed by
+six five-frame strike records (down, down-left, left, right, down-right, up).
+
+### 1.7 DAGGER.SND combat clips (SndFile.cs)
+
+`DAGGER.SND` is a numeric BSA. Each record payload is raw unsigned 8-bit mono
+PCM at 11025 Hz. DFU `SoundClips` values address BSA directory order; the BSA
+numeric record ID is distinct provenance. Publication wraps selected records
+in a standard 44-byte PCM WAV header without resampling or changing samples.
+The clone-first dagger slice uses swing-high-pitch index 106 and hit variants
+108 through 112.
+
 ## 2. rusty-engine side — what exists and what to plug into
 
 - **Rust core**: `rust/crates/render-model` owns mesh data (`StaticMeshAsset`, `MeshPayloadDescriptor`,

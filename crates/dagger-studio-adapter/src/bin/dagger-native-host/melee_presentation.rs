@@ -1,548 +1,443 @@
 use std::collections::BTreeMap;
 
-use anyhow::Result;
-use dagger_runtime::{MeleePresentationPhase, MeleePresentationReadout};
-#[cfg(test)]
-use rusty_engine::render_model::RenderHandle;
+use anyhow::{Context, Result};
+use dagger_runtime::{
+    CombatAssetCatalog, EffectAsset, MeleePresentationPhase, MeleePresentationReadout,
+    WeaponAnimation,
+};
 use rusty_engine::{
     render_model::{
-        Geometry, Material, RenderDiff, RenderFrameDiff, RenderLayer, RenderMetadata, RenderNode,
-        Transform,
+        BillboardMode, Geometry, Material, RenderDiff, RenderFrameDiff, RenderHandle, RenderLayer,
+        RenderMetadata, RenderNode, SpriteAttachment, SpriteDepthPolicy, SpriteInstanceDescriptor,
+        SpriteShading, SpriteSizeMode, Transform,
     },
     render_projection::{RenderHandleNamespace, RetainedNodeProjector},
 };
 
+const WEAPON_ID: &str = "weapon.dagger.steel";
+const IDLE_ACTION: &str = "idle";
+const STRIKE_ACTION: &str = "strikeDown";
+const BLOOD_EFFECT_ID: &str = "effect.blood.0";
+const WEAPON_SPRITE_HANDLE: RenderHandle = RenderHandle::new((7_u64 << 40) | 1);
+const IMPACT_SPRITE_HANDLE: RenderHandle = RenderHandle::new((7_u64 << 40) | 2);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum MeleeNode {
-    Blade,
-    Guard,
-    Grip,
-    StaminaBackground,
-    StaminaFill,
-    StaminaSpent,
-    TargetHealthBackground,
-    TargetHealthFill,
-    ImpactPrimary,
-    ImpactSecondary,
+    ViewmodelRoot,
 }
 
-/// Dagger-owned first-person melee meaning projected through Engine's bounded
-/// camera-relative viewmodel layer. The browser applies retained facts only;
-/// it never owns action timing or predicts a combat result.
+/// Dagger-owned first-person weapon presentation projected through Engine's
+/// bounded camera-relative layer. The selected resource and frame ranges come
+/// from the generated semantic catalog; browser code owns neither the weapon
+/// choice nor animation timing.
 pub(crate) struct MeleePresentation {
     projector: RetainedNodeProjector<MeleeNode>,
-    nodes: BTreeMap<MeleeNode, RenderNode>,
+    root: BTreeMap<MeleeNode, RenderNode>,
+    weapon_asset: String,
+    pivot: [f32; 2],
+    idle: WeaponAnimation,
+    strike: WeaponAnimation,
+    blood: EffectAsset,
+    sprite_created: bool,
+    current_frame: u32,
+    impact_created: bool,
+    impact_frame: u32,
+    impact_position: [f32; 3],
 }
 
 impl MeleePresentation {
-    pub(crate) fn new() -> Self {
-        Self {
+    pub(crate) fn from_catalog(catalog_text: &str) -> Result<Self> {
+        let catalog = CombatAssetCatalog::from_json(catalog_text).map_err(anyhow::Error::msg)?;
+        let weapon = catalog
+            .weapon(WEAPON_ID)
+            .with_context(|| format!("combat catalog is missing {WEAPON_ID}"))?;
+        let idle = weapon
+            .animation(IDLE_ACTION)
+            .with_context(|| format!("{WEAPON_ID} is missing {IDLE_ACTION}"))?
+            .clone();
+        let strike = weapon
+            .animation(STRIKE_ACTION)
+            .with_context(|| format!("{WEAPON_ID} is missing {STRIKE_ACTION}"))?
+            .clone();
+        let blood = catalog
+            .effect(BLOOD_EFFECT_ID)
+            .with_context(|| format!("combat catalog is missing {BLOOD_EFFECT_ID}"))?
+            .clone();
+        let mut root = BTreeMap::new();
+        root.insert(MeleeNode::ViewmodelRoot, viewmodel_root());
+        Ok(Self {
             projector: RetainedNodeProjector::new(RenderHandleNamespace::PRESENTATION),
-            nodes: BTreeMap::new(),
-        }
+            root,
+            weapon_asset: weapon.sprite_asset_id(),
+            pivot: weapon.pivot,
+            current_frame: idle.frame_start,
+            idle,
+            strike,
+            impact_frame: blood.frames[0].frame,
+            blood,
+            sprite_created: false,
+            impact_created: false,
+            impact_position: [0.0, 0.0, 0.0],
+        })
     }
 
     pub(crate) fn tick(
         &mut self,
         action: Option<&MeleePresentationReadout>,
-        stamina: f32,
-        max_stamina: f32,
+        _stamina: f32,
+        _max_stamina: f32,
+        impact_position: Option<[f32; 3]>,
     ) -> Result<RenderFrameDiff> {
-        self.nodes = presentation_nodes(action, stamina, max_stamina);
-        self.projector
-            .project(self.nodes.clone())
-            .map_err(|error| anyhow::anyhow!("project retained melee presentation: {error:?}"))
+        let mut ops = self
+            .projector
+            .project(self.root.clone())
+            .map_err(|error| anyhow::anyhow!("project melee viewmodel root: {error:?}"))?
+            .ops;
+        let root = self
+            .projector
+            .handle_of(&MeleeNode::ViewmodelRoot)
+            .context("melee viewmodel root has no retained handle")?;
+        let frame = weapon_frame(&self.idle, &self.strike, action);
+        if !self.sprite_created {
+            ops.push(RenderDiff::CreateSprite {
+                handle: WEAPON_SPRITE_HANDLE,
+                parent: Some(root),
+                sprite: weapon_sprite(&self.weapon_asset, self.pivot, frame),
+            });
+            self.sprite_created = true;
+        } else if frame != self.current_frame {
+            ops.push(RenderDiff::UpdateSprite {
+                handle: WEAPON_SPRITE_HANDLE,
+                frame: Some(frame),
+                tint: None,
+                render_order: None,
+                visible: None,
+            });
+        }
+        self.current_frame = frame;
+        self.project_impact(&mut ops, action, impact_position);
+        RenderFrameDiff::try_from_ops(ops)
+            .map_err(|error| anyhow::anyhow!("build classic melee presentation: {error:?}"))
     }
 
     pub(crate) fn snapshot(&self) -> Result<RenderFrameDiff> {
-        let ops = self
-            .nodes
-            .iter()
-            .filter_map(|(key, node)| {
-                self.projector
-                    .handle_of(key)
-                    .map(|handle| RenderDiff::Create {
-                        handle,
-                        parent: None,
-                        node: node.clone(),
-                    })
-            })
-            .collect();
+        if !self.sprite_created {
+            return Ok(RenderFrameDiff::new());
+        }
+        let root = self
+            .projector
+            .handle_of(&MeleeNode::ViewmodelRoot)
+            .context("melee viewmodel root has no retained handle")?;
+        let mut ops = vec![
+            RenderDiff::Create {
+                handle: root,
+                parent: None,
+                node: self.root[&MeleeNode::ViewmodelRoot].clone(),
+            },
+            RenderDiff::CreateSprite {
+                handle: WEAPON_SPRITE_HANDLE,
+                parent: Some(root),
+                sprite: weapon_sprite(&self.weapon_asset, self.pivot, self.current_frame),
+            },
+        ];
+        if self.impact_created {
+            ops.push(RenderDiff::CreateSprite {
+                handle: IMPACT_SPRITE_HANDLE,
+                parent: None,
+                sprite: impact_sprite(
+                    &self.blood.sprite_asset_id(),
+                    self.blood.pivot,
+                    self.impact_frame,
+                    self.impact_position,
+                ),
+            });
+        }
         RenderFrameDiff::try_from_ops(ops)
-            .map_err(|error| anyhow::anyhow!("snapshot retained melee presentation: {error:?}"))
+            .map_err(|error| anyhow::anyhow!("snapshot classic melee presentation: {error:?}"))
     }
 
     pub(crate) fn retained_len(&self) -> usize {
-        self.nodes.len()
+        usize::from(self.sprite_created)
+            + usize::from(self.impact_created)
+            + self.projector.retained_len()
     }
 
     pub(crate) fn dispose(&mut self) -> Result<RenderFrameDiff> {
-        self.nodes.clear();
-        self.projector
-            .project(BTreeMap::new())
-            .map_err(|error| anyhow::anyhow!("dispose retained melee presentation: {error:?}"))
+        let mut ops = Vec::new();
+        if self.sprite_created {
+            ops.push(RenderDiff::Destroy {
+                handle: WEAPON_SPRITE_HANDLE,
+            });
+            self.sprite_created = false;
+        }
+        if self.impact_created {
+            ops.push(RenderDiff::Destroy {
+                handle: IMPACT_SPRITE_HANDLE,
+            });
+            self.impact_created = false;
+        }
+        ops.extend(
+            self.projector
+                .project(BTreeMap::new())
+                .map_err(|error| anyhow::anyhow!("dispose melee viewmodel root: {error:?}"))?
+                .ops,
+        );
+        RenderFrameDiff::try_from_ops(ops)
+            .map_err(|error| anyhow::anyhow!("dispose classic melee presentation: {error:?}"))
     }
 
-    #[cfg(test)]
-    fn handle(&self, key: MeleeNode) -> Option<RenderHandle> {
-        self.projector.handle_of(&key)
-    }
-}
-
-fn presentation_nodes(
-    action: Option<&MeleePresentationReadout>,
-    stamina: f32,
-    max_stamina: f32,
-) -> BTreeMap<MeleeNode, RenderNode> {
-    let mut nodes = BTreeMap::new();
-    let pose = weapon_pose(action);
-    let blade_color = weapon_color(action);
-    nodes.insert(
-        MeleeNode::Blade,
-        viewmodel_node(
-            Geometry::Cube,
-            pose.center,
-            [0.045, 0.30, 0.025],
-            pose.rotation,
-            blade_color,
-            false,
-            "melee-blade",
-        ),
-    );
-    let guard_center = offset_from(pose.center, pose.rotation, [0.0, -0.29, 0.0]);
-    nodes.insert(
-        MeleeNode::Guard,
-        viewmodel_node(
-            Geometry::Cube,
-            guard_center,
-            [0.18, 0.035, 0.045],
-            pose.rotation,
-            [0.72, 0.49, 0.16, 1.0],
-            false,
-            "melee-guard",
-        ),
-    );
-    let grip_center = offset_from(pose.center, pose.rotation, [0.0, -0.42, 0.0]);
-    nodes.insert(
-        MeleeNode::Grip,
-        viewmodel_node(
-            Geometry::Cube,
-            grip_center,
-            [0.06, 0.14, 0.055],
-            pose.rotation,
-            [0.22, 0.10, 0.045, 1.0],
-            false,
-            "melee-grip",
-        ),
-    );
-
-    add_stamina_bar(&mut nodes, action, stamina, max_stamina);
-    if let Some(action) = action {
-        add_target_health_bar(&mut nodes, action);
-        add_impact(&mut nodes, action);
-    }
-    nodes
-}
-
-#[derive(Debug, Clone, Copy)]
-struct WeaponPose {
-    center: [f32; 3],
-    rotation: f32,
-}
-
-fn weapon_pose(action: Option<&MeleePresentationReadout>) -> WeaponPose {
-    let rest = WeaponPose {
-        center: [0.48, -0.30, -0.82],
-        rotation: -0.48,
-    };
-    let Some(action) = action else {
-        return rest;
-    };
-    let windup = WeaponPose {
-        center: [0.62, -0.23, -0.78],
-        rotation: -0.92,
-    };
-    let strike = WeaponPose {
-        center: [-0.10, 0.02, -0.62],
-        rotation: 0.92,
-    };
-    match action.phase {
-        MeleePresentationPhase::Anticipation => {
-            interpolate_pose(rest, windup, smooth(action.phase_progress))
+    fn project_impact(
+        &mut self,
+        ops: &mut Vec<RenderDiff>,
+        action: Option<&MeleePresentationReadout>,
+        impact_position: Option<[f32; 3]>,
+    ) {
+        let active = action.filter(|action| {
+            action.accepted
+                && matches!(action.outcome.as_str(), "hit" | "killed")
+                && matches!(
+                    action.phase,
+                    MeleePresentationPhase::Contact | MeleePresentationPhase::Recovery
+                )
+        });
+        let Some((action, position)) = active.zip(impact_position) else {
+            if self.impact_created {
+                ops.push(RenderDiff::Destroy {
+                    handle: IMPACT_SPRITE_HANDLE,
+                });
+                self.impact_created = false;
+            }
+            return;
+        };
+        let progress = match action.phase {
+            MeleePresentationPhase::Contact => action.phase_progress * 0.45,
+            MeleePresentationPhase::Recovery => 0.45 + action.phase_progress * 0.55,
+            _ => 0.0,
         }
-        MeleePresentationPhase::Contact => {
-            interpolate_pose(windup, strike, smooth(action.phase_progress))
-        }
-        MeleePresentationPhase::Recovery => {
-            interpolate_pose(strike, rest, smooth(action.phase_progress))
-        }
-        MeleePresentationPhase::Rejected => {
-            let kick = (action.phase_progress * std::f32::consts::TAU * 2.0).sin()
-                * (1.0 - action.phase_progress)
-                * 0.045;
-            WeaponPose {
-                center: [
-                    rest.center[0] + kick,
-                    rest.center[1] + kick.abs() * 0.4,
-                    rest.center[2],
-                ],
-                rotation: rest.rotation + kick * 2.0,
+        .clamp(0.0, 0.999_999);
+        let frame_index = (progress * self.blood.frames.len() as f32) as usize;
+        let frame = self.blood.frames[frame_index].frame;
+        let position = [position[0], position[1] + 0.55, position[2]];
+        if !self.impact_created {
+            ops.push(RenderDiff::CreateSprite {
+                handle: IMPACT_SPRITE_HANDLE,
+                parent: None,
+                sprite: impact_sprite(
+                    &self.blood.sprite_asset_id(),
+                    self.blood.pivot,
+                    frame,
+                    position,
+                ),
+            });
+            self.impact_created = true;
+        } else {
+            if position != self.impact_position {
+                ops.push(RenderDiff::Update {
+                    handle: IMPACT_SPRITE_HANDLE,
+                    transform: Some(Transform {
+                        translation: position,
+                        ..Transform::IDENTITY
+                    }),
+                    material: None,
+                    visible: None,
+                    metadata: None,
+                });
+            }
+            if frame != self.impact_frame {
+                ops.push(RenderDiff::UpdateSprite {
+                    handle: IMPACT_SPRITE_HANDLE,
+                    frame: Some(frame),
+                    tint: None,
+                    render_order: None,
+                    visible: None,
+                });
             }
         }
+        self.impact_frame = frame;
+        self.impact_position = position;
     }
 }
 
-fn weapon_color(action: Option<&MeleePresentationReadout>) -> [f32; 4] {
-    let Some(action) = action else {
-        return [0.72, 0.79, 0.88, 1.0];
-    };
-    if action.phase == MeleePresentationPhase::Rejected {
-        return [0.95, 0.18, 0.52, 1.0];
-    }
-    if action.phase == MeleePresentationPhase::Contact {
-        return match action.outcome.as_str() {
-            "miss" => [0.35, 0.82, 1.0, 1.0],
-            "killed" => [1.0, 0.88, 0.28, 1.0],
-            _ => [1.0, 0.38, 0.16, 1.0],
-        };
-    }
-    [0.78, 0.84, 0.94, 1.0]
-}
-
-fn add_stamina_bar(
-    nodes: &mut BTreeMap<MeleeNode, RenderNode>,
+fn weapon_frame(
+    idle: &WeaponAnimation,
+    strike: &WeaponAnimation,
     action: Option<&MeleePresentationReadout>,
-    stamina: f32,
-    max_stamina: f32,
-) {
-    const WIDTH: f32 = 0.46;
-    const LEFT: f32 = -0.68;
-    const Y: f32 = -0.30;
-    nodes.insert(
-        MeleeNode::StaminaBackground,
-        viewmodel_node(
-            Geometry::Cube,
-            [LEFT + WIDTH * 0.5, Y, -0.72],
-            [WIDTH * 0.5 + 0.018, 0.052, 0.012],
-            0.0,
-            [0.035, 0.045, 0.055, 0.92],
-            false,
-            "melee-stamina-background",
-        ),
-    );
-    let fraction = if max_stamina > 0.0 {
-        (stamina / max_stamina).clamp(0.0, 1.0)
-    } else {
-        0.0
+) -> u32 {
+    let Some(action) = action.filter(|action| action.accepted) else {
+        return idle.frame_start;
     };
-    if fraction > 0.0 {
-        nodes.insert(
-            MeleeNode::StaminaFill,
-            bar_node(
-                LEFT,
-                Y,
-                -0.70,
-                WIDTH,
-                fraction,
-                [0.18, 0.86, 0.42, 1.0],
-                "melee-stamina-fill",
-            ),
-        );
+    let overall = match action.phase {
+        MeleePresentationPhase::Anticipation => action.phase_progress * 0.2,
+        MeleePresentationPhase::Contact => 0.2 + action.phase_progress * 0.55,
+        MeleePresentationPhase::Recovery => 0.75 + action.phase_progress * 0.25,
+        MeleePresentationPhase::Rejected => return idle.frame_start,
     }
-    if let Some(action) = action.filter(|action| action.stamina_before > action.stamina_after) {
-        let before = (action.stamina_before / max_stamina).clamp(0.0, 1.0);
-        let after = (action.stamina_after / max_stamina).clamp(0.0, 1.0);
-        let spent = before - after;
-        if spent > 0.0 {
-            let spent_left = LEFT + WIDTH * after;
-            nodes.insert(
-                MeleeNode::StaminaSpent,
-                bar_node(
-                    spent_left,
-                    Y,
-                    -0.68,
-                    WIDTH,
-                    spent,
-                    [1.0, 0.63, 0.10, 1.0],
-                    "melee-stamina-spent",
-                ),
-            );
-        }
-    }
+    .clamp(0.0, 0.999_999);
+    strike.frame_start + (overall * strike.frame_count as f32) as u32
 }
 
-fn add_target_health_bar(
-    nodes: &mut BTreeMap<MeleeNode, RenderNode>,
-    action: &MeleePresentationReadout,
-) {
-    if !action.accepted {
-        return;
-    }
-    let (Some(before), Some(after), Some(maximum)) = (
-        action.target_health_before,
-        action.target_health_after,
-        action.target_max_health,
-    ) else {
-        return;
-    };
-    const WIDTH: f32 = 0.62;
-    const LEFT: f32 = -0.31;
-    const Y: f32 = 0.30;
-    nodes.insert(
-        MeleeNode::TargetHealthBackground,
-        viewmodel_node(
-            Geometry::Cube,
-            [0.0, Y, -0.74],
-            [WIDTH * 0.5 + 0.018, 0.055, 0.012],
-            0.0,
-            [0.05, 0.025, 0.025, 0.94],
-            false,
-            "melee-target-health-background",
-        ),
-    );
-    let contact_reached = action.phase != MeleePresentationPhase::Anticipation;
-    let shown = if contact_reached { after } else { before };
-    let fraction = if maximum > 0.0 {
-        (shown / maximum).clamp(0.0, 1.0)
-    } else {
-        0.0
-    };
-    if fraction > 0.0 {
-        nodes.insert(
-            MeleeNode::TargetHealthFill,
-            bar_node(
-                LEFT,
-                Y,
-                -0.72,
-                WIDTH,
-                fraction,
-                [0.92, 0.12, 0.10, 1.0],
-                "melee-target-health-fill",
-            ),
-        );
-    }
-}
-
-fn add_impact(nodes: &mut BTreeMap<MeleeNode, RenderNode>, action: &MeleePresentationReadout) {
-    let visible_contact = matches!(
-        action.phase,
-        MeleePresentationPhase::Contact | MeleePresentationPhase::Recovery
-    );
-    if action.phase == MeleePresentationPhase::Rejected {
-        let fade = 1.0 - action.phase_progress;
-        nodes.insert(
-            MeleeNode::ImpactPrimary,
-            viewmodel_node(
-                Geometry::Cube,
-                [0.0, 0.02, -0.55],
-                [0.28 * fade.max(0.55), 0.04, 0.018],
-                0.72,
-                [0.95, 0.08, 0.38, 0.95],
-                false,
-                "melee-rejected-primary",
-            ),
-        );
-        nodes.insert(
-            MeleeNode::ImpactSecondary,
-            viewmodel_node(
-                Geometry::Cube,
-                [0.0, 0.02, -0.55],
-                [0.28 * fade.max(0.55), 0.04, 0.018],
-                -0.72,
-                [0.95, 0.08, 0.38, 0.95],
-                false,
-                "melee-rejected-secondary",
-            ),
-        );
-        return;
-    }
-    if !visible_contact {
-        return;
-    }
-    let (color, wireframe, scale) = match action.outcome.as_str() {
-        "miss" => ([0.30, 0.80, 1.0, 0.92], true, 0.22),
-        "killed" => ([1.0, 0.84, 0.18, 1.0], false, 0.30),
-        _ => ([1.0, 0.24, 0.10, 0.96], false, 0.23),
-    };
-    nodes.insert(
-        MeleeNode::ImpactPrimary,
-        viewmodel_node(
-            Geometry::Sphere,
-            [0.0, 0.04, -0.54],
-            [scale, scale, 0.035],
-            0.0,
-            color,
-            wireframe,
-            match action.outcome.as_str() {
-                "miss" => "melee-impact-miss",
-                "killed" => "melee-impact-kill",
-                _ => "melee-impact-hit",
-            },
-        ),
-    );
-    if action.died {
-        nodes.insert(
-            MeleeNode::ImpactSecondary,
-            viewmodel_node(
-                Geometry::Cube,
-                [0.0, 0.04, -0.52],
-                [0.36, 0.045, 0.018],
-                0.78,
-                [1.0, 0.94, 0.56, 1.0],
-                false,
-                "melee-impact-kill-cross",
-            ),
-        );
-    }
-}
-
-fn bar_node(
-    left: f32,
-    y: f32,
-    z: f32,
-    width: f32,
-    fraction: f32,
-    color: [f32; 4],
-    label: &str,
-) -> RenderNode {
-    let visible_width = width * fraction;
-    viewmodel_node(
-        Geometry::Cube,
-        [left + visible_width * 0.5, y, z],
-        [visible_width * 0.5, 0.040, 0.012],
-        0.0,
-        color,
-        false,
-        label,
-    )
-}
-
-fn viewmodel_node(
-    geometry: Geometry,
-    translation: [f32; 3],
-    scale: [f32; 3],
-    rotation_z: f32,
-    color: [f32; 4],
-    wireframe: bool,
-    label: &str,
-) -> RenderNode {
-    let mut tags = vec!["dagger-melee".to_string(), label.to_string()];
-    tags.sort();
+fn viewmodel_root() -> RenderNode {
     RenderNode {
-        geometry,
-        material: Material { color, wireframe },
-        transform: Transform {
-            translation,
-            rotation: z_rotation(rotation_z),
-            scale,
-        },
+        geometry: Geometry::Group,
+        material: Material::DEFAULT,
+        transform: Transform::IDENTITY,
         visible: true,
         layer: RenderLayer::Viewmodel,
         metadata: RenderMetadata {
             source_entity: None,
             source_scene_node: None,
-            tags,
-            label: Some(label.to_string()),
+            tags: vec!["dagger-melee".to_string()],
+            label: Some("classic-weapon-viewmodel".to_string()),
         },
     }
 }
 
-fn z_rotation(angle: f32) -> [f32; 4] {
-    [0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos()]
-}
-
-fn offset_from(center: [f32; 3], rotation: f32, offset: [f32; 3]) -> [f32; 3] {
-    let (sin, cos) = rotation.sin_cos();
-    [
-        center[0] + offset[0] * cos - offset[1] * sin,
-        center[1] + offset[0] * sin + offset[1] * cos,
-        center[2] + offset[2],
-    ]
-}
-
-fn interpolate_pose(from: WeaponPose, to: WeaponPose, amount: f32) -> WeaponPose {
-    WeaponPose {
-        center: [
-            lerp(from.center[0], to.center[0], amount),
-            lerp(from.center[1], to.center[1], amount),
-            lerp(from.center[2], to.center[2], amount),
-        ],
-        rotation: lerp(from.rotation, to.rotation, amount),
+fn weapon_sprite(asset: &str, pivot: [f32; 2], frame: u32) -> SpriteInstanceDescriptor {
+    SpriteInstanceDescriptor {
+        asset: asset.to_string(),
+        frame,
+        pivot,
+        // The fixed transparent atlas cell preserves a stable screen-space
+        // footprint while individual classic frames retain their own bounds.
+        size: [0.78, 1.78],
+        size_mode: SpriteSizeMode::World,
+        billboard: BillboardMode::None,
+        tint: [1.0, 1.0, 1.0, 1.0],
+        render_order: 100,
+        depth: SpriteDepthPolicy::DepthTestOff,
+        shading: SpriteShading::Unlit,
+        visible: true,
+        transform: Transform {
+            translation: [0.45, -0.10, -1.0],
+            rotation: [0.0, 0.0, 0.0, 1.0],
+            scale: [1.0, 1.0, 1.0],
+        },
+        attachment: SpriteAttachment::default(),
+        metadata: RenderMetadata {
+            source_entity: None,
+            source_scene_node: None,
+            tags: vec!["classic-combat".to_string(), "dagger-melee".to_string()],
+            label: Some("classic-dagger-weapon".to_string()),
+        },
     }
 }
 
-fn lerp(from: f32, to: f32, amount: f32) -> f32 {
-    from + (to - from) * amount
-}
-
-fn smooth(value: f32) -> f32 {
-    let value = value.clamp(0.0, 1.0);
-    value * value * (3.0 - 2.0 * value)
+fn impact_sprite(
+    asset: &str,
+    pivot: [f32; 2],
+    frame: u32,
+    position: [f32; 3],
+) -> SpriteInstanceDescriptor {
+    SpriteInstanceDescriptor {
+        asset: asset.to_string(),
+        frame,
+        pivot,
+        size: [0.75, 0.34],
+        size_mode: SpriteSizeMode::World,
+        billboard: BillboardMode::Spherical,
+        tint: [1.0, 1.0, 1.0, 1.0],
+        render_order: 0,
+        depth: SpriteDepthPolicy::Default,
+        shading: SpriteShading::Unlit,
+        visible: true,
+        transform: Transform {
+            translation: position,
+            ..Transform::IDENTITY
+        },
+        attachment: SpriteAttachment::default(),
+        metadata: RenderMetadata {
+            source_entity: None,
+            source_scene_node: None,
+            tags: vec!["classic-combat".to_string(), "world-impact".to_string()],
+            label: Some("classic-blood-impact".to_string()),
+        },
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn action(phase: MeleePresentationPhase, outcome: &str) -> MeleePresentationReadout {
+    const CATALOG: &str = include_str!("../../../../../content/textures/combat-manifest.json");
+
+    fn action(phase: MeleePresentationPhase, progress: f32) -> MeleePresentationReadout {
         MeleePresentationReadout {
             attempt_sequence: 1,
             phase,
-            phase_progress: 0.5,
-            accepted: phase != MeleePresentationPhase::Rejected,
-            outcome: outcome.to_string(),
-            target_id: Some(2007),
-            stamina_before: 90.0,
-            stamina_after: 80.0,
-            target_health_before: Some(3.0),
-            target_health_after: Some(if outcome == "killed" { 0.0 } else { 2.0 }),
-            target_max_health: Some(3.0),
-            final_damage: Some(if outcome == "miss" { 0.0 } else { 1.0 }),
-            died: outcome == "killed",
+            phase_progress: progress,
+            accepted: true,
+            outcome: "miss".to_string(),
+            target_id: None,
+            stamina_before: 10.0,
+            stamina_after: 9.0,
+            target_health_before: None,
+            target_health_after: None,
+            target_max_health: None,
+            final_damage: None,
+            died: false,
         }
     }
 
     #[test]
-    fn viewmodel_distinguishes_contact_results_and_rejection() {
-        let mut presentation = MeleePresentation::new();
-        let rest = presentation.tick(None, 90.0, 90.0).expect("rest frame");
-        assert!(rest.ops.iter().any(|op| matches!(op, RenderDiff::Create { node, .. } if node.layer == RenderLayer::Viewmodel && node.metadata.label.as_deref() == Some("melee-blade"))));
+    fn semantic_classic_weapon_is_a_camera_relative_sprite_with_stable_identity() {
+        let mut presentation = MeleePresentation::from_catalog(CATALOG).expect("catalog");
+        let first = presentation
+            .tick(None, 10.0, 10.0, None)
+            .expect("idle frame");
+        assert!(first.ops.iter().any(|op| matches!(
+            op,
+            RenderDiff::Create { node, .. }
+                if node.layer == RenderLayer::Viewmodel
+                    && node.metadata.label.as_deref() == Some("classic-weapon-viewmodel")
+        )));
+        assert!(first.ops.iter().any(|op| matches!(
+            op,
+            RenderDiff::CreateSprite { sprite, .. }
+                if sprite.asset == "sprite/weapon-dagger-steel-atlas"
+                    && sprite.frame == 0
+                    && sprite.pivot == [0.5, 1.0]
+        )));
 
+        let contact = presentation
+            .tick(
+                Some(&action(MeleePresentationPhase::Contact, 0.5)),
+                9.0,
+                10.0,
+                None,
+            )
+            .expect("strike frame");
+        assert!(contact.ops.iter().any(|op| matches!(
+            op,
+            RenderDiff::UpdateSprite { handle, frame: Some(frame), .. }
+                if *handle == WEAPON_SPRITE_HANDLE && *frame >= 1 && *frame <= 5
+        )));
+    }
+
+    #[test]
+    fn semantic_blood_is_a_bounded_world_sprite_only_for_a_hit() {
+        let mut presentation = MeleePresentation::from_catalog(CATALOG).expect("catalog");
+        presentation.tick(None, 10.0, 10.0, None).unwrap();
+        let mut hit = action(MeleePresentationPhase::Contact, 0.5);
+        hit.outcome = "hit".to_string();
+        hit.target_id = Some(2007);
+        let frame = presentation
+            .tick(Some(&hit), 9.0, 10.0, Some([2.0, 3.0, 4.0]))
+            .expect("world impact frame");
+        assert!(frame.ops.iter().any(|op| matches!(
+            op,
+            RenderDiff::CreateSprite { parent: None, sprite, .. }
+                if sprite.asset == "sprite/effect-blood-0-atlas"
+                    && sprite.size == [0.75, 0.34]
+                    && sprite.depth == SpriteDepthPolicy::Default
+                    && sprite.transform.translation == [2.0, 3.55, 4.0]
+        )));
+        hit.outcome = "miss".to_string();
         let miss = presentation
-            .tick(
-                Some(&action(MeleePresentationPhase::Contact, "miss")),
-                80.0,
-                90.0,
-            )
+            .tick(Some(&hit), 9.0, 10.0, Some([2.0, 3.0, 4.0]))
             .expect("miss frame");
-        assert!(miss.ops.iter().any(|op| matches!(op, RenderDiff::Create { node, .. } if node.metadata.label.as_deref() == Some("melee-impact-miss"))));
-
-        let killed = presentation
-            .tick(
-                Some(&action(MeleePresentationPhase::Contact, "killed")),
-                80.0,
-                90.0,
-            )
-            .expect("kill frame");
-        assert!(killed.ops.iter().any(|op| matches!(op, RenderDiff::Create { node, .. } if node.metadata.label.as_deref() == Some("melee-impact-kill-cross"))));
-
-        let rejected = presentation
-            .tick(
-                Some(&action(MeleePresentationPhase::Rejected, "cooldown")),
-                80.0,
-                90.0,
-            )
-            .expect("rejected frame");
-        assert!(rejected.ops.iter().any(|op| match op {
-            RenderDiff::Create { node, .. } => {
-                node.metadata.label.as_deref() == Some("melee-rejected-primary")
-            }
-            RenderDiff::Update {
-                metadata: Some(metadata),
-                ..
-            } => metadata.label.as_deref() == Some("melee-rejected-primary"),
-            _ => false,
-        }));
-        assert!(presentation.handle(MeleeNode::Blade).is_some());
+        assert!(miss.ops.iter().any(|op| matches!(
+            op,
+            RenderDiff::Destroy { handle } if *handle == IMPACT_SPRITE_HANDLE
+        )));
     }
 }

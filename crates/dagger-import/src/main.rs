@@ -1,6 +1,7 @@
 //! dagger-import: extract a Daggerfall dungeon from classic Arena2 data files
 //! to a single GLB (textured by default, --untextured for a flat material).
 
+mod combat_assets;
 mod dungeon;
 mod glb;
 mod meshjson;
@@ -253,6 +254,7 @@ fn main() {
         publish_textures(dir, &output.textures);
         publish_billboard_textures(dir, &args.arena2_dir, &output.scene.billboards);
         publish_enemy_atlases(dir, &args.arena2_dir, &output.scene.enemies);
+        combat_assets::publish(dir, &args.arena2_dir).expect("publish classic combat assets");
     }
 }
 
