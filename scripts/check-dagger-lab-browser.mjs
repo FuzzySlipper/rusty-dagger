@@ -724,6 +724,18 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
         .filter({ hasText: outcome })
         .first()
         .waitFor({ timeout: 5_000 });
+      if (presentationOutcome !== 'cooldown') {
+        await page.waitForFunction(
+          () => Number(document.body.dataset.daggerPresentationOpCount ?? '0') >= 1,
+          undefined,
+          { timeout: 5_000 },
+        );
+        assert.equal(
+          await page.locator('body').getAttribute('data-dagger-audio-resume-error'),
+          null,
+          'physical attack must resume the Engine audio host from its user gesture',
+        );
+      }
       return;
     } catch (error) {
       if (attempt === 3) {

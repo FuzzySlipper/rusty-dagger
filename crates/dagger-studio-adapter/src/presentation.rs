@@ -1,6 +1,6 @@
 use std::{fs, path::Path};
 
-use dagger_runtime::DaggerRuntime;
+use dagger_runtime::{CombatAssetCatalog, DaggerRuntime};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
@@ -379,6 +379,49 @@ pub fn build_render_bundle(root: &Path, project_text: &str) -> Result<DaggerRend
             content_hash: content_hash.to_owned(),
             media_type: "image/png".to_owned(),
             source_path: source_path.to_owned(),
+            bytes,
+        });
+    }
+    let combat_manifest_path = project_resource_path(root, "content/textures/combat-manifest.json")
+        .ok_or_else(|| "combat asset catalog path was rejected".to_owned())?;
+    let combat_manifest = fs::read_to_string(&combat_manifest_path)
+        .map_err(|error| format!("read combat asset catalog: {error}"))?;
+    let combat_catalog = CombatAssetCatalog::from_json(&combat_manifest)?;
+    for audio in &combat_catalog.audio {
+        if audio.mime_type != "audio/wav" {
+            return Err(format!(
+                "combat audio {} has unsupported media type {}",
+                audio.id, audio.mime_type
+            ));
+        }
+        let path = project_resource_path(root, &audio.path)
+            .ok_or_else(|| format!("combat audio path was rejected: {}", audio.path))?;
+        let bytes = fs::read(&path)
+            .map_err(|error| format!("read combat audio {}: {error}", audio.path))?;
+        if bytes.len() as u64 != audio.byte_length {
+            return Err(format!(
+                "combat audio {} byte length drifted: expected {}, got {}",
+                audio.id,
+                audio.byte_length,
+                bytes.len()
+            ));
+        }
+        let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
+        if actual != audio.sha256 {
+            return Err(format!(
+                "combat audio {} content hash drifted: expected {}, got {actual}",
+                audio.id, audio.sha256
+            ));
+        }
+        let hash_hex = audio
+            .sha256
+            .strip_prefix("sha256:")
+            .ok_or_else(|| format!("combat audio {} has invalid content hash", audio.id))?;
+        resources.push(DaggerRenderResource {
+            identity: format!("audio-resource/{hash_hex}"),
+            content_hash: audio.sha256.clone(),
+            media_type: audio.mime_type.clone(),
+            source_path: audio.path.clone(),
             bytes,
         });
     }

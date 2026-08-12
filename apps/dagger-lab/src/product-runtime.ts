@@ -1,6 +1,7 @@
 import { InjectionToken } from '@angular/core';
 import type {
   RustyApplicationContent,
+  RustyApplicationPresentationFrame,
   RustyApplicationRendererPort,
   RustyApplicationUiContext,
 } from '@rusty-engine/application-host';
@@ -34,6 +35,7 @@ interface DaggerProductStateWire {
   readonly camera: DaggerProductCamera;
   readonly playerPosition: readonly [number, number, number];
   readonly frame?: Readonly<Record<string, unknown>>;
+  readonly presentation?: RustyApplicationPresentationFrame;
   readonly patrolDebugEnabled: boolean;
   readonly navDebugEnabled: boolean;
   readonly meleePresentation: DaggerMeleePresentationWire | null;
@@ -106,7 +108,7 @@ export function mountDaggerProductRuntime(
   const environmentFrames = new Map<number, number>();
   const enemyTransforms = new Map<number, string>();
 
-  const applyState = (state: DaggerProductStateWire): void => {
+  const applyState = async (state: DaggerProductStateWire): Promise<void> => {
     if (state.frame !== undefined) {
       const ops = state.frame['ops'];
       const opCount = Array.isArray(ops) ? ops.length : 0;
@@ -142,6 +144,19 @@ export function mountDaggerProductRuntime(
         dynamicFrameSequence += 1;
         document.body.dataset['daggerDynamicFrameSequence'] = String(dynamicFrameSequence);
         document.body.dataset['daggerDynamicOpCount'] = String(opCount);
+      }
+    }
+    if (state.presentation !== undefined) {
+      const ops = state.presentation['ops'];
+      const opCount = Array.isArray(ops) ? ops.length : 0;
+      if (opCount > 0) {
+        const receipt = await renderer.applyPresentation(state.presentation);
+        if (receipt.applied !== opCount || receipt.diagnostics.length > 0) {
+          throw new Error(
+            `Dagger presentation rejected: ${receipt.diagnostics.map((entry) => entry.message).join('; ')}`,
+          );
+        }
+        document.body.dataset['daggerPresentationOpCount'] = String(opCount);
       }
     }
     renderer.setCameraPose(state.camera);
@@ -185,7 +200,7 @@ export function mountDaggerProductRuntime(
         if (!response.ok) {
           throw new Error(`Dagger product input failed with ${String(response.status)}`);
         }
-        applyState(await response.json() as DaggerProductStateWire);
+        await applyState(await response.json() as DaggerProductStateWire);
         delete document.body.dataset['daggerProductInputError'];
       }
     } catch (error: unknown) {
@@ -231,6 +246,7 @@ export function mountDaggerProductRuntime(
       return;
     }
     if (event.repeat || !context.ui.allowsGameplayInput(event)) return;
+    if (event.code === 'Space') resumeAudioFromGesture();
     pressed.add(event.code);
     submit([0, 0], buttons);
   };
@@ -245,6 +261,7 @@ export function mountDaggerProductRuntime(
   };
   const onMouseDown = (event: MouseEvent): void => {
     if (!context.ui.allowsGameplayInput(event)) return;
+    if (event.button === 0) resumeAudioFromGesture();
     buttons = event.buttons;
     submit([0, 0], buttons);
   };
@@ -274,7 +291,7 @@ export function mountDaggerProductRuntime(
         }
         return response.json() as Promise<DaggerProductStateWire>;
       })
-      .then(applyState)
+      .then((state) => applyState(state))
       .catch(() => undefined);
   }, 100);
   return {
@@ -291,6 +308,18 @@ export function mountDaggerProductRuntime(
       window.removeEventListener('blur', onBlur);
     },
   };
+
+  function resumeAudioFromGesture(): void {
+    void renderer.resumeAudio().then((receipt) => {
+      if (receipt.resumed) {
+        delete document.body.dataset['daggerAudioResumeError'];
+      } else {
+        document.body.dataset['daggerAudioResumeError'] = receipt.diagnostics
+          .map((entry) => entry.message)
+          .join('; ');
+      }
+    });
+  }
 }
 
 function decodeBase64(encoded: string): Uint8Array {
