@@ -230,7 +230,6 @@ fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
     let mut rgba = vec![0u8; width * height * 4];
     let mut entries = Vec::new();
     for (index, frame) in frames.iter_mut().enumerate() {
-        flip_rgba_rows(&mut frame.rgba, frame.width, frame.height);
         let cell_x = (index % columns) * cell_width;
         let cell_y = (index / columns) * cell_height;
         let x = cell_x + (cell_width - frame.width) / 2;
@@ -251,6 +250,10 @@ fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
             "sourceOffset": frame.source_offset,
         }));
     }
+    // Engine samples v=0 from the first PNG row. Flip the completed atlas,
+    // rather than each cell independently, so multi-row frame UVs keep their
+    // row identity as well as their upright pixel orientation.
+    flip_rgba_rows(&mut rgba, width, height);
     let png = crate::png::encode_rgba(width as u32, height as u32, &rgba);
     Ok(PackedAtlas {
         width,
