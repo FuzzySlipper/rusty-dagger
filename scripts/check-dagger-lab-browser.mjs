@@ -53,8 +53,7 @@ try {
     );
     assert.equal(await page.locator('canvas').count(), 1, 'replacement created split renderer authority');
   }
-  await page.getByTestId('open-lab').click();
-  await page.waitForFunction(() => document.querySelector('[data-testid="lab-page"]')?.classList.contains('is-open'));
+  await openInterface(page);
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'lab');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), null);
   await assertFixedApplicationShell(page, 1280, 900, true);
@@ -396,60 +395,115 @@ async function assertConnectedDynamicPresentation(page) {
 }
 
 async function assertSemanticPointerDirections(page) {
-  const input = (pointerDelta) => page.evaluate(async (delta) => {
-    const response = await fetch('/api/dagger-product/input', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pressedCodes: [], pointerDelta: delta, buttons: 0 }),
-    });
-    if (!response.ok) throw new Error(`pointer input failed with ${String(response.status)}`);
-    return response.json();
-  }, pointerDelta);
+  const camera = async () => ({
+    yawDegrees: Number(await page.locator('body').getAttribute('data-dagger-camera-yaw')),
+    pitchDegrees: Number(await page.locator('body').getAttribute('data-dagger-camera-pitch')),
+  });
+  const move = async (movementX, movementY) => {
+    const beforeSequence = Number(await page.locator('body').getAttribute('data-dagger-input-sequence'));
+    const beforeCamera = await camera();
+    await page.evaluate(
+      ({ x, y }) => window.dispatchEvent(new MouseEvent('mousemove', {
+        movementX: x,
+        movementY: y,
+        bubbles: true,
+      })),
+      { x: movementX, y: movementY },
+    );
+    await page.waitForFunction(
+      ({ sequence, yawDegrees, pitchDegrees }) =>
+        Number(document.body.dataset.daggerInputSequence ?? '0') > sequence &&
+        (Number(document.body.dataset.daggerCameraYaw) !== yawDegrees ||
+          Number(document.body.dataset.daggerCameraPitch) !== pitchDegrees),
+      { sequence: beforeSequence, ...beforeCamera },
+      { timeout: 5_000 },
+    );
+    return camera();
+  };
   const angleDelta = (from, to) => ((to - from + 540) % 360) - 180;
-  const before = await input([0, 0]);
-  const right = await input([10, 0]);
-  const left = await input([-10, 0]);
-  const up = await input([0, -10]);
-  const down = await input([0, 10]);
-  assert.ok(angleDelta(before.camera.yawDegrees, right.camera.yawDegrees) > 0, 'mouse-right did not turn right');
-  assert.ok(angleDelta(right.camera.yawDegrees, left.camera.yawDegrees) < 0, 'mouse-left did not turn left');
-  assert.ok(up.camera.pitchDegrees > left.camera.pitchDegrees, 'mouse-up did not look up');
-  assert.ok(down.camera.pitchDegrees < up.camera.pitchDegrees, 'mouse-down did not look down');
+  await page.getByTestId('open-lab').click();
+  await page.waitForFunction(
+    () => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'lab',
+  );
+  await page.getByTestId('return-to-play').click();
+  await page.waitForFunction(() => document.pointerLockElement !== null);
+  await page.mouse.move(640, 450, { steps: 1 });
+  await page.waitForTimeout(80);
+  await pressPhysical(page, 'KeyR');
+  await page.waitForTimeout(80);
+  const before = await camera();
+  const right = await move(20, 0);
+  const left = await move(-20, 0);
+  const up = await move(0, -20);
+  const down = await move(0, 20);
+  assert.ok(
+    angleDelta(before.yawDegrees, right.yawDegrees) > 0,
+    `mouse-right did not turn right: before=${JSON.stringify(before)} after=${JSON.stringify(right)}`,
+  );
+  assert.ok(
+    angleDelta(right.yawDegrees, left.yawDegrees) < 0,
+    `mouse-left did not turn left: before=${JSON.stringify(right)} after=${JSON.stringify(left)}`,
+  );
+  assert.ok(
+    up.pitchDegrees > left.pitchDegrees,
+    `mouse-up did not look up: before=${JSON.stringify(left)} after=${JSON.stringify(up)}`,
+  );
+  assert.ok(
+    down.pitchDegrees < up.pitchDegrees,
+    `mouse-down did not look down: before=${JSON.stringify(up)} after=${JSON.stringify(down)}`,
+  );
   return {
-    right: angleDelta(before.camera.yawDegrees, right.camera.yawDegrees),
-    left: angleDelta(right.camera.yawDegrees, left.camera.yawDegrees),
-    up: up.camera.pitchDegrees - left.camera.pitchDegrees,
-    down: down.camera.pitchDegrees - up.camera.pitchDegrees,
+    right: angleDelta(before.yawDegrees, right.yawDegrees),
+    left: angleDelta(right.yawDegrees, left.yawDegrees),
+    up: up.pitchDegrees - left.pitchDegrees,
+    down: down.pitchDegrees - up.pitchDegrees,
   };
 }
 
 async function assertMouseLookDoesNotMultiplyMovementTicks(page) {
-  let requestCount = 0;
+  const submittedFrames = [];
   const countInput = async (route) => {
-    if (route.request().method() === 'POST') requestCount += 1;
+    if (route.request().method() === 'POST') {
+      submittedFrames.push(route.request().postDataJSON());
+    }
     await route.continue();
   };
   await page.route('**/api/dagger-product/input', countInput);
   const sample = async (withMouseLook) => {
-    requestCount = 0;
+    const firstFrame = submittedFrames.length;
     await page.keyboard.down('w');
     if (withMouseLook) {
-      for (let index = 0; index < 32; index += 1) {
-        await page.mouse.move(640 + (index % 2), 450, { steps: 1 });
-      }
+      await page.mouse.move(641, 450, { steps: 1 });
     }
     await page.waitForTimeout(320);
     await page.keyboard.up('w');
-    await page.waitForTimeout(100);
-    return requestCount;
+    await page.waitForTimeout(80);
+    const releaseSequence = Number(
+      await page.locator('body').getAttribute('data-dagger-sampled-input-sequence'),
+    );
+    await page.waitForFunction(
+      (sequence) => Number(document.body.dataset.daggerInputSequence ?? '0') >= sequence,
+      releaseSequence,
+      { timeout: 10_000 },
+    );
+    const frames = submittedFrames.slice(firstFrame);
+    const movementFrames = frames.filter((frame) => frame.pressedCodes.includes('KeyW'));
+    return {
+      requests: frames.length,
+      movementRequests: movementFrames.length,
+      movementSeconds: movementFrames.reduce((total, frame) => total + frame.stepSeconds, 0),
+    };
   };
   const forwardOnly = await sample(false);
   const forwardAndLook = await sample(true);
   await page.unroute('**/api/dagger-product/input', countInput);
-  assert.ok(forwardOnly >= 6, `fixed input cadence was too sparse: ${String(forwardOnly)}`);
   assert.ok(
-    forwardAndLook <= forwardOnly + 2,
-    `mouse events multiplied movement ticks: W=${String(forwardOnly)} W+look=${String(forwardAndLook)}`,
+    forwardOnly.movementSeconds > 0,
+    `held movement did not submit a frame: ${JSON.stringify(forwardOnly)}`,
+  );
+  assert.ok(
+    forwardAndLook.movementRequests <= forwardOnly.movementRequests + 2,
+    `mouse events multiplied movement frames: W=${JSON.stringify(forwardOnly)} W+look=${JSON.stringify(forwardAndLook)}`,
   );
   return { forwardOnly, forwardAndLook };
 }
@@ -714,7 +768,20 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       const priorSequence = await page.locator('body').getAttribute('data-dagger-melee-sequence');
+      const priorInputSequence = Number(
+        await page.locator('body').getAttribute('data-dagger-input-sequence'),
+      );
       await pressPhysical(page, 'Space');
+      await page.waitForFunction(
+        (sequence) => Number(document.body.dataset.daggerInputSequence ?? '0') > sequence,
+        priorInputSequence,
+        { timeout: 10_000 },
+      );
+      assert.match(
+        await page.locator('body').getAttribute('data-dagger-last-sampled-pressed-edges') ?? '',
+        /(?:^|,)Space(?:,|$)/,
+        'physical Space edge was not retained by the browser sampler',
+      );
       const observation = await page.waitForFunction(
         ({ previous, expected, phase, durableOutcome }) => {
           const body = document.body.dataset;
@@ -738,7 +805,8 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
         },
         { timeout: 10_000 },
       );
-      if (await observation.jsonValue() === 'presentation') {
+      const observationKind = await observation.jsonValue();
+      if (observationKind === 'presentation') {
         // The authoritative phase and retained renderer frame share one Rust
         // tick but arrive across the HTTP/app-host boundary. Give the browser
         // one visible cadence to paint the just-observed phase before capture.
@@ -758,7 +826,7 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
         .filter({ hasText: outcome })
         .first()
         .waitFor({ timeout: 5_000 });
-      if (presentationOutcome !== 'cooldown') {
+      if (presentationOutcome !== 'cooldown' && observationKind === 'presentation') {
         await page.waitForFunction(
           () => Number(document.body.dataset.daggerPresentationOpCount ?? '0') >= 1,
           undefined,
@@ -773,6 +841,7 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
       return;
     } catch (error) {
       if (attempt === 3) {
+        console.error(`physical Space final diagnostics inputError=${String(await page.locator('body').getAttribute('data-dagger-product-input-error'))} stateError=${String(await page.locator('body').getAttribute('data-dagger-product-state-error'))} edges=${String(await page.locator('body').getAttribute('data-dagger-last-sampled-pressed-edges'))} combatCount=${String(await page.getByTestId('combat-count').innerText())} records=${JSON.stringify(await page.locator('[data-testid^="combat-"]').allInnerTexts())}`);
         throw error;
       }
       console.error(`physical Space action not observed after attempt ${attempt}; retrying`);

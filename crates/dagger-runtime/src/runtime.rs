@@ -21,7 +21,8 @@ use serde::Serialize;
 use crate::patrol::{EnemyAiMode, PatrolService, PositionUpdate};
 use crate::player::{
     apply_player_action, player_view, PlayerControlReceipt, PlayerControllerConfig,
-    PlayerControllerState, PlayerError, ResolvedPlayerAction,
+    PlayerControllerState, PlayerError, PlayerFrameReceipt, ResolvedPlayerAction,
+    ResolvedPlayerFrame,
 };
 use crate::project::{AdmittedProject, ContentEntity, ProjectAdmissionError, PLAYER_HALF_EXTENTS};
 
@@ -62,12 +63,10 @@ pub struct DaggerRuntime {
     collision_scene: VoxelCollisionScene,
     player: EntityId,
     player_controller: PlayerControllerConfig,
-    player_state: PlayerControllerState,
     player_look_state: FirstPersonLookState,
     player_controller_service: CharacterControllerService,
     player_command_sequence: u64,
     player_start: Vec3,
-    player_start_state: PlayerControllerState,
     player_start_look_state: FirstPersonLookState,
     experiment: AdmittedExperiment,
     player_resources: LiveActorResources,
@@ -415,7 +414,6 @@ impl DaggerRuntime {
             calculation: player_health_calculation(&experiment).clone(),
         };
         let player_start = admitted.player_start;
-        let player_start_state = admitted.player_state;
         let player_start_look_state = admitted.player_look_state;
         let player_resources = LiveActorResources::full(&experiment.player.stats);
         let enemy_resources = reset_enemy_resources(&admitted.content_entities, &experiment);
@@ -429,12 +427,10 @@ impl DaggerRuntime {
             collision_scene,
             player: admitted.player,
             player_controller,
-            player_state: admitted.player_state,
             player_look_state: admitted.player_look_state,
             player_controller_service: CharacterControllerService::default(),
             player_command_sequence: 0,
             player_start,
-            player_start_state,
             player_start_look_state,
             experiment,
             player_resources,
@@ -474,7 +470,7 @@ impl DaggerRuntime {
     }
 
     pub fn player_state(&self) -> PlayerControllerState {
-        self.player_state
+        PlayerControllerState::from_look_state(self.player_look_state)
     }
 
     /// Install the committed navigation artifact as the live enemy movement
@@ -776,7 +772,6 @@ impl DaggerRuntime {
     /// retaining the currently applied experiment document.
     pub fn reset_play_session(&mut self) -> Result<ExperimentReadout, RuntimeError> {
         self.set_player_position(self.player_start)?;
-        self.player_state = self.player_start_state;
         self.player_look_state = self.player_start_look_state;
         self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
         self.enemy_resources = reset_enemy_resources(&self.content_entities, &self.experiment);
@@ -810,7 +805,7 @@ impl DaggerRuntime {
             .copied()
             .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
         let original_position = self.player_position()?;
-        let original_state = self.player_state;
+        let original_look_state = self.player_look_state;
         let original_focus = self.focused_content_id;
         for [offset_x, offset_z] in [[0.0, 1.5], [1.5, 0.0], [0.0, -1.5], [-1.5, 0.0]] {
             let approach_probe = [target[0] + offset_x, target[1] + 2.0, target[2] + offset_z];
@@ -825,12 +820,11 @@ impl DaggerRuntime {
                 approach_probe[2],
             );
             self.set_player_position(position)?;
-            let mut facing_state = self.player_start_state;
+            let mut facing_state = self.player_start_look_state;
             let delta_x = target[0] - position.x;
             let delta_z = target[2] - position.z;
-            facing_state.set_yaw_degrees(delta_x.atan2(-delta_z).to_degrees());
-            self.player_state = facing_state;
-            self.player_look_state = facing_state.engine_look_state();
+            facing_state.yaw_radians = delta_x.atan2(-delta_z);
+            self.player_look_state = facing_state;
 
             let navigable = [
                 ResolvedPlayerAction::Move {
@@ -845,8 +839,7 @@ impl DaggerRuntime {
             .into_iter()
             .any(|action| {
                 let _ = self.set_player_position(position);
-                self.player_state = facing_state;
-                self.player_look_state = facing_state.engine_look_state();
+                self.player_look_state = facing_state;
                 self.apply_player_action(action).is_ok_and(|_| {
                     self.player_position().is_ok_and(|after| {
                         (after.x - position.x).hypot(after.z - position.z) > 0.01
@@ -855,8 +848,7 @@ impl DaggerRuntime {
             });
             if navigable {
                 self.set_player_position(position)?;
-                self.player_state = facing_state;
-                self.player_look_state = facing_state.engine_look_state();
+                self.player_look_state = facing_state;
                 self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
                 self.enemy_resources =
                     reset_enemy_resources(&self.content_entities, &self.experiment);
@@ -873,8 +865,7 @@ impl DaggerRuntime {
             }
         }
         self.set_player_position(original_position)?;
-        self.player_state = original_state;
-        self.player_look_state = original_state.engine_look_state();
+        self.player_look_state = original_look_state;
         self.focused_content_id = original_focus;
         Err(RuntimeError::Content(ContentError::NoGroundedApproach(id)))
     }
@@ -949,7 +940,7 @@ impl DaggerRuntime {
         let player_position = self.player_position()?;
         let target = select_aimed_melee_target(
             player_position,
-            self.player_state.yaw_degrees,
+            self.player_state().yaw_degrees,
             attack_range,
             &self.content_entities,
             &self.content_live_positions,
@@ -1150,7 +1141,7 @@ impl DaggerRuntime {
                 })
                 .collect(),
             player_position: [position.x, position.y, position.z],
-            player_yaw_degrees: self.player_state.yaw_degrees,
+            player_yaw_degrees: self.player_state().yaw_degrees,
             calculations: self.calculation_history.iter().cloned().collect(),
             combat: self.combat_history.iter().cloned().collect(),
             combat_attempts: self.combat_attempt_history.iter().cloned().collect(),
@@ -1218,7 +1209,6 @@ impl DaggerRuntime {
             &mut self.entities,
             &self.collision_scene,
             self.player,
-            &mut self.player_state,
             &mut self.player_look_state,
             &mut self.player_controller_service,
             &mut self.player_command_sequence,
@@ -1228,6 +1218,26 @@ impl DaggerRuntime {
         )
         .map_err(RuntimeError::Player)?;
         Ok(result)
+    }
+
+    /// Apply one fixed-cadence product input frame atomically. Look is
+    /// resolved first and the resulting Engine heading owns movement in this
+    /// same frame; neutral frames still advance grounding and gravity.
+    pub fn apply_player_frame(
+        &mut self,
+        frame: ResolvedPlayerFrame,
+    ) -> Result<PlayerFrameReceipt, RuntimeError> {
+        crate::player::apply_player_frame(
+            &mut self.entities,
+            &self.collision_scene,
+            self.player,
+            &mut self.player_look_state,
+            &mut self.player_controller_service,
+            &mut self.player_command_sequence,
+            &self.player_controller,
+            frame,
+        )
+        .map_err(RuntimeError::Player)
     }
 }
 

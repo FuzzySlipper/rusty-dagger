@@ -13,6 +13,8 @@ pub const MAX_PLAYER_SPEED_UNITS_PER_SECOND: f32 = 1_000.0;
 pub const MAX_PLAYER_LOOK_DEGREES_PER_UNIT: f32 = 180.0;
 pub const MAX_PLAYER_STEP_UP_UNITS: f32 = 4.0;
 pub const MAX_INPUT_CONTROL_LENGTH: usize = 64;
+pub const MAX_PLAYER_FRAME_LOOK_UNITS: f32 = 64.0;
+pub const MAX_PLAYER_FRAME_STEP_SECONDS: f32 = 0.25;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlayerInputBindings {
@@ -154,21 +156,10 @@ pub struct PlayerControllerState {
 }
 
 impl PlayerControllerState {
-    pub(crate) fn from_degrees(yaw_degrees: f32, pitch_degrees: f32) -> Self {
+    pub(crate) fn from_look_state(state: FirstPersonLookState) -> Self {
         Self {
-            yaw_degrees,
-            pitch_degrees,
-        }
-    }
-
-    pub(crate) fn set_yaw_degrees(&mut self, yaw_degrees: f32) {
-        self.yaw_degrees = yaw_degrees;
-    }
-
-    pub(crate) fn engine_look_state(self) -> FirstPersonLookState {
-        FirstPersonLookState {
-            yaw_radians: self.yaw_degrees.to_radians(),
-            pitch_radians: self.pitch_degrees.to_radians(),
+            yaw_degrees: state.yaw_radians.to_degrees(),
+            pitch_degrees: state.pitch_radians.to_degrees(),
         }
     }
 }
@@ -183,6 +174,20 @@ impl PlayerControllerState {
 pub enum ResolvedPlayerAction {
     Move { forward: f32, right: f32 },
     Look { yaw_delta: f32, pitch_delta: f32 },
+}
+
+/// One authoritative sampled control frame.
+///
+/// Hosts accumulate physical pointer events and held controls, then submit one
+/// frame at their declared fixed cadence. Dagger applies the complete look
+/// delta before evaluating camera-relative movement for the same frame.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ResolvedPlayerFrame {
+    pub forward: f32,
+    pub right: f32,
+    pub yaw_delta: f32,
+    pub pitch_delta: f32,
+    pub step_seconds: f32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -212,12 +217,18 @@ pub struct PlayerControlReceipt {
     pub motion: Option<CharacterControllerReceipt>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlayerFrameReceipt {
+    pub frame: ResolvedPlayerFrame,
+    pub facts: Vec<PlayerControlFact>,
+    pub motion: CharacterControllerReceipt,
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn apply_player_action(
     entities: &mut EntityState,
     scene: &rusty_engine::engine_spatial::VoxelCollisionScene,
     player: EntityId,
-    state: &mut PlayerControllerState,
     look_state: &mut FirstPersonLookState,
     service: &mut CharacterControllerService,
     command_sequence: &mut u64,
@@ -240,11 +251,7 @@ pub(crate) fn apply_player_action(
             yaw_delta,
             pitch_delta,
         } => {
-            let before = *state;
-            // Public degree fields remain a stable Dagger readout. Rebuild the
-            // explicit Engine state first because Dagger diagnostics may set a
-            // facing directly before issuing their next semantic command.
-            *look_state = state.engine_look_state();
+            let before = PlayerControllerState::from_look_state(*look_state);
             let receipt = FirstPersonLookService.integrate(
                 &config.look,
                 *look_state,
@@ -253,79 +260,32 @@ pub(crate) fn apply_player_action(
                 },
             )?;
             *look_state = receipt.after;
-            // Keep Dagger's public camera readout in the same canonical basis
-            // used by the Engine controller. Product adapters own device-axis
-            // inversion; carrying a second yaw convention here makes visible
-            // camera facing disagree with camera-relative movement.
-            state.yaw_degrees = receipt.after.yaw_radians.to_degrees();
-            state.pitch_degrees = receipt.after.pitch_radians.to_degrees();
+            let after = PlayerControllerState::from_look_state(receipt.after);
             Ok(PlayerControlReceipt {
                 action,
                 facts: vec![PlayerControlFact::LookChanged {
                     entity: player,
                     before_yaw_degrees: before.yaw_degrees,
-                    after_yaw_degrees: state.yaw_degrees,
+                    after_yaw_degrees: after.yaw_degrees,
                     before_pitch_degrees: before.pitch_degrees,
-                    after_pitch_degrees: state.pitch_degrees,
+                    after_pitch_degrees: after.pitch_degrees,
                 }],
                 motion: None,
             })
         }
         ResolvedPlayerAction::Move { forward, right } => {
-            // The project contract predates Engine's bounded fixed-step
-            // command envelope. Preserve the authored action duration by
-            // splitting it into deterministic canonical ticks.
-            let substeps = (move_delta_seconds / (1.0 / 60.0)).ceil().max(1.0) as u32;
-            let step_seconds = move_delta_seconds / substeps as f32;
-            let action_start = entities
-                .transform(player)
-                .ok_or(PlayerError::MissingCharacterMotion { player })?
-                .translation;
-            let mut blocked = false;
-            let mut last_receipt = None;
-            for _ in 0..substeps {
-                *command_sequence = command_sequence
-                    .checked_add(1)
-                    .ok_or(PlayerError::CommandSequenceExhausted)?;
-                let receipt = service.step(
-                    entities,
-                    scene,
-                    player,
-                    &config.engine,
-                    CharacterControllerCommand {
-                        planar_intent: Vec2::new(right, forward),
-                        heading_yaw_radians: look_state.yaw_radians,
-                        step_seconds,
-                        sequence: *command_sequence,
-                        ..CharacterControllerCommand::idle(step_seconds, *command_sequence)
-                    },
-                )?;
-                blocked |= !receipt.blocks.is_empty()
-                    || receipt.contacts.iter().any(|contact| {
-                        matches!(
-                            contact.kind,
-                            rusty_engine::engine_spatial::CharacterContactKind::Wall
-                        )
-                    });
-                last_receipt = Some(receipt);
-            }
-            let receipt = last_receipt.expect("at least one canonical controller substep");
-            let mut facts = Vec::new();
-            let before = action_start;
-            let after = receipt.transform_after.translation;
-            if before != after {
-                facts.push(PlayerControlFact::Moved {
-                    entity: player,
-                    before,
-                    after,
-                });
-            }
-            if blocked {
-                facts.push(PlayerControlFact::Blocked {
-                    entity: player,
-                    attempted_velocity: receipt.wish_velocity,
-                });
-            }
+            let (facts, receipt) = apply_motion(
+                entities,
+                scene,
+                player,
+                service,
+                command_sequence,
+                config,
+                forward,
+                right,
+                look_state.yaw_radians,
+                move_delta_seconds,
+            )?;
             Ok(PlayerControlReceipt {
                 action,
                 facts,
@@ -335,9 +295,158 @@ pub(crate) fn apply_player_action(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn apply_player_frame(
+    entities: &mut EntityState,
+    scene: &rusty_engine::engine_spatial::VoxelCollisionScene,
+    player: EntityId,
+    look_state: &mut FirstPersonLookState,
+    service: &mut CharacterControllerService,
+    command_sequence: &mut u64,
+    config: &PlayerControllerConfig,
+    frame: ResolvedPlayerFrame,
+) -> Result<PlayerFrameReceipt, PlayerError> {
+    if !player_frame_is_valid(frame) {
+        return Err(PlayerError::InvalidFrame(frame));
+    }
+    let entity_view = entities
+        .view(player)
+        .map_err(|_| PlayerError::UnknownPlayer { player })?;
+    if entity_view.character_motion.is_none() || entity_view.transform.is_none() {
+        return Err(PlayerError::MissingCharacterMotion { player });
+    }
+
+    let look_before = *look_state;
+    let look_after =
+        integrate_bounded_look(config, look_before, frame.yaw_delta, frame.pitch_delta)?;
+    let (mut facts, motion) = apply_motion(
+        entities,
+        scene,
+        player,
+        service,
+        command_sequence,
+        config,
+        frame.forward,
+        frame.right,
+        look_after.yaw_radians,
+        frame.step_seconds,
+    )?;
+    *look_state = look_after;
+    if look_after != look_before {
+        let before = PlayerControllerState::from_look_state(look_before);
+        let after = PlayerControllerState::from_look_state(look_after);
+        facts.insert(
+            0,
+            PlayerControlFact::LookChanged {
+                entity: player,
+                before_yaw_degrees: before.yaw_degrees,
+                after_yaw_degrees: after.yaw_degrees,
+                before_pitch_degrees: before.pitch_degrees,
+                after_pitch_degrees: after.pitch_degrees,
+            },
+        );
+    }
+    Ok(PlayerFrameReceipt {
+        frame,
+        facts,
+        motion,
+    })
+}
+
+fn integrate_bounded_look(
+    config: &PlayerControllerConfig,
+    mut state: FirstPersonLookState,
+    mut yaw_delta: f32,
+    mut pitch_delta: f32,
+) -> Result<FirstPersonLookState, PlayerError> {
+    while yaw_delta != 0.0 || pitch_delta != 0.0 {
+        let yaw = yaw_delta.clamp(-1.0, 1.0);
+        let pitch = pitch_delta.clamp(-1.0, 1.0);
+        state = FirstPersonLookService
+            .integrate(
+                &config.look,
+                state,
+                FirstPersonLookCommand {
+                    delta: Vec2::new(yaw, pitch),
+                },
+            )?
+            .after;
+        yaw_delta -= yaw;
+        pitch_delta -= pitch;
+    }
+    Ok(state)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn apply_motion(
+    entities: &mut EntityState,
+    scene: &rusty_engine::engine_spatial::VoxelCollisionScene,
+    player: EntityId,
+    service: &mut CharacterControllerService,
+    command_sequence: &mut u64,
+    config: &PlayerControllerConfig,
+    forward: f32,
+    right: f32,
+    heading_yaw_radians: f32,
+    move_delta_seconds: f32,
+) -> Result<(Vec<PlayerControlFact>, CharacterControllerReceipt), PlayerError> {
+    let substeps = (move_delta_seconds / (1.0 / 60.0)).ceil().max(1.0) as u32;
+    let step_seconds = move_delta_seconds / substeps as f32;
+    let action_start = entities
+        .transform(player)
+        .ok_or(PlayerError::MissingCharacterMotion { player })?
+        .translation;
+    let mut blocked = false;
+    let mut last_receipt = None;
+    for _ in 0..substeps {
+        *command_sequence = command_sequence
+            .checked_add(1)
+            .ok_or(PlayerError::CommandSequenceExhausted)?;
+        let receipt = service.step(
+            entities,
+            scene,
+            player,
+            &config.engine,
+            CharacterControllerCommand {
+                planar_intent: Vec2::new(right, forward),
+                heading_yaw_radians,
+                step_seconds,
+                sequence: *command_sequence,
+                ..CharacterControllerCommand::idle(step_seconds, *command_sequence)
+            },
+        )?;
+        blocked |= !receipt.blocks.is_empty()
+            || receipt.contacts.iter().any(|contact| {
+                matches!(
+                    contact.kind,
+                    rusty_engine::engine_spatial::CharacterContactKind::Wall
+                )
+            });
+        last_receipt = Some(receipt);
+    }
+    let receipt = last_receipt.expect("at least one canonical controller substep");
+    let mut facts = Vec::new();
+    let after = receipt.transform_after.translation;
+    if action_start != after {
+        facts.push(PlayerControlFact::Moved {
+            entity: player,
+            before: action_start,
+            after,
+        });
+    }
+    if blocked {
+        facts.push(PlayerControlFact::Blocked {
+            entity: player,
+            attempted_velocity: receipt.wish_velocity,
+        });
+    }
+    Ok((facts, receipt))
+}
+
 #[derive(Debug)]
 pub enum PlayerError {
     InvalidAction(ResolvedPlayerAction),
+    InvalidFrame(ResolvedPlayerFrame),
     UnknownPlayer { player: EntityId },
     MissingCharacterMotion { player: EntityId },
     CommandSequenceExhausted,
@@ -385,6 +494,20 @@ fn player_action_is_valid(action: ResolvedPlayerAction) -> bool {
                 && (-1.0..=1.0).contains(&pitch_delta)
         }
     }
+}
+
+fn player_frame_is_valid(frame: ResolvedPlayerFrame) -> bool {
+    frame.forward.is_finite()
+        && frame.right.is_finite()
+        && frame.yaw_delta.is_finite()
+        && frame.pitch_delta.is_finite()
+        && frame.step_seconds.is_finite()
+        && (-1.0..=1.0).contains(&frame.forward)
+        && (-1.0..=1.0).contains(&frame.right)
+        && frame.yaw_delta.abs() <= MAX_PLAYER_FRAME_LOOK_UNITS
+        && frame.pitch_delta.abs() <= MAX_PLAYER_FRAME_LOOK_UNITS
+        && frame.step_seconds > 0.0
+        && frame.step_seconds <= MAX_PLAYER_FRAME_STEP_SECONDS
 }
 
 pub(crate) fn player_view(
