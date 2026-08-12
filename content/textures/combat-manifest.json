@@ -1429,7 +1429,7 @@
     "path": "weapon-dagger-steel-atlas.png",
     "pivot": [
       0.5,
-      1.0
+      0.0
     ],
     "sha256": "sha256:e93eba12cde7f34cba0aac0be7fa7319b304b2d47117a375fdeac9d6ba54d831",
     "source": {

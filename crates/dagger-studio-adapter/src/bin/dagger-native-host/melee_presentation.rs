@@ -299,7 +299,7 @@ fn weapon_sprite(asset: &str, pivot: [f32; 2], frame: u32) -> SpriteInstanceDesc
         pivot,
         // The fixed transparent atlas cell preserves a stable screen-space
         // footprint while individual classic frames retain their own bounds.
-        size: [0.78, 1.78],
+        size: [0.60, 1.30],
         size_mode: SpriteSizeMode::World,
         billboard: BillboardMode::None,
         tint: [1.0, 1.0, 1.0, 1.0],
@@ -308,7 +308,7 @@ fn weapon_sprite(asset: &str, pivot: [f32; 2], frame: u32) -> SpriteInstanceDesc
         shading: SpriteShading::Unlit,
         visible: true,
         transform: Transform {
-            translation: [0.45, -0.10, -1.0],
+            translation: [0.34, -0.64, -1.0],
             rotation: [0.0, 0.0, 0.0, 1.0],
             scale: [1.0, 1.0, 1.0],
         },
@@ -395,7 +395,7 @@ mod tests {
             RenderDiff::CreateSprite { sprite, .. }
                 if sprite.asset == "sprite/weapon-dagger-steel-atlas"
                     && sprite.frame == 0
-                    && sprite.pivot == [0.5, 1.0]
+                    && sprite.pivot == [0.5, 0.0]
         )));
 
         let contact = presentation
