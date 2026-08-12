@@ -88,7 +88,7 @@ fn steer_toward(runtime: &mut DaggerRuntime, target: [f32; 3]) {
     let position = runtime.player_position().expect("player position");
     let dx = target[0] - position.x;
     let dz = target[2] - position.z;
-    let desired = (-dx).atan2(-dz).to_degrees();
+    let desired = dx.atan2(-dz).to_degrees();
     for _ in 0..40 {
         let current = runtime.player_state().yaw_degrees;
         let delta = (desired - current + 180.0).rem_euclid(360.0) - 180.0;
@@ -97,9 +97,7 @@ fn steer_toward(runtime: &mut DaggerRuntime, target: [f32; 3]) {
         }
         runtime
             .apply_player_action(ResolvedPlayerAction::Look {
-                // Look actions use Engine's canonical yaw sign; the stable
-                // Dagger camera readout uses the opposite renderer sign.
-                yaw_delta: -(delta / 12.0).clamp(-1.0, 1.0),
+                yaw_delta: (delta / 12.0).clamp(-1.0, 1.0),
                 pitch_delta: 0.0,
             })
             .expect("steer look");

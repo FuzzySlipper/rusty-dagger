@@ -218,7 +218,10 @@ modularity gate, task 6529):
   Native diagnostics compose their overlays around that same production
   component; they are not a separate animation implementation. Pointer deltas
   remain raw in the browser bridge and acquire Dagger's FPS yaw/pitch meaning
-  once in the Rust product host.
+  once in the Rust product host. That adapter maps mouse-right and mouse-up to
+  positive canonical Engine yaw and pitch respectively; the retained camera
+  readout and character-controller heading share that same yaw basis so WASD
+  movement remains camera-relative.
 
   First-person melee presentation follows the same boundary and is clone-first.
   `dagger-runtime` owns attack direction, contact, recovery, cooldown, stamina,

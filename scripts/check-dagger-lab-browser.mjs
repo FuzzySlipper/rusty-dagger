@@ -408,8 +408,8 @@ async function assertSemanticPointerDirections(page) {
   const left = await input([-10, 0]);
   const up = await input([0, -10]);
   const down = await input([0, 10]);
-  assert.ok(angleDelta(before.camera.yawDegrees, right.camera.yawDegrees) < 0, 'mouse-right did not turn right');
-  assert.ok(angleDelta(right.camera.yawDegrees, left.camera.yawDegrees) > 0, 'mouse-left did not turn left');
+  assert.ok(angleDelta(before.camera.yawDegrees, right.camera.yawDegrees) > 0, 'mouse-right did not turn right');
+  assert.ok(angleDelta(right.camera.yawDegrees, left.camera.yawDegrees) < 0, 'mouse-left did not turn left');
   assert.ok(up.camera.pitchDegrees > left.camera.pitchDegrees, 'mouse-up did not look up');
   assert.ok(down.camera.pitchDegrees < up.camera.pitchDegrees, 'mouse-down did not look down');
   return {

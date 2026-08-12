@@ -430,7 +430,7 @@ fn resequence_presentation(op: PresentationOp, sequence: u32) -> PresentationOp 
 fn resolve_pointer_look(pointer_delta: [f32; 2]) -> ResolvedPlayerAction {
     ResolvedPlayerAction::Look {
         yaw_delta: pointer_delta[0] * 0.05,
-        pitch_delta: pointer_delta[1] * 0.05,
+        pitch_delta: -pointer_delta[1] * 0.05,
     }
 }
 
@@ -498,12 +498,12 @@ mod tests {
             "mouse-right feeds canonical positive yaw"
         );
         assert!(
-            look([0.0, -10.0]).1 < 0.0,
-            "mouse-up feeds canonical negative pitch"
+            look([0.0, -10.0]).1 > 0.0,
+            "mouse-up feeds canonical positive pitch"
         );
         assert!(
-            look([0.0, 10.0]).1 > 0.0,
-            "mouse-down feeds canonical positive pitch"
+            look([0.0, 10.0]).1 < 0.0,
+            "mouse-down feeds canonical negative pitch"
         );
     }
 
