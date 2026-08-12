@@ -403,11 +403,14 @@ async function assertSemanticPointerDirections(page) {
     const beforeSequence = Number(await page.locator('body').getAttribute('data-dagger-input-sequence'));
     const beforeCamera = await camera();
     await page.evaluate(
-      ({ x, y }) => window.dispatchEvent(new MouseEvent('mousemove', {
-        movementX: x,
-        movementY: y,
-        bubbles: true,
-      })),
+      ({ x, y }) => {
+        const event = new MouseEvent('mousemove', { bubbles: true });
+        Object.defineProperties(event, {
+          movementX: { value: x },
+          movementY: { value: y },
+        });
+        window.dispatchEvent(event);
+      },
       { x: movementX, y: movementY },
     );
     await page.waitForFunction(
