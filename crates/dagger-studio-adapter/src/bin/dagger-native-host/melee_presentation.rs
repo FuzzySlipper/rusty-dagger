@@ -424,6 +424,7 @@ fn weapon_sprite(
         render_order: 100,
         depth: SpriteDepthPolicy::DepthTestOff,
         shading: SpriteShading::Unlit,
+        material: Default::default(),
         visible: true,
         transform: Transform {
             translation: [
@@ -461,6 +462,7 @@ fn impact_sprite(
         render_order: 0,
         depth: SpriteDepthPolicy::Default,
         shading: SpriteShading::Unlit,
+        material: Default::default(),
         visible: true,
         transform: Transform {
             translation: position,
