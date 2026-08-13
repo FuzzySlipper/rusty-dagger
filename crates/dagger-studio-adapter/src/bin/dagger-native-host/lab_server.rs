@@ -14,6 +14,12 @@ use std::{
 use anyhow::{Context, Result};
 
 const MAX_REQUEST_BYTES: usize = 64 * 1024;
+const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(2);
+// Product bootstrap currently carries the checked scene resources inline and is
+// tens of megabytes. Leave enough headroom for a cold serialization and a LAN
+// transfer instead of treating normal browser latency as a bridge failure.
+const RESPONSE_WRITE_TIMEOUT: Duration = Duration::from_secs(60);
+const RUNTIME_REPLY_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(crate) enum LabCommand {
     ProductBootstrap {
@@ -123,9 +129,10 @@ fn run(
     while !shutdown.load(Ordering::Acquire) {
         match listener.accept() {
             Ok((mut stream, _)) => {
-                let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
-                let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
+                let _ = stream.set_read_timeout(Some(REQUEST_READ_TIMEOUT));
+                let _ = stream.set_write_timeout(Some(RESPONSE_WRITE_TIMEOUT));
                 if let Err(error) = handle_request(&mut stream, &commands, &static_root) {
+                    eprintln!("DAGGER_LAB_REQUEST_ERROR {error:#}");
                     let _ = write_response(
                         &mut stream,
                         500,
@@ -212,7 +219,7 @@ fn handle_request(
         .send(command)
         .context("send command to Dagger runtime")?;
     let reply = receive_reply
-        .recv_timeout(Duration::from_secs(3))
+        .recv_timeout(RUNTIME_REPLY_TIMEOUT)
         .context("wait for Dagger runtime reply")?;
     write_response(stream, reply.status, &reply.body)
 }
