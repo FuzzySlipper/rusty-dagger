@@ -747,6 +747,35 @@ mod tests {
         let defeated = runtime.experiment_readout().unwrap();
         assert_eq!(defeated.active_encounter.unwrap().status, "defeat");
         assert_eq!(defeated.player_stats.current_health, 0.0);
+        let attack_sequences = runtime
+            .enemy_presentation()
+            .into_iter()
+            .map(|enemy| (enemy.handle, enemy.attack_sequence))
+            .collect::<Vec<_>>();
+        let history_len = defeated.encounter_decisions.len();
+        for _ in 0..30 {
+            runtime
+                .tick_play_session(0.1)
+                .expect("post-defeat enemies drop the dead player target");
+        }
+        assert_eq!(
+            runtime
+                .enemy_presentation()
+                .into_iter()
+                .map(|enemy| (enemy.handle, enemy.attack_sequence))
+                .collect::<Vec<_>>(),
+            attack_sequences,
+            "enemy attack animation counters must stop after defeat"
+        );
+        assert!(
+            runtime
+                .experiment_readout()
+                .unwrap()
+                .encounter_decisions
+                .len()
+                <= history_len + 1,
+            "post-defeat ticks may record one state transition, not repeated attacks"
+        );
     }
 
     #[test]

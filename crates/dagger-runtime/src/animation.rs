@@ -222,6 +222,14 @@ impl AnimationService {
             else {
                 continue;
             };
+            if update.attack_sequence < entry.attack_sequence
+                || update.hurt_sequence < entry.hurt_sequence
+            {
+                entry.attack_sequence = update.attack_sequence;
+                entry.hurt_sequence = update.hurt_sequence;
+                entry.active_action = None;
+                continue;
+            }
             if update.hurt_sequence > entry.hurt_sequence {
                 entry.hurt_sequence = update.hurt_sequence;
                 entry.attack_sequence = entry.attack_sequence.max(update.attack_sequence);
@@ -515,6 +523,18 @@ mod tests {
         assert_eq!(svc.evaluate(0.0, camera)[0].frame, 88);
         assert!(svc.evaluate(0.25, camera).is_empty());
         assert_eq!(svc.evaluate(0.0, camera)[0].frame, 32);
+
+        svc.update_enemy_actions(&[EnemyAnimationUpdate {
+            handle: 600,
+            attack_sequence: 0,
+            hurt_sequence: 0,
+        }]);
+        svc.update_enemy_actions(&[attack]);
+        assert_eq!(
+            svc.evaluate(0.0, camera)[0].frame,
+            40,
+            "the first attack after a runtime counter reset must not be swallowed"
+        );
     }
 
     #[test]

@@ -27,7 +27,11 @@ const application = await mountRustyApplication({
     const angular = await bootstrapApplication(AppComponent, {
       providers: [provideHttpClient(), { provide: DAGGER_APPLICATION_CONTEXT, useValue: context }],
     });
-    const runtime = mountDaggerProductRuntime(context.renderer, context);
+    const runtime = mountDaggerProductRuntime(
+      context.renderer,
+      context,
+      bootstrap.inputSequence,
+    );
     return {
       dispose: () => {
         runtime.dispose();
