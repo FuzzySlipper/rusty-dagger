@@ -82,6 +82,23 @@ impl PatrolGrid {
         self.cells.get(&(cx, cz, level)).copied()
     }
 
+    /// Resolve the closest support surface in a world-space column. Player
+    /// positions are body/camera positions rather than nav support heights,
+    /// so an exact level lookup is not meaningful for encounter sensing.
+    fn nearest_support(&self, x: f32, z: f32, y: f32) -> Option<f32> {
+        if !x.is_finite() || !y.is_finite() || !z.is_finite() {
+            return None;
+        }
+        let cx = (x / CELL_SIZE).floor() as i32;
+        let cz = (z / CELL_SIZE).floor() as i32;
+        self.cells
+            .iter()
+            .filter_map(|(&(cell_x, cell_z, _), &support_y)| {
+                (cell_x == cx && cell_z == cz).then_some(support_y)
+            })
+            .min_by(|left, right| (y - *left).abs().total_cmp(&(y - *right).abs()))
+    }
+
     /// Find a random walkable cell within `radius_cells` of the given center.
     /// Returns the world-space center of the chosen cell + its support Y.
     fn random_walkable_near(
@@ -265,10 +282,17 @@ impl PatrolService {
         let mut updates = Vec::new();
         let mut decisions = Vec::new();
         let mut attacks = Vec::new();
+        let player_level = self
+            .grid
+            .nearest_support(player_position[0], player_position[2], player_position[1])
+            .map(|support_y| (support_y / 0.25).round() as i32);
         for npc in &mut self.npcs {
             let was_moving = npc.is_moving;
-            let distance_to_player =
-                (player_position[0] - npc.position[0]).hypot(player_position[2] - npc.position[2]);
+            let distance_to_player = if player_level == Some(npc.level) {
+                (player_position[0] - npc.position[0]).hypot(player_position[2] - npc.position[2])
+            } else {
+                f32::INFINITY
+            };
             let behavior = behaviors.get(&npc.handle);
             let next_mode = if dead.contains(&npc.handle) {
                 EnemyAiMode::Dead
@@ -458,6 +482,17 @@ fn move_toward(npc: &mut PatrolNpc, grid: &PatrolGrid, target: [f32; 3], speed: 
 mod tests {
     use super::*;
 
+    fn encounter_behavior() -> EnemyBehaviorExperiment {
+        EnemyBehaviorExperiment {
+            detection_range: 20.0,
+            patrol_speed: 0.0,
+            chase_speed: 2.0,
+            attack_range: 2.0,
+            attack_cooldown_seconds: 1.0,
+            attack_damage: 4.0,
+        }
+    }
+
     fn make_grid() -> Vec<(f64, f64, f64, f64)> {
         // Simple 11x11 grid at level 0 (y=0)
         let mut cells = Vec::new();
@@ -495,6 +530,28 @@ mod tests {
         let svc = PatrolService::new(&cells, &[(2001, [0.1, 11.0, 0.1])]);
         let positions = svc.positions();
         assert_eq!(positions[0].1[1], 10.0);
+    }
+
+    #[test]
+    fn encounter_sensing_requires_the_players_walkable_level() {
+        let mut cells = make_grid();
+        for x in -5..=5 {
+            for z in -5..=5 {
+                cells.push((x as f64, z as f64, 40.0, 10.0));
+            }
+        }
+        let behaviors = BTreeMap::from([(1, encounter_behavior())]);
+        let mut service = PatrolService::new(&cells, &[(1, [0.25, 0.0, 0.25])]);
+
+        let upper_floor =
+            service.evaluate_encounters(0.1, [0.25, 10.9, 0.25], &behaviors, &BTreeSet::new());
+        assert!(upper_floor.attacks.is_empty());
+        assert_eq!(service.states(), vec![(1, EnemyAiMode::Patrol)]);
+
+        let same_floor =
+            service.evaluate_encounters(0.1, [0.25, 0.9, 0.25], &behaviors, &BTreeSet::new());
+        assert_eq!(same_floor.attacks.len(), 1);
+        assert_eq!(service.states(), vec![(1, EnemyAiMode::Attack)]);
     }
 
     #[test]

@@ -255,7 +255,9 @@ modularity gate, task 6529):
   content-addressed resource bytes, authoritative camera/state, semantic input
   endpoint, and Lab API. The ordinary `dagger-native-host` mode remains an X11
   renderer diagnostic rather than a second product surface. Closing and
-  reopening the browser product reconnects to the same Rust session.
+  reopening the browser product reconnects to the same Rust session. Product
+  bootstrap includes that session's accepted input sequence so a reloaded
+  client continues monotonically instead of replaying sequence one.
   Loopback is the default bind and an explicit LAN bind remains trusted,
   unauthenticated development mode. Worksheet evaluation is side-effect-free;
   Reset & Play restores the named start and focuses the Engine-owned gameplay surface. The app
@@ -572,6 +574,12 @@ their visible start until the player's first attack, so reading the objective
 or acquiring pointer lock cannot consume the run before play begins. These routes intentionally stay within the
 currently reachable dungeon region, so the baked-door limitation from task
 6525 does not prevent quick combat verification.
+
+Ground enemy sensing is constrained to the player's nearest walkable nav
+level before planar detection, chase, or melee ranges are evaluated. This keeps
+stacked dungeon floors from becoming adjacent combat space. Attack presentation
+counters advance only for a living player with clear collision line of sight;
+defeat drops the player target and does not emit zero-damage attack loops.
 
 ## Navigation grid (task 6639)
 

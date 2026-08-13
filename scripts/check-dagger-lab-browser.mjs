@@ -286,6 +286,12 @@ try {
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
   assert.equal(await page.getByTestId('max-health').innerText(), '130.00');
+  const reloadMove = await resetAndPhysicallyMove(page, spawnPosition);
+  assert.equal(
+    await page.evaluate(() => document.body.dataset.daggerProductInputError),
+    undefined,
+    'physical input after reload was rejected by the persistent Rust session',
+  );
 
   // Invalid documents may be kept as drafts, but activating one must surface
   // the Rust author error and preserve the prior active session and history.
@@ -337,7 +343,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} reloadMove=${JSON.stringify(reloadMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
   );
 } finally {
   await browser.close();
@@ -769,11 +775,19 @@ async function jumpAndPhysicallyAttack(
   if (outcome === 'HIT') {
     await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
   }
-  await page.waitForFunction(
-    () => document.body.dataset.daggerMeleeSequence === undefined,
-    undefined,
-    { timeout: 5_000 },
-  );
+  // Melee phases advance on sampled gameplay frames. Hold a bounded movement
+  // input while waiting so cleanup does not depend on runner latency or an
+  // incidental pending key event.
+  await page.keyboard.down('a');
+  try {
+    await page.waitForFunction(
+      () => document.body.dataset.daggerMeleeSequence === undefined,
+      undefined,
+      { timeout: 10_000 },
+    );
+  } finally {
+    await page.keyboard.up('a');
+  }
   await pressPhysical(page, 'KeyR');
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   await openInterface(page);
@@ -879,27 +893,45 @@ async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage)
     contentId,
     { timeout: 10_000 },
   );
-  const attack = page
-    .locator('[data-testid^="encounter-"]:not([data-testid="encounter-panel"])')
-    .filter({ hasText: 'melee attack' })
-    .filter({ hasText: `damage ${damage.toFixed(2)}` })
-    .first();
+  // Enemy authority advances on sampled physical input. Drive one bounded
+  // frame after the HTTP jump instead of depending on an unrelated pending
+  // key-release from earlier browser work.
+  await pressPhysical(page, 'KeyA');
+  let attack;
   try {
-    await attack.waitFor({ timeout: 20_000 });
+    const observation = await page.waitForFunction(
+      async ({ id, expectedDamage }) => {
+        const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
+        if (!response.ok) return false;
+        const live = await response.json();
+        return live.encounterDecisions?.find((decision) => (
+          decision.enemyId === id
+          && decision.decision === 'melee attack'
+          && decision.damage === expectedDamage
+          && decision.lineOfSightClear === true
+        )) ?? false;
+      },
+      { id: contentId, expectedDamage: damage },
+      { timeout: 20_000 },
+    );
+    attack = await observation.jsonValue();
   } catch (error) {
+    const live = await page.evaluate(async () => {
+      const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
+      return response.json();
+    });
     const records = await page
       .locator('[data-testid^="encounter-"]:not([data-testid="encounter-panel"])')
       .allInnerTexts();
     const position = await page.getByTestId('player-position').innerText();
     throw new Error(
-      `enemy ${contentId} did not produce damage ${damage.toFixed(2)} at ${JSON.stringify(position)}; records=${JSON.stringify(records)}`,
+      `enemy ${contentId} did not produce damage ${damage.toFixed(2)} at ${JSON.stringify(position)}; health=${String(live.playerStats?.currentHealth)}; decisions=${JSON.stringify(live.encounterDecisions?.slice(-8))}; records=${JSON.stringify(records)}`,
       { cause: error },
     );
   }
-  await attack.filter({ hasText: 'LOS clear' }).waitFor();
-  await pressPhysical(page, 'KeyA');
-  const text = await attack.innerText();
-  assert.match(text, /player \d+\.\d{2} → \d+\.\d{2}/i);
+  assert.equal(attack.lineOfSightClear, true);
+  assert.equal(attack.damage, damage);
+  const text = `${attack.enemyName} ${attack.enemyId}: melee attack damage ${attack.damage.toFixed(2)}; player ${attack.playerHealthBefore.toFixed(2)} → ${attack.playerHealthAfter.toFixed(2)}; LOS clear`;
   await page.screenshot({ path: `${output}/skeleton-encounter-desktop.png`, fullPage: true });
   await openInterface(page);
   await page.getByTestId('reset').click();

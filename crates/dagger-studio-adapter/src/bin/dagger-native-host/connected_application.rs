@@ -145,7 +145,11 @@ fn handle_command(
         LabCommand::ProductBootstrap { reply } => {
             pending_presentation.replace(presentation.snapshot()?)?;
             let _ = pending_audio.take()?;
-            send_json(reply, 200, &ProductBootstrap::new(runtime, bundle)?)
+            send_json(
+                reply,
+                200,
+                &ProductBootstrap::new(runtime, bundle, *accepted_input_sequence)?,
+            )
         }
         LabCommand::ProductState { reply } => send_json(
             reply,
@@ -245,6 +249,7 @@ fn apply_product_input(
 #[serde(rename_all = "camelCase")]
 struct ProductBootstrap<'a> {
     schema_version: u8,
+    input_sequence: u64,
     camera: RendererCameraPose,
     frame: &'a rusty_engine::render_model::RenderFrameDiff,
     resources: Vec<ProductResource<'a>>,
@@ -252,9 +257,14 @@ struct ProductBootstrap<'a> {
 }
 
 impl<'a> ProductBootstrap<'a> {
-    fn new(runtime: &DaggerRuntime, bundle: &'a DaggerRenderBundle) -> Result<Self> {
+    fn new(
+        runtime: &DaggerRuntime,
+        bundle: &'a DaggerRenderBundle,
+        input_sequence: u64,
+    ) -> Result<Self> {
         Ok(Self {
             schema_version: 1,
+            input_sequence,
             camera: camera_pose(runtime)?,
             frame: &bundle.frame,
             resources: bundle

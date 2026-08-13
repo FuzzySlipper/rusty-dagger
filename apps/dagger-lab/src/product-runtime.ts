@@ -25,6 +25,7 @@ interface DaggerProductResourceWire {
 
 interface DaggerProductBootstrapWire {
   readonly schemaVersion: 1;
+  readonly inputSequence: number;
   readonly camera: DaggerProductCamera;
   readonly frame: Readonly<Record<string, unknown>>;
   readonly resources: readonly DaggerProductResourceWire[];
@@ -76,6 +77,7 @@ const MAX_SAMPLED_STEP_SECONDS = 0.08;
 const MIN_INPUT_STEP_SECONDS = 0.001;
 
 export interface DaggerProductBootstrap {
+  readonly inputSequence: number;
   readonly camera: DaggerProductCamera;
   readonly content: RustyApplicationContent;
   readonly sourceEntityCount: number;
@@ -91,6 +93,7 @@ export async function loadDaggerProductBootstrap(): Promise<DaggerProductBootstr
     throw new Error('Dagger product bootstrap is malformed');
   }
   return {
+    inputSequence: wire.inputSequence,
     camera: wire.camera,
     content: {
       frame: wire.frame,
@@ -108,6 +111,7 @@ export async function loadDaggerProductBootstrap(): Promise<DaggerProductBootstr
 export function mountDaggerProductRuntime(
   renderer: RustyApplicationRendererPort,
   context: RustyApplicationUiContext,
+  initialInputSequence: number,
 ): { readonly dispose: () => void } {
   const pressed = new Set<string>();
   const pressedEdges = new Set<string>();
@@ -118,8 +122,8 @@ export function mountDaggerProductRuntime(
   let buttons = 0;
   let buttonPressedEdges = 0;
   let pointerDelta: [number, number] = [0, 0];
-  let inputSequence = 0;
-  let latestAppliedInputSequence = 0;
+  let inputSequence = initialInputSequence;
+  let latestAppliedInputSequence = initialInputSequence;
   let lastInputSampleAtMs = performance.now();
   let inputChanged = false;
   let dynamicFrameSequence = 0;
@@ -127,6 +131,7 @@ export function mountDaggerProductRuntime(
   const enemyTransforms = new Map<number, string>();
 
   const applyState = async (state: DaggerProductStateWire): Promise<void> => {
+    inputSequence = Math.max(inputSequence, state.inputSequence);
     const ownsControlState = state.inputSequence >= latestAppliedInputSequence;
     if (ownsControlState) latestAppliedInputSequence = state.inputSequence;
     if (state.frame !== undefined) {

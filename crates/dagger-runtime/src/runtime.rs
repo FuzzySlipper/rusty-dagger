@@ -719,8 +719,12 @@ impl DaggerRuntime {
         let Some(patrol) = self.patrol.as_mut() else {
             return Ok(Vec::new());
         };
-        let evaluation =
-            patrol.evaluate_encounters(dt, [player.x, player.y, player.z], &behaviors, &dead);
+        let player_target = if self.player_resources.current_health > 0.0 {
+            [player.x, player.y, player.z]
+        } else {
+            [f32::INFINITY; 3]
+        };
+        let evaluation = patrol.evaluate_encounters(dt, player_target, &behaviors, &dead);
         for update in &evaluation.positions {
             self.content_live_positions
                 .insert(u64::from(update.handle), update.translation);
@@ -744,12 +748,17 @@ impl DaggerRuntime {
         }
         for attack in evaluation.attacks {
             let id = u64::from(attack.handle);
-            if let Some(sequence) = self.enemy_attack_sequences.get_mut(&id) {
-                *sequence = sequence.saturating_add(1);
-            }
             let before = self.player_resources.current_health;
+            if before <= 0.0 {
+                continue;
+            }
             let line_of_sight_clear = self.enemy_line_of_sight_clear(id, player);
-            let damage = if before > 0.0 && line_of_sight_clear {
+            if line_of_sight_clear {
+                if let Some(sequence) = self.enemy_attack_sequences.get_mut(&id) {
+                    *sequence = sequence.saturating_add(1);
+                }
+            }
+            let damage = if line_of_sight_clear {
                 attack.damage
             } else {
                 0.0
@@ -818,7 +827,11 @@ impl DaggerRuntime {
         let Some(enemy) = self.content_live_positions.get(&id) else {
             return false;
         };
-        let delta = [player.x - enemy[0], player.z - enemy[2]];
+        // Classic sprites do not provide per-mobile controller dimensions.
+        // Encounter sensing has already established a shared nav level, so
+        // cast between actor centers at the player's stable body height.
+        let origin = [enemy[0], player.y, enemy[2]];
+        let delta = [player.x - origin[0], player.z - origin[2]];
         let distance = delta[0].hypot(delta[1]);
         if distance <= 0.4 {
             return true;
@@ -831,15 +844,7 @@ impl DaggerRuntime {
         let clear_distance = f64::from((distance - 0.35).max(0.0));
         !self
             .collision_scene
-            .raycast_world(
-                [
-                    f64::from(enemy[0]),
-                    f64::from(player.y),
-                    f64::from(enemy[2]),
-                ],
-                direction,
-                clear_distance,
-            )
+            .raycast_world(origin.map(f64::from), direction, clear_distance)
             .is_some_and(|hit| collision_hit_distance(hit) + 0.05 < clear_distance)
     }
 
