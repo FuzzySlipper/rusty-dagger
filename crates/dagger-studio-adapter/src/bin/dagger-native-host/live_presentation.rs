@@ -145,6 +145,10 @@ impl LivePresentation {
         })
     }
 
+    // This is the single composition boundary for independent Rust gameplay
+    // authorities. Keeping the inputs explicit makes it harder for presentation
+    // to infer or cache a second copy of encounter state.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn tick(
         &mut self,
         dt: f32,
