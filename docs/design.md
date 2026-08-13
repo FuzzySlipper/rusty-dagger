@@ -204,7 +204,8 @@ modularity gate, task 6529):
   changes the host interaction mode rather than mounting a second renderer or
   runtime, and returning to play restores gameplay focus through the bounded
   host port. The browser product is a fixed application window: gameplay uses
-  the stable renderer viewport, while the Lab is a distinct opaque workspace
+  a centered 320:200 reference viewport scaled to the largest fitting 8:5
+  rectangle, while the Lab is a distinct opaque workspace
   with its own bounded scroll container. Lab content never participates in
   document, application-host, or renderer sizing. This matches the layout
   contract expected from a later native wrapper without making the wrapper the
@@ -237,7 +238,11 @@ modularity gate, task 6529):
   still produces the same complete weapon motion. Cooldown rejection records
   the input without replacing or restarting an active swing. The generated
   combat catalog maps semantic weapon/action/effect/audio IDs to classic
-  Arena2 resources. The weapon is intentionally camera-relative through Engine's public `viewmodel`
+  Arena2 resources. Generated weapon frames retain DFU's native 320x200
+  bottom/left/right screen alignment inside one stable reference canvas; the
+  browser host letterboxes that canvas rather than allowing arbitrary window
+  aspect ratios to distort or clip the weapon. The weapon is intentionally
+  camera-relative through Engine's public `viewmodel`
   layer, while blood/sparkle belongs at the world impact point through Engine's
   world presentation facade. Fullscreen impact flashes and oversized
   target-health overlays are not the default clone treatment. TypeScript only

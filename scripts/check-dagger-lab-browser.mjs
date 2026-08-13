@@ -628,7 +628,6 @@ async function assertFixedApplicationShell(page, width, height, exerciseLabScrol
       '#application',
       '[data-rusty-application-host]',
       '[data-rusty-application-ui]',
-      '[data-rusty-application-renderer]',
       'dagger-root',
       '.product-shell',
     ];
@@ -647,6 +646,12 @@ async function assertFixedApplicationShell(page, width, height, exerciseLabScrol
         const bounds = element.getBoundingClientRect();
         return [selector, { width: bounds.width, height: bounds.height }];
       })),
+      renderer: (() => {
+        const element = document.querySelector('[data-rusty-application-renderer]');
+        if (element === null) throw new Error('fixed shell renderer is missing');
+        const bounds = element.getBoundingClientRect();
+        return { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
+      })(),
     };
   });
   const before = await readBounds();
@@ -660,6 +665,18 @@ async function assertFixedApplicationShell(page, width, height, exerciseLabScrol
     assert.ok(Math.abs(bounds.width - width) <= 1, `${selector} width escaped fixed application bounds`);
     assert.ok(Math.abs(bounds.height - height) <= 1, `${selector} height escaped fixed application bounds`);
   }
+  const rendererWidth = Math.min(width, height * 1.6);
+  const rendererHeight = rendererWidth / 1.6;
+  assert.ok(Math.abs(before.renderer.width - rendererWidth) <= 1, 'renderer escaped 8:5 width');
+  assert.ok(Math.abs(before.renderer.height - rendererHeight) <= 1, 'renderer escaped 8:5 height');
+  assert.ok(
+    Math.abs(before.renderer.left - (width - rendererWidth) / 2) <= 1,
+    'renderer is not horizontally centered',
+  );
+  assert.ok(
+    Math.abs(before.renderer.top - (height - rendererHeight) / 2) <= 1,
+    'renderer is not vertically centered',
+  );
   if (!exerciseLabScroll) return;
   const scroller = page.getByTestId('lab-scroll');
   const scrollRange = await scroller.evaluate((element) => element.scrollHeight - element.clientHeight);
