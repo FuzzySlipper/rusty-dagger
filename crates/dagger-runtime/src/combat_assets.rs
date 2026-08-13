@@ -19,6 +19,7 @@ pub struct WeaponAsset {
     pub texture_asset_id: String,
     pub width: u32,
     pub height: u32,
+    pub reference_size: [u32; 2],
     pub pivot: [f32; 2],
     pub frames: Vec<CombatFrame>,
     pub animations: Vec<WeaponAnimation>,
@@ -101,6 +102,11 @@ impl CombatAssetCatalog {
         }
         validate_asset_identity(&self.weapon.id, &self.weapon.texture_asset_id)?;
         validate_dimensions(self.weapon.width, self.weapon.height, &self.weapon.id)?;
+        validate_dimensions(
+            self.weapon.reference_size[0],
+            self.weapon.reference_size[1],
+            &format!("{} reference canvas", self.weapon.id),
+        )?;
         validate_pivot(self.weapon.pivot, &self.weapon.id)?;
         validate_frames(&self.weapon.frames, &self.weapon.id)?;
         let mut actions = BTreeSet::new();
@@ -267,6 +273,7 @@ mod tests {
             .weapon("weapon.dagger.steel")
             .expect("semantic dagger weapon");
         assert_eq!(weapon.frames.len(), 31);
+        assert_eq!(weapon.reference_size, [320, 200]);
         assert_eq!(weapon.animation("strikeDown").unwrap().frame_count, 5);
         assert_eq!(weapon.sprite_asset_id(), "sprite/weapon-dagger-steel-atlas");
         assert_eq!(

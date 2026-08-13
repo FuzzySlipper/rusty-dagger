@@ -25,6 +25,11 @@ const BLOOD_EFFECT_ID: &str = "effect.blood.0";
 const SWING_AUDIO_ID: &str = "audio.melee.dagger.swing";
 const WEAPON_SPRITE_HANDLE: RenderHandle = RenderHandle::new((7_u64 << 40) | 1);
 const IMPACT_SPRITE_HANDLE: RenderHandle = RenderHandle::new((7_u64 << 40) | 2);
+// Engine's current public application host uses a 55-degree perspective
+// viewmodel camera. At z=-1 this height fills that camera vertically; the
+// generated 320x200 reference canvas supplies the matching horizontal span.
+const CLASSIC_VIEWMODEL_HEIGHT: f32 = 1.04;
+const CLASSIC_VIEWMODEL_DEPTH: f32 = -1.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum MeleeNode {
@@ -39,6 +44,7 @@ pub(crate) struct MeleePresentation {
     projector: RetainedNodeProjector<MeleeNode>,
     root: BTreeMap<MeleeNode, RenderNode>,
     weapon_asset: String,
+    weapon_size: [f32; 2],
     pivot: [f32; 2],
     idle: WeaponAnimation,
     strike: WeaponAnimation,
@@ -87,10 +93,16 @@ impl MeleePresentation {
             .collect::<Result<Vec<_>>>()?;
         let mut root = BTreeMap::new();
         root.insert(MeleeNode::ViewmodelRoot, viewmodel_root());
+        let weapon_size = [
+            CLASSIC_VIEWMODEL_HEIGHT * weapon.reference_size[0] as f32
+                / weapon.reference_size[1] as f32,
+            CLASSIC_VIEWMODEL_HEIGHT,
+        ];
         Ok(Self {
             projector: RetainedNodeProjector::new(RenderHandleNamespace::PRESENTATION),
             root,
             weapon_asset: weapon.sprite_asset_id(),
+            weapon_size,
             pivot: weapon.pivot,
             current_frame: idle.frame_start,
             idle,
@@ -170,7 +182,7 @@ impl MeleePresentation {
             ops.push(RenderDiff::CreateSprite {
                 handle: WEAPON_SPRITE_HANDLE,
                 parent: Some(root),
-                sprite: weapon_sprite(&self.weapon_asset, self.pivot, frame),
+                sprite: weapon_sprite(&self.weapon_asset, self.weapon_size, self.pivot, frame),
             });
             self.sprite_created = true;
         } else if frame != self.current_frame {
@@ -205,7 +217,12 @@ impl MeleePresentation {
             RenderDiff::CreateSprite {
                 handle: WEAPON_SPRITE_HANDLE,
                 parent: Some(root),
-                sprite: weapon_sprite(&self.weapon_asset, self.pivot, self.current_frame),
+                sprite: weapon_sprite(
+                    &self.weapon_asset,
+                    self.weapon_size,
+                    self.pivot,
+                    self.current_frame,
+                ),
             },
         ];
         if self.impact_created {
@@ -387,14 +404,20 @@ fn viewmodel_root() -> RenderNode {
     }
 }
 
-fn weapon_sprite(asset: &str, pivot: [f32; 2], frame: u32) -> SpriteInstanceDescriptor {
+fn weapon_sprite(
+    asset: &str,
+    size: [f32; 2],
+    pivot: [f32; 2],
+    frame: u32,
+) -> SpriteInstanceDescriptor {
     SpriteInstanceDescriptor {
         asset: asset.to_string(),
         frame,
         pivot,
-        // The fixed transparent atlas cell preserves a stable screen-space
-        // footprint while individual classic frames retain their own bounds.
-        size: [0.60, 1.30],
+        // The generated fixed cell is a complete 320x200 classic screen
+        // canvas. Its transparent placement preserves DFU's per-action
+        // left/right alignment while this quad remains stable across frames.
+        size,
         size_mode: SpriteSizeMode::World,
         billboard: BillboardMode::None,
         tint: [1.0, 1.0, 1.0, 1.0],
@@ -403,11 +426,11 @@ fn weapon_sprite(asset: &str, pivot: [f32; 2], frame: u32) -> SpriteInstanceDesc
         shading: SpriteShading::Unlit,
         visible: true,
         transform: Transform {
-            // Place the opaque portion of the classic fixed-cell frame in the
-            // actual lower-right viewmodel quadrant. The transparent source
-            // padding is intentionally retained so every strike frame keeps a
-            // stable footprint.
-            translation: [0.65, -1.0, -1.0],
+            translation: [
+                0.0,
+                -CLASSIC_VIEWMODEL_HEIGHT / 2.0,
+                CLASSIC_VIEWMODEL_DEPTH,
+            ],
             rotation: [0.0, 0.0, 0.0, 1.0],
             scale: [1.0, 1.0, 1.0],
         },
@@ -495,7 +518,11 @@ mod tests {
                 if sprite.asset == "sprite/weapon-dagger-steel-atlas"
                     && sprite.frame == 0
                     && sprite.pivot == [0.5, 0.0]
-                    && sprite.transform.translation == [0.65, -1.0, -1.0]
+                    && sprite.size == [
+                        CLASSIC_VIEWMODEL_HEIGHT * 320.0 / 200.0,
+                        CLASSIC_VIEWMODEL_HEIGHT,
+                    ]
+                    && sprite.transform.translation == [0.0, -0.52, -1.0]
         )));
 
         let contact = presentation

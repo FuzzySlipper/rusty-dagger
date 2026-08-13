@@ -19,6 +19,14 @@ struct Frame {
     height: usize,
     rgba: Vec<u8>,
     source_offset: [i16; 2],
+    placement: FramePlacement,
+}
+
+#[derive(Clone, Copy)]
+enum FramePlacement {
+    Left(f32),
+    Center,
+    Right(f32),
 }
 
 struct PackedAtlas {
@@ -94,6 +102,11 @@ fn publish_weapon(texture_dir: &Path, arena2_dir: &Path) -> Result<Value, String
                 height: info.height as usize,
                 rgba: palette.to_rgba_transparent(&indexed),
                 source_offset: [info.x_offset, info.y_offset],
+                placement: match *alignment {
+                    "left" => FramePlacement::Left(*screen_offset),
+                    "right" => FramePlacement::Right(*screen_offset),
+                    _ => return Err(format!("unsupported weapon alignment {alignment}")),
+                },
             });
         }
         animations.push(json!({
@@ -107,7 +120,7 @@ fn publish_weapon(texture_dir: &Path, arena2_dir: &Path) -> Result<Value, String
         }));
     }
 
-    let atlas = pack_fixed_cells(frames)?;
+    let atlas = pack_fixed_cells(frames, Some([320, 200]))?;
     let file = "weapon-dagger-steel-atlas.png";
     fs::write(texture_dir.join(file), &atlas.png).map_err(|error| error.to_string())?;
     Ok(json!({
@@ -119,6 +132,7 @@ fn publish_weapon(texture_dir: &Path, arena2_dir: &Path) -> Result<Value, String
         "byteLength": atlas.png.len(),
         "width": atlas.width,
         "height": atlas.height,
+        "referenceSize": [320, 200],
         "pivot": [0.5, 0.0],
         "frames": atlas.frames,
         "animations": animations,
@@ -149,9 +163,10 @@ fn publish_effects(texture_dir: &Path, arena2_dir: &Path) -> Result<Vec<Value>, 
                 height,
                 rgba: palette.to_rgba_transparent(&indexed),
                 source_offset: [0, 0],
+                placement: FramePlacement::Center,
             });
         }
-        let atlas = pack_fixed_cells(frames)?;
+        let atlas = pack_fixed_cells(frames, None)?;
         let slug = id.replace('.', "-");
         let file = format!("{slug}-atlas.png");
         fs::write(texture_dir.join(&file), &atlas.png).map_err(|error| error.to_string())?;
@@ -207,12 +222,19 @@ fn publish_audio(audio_dir: &Path, arena2_dir: &Path) -> Result<Vec<Value>, Stri
     Ok(output)
 }
 
-fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
+fn pack_fixed_cells(
+    mut frames: Vec<Frame>,
+    reference_size: Option<[usize; 2]>,
+) -> Result<PackedAtlas, String> {
     if frames.is_empty() {
         return Err("cannot pack an empty combat atlas".to_string());
     }
-    let cell_width = frames.iter().map(|frame| frame.width).max().unwrap_or(1);
-    let cell_height = frames.iter().map(|frame| frame.height).max().unwrap_or(1);
+    let cell_width = reference_size
+        .map(|size| size[0])
+        .unwrap_or_else(|| frames.iter().map(|frame| frame.width).max().unwrap_or(1));
+    let cell_height = reference_size
+        .map(|size| size[1])
+        .unwrap_or_else(|| frames.iter().map(|frame| frame.height).max().unwrap_or(1));
     if cell_width > MAX_ATLAS_DIMENSION || cell_height > MAX_ATLAS_DIMENSION {
         return Err(format!(
             "combat frame {cell_width}x{cell_height} exceeds Engine texture bounds"
@@ -230,13 +252,22 @@ fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
     let mut rgba = vec![0u8; width * height * 4];
     let mut entries = Vec::new();
     for (index, frame) in frames.iter_mut().enumerate() {
+        if frame.width > cell_width || frame.height > cell_height {
+            return Err(format!(
+                "combat frame {}x{} exceeds fixed cell {cell_width}x{cell_height}",
+                frame.width, frame.height
+            ));
+        }
         let cell_x = (index % columns) * cell_width;
         let cell_y = (index / columns) * cell_height;
-        let x = cell_x + (cell_width - frame.width) / 2;
-        let y = cell_y + cell_height - frame.height;
-        // Engine's retained DataTexture samples v=0 from the first encoded PNG
-        // row. Flip inside each fixed cell while copying so the pixels are
-        // upright without reversing the frame rows of a multi-row atlas.
+        let x = cell_x + horizontal_frame_offset(frame.placement, cell_width, frame.width);
+        // Weapon cells are complete classic screen canvases. Engine's retained
+        // DataTexture maps the first encoded row to v=0 (the quad bottom), so a
+        // DFU bottom-aligned frame begins at the first cell row. Generic effect
+        // cells retain their existing bottom packing within the tallest frame.
+        let y = cell_y + vertical_frame_offset(reference_size.is_some(), cell_height, frame.height);
+        // Reverse the source rows while copying so the classic top-down image
+        // remains upright in Engine's bottom-up UV convention.
         for row in 0..frame.height {
             let source_row = frame.height - 1 - row;
             let source =
@@ -262,6 +293,35 @@ fn pack_fixed_cells(mut frames: Vec<Frame>) -> Result<PackedAtlas, String> {
         png,
         frames: entries,
     })
+}
+
+fn horizontal_frame_offset(
+    placement: FramePlacement,
+    cell_width: usize,
+    frame_width: usize,
+) -> usize {
+    let available = cell_width.saturating_sub(frame_width);
+    match placement {
+        FramePlacement::Left(offset) => {
+            ((offset * cell_width as f32).round() as usize).min(available)
+        }
+        FramePlacement::Center => available / 2,
+        FramePlacement::Right(offset) => {
+            available.saturating_sub(((offset * cell_width as f32).round() as usize).min(available))
+        }
+    }
+}
+
+fn vertical_frame_offset(
+    classic_reference_canvas: bool,
+    cell_height: usize,
+    frame_height: usize,
+) -> usize {
+    if classic_reference_canvas {
+        0
+    } else {
+        cell_height.saturating_sub(frame_height)
+    }
 }
 
 fn sha256(bytes: &[u8]) -> String {
@@ -298,6 +358,9 @@ mod tests {
         )
         .expect("decode combat manifest");
         assert_eq!(manifest["weapon"]["id"], "weapon.dagger.steel");
+        assert_eq!(manifest["weapon"]["referenceSize"], json!([320, 200]));
+        assert_eq!(manifest["weapon"]["width"], 3840);
+        assert_eq!(manifest["weapon"]["height"], 600);
         assert_eq!(manifest["weapon"]["frames"].as_array().unwrap().len(), 31);
         assert_eq!(manifest["effects"].as_array().unwrap().len(), 4);
         assert_eq!(manifest["audio"].as_array().unwrap().len(), 6);
@@ -312,5 +375,27 @@ mod tests {
             assert_eq!(&fs::read(path).unwrap()[..4], b"RIFF");
         }
         fs::remove_dir_all(&root).expect("remove isolated combat publication output");
+    }
+
+    #[test]
+    fn classic_frame_alignment_uses_the_320_pixel_reference_canvas() {
+        assert_eq!(
+            horizontal_frame_offset(FramePlacement::Right(0.0), 320, 162),
+            158
+        );
+        assert_eq!(
+            horizontal_frame_offset(FramePlacement::Right(0.04), 320, 65),
+            242
+        );
+        assert_eq!(
+            horizontal_frame_offset(FramePlacement::Left(0.0), 320, 311),
+            0
+        );
+        assert_eq!(
+            horizontal_frame_offset(FramePlacement::Center, 320, 162),
+            79
+        );
+        assert_eq!(vertical_frame_offset(true, 200, 143), 0);
+        assert_eq!(vertical_frame_offset(false, 200, 143), 57);
     }
 }
