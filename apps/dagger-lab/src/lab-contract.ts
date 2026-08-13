@@ -173,6 +173,17 @@ export interface ExperimentReadout {
   readonly encounterDecisions: readonly EncounterDecisionRecord[];
   readonly content: readonly ContentEntityReadout[];
   readonly focusedContentId: number | null;
+  readonly namedEncounters: readonly NamedEncounterReadout[];
+  readonly activeEncounter: NamedEncounterReadout | null;
+}
+
+export interface NamedEncounterReadout {
+  readonly id: string;
+  readonly name: string;
+  readonly objective: string;
+  readonly routeCode: string;
+  readonly memberEntityIds: readonly number[];
+  readonly status: 'available' | 'active' | 'victory' | 'defeat';
 }
 
 export interface EncounterDecisionRecord {

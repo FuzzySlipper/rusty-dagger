@@ -26,6 +26,15 @@ pub struct MobileType {
     pub texture_archive: u16,
     pub has_idle: bool,
     pub flying: bool,
+    /// Classic lootable corpse marker texture. DFU replaces the disabled live
+    /// mobile with this separate flat after authoritative death.
+    pub corpse: Option<CorpseTexture>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CorpseTexture {
+    pub archive: u16,
+    pub record: u16,
 }
 
 /// The enemies present in Privateer's Hold (extend as new dungeons need).
@@ -39,6 +48,10 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 255,
         has_idle: true,
         flying: false,
+        corpse: Some(CorpseTexture {
+            archive: 401,
+            record: 1,
+        }),
     },
     MobileType {
         id: 1,
@@ -46,6 +59,7 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 256,
         has_idle: false,
         flying: true,
+        corpse: None,
     },
     MobileType {
         id: 3,
@@ -53,6 +67,7 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 258,
         has_idle: false,
         flying: true,
+        corpse: None,
     },
     MobileType {
         id: 4,
@@ -60,6 +75,7 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 259,
         has_idle: true,
         flying: false,
+        corpse: None,
     },
     MobileType {
         id: 7,
@@ -67,6 +83,7 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 262,
         has_idle: true,
         flying: false,
+        corpse: None,
     },
     MobileType {
         id: 15,
@@ -74,6 +91,10 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 270,
         has_idle: true,
         flying: false,
+        corpse: Some(CorpseTexture {
+            archive: 306,
+            record: 1,
+        }),
     },
     MobileType {
         id: 138,
@@ -81,6 +102,7 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 484,
         has_idle: true,
         flying: false,
+        corpse: None,
     },
     MobileType {
         id: 141,
@@ -88,6 +110,7 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         texture_archive: 482,
         has_idle: true,
         flying: false,
+        corpse: None,
     },
 ];
 
@@ -209,6 +232,8 @@ mod tests {
     fn known_enemies_resolve() {
         assert_eq!(mobile_type(0).unwrap().texture_archive, 255);
         assert_eq!(mobile_type(15).unwrap().texture_archive, 270);
+        assert_eq!(mobile_type(0).unwrap().corpse.unwrap().archive, 401);
+        assert_eq!(mobile_type(15).unwrap().corpse.unwrap().record, 1);
         assert_eq!(mobile_type(138).unwrap().name, "Thief");
         assert_eq!(mobile_type(141).unwrap().texture_archive, 482);
         assert!(mobile_type(42).is_none(), "not needed for Privateer's Hold");

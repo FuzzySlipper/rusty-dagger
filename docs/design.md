@@ -475,15 +475,17 @@ per-action movement assertions would catch a violation.
 
 ## Directional enemy sprites (task 6595)
 
-Classic enemies are view-only directional billboards. Ownership split:
+Classic enemies are Rust-authoritative directional billboards. Ownership split:
 
 - `arena2::mobile` owns the Daggerfall reference data and math: the minimal
-  enemy table (mobile id -> texture archive/idle semantics), the DFU 8-sector
-  orientation function, the Move/Idle record+flip tables, and DFU billboard
-  record sizing.
+  enemy table (mobile id -> texture archive/idle/corpse semantics), the DFU
+  8-sector orientation function, the Move/Idle/Attack/Hurt record+flip tables,
+  and DFU billboard record sizing.
 - `dagger-import` collects RDB enemy flats into scene nodes (`scene.enemies`,
   never baked into the static mesh) and packs one 8-frame orientation atlas
-  PNG per mobile id (mirrored sides baked, palette index 0 transparent).
+  PNG per mobile id with state-major Move, Idle, Attack, and Hurt ranges
+  (mirrored sides baked, palette index 0 transparent). Supported corpse flats
+  are emitted as separate generated textures.
 - The studio adapter emits `defineSpriteAtlas` + `createSprite` per enemy
   (`billboard: cylindrical`; the renderer honors billboard modes,
   rusty-engine 6630).
@@ -496,7 +498,10 @@ Classic enemies are view-only directional billboards. Ownership split:
   frames (`updateSprite` ops) and never re-implement the math — the
   Rust tests and `dagger-sprite-frames` consume them without reimplementing
   the sector math. The native and connected-product presentation loops submit
-  those updates through the same public retained-frame facade. Camera-facing
+  those updates through the same public retained-frame facade. Authoritative
+  attack and damage counters trigger non-looping Attack/Hurt ranges. Death
+  hides the live actor and shows its grounded corpse entity at the terminal
+  transform; retry reverses that swap. Camera-facing
   stays Engine presentation behavior; Dagger never calls the private renderer.
 - Classic Rat and Imp records contain direction-dependent scale metadata that
   is unsuitable for live geometry. Import retains those source sizes as
@@ -538,9 +543,9 @@ Ownership split:
   `evaluate(dt, camera)` call per tick walks all entries and emits only
   changed frames as a `Vec<FrameUpdate>`. Two `SpriteKind`s:
   - `Env { frame_count, fps }`: time-cycled, frame = `(elapsed * fps) % frame_count`.
-  - `Enemy { position, heading, mobile_id }`: actor-relative camera-driven
-    orientation via `evaluate_directional`; move-state cycling uses
-    `orientation × anim_frame`.
+  - `Enemy { position, heading, mobile_id, layout }`: actor-relative
+    camera-driven orientation via `evaluate_directional`; state-major layout
+    selects idle/movement or authoritative Attack/Hurt one-shots.
 - `AnimationService` remains the sole per-tick authority and is covered in
   Rust. `dagger-native-host` composes its consolidated updates with patrol
   transforms in one bounded Rust tick and submits them through the facade.
@@ -554,6 +559,19 @@ the service's elapsed-time state never crosses the renderer boundary.
 DaggerfallBillboard default). Enemy idle records are 1-frame for all
 Privateer's Hold enemies (the orientation evaluation IS the idle animation).
 Move-state cycling at 6fps (ground) / 10fps (flying) comes with 6641.
+
+## Named combat checks (tasks 6828 and 6829)
+
+The committed encounter configuration names two deterministic checks over real
+admitted enemies: `Digit1` routes to the Rat Cellar and `Digit2` routes to the
+Skeletal Guardroom. The routing and membership document is content config;
+Rust owns activation, victory when every named member is dead, defeat when the
+player reaches zero health, and `R` retry at the encounter start. The browser
+HUD only projects this readout. A newly routed encounter holds its actors at
+their visible start until the player's first attack, so reading the objective
+or acquiring pointer lock cannot consume the run before play begins. These routes intentionally stay within the
+currently reachable dungeon region, so the baked-door limitation from task
+6525 does not prevent quick combat verification.
 
 ## Navigation grid (task 6639)
 

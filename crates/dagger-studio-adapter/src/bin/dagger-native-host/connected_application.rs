@@ -33,6 +33,10 @@ const ENCOUNTER_GALLERY_PROJECT: &str =
     include_str!("../../../../../content/projects/encounter-gallery.project.json");
 const ENCOUNTER_GALLERY_NAVGRID: &str =
     include_str!("../../../../../content/projects/encounter-gallery.navgrid.json");
+const PRIVATEERS_HOLD_ENCOUNTERS: &str =
+    include_str!("../../../../../data/encounters/privateers-hold.json");
+const ENCOUNTER_GALLERY_ENCOUNTERS: &str =
+    include_str!("../../../../../data/encounters/encounter-gallery.json");
 
 pub(crate) fn run(options: Options) -> Result<()> {
     if options.proof || options.corrupt_resource {
@@ -45,20 +49,29 @@ pub(crate) fn run(options: Options) -> Result<()> {
         .parent()
         .and_then(Path::parent)
         .context("resolve Rusty Dagger workspace root")?;
-    let (project, navgrid, product_name) = if options.encounter_gallery {
+    let (project, navgrid, encounters, product_name) = if options.encounter_gallery {
         (
             ENCOUNTER_GALLERY_PROJECT,
             ENCOUNTER_GALLERY_NAVGRID,
+            ENCOUNTER_GALLERY_ENCOUNTERS,
             "encounter-gallery",
         )
     } else {
-        (PROJECT, NAVGRID, "privateers-hold")
+        (
+            PROJECT,
+            NAVGRID,
+            PRIVATEERS_HOLD_ENCOUNTERS,
+            "privateers-hold",
+        )
     };
     let mut runtime = DaggerRuntime::from_project_json(project)
         .with_context(|| format!("admit checked {product_name} project"))?;
     runtime
         .install_encounter_navigation_json(navgrid)
         .context("install committed encounter navigation")?;
+    runtime
+        .install_named_encounters_json(encounters)
+        .context("install committed named encounters")?;
     let mut presentation = NativeDiagnostics::from_documents(project, navgrid)?;
     let mut pending_presentation = PendingPresentation::default();
     let mut pending_audio = PendingAudioPresentation::default();
@@ -210,6 +223,11 @@ fn apply_product_input(
     if attack_pressed {
         let _ = runtime.attack_focused_target()?;
     }
+    for route_code in ["Digit1", "Digit2"] {
+        if pressed_edges.contains(route_code) {
+            runtime.route_named_encounter(route_code)?;
+        }
+    }
     if reset_pressed {
         runtime.reset_play_session()?;
     }
@@ -351,6 +369,7 @@ fn tick_presentation(
     let encounter_updates = runtime.tick_play_session(dt)?;
     let positions = runtime.encounter_positions();
     let dead_encounters = runtime.dead_encounter_ids();
+    let enemy_presentation = runtime.enemy_presentation();
     let melee_action = runtime.melee_presentation();
     let stamina = runtime.player_stamina();
     let camera = camera_pose(runtime)?;
@@ -364,6 +383,7 @@ fn tick_presentation(
         &positions,
         &encounter_updates,
         &dead_encounters,
+        &enemy_presentation,
         melee_action.as_ref(),
         stamina,
     )
@@ -695,6 +715,46 @@ mod tests {
         .expect("hold diagnostics");
         assert!(diagnostics.sprite_overlay_enabled());
         assert!(diagnostics.nav_overlay_enabled());
+    }
+
+    #[test]
+    fn ordinary_number_keys_route_named_combat_encounters() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
+        runtime
+            .install_encounter_navigation_json(NAVGRID)
+            .expect("real navgrid");
+        runtime
+            .install_named_encounters_json(PRIVATEERS_HOLD_ENCOUNTERS)
+            .expect("named encounters");
+        let mut diagnostics =
+            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+        let mut sequence = 0;
+
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut sequence,
+            input(1, &[], &["Digit1"], [0.0, 0.0]),
+        )
+        .expect("Rat route");
+        let rat = runtime.experiment_readout().expect("Rat readout");
+        assert_eq!(
+            rat.active_encounter.expect("active Rat").id,
+            "rat-introduction"
+        );
+
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut sequence,
+            input(2, &[], &["Digit2"], [0.0, 0.0]),
+        )
+        .expect("Skeleton route");
+        let skeleton = runtime.experiment_readout().expect("Skeleton readout");
+        assert_eq!(
+            skeleton.active_encounter.expect("active Skeleton").id,
+            "skeletal-guardroom"
+        );
     }
 
     #[test]

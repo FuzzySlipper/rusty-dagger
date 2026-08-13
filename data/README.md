@@ -10,6 +10,12 @@ are committed generated output and must be regenerated with
 `experiments/privateers-hold-starter.json` is the active default consumed by
 `dagger-runtime` and displayed by Dagger Lab.
 
+`encounters/privateers-hold.json` and `encounters/encounter-gallery.json`
+author the two compact named combat routes used by the committed product and
+its focused test room. They contain names, objectives, physical route keys,
+and admitted entity membership only. Rust owns activation, victory/defeat,
+reset, AI, and combat semantics.
+
 - JSON is appropriate for plain values and tables. TypeScript authoring modules
   may produce the same immutable experiment document when typed builders make
   formulas or composition materially clearer.

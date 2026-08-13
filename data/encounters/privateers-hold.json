@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "encounters": [
+    {
+      "id": "rat-introduction",
+      "name": "Rat Cellar",
+      "objective": "Defeat the rat and inspect its classic corpse marker.",
+      "routeCode": "Digit1",
+      "startEntityId": 2007,
+      "memberEntityIds": [2007]
+    },
+    {
+      "id": "skeletal-guardroom",
+      "name": "Skeletal Guardroom",
+      "objective": "Defeat the tougher Skeletal Warrior and survive its slower, heavier attacks.",
+      "routeCode": "Digit2",
+      "startEntityId": 2000,
+      "memberEntityIds": [2000]
+    }
+  ]
+}

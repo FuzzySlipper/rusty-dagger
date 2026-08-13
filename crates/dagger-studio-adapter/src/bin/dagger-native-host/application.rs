@@ -434,6 +434,7 @@ impl NativeApplication {
         }
         let encounter_positions = self.runtime.encounter_positions();
         let dead_encounters = self.runtime.dead_encounter_ids();
+        let enemy_presentation = self.runtime.enemy_presentation();
         let melee_action = self.runtime.melee_presentation();
         let stamina = self.runtime.player_stamina();
         let diagnostic = self.diagnostics.tick(
@@ -446,6 +447,7 @@ impl NativeApplication {
             &encounter_positions,
             &encounter_updates,
             &dead_encounters,
+            &enemy_presentation,
             melee_action.as_ref(),
             stamina,
         )?;

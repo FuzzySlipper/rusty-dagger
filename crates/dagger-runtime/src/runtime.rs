@@ -16,7 +16,7 @@ use rusty_engine::entity_state::{
 use rusty_engine::svc_collision::{
     StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::patrol::{EnemyAiMode, PatrolService, PositionUpdate};
 use crate::player::{
@@ -81,11 +81,17 @@ pub struct DaggerRuntime {
     melee_presentation: Option<ActiveMeleePresentation>,
     encounter_sequence: u64,
     encounter_history: VecDeque<EncounterDecisionRecord>,
+    enemy_attack_sequences: BTreeMap<u64, u64>,
+    enemy_hurt_sequences: BTreeMap<u64, u64>,
     dungeon_bounds: Option<([f64; 3], [f64; 3])>,
     content_entities: Vec<ContentEntity>,
     content_live_positions: BTreeMap<u64, [f32; 3]>,
     focused_content_id: Option<u64>,
     patrol: Option<PatrolService>,
+    named_encounters: Vec<NamedEncounter>,
+    active_encounter_id: Option<String>,
+    active_encounter_outcome: NamedEncounterOutcome,
+    active_encounter_engaged: bool,
 }
 
 pub const STARTER_EXPERIMENT_JSON: &str =
@@ -118,6 +124,46 @@ pub struct ExperimentReadout {
     pub encounter_decisions: Vec<EncounterDecisionRecord>,
     pub content: Vec<ContentEntityReadout>,
     pub focused_content_id: Option<u64>,
+    pub named_encounters: Vec<NamedEncounterReadout>,
+    pub active_encounter: Option<NamedEncounterReadout>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NamedEncounterReadout {
+    pub id: String,
+    pub name: String,
+    pub objective: String,
+    pub route_code: String,
+    pub member_entity_ids: Vec<u64>,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct NamedEncounterCatalog {
+    schema_version: u32,
+    encounters: Vec<NamedEncounter>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct NamedEncounter {
+    id: String,
+    name: String,
+    objective: String,
+    route_code: String,
+    start_entity_id: u64,
+    member_entity_ids: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum NamedEncounterOutcome {
+    #[default]
+    Inactive,
+    Active,
+    Victory,
+    Defeat,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -336,6 +382,14 @@ pub struct EncounterDecisionRecord {
     pub player_died: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnemyPresentationReadout {
+    pub handle: u32,
+    pub attack_sequence: u64,
+    pub hurt_sequence: u64,
+    pub dead: bool,
+}
+
 /// A side-effect-free evaluation through the same admission and calculation
 /// authority used when an experiment is applied to play.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -417,6 +471,11 @@ impl DaggerRuntime {
         let player_start_look_state = admitted.player_look_state;
         let player_resources = LiveActorResources::full(&experiment.player.stats);
         let enemy_resources = reset_enemy_resources(&admitted.content_entities, &experiment);
+        let enemy_presentation_sequences = admitted
+            .content_entities
+            .iter()
+            .map(|entity| (entity.id, 0_u64))
+            .collect::<BTreeMap<_, _>>();
         let content_live_positions = admitted
             .content_entities
             .iter()
@@ -445,11 +504,17 @@ impl DaggerRuntime {
             melee_presentation: None,
             encounter_sequence: 0,
             encounter_history: VecDeque::new(),
+            enemy_attack_sequences: enemy_presentation_sequences.clone(),
+            enemy_hurt_sequences: enemy_presentation_sequences,
             dungeon_bounds: admitted.dungeon_bounds,
             content_entities: admitted.content_entities,
             content_live_positions,
             focused_content_id: None,
             patrol: None,
+            named_encounters: Vec::new(),
+            active_encounter_id: None,
+            active_encounter_outcome: NamedEncounterOutcome::Inactive,
+            active_encounter_engaged: false,
         })
     }
 
@@ -513,11 +578,94 @@ impl DaggerRuntime {
         Ok(())
     }
 
+    pub fn install_named_encounters_json(&mut self, document: &str) -> Result<(), RuntimeError> {
+        let catalog: NamedEncounterCatalog = serde_json::from_str(document).map_err(|error| {
+            RuntimeError::Encounter(format!("invalid named encounters: {error}"))
+        })?;
+        if catalog.schema_version != 1 {
+            return Err(RuntimeError::Encounter(format!(
+                "unsupported named encounter schema {}",
+                catalog.schema_version
+            )));
+        }
+        let mut ids = BTreeSet::new();
+        let mut routes = BTreeSet::new();
+        for encounter in &catalog.encounters {
+            if encounter.id.trim().is_empty()
+                || encounter.name.trim().is_empty()
+                || encounter.objective.trim().is_empty()
+            {
+                return Err(RuntimeError::Encounter(
+                    "named encounter id, name, and objective must be non-empty".to_string(),
+                ));
+            }
+            if !ids.insert(encounter.id.as_str()) || !routes.insert(encounter.route_code.as_str()) {
+                return Err(RuntimeError::Encounter(format!(
+                    "duplicate named encounter id or route for {}",
+                    encounter.id
+                )));
+            }
+            if encounter.member_entity_ids.is_empty()
+                || !encounter
+                    .member_entity_ids
+                    .contains(&encounter.start_entity_id)
+            {
+                return Err(RuntimeError::Encounter(format!(
+                    "named encounter {} must include its start entity",
+                    encounter.id
+                )));
+            }
+            for member in &encounter.member_entity_ids {
+                if !self.enemy_resources.contains_key(member) {
+                    return Err(RuntimeError::Encounter(format!(
+                        "named encounter {} references unsupported enemy {}",
+                        encounter.id, member
+                    )));
+                }
+            }
+        }
+        self.named_encounters = catalog.encounters;
+        self.active_encounter_id = None;
+        self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
+        self.active_encounter_engaged = false;
+        Ok(())
+    }
+
+    pub fn start_named_encounter(&mut self, id: &str) -> Result<ExperimentReadout, RuntimeError> {
+        let encounter = self
+            .named_encounters
+            .iter()
+            .find(|encounter| encounter.id == id)
+            .cloned()
+            .ok_or_else(|| RuntimeError::Encounter(format!("unknown named encounter {id}")))?;
+        self.jump_to_content(encounter.start_entity_id)?;
+        self.active_encounter_id = Some(encounter.id);
+        self.active_encounter_outcome = NamedEncounterOutcome::Active;
+        self.active_encounter_engaged = false;
+        self.experiment_readout()
+    }
+
+    pub fn route_named_encounter(&mut self, route_code: &str) -> Result<bool, RuntimeError> {
+        let id = self
+            .named_encounters
+            .iter()
+            .find(|encounter| encounter.route_code == route_code)
+            .map(|encounter| encounter.id.clone());
+        let Some(id) = id else {
+            return Ok(false);
+        };
+        self.start_named_encounter(&id)?;
+        Ok(true)
+    }
+
     pub fn tick_play_session(&mut self, dt: f32) -> Result<Vec<PositionUpdate>, RuntimeError> {
         if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
             return Err(RuntimeError::Encounter(
                 "play-session tick must be finite and bounded to 0.25 seconds".to_string(),
             ));
+        }
+        if self.active_encounter_id.is_some() && !self.active_encounter_engaged {
+            return Ok(Vec::new());
         }
         self.player_attack_cooldown_remaining =
             (self.player_attack_cooldown_remaining - dt).max(0.0);
@@ -596,6 +744,9 @@ impl DaggerRuntime {
         }
         for attack in evaluation.attacks {
             let id = u64::from(attack.handle);
+            if let Some(sequence) = self.enemy_attack_sequences.get_mut(&id) {
+                *sequence = sequence.saturating_add(1);
+            }
             let before = self.player_resources.current_health;
             let line_of_sight_clear = self.enemy_line_of_sight_clear(id, player);
             let damage = if before > 0.0 && line_of_sight_clear {
@@ -625,7 +776,32 @@ impl DaggerRuntime {
                 player_died: before > 0.0 && after <= 0.0,
             });
         }
+        self.refresh_named_encounter_outcome();
         Ok(evaluation.positions)
+    }
+
+    fn refresh_named_encounter_outcome(&mut self) {
+        if self.active_encounter_outcome != NamedEncounterOutcome::Active {
+            return;
+        }
+        if self.player_resources.current_health <= 0.0 {
+            self.active_encounter_outcome = NamedEncounterOutcome::Defeat;
+            return;
+        }
+        let Some(encounter) = self
+            .named_encounters
+            .iter()
+            .find(|encounter| self.active_encounter_id.as_deref() == Some(encounter.id.as_str()))
+        else {
+            return;
+        };
+        if encounter.member_entity_ids.iter().all(|id| {
+            self.enemy_resources
+                .get(id)
+                .is_some_and(|resources| resources.current_health <= 0.0)
+        }) {
+            self.active_encounter_outcome = NamedEncounterOutcome::Victory;
+        }
     }
 
     fn enemy_name(&self, id: u64) -> String {
@@ -714,6 +890,29 @@ impl DaggerRuntime {
             .collect()
     }
 
+    pub fn enemy_presentation(&self) -> Vec<EnemyPresentationReadout> {
+        self.enemy_resources
+            .iter()
+            .filter_map(|(&id, resources)| {
+                Some(EnemyPresentationReadout {
+                    handle: u32::try_from(id).ok()?,
+                    attack_sequence: self.enemy_attack_sequences.get(&id).copied().unwrap_or(0),
+                    hurt_sequence: self.enemy_hurt_sequences.get(&id).copied().unwrap_or(0),
+                    dead: resources.current_health <= 0.0,
+                })
+            })
+            .collect()
+    }
+
+    fn reset_enemy_presentation_sequences(&mut self) {
+        for sequence in self.enemy_attack_sequences.values_mut() {
+            *sequence = 0;
+        }
+        for sequence in self.enemy_hurt_sequences.values_mut() {
+            *sequence = 0;
+        }
+    }
+
     /// Admit and apply one complete authoring document. Admission and all
     /// calculations happen before live state changes, so a rejected edit
     /// cannot partially mutate the running experiment.
@@ -738,6 +937,11 @@ impl DaggerRuntime {
         self.melee_presentation = None;
         self.encounter_sequence = 0;
         self.encounter_history.clear();
+        self.reset_enemy_presentation_sequences();
+        if self.active_encounter_id.is_some() {
+            self.active_encounter_outcome = NamedEncounterOutcome::Active;
+            self.active_encounter_engaged = false;
+        }
         self.calculation_history
             .push_back(SessionCalculationRecord {
                 sequence: self.calculation_sequence,
@@ -771,6 +975,9 @@ impl DaggerRuntime {
     /// Reset the playable run to the committed Privateer's Hold start while
     /// retaining the currently applied experiment document.
     pub fn reset_play_session(&mut self) -> Result<ExperimentReadout, RuntimeError> {
+        if let Some(active) = self.active_encounter_id.clone() {
+            return self.start_named_encounter(&active);
+        }
         self.set_player_position(self.player_start)?;
         self.player_look_state = self.player_start_look_state;
         self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
@@ -783,6 +990,7 @@ impl DaggerRuntime {
         self.melee_presentation = None;
         self.encounter_sequence = 0;
         self.encounter_history.clear();
+        self.reset_enemy_presentation_sequences();
         if let Some(patrol) = self.patrol.as_mut() {
             patrol.reset();
             self.content_live_positions = patrol
@@ -824,6 +1032,11 @@ impl DaggerRuntime {
             let delta_x = target[0] - position.x;
             let delta_z = target[2] - position.z;
             facing_state.yaw_radians = delta_x.atan2(-delta_z);
+            let horizontal_distance = delta_x.hypot(delta_z).max(0.01);
+            let camera_y = position.y + 0.75;
+            let target_visual_center_y = target[1] + 0.75;
+            facing_state.pitch_radians =
+                (target_visual_center_y - camera_y).atan2(horizontal_distance);
             self.player_look_state = facing_state;
 
             let navigable = [
@@ -846,7 +1059,7 @@ impl DaggerRuntime {
                     })
                 })
             });
-            if navigable {
+            if navigable && self.enemy_line_of_sight_clear(id, position) {
                 self.set_player_position(position)?;
                 self.player_look_state = facing_state;
                 self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
@@ -860,6 +1073,10 @@ impl DaggerRuntime {
                 self.melee_presentation = None;
                 self.encounter_sequence = 0;
                 self.encounter_history.clear();
+                self.reset_enemy_presentation_sequences();
+                self.active_encounter_id = None;
+                self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
+                self.active_encounter_engaged = false;
                 self.focused_content_id = Some(id);
                 return self.experiment_readout();
             }
@@ -874,6 +1091,9 @@ impl DaggerRuntime {
     /// required to begin the swing; Dagger resolves the aimed contact only
     /// when the Rust-owned action reaches its contact frame.
     pub fn attack_focused_target(&mut self) -> Result<ExperimentReadout, RuntimeError> {
+        if self.active_encounter_id.is_some() {
+            self.active_encounter_engaged = true;
+        }
         let cooldown_before = self.player_attack_cooldown_remaining;
         let stamina_before = self.player_resources.current_stamina;
         let cooldown_duration = self.experiment.player.combat.attack_cooldown_seconds;
@@ -1012,6 +1232,11 @@ impl DaggerRuntime {
             .get_mut(&id)
             .expect("combat definition checked above")
             .current_health = resolution.health_after;
+        if resolution.hit {
+            if let Some(sequence) = self.enemy_hurt_sequences.get_mut(&id) {
+                *sequence = sequence.saturating_add(1);
+            }
+        }
         let outcome = if resolution.died {
             "killed"
         } else if resolution.hit {
@@ -1125,6 +1350,20 @@ impl DaggerRuntime {
                 }
             })
             .collect();
+        let named_encounters = self
+            .named_encounters
+            .iter()
+            .map(|encounter| self.named_encounter_readout(encounter))
+            .collect::<Vec<_>>();
+        let active_encounter = self
+            .active_encounter_id
+            .as_deref()
+            .and_then(|id| {
+                self.named_encounters
+                    .iter()
+                    .find(|encounter| encounter.id == id)
+            })
+            .map(|encounter| self.named_encounter_readout(encounter));
         Ok(ExperimentReadout {
             document: self.experiment.document.clone(),
             move_speed_units_per_second: self.player_controller.move_speed_units_per_second,
@@ -1150,7 +1389,30 @@ impl DaggerRuntime {
             encounter_decisions: self.encounter_history.iter().cloned().collect(),
             content,
             focused_content_id: self.focused_content_id,
+            named_encounters,
+            active_encounter,
         })
+    }
+
+    fn named_encounter_readout(&self, encounter: &NamedEncounter) -> NamedEncounterReadout {
+        let status = if self.active_encounter_id.as_deref() == Some(encounter.id.as_str()) {
+            match self.active_encounter_outcome {
+                NamedEncounterOutcome::Inactive => "available",
+                NamedEncounterOutcome::Active => "active",
+                NamedEncounterOutcome::Victory => "victory",
+                NamedEncounterOutcome::Defeat => "defeat",
+            }
+        } else {
+            "available"
+        };
+        NamedEncounterReadout {
+            id: encounter.id.clone(),
+            name: encounter.name.clone(),
+            objective: encounter.objective.clone(),
+            route_code: encounter.route_code.clone(),
+            member_entity_ids: encounter.member_entity_ids.clone(),
+            status: status.to_string(),
+        }
     }
 
     /// Authoritatively reposition the player (route derivation / probing).

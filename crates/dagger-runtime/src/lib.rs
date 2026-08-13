@@ -15,7 +15,10 @@ mod player;
 mod project;
 mod runtime;
 
-pub use animation::{AnimationService, FrameUpdate, SpriteEntry, SpriteKind};
+pub use animation::{
+    AnimationService, EnemyAnimationLayout, EnemyAnimationStateLayout, EnemyAnimationUpdate,
+    FrameUpdate, SpriteEntry, SpriteKind,
+};
 pub use combat_assets::{
     AudioAsset, CombatAssetCatalog, CombatFrame, EffectAsset, WeaponAnimation, WeaponAsset,
 };
@@ -32,11 +35,12 @@ pub use player::{
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
     ActorGameplayReadout, CombatAttemptRecord, CombatRecord, ContentEntityReadout, ContentError,
-    ContentLiveReadout, DaggerRuntime, EnemyReferenceReadout, EnemyStatsReadout,
-    ExperimentEvaluation, ExperimentReadout, LiveActorResources, MeleePresentationPhase,
-    MeleePresentationReadout, RuntimeError, SessionCalculationRecord, CALCULATION_HISTORY_LIMIT,
-    MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS,
-    MELEE_REJECTION_SECONDS, STARTER_EXPERIMENT_JSON,
+    ContentLiveReadout, DaggerRuntime, EnemyPresentationReadout, EnemyReferenceReadout,
+    EnemyStatsReadout, ExperimentEvaluation, ExperimentReadout, LiveActorResources,
+    MeleePresentationPhase, MeleePresentationReadout, NamedEncounterReadout, RuntimeError,
+    SessionCalculationRecord, CALCULATION_HISTORY_LIMIT, MELEE_ANTICIPATION_SECONDS,
+    MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS, MELEE_REJECTION_SECONDS,
+    STARTER_EXPERIMENT_JSON,
 };
 
 #[cfg(test)]
@@ -50,6 +54,7 @@ mod tests {
 
     const PROJECT: &str = include_str!("../../../content/projects/privateers-hold.project.json");
     const NAVGRID: &str = include_str!("../../../content/projects/privateers-hold.navgrid.json");
+    const NAMED_ENCOUNTERS: &str = include_str!("../../../data/encounters/privateers-hold.json");
 
     fn adversarial_wall_project() -> String {
         // Inject an additive voxelEnvironment carrying a tall wall in front of
@@ -644,6 +649,104 @@ mod tests {
             .encounter_decisions
             .iter()
             .all(|record| record.enemy_id != 2007 || record.decision != "melee attack"));
+    }
+
+    #[test]
+    fn named_combat_routes_own_victory_defeat_and_fast_retry() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        runtime
+            .install_encounter_navigation_json(NAVGRID)
+            .expect("install navigation");
+        runtime
+            .install_named_encounters_json(NAMED_ENCOUNTERS)
+            .expect("install named encounters");
+        let initial = runtime.experiment_readout().expect("initial readout");
+        assert_eq!(initial.named_encounters.len(), 2);
+        assert!(initial.active_encounter.is_none());
+
+        let mut lethal: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        lethal["player"]["combat"]["hitBonus"] = serde_json::Value::from(100.0);
+        lethal["player"]["combat"]["baseDamage"] = serde_json::Value::from(10.0);
+        lethal["enemies"][0]["combat"]["armor"] = serde_json::Value::from(0.0);
+        runtime
+            .apply_experiment_json(&serde_json::to_string(&lethal).unwrap())
+            .expect("apply lethal profile");
+        assert!(runtime
+            .route_named_encounter("Digit1")
+            .expect("route Rat room"));
+        let active = runtime
+            .experiment_readout()
+            .unwrap()
+            .active_encounter
+            .unwrap();
+        assert_eq!(active.id, "rat-introduction");
+        assert_eq!(active.status, "active");
+        assert!(
+            runtime.player_state().pitch_degrees < -5.0,
+            "Rat route should aim down at the low classic sprite"
+        );
+
+        for _ in 0..80 {
+            runtime
+                .tick_play_session(0.1)
+                .expect("named encounter waits for player attack");
+        }
+        assert_eq!(
+            runtime
+                .experiment_readout()
+                .expect("waiting readout")
+                .player_stats
+                .current_health,
+            85.0
+        );
+
+        runtime.attack_focused_target().expect("start Rat attack");
+        runtime
+            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+            .expect("resolve Rat contact");
+        assert_eq!(
+            runtime
+                .experiment_readout()
+                .unwrap()
+                .active_encounter
+                .unwrap()
+                .status,
+            "victory"
+        );
+        let retried = runtime.reset_play_session().expect("retry Rat room");
+        assert_eq!(retried.active_encounter.unwrap().status, "active");
+        assert_eq!(retried.focused_content_id, Some(2007));
+
+        let mut fragile: serde_json::Value =
+            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
+        fragile["player"]["stats"]["attributes"]["endurance"] = serde_json::Value::from(0.0);
+        fragile["player"]["stats"]["resources"]["baseHealth"] = serde_json::Value::from(1.0);
+        fragile["enemies"][1]["behavior"]["attackDamage"] = serde_json::Value::from(20.0);
+        runtime
+            .apply_experiment_json(&serde_json::to_string(&fragile).unwrap())
+            .expect("apply fragile profile");
+        assert!(runtime
+            .route_named_encounter("Digit2")
+            .expect("route Skeleton room"));
+        runtime
+            .attack_focused_target()
+            .expect("engage Skeleton room");
+        for _ in 0..30 {
+            runtime.tick_play_session(0.1).expect("Skeleton room tick");
+            if runtime
+                .experiment_readout()
+                .unwrap()
+                .active_encounter
+                .as_ref()
+                .is_some_and(|encounter| encounter.status == "defeat")
+            {
+                break;
+            }
+        }
+        let defeated = runtime.experiment_readout().unwrap();
+        assert_eq!(defeated.active_encounter.unwrap().status, "defeat");
+        assert_eq!(defeated.player_stats.current_health, 0.0);
     }
 
     #[test]

@@ -65,7 +65,12 @@ interpretation and clone behavior. `WeaponManager` starts the screen weapon
 action before target resolution and applies saturating fatigue loss at the hit
 frame; low fatigue is not an attack-input rejection. The mobile tables establish
 directional move records 0-4, attack records 5-9 at 10 fps, hurt records 10-14
-at 4 fps, and idle records 15-19. The generated
+at 4 fps, and idle records 15-19. `EnemyBasics.cs` identifies Rat corpse
+archive/record 401/1 and Skeletal Warrior corpse archive/record 306/1;
+`EnemyDeath.cs` and `GameObjectHelper.CreateLootableCorpseMarker()` establish
+that death replaces the live mobile with a separately grounded corpse flat.
+Rusty Dagger adapts that model into a retained live-sprite/corpse-sprite swap;
+loot-container authority is deliberately outside tasks 6828/6829. The generated
 manifest retains source file/record metadata as provenance while exposing
 semantic IDs (`weapon.dagger.steel`, `effect.*`, `audio.melee.*`) to runtime
 consumers. Gameplay code therefore does not embed Arena2 filenames, record

@@ -149,6 +149,7 @@ impl NativeDiagnostics {
         encounter_positions: &[(u32, [f32; 3], f32, bool)],
         encounter_updates: &[PositionUpdate],
         dead_encounters: &BTreeSet<u32>,
+        enemy_presentation: &[dagger_runtime::EnemyPresentationReadout],
         melee_action: Option<&MeleePresentationReadout>,
         stamina: (f32, f32),
     ) -> Result<DiagnosticFrame> {
@@ -165,6 +166,7 @@ impl NativeDiagnostics {
             encounter_positions,
             encounter_updates,
             dead_encounters,
+            enemy_presentation,
             melee_action,
         )?;
         let mut ops = live.frame.ops;
@@ -422,6 +424,7 @@ mod tests {
                 &runtime.encounter_positions(),
                 &[],
                 &BTreeSet::new(),
+                &runtime.enemy_presentation(),
                 runtime.melee_presentation().as_ref(),
                 runtime.player_stamina(),
             )
@@ -443,6 +446,7 @@ mod tests {
                 &runtime.encounter_positions(),
                 &[],
                 &BTreeSet::new(),
+                &runtime.enemy_presentation(),
                 runtime.melee_presentation().as_ref(),
                 runtime.player_stamina(),
             )
@@ -463,6 +467,7 @@ mod tests {
                 &runtime.encounter_positions(),
                 &[],
                 &BTreeSet::new(),
+                &runtime.enemy_presentation(),
                 runtime.melee_presentation().as_ref(),
                 runtime.player_stamina(),
             )
@@ -481,6 +486,7 @@ mod tests {
                     &runtime.encounter_positions(),
                     &updates,
                     &runtime.dead_encounter_ids(),
+                    &runtime.enemy_presentation(),
                     runtime.melee_presentation().as_ref(),
                     runtime.player_stamina(),
                 )
@@ -507,6 +513,7 @@ mod tests {
                 &[],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
                 (90.0, 90.0),
             )
@@ -524,6 +531,7 @@ mod tests {
                 &[],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
                 (90.0, 90.0),
             )
@@ -535,6 +543,7 @@ mod tests {
                 &[],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
                 (90.0, 90.0),
             )
