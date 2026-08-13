@@ -440,11 +440,9 @@ fn publish_billboard_textures(
     );
 }
 
-/// Decode and pack one directional sprite atlas per unique enemy mobile id:
-/// 8 orientations × M move-state frames in a horizontal strip (orientation *
-/// M + anim_frame layout), plus an enemy-manifest.json mapping each atlas to
-/// its PNG sourcePath/hash/dims, per-frame UV rects, source DFU world sizes,
-/// and one normalized world size for the complete atlas.
+/// Decode and pack one directional sprite atlas per unique enemy mobile id.
+/// Move, idle, attack, and hurt state ranges are retained in one stable atlas;
+/// classic corpse markers are published as separate ground sprites.
 /// generate-project.py consumes this to stamp enemy sprite resources and atlas
 /// frame descriptors. The AnimationService uses the 8×M layout so direction
 /// changes preserve the current anim frame position.
@@ -453,7 +451,11 @@ fn publish_enemy_atlases(
     arena2_dir: &std::path::Path,
     enemies: &[dungeon::EnemyScene],
 ) {
-    use arena2::mobile::{mobile_type, record_world_size, MOVE_ANIMS};
+    use arena2::mobile::{
+        mobile_type, record_world_size, standing_anims, HURT_ANIMS, HURT_ANIM_SPEED,
+        IDLE_ANIM_SPEED, MOVE_ANIMS, MOVE_ANIM_SPEED, PRIMARY_ATTACK_ANIMS,
+        PRIMARY_ATTACK_ANIM_SPEED,
+    };
     use arena2::palette::Palette;
     use arena2::texture::TextureFile;
     use std::collections::BTreeMap;
@@ -468,7 +470,6 @@ fn publish_enemy_atlases(
     let mut failures = 0usize;
     for id in unique.keys() {
         let mobile = mobile_type(*id).expect("mobile type for collected enemy");
-        let anims = MOVE_ANIMS; // Move-state animation (4-8 frames per record)
         let tex_path = arena2_dir.join(format!("TEXTURE.{:03}", mobile.texture_archive));
         let Ok(tex) = TextureFile::load(&tex_path) else {
             failures += 1;
@@ -479,53 +480,80 @@ fn publish_enemy_atlases(
             continue;
         };
 
-        // Determine the frame count per orientation record (all move records
-        // for a given enemy carry the same frame count).
-        let first_rec = anims[0].record as usize;
-        let anim_frame_count = tex
-            .record_info(first_rec)
-            .map(|i| i.frame_count.max(1) as usize)
-            .unwrap_or(1);
+        let states = [
+            ("move", &MOVE_ANIMS, MOVE_ANIM_SPEED, true),
+            ("idle", standing_anims(mobile), IDLE_ANIM_SPEED, true),
+            (
+                "attack",
+                &PRIMARY_ATTACK_ANIMS,
+                PRIMARY_ATTACK_ANIM_SPEED,
+                false,
+            ),
+            ("hurt", &HURT_ANIMS, HURT_ANIM_SPEED, false),
+        ];
 
-        // Decode all frames for all 8 orientations.
-        // Each entry: (flip, w, h, indexed_pixels, world_size).
-        type DecodedEnemyFrame = (bool, usize, usize, Vec<u8>, [f32; 2]);
+        // Decode state-major, then orientation-major, then frame-major. Each
+        // state records its stable range so Rust presentation never derives
+        // classic record numbers or atlas arithmetic in browser code.
+        type DecodedEnemyFrame = (usize, bool, usize, usize, Vec<u8>, [f32; 2]);
         let mut decoded: Vec<DecodedEnemyFrame> = Vec::new();
+        let mut state_layouts = Vec::new();
         let mut failed = false;
-        for anim in anims.iter() {
-            let rec = anim.record as usize;
-            let info = match tex.record_info(rec) {
-                Some(i) => i,
-                None => {
-                    failures += 1;
-                    eprintln!(
-                        "enemy atlas warning: TEXTURE.{:03} rec {} missing",
-                        mobile.texture_archive, rec
-                    );
+        for (state_name, anims, fps, loops) in states {
+            let frame_start = decoded.len();
+            let frame_counts = anims
+                .iter()
+                .filter_map(|anim| tex.record_info(anim.record as usize))
+                .map(|info| info.frame_count.max(1) as usize)
+                .collect::<Vec<_>>();
+            let Some(&frames_per_orientation) = frame_counts.first() else {
+                failed = true;
+                break;
+            };
+            if frame_counts.len() != 8
+                || frame_counts
+                    .iter()
+                    .any(|count| *count != frames_per_orientation)
+            {
+                failures += 1;
+                eprintln!(
+                    "enemy atlas warning: TEXTURE.{:03} {state_name} records have non-uniform frames",
+                    mobile.texture_archive
+                );
+                failed = true;
+                break;
+            }
+            for (orientation, anim) in anims.iter().enumerate() {
+                let rec = anim.record as usize;
+                let Some(info) = tex.record_info(rec) else {
                     failed = true;
                     break;
+                };
+                let size = record_world_size(info.width, info.height, info.scale_x, info.scale_y);
+                for frame in 0..frames_per_orientation {
+                    match tex.frame_pixels(rec, frame) {
+                        Ok((w, h, indexed)) => {
+                            decoded.push((orientation, anim.flip, w, h, indexed, size));
+                        }
+                        Err(error) => {
+                            eprintln!(
+                                "enemy atlas warning: TEXTURE.{:03} rec {rec} frame {frame}: {error}",
+                                mobile.texture_archive
+                            );
+                            failed = true;
+                            break;
+                        }
+                    }
                 }
-            };
-            let size = record_world_size(info.width, info.height, info.scale_x, info.scale_y);
-            for f in 0..anim_frame_count {
-                match tex.frame_pixels(rec, f) {
-                    Ok((w, h, indexed)) => {
-                        decoded.push((anim.flip, w, h, indexed, size));
-                    }
-                    Err(e) => {
-                        failures += 1;
-                        eprintln!(
-                            "enemy atlas warning: TEXTURE.{:03} rec {} frame {f}: {e}",
-                            mobile.texture_archive, rec
-                        );
-                        failed = true;
-                        break;
-                    }
+                if failed {
+                    failures += 1;
+                    break;
                 }
             }
             if failed {
                 break;
             }
+            state_layouts.push((state_name, frame_start, frames_per_orientation, fps, loops));
         }
         if failed {
             continue;
@@ -539,27 +567,27 @@ fn publish_enemy_atlases(
         // bottom-center pivot and one fixed world-space quad.
         type NormalizedEnemyFrame = (usize, usize, Vec<u8>, [f32; 2]);
         let mut visible = Vec::with_capacity(decoded.len());
-        for (flip, w, h, indexed, source_size) in decoded {
+        for (orientation, flip, w, h, indexed, source_size) in decoded {
             let mut rgba = palette.to_rgba_transparent(&indexed);
             if flip {
                 flip_rgba_columns(&mut rgba, w, h);
             }
             let (trimmed_w, trimmed_h, trimmed) = crop_visible_rgba(&rgba, w, h);
-            visible.push((trimmed_w, trimmed_h, trimmed, source_size));
+            visible.push((orientation, trimmed_w, trimmed_h, trimmed, source_size));
         }
         let target_h = visible
             .iter()
-            .map(|frame| frame.1)
+            .map(|frame| frame.2)
             .max()
             .unwrap_or(1)
             .max(1);
-        let orientation_widths = visible
-            .chunks(anim_frame_count)
-            .map(|frames| {
-                let mut widths = frames
+        let orientation_widths = (0..8)
+            .map(|orientation| {
+                let mut widths = visible
                     .iter()
+                    .filter(|frame| frame.0 == orientation)
                     .map(|frame| {
-                        ((frame.0 as f64 * target_h as f64 / frame.1.max(1) as f64).round()
+                        ((frame.1 as f64 * target_h as f64 / frame.2.max(1) as f64).round()
                             as usize)
                             .max(1)
                     })
@@ -569,8 +597,8 @@ fn publish_enemy_atlases(
             })
             .collect::<Vec<_>>();
         let mut normalized: Vec<NormalizedEnemyFrame> = Vec::with_capacity(visible.len());
-        for (index, (w, h, rgba, source_size)) in visible.into_iter().enumerate() {
-            let target_w = orientation_widths[index / anim_frame_count];
+        for (orientation, w, h, rgba, source_size) in visible {
+            let target_w = orientation_widths[orientation];
             normalized.push((
                 target_w,
                 target_h,
@@ -579,7 +607,7 @@ fn publish_enemy_atlases(
             ));
         }
 
-        let total_cells = 8 * anim_frame_count;
+        let total_cells = normalized.len();
         let cell_w: usize = normalized.iter().map(|d| d.0).max().unwrap_or(1);
         let cell_h = target_h;
         let mut source_heights = normalized
@@ -631,8 +659,23 @@ fn publish_enemy_atlases(
         let file = format!("{slug}.png");
         std::fs::write(dir.join(&file), &png).expect("write enemy atlas png");
         let hash = format!("sha256:{:x}", Sha256::digest(&png));
+        let state_entries = state_layouts
+            .iter()
+            .map(|(name, frame_start, frames_per_orientation, fps, loops)| {
+                format!(
+                    "\"{name}\":{{\"frameStart\":{frame_start},\"framesPerOrientation\":{frames_per_orientation},\"fps\":{fps},\"loop\":{loops}}}"
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let corpse =
+            publish_enemy_corpse(dir, arena2_dir, &palette, mobile).unwrap_or_else(|error| {
+                failures += 1;
+                eprintln!("enemy corpse warning: {}: {error}", mobile.name);
+                "null".to_string()
+            });
         entries.push(format!(
-            "    {{\"mobileId\":{},\"name\":\"{}\",\"archive\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{atlas_w},\"height\":{atlas_h},\"normalizedSize\":[{:?},{:?}],\"frames\":[\n{}\n    ]}}",
+            "    {{\"mobileId\":{},\"name\":\"{}\",\"archive\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{atlas_w},\"height\":{atlas_h},\"normalizedSize\":[{:?},{:?}],\"states\":{{{state_entries}}},\"corpse\":{corpse},\"frames\":[\n{}\n    ]}}",
             mobile.id, mobile.name, mobile.texture_archive,
             png.len(),
             normalized_size[0], normalized_size[1],
@@ -649,6 +692,45 @@ fn publish_enemy_atlases(
         "enemies:     {} atlases ({} decode failures)",
         count, failures
     );
+}
+
+fn publish_enemy_corpse(
+    dir: &std::path::Path,
+    arena2_dir: &std::path::Path,
+    palette: &arena2::palette::Palette,
+    mobile: &arena2::mobile::MobileType,
+) -> Result<String, String> {
+    use arena2::mobile::record_world_size;
+    use arena2::texture::TextureFile;
+
+    let Some(corpse) = mobile.corpse else {
+        return Ok("null".to_string());
+    };
+    let source_file = format!("TEXTURE.{:03}", corpse.archive);
+    let texture = TextureFile::load(&arena2_dir.join(&source_file))
+        .map_err(|error| format!("load {source_file}: {error}"))?;
+    let info = texture
+        .record_info(corpse.record as usize)
+        .ok_or_else(|| format!("{source_file} record {} is missing", corpse.record))?;
+    let (width, height, indexed) = texture
+        .frame_pixels(corpse.record as usize, 0)
+        .map_err(|error| format!("decode {source_file} record {}: {error}", corpse.record))?;
+    let rgba = palette.to_rgba_transparent(&indexed);
+    let (trimmed_width, trimmed_height, mut trimmed) = crop_visible_rgba(&rgba, width, height);
+    flip_rgba_rows(&mut trimmed, trimmed_width, trimmed_height);
+    let png = crate::png::encode_rgba(trimmed_width as u32, trimmed_height as u32, &trimmed);
+    let file = format!("enemy-{}-corpse.png", mobile.id);
+    std::fs::write(dir.join(&file), &png).map_err(|error| error.to_string())?;
+    let hash = format!("sha256:{:x}", Sha256::digest(&png));
+    let world_size = record_world_size(info.width, info.height, info.scale_x, info.scale_y);
+    Ok(format!(
+        "{{\"archive\":{},\"record\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{trimmed_width},\"height\":{trimmed_height},\"worldSize\":[{:?},{:?}]}}",
+        corpse.archive,
+        corpse.record,
+        png.len(),
+        world_size[0],
+        world_size[1]
+    ))
 }
 
 fn flip_rgba_columns(rgba: &mut [u8], width: usize, height: usize) {

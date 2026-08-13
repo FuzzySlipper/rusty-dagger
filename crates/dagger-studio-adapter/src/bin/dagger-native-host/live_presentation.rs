@@ -2,10 +2,13 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{bail, Context, Result};
 use dagger_runtime::{
-    AnimationService, MeleePresentationPhase, MeleePresentationReadout, PositionUpdate,
+    AnimationService, EnemyAnimationLayout, EnemyAnimationStateLayout, EnemyAnimationUpdate,
+    EnemyPresentationReadout, MeleePresentationPhase, MeleePresentationReadout, PositionUpdate,
 };
 use rusty_engine::render_model::{RenderDiff, RenderFrameDiff, RenderHandle, Transform};
 use serde::Deserialize;
+
+const ENEMY_MANIFEST: &str = include_str!("../../../../../content/textures/enemy-manifest.json");
 
 #[derive(Debug, Clone)]
 pub(crate) struct SpriteDescriptor {
@@ -39,6 +42,7 @@ pub(crate) struct LivePresentation {
     live_sprites: BTreeMap<u32, LiveSprite>,
     current_frames: BTreeMap<u32, u32>,
     current_visibility: BTreeMap<u32, bool>,
+    corpse_handles: BTreeMap<u32, u32>,
     animation_advanced: bool,
     patrol_moved: bool,
 }
@@ -47,6 +51,13 @@ impl LivePresentation {
     pub(crate) fn from_project(project_text: &str) -> Result<Self> {
         let project: ProjectDocument =
             serde_json::from_str(project_text).context("decode live presentation project")?;
+        let enemy_manifest: EnemyManifestDocument =
+            serde_json::from_str(ENEMY_MANIFEST).context("decode enemy animation manifest")?;
+        let enemy_layouts = enemy_manifest
+            .enemies
+            .into_iter()
+            .map(|enemy| (enemy.mobile_id, enemy.states.into_layout()))
+            .collect::<BTreeMap<_, _>>();
         let frame_counts = project
             .assets
             .iter()
@@ -69,6 +80,7 @@ impl LivePresentation {
         let mut animation = AnimationService::new();
         let mut sprite_descriptors = Vec::new();
         let mut live_sprites = BTreeMap::new();
+        let mut corpse_handles = BTreeMap::new();
         let mut seen_handles = BTreeSet::new();
         for entity in &scene.entities {
             let Some(sprite) = &entity.sprite else {
@@ -82,13 +94,18 @@ impl LivePresentation {
                 .copied()
                 .unwrap_or(1);
             if let Some(mobile_id) = enemy_mobile_id(&sprite.asset) {
-                if frame_count < 8 || frame_count % 8 != 0 {
-                    bail!(
-                        "enemy sprite {} has {frame_count} frames; expected 8 directional rows",
-                        sprite.asset
-                    );
+                let layout = enemy_layouts
+                    .get(&mobile_id)
+                    .copied()
+                    .with_context(|| format!("enemy {mobile_id} has no animation layout"))?;
+                let required_frames = layout
+                    .hurt
+                    .frame_start
+                    .saturating_add(8 * layout.hurt.frames_per_orientation);
+                if frame_count < required_frames {
+                    bail!("enemy sprite {} has {frame_count} frames; layout requires {required_frames}", sprite.asset);
                 }
-                animation.add_enemy(entity.id, entity.translation, mobile_id, frame_count / 8);
+                animation.add_enemy_with_layout(entity.id, entity.translation, mobile_id, layout);
                 sprite_descriptors.push(SpriteDescriptor {
                     handle: entity.id,
                     authored: entity.translation,
@@ -102,6 +119,13 @@ impl LivePresentation {
                         heading: 0.0,
                     },
                 );
+            } else if let Some(source) = entity
+                .name
+                .as_deref()
+                .and_then(|name| name.strip_prefix("corpse-for-"))
+                .and_then(|id| id.parse::<u32>().ok())
+            {
+                corpse_handles.insert(source, entity.id);
             } else if frame_count > 1 {
                 animation.add_env(entity.id, frame_count);
             }
@@ -115,6 +139,7 @@ impl LivePresentation {
             live_sprites,
             current_frames: BTreeMap::new(),
             current_visibility: BTreeMap::new(),
+            corpse_handles,
             animation_advanced: false,
             patrol_moved: false,
         })
@@ -127,6 +152,7 @@ impl LivePresentation {
         encounter_positions: &[(u32, [f32; 3], f32, bool)],
         encounter_updates: &[PositionUpdate],
         dead_encounters: &BTreeSet<u32>,
+        enemy_presentation: &[EnemyPresentationReadout],
         melee_action: Option<&MeleePresentationReadout>,
     ) -> Result<LivePresentationFrame> {
         if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
@@ -155,6 +181,16 @@ impl LivePresentation {
             }
         }
         self.animation.update_enemies(encounter_positions);
+        self.animation.update_enemy_actions(
+            &enemy_presentation
+                .iter()
+                .map(|state| EnemyAnimationUpdate {
+                    handle: state.handle,
+                    attack_sequence: state.attack_sequence,
+                    hurt_sequence: state.hurt_sequence,
+                })
+                .collect::<Vec<_>>(),
+        );
         let animation_updates = self.animation.evaluate(dt, camera);
         let mut ops = Vec::with_capacity(animation_updates.len() + encounter_updates.len());
         for update in encounter_updates {
@@ -181,6 +217,23 @@ impl LivePresentation {
             if self.current_visibility.insert(handle, visible) != Some(visible) {
                 sprite_changes.entry(handle).or_default().1 = Some(visible);
             }
+            if let Some(&corpse_handle) = self.corpse_handles.get(&handle) {
+                let corpse_visible = dead_encounters.contains(&handle) && !hold_for_contact;
+                if self
+                    .current_visibility
+                    .insert(corpse_handle, corpse_visible)
+                    != Some(corpse_visible)
+                {
+                    sprite_changes.entry(corpse_handle).or_default().1 = Some(corpse_visible);
+                    if let Some(live) = self.live_sprites.get(&handle) {
+                        ops.push(transform_update(
+                            corpse_handle,
+                            live.translation,
+                            live.heading,
+                        ));
+                    }
+                }
+            }
         }
         for (handle, (frame, visible)) in sprite_changes {
             ops.push(sprite_update(handle, frame, visible));
@@ -205,6 +258,16 @@ impl LivePresentation {
                 handle,
                 Some(frame),
                 self.current_visibility.get(&handle).copied(),
+            ));
+        }
+        for (&source, &corpse) in &self.corpse_handles {
+            if let Some(live) = self.live_sprites.get(&source) {
+                ops.push(transform_update(corpse, live.translation, live.heading));
+            }
+            ops.push(sprite_update(
+                corpse,
+                Some(0),
+                self.current_visibility.get(&corpse).copied(),
             ));
         }
         frame_from_ops(ops)
@@ -269,6 +332,59 @@ struct ProjectDocument {
 }
 
 #[derive(Deserialize)]
+struct EnemyManifestDocument {
+    enemies: Vec<EnemyManifestEntry>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EnemyManifestEntry {
+    mobile_id: u8,
+    states: EnemyStatesDocument,
+}
+
+#[derive(Deserialize)]
+struct EnemyStatesDocument {
+    #[serde(rename = "move")]
+    movement: EnemyStateLayoutDocument,
+    idle: EnemyStateLayoutDocument,
+    attack: EnemyStateLayoutDocument,
+    hurt: EnemyStateLayoutDocument,
+}
+
+impl EnemyStatesDocument {
+    fn into_layout(self) -> EnemyAnimationLayout {
+        EnemyAnimationLayout {
+            movement: self.movement.into_layout(),
+            idle: self.idle.into_layout(),
+            attack: self.attack.into_layout(),
+            hurt: self.hurt.into_layout(),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct EnemyStateLayoutDocument {
+    frame_start: u32,
+    frames_per_orientation: u32,
+    fps: u32,
+    #[serde(rename = "loop")]
+    loops: bool,
+}
+
+impl EnemyStateLayoutDocument {
+    fn into_layout(self) -> EnemyAnimationStateLayout {
+        EnemyAnimationStateLayout {
+            frame_start: self.frame_start,
+            frames_per_orientation: self.frames_per_orientation,
+            fps: self.fps,
+            loops: self.loops,
+        }
+    }
+}
+
+#[derive(Deserialize)]
 struct AssetDocument {
     id: String,
     texture: Option<TextureDocument>,
@@ -294,6 +410,7 @@ struct SceneDocument {
 #[derive(Deserialize)]
 struct EntityDocument {
     id: u32,
+    name: Option<String>,
     translation: [f32; 3],
     sprite: Option<SpriteDocument>,
 }
@@ -344,9 +461,10 @@ mod tests {
             .tick(
                 0.0,
                 [position[0], position[1] + 1.5, position[2] - 4.0],
-                &[(2000, position, 0.0, false)],
+                &[(2000, position, 0.0, true)],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
             )
             .expect("front tick");
@@ -355,9 +473,10 @@ mod tests {
             .tick(
                 0.0,
                 [position[0] + 4.0, position[1] + 1.5, position[2]],
-                &[(2000, position, 0.0, false)],
+                &[(2000, position, 0.0, true)],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
             )
             .expect("side tick");
@@ -366,9 +485,10 @@ mod tests {
             .tick(
                 0.0,
                 [position[0], position[1] + 1.5, position[2] + 4.0],
-                &[(2000, position, 0.0, false)],
+                &[(2000, position, 0.0, true)],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
             )
             .expect("back tick");
@@ -399,9 +519,10 @@ mod tests {
             .tick(
                 0.0,
                 camera,
-                &[(2000, position, std::f32::consts::FRAC_PI_2, false)],
+                &[(2000, position, std::f32::consts::FRAC_PI_2, true)],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
             )
             .expect("right-facing tick");
@@ -409,9 +530,10 @@ mod tests {
             .tick(
                 0.0,
                 camera,
-                &[(2000, position, -std::f32::consts::FRAC_PI_2, false)],
+                &[(2000, position, -std::f32::consts::FRAC_PI_2, true)],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
             )
             .expect("left-facing tick");
@@ -444,11 +566,11 @@ mod tests {
             died: true,
         };
         let dead = BTreeSet::from([2000]);
-        let visibility = |frame: &LivePresentationFrame| {
+        let visibility = |frame: &LivePresentationFrame, expected_handle: u64| {
             frame.frame.ops.iter().find_map(|op| match op {
                 RenderDiff::UpdateSprite {
                     handle, visible, ..
-                } if handle.raw() == 2000 => *visible,
+                } if handle.raw() == expected_handle => *visible,
                 _ => None,
             })
         };
@@ -459,10 +581,12 @@ mod tests {
                 &[(2000, position, 0.0, false)],
                 &[],
                 &dead,
+                &[],
                 Some(&action),
             )
             .expect("anticipation frame");
-        assert_eq!(visibility(&anticipation), Some(true));
+        assert_eq!(visibility(&anticipation, 2000), Some(true));
+        assert_eq!(visibility(&anticipation, 102000), Some(false));
 
         action.phase = MeleePresentationPhase::Contact;
         let contact = presentation
@@ -472,10 +596,12 @@ mod tests {
                 &[(2000, position, 0.0, false)],
                 &[],
                 &dead,
+                &[],
                 Some(&action),
             )
             .expect("contact frame");
-        assert_eq!(visibility(&contact), Some(false));
+        assert_eq!(visibility(&contact, 2000), Some(false));
+        assert_eq!(visibility(&contact, 102000), Some(true));
 
         let reset = presentation
             .tick(
@@ -484,9 +610,11 @@ mod tests {
                 &[(2000, position, 0.0, false)],
                 &[],
                 &BTreeSet::new(),
+                &[],
                 None,
             )
             .expect("reset frame");
-        assert_eq!(visibility(&reset), Some(true));
+        assert_eq!(visibility(&reset, 2000), Some(true));
+        assert_eq!(visibility(&reset, 102000), Some(false));
     }
 }

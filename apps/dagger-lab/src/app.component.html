@@ -2,7 +2,10 @@
   <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport">
     <div class="game-hud" data-rusty-ui-interactive>
       <div><span>Privateer's Hold</span><strong>Rust-authoritative connected product</strong></div>
-      <div class="game-controls"><span>WASD + mouse</span><span>Space attack</span><span>R reset</span><span>G patrol</span><span>N navgrid</span></div>
+      <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">
+        <span>{{ encounter.name }} · {{ encounter.status }}</span><strong>{{ encounter.objective }}</strong>
+      </div>
+      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD + mouse</span><span>Space / click attack</span><span>R retry</span></div>
       <button type="button" data-testid="open-lab" (click)="openLab()">Open Dagger Lab</button>
       <button type="button" data-testid="refresh-scene" (click)="refreshScene()">Refresh scene</button>
     </div>

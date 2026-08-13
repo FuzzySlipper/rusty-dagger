@@ -9,14 +9,11 @@
 //!   at DFU's billboard default 5 fps (`ENV_BILLBOARD_FPS`). The frame index
 //!   advances linearly and wraps.
 //!
-//! - **Enemy directional sprites**: the atlas is laid out as orientation ×
-//!   anim_frame (8 × M cells). The visible frame = orientation *
-//!   anim_frame_count + current_anim_frame. Orientation comes from the camera
-//!   (evaluate_directional); anim_frame advances independently from elapsed
-//!   time at DFU speed (6fps ground, 10fps flying). This means a direction
-//!   change mid-animation preserves the anim frame position — only the
-//!   orientation base shifts. All enemies share the same global clock, so
-//!   they're synchronized; per-enemy phase offsets arrive with patrol (6641).
+//! - **Enemy directional sprites**: each atlas contains state-major Move,
+//!   Idle, Attack, and Hurt ranges, with eight orientations per state.
+//!   Movement follows the shared clock; authoritative attack/hurt sequence
+//!   counters start bounded one-shots whose local clocks cannot be restarted
+//!   by repeated readout polling.
 //!
 //! The service owns elapsed time and per-sprite state. One `evaluate` call
 //! per tick produces the complete diff — callers never poll individual
@@ -36,6 +33,44 @@ pub struct SpriteEntry {
     /// Whether this sprite's entity is currently moving (patrol state).
     /// When false, the anim_frame freezes at 0 (idle). When true, it cycles.
     is_moving: bool,
+    attack_sequence: u64,
+    hurt_sequence: u64,
+    active_action: Option<ActiveEnemyAction>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ActiveEnemyAction {
+    kind: EnemyActionKind,
+    elapsed: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum EnemyActionKind {
+    Attack,
+    Hurt,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnemyAnimationStateLayout {
+    pub frame_start: u32,
+    pub frames_per_orientation: u32,
+    pub fps: u32,
+    pub loops: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnemyAnimationLayout {
+    pub movement: EnemyAnimationStateLayout,
+    pub idle: EnemyAnimationStateLayout,
+    pub attack: EnemyAnimationStateLayout,
+    pub hurt: EnemyAnimationStateLayout,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnemyAnimationUpdate {
+    pub handle: u32,
+    pub attack_sequence: u64,
+    pub hurt_sequence: u64,
 }
 
 /// What drives a sprite's frame.
@@ -57,9 +92,7 @@ pub enum SpriteKind {
         mobile_id: u8,
         /// Frames per orientation in the atlas (M). All 8 orientations
         /// carry the same count (DFU move records are uniform per enemy).
-        anim_frame_count: u32,
-        /// DFU animation speed: 6fps ground, 10fps flying.
-        anim_fps: u32,
+        layout: EnemyAnimationLayout,
     },
 }
 
@@ -97,6 +130,9 @@ impl AnimationService {
             },
             last_frame: None,
             is_moving: false,
+            attack_sequence: 0,
+            hurt_sequence: 0,
+            active_action: None,
         });
     }
 
@@ -110,17 +146,45 @@ impl AnimationService {
         anim_frame_count: u32,
     ) {
         let anim_fps = move_fps(mobile_id);
+        let state = EnemyAnimationStateLayout {
+            frame_start: 0,
+            frames_per_orientation: anim_frame_count,
+            fps: anim_fps,
+            loops: true,
+        };
+        self.add_enemy_with_layout(
+            handle,
+            position,
+            mobile_id,
+            EnemyAnimationLayout {
+                movement: state,
+                idle: state,
+                attack: state,
+                hurt: state,
+            },
+        );
+    }
+
+    pub fn add_enemy_with_layout(
+        &mut self,
+        handle: u32,
+        position: [f32; 3],
+        mobile_id: u8,
+        layout: EnemyAnimationLayout,
+    ) {
         self.entries.push(SpriteEntry {
             handle,
             kind: SpriteKind::Enemy {
                 position,
                 heading: 0.0,
                 mobile_id,
-                anim_frame_count,
-                anim_fps,
+                layout,
             },
             last_frame: None,
             is_moving: false,
+            attack_sequence: 0,
+            hurt_sequence: 0,
+            active_action: None,
         });
     }
 
@@ -142,6 +206,35 @@ impl AnimationService {
                     entry.is_moving = is_moving;
                     break;
                 }
+            }
+        }
+    }
+
+    /// Apply authoritative one-shot counters. A new hurt event takes priority
+    /// over an attack event in the same frame; repeated state polling is
+    /// idempotent and cannot restart an animation.
+    pub fn update_enemy_actions(&mut self, updates: &[EnemyAnimationUpdate]) {
+        for update in updates {
+            let Some(entry) = self
+                .entries
+                .iter_mut()
+                .find(|entry| entry.handle == update.handle)
+            else {
+                continue;
+            };
+            if update.hurt_sequence > entry.hurt_sequence {
+                entry.hurt_sequence = update.hurt_sequence;
+                entry.attack_sequence = entry.attack_sequence.max(update.attack_sequence);
+                entry.active_action = Some(ActiveEnemyAction {
+                    kind: EnemyActionKind::Hurt,
+                    elapsed: 0.0,
+                });
+            } else if update.attack_sequence > entry.attack_sequence {
+                entry.attack_sequence = update.attack_sequence;
+                entry.active_action = Some(ActiveEnemyAction {
+                    kind: EnemyActionKind::Attack,
+                    elapsed: 0.0,
+                });
             }
         }
     }
@@ -177,21 +270,28 @@ impl AnimationService {
                 SpriteKind::Enemy {
                     position,
                     heading,
-                    anim_frame_count,
-                    anim_fps,
+                    layout,
                     ..
                 } => {
-                    // Orientation from camera (0-7 DFU sectors).
                     let orientation = evaluate_directional(*position, *heading, camera) as u32;
-                    // Anim frame: when moving, cycle at DFU speed; when idle,
-                    // freeze at 0 (most enemy idle records are 1-frame).
-                    let anim_frame = if !entry.is_moving || *anim_frame_count <= 1 {
-                        0
-                    } else {
-                        ((self.elapsed * *anim_fps as f32) as u32) % anim_frame_count
+                    let state = match entry.active_action {
+                        Some(action) if action.kind == EnemyActionKind::Hurt => layout.hurt,
+                        Some(_) => layout.attack,
+                        None if entry.is_moving => layout.movement,
+                        None => layout.idle,
                     };
-                    // Atlas layout: orientation * M + anim_frame.
-                    orientation * anim_frame_count + anim_frame
+                    let elapsed = entry
+                        .active_action
+                        .map_or(self.elapsed, |action| action.elapsed);
+                    let raw_frame = (elapsed * state.fps as f32) as u32;
+                    let anim_frame = if state.frames_per_orientation <= 1 {
+                        0
+                    } else if state.loops {
+                        raw_frame % state.frames_per_orientation
+                    } else {
+                        raw_frame.min(state.frames_per_orientation - 1)
+                    };
+                    state.frame_start + orientation * state.frames_per_orientation + anim_frame
                 }
             };
             if entry.last_frame != Some(frame) {
@@ -200,6 +300,19 @@ impl AnimationService {
                     handle: entry.handle,
                     frame,
                 });
+            }
+            if let (Some(action), SpriteKind::Enemy { layout, .. }) =
+                (&mut entry.active_action, &entry.kind)
+            {
+                action.elapsed += dt;
+                let state = match action.kind {
+                    EnemyActionKind::Attack => layout.attack,
+                    EnemyActionKind::Hurt => layout.hurt,
+                };
+                let duration = state.frames_per_orientation as f32 / state.fps.max(1) as f32;
+                if action.elapsed >= duration {
+                    entry.active_action = None;
+                }
             }
         }
         updates
@@ -348,6 +461,60 @@ mod tests {
                 frame: 18
             }]
         );
+    }
+
+    #[test]
+    fn enemy_attack_and_hurt_are_idempotent_priority_one_shots() {
+        let mut svc = AnimationService::new();
+        let layout = EnemyAnimationLayout {
+            movement: EnemyAnimationStateLayout {
+                frame_start: 0,
+                frames_per_orientation: 4,
+                fps: 6,
+                loops: true,
+            },
+            idle: EnemyAnimationStateLayout {
+                frame_start: 32,
+                frames_per_orientation: 1,
+                fps: 4,
+                loops: true,
+            },
+            attack: EnemyAnimationStateLayout {
+                frame_start: 40,
+                frames_per_orientation: 6,
+                fps: 10,
+                loops: false,
+            },
+            hurt: EnemyAnimationStateLayout {
+                frame_start: 88,
+                frames_per_orientation: 1,
+                fps: 4,
+                loops: false,
+            },
+        };
+        svc.add_enemy_with_layout(600, [0.0, 0.0, 0.0], 15, layout);
+        let camera = [0.0, 1.0, -4.0];
+        assert_eq!(svc.evaluate(0.0, camera)[0].frame, 32);
+
+        let attack = EnemyAnimationUpdate {
+            handle: 600,
+            attack_sequence: 1,
+            hurt_sequence: 0,
+        };
+        svc.update_enemy_actions(&[attack]);
+        assert_eq!(svc.evaluate(0.0, camera)[0].frame, 40);
+        svc.update_enemy_actions(&[attack]);
+        assert!(svc.evaluate(0.2, camera).is_empty());
+        assert_eq!(svc.evaluate(0.0, camera)[0].frame, 42);
+
+        svc.update_enemy_actions(&[EnemyAnimationUpdate {
+            handle: 600,
+            attack_sequence: 2,
+            hurt_sequence: 1,
+        }]);
+        assert_eq!(svc.evaluate(0.0, camera)[0].frame, 88);
+        assert!(svc.evaluate(0.25, camera).is_empty());
+        assert_eq!(svc.evaluate(0.0, camera)[0].frame, 32);
     }
 
     #[test]
