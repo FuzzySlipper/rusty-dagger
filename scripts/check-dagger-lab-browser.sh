@@ -23,6 +23,20 @@ cleanup() {
 trap cleanup EXIT
 
 pnpm lab:build
+
+# pnpm does not content-track file: dependencies, so a vendored
+# @rusty-engine/application-host can silently go stale when the adjacent
+# Engine checkout moves (this once shipped upside-down in-game sprites while
+# every check passed). Compare against the source artifact before testing.
+vendored_host=$(echo node_modules/.pnpm/@rusty-engine+application-host*/node_modules/@rusty-engine/application-host/index.js)
+upstream_host="$repo_root/../rusty-engine/render/artifacts/application-host/index.js"
+if [[ -f "$upstream_host" ]]; then
+  if ! cmp -s "$vendored_host" "$upstream_host"; then
+    echo "vendored @rusty-engine/application-host differs from $upstream_host" >&2
+    echo "pnpm file: deps do not track content; run: rm -rf node_modules && pnpm install" >&2
+    exit 1
+  fi
+fi
 cargo build -p dagger-studio-adapter --bin dagger-native-host --locked
 
 ./target/debug/dagger-native-host --browser-product --lab-port=4274 >"$host_log" 2>&1 &
