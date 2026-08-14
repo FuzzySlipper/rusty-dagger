@@ -545,14 +545,14 @@ fn publish_enemy_atlases(
             continue;
         }
 
-        // Classic record scale metadata is not consistent enough to drive
-        // live geometry (Rat and Imp are especially divergent). Convert each
-        // frame to visible RGBA, crop transparent margins, and rescale it to
-        // one shared visible height with nearest-neighbor sampling, keeping
-        // the frame's native aspect ratio: the Engine publishes one fixed
-        // world-space quad per enemy (per-frame sprite resize is not an Engine
-        // feature), so frames are aspect-preserved and bottom-center packed
-        // into a uniform cell instead of stretched to a median width.
+        // Classic record scale metadata is not consistent enough per direction
+        // to drive live geometry (Rat and Imp are especially divergent), so one
+        // fixed world-space quad per enemy uses the MEDIAN classic record
+        // world size. The uniform atlas cell matches that quad's aspect and
+        // every cropped frame is scaled to FIT (never stretched), bottom-center
+        // packed: frames keep both their native aspect and their classic
+        // relative sizes (a spread-wing frame stays short and wide instead of
+        // being inflated to a shared height).
         type NormalizedEnemyFrame = (usize, usize, Vec<u8>, [f32; 2]);
         let mut visible = Vec::with_capacity(decoded.len());
         for (orientation, flip, w, h, indexed, source_size) in decoded {
@@ -563,15 +563,26 @@ fn publish_enemy_atlases(
             let (trimmed_w, trimmed_h, trimmed) = crop_visible_rgba(&rgba, w, h);
             visible.push((orientation, trimmed_w, trimmed_h, trimmed, source_size));
         }
-        let target_h = visible
+        let cell_h = visible
             .iter()
             .map(|frame| frame.2)
             .max()
             .unwrap_or(1)
             .max(1);
+        let mut source_widths = visible.iter().map(|frame| frame.4[0]).collect::<Vec<_>>();
+        let mut source_heights = visible.iter().map(|frame| frame.4[1]).collect::<Vec<_>>();
+        source_widths.sort_by(f32::total_cmp);
+        source_heights.sort_by(f32::total_cmp);
+        let world_w = source_widths[source_widths.len() / 2];
+        let world_h = source_heights[source_heights.len() / 2];
+        let cell_w = ((cell_h as f64 * world_w as f64 / world_h.max(f32::EPSILON) as f64).round()
+            as usize)
+            .max(1);
         let mut normalized: Vec<NormalizedEnemyFrame> = Vec::with_capacity(visible.len());
         for (_orientation, w, h, rgba, source_size) in visible {
-            let target_w = ((w as f64 * target_h as f64 / h.max(1) as f64).round() as usize).max(1);
+            let scale = (cell_w as f64 / w.max(1) as f64).min(cell_h as f64 / h.max(1) as f64);
+            let target_w = ((w as f64 * scale).round() as usize).max(1);
+            let target_h = ((h as f64 * scale).round() as usize).max(1);
             normalized.push((
                 target_w,
                 target_h,
@@ -581,18 +592,7 @@ fn publish_enemy_atlases(
         }
 
         let total_cells = normalized.len();
-        let cell_w: usize = normalized.iter().map(|d| d.0).max().unwrap_or(1);
-        let cell_h = target_h;
-        let mut source_heights = normalized
-            .iter()
-            .map(|frame| frame.3[1])
-            .collect::<Vec<_>>();
-        source_heights.sort_by(f32::total_cmp);
-        let normalized_world_h = source_heights[source_heights.len() / 2];
-        let normalized_size = [
-            normalized_world_h * cell_w as f32 / cell_h as f32,
-            normalized_world_h,
-        ];
+        let normalized_size = [world_w, world_h];
         // Engine's public texture contract bounds either dimension at 4096.
         // Classic enemies can have enough directional animation frames to
         // exceed that width in a historical one-row atlas, so pack a bounded
