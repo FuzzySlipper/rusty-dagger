@@ -56,7 +56,7 @@
         </div>
         <div class="sprite-stage-meta">
           <div><span>Atlas</span><code data-testid="sprite-atlas-path">{{ entry.imagePath }}</code></div>
-          <div *ngIf="entry.imageWidth > 0"><span>Atlas pixels</span><strong>{{ entry.imageWidth }} × {{ entry.imageHeight }}</strong></div>
+          <div *ngIf="atlasDims(entry).width > 0"><span>Atlas pixels</span><strong>{{ atlasDims(entry).width }} × {{ atlasDims(entry).height }}</strong></div>
           <div *ngIf="entry.worldSize"><span>World size</span><strong>{{ format(entry.worldSize?.[0]) }} × {{ format(entry.worldSize?.[1]) }}</strong></div>
           <div *ngIf="entry.pivot"><span>Pivot</span><strong data-testid="sprite-pivot-value">{{ format(entry.pivot?.[0]) }}, {{ format(entry.pivot?.[1]) }}</strong></div>
           <div><span>Frames</span><strong>{{ entry.frames.length }}</strong></div>

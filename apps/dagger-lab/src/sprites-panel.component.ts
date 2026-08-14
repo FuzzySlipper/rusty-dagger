@@ -28,6 +28,11 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
   private readonly api = inject(LabApiService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private timer: ReturnType<typeof setInterval> | undefined;
+  /** Decoded atlas pixel sizes, keyed by entry. Manifests are not consistent
+   * about whether width/height describe the atlas or one frame (animated
+   * billboards record the frame), so the blitting math trusts the decoded
+   * image and falls back to manifest dims only until it loads. */
+  private readonly naturalDims = new Map<string, { width: number; height: number }>();
 
   entries: SpriteEntry[] = [];
   loadError = '';
@@ -57,6 +62,8 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
       this.entries = normalizeSpriteIndex(index);
       this.loaded = true;
       this.selectedKey = this.selectedKey ?? this.entries.at(0)?.key;
+      const selected = this.selected();
+      if (selected !== undefined) this.preloadDims(selected);
     } catch (error: unknown) {
       this.loadError = errorMessage(error);
     } finally {
@@ -106,6 +113,26 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
     this.step = 0;
     this.inspectedFrame = undefined;
     this.stopTimer();
+    this.preloadDims(entry);
+  }
+
+  atlasDims(entry: SpriteEntry): { width: number; height: number } {
+    return (
+      this.naturalDims.get(entry.key) ?? { width: entry.imageWidth, height: entry.imageHeight }
+    );
+  }
+
+  private preloadDims(entry: SpriteEntry): void {
+    if (entry.imagePath === '' || this.naturalDims.has(entry.key)) return;
+    const image = new Image();
+    image.onload = () => {
+      this.naturalDims.set(entry.key, {
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+      });
+      this.changeDetector.markForCheck();
+    };
+    image.src = this.assetUrl(entry);
   }
 
   animation(): SpriteAnimation | undefined {
@@ -199,8 +226,9 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
     boxWidth: number,
     boxHeight: number,
   ): { width: number; height: number; scale: number } {
-    const width = Math.max(1, (rect.uvMax[0] - rect.uvMin[0]) * entry.imageWidth);
-    const height = Math.max(1, (rect.uvMax[1] - rect.uvMin[1]) * entry.imageHeight);
+    const dims = this.atlasDims(entry);
+    const width = Math.max(1, (rect.uvMax[0] - rect.uvMin[0]) * dims.width);
+    const height = Math.max(1, (rect.uvMax[1] - rect.uvMin[1]) * dims.height);
     const scale =
       this.zoom > 0
         ? this.zoom
@@ -225,10 +253,11 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
     boxHeight: number,
   ): Record<string, string> {
     const { scale } = this.frameMetrics(entry, rect, boxWidth, boxHeight);
+    const dims = this.atlasDims(entry);
     const style: Record<string, string> = {
       'background-image': `url("${this.assetUrl(entry)}")`,
-      'background-size': `${entry.imageWidth * scale}px ${entry.imageHeight * scale}px`,
-      'background-position': `${-rect.uvMin[0] * entry.imageWidth * scale}px ${-rect.uvMin[1] * entry.imageHeight * scale}px`,
+      'background-size': `${dims.width * scale}px ${dims.height * scale}px`,
+      'background-position': `${-rect.uvMin[0] * dims.width * scale}px ${-rect.uvMin[1] * dims.height * scale}px`,
     };
     if (entry.flipY) style['transform'] = 'scaleY(-1)';
     return style;

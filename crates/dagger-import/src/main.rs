@@ -636,8 +636,12 @@ fn publish_enemy_atlases(
             let y0 = (idx / columns) * cell_h;
             let dx = x0 + (cell_w - w) / 2;
             let dy = y0 + cell_h - h;
+            // Engine's UV convention needs each frame bottom-up (v=0 samples
+            // the first PNG row = quad bottom). Flip within the cell, not the
+            // whole image: a whole-atlas flip would swap grid rows and detach
+            // every multi-row cell from its manifest UVs.
             for (row_i, row) in rgba.chunks(w * 4).enumerate() {
-                let dst = ((dy + row_i) * atlas_w + dx) * 4;
+                let dst = ((dy + (h - 1 - row_i)) * atlas_w + dx) * 4;
                 atlas[dst..dst + w * 4].copy_from_slice(row);
             }
             frame_entries.push(format!(
@@ -650,11 +654,7 @@ fn publish_enemy_atlases(
                 source_size[1]
             ));
         }
-        let png = {
-            let mut flipped = atlas.clone();
-            flip_rgba_rows(&mut flipped, atlas_w, atlas_h);
-            crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &flipped)
-        };
+        let png = crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &atlas);
         let slug = format!("enemy-{}-atlas", mobile.id);
         let file = format!("{slug}.png");
         std::fs::write(dir.join(&file), &png).expect("write enemy atlas png");
