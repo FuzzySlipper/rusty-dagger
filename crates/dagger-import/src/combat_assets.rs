@@ -261,17 +261,13 @@ fn pack_fixed_cells(
         let cell_x = (index % columns) * cell_width;
         let cell_y = (index / columns) * cell_height;
         let x = cell_x + horizontal_frame_offset(frame.placement, cell_width, frame.width);
-        // Weapon cells are complete classic screen canvases. Engine's retained
-        // DataTexture maps the first encoded row to v=0 (the quad bottom), so a
-        // DFU bottom-aligned frame begins at the first cell row. Generic effect
-        // cells retain their existing bottom packing within the tallest frame.
-        let y = cell_y + vertical_frame_offset(reference_size.is_some(), cell_height, frame.height);
-        // Reverse the source rows while copying so the classic top-down image
-        // remains upright in Engine's bottom-up UV convention.
+        // Engine's sprite contract samples upright decoded-image space (v=0 =
+        // first PNG row = quad top). Frames are packed top-aligned in classic
+        // top-down row order, preserving the alignment the old bottom-up
+        // convention produced on screen.
+        let y = cell_y;
         for row in 0..frame.height {
-            let source_row = frame.height - 1 - row;
-            let source =
-                &frame.rgba[source_row * frame.width * 4..(source_row + 1) * frame.width * 4];
+            let source = &frame.rgba[row * frame.width * 4..(row + 1) * frame.width * 4];
             let target = ((y + row) * width + x) * 4;
             rgba[target..target + source.len()].copy_from_slice(source);
         }
@@ -309,18 +305,6 @@ fn horizontal_frame_offset(
         FramePlacement::Right(offset) => {
             available.saturating_sub(((offset * cell_width as f32).round() as usize).min(available))
         }
-    }
-}
-
-fn vertical_frame_offset(
-    classic_reference_canvas: bool,
-    cell_height: usize,
-    frame_height: usize,
-) -> usize {
-    if classic_reference_canvas {
-        0
-    } else {
-        cell_height.saturating_sub(frame_height)
     }
 }
 
@@ -395,7 +379,5 @@ mod tests {
             horizontal_frame_offset(FramePlacement::Center, 320, 162),
             79
         );
-        assert_eq!(vertical_frame_offset(true, 200, 143), 0);
-        assert_eq!(vertical_frame_offset(false, 200, 143), 57);
     }
 }

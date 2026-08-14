@@ -217,9 +217,8 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
   /// CSS sprite blitting: scale the atlas as a background image and shift it
   /// so exactly one frame rect shows. Pixelated scaling keeps the classic art
   /// crisp; no canvas is involved (Engine owns the sole product canvas).
-  /// Sprite atlases are stored bottom-up (see SpriteEntry.flipY), so the
-  /// pixels layer is flipped for display while the frame box and pivot marker
-  /// keep their normal orientation.
+  /// Atlases are stored upright (Engine's sprite contract samples upright
+  /// decoded-image space), matching CSS's top-left origin directly.
   private frameMetrics(
     entry: SpriteEntry,
     rect: SpriteFrameRect,
@@ -259,7 +258,6 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
       'background-size': `${dims.width * scale}px ${dims.height * scale}px`,
       'background-position': `${-rect.uvMin[0] * dims.width * scale}px ${-rect.uvMin[1] * dims.height * scale}px`,
     };
-    if (entry.flipY) style['transform'] = 'scaleY(-1)';
     return style;
   }
 

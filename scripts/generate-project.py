@@ -148,8 +148,10 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
         slug = f"billboard-{tex['archive']}-{tex['record']}"
         frame_count = tex.get("frameCount", 1)
         atlas_frames = tex.get("frames", [{"frame": 0, "uvMin": [0, 0], "uvMax": [1, 1]}])
-        # Multi-frame atlas PNG is wider: frame_width * frame_count.
-        tex_width = tex["width"] * frame_count
+        # Packed PNG dims are explicit in the manifest; fall back to the
+        # frame-dims times frame-count derivation for older manifests.
+        tex_width = tex.get("atlasWidth", tex["width"] * frame_count)
+        tex_height = tex.get("atlasHeight", tex["height"])
         assets.append({
             "id": f"texture/{slug}",
             "catalog": {
@@ -161,7 +163,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
             },
             "texture": {
                 "width": tex_width,
-                "height": tex["height"],
+                "height": tex_height,
                 "filter": "nearest",
                 "wrap": "clamp",
                 "alphaCutout": True,

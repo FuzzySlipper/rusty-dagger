@@ -195,7 +195,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:d3e7aa152975241e224771ed9844365b8a0f02d315828388eaec7d5ee9662ec5",
+      "sha256": "sha256:3c61459ccddbca1f7623611655498390f2fccf0d7283373735b4bcc3ccef1c45",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -236,7 +236,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:b3d526d2a6842df71651c9bed3073cfdfb0138b9b2fa0cdaaa115144fba9e9b0",
+      "sha256": "sha256:a36b7e6a8fc9a9554c75bca477de98ad21ca426a3eac260da8f438d9ff100fdc",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -353,7 +353,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:35b4bde0695fabab0c8d27b516381540975d2e2e1a4a10c3251ea773e9690fd6",
+      "sha256": "sha256:cd7dec45fa1170192fcb40f7c510ab0b534e1f931277c8a2c040ccc7eadb9bcc",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -755,7 +755,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:fa457f57d2a0019de72c4e40fce63be210e2587df7f3f35a005e56c79a86bc98",
+      "sha256": "sha256:855a5e8eb8bd861ec4a3a6512c0ebfc0c609b7f02309121d5b9957e28552585d",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -1435,7 +1435,7 @@
       320,
       200
     ],
-    "sha256": "sha256:1473e7d4bd35426625c05ec66aaf6d91514a0d14f31a471cbd2bf719cd067796",
+    "sha256": "sha256:2903a3c1ef24575b56ead1d2d88aa1ab26186c0899a7a5ba2479874c0d07d5d2",
     "source": {
       "file": "WEAPON02.CIF",
       "palette": "ART_PAL.COL"

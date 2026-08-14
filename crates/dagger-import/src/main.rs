@@ -288,19 +288,6 @@ fn publish_textures(dir: &std::path::Path, textures: &[glb::TextureInput]) {
     );
 }
 
-/// Sprite PNGs are stored bottom-up: renderer-three samples v=0 at the
-/// first PNG row and maps uvMin to the quad's bottom vertices, so a
-/// top-down PNG renders upside down (and the contract forbids
-/// uvMin.y > uvMax.y, so the flip must be in the pixels).
-fn flip_rgba_rows(rgba: &mut [u8], width: usize, height: usize) {
-    let stride = width * 4;
-    for y in 0..height / 2 {
-        for x in 0..stride {
-            rgba.swap(y * stride + x, (height - 1 - y) * stride + x);
-        }
-    }
-}
-
 /// Decode unique billboard (archive, record) textures to transparent PNGs
 /// (palette index 0 = transparent, the Daggerfall billboard rule) plus a
 /// billboard manifest mapping each texture to its PNG sourcePath/hash/dims.
@@ -366,21 +353,18 @@ fn publish_billboard_textures(
         }
         let (w, h) = (info.width.max(1) as usize, info.height.max(1) as usize);
 
-        // Pack into atlas: single frame = plain PNG; multi-frame = horizontal strip.
+        // Pack into atlas: single frame = plain PNG; multi-frame = horizontal
+        // strip. Engine's sprite contract samples upright decoded-image space
+        // (top-left origin), so classic rows are stored as-is.
         let (atlas_w, atlas_h, rgba) = if all_frames.len() == 1 {
-            let mut rgba = all_frames.into_iter().next().unwrap();
-            flip_rgba_rows(&mut rgba, w, h);
-            (w, h, rgba)
+            (w, h, all_frames.into_iter().next().unwrap())
         } else {
             let fc = all_frames.len();
             let mut strip = vec![0u8; w * fc * h * 4];
             for (i, frame) in all_frames.iter().enumerate() {
-                // Each frame is bottom-up in source; flip into atlas row order.
-                let mut flipped = frame.clone();
-                flip_rgba_rows(&mut flipped, w, h);
                 // Copy each row of the frame into its column range in the strip.
                 for y in 0..h {
-                    let src = &flipped[y * w * 4..(y + 1) * w * 4];
+                    let src = &frame[y * w * 4..(y + 1) * w * 4];
                     let dst_start = (y * w * fc + i * w) * 4;
                     strip[dst_start..dst_start + w * 4].copy_from_slice(src);
                 }
@@ -397,7 +381,9 @@ fn publish_billboard_textures(
         // Manifest entry: single-frame records stay backward-compatible
         // (no frameCount/frames). Multi-frame records add frameCount, fps,
         // and per-frame UV rects so generate-project.py can build a
-        // multi-frame spriteAtlas.
+        // multi-frame spriteAtlas. width/height are one frame's dims (classic
+        // record dims); atlasWidth/atlasHeight are the packed PNG dims, which
+        // differ for multi-frame strips.
         let extra = if frame_count > 1 {
             let fc = frame_count as f32;
             let frames: Vec<String> = (0..frame_count)
@@ -420,7 +406,7 @@ fn publish_billboard_textures(
             String::new()
         };
         entries.push(format!(
-            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"worldSize\":[{:?},{:?}]{}}}",
+            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"atlasWidth\":{atlas_w},\"atlasHeight\":{atlas_h},\"worldSize\":[{:?},{:?}]{}}}",
             png.len(),
             world[0],
             world[1],
@@ -636,12 +622,11 @@ fn publish_enemy_atlases(
             let y0 = (idx / columns) * cell_h;
             let dx = x0 + (cell_w - w) / 2;
             let dy = y0 + cell_h - h;
-            // Engine's UV convention needs each frame bottom-up (v=0 samples
-            // the first PNG row = quad bottom). Flip within the cell, not the
-            // whole image: a whole-atlas flip would swap grid rows and detach
-            // every multi-row cell from its manifest UVs.
+            // Engine's sprite contract samples upright decoded-image space
+            // (top-left origin, V down), so each frame's rows are packed in
+            // classic top-down order, bottom-aligned in its cell.
             for (row_i, row) in rgba.chunks(w * 4).enumerate() {
-                let dst = ((dy + (h - 1 - row_i)) * atlas_w + dx) * 4;
+                let dst = ((dy + row_i) * atlas_w + dx) * 4;
                 atlas[dst..dst + w * 4].copy_from_slice(row);
             }
             frame_entries.push(format!(
@@ -716,8 +701,7 @@ fn publish_enemy_corpse(
         .frame_pixels(corpse.record as usize, 0)
         .map_err(|error| format!("decode {source_file} record {}: {error}", corpse.record))?;
     let rgba = palette.to_rgba_transparent(&indexed);
-    let (trimmed_width, trimmed_height, mut trimmed) = crop_visible_rgba(&rgba, width, height);
-    flip_rgba_rows(&mut trimmed, trimmed_width, trimmed_height);
+    let (trimmed_width, trimmed_height, trimmed) = crop_visible_rgba(&rgba, width, height);
     let png = crate::png::encode_rgba(trimmed_width as u32, trimmed_height as u32, &trimmed);
     let file = format!("enemy-{}-corpse.png", mobile.id);
     std::fs::write(dir.join(&file), &png).map_err(|error| error.to_string())?;

@@ -487,7 +487,10 @@ Classic enemies are Rust-authoritative directional billboards. Ownership split:
   never baked into the static mesh) and packs one 8-frame orientation atlas
   PNG per mobile id with state-major Move, Idle, Attack, and Hurt ranges
   (mirrored sides baked, palette index 0 transparent). Supported corpse flats
-  are emitted as separate generated textures.
+  are emitted as separate generated textures. All sprite PNGs (enemy atlases,
+  billboards, corpses, combat assets) are stored upright in classic top-down
+  row order: Engine's sprite contract samples upright decoded-image space
+  (top-left origin, V down), so importers must not reverse rows.
 - The studio adapter emits `defineSpriteAtlas` + `createSprite` per enemy
   (`billboard: cylindrical`; the renderer honors billboard modes,
   rusty-engine 6630).

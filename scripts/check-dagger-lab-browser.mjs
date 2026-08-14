@@ -376,10 +376,10 @@ async function assertSpriteReviewTab(page, output) {
   const frameTransform = await page
     .getByTestId('sprite-frame-pixels')
     .evaluate((element) => getComputedStyle(element).transform);
-  assert.match(
+  assert.equal(
     frameTransform,
-    /matrix\(1, 0, 0, -1, 0, 0\)/,
-    'bottom-up stored atlas is not flipped for upright display',
+    'none',
+    'upright stored atlas must need no display flip (Engine samples top-left image space)',
   );
 
   await page.getByTestId('sprite-anim-attack').click();

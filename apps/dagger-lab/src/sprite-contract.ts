@@ -41,13 +41,6 @@ export interface SpriteEntry {
   readonly animations: readonly SpriteAnimation[];
   readonly worldSize?: readonly number[] | undefined;
   readonly pivot?: readonly number[] | undefined;
-  /**
-   * Sprite atlases are written bottom-up at import time (Engine's UV
-   * convention samples v=0 at the first PNG row), so a viewer with top-left
-   * origin must flip them for display. Plain dungeon textures are mesh-mapped
-   * and shown as stored.
-   */
-  readonly flipY: boolean;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -90,7 +83,6 @@ function enemyEntry(manifest: string, raw: JsonObject): SpriteEntry {
     frames,
     animations: stateAnimations(raw['states'], frames.length),
     worldSize: numberArray(raw['normalizedSize']),
-    flipY: true,
   };
 }
 
@@ -99,6 +91,10 @@ function billboardEntry(manifest: string, raw: JsonObject): SpriteEntry {
   const archive = number(raw['archive']);
   const record = number(raw['record']);
   const frameCount = number(raw['frameCount']) ?? 0;
+  // width/height are one frame's classic dims; the packed strip dims live in
+  // atlasWidth/atlasHeight (absent in older manifests).
+  const imageWidth = number(raw['atlasWidth']) ?? number(raw['width']) ?? 0;
+  const imageHeight = number(raw['atlasHeight']) ?? number(raw['height']) ?? 0;
   const animations: SpriteAnimation[] =
     frameCount > 1 && frames.length > 0
       ? [
@@ -119,12 +115,11 @@ function billboardEntry(manifest: string, raw: JsonObject): SpriteEntry {
     label: `billboard ${archive}-${record}`,
     detail: `archive ${archive ?? '?'} record ${record ?? '?'}`,
     imagePath: contentPath(string(raw['path']) ?? ''),
-    imageWidth: number(raw['width']) ?? 0,
-    imageHeight: number(raw['height']) ?? 0,
+    imageWidth,
+    imageHeight,
     frames: frames.length > 0 ? frames : wholeFrame(raw),
     animations,
     worldSize: numberArray(raw['worldSize']),
-    flipY: true,
   };
 }
 
@@ -154,7 +149,6 @@ function weaponEntry(manifest: string, raw: JsonObject): SpriteEntry {
     frames: frameRects(raw['frames']),
     animations,
     pivot: numberArray(raw['pivot']),
-    flipY: true,
   };
 }
 
@@ -184,7 +178,6 @@ function effectEntry(manifest: string, raw: JsonObject): SpriteEntry {
           ]
         : [],
     pivot: numberArray(raw['pivot']),
-    flipY: true,
   };
 }
 
@@ -200,7 +193,6 @@ function plainTextureEntry(manifest: string, raw: JsonObject): SpriteEntry {
     imageHeight: number(raw['height']) ?? 0,
     frames: wholeFrame(raw),
     animations: [],
-    flipY: false,
   };
 }
 
