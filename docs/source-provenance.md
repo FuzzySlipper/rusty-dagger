@@ -22,7 +22,9 @@ the generic `rusty_engine::engine_spatial`, `rusty_engine::entity_state`, and
 `rusty_engine::svc_collision` namespaces through the facade; it does not
 depend on `rusty-engine-demo` or `loading-bay-game`.
 
-The enemy atlas PNGs and manifests are generated, not hand-edited. Task 6707
+The enemy atlas PNGs and manifests are generated from the classic data and
+may be hand-edited afterward (see the `content/` posture in AGENTS.md); the
+classic extraction remains the default source on full regeneration. Task 6707
 changed their durable extraction layout from an unbounded single row to a
 deterministic multi-row grid capped by Engine's public 4096-pixel texture
 dimension, then regenerated the checked project from local Arena2 data.

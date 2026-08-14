@@ -84,8 +84,14 @@ work does not need donor ceremony. New Daggerfall behavior does.
   fix forward when upstream drift breaks something. Downstream does not fetch,
   mutate, pin, or enforce freshness for that checkout; operator update policy
   belongs outside this repository.
-- `content/` is generated output. Regenerate it with `scripts/regenerate.sh`
-  rather than hand-editing artifacts.
+- `content/` is generated output that doubles as a living content tree.
+  Classic regeneration (`scripts/regenerate.sh`) is the default source and
+  will overwrite generated files; hand edits to content are legitimate and
+  expected to grow (Den task 6945 owns explicit preserve/overwrite controls).
+  Hash drift between manifests and on-disk bytes is surfaced as a loud
+  warning — generation stamps the actual bytes' identity and runtime serving
+  warns and publishes actual content — never a silent drop or a hard stop.
+  Commit hand edits you want to keep before running a full regeneration.
 
 ## Code style and language authority
 
@@ -137,6 +143,16 @@ movement, animation) stays in Rust.
 ## Work and verification
 
 Treat a dirty worktree as shared state. Preserve unrelated changes.
+
+### Proportionality
+
+Fail hard only where a wrong result would lose work, corrupt shared state, or
+violate a boundary: path containment, unsupported Studio protocol mutations,
+the Engine boundary audit, and explicit CI check modes keep their hard stops.
+Everything else — content drift, freshness mismatches, quality heuristics —
+surfaces as a loud warning with operator choice, not a hard stop. When adding
+a new hard failure, state in one sentence what loss it prevents; if you
+can't, make it a warning.
 
 Run the narrowest check first, then the gate that owns the changed surface:
 
