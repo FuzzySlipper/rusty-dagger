@@ -490,7 +490,12 @@ mod tests {
                     _ => None,
                 })
                 .unwrap_or_else(|| panic!("missing canonical atlas {atlas_id}"));
-            assert!(atlas.frames.iter().all(|frame| frame.size.is_none()));
+            // Per-frame world sizes (classic per-record dims) ride the atlas.
+            assert!(atlas.frames.iter().all(|frame| {
+                frame
+                    .size
+                    .is_some_and(|size| size[0] > 0.0 && size[1] > 0.0)
+            }));
         }
         let rat = bundle
             .frame
@@ -515,6 +520,10 @@ mod tests {
                 _ => None,
             })
             .expect("Rat atlas");
-        assert!(rat_atlas.frames.iter().all(|frame| frame.size.is_none()));
+        assert!(rat_atlas.frames.iter().all(|frame| {
+            frame
+                .size
+                .is_some_and(|size| size[0] > 0.0 && size[1] > 0.0)
+        }));
     }
 }

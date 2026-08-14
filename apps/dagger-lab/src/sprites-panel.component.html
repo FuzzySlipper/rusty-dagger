@@ -140,6 +140,7 @@
         <div class="sprite-inspector" *ngIf="currentRect() as rect" data-testid="sprite-inspector">
           <span>frame {{ rect.frame }}</span>
           <code>uv {{ format(rect.uvMin[0]) }}, {{ format(rect.uvMin[1]) }} → {{ format(rect.uvMax[0]) }}, {{ format(rect.uvMax[1]) }}</code>
+          <code *ngIf="rect.size" data-testid="sprite-frame-size">world size {{ format(rect.size[0]) }} × {{ format(rect.size[1]) }}</code>
           <code *ngIf="rect.sourceSize">source size {{ format(rect.sourceSize[0]) }} × {{ format(rect.sourceSize[1]) }}</code>
           <code *ngIf="rect.sourceOffset">source offset {{ format(rect.sourceOffset[0]) }}, {{ format(rect.sourceOffset[1]) }}</code>
         </div>
