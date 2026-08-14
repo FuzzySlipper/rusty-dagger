@@ -1,5 +1,11 @@
 # Session handoff — 2026-08-05 (nav grid task 6639)
 
+> **Superseded snapshot.** Handoffs and task status live in Den (the
+> `rusty-dagger` handoff label and task list) — this dated note is kept only
+> as history. Several technical claims below are no longer true (sprite PNGs
+> are stored upright; atlas cells are fit-scaled, not uniform full-height);
+> `docs/design.md` is the current technical reference.
+
 Written from session context at the user's request (approaching a subscription
 limit; a different agent may pick this up). Not re-verified against artifacts
 — trust the repo and Den over anything here that disagrees.
@@ -108,10 +114,7 @@ headless screenshot proof.
 - The start room is a ~30m open vertical shaft with rooms stacked in the same
   XZ columns — any "ceiling within Nm" interior check must tolerate that
   (hence 64m = full mesh height).
-- Imp resize-on-orbit wobble = per-record scale factors; accepted limitation
-  pending upstream 6638 (per-frame sprite resize). Don't chase it.
-- Sprite PNGs are stored bottom-up; `flip_rgba_rows` in dagger-import handles
-  it. Enemy atlases are 8 uniform full-height cells, bottom-center aligned.
+- Imp resize-on-orbit wobble = per-record scale factors.
 - Vite dev server (middlewareMode) always injects its HMR client and binds a
   ws port; `hmr: false` does NOT stop it (vite 6.4.3). serve-flycam allocates
   a free HMR port per instance.
@@ -126,6 +129,4 @@ headless screenshot proof.
 
 - Worktree clean at `b6dfa74` (all committed + pushed, including the new
   navgrid.json artifact and flycam-navgrid proof screenshots).
-- Den task 6639 status: `review` (round 4049 open).
-- Upstream rusty-engine tasks open that matter to us: 6638 (per-frame sprite
-  resize), 6642 + 6643 (pathfinding seams).
+- (Task status lines removed — Den is the only live record.)
