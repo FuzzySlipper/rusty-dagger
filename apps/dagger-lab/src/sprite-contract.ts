@@ -13,6 +13,8 @@ export interface SpriteFrameRect {
   readonly frame: number;
   readonly uvMin: readonly [number, number];
   readonly uvMax: readonly [number, number];
+  /** Per-frame world size when the manifest carries one (Engine resizes the quad on frame change). */
+  readonly size?: readonly number[] | undefined;
   readonly sourceSize?: readonly number[] | undefined;
   readonly sourceOffset?: readonly number[] | undefined;
 }
@@ -271,6 +273,7 @@ function frameRects(raw: unknown): SpriteFrameRect[] {
       // Length is guarded above; the tuple cast keeps noUncheckedIndexedAccess happy.
       uvMin: [uvMin[0]!, uvMin[1]!],
       uvMax: [uvMax[0]!, uvMax[1]!],
+      size: numberArray(item['size']),
       sourceSize: numberArray(item['sourceSize']),
       sourceOffset: numberArray(item['sourceOffset']),
     });

@@ -180,9 +180,8 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
     # Enemy directional sprite atlases (6595). One texture asset per unique
     # enemy mobile id; the importer-packed, Engine-bounded PNG holds the
     # orientation/animation frames (mirrored sides baked) and the manifest
-    # carries per-frame UV rects and source DFU sizes as provenance. Import has
-    # already cropped and nearest-neighbor normalized the visible pixels into
-    # uniform bottom-centered cells, so runtime geometry stays fixed.
+    # carries per-frame UV rects, per-frame world sizes (the Engine resizes
+    # the quad on frame change), and source DFU sizes as provenance.
     for enemy in enemy_manifest.get("enemies", []):
         slug = f"enemy-{enemy['mobileId']}-atlas"
         assets.append({
@@ -202,7 +201,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
                 "alphaCutout": True,
                 "spriteAtlas": {
                     "frames": [
-                        {"frame": f["frame"], "uvMin": f["uvMin"], "uvMax": f["uvMax"]}
+                        {"frame": f["frame"], "uvMin": f["uvMin"], "uvMax": f["uvMax"], **({"size": f["size"]} if "size" in f else {})}
                         for f in enemy["frames"]
                     ],
                 },

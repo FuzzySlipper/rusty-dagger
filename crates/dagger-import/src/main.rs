@@ -545,58 +545,50 @@ fn publish_enemy_atlases(
             continue;
         }
 
-        // Classic record scale metadata is not consistent enough per direction
-        // to drive live geometry (Rat and Imp are especially divergent), so one
-        // fixed world-space quad per enemy uses the MEDIAN classic record
-        // world size. The uniform atlas cell matches that quad's aspect and
-        // every cropped frame is scaled to FIT (never stretched), bottom-center
-        // packed: frames keep both their native aspect and their classic
-        // relative sizes (a spread-wing frame stays short and wide instead of
-        // being inflated to a shared height).
-        type NormalizedEnemyFrame = (usize, usize, Vec<u8>, [f32; 2]);
-        let mut visible = Vec::with_capacity(decoded.len());
-        for (orientation, flip, w, h, indexed, source_size) in decoded {
+        // The Engine resizes sprite quads per frame (SpriteFrameRect.size), so
+        // frames ship at native cropped pixels with tight UV rects and the
+        // classic per-record world size, scaled by the crop ratio: DFU sizes
+        // the billboard per record (front view narrower than side view), which
+        // is authentic classic behavior that the old fixed-quad constraint
+        // could not express. Per-axis crop mapping keeps that size truthful
+        // for the visible art.
+        // (trimmed_w, trimmed_h, trimmed rgba, source_size, world_size)
+        type NormalizedEnemyFrame = (usize, usize, Vec<u8>, [f32; 2], [f32; 2]);
+        let mut visible: Vec<NormalizedEnemyFrame> = Vec::with_capacity(decoded.len());
+        for (_orientation, flip, w, h, indexed, source_size) in decoded {
             let mut rgba = palette.to_rgba_transparent(&indexed);
             if flip {
                 flip_rgba_columns(&mut rgba, w, h);
             }
             let (trimmed_w, trimmed_h, trimmed) = crop_visible_rgba(&rgba, w, h);
-            visible.push((orientation, trimmed_w, trimmed_h, trimmed, source_size));
+            let world_size = [
+                source_size[0] * trimmed_w as f32 / w.max(1) as f32,
+                source_size[1] * trimmed_h as f32 / h.max(1) as f32,
+            ];
+            visible.push((trimmed_w, trimmed_h, trimmed, source_size, world_size));
         }
-        let cell_h = visible
-            .iter()
-            .map(|frame| frame.2)
-            .max()
-            .unwrap_or(1)
-            .max(1);
-        let mut source_widths = visible.iter().map(|frame| frame.4[0]).collect::<Vec<_>>();
-        let mut source_heights = visible.iter().map(|frame| frame.4[1]).collect::<Vec<_>>();
-        source_widths.sort_by(f32::total_cmp);
-        source_heights.sort_by(f32::total_cmp);
-        let world_w = source_widths[source_widths.len() / 2];
-        let world_h = source_heights[source_heights.len() / 2];
-        let cell_w = ((cell_h as f64 * world_w as f64 / world_h.max(f32::EPSILON) as f64).round()
-            as usize)
-            .max(1);
-        let mut normalized: Vec<NormalizedEnemyFrame> = Vec::with_capacity(visible.len());
-        for (_orientation, w, h, rgba, source_size) in visible {
-            let scale = (cell_w as f64 / w.max(1) as f64).min(cell_h as f64 / h.max(1) as f64);
-            let target_w = ((w as f64 * scale).round() as usize).max(1);
-            let target_h = ((h as f64 * scale).round() as usize).max(1);
-            normalized.push((
-                target_w,
-                target_h,
-                resize_rgba_nearest(&rgba, w, h, target_w, target_h),
-                source_size,
-            ));
-        }
+        let normalized: Vec<NormalizedEnemyFrame> = visible;
 
         let total_cells = normalized.len();
-        let normalized_size = [world_w, world_h];
+        // Representative fixed-quad fallback (entities still declare one
+        // sprite size); per-frame sizes in the atlas override it.
+        let mut frame_ws = normalized
+            .iter()
+            .map(|frame| frame.4[0])
+            .collect::<Vec<_>>();
+        let mut frame_hs = normalized
+            .iter()
+            .map(|frame| frame.4[1])
+            .collect::<Vec<_>>();
+        frame_ws.sort_by(f32::total_cmp);
+        frame_hs.sort_by(f32::total_cmp);
+        let normalized_size = [frame_ws[frame_ws.len() / 2], frame_hs[frame_hs.len() / 2]];
         // Engine's public texture contract bounds either dimension at 4096.
         // Classic enemies can have enough directional animation frames to
         // exceed that width in a historical one-row atlas, so pack a bounded
         // grid while retaining stable frame numbers and per-frame UVs.
+        let cell_w: usize = normalized.iter().map(|frame| frame.0).max().unwrap_or(1);
+        let cell_h: usize = normalized.iter().map(|frame| frame.1).max().unwrap_or(1);
         const MAX_ATLAS_DIMENSION: usize = 4096;
         let columns = total_cells.min((MAX_ATLAS_DIMENSION / cell_w).max(1));
         let rows = total_cells.div_ceil(columns);
@@ -604,24 +596,27 @@ fn publish_enemy_atlases(
         let atlas_h: usize = cell_h * rows;
         let mut atlas = vec![0u8; atlas_w * atlas_h * 4];
         let mut frame_entries: Vec<String> = Vec::new();
-        for (idx, (w, h, rgba, source_size)) in normalized.iter().enumerate() {
+        for (idx, (w, h, rgba, source_size, world_size)) in normalized.iter().enumerate() {
             let x0 = (idx % columns) * cell_w;
             let y0 = (idx / columns) * cell_h;
             let dx = x0 + (cell_w - w) / 2;
             let dy = y0 + cell_h - h;
             // Engine's sprite contract samples upright decoded-image space
             // (top-left origin, V down), so each frame's rows are packed in
-            // classic top-down order, bottom-aligned in its cell.
+            // classic top-down order, bottom-aligned in its cell. The UV rect
+            // is tight around the art and carries the frame's own world size.
             for (row_i, row) in rgba.chunks(w * 4).enumerate() {
                 let dst = ((dy + row_i) * atlas_w + dx) * 4;
                 atlas[dst..dst + w * 4].copy_from_slice(row);
             }
             frame_entries.push(format!(
-                "      {{\"frame\":{idx},\"uvMin\":[{},{}],\"uvMax\":[{},{}],\"sourceSize\":[{:?},{:?}]}}",
-                x0 as f64 / atlas_w as f64,
-                y0 as f64 / atlas_h as f64,
-                (x0 + cell_w) as f64 / atlas_w as f64,
-                (y0 + cell_h) as f64 / atlas_h as f64,
+                "      {{\"frame\":{idx},\"uvMin\":[{},{}],\"uvMax\":[{},{}],\"size\":[{:?},{:?}],\"sourceSize\":[{:?},{:?}]}}",
+                dx as f64 / atlas_w as f64,
+                dy as f64 / atlas_h as f64,
+                (dx + w) as f64 / atlas_w as f64,
+                (dy + h) as f64 / atlas_h as f64,
+                world_size[0],
+                world_size[1],
                 source_size[0],
                 source_size[1]
             ));
@@ -776,24 +771,4 @@ fn crop_visible_rgba(rgba: &[u8], width: usize, height: usize) -> (usize, usize,
             .copy_from_slice(&rgba[source..source + cropped_w * 4]);
     }
     (cropped_w, cropped_h, cropped)
-}
-
-fn resize_rgba_nearest(
-    rgba: &[u8],
-    source_w: usize,
-    source_h: usize,
-    target_w: usize,
-    target_h: usize,
-) -> Vec<u8> {
-    let mut resized = vec![0; target_w * target_h * 4];
-    for y in 0..target_h {
-        let source_y = y * source_h / target_h;
-        for x in 0..target_w {
-            let source_x = x * source_w / target_w;
-            let source = (source_y * source_w + source_x) * 4;
-            let destination = (y * target_w + x) * 4;
-            resized[destination..destination + 4].copy_from_slice(&rgba[source..source + 4]);
-        }
-    }
-    resized
 }
