@@ -547,10 +547,12 @@ fn publish_enemy_atlases(
 
         // Classic record scale metadata is not consistent enough to drive
         // live geometry (Rat and Imp are especially divergent). Convert each
-        // frame to visible RGBA, crop transparent margins, and normalize its
-        // visible height plus the median width of its direction with
-        // nearest-neighbor sampling. Every animation frame then shares one
-        // bottom-center pivot and one fixed world-space quad.
+        // frame to visible RGBA, crop transparent margins, and rescale it to
+        // one shared visible height with nearest-neighbor sampling, keeping
+        // the frame's native aspect ratio: the Engine publishes one fixed
+        // world-space quad per enemy (per-frame sprite resize is not an Engine
+        // feature), so frames are aspect-preserved and bottom-center packed
+        // into a uniform cell instead of stretched to a median width.
         type NormalizedEnemyFrame = (usize, usize, Vec<u8>, [f32; 2]);
         let mut visible = Vec::with_capacity(decoded.len());
         for (orientation, flip, w, h, indexed, source_size) in decoded {
@@ -567,24 +569,9 @@ fn publish_enemy_atlases(
             .max()
             .unwrap_or(1)
             .max(1);
-        let orientation_widths = (0..8)
-            .map(|orientation| {
-                let mut widths = visible
-                    .iter()
-                    .filter(|frame| frame.0 == orientation)
-                    .map(|frame| {
-                        ((frame.1 as f64 * target_h as f64 / frame.2.max(1) as f64).round()
-                            as usize)
-                            .max(1)
-                    })
-                    .collect::<Vec<_>>();
-                widths.sort_unstable();
-                widths[(widths.len() - 1) / 2]
-            })
-            .collect::<Vec<_>>();
         let mut normalized: Vec<NormalizedEnemyFrame> = Vec::with_capacity(visible.len());
-        for (orientation, w, h, rgba, source_size) in visible {
-            let target_w = orientation_widths[orientation];
+        for (_orientation, w, h, rgba, source_size) in visible {
+            let target_w = ((w as f64 * target_h as f64 / h.max(1) as f64).round() as usize).max(1);
             normalized.push((
                 target_w,
                 target_h,

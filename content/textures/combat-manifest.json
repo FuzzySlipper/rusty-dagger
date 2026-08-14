@@ -88,7 +88,7 @@
   "cloneBaseline": "classic-daggerfall-dfu",
   "effects": [
     {
-      "byteLength": 73090,
+      "byteLength": 2964,
       "fps": 10,
       "frames": [
         {
@@ -195,7 +195,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:3c61459ccddbca1f7623611655498390f2fccf0d7283373735b4bcc3ccef1c45",
+      "sha256": "sha256:4aaf1cee5dcbeb3f65a8ff3cc469cb2cebdbde021531ad8282ee3b3061c77e2b",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -205,7 +205,7 @@
       "width": 320
     },
     {
-      "byteLength": 12488,
+      "byteLength": 2586,
       "fps": 10,
       "frames": [
         {
@@ -236,7 +236,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:a36b7e6a8fc9a9554c75bca477de98ad21ca426a3eac260da8f438d9ff100fdc",
+      "sha256": "sha256:7ed771e03454a71508f47b3db0b846b1712a7b0a6f256c9de5ba4adcb3ae81ef",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -246,7 +246,7 @@
       "width": 86
     },
     {
-      "byteLength": 19939,
+      "byteLength": 409,
       "fps": 10,
       "frames": [
         {
@@ -353,7 +353,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:cd7dec45fa1170192fcb40f7c510ab0b534e1f931277c8a2c040ccc7eadb9bcc",
+      "sha256": "sha256:21ef57245d5ab2bfd3c54e11e434f88723f78f977cda97d66705d8c8f2356a6d",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -363,7 +363,7 @@
       "width": 160
     },
     {
-      "byteLength": 188128,
+      "byteLength": 2618,
       "fps": 10,
       "frames": [
         {
@@ -755,7 +755,7 @@
         0.5,
         0.5
       ],
-      "sha256": "sha256:855a5e8eb8bd861ec4a3a6512c0ebfc0c609b7f02309121d5b9957e28552585d",
+      "sha256": "sha256:5d74f76bc18c26f9512f69686b89ab97096a14f42327aa1ba6c5c99d24521b66",
       "source": {
         "archive": 380,
         "file": "TEXTURE.380",
@@ -832,7 +832,7 @@
         "sourceRecord": 6
       }
     ],
-    "byteLength": 9217368,
+    "byteLength": 149084,
     "frames": [
       {
         "frame": 0,
@@ -1435,7 +1435,7 @@
       320,
       200
     ],
-    "sha256": "sha256:7abbbf6002358070e02b65d9498066681c3b9a178e3267cb5649a812e01fe580",
+    "sha256": "sha256:072c2af3a329f10fa1cfd9c7547c1c6b3e0f192ec31d1539cdc73f31f36bd08b",
     "source": {
       "file": "WEAPON02.CIF",
       "palette": "ART_PAL.COL"
