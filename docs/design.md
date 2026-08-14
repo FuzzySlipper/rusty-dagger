@@ -136,7 +136,7 @@ task 6519 → docs/companion-reuse.md):
   project documents.
 - **rusty-roguelike** — first-person reference game on the engine (grid-based;
   assess controller/camera reuse).
-- **rusty-engine-ui** — UI kit repo (inventory pending).
+- **rusty-engine-ui** — UI kit repo.
 - **rusty-d20** — rules vocabulary; minimal expected use here.
 - **asha-rpg** — useful immutable TypeScript authoring -> compact IR -> Rust
   semantic authority pattern. Its broad versioning, replay, checkpoint,
@@ -492,8 +492,7 @@ Classic enemies are Rust-authoritative directional billboards. Ownership split:
   row order: Engine's sprite contract samples upright decoded-image space
   (top-left origin, V down), so importers must not reverse rows.
 - The studio adapter emits `defineSpriteAtlas` + `createSprite` per enemy
-  (`billboard: cylindrical`; the renderer honors billboard modes,
-  rusty-engine 6630).
+  (`billboard: cylindrical`; the renderer honors billboard modes).
 - The per-camera-tick directional authority is consumer-side by engine design
   ("projection-driven, never renderer wall-clock") and lives in
   `dagger-runtime::directional` (`evaluate_directional`, arena2::mobile
@@ -531,7 +530,7 @@ consolidated per-tick animation authority in `dagger-runtime::animation`.
 produces a consolidated frame diff (only changed entries), not per-entity
 polling. This is deliberate: once naive per-entity polling becomes the
 pattern, future work inherits it. The service shape stays the same when
-offscreen-sprite throttling arrives (engine 6632 visibility readouts exist):
+offscreen-sprite throttling arrives (Engine visibility readouts exist):
 freeze an entry's `last_frame` or filter the diff — no API change.
 
 Ownership split:

@@ -17,7 +17,7 @@ python3 scripts/generate-project.py --write
 cargo run -q -p dagger-runtime --bin dagger-walkthrough
 cargo run -q -p dagger-runtime --bin dagger-navgrid -- --write
 # Sprite art validation (6665): deterministic quality checks + visual dump for flagged cases
-# Classic per-orientation variance (Rat 65x67 vs 70x27 etc) is warn-level (classic authored, pending upstream 6638 per-frame resize);
+# Classic per-orientation variance (Rat 65x67 vs 70x27 etc) is warn-level (classic authored);
 # extraction mismatches (manifest worldSize vs DFU, PNG dims) are error-level and fail closed.
 cargo run -q -p dagger-import --bin dagger-validate-sprites -- \
     --out content/validation/sprites.json --html content/validation/sprites

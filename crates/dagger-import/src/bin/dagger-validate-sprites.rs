@@ -872,7 +872,7 @@ fn generate_html(report: &ValidationReport, out_dir: &Path) {
         ));
     }
     idx.push_str("</table>");
-    idx.push_str("<h2>Notes</h2><ul><li>WorldSize = (raw + raw*scale/256) * 0.025 (DFU BlocksFile.ScaleDivisor). Fixed-quad renderer uses front-record size; per-frame variance flagged pending upstream 6638.</li><li>Cell waste = 1 - avgFrameArea / cellArea (world units).</li><li>Ground truth verified against TEXTURE.nnn when --arena2 data present.</li></ul>");
+    idx.push_str("<h2>Notes</h2><ul><li>WorldSize = (raw + raw*scale/256) * 0.025 (DFU BlocksFile.ScaleDivisor). Frames keep native aspect; per-frame variance is classic-authored and flagged for review.</li><li>Cell waste = 1 - avgFrameArea / cellArea (world units).</li><li>Ground truth verified against TEXTURE.nnn when --arena2 data present.</li></ul>");
     std::fs::write(out_dir.join("index.html"), idx).unwrap();
 
     // Per-enemy pages
