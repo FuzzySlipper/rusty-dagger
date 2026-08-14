@@ -83,6 +83,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
         options.lab_host,
         port,
         root.join("dist/apps/dagger-lab/browser"),
+        root.join("content"),
     )?;
     println!(
         "DAGGER_PRODUCT_READY product={} api=http://127.0.0.1:{}/api/dagger-product/bootstrap ui=http://127.0.0.1:{} resources={} source_entities={}",

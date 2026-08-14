@@ -6,6 +6,7 @@ import {
   ExperimentEvaluation,
   ExperimentReadout,
 } from './lab-contract';
+import { SpriteIndex } from './sprite-contract';
 
 const API_URL = '/api/dagger-lab';
 
@@ -41,5 +42,9 @@ export class LabApiService {
     return firstValueFrom(
       this.http.post<ExperimentReadout>(`${API_URL}/content/jump`, { id }),
     );
+  }
+
+  spriteIndex(): Promise<SpriteIndex> {
+    return firstValueFrom(this.http.get<SpriteIndex>(`${API_URL}/sprites/index`));
   }
 }

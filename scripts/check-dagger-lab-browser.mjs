@@ -328,6 +328,12 @@ try {
   await page.getByTestId('content-name').filter({ hasText: 'Rat' }).waitFor();
   await page.screenshot({ path: `${output}/profiles-desktop.png`, fullPage: true });
 
+  // Sprite review tab: derived manifests publish through the lab bridge, the
+  // Rat atlas renders through the asset route, its attack animation advances
+  // real frames at authored timing, and directional review reaches the back
+  // orientation. The tab must not add a canvas (Engine owns the sole one).
+  const spriteReview = await assertSpriteReviewTab(page, output);
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByTestId('profile-list').scrollIntoViewIfNeeded();
   await assertFixedApplicationShell(page, 390, 844, true);
@@ -343,10 +349,51 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} reloadMove=${JSON.stringify(reloadMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} reloadMove=${JSON.stringify(reloadMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
   );
 } finally {
   await browser.close();
+}
+
+async function assertSpriteReviewTab(page, output) {
+  await page.getByTestId('tab-sprites').click();
+  await page.getByTestId('sprite-list').waitFor();
+  const count = Number.parseInt(await page.getByTestId('sprite-count').innerText(), 10);
+  assert.ok(count > 40, `sprite index published too few entries: ${count}`);
+  assert.equal(await page.locator('canvas').count(), 1, 'sprite review must not add a canvas');
+
+  await page.getByTestId('sprite-filter').fill('rat');
+  await page.getByTestId('sprite-entry-enemy-manifest-json-mobile-0').click();
+  await page.getByTestId('sprite-title').filter({ hasText: 'Rat' }).waitFor();
+  const background = await page
+    .getByTestId('sprite-frame-view')
+    .evaluate((element) => getComputedStyle(element).backgroundImage);
+  assert.match(
+    background,
+    /sprites\/asset\/textures\/enemy-0-atlas\.png/,
+    'stage frame is not blitted from the lab asset route',
+  );
+
+  await page.getByTestId('sprite-anim-attack').click();
+  await page.getByTestId('sprite-anim-name').filter({ hasText: 'attack' }).waitFor();
+  const firstFrame = await page.getByTestId('sprite-frame-index').getAttribute('data-frame');
+  await page.getByTestId('sprite-play').click();
+  await page.waitForFunction(
+    (initial) =>
+      document.querySelector('[data-testid="sprite-frame-index"]')?.getAttribute('data-frame') !==
+      initial,
+    firstFrame,
+  );
+  const playedFrame = await page.getByTestId('sprite-frame-index').getAttribute('data-frame');
+  assert.notEqual(playedFrame, firstFrame, 'attack animation did not advance frames');
+
+  await page.getByTestId('sprite-orientation-4').click();
+  await page.getByTestId('sprite-orientation-name').filter({ hasText: 'back' }).waitFor();
+  assert.equal(await page.locator('canvas').count(), 1, 'sprite review must not add a canvas');
+  await page.screenshot({ path: `${output}/sprites-desktop.png`, fullPage: true });
+  await page.getByTestId('tab-experiments').click();
+  await page.getByTestId('history-detail').waitFor();
+  return { entries: count, ratAttackFrames: `${firstFrame}->${playedFrame}` };
 }
 
 async function waitForConnection(page) {

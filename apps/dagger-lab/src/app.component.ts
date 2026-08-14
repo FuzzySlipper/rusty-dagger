@@ -22,6 +22,7 @@ import {
   documentFromDraft,
 } from './lab-contract';
 import { DAGGER_APPLICATION_CONTEXT, loadDaggerProductBootstrap } from './product-runtime';
+import { SpritesPanelComponent } from './sprites-panel.component';
 
 const EMPTY_DOCUMENT: ExperimentDocument = {
   schemaVersion: 1,
@@ -99,7 +100,7 @@ const EMPTY_DOCUMENT: ExperimentDocument = {
 
 @Component({
   selector: 'dagger-root',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SpritesPanelComponent],
   templateUrl: './app.component.html',
 })
 export class AppComponent implements OnInit, OnDestroy {
@@ -134,6 +135,7 @@ export class AppComponent implements OnInit, OnDestroy {
   contentFilter = '';
   selectedContentId: number | undefined;
   labOpen = false;
+  activeTab: 'experiments' | 'sprites' = 'experiments';
 
   trackContent(_index: number, entity: ContentEntityReadout): number {
     return entity.id;

@@ -80,7 +80,12 @@ pub(crate) struct LabServer {
 }
 
 impl LabServer {
-    pub(crate) fn start(host: IpAddr, port: u16, static_root: PathBuf) -> Result<Self> {
+    pub(crate) fn start(
+        host: IpAddr,
+        port: u16,
+        static_root: PathBuf,
+        content_root: PathBuf,
+    ) -> Result<Self> {
         let listener = TcpListener::bind((host, port))
             .with_context(|| format!("bind Dagger Lab bridge on {host}:{port}"))?;
         listener
@@ -92,7 +97,15 @@ impl LabServer {
         let worker_shutdown = Arc::clone(&shutdown);
         let worker = thread::Builder::new()
             .name("dagger-lab-http".to_string())
-            .spawn(move || run(listener, send_command, worker_shutdown, static_root))
+            .spawn(move || {
+                run(
+                    listener,
+                    send_command,
+                    worker_shutdown,
+                    static_root,
+                    content_root,
+                )
+            })
             .context("start Dagger Lab bridge thread")?;
         Ok(Self {
             commands,
@@ -125,13 +138,16 @@ fn run(
     commands: Sender<LabCommand>,
     shutdown: Arc<AtomicBool>,
     static_root: PathBuf,
+    content_root: PathBuf,
 ) {
     while !shutdown.load(Ordering::Acquire) {
         match listener.accept() {
             Ok((mut stream, _)) => {
                 let _ = stream.set_read_timeout(Some(REQUEST_READ_TIMEOUT));
                 let _ = stream.set_write_timeout(Some(RESPONSE_WRITE_TIMEOUT));
-                if let Err(error) = handle_request(&mut stream, &commands, &static_root) {
+                if let Err(error) =
+                    handle_request(&mut stream, &commands, &static_root, &content_root)
+                {
                     eprintln!("DAGGER_LAB_REQUEST_ERROR {error:#}");
                     let _ = write_response(
                         &mut stream,
@@ -152,6 +168,7 @@ fn handle_request(
     stream: &mut TcpStream,
     commands: &Sender<LabCommand>,
     static_root: &Path,
+    content_root: &Path,
 ) -> Result<()> {
     let request = read_request(stream)?;
     if request.method == "OPTIONS" {
@@ -159,6 +176,16 @@ fn handle_request(
     }
     if request.method == "GET" && request.path == "/healthz" {
         return write_response(stream, 200, r#"{"status":"ok","project":"rusty-dagger"}"#);
+    }
+    // Sprite review reads derived content straight from disk: no runtime
+    // authority is involved, so these never enter the command channel.
+    if request.method == "GET" && request.path == "/api/dagger-lab/sprites/index" {
+        return serve_sprite_index(stream, content_root);
+    }
+    if request.method == "GET" {
+        if let Some(name) = request.path.strip_prefix("/api/dagger-lab/sprites/asset/") {
+            return serve_sprite_asset(stream, content_root, name);
+        }
     }
     if request.method == "GET" && !request.path.starts_with("/api/") {
         return serve_static(stream, static_root, &request.path);
@@ -251,6 +278,89 @@ fn serve_static(stream: &mut TcpStream, root: &Path, request_path: &str) -> Resu
         Some("html") => "text/html; charset=utf-8",
         Some("js") => "text/javascript; charset=utf-8",
         Some("css") => "text/css; charset=utf-8",
+        Some("json") => "application/json; charset=utf-8",
+        _ => "application/octet-stream",
+    };
+    write_bytes_response(stream, 200, content_type, &bytes)
+}
+
+/// Consolidated sprite-review index: every `*.json` manifest under
+/// `content/textures/` parsed into a name-keyed map, plus the file listing of
+/// each content subdirectory so the lab UI can cross-reference anything a
+/// manifest does not mention. Directory-driven on purpose: new manifests or
+/// assets appear without code changes. Unreadable or malformed manifests are
+/// skipped with a log line rather than failing the whole index.
+fn serve_sprite_index(stream: &mut TcpStream, content_root: &Path) -> Result<()> {
+    let mut manifests = serde_json::Map::new();
+    let mut files = serde_json::Map::new();
+    for subdir in ["textures", "audio"] {
+        let dir = content_root.join(subdir);
+        let mut names = Vec::new();
+        match std::fs::read_dir(&dir) {
+            Ok(entries) => {
+                for entry in entries.flatten() {
+                    if !entry
+                        .file_type()
+                        .map(|kind| kind.is_file())
+                        .unwrap_or(false)
+                    {
+                        continue;
+                    }
+                    names.push(entry.file_name().to_string_lossy().into_owned());
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error).with_context(|| format!("list {}", dir.display())),
+        }
+        names.sort();
+        if subdir == "textures" {
+            for name in &names {
+                if !name.ends_with(".json") {
+                    continue;
+                }
+                let parsed = std::fs::read_to_string(dir.join(name))
+                    .ok()
+                    .and_then(|text| serde_json::from_str::<serde_json::Value>(&text).ok());
+                match parsed {
+                    Some(value) => {
+                        manifests.insert(name.clone(), value);
+                    }
+                    None => eprintln!("DAGGER_LAB_SPRITE_MANIFEST_SKIP {name}"),
+                }
+            }
+        }
+        files.insert(subdir.to_string(), serde_json::Value::from(names));
+    }
+    write_response(
+        stream,
+        200,
+        &serde_json::json!({ "manifests": manifests, "files": files }).to_string(),
+    )
+}
+
+/// Serve one derived content file (sprite atlas PNG, audio clip, …) by path
+/// relative to the content root. Same traversal posture as `serve_static`.
+fn serve_sprite_asset(stream: &mut TcpStream, content_root: &Path, name: &str) -> Result<()> {
+    let name = name.split('?').next().unwrap_or(name);
+    if name.contains("..") || name.starts_with('/') || name.contains('\\') {
+        return write_response(stream, 404, r#"{"error":"unknown sprite asset"}"#);
+    }
+    let path = content_root.join(name);
+    let bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return write_response(stream, 404, r#"{"error":"unknown sprite asset"}"#)
+        }
+        Err(error) => return Err(error).with_context(|| format!("read {}", path.display())),
+    };
+    let content_type = match path.extension().and_then(|extension| extension.to_str()) {
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        Some("wav") => "audio/wav",
+        Some("ogg") => "audio/ogg",
+        Some("mp3") => "audio/mpeg",
         Some("json") => "application/json; charset=utf-8",
         _ => "application/octet-stream",
     };

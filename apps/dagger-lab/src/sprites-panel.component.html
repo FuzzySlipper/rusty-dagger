@@ -1,0 +1,139 @@
+<article class="panel sprites-panel" data-testid="sprites-panel">
+  <div class="panel-heading">
+    <div>
+      <p class="kicker">Derived content review · read-only</p>
+      <h2>Sprite review</h2>
+    </div>
+    <span class="schema" data-testid="sprite-count">{{ entries.length }} entries</span>
+  </div>
+  <p class="muted">
+    Browse every manifest the content directory publishes, play animations at their authored
+    timing, and step through directional frames to confirm each orientation matches its label.
+    Playback here is inspection only; runtime animation authority stays in Rust.
+  </p>
+
+  <p *ngIf="loadError" class="inline-error" role="alert" data-testid="sprites-error">{{ loadError }}</p>
+  <p *ngIf="loaded && entries.length === 0" class="muted">No sprite manifests were published by the content directory.</p>
+
+  <div class="sprites-layout" *ngIf="entries.length > 0">
+    <div class="sprite-browser">
+      <label class="filter"><span>Find a sprite or manifest</span>
+        <input data-testid="sprite-filter" type="search" placeholder="rat or billboard" [(ngModel)]="filter" />
+      </label>
+      <nav data-testid="sprite-list" aria-label="Derived sprite entries">
+        <ng-container *ngFor="let group of groups()">
+          <p class="kicker sprite-group">{{ group.manifest }}</p>
+          <button *ngFor="let entry of group.entries; trackBy: trackEntry" type="button"
+            [class.selected]="selectedKey === entry.key"
+            [attr.data-testid]="entryTestId(entry)" (click)="selectEntry(entry)">
+            <span>{{ entry.label }}</span>
+            <small>{{ entry.detail }}<ng-container *ngIf="entry.animations.length > 0"> · {{ entry.animations.length }} animations</ng-container></small>
+          </button>
+        </ng-container>
+      </nav>
+    </div>
+
+    <section class="sprite-detail" *ngIf="selected() as entry" data-testid="sprite-detail">
+      <div class="content-title">
+        <div>
+          <p class="kicker">{{ entry.manifest }}</p>
+          <h3 data-testid="sprite-title">{{ entry.label }}</h3>
+        </div>
+        <span class="schema">{{ entry.detail }}</span>
+      </div>
+
+      <div class="sprite-stage-row">
+        <div class="sprite-stage" data-testid="sprite-stage">
+          <ng-container *ngIf="currentRect() as rect">
+            <div class="sprite-frame-view" data-testid="sprite-frame-view"
+              [ngStyle]="stageStyle(entry, rect)">
+              <span *ngIf="pivotStyle(entry, rect) as pivot" class="sprite-pivot" data-testid="sprite-pivot"
+                [ngStyle]="pivot" title="pivot (origin bottom-left)"></span>
+            </div>
+          </ng-container>
+          <img *ngIf="entry.frames.length === 0" class="sprite-plain-image" [src]="assetUrl(entry)" [alt]="entry.label" />
+        </div>
+        <div class="sprite-stage-meta">
+          <div><span>Atlas</span><code data-testid="sprite-atlas-path">{{ entry.imagePath }}</code></div>
+          <div *ngIf="entry.imageWidth > 0"><span>Atlas pixels</span><strong>{{ entry.imageWidth }} × {{ entry.imageHeight }}</strong></div>
+          <div *ngIf="entry.worldSize"><span>World size</span><strong>{{ format(entry.worldSize?.[0]) }} × {{ format(entry.worldSize?.[1]) }}</strong></div>
+          <div *ngIf="entry.pivot"><span>Pivot</span><strong data-testid="sprite-pivot-value">{{ format(entry.pivot?.[0]) }}, {{ format(entry.pivot?.[1]) }}</strong></div>
+          <div><span>Frames</span><strong>{{ entry.frames.length }}</strong></div>
+          <label class="zoom"><span>Zoom</span>
+            <select data-testid="sprite-zoom" [(ngModel)]="zoom">
+              <option [ngValue]="0">fit</option>
+              <option [ngValue]="1">1×</option>
+              <option [ngValue]="2">2×</option>
+              <option [ngValue]="4">4×</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="sprite-animations" *ngIf="entry.animations.length > 0">
+        <p class="kicker field-kicker">Animations · confirm each name matches what you see</p>
+        <div class="sprite-anim-list" data-testid="sprite-anim-list" role="tablist" aria-label="Animations">
+          <button *ngFor="let animation of entry.animations; let i = index" type="button" role="tab"
+            [class.selected]="animationIndex === i"
+            [attr.data-testid]="'sprite-anim-' + animation.name"
+            [attr.aria-selected]="animationIndex === i"
+            (click)="selectAnimation(i)">
+            <span>{{ animation.name }}</span>
+            <small>{{ animation.framesPerOrientation }} frames · {{ animation.fps }} fps · {{ animation.loop ? 'loop' : 'once' }}<ng-container *ngIf="animation.notes"> · {{ animation.notes }}</ng-container></small>
+          </button>
+        </div>
+
+        <ng-container *ngIf="animation() as animation">
+          <div class="sprite-playback">
+            <button type="button" class="primary" data-testid="sprite-play" (click)="togglePlay()">
+              {{ playing ? 'Stop' : 'Play' }}
+            </button>
+            <div class="sprite-playback-status">
+              <strong data-testid="sprite-anim-name">{{ animation.name }}</strong>
+              <span data-testid="sprite-frame-index" [attr.data-frame]="currentFrame()">
+                frame {{ currentFrame() ?? '—' }}<ng-container *ngIf="animation.framesPerOrientation > 1"> · step {{ step + 1 }} / {{ animation.framesPerOrientation }}</ng-container>
+              </span>
+            </div>
+          </div>
+
+          <div class="sprite-orientations" *ngIf="animation.orientationCount > 1" data-testid="sprite-orientations">
+            <p class="kicker">Directional review · viewer-relative facing</p>
+            <div class="sprite-compass">
+              <button *ngFor="let orientation of orientations()" type="button"
+                [class.selected]="orientation === this.orientation"
+                [attr.data-testid]="'sprite-orientation-' + orientation"
+                (click)="selectOrientation(orientation)">
+                {{ orientationLabel(orientation) }}
+              </button>
+            </div>
+            <p class="play-note" data-testid="sprite-orientation-name">
+              Showing orientation {{ orientation }} ({{ orientationLabel(orientation) }}): the side of the actor facing the viewer.
+              0° is the actor's front, 180° its back.
+            </p>
+          </div>
+        </ng-container>
+      </div>
+
+      <div class="sprite-frames" *ngIf="entry.frames.length > 0">
+        <p class="kicker field-kicker">Atlas frames · click to inspect</p>
+        <div class="sprite-frame-grid" data-testid="sprite-frame-grid">
+          <button *ngFor="let rect of entry.frames" type="button" class="sprite-thumb"
+            [class.selected]="currentFrame() === rect.frame"
+            [class.live]="playing && currentFrame() === rect.frame"
+            [attr.data-testid]="'sprite-thumb-' + rect.frame"
+            [title]="'frame ' + rect.frame"
+            (click)="inspectFrame(rect.frame)">
+            <span [ngStyle]="thumbStyle(entry, rect)"></span>
+            <small>{{ rect.frame }}</small>
+          </button>
+        </div>
+        <div class="sprite-inspector" *ngIf="currentRect() as rect" data-testid="sprite-inspector">
+          <span>frame {{ rect.frame }}</span>
+          <code>uv {{ format(rect.uvMin[0]) }}, {{ format(rect.uvMin[1]) }} → {{ format(rect.uvMax[0]) }}, {{ format(rect.uvMax[1]) }}</code>
+          <code *ngIf="rect.sourceSize">source size {{ format(rect.sourceSize[0]) }} × {{ format(rect.sourceSize[1]) }}</code>
+          <code *ngIf="rect.sourceOffset">source offset {{ format(rect.sourceOffset[0]) }}, {{ format(rect.sourceOffset[1]) }}</code>
+        </div>
+      </div>
+    </section>
+  </div>
+</article>
