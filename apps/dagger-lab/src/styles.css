@@ -174,6 +174,10 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
 .sprite-playback-status { display: grid; gap: 2px; }
 .sprite-playback-status strong { color: #c7a96a; font: 500 1.05rem ui-monospace, monospace; }
 .sprite-playback-status span { color: #8ca09d; font: .74rem ui-monospace, monospace; }
+.sprite-sequence { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-top: 10px; }
+.sprite-sequence span { color: #80908e; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
+.sprite-sequence code { color: #d8e1de; font-size: .8rem; }
+.sprite-sequence small { color: #6f7f7d; font-size: .66rem; }
 .sprite-orientations { margin-top: 18px; }
 .sprite-compass { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .sprite-compass button { padding: 8px 12px; font: 600 .74rem ui-monospace, monospace; }

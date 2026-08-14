@@ -29,12 +29,34 @@ pub struct MobileType {
     /// Classic lootable corpse marker texture. DFU replaces the disabled live
     /// mobile with this separate flat after authoritative death.
     pub corpse: Option<CorpseTexture>,
+    /// Classic attack playback (DFU PrimaryAttackAnimFrames + alternates).
+    pub attack_sequence: AttackSequence,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CorpseTexture {
     pub archive: u16,
     pub record: u16,
+}
+
+/// One alternate attack sequence (DFU PrimaryAttackAnimFrames2..5) with its
+/// Dice100 threshold (DFU ChanceForAttackN, tested cumulatively in order).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AttackAlternate {
+    pub chance: u8,
+    pub frames: &'static [i8],
+}
+
+/// Classic attack playback sequence (DFU PrimaryAttackAnimFrames). Entries
+/// are per-orientation frame indices played in order at PRIMARY_ATTACK_ANIM_SPEED;
+/// -1 is not a frame: DaggerfallMobileUnit treats it as the melee damage beat
+/// (doMeleeDamage) and advances past it in the same tick, so it costs no
+/// visible time. Our runtime currently keeps damage timing authoritative
+/// elsewhere and uses the marker only to skip the beat in presentation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AttackSequence {
+    pub primary: &'static [i8],
+    pub alternates: &'static [AttackAlternate],
 }
 
 /// The enemies present in Privateer's Hold (extend as new dungeons need).
@@ -52,6 +74,10 @@ pub const MOBILE_TYPES: &[MobileType] = &[
             archive: 401,
             record: 1,
         }),
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, 2, -1, 3, 4, 5],
+            alternates: &[],
+        },
     },
     MobileType {
         id: 1,
@@ -60,6 +86,10 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         has_idle: false,
         flying: true,
         corpse: None,
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, 2, -1, 3, 1],
+            alternates: &[],
+        },
     },
     MobileType {
         id: 3,
@@ -68,6 +98,10 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         has_idle: false,
         flying: true,
         corpse: None,
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, -1, 2, 3],
+            alternates: &[],
+        },
     },
     MobileType {
         id: 4,
@@ -76,6 +110,10 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         has_idle: true,
         flying: false,
         corpse: None,
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, 2, -1, 3, 0],
+            alternates: &[],
+        },
     },
     MobileType {
         id: 7,
@@ -84,6 +122,13 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         has_idle: true,
         flying: false,
         corpse: None,
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, 2, -1, 3, 4, -1, 5, 0],
+            alternates: &[AttackAlternate {
+                chance: 50,
+                frames: &[4, -1, 5, 0],
+            }],
+        },
     },
     MobileType {
         id: 15,
@@ -95,6 +140,10 @@ pub const MOBILE_TYPES: &[MobileType] = &[
             archive: 306,
             record: 1,
         }),
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, 2, 3, -1, 4, 5],
+            alternates: &[],
+        },
     },
     MobileType {
         id: 138,
@@ -103,6 +152,19 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         has_idle: true,
         flying: false,
         corpse: None,
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, -1, 2, 3, 4, -1, 5, 0],
+            alternates: &[
+                AttackAlternate {
+                    chance: 33,
+                    frames: &[4, 4, -1, 5, 0, 0],
+                },
+                AttackAlternate {
+                    chance: 33,
+                    frames: &[4, -1, 5, 0, 0, 1, -1, 2, 3, 4, -1, 5, 0],
+                },
+            ],
+        },
     },
     MobileType {
         id: 141,
@@ -111,11 +173,41 @@ pub const MOBILE_TYPES: &[MobileType] = &[
         has_idle: true,
         flying: false,
         corpse: None,
+        attack_sequence: AttackSequence {
+            primary: &[0, 1, -1, 2, 3, 4, -1, 5],
+            alternates: &[AttackAlternate {
+                chance: 50,
+                frames: &[3, 4, -1, 5, 0],
+            }],
+        },
     },
 ];
 
 pub fn mobile_type(id: u8) -> Option<&'static MobileType> {
     MOBILE_TYPES.iter().find(|t| t.id == id)
+}
+
+/// Choose an attack sequence the DFU way (DaggerfallMobileUnit.ApplyEnemyState):
+/// a 1..=100 roll tested against cumulative alternate thresholds, primary as
+/// the fallback.
+pub fn choose_attack_sequence(sequence: &AttackSequence, roll: u8) -> &'static [i8] {
+    let mut roll = i32::from(roll.clamp(1, 100));
+    for alternate in sequence.alternates {
+        if roll <= i32::from(alternate.chance) {
+            return alternate.frames;
+        }
+        roll -= i32::from(alternate.chance);
+    }
+    sequence.primary
+}
+
+/// The visible frames of an attack sequence in playback order: the -1 damage
+/// beats are dropped (they cost no visible time in DFU), duplicate frame
+/// indices are preserved (a repeated index is a held frame).
+pub fn visible_attack_frames(sequence: &[i8]) -> impl Iterator<Item = u32> + '_ {
+    sequence
+        .iter()
+        .filter_map(|frame| u32::try_from(*frame).ok())
 }
 
 /// One orientation's animation record + mirroring (DFU MobileAnimation).

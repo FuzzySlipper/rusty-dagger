@@ -7,6 +7,7 @@ import {
   SpriteAnimation,
   SpriteEntry,
   SpriteFrameRect,
+  displayFrames,
   normalizeSpriteIndex,
 } from './sprite-contract';
 
@@ -181,9 +182,21 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
     if (this.inspectedFrame !== undefined && !this.playing) return this.inspectedFrame;
     const animation = this.animation();
     if (animation === undefined) return entry.frames[0]?.frame;
+    const frames = displayFrames(animation);
+    const animIndex = frames[Math.min(this.step, frames.length - 1)] ?? 0;
     return (
-      animation.frameStart + this.orientation * animation.framesPerOrientation + this.step
+      animation.frameStart + this.orientation * animation.framesPerOrientation + animIndex
     );
+  }
+
+  /** Visible beats of the selected animation (classic sequence when present). */
+  beats(animation: SpriteAnimation): number {
+    return displayFrames(animation).length;
+  }
+
+  /** Classic sequence as review text; ⚔ marks the melee damage beat. */
+  sequenceText(sequence: readonly number[]): string {
+    return sequence.map((frame) => (frame === -1 ? '⚔' : String(frame))).join(' ');
   }
 
   currentRect(): SpriteFrameRect | undefined {
@@ -305,11 +318,12 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
         return;
       }
       this.step += 1;
-      if (this.step >= active.framesPerOrientation) {
+      const beats = displayFrames(active).length;
+      if (this.step >= beats) {
         if (active.loop) {
           this.step = 0;
         } else {
-          this.step = active.framesPerOrientation - 1;
+          this.step = beats - 1;
           this.stopTimer();
         }
       }

@@ -25,6 +25,25 @@ export interface SpriteAnimation {
   readonly framesPerOrientation: number;
   readonly orientationCount: number;
   readonly notes: string;
+  /**
+   * Classic playback order (DFU PrimaryAttackAnimFrames) when the state
+   * carries one: per-orientation frame indices; -1 marks the melee damage
+   * beat and costs no visible time.
+   */
+  readonly sequence?: readonly number[] | undefined;
+  /** Alternate sequences with cumulative Dice100 chances (DFU ChanceForAttackN). */
+  readonly alternates?: readonly { chance: number; sequence: readonly number[] }[] | undefined;
+}
+
+/** The frames a sequence plays per orientation, in order: damage beats (-1)
+ * dropped, held frames (duplicates) preserved. Falls back to linear 0..N-1. */
+export function displayFrames(animation: SpriteAnimation): number[] {
+  const sequence = animation.sequence;
+  if (sequence !== undefined && sequence.length > 0) {
+    const visible = sequence.filter((frame) => frame >= 0);
+    if (visible.length > 0) return visible;
+  }
+  return Array.from({ length: animation.framesPerOrientation }, (_value, index) => index);
 }
 
 export interface SpriteEntry {
@@ -212,6 +231,11 @@ function stateAnimations(states: unknown, frameCount: number): SpriteAnimation[]
       framesPerOrientation: number(raw['framesPerOrientation']) ?? 1,
       orientationCount: 1,
       notes: '',
+      sequence: numberArray(raw['sequence']),
+      alternates: arrayOfObjects(raw['alternateSequences']).map((alternate) => ({
+        chance: number(alternate['chance']) ?? 0,
+        sequence: numberArray(alternate['sequence']) ?? [],
+      })),
     });
   }
   parsed.sort((left, right) => left.frameStart - right.frameStart);

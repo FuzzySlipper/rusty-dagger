@@ -384,6 +384,11 @@ async function assertSpriteReviewTab(page, output) {
 
   await page.getByTestId('sprite-anim-attack').click();
   await page.getByTestId('sprite-anim-name').filter({ hasText: 'attack' }).waitFor();
+  const classicSequence = await page.getByTestId('sprite-sequence').innerText();
+  assert.ok(
+    classicSequence.includes('0 1 2 ⚔ 3 4 5'),
+    'rat attack does not show the classic playback sequence with its damage beat',
+  );
   const firstFrame = await page.getByTestId('sprite-frame-index').getAttribute('data-frame');
   await page.getByTestId('sprite-play').click();
   await page.waitForFunction(

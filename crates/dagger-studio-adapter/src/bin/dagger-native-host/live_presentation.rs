@@ -2,8 +2,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use anyhow::{bail, Context, Result};
 use dagger_runtime::{
-    AnimationService, EnemyAnimationLayout, EnemyAnimationStateLayout, EnemyAnimationUpdate,
-    EnemyPresentationReadout, MeleePresentationPhase, MeleePresentationReadout, PositionUpdate,
+    AnimationService, AttackSequence, EnemyAnimationLayout, EnemyAnimationStateLayout,
+    EnemyAnimationUpdate, EnemyPresentationReadout, MeleePresentationPhase,
+    MeleePresentationReadout, PositionUpdate,
 };
 use rusty_engine::render_model::{RenderDiff, RenderFrameDiff, RenderHandle, Transform};
 use serde::Deserialize;
@@ -56,7 +57,7 @@ impl LivePresentation {
         let enemy_layouts = enemy_manifest
             .enemies
             .into_iter()
-            .map(|enemy| (enemy.mobile_id, enemy.states.into_layout()))
+            .map(|enemy| (enemy.mobile_id, enemy.states.into_parts()))
             .collect::<BTreeMap<_, _>>();
         let frame_counts = project
             .assets
@@ -94,9 +95,9 @@ impl LivePresentation {
                 .copied()
                 .unwrap_or(1);
             if let Some(mobile_id) = enemy_mobile_id(&sprite.asset) {
-                let layout = enemy_layouts
+                let (layout, attack_sequences) = enemy_layouts
                     .get(&mobile_id)
-                    .copied()
+                    .cloned()
                     .with_context(|| format!("enemy {mobile_id} has no animation layout"))?;
                 let required_frames = layout
                     .hurt
@@ -106,6 +107,9 @@ impl LivePresentation {
                     bail!("enemy sprite {} has {frame_count} frames; layout requires {required_frames}", sprite.asset);
                 }
                 animation.add_enemy_with_layout(entity.id, entity.translation, mobile_id, layout);
+                if !attack_sequences.is_empty() {
+                    animation.set_attack_sequences(entity.id, attack_sequences);
+                }
                 sprite_descriptors.push(SpriteDescriptor {
                     handle: entity.id,
                     authored: entity.translation,
@@ -357,13 +361,42 @@ struct EnemyStatesDocument {
 }
 
 impl EnemyStatesDocument {
-    fn into_layout(self) -> EnemyAnimationLayout {
-        EnemyAnimationLayout {
+    fn into_parts(self) -> (EnemyAnimationLayout, Vec<AttackSequence>) {
+        let EnemyStateLayoutDocument {
+            frame_start,
+            frames_per_orientation,
+            fps,
+            loops,
+            sequence,
+            alternate_sequences,
+        } = self.attack;
+        let layout = EnemyAnimationLayout {
             movement: self.movement.into_layout(),
             idle: self.idle.into_layout(),
-            attack: self.attack.into_layout(),
+            attack: EnemyAnimationStateLayout {
+                frame_start,
+                frames_per_orientation,
+                fps,
+                loops,
+            },
             hurt: self.hurt.into_layout(),
+        };
+        // Classic attack playback (DFU PrimaryAttackAnimFrames): primary first
+        // with chance 0, then alternates with cumulative Dice100 thresholds.
+        let mut sequences = Vec::new();
+        if let Some(primary) = sequence {
+            sequences.push(AttackSequence {
+                chance: 0,
+                frames: primary,
+            });
         }
+        for alternate in alternate_sequences.unwrap_or_default() {
+            sequences.push(AttackSequence {
+                chance: alternate.chance,
+                frames: alternate.sequence,
+            });
+        }
+        (layout, sequences)
     }
 }
 
@@ -375,6 +408,16 @@ struct EnemyStateLayoutDocument {
     fps: u32,
     #[serde(rename = "loop")]
     loops: bool,
+    #[serde(default)]
+    sequence: Option<Vec<i8>>,
+    #[serde(default)]
+    alternate_sequences: Option<Vec<AlternateSequenceDocument>>,
+}
+
+#[derive(Deserialize)]
+struct AlternateSequenceDocument {
+    chance: u8,
+    sequence: Vec<i8>,
 }
 
 impl EnemyStateLayoutDocument {

@@ -42,6 +42,9 @@ pub struct SpriteEntry {
 struct ActiveEnemyAction {
     kind: EnemyActionKind,
     elapsed: f32,
+    /// Index into the enemy's attack sequences (0 = primary) chosen when the
+    /// action started. Unused for Hurt.
+    sequence: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -73,6 +76,17 @@ pub struct EnemyAnimationUpdate {
     pub hurt_sequence: u64,
 }
 
+/// One classic attack playback option (DFU PrimaryAttackAnimFrames, carried
+/// through the enemy manifest). `frames` holds per-orientation frame indices
+/// in playback order; -1 is the melee damage beat (no visible time). Index 0
+/// is the primary sequence (chance unused); alternates carry their cumulative
+/// Dice100 threshold.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AttackSequence {
+    pub chance: u8,
+    pub frames: Vec<i8>,
+}
+
 /// What drives a sprite's frame.
 #[derive(Debug, Clone)]
 pub enum SpriteKind {
@@ -93,6 +107,9 @@ pub enum SpriteKind {
         /// Frames per orientation in the atlas (M). All 8 orientations
         /// carry the same count (DFU move records are uniform per enemy).
         layout: EnemyAnimationLayout,
+        /// Classic attack playback sequences (primary first). Empty = legacy
+        /// linear 0..M-1 playback.
+        attack_sequences: Vec<AttackSequence>,
     },
 }
 
@@ -179,6 +196,7 @@ impl AnimationService {
                 heading: 0.0,
                 mobile_id,
                 layout,
+                attack_sequences: Vec::new(),
             },
             last_frame: None,
             is_moving: false,
@@ -186,6 +204,19 @@ impl AnimationService {
             hurt_sequence: 0,
             active_action: None,
         });
+    }
+
+    /// Install classic attack playback sequences for a registered enemy
+    /// (primary first, alternates with cumulative Dice100 chances after).
+    pub fn set_attack_sequences(&mut self, handle: u32, sequences: Vec<AttackSequence>) {
+        if let Some(entry) = self.entries.iter_mut().find(|entry| entry.handle == handle) {
+            if let SpriteKind::Enemy {
+                attack_sequences, ..
+            } = &mut entry.kind
+            {
+                *attack_sequences = sequences;
+            }
+        }
     }
 
     /// Update enemy positions and move/idle state from the patrol service.
@@ -236,12 +267,28 @@ impl AnimationService {
                 entry.active_action = Some(ActiveEnemyAction {
                     kind: EnemyActionKind::Hurt,
                     elapsed: 0.0,
+                    sequence: 0,
                 });
             } else if update.attack_sequence > entry.attack_sequence {
                 entry.attack_sequence = update.attack_sequence;
+                // DFU rolls Dice100 per attack against cumulative alternate
+                // chances; presentation uses a deterministic roll derived from
+                // the authoritative counter so playback is reproducible.
+                let sequence = match &entry.kind {
+                    SpriteKind::Enemy {
+                        mobile_id,
+                        attack_sequences,
+                        ..
+                    } => choose_attack_sequence(
+                        attack_sequences,
+                        attack_roll(*mobile_id, update.attack_sequence),
+                    ),
+                    _ => 0,
+                };
                 entry.active_action = Some(ActiveEnemyAction {
                     kind: EnemyActionKind::Attack,
                     elapsed: 0.0,
+                    sequence,
                 });
             }
         }
@@ -279,20 +326,41 @@ impl AnimationService {
                     position,
                     heading,
                     layout,
+                    attack_sequences,
                     ..
                 } => {
                     let orientation = evaluate_directional(*position, *heading, camera) as u32;
-                    let state = match entry.active_action {
-                        Some(action) if action.kind == EnemyActionKind::Hurt => layout.hurt,
-                        Some(_) => layout.attack,
-                        None if entry.is_moving => layout.movement,
-                        None => layout.idle,
+                    let (state, attack_frames) = match &entry.active_action {
+                        Some(action) if action.kind == EnemyActionKind::Hurt => (layout.hurt, None),
+                        Some(action) => (
+                            layout.attack,
+                            attack_sequences
+                                .get(action.sequence)
+                                .map(|sequence| sequence.frames.as_slice()),
+                        ),
+                        None if entry.is_moving => (layout.movement, None),
+                        None => (layout.idle, None),
                     };
                     let elapsed = entry
                         .active_action
                         .map_or(self.elapsed, |action| action.elapsed);
                     let raw_frame = (elapsed * state.fps as f32) as u32;
-                    let anim_frame = if state.frames_per_orientation <= 1 {
+                    let anim_frame = if let Some(frames) = attack_frames {
+                        // Classic sequence playback: walk the visible frames
+                        // (damage beats cost no time), holding the last one.
+                        let visible = frames.iter().filter(|frame| **frame >= 0).count();
+                        if visible == 0 {
+                            0
+                        } else {
+                            let index = (raw_frame as usize).min(visible - 1);
+                            frames
+                                .iter()
+                                .filter(|frame| **frame >= 0)
+                                .nth(index)
+                                .map(|frame| *frame as u32)
+                                .unwrap_or(0)
+                        }
+                    } else if state.frames_per_orientation <= 1 {
                         0
                     } else if state.loops {
                         raw_frame % state.frames_per_orientation
@@ -309,15 +377,32 @@ impl AnimationService {
                     frame,
                 });
             }
-            if let (Some(action), SpriteKind::Enemy { layout, .. }) =
-                (&mut entry.active_action, &entry.kind)
+            if let (
+                Some(action),
+                SpriteKind::Enemy {
+                    layout,
+                    attack_sequences,
+                    ..
+                },
+            ) = (&mut entry.active_action, &entry.kind)
             {
                 action.elapsed += dt;
                 let state = match action.kind {
                     EnemyActionKind::Attack => layout.attack,
                     EnemyActionKind::Hurt => layout.hurt,
                 };
-                let duration = state.frames_per_orientation as f32 / state.fps.max(1) as f32;
+                // Sequence playback lasts one beat per visible frame.
+                let beats = match action.kind {
+                    EnemyActionKind::Attack => attack_sequences
+                        .get(action.sequence)
+                        .map(|sequence| {
+                            sequence.frames.iter().filter(|frame| **frame >= 0).count() as u32
+                        })
+                        .unwrap_or(state.frames_per_orientation)
+                        .max(1),
+                    EnemyActionKind::Hurt => state.frames_per_orientation,
+                };
+                let duration = beats as f32 / state.fps.max(1) as f32;
                 if action.elapsed >= duration {
                     entry.active_action = None;
                 }
@@ -331,6 +416,29 @@ impl Default for AnimationService {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Deterministic 1..=100 presentation roll for attack sequence selection
+/// (DFU rolls Dice100 per attack; gameplay timing stays authoritative
+/// elsewhere, so reproducible playback is preferred here).
+fn attack_roll(mobile_id: u8, attack_sequence: u64) -> u8 {
+    let mut hash = (mobile_id as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        ^ attack_sequence.wrapping_mul(0xC2B2_AE3D_27D4_EB4F);
+    hash ^= hash >> 33;
+    (hash % 100) as u8 + 1
+}
+
+/// DFU ApplyEnemyState: test the roll against cumulative alternate chances,
+/// falling back to the primary sequence (index 0).
+fn choose_attack_sequence(sequences: &[AttackSequence], roll: u8) -> usize {
+    let mut roll = i32::from(roll);
+    for (index, sequence) in sequences.iter().enumerate().skip(1) {
+        if roll <= i32::from(sequence.chance) {
+            return index;
+        }
+        roll -= i32::from(sequence.chance);
+    }
+    0
 }
 
 /// DFU animation speed for a mobile type's move state (ground=6, flying=10).
@@ -535,6 +643,90 @@ mod tests {
             40,
             "the first attack after a runtime counter reset must not be swallowed"
         );
+    }
+
+    #[test]
+    fn attack_plays_classic_sequence_with_damage_beat_skipped() {
+        // Imp primary (DFU): {0, 1, 2, -1, 3, 1} — the -1 damage beat costs
+        // no visible time and the closing frame 1 is a held recovery pose.
+        let layout = EnemyAnimationLayout {
+            movement: EnemyAnimationStateLayout {
+                frame_start: 0,
+                frames_per_orientation: 4,
+                fps: 6,
+                loops: true,
+            },
+            idle: EnemyAnimationStateLayout {
+                frame_start: 32,
+                frames_per_orientation: 1,
+                fps: 4,
+                loops: true,
+            },
+            attack: EnemyAnimationStateLayout {
+                frame_start: 40,
+                frames_per_orientation: 6,
+                fps: 10,
+                loops: false,
+            },
+            hurt: EnemyAnimationStateLayout {
+                frame_start: 88,
+                frames_per_orientation: 1,
+                fps: 4,
+                loops: false,
+            },
+        };
+        let mut svc = AnimationService::new();
+        svc.add_enemy_with_layout(600, [0.0, 0.0, 0.0], 1, layout);
+        svc.set_attack_sequences(
+            600,
+            vec![AttackSequence {
+                chance: 0,
+                frames: vec![0, 1, 2, -1, 3, 1],
+            }],
+        );
+        let camera = [0.0, 1.0, -4.0];
+        assert_eq!(svc.evaluate(0.0, camera)[0].frame, 32);
+        svc.update_enemy_actions(&[EnemyAnimationUpdate {
+            handle: 600,
+            attack_sequence: 1,
+            hurt_sequence: 0,
+        }]);
+        // Beats lag one evaluate call (elapsed advances after the frame is
+        // computed): step 0.1s at 10fps per beat, then read.
+        let expected = [40, 41, 42, 43, 41];
+        for frame in expected {
+            assert_eq!(svc.evaluate(0.0, camera)[0].frame, frame);
+            assert!(svc.evaluate(0.1, camera).is_empty());
+        }
+        assert_eq!(
+            svc.evaluate(0.0, camera)[0].frame,
+            32,
+            "sequence plays its 5 visible beats, then the enemy returns to idle"
+        );
+    }
+
+    #[test]
+    fn attack_alternate_selection_matches_dfu_cumulative_chances() {
+        let sequences = vec![
+            AttackSequence {
+                chance: 0,
+                frames: vec![0],
+            },
+            AttackSequence {
+                chance: 33,
+                frames: vec![1],
+            },
+            AttackSequence {
+                chance: 33,
+                frames: vec![2],
+            },
+        ];
+        assert_eq!(choose_attack_sequence(&sequences, 1), 1);
+        assert_eq!(choose_attack_sequence(&sequences, 33), 1);
+        assert_eq!(choose_attack_sequence(&sequences, 34), 2);
+        assert_eq!(choose_attack_sequence(&sequences, 66), 2);
+        assert_eq!(choose_attack_sequence(&sequences, 67), 0);
+        assert_eq!(choose_attack_sequence(&sequences, 100), 0);
     }
 
     #[test]

@@ -548,9 +548,16 @@ Ownership split:
   `evaluate(dt, camera)` call per tick walks all entries and emits only
   changed frames as a `Vec<FrameUpdate>`. Two `SpriteKind`s:
   - `Env { frame_count, fps }`: time-cycled, frame = `(elapsed * fps) % frame_count`.
-  - `Enemy { position, heading, mobile_id, layout }`: actor-relative
+  - `Enemy { position, heading, mobile_id, layout, attack_sequences }`: actor-relative
     camera-driven orientation via `evaluate_directional`; state-major layout
-    selects idle/movement or authoritative Attack/Hurt one-shots.
+    selects idle/movement or authoritative Attack/Hurt one-shots. Attack
+    one-shots follow the classic per-enemy playback sequence (DFU
+    `PrimaryAttackAnimFrames`, ported in `arena2::mobile` and carried through
+    the enemy manifest): the visible frames play in sequence order at 10fps,
+    the -1 melee-damage beat costs no visible time, duplicate indices hold a
+    pose, and alternates are chosen per attack by a deterministic
+    presentation-side roll against the DFU cumulative chances. Damage timing
+    itself stays authoritative in the combat rules, not the animation.
 - `AnimationService` remains the sole per-tick authority and is covered in
   Rust. `dagger-native-host` composes its consolidated updates with patrol
   transforms in one bounded Rust tick and submits them through the facade.

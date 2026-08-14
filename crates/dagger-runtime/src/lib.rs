@@ -16,8 +16,8 @@ mod project;
 mod runtime;
 
 pub use animation::{
-    AnimationService, EnemyAnimationLayout, EnemyAnimationStateLayout, EnemyAnimationUpdate,
-    FrameUpdate, SpriteEntry, SpriteKind,
+    AnimationService, AttackSequence, EnemyAnimationLayout, EnemyAnimationStateLayout,
+    EnemyAnimationUpdate, FrameUpdate, SpriteEntry, SpriteKind,
 };
 pub use combat_assets::{
     AudioAsset, CombatAssetCatalog, CombatFrame, EffectAsset, WeaponAnimation, WeaponAsset,

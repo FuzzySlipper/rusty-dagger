@@ -92,9 +92,18 @@
             <div class="sprite-playback-status">
               <strong data-testid="sprite-anim-name">{{ animation.name }}</strong>
               <span data-testid="sprite-frame-index" [attr.data-frame]="currentFrame()">
-                frame {{ currentFrame() ?? '—' }}<ng-container *ngIf="animation.framesPerOrientation > 1"> · step {{ step + 1 }} / {{ animation.framesPerOrientation }}</ng-container>
+                frame {{ currentFrame() ?? '—' }}<ng-container *ngIf="beats(animation) > 1"> · step {{ step + 1 }} / {{ beats(animation) }}</ng-container>
               </span>
             </div>
+          </div>
+          <div class="sprite-sequence" *ngIf="animation.sequence as sequence" data-testid="sprite-sequence">
+            <span>classic sequence</span>
+            <code>{{ sequenceText(sequence) }}</code>
+            <small>⚔ = melee damage beat (no visible time)</small>
+          </div>
+          <div class="sprite-sequence" *ngFor="let alternate of animation.alternates" data-testid="sprite-sequence-alt">
+            <span>alternate · {{ alternate.chance }}% chance</span>
+            <code>{{ sequenceText(alternate.sequence) }}</code>
           </div>
 
           <div class="sprite-orientations" *ngIf="animation.orientationCount > 1" data-testid="sprite-orientations">
