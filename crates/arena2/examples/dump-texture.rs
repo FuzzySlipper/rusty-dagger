@@ -9,7 +9,9 @@ use arena2::texture::TextureFile;
 
 fn main() {
     let mut args = std::env::args().skip(1);
-    let path = args.next().expect("usage: dump-texture <TEXTURE.nnn> [record out_prefix]");
+    let path = args
+        .next()
+        .expect("usage: dump-texture <TEXTURE.nnn> [record out_prefix]");
     let tex = TextureFile::load(std::path::Path::new(&path)).expect("load texture archive");
     match args.next() {
         None => {
