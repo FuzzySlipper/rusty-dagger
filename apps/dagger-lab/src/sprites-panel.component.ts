@@ -64,7 +64,16 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
     }
   }
 
+  private groupsCache: { filter: string; entries: readonly SpriteEntry[]; groups: SpriteGroup[] } | undefined;
+
   groups(): SpriteGroup[] {
+    // Memoized: the lab poll ticks change detection every 250 ms, and
+    // returning fresh group arrays each time makes the outer ngFor rebuild
+    // the nav DOM — resetting scroll and eating clicks.
+    const cache = this.groupsCache;
+    if (cache !== undefined && cache.filter === this.filter && cache.entries === this.entries) {
+      return cache.groups;
+    }
     const filter = this.filter.trim().toLowerCase();
     const groups: SpriteGroup[] = [];
     let current: { manifest: string; entries: SpriteEntry[] } | undefined;
@@ -78,7 +87,12 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
       }
       current.entries.push(entry);
     }
+    this.groupsCache = { filter: this.filter, entries: this.entries, groups };
     return groups;
+  }
+
+  trackGroup(_index: number, group: SpriteGroup): string {
+    return group.manifest;
   }
 
   selected(): SpriteEntry | undefined {
@@ -176,47 +190,76 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
   /// CSS sprite blitting: scale the atlas as a background image and shift it
   /// so exactly one frame rect shows. Pixelated scaling keeps the classic art
   /// crisp; no canvas is involved (Engine owns the sole product canvas).
-  frameStyle(
+  /// Sprite atlases are stored bottom-up (see SpriteEntry.flipY), so the
+  /// pixels layer is flipped for display while the frame box and pivot marker
+  /// keep their normal orientation.
+  private frameMetrics(
     entry: SpriteEntry,
     rect: SpriteFrameRect,
     boxWidth: number,
     boxHeight: number,
-  ): Record<string, string> {
+  ): { width: number; height: number; scale: number } {
     const width = Math.max(1, (rect.uvMax[0] - rect.uvMin[0]) * entry.imageWidth);
     const height = Math.max(1, (rect.uvMax[1] - rect.uvMin[1]) * entry.imageHeight);
     const scale =
       this.zoom > 0
         ? this.zoom
         : Math.max(0.05, Math.min(boxWidth / width, boxHeight / height, 8));
-    return {
-      width: `${width * scale}px`,
-      height: `${height * scale}px`,
+    return { width, height, scale };
+  }
+
+  frameBoxStyle(
+    entry: SpriteEntry,
+    rect: SpriteFrameRect,
+    boxWidth: number,
+    boxHeight: number,
+  ): Record<string, string> {
+    const { width, height, scale } = this.frameMetrics(entry, rect, boxWidth, boxHeight);
+    return { width: `${width * scale}px`, height: `${height * scale}px` };
+  }
+
+  framePixelStyle(
+    entry: SpriteEntry,
+    rect: SpriteFrameRect,
+    boxWidth: number,
+    boxHeight: number,
+  ): Record<string, string> {
+    const { scale } = this.frameMetrics(entry, rect, boxWidth, boxHeight);
+    const style: Record<string, string> = {
       'background-image': `url("${this.assetUrl(entry)}")`,
       'background-size': `${entry.imageWidth * scale}px ${entry.imageHeight * scale}px`,
       'background-position': `${-rect.uvMin[0] * entry.imageWidth * scale}px ${-rect.uvMin[1] * entry.imageHeight * scale}px`,
     };
+    if (entry.flipY) style['transform'] = 'scaleY(-1)';
+    return style;
   }
 
-  stageStyle(entry: SpriteEntry, rect: SpriteFrameRect): Record<string, string> {
-    return this.frameStyle(entry, rect, STAGE_WIDTH, STAGE_HEIGHT);
+  stageBoxStyle(entry: SpriteEntry, rect: SpriteFrameRect): Record<string, string> {
+    return this.frameBoxStyle(entry, rect, STAGE_WIDTH, STAGE_HEIGHT);
   }
 
-  thumbStyle(entry: SpriteEntry, rect: SpriteFrameRect): Record<string, string> {
-    return this.frameStyle(entry, rect, THUMB_SIZE, THUMB_SIZE);
+  stagePixelStyle(entry: SpriteEntry, rect: SpriteFrameRect): Record<string, string> {
+    return this.framePixelStyle(entry, rect, STAGE_WIDTH, STAGE_HEIGHT);
+  }
+
+  thumbBoxStyle(entry: SpriteEntry, rect: SpriteFrameRect): Record<string, string> {
+    return this.frameBoxStyle(entry, rect, THUMB_SIZE, THUMB_SIZE);
+  }
+
+  thumbPixelStyle(entry: SpriteEntry, rect: SpriteFrameRect): Record<string, string> {
+    return this.framePixelStyle(entry, rect, THUMB_SIZE, THUMB_SIZE);
   }
 
   pivotStyle(entry: SpriteEntry, rect: SpriteFrameRect): Record<string, string> | undefined {
     const pivot = entry.pivot;
     if (pivot === undefined || pivot.length < 2) return undefined;
-    const style = this.stageStyle(entry, rect);
-    const width = parseFloat(style['width'] ?? '0');
-    const height = parseFloat(style['height'] ?? '0');
+    const { width, height, scale } = this.frameMetrics(entry, rect, STAGE_WIDTH, STAGE_HEIGHT);
     const pivotX = pivot[0] ?? 0;
     const pivotY = pivot[1] ?? 0;
     return {
       // Engine sprite pivots are measured from the bottom-left of the quad.
-      left: `${pivotX * width}px`,
-      bottom: `${pivotY * height}px`,
+      left: `${pivotX * width * scale}px`,
+      bottom: `${pivotY * height * scale}px`,
     };
   }
 

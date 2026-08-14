@@ -154,7 +154,8 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
 .sprite-detail { min-width: 0; padding: 18px; border: 1px solid #2c3a3b; border-radius: 10px; background: #0f1618; }
 .sprite-stage-row { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 18px; }
 .sprite-stage { display: grid; place-items: center; min-width: 320px; min-height: 240px; max-width: 100%; overflow: auto; border: 1px solid #293638; border-radius: 10px; background: repeating-conic-gradient(#141c1e 0% 25%, #0b1113 0% 50%) 0 0 / 22px 22px; }
-.sprite-frame-view { position: relative; background-repeat: no-repeat; image-rendering: pixelated; }
+.sprite-frame-view { position: relative; }
+.sprite-frame-pixels { position: absolute; inset: 0; background-repeat: no-repeat; image-rendering: pixelated; }
 .sprite-plain-image { max-width: 100%; max-height: 320px; image-rendering: pixelated; }
 .sprite-pivot { position: absolute; width: 9px; height: 9px; margin: 0 0 -4.5px -4.5px; border: 2px solid #ff5f56; border-radius: 50%; background: rgba(255, 95, 86, .25); pointer-events: none; }
 .sprite-stage-meta { display: grid; align-content: start; gap: 10px; min-width: 200px; }
@@ -180,7 +181,8 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
 .sprite-frames { margin-top: 22px; }
 .sprite-frame-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; max-height: 300px; overflow: auto; }
 .sprite-thumb { display: grid; justify-items: center; gap: 4px; padding: 6px; }
-.sprite-thumb span { display: block; background-repeat: no-repeat; image-rendering: pixelated; }
+.sprite-thumb-box { display: block; position: relative; }
+.sprite-thumb-pixels { position: absolute; inset: 0; background-repeat: no-repeat; image-rendering: pixelated; }
 .sprite-thumb small { color: #82918f; font: .64rem ui-monospace, monospace; }
 .sprite-thumb.selected { border-color: #c7a96a; background: #2c2b24; }
 .sprite-thumb.live small { color: #8de0b1; }

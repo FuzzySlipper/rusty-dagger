@@ -41,6 +41,13 @@ export interface SpriteEntry {
   readonly animations: readonly SpriteAnimation[];
   readonly worldSize?: readonly number[] | undefined;
   readonly pivot?: readonly number[] | undefined;
+  /**
+   * Sprite atlases are written bottom-up at import time (Engine's UV
+   * convention samples v=0 at the first PNG row), so a viewer with top-left
+   * origin must flip them for display. Plain dungeon textures are mesh-mapped
+   * and shown as stored.
+   */
+  readonly flipY: boolean;
 }
 
 type JsonObject = Record<string, unknown>;
@@ -83,6 +90,7 @@ function enemyEntry(manifest: string, raw: JsonObject): SpriteEntry {
     frames,
     animations: stateAnimations(raw['states'], frames.length),
     worldSize: numberArray(raw['normalizedSize']),
+    flipY: true,
   };
 }
 
@@ -116,6 +124,7 @@ function billboardEntry(manifest: string, raw: JsonObject): SpriteEntry {
     frames: frames.length > 0 ? frames : wholeFrame(raw),
     animations,
     worldSize: numberArray(raw['worldSize']),
+    flipY: true,
   };
 }
 
@@ -145,6 +154,7 @@ function weaponEntry(manifest: string, raw: JsonObject): SpriteEntry {
     frames: frameRects(raw['frames']),
     animations,
     pivot: numberArray(raw['pivot']),
+    flipY: true,
   };
 }
 
@@ -174,6 +184,7 @@ function effectEntry(manifest: string, raw: JsonObject): SpriteEntry {
           ]
         : [],
     pivot: numberArray(raw['pivot']),
+    flipY: true,
   };
 }
 
@@ -189,6 +200,7 @@ function plainTextureEntry(manifest: string, raw: JsonObject): SpriteEntry {
     imageHeight: number(raw['height']) ?? 0,
     frames: wholeFrame(raw),
     animations: [],
+    flipY: false,
   };
 }
 
