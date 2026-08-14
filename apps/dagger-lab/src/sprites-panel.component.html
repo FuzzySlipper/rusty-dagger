@@ -21,7 +21,7 @@
         <input data-testid="sprite-filter" type="search" placeholder="rat or billboard" [(ngModel)]="filter" />
       </label>
       <nav data-testid="sprite-list" aria-label="Derived sprite entries">
-        <ng-container *ngFor="let group of groups()">
+        <ng-container *ngFor="let group of groups(); trackBy: trackGroup">
           <p class="kicker sprite-group">{{ group.manifest }}</p>
           <button *ngFor="let entry of group.entries; trackBy: trackEntry" type="button"
             [class.selected]="selectedKey === entry.key"
@@ -46,7 +46,8 @@
         <div class="sprite-stage" data-testid="sprite-stage">
           <ng-container *ngIf="currentRect() as rect">
             <div class="sprite-frame-view" data-testid="sprite-frame-view"
-              [ngStyle]="stageStyle(entry, rect)">
+              [ngStyle]="stageBoxStyle(entry, rect)">
+              <div class="sprite-frame-pixels" data-testid="sprite-frame-pixels" [ngStyle]="stagePixelStyle(entry, rect)"></div>
               <span *ngIf="pivotStyle(entry, rect) as pivot" class="sprite-pivot" data-testid="sprite-pivot"
                 [ngStyle]="pivot" title="pivot (origin bottom-left)"></span>
             </div>
@@ -123,7 +124,7 @@
             [attr.data-testid]="'sprite-thumb-' + rect.frame"
             [title]="'frame ' + rect.frame"
             (click)="inspectFrame(rect.frame)">
-            <span [ngStyle]="thumbStyle(entry, rect)"></span>
+            <span class="sprite-thumb-box" [ngStyle]="thumbBoxStyle(entry, rect)"><span class="sprite-thumb-pixels" [ngStyle]="thumbPixelStyle(entry, rect)"></span></span>
             <small>{{ rect.frame }}</small>
           </button>
         </div>

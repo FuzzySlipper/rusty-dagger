@@ -366,12 +366,20 @@ async function assertSpriteReviewTab(page, output) {
   await page.getByTestId('sprite-entry-enemy-manifest-json-mobile-0').click();
   await page.getByTestId('sprite-title').filter({ hasText: 'Rat' }).waitFor();
   const background = await page
-    .getByTestId('sprite-frame-view')
+    .getByTestId('sprite-frame-pixels')
     .evaluate((element) => getComputedStyle(element).backgroundImage);
   assert.match(
     background,
     /sprites\/asset\/textures\/enemy-0-atlas\.png/,
     'stage frame is not blitted from the lab asset route',
+  );
+  const frameTransform = await page
+    .getByTestId('sprite-frame-pixels')
+    .evaluate((element) => getComputedStyle(element).transform);
+  assert.match(
+    frameTransform,
+    /matrix\(1, 0, 0, -1, 0, 0\)/,
+    'bottom-up stored atlas is not flipped for upright display',
   );
 
   await page.getByTestId('sprite-anim-attack').click();
