@@ -28,25 +28,34 @@ pub(crate) fn texture_descriptor(root: &Path, asset: &Value, texture: &Value) ->
     let bytes = fs::read(project_resource_path(root, source_path)?).ok()?;
     let expected = format!("sha256:{hash_hex}");
     let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
-    if actual != expected {
-        // Content drifted since generation: fail closed, project nothing
-        // rather than admit a mismatched resource identity.
-        return None;
-    }
+    // Hand-edited content is legitimate: when the bytes drifted from the
+    // generation-time hash, say so loudly and serve the actual bytes under
+    // their actual identity instead of silently dropping the texture.
+    let (content_hash, resource_hash) = if actual != expected {
+        eprintln!(
+            "TEXTURE_DRIFT {source_path}: manifest hash {expected}, actual {actual} — serving actual bytes"
+        );
+        (
+            actual.clone(),
+            actual.trim_start_matches("sha256:").to_string(),
+        )
+    } else {
+        (expected, hash_hex.to_string())
+    };
     Some(json!({
         "id": id,
         "width": texture.get("width").and_then(Value::as_u64).unwrap_or(0),
         "height": texture.get("height").and_then(Value::as_u64).unwrap_or(0),
         "filter": texture.get("filter").and_then(Value::as_str).unwrap_or("nearest"),
         "wrap": texture.get("wrap").and_then(Value::as_str).unwrap_or("repeat"),
-        "contentHash": expected,
+        "contentHash": content_hash,
         "version": 1,
         "payload": {
             "encoding": "pngRgba8",
             "colorSpace": "srgb",
-            "contentHash": expected,
+            "contentHash": content_hash,
             "byteLength": bytes.len(),
-            "source": { "kind": "resource", "resource": format!("texture-resource/{hash_hex}") },
+            "source": { "kind": "resource", "resource": format!("texture-resource/{resource_hash}") },
         },
     }))
 }
@@ -82,18 +91,29 @@ pub(crate) fn texture_resources(root: &Path, project: &Map<String, Value>) -> Va
         };
         let Ok(bytes) = fs::read(path) else { continue };
         let expected = format!("sha256:{hash_hex}");
-        if format!("sha256:{:x}", Sha256::digest(&bytes)) != expected {
-            continue;
-        }
+        let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
+        // Drift means hand-edited content: warn and publish the actual
+        // resource identity so the edit shows up instead of vanishing.
+        let (content_hash, resource_hash) = if actual != expected {
+            eprintln!(
+                "TEXTURE_DRIFT {source_path}: manifest hash {expected}, actual {actual} — publishing actual resource identity"
+            );
+            (
+                actual.clone(),
+                actual.trim_start_matches("sha256:").to_string(),
+            )
+        } else {
+            (expected, hash_hex.to_string())
+        };
         let _ = texture;
         // Distinct classic textures may decode to identical bytes (e.g.
         // TEXTURE.120[3] == TEXTURE.168[3]); the manifest is keyed by exact
         // resource identity, so emit one entry per unique resource while
         // defineTexture ops keep their per-asset ids bound to it.
-        if seen_hashes.insert(hash_hex.to_owned()) {
+        if seen_hashes.insert(resource_hash.clone()) {
             resources.push(json!({
-                "resource": format!("texture-resource/{hash_hex}"),
-                "contentHash": expected,
+                "resource": format!("texture-resource/{resource_hash}"),
+                "contentHash": content_hash,
                 "byteLength": bytes.len(),
                 "sourcePath": source_path,
             }));
@@ -398,28 +418,24 @@ pub fn build_render_bundle(root: &Path, project_text: &str) -> Result<DaggerRend
             .ok_or_else(|| format!("combat audio path was rejected: {}", audio.path))?;
         let bytes = fs::read(&path)
             .map_err(|error| format!("read combat audio {}: {error}", audio.path))?;
-        if bytes.len() as u64 != audio.byte_length {
-            return Err(format!(
-                "combat audio {} byte length drifted: expected {}, got {}",
+        let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
+        // Hand-edited audio is legitimate content: warn on drift and publish
+        // the actual identity rather than failing the whole bundle build.
+        if bytes.len() as u64 != audio.byte_length || actual != audio.sha256 {
+            eprintln!(
+                "AUDIO_DRIFT {}: catalog hash {} length {}, actual {actual} length {} — publishing actual identity",
                 audio.id,
+                audio.sha256,
                 audio.byte_length,
                 bytes.len()
-            ));
+            );
         }
-        let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
-        if actual != audio.sha256 {
-            return Err(format!(
-                "combat audio {} content hash drifted: expected {}, got {actual}",
-                audio.id, audio.sha256
-            ));
-        }
-        let hash_hex = audio
-            .sha256
+        let hash_hex = actual
             .strip_prefix("sha256:")
             .ok_or_else(|| format!("combat audio {} has invalid content hash", audio.id))?;
         resources.push(DaggerRenderResource {
             identity: format!("audio-resource/{hash_hex}"),
-            content_hash: audio.sha256.clone(),
+            content_hash: actual,
             media_type: audio.mime_type.clone(),
             source_path: audio.path.clone(),
             bytes,
