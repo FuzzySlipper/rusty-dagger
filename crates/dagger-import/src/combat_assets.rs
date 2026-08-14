@@ -261,11 +261,11 @@ fn pack_fixed_cells(
         let cell_x = (index % columns) * cell_width;
         let cell_y = (index / columns) * cell_height;
         let x = cell_x + horizontal_frame_offset(frame.placement, cell_width, frame.width);
-        // Engine's sprite contract samples upright decoded-image space (v=0 =
-        // first PNG row = quad top). Frames are packed top-aligned in classic
-        // top-down row order, preserving the alignment the old bottom-up
-        // convention produced on screen.
-        let y = cell_y;
+        // Engine's sprite contract samples upright image space (v=0 = quad
+        // top). Classic weapon canvases anchor their art to the canvas bottom
+        // (the hilt sits at the screen bottom), so weapon frames pack
+        // bottom-aligned; effect frames keep their historic top alignment.
+        let y = cell_y + vertical_frame_offset(reference_size.is_some(), cell_height, frame.height);
         for row in 0..frame.height {
             let source = &frame.rgba[row * frame.width * 4..(row + 1) * frame.width * 4];
             let target = ((y + row) * width + x) * 4;
@@ -305,6 +305,21 @@ fn horizontal_frame_offset(
         FramePlacement::Right(offset) => {
             available.saturating_sub(((offset * cell_width as f32).round() as usize).min(available))
         }
+    }
+}
+
+/// Vertical cell placement under Engine's upright image-space contract
+/// (v=0 = quad top): classic weapon canvases anchor art to the canvas bottom
+/// (hilt at the screen bottom); effect frames keep their top alignment.
+fn vertical_frame_offset(
+    classic_reference_canvas: bool,
+    cell_height: usize,
+    frame_height: usize,
+) -> usize {
+    if classic_reference_canvas {
+        cell_height.saturating_sub(frame_height)
+    } else {
+        0
     }
 }
 
@@ -379,5 +394,7 @@ mod tests {
             horizontal_frame_offset(FramePlacement::Center, 320, 162),
             79
         );
+        assert_eq!(vertical_frame_offset(true, 200, 143), 57);
+        assert_eq!(vertical_frame_offset(false, 200, 143), 0);
     }
 }
