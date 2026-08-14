@@ -16,8 +16,13 @@
       <div><span>Dagger Lab</span><strong>Experiment workspace</strong></div>
       <button type="button" data-testid="return-to-play" (click)="returnToPlay()">Return to play</button>
     </div>
+    <nav class="lab-tabs" data-testid="lab-tabs" aria-label="Lab views">
+      <button type="button" data-testid="tab-experiments" [class.selected]="activeTab === 'experiments'" (click)="activeTab = 'experiments'">Experiments</button>
+      <button type="button" data-testid="tab-sprites" [class.selected]="activeTab === 'sprites'" (click)="activeTab = 'sprites'">Sprites</button>
+    </nav>
     <div class="lab-scroll" data-testid="lab-scroll">
       <div class="lab-content">
+      <ng-container *ngIf="activeTab === 'experiments'">
   <header>
     <div>
       <p class="eyebrow">Privateer's Hold · attached to live Rust authority</p>
@@ -405,6 +410,8 @@
       </div>
     </article>
   </section>
+      </ng-container>
+      <dagger-sprites-panel *ngIf="activeTab === 'sprites'"></dagger-sprites-panel>
       </div>
     </div>
   </section>
