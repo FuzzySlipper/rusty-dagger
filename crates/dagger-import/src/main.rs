@@ -647,9 +647,40 @@ fn publish_enemy_atlases(
         let state_entries = state_layouts
             .iter()
             .map(|(name, frame_start, frames_per_orientation, fps, loops)| {
-                format!(
-                    "\"{name}\":{{\"frameStart\":{frame_start},\"framesPerOrientation\":{frames_per_orientation},\"fps\":{fps},\"loop\":{loops}}}"
-                )
+                let mut entry = format!(
+                    "\"frameStart\":{frame_start},\"framesPerOrientation\":{frames_per_orientation},\"fps\":{fps},\"loop\":{loops}"
+                );
+                // Attack states carry the classic playback sequence (DFU
+                // PrimaryAttackAnimFrames; -1 = melee damage beat) plus any
+                // alternates with their cumulative Dice100 chances.
+                if *name == "attack" {
+                    let sequence = &mobile.attack_sequence;
+                    let primary = sequence
+                        .primary
+                        .iter()
+                        .map(|frame| frame.to_string())
+                        .collect::<Vec<_>>()
+                        .join(",");
+                    entry.push_str(&format!(",\"sequence\":[{primary}]"));
+                    if !sequence.alternates.is_empty() {
+                        let alternates = sequence
+                            .alternates
+                            .iter()
+                            .map(|alternate| {
+                                let frames = alternate
+                                    .frames
+                                    .iter()
+                                    .map(|frame| frame.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(",");
+                                format!("{{\"chance\":{},\"sequence\":[{}]}}", alternate.chance, frames)
+                            })
+                            .collect::<Vec<_>>()
+                            .join(",");
+                        entry.push_str(&format!(",\"alternateSequences\":[{alternates}]"));
+                    }
+                }
+                format!("\"{name}\":{{{entry}}}")
             })
             .collect::<Vec<_>>()
             .join(",");
