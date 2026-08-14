@@ -510,13 +510,13 @@ Classic enemies are Rust-authoritative directional billboards. Ownership split:
   stays Engine presentation behavior; Dagger never calls the private renderer.
 - Classic Rat and Imp records contain direction-dependent scale metadata that
   is unsuitable for live geometry. Import retains those source sizes as
-  provenance, but crops each decoded frame to visible pixels and rescales it
-  to one per-enemy visible height with nearest-neighbor sampling, preserving
-  each frame's native aspect ratio. Frames are bottom-centered in a uniform
-  atlas cell sized to the widest frame, so no frame is ever stretched; the
-  project publishes one fixed world size and pivot for every frame and frame
-  changes only select UVs (per-frame sprite resize is not an Engine feature).
-  The generated encounter
+  provenance, but crops each decoded frame to visible pixels and scales it to
+  FIT one uniform atlas cell (never stretched), bottom-center packed. The cell
+  matches the aspect of the enemy's single fixed world quad — the median
+  classic record world size — so frames keep both their native aspect and
+  their classic relative sizes (a spread-wing bat frame stays short and wide).
+  Frame changes only select UVs; per-frame sprite resize is not an Engine
+  feature. The generated encounter
   gallery exercises real Rat, Imp, and Skeletal Warrior atlases, Rust
   patrol/heading and animation authority, a collidable trimesh floor, and the
   same Engine application host without requiring dungeon navigation.
