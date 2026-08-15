@@ -104,6 +104,7 @@ function enemyEntry(manifest: string, raw: JsonObject): SpriteEntry {
     frames,
     animations: stateAnimations(raw['states'], frames.length),
     worldSize: numberArray(raw['normalizedSize']),
+    pivot: numberArray(raw['pivot']),
   };
 }
 
@@ -143,6 +144,7 @@ function billboardEntry(manifest: string, raw: JsonObject): SpriteEntry {
     frames: frames.length > 0 ? frames : wholeFrame(raw),
     animations,
     worldSize: numberArray(raw['worldSize']),
+    pivot: numberArray(raw['pivot']),
   };
 }
 

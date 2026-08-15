@@ -8,6 +8,12 @@ import {
 } from './lab-contract';
 import { SpriteIndex } from './sprite-contract';
 
+export interface SpriteManifestSaveResult {
+  readonly status: string;
+  readonly manifest: string;
+  readonly projectDocs: string;
+}
+
 const API_URL = '/api/dagger-lab';
 
 @Injectable({ providedIn: 'root' })
@@ -46,5 +52,11 @@ export class LabApiService {
 
   spriteIndex(): Promise<SpriteIndex> {
     return firstValueFrom(this.http.get<SpriteIndex>(`${API_URL}/sprites/index`));
+  }
+
+  saveSpriteManifest(name: string, manifest: unknown): Promise<SpriteManifestSaveResult> {
+    return firstValueFrom(
+      this.http.post<SpriteManifestSaveResult>(`${API_URL}/sprites/manifest/${name}`, manifest),
+    );
   }
 }

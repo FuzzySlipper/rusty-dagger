@@ -402,11 +402,54 @@ async function assertSpriteReviewTab(page, output) {
 
   await page.getByTestId('sprite-orientation-4').click();
   await page.getByTestId('sprite-orientation-name').filter({ hasText: 'back' }).waitFor();
+
+  // Manifest editing: adjust the Rat attack fps and pivot, save, confirm the
+  // manifest persisted with an edit marker and project docs restamped, then
+  // restore the classic values. Leaves the content tree as it found it.
+  await page.getByTestId('sprite-anim-attack').click();
+  await page.getByTestId('sprite-anim-name').filter({ hasText: 'attack' }).waitFor();
+  const fpsInput = page.getByTestId('sprite-fps');
+  const pivotInput = page.getByTestId('sprite-pivot-x');
+  const classicFps = await fpsInput.inputValue();
+  const classicPivot = await pivotInput.inputValue();
+  await fpsInput.fill('12');
+  await pivotInput.fill('0.6');
+  await page.getByTestId('sprite-savebar').waitFor();
+  await page.getByTestId('sprite-edited-badge').waitFor();
+  await page.getByTestId('sprite-save').click();
+  await page.getByTestId('sprite-save-final').filter({ hasText: 'restamped' }).waitFor({ timeout: 60_000 });
+  let manifestIndex = await page.evaluate(async () =>
+    (await fetch('/api/dagger-lab/sprites/index')).json(),
+  );
+  let rat = manifestIndex.manifests['enemy-manifest.json'].enemies.find((e) => e.mobileId === 0);
+  assert.equal(rat.states.attack.fps, 12, 'edited attack fps did not persist to the manifest');
+  assert.equal(rat.pivot[0], 0.6, 'edited pivot did not persist to the manifest');
+  assert.equal(rat.edited, true, 'edit marker was not recorded');
+  await fpsInput.fill(classicFps);
+  await pivotInput.fill(classicPivot);
+  await page.getByTestId('sprite-save').click();
+  await page.getByTestId('sprite-save-final').filter({ hasText: 'restamped' }).waitFor({ timeout: 60_000 });
+  manifestIndex = await page.evaluate(async () =>
+    (await fetch('/api/dagger-lab/sprites/index')).json(),
+  );
+  rat = manifestIndex.manifests['enemy-manifest.json'].enemies.find((e) => e.mobileId === 0);
+  assert.equal(rat.states.attack.fps, Number(classicFps), 'classic fps was not restored');
+  assert.equal(rat.pivot[0], Number(classicPivot), 'classic pivot was not restored');
+  // Leave the committed manifest pristine: clear the edit marker and save.
+  await page.getByTestId('sprite-clear-edits').click();
+  await page.getByTestId('sprite-save').click();
+  await page.getByTestId('sprite-save-final').filter({ hasText: 'restamped' }).waitFor({ timeout: 60_000 });
+  manifestIndex = await page.evaluate(async () =>
+    (await fetch('/api/dagger-lab/sprites/index')).json(),
+  );
+  rat = manifestIndex.manifests['enemy-manifest.json'].enemies.find((e) => e.mobileId === 0);
+  assert.equal(rat.edited, undefined, 'edit marker was not cleared from the manifest');
+
   assert.equal(await page.locator('canvas').count(), 1, 'sprite review must not add a canvas');
   await page.screenshot({ path: `${output}/sprites-desktop.png`, fullPage: true });
   await page.getByTestId('tab-experiments').click();
   await page.getByTestId('history-detail').waitFor();
-  return { entries: count, ratAttackFrames: `${firstFrame}->${playedFrame}` };
+  return { entries: count, ratAttackFrames: `${firstFrame}->${playedFrame}`, manifestEdit: 'fps/pivot persisted+restored' };
 }
 
 async function waitForConnection(page) {

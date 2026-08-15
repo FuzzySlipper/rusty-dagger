@@ -14,6 +14,10 @@ use std::{
 use anyhow::{Context, Result};
 
 const MAX_REQUEST_BYTES: usize = 64 * 1024;
+// Manifest write bodies carry the whole document (enemy-manifest.json is
+// ~140KB of frame rects); the lab bridge is a LAN operator tool, so allow
+// generous bodies.
+const MAX_MANIFEST_WRITE_BYTES: usize = 8 * 1024 * 1024;
 const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(2);
 // Product bootstrap currently carries the checked scene resources inline and is
 // tens of megabytes. Leave enough headroom for a cold serialization and a LAN
@@ -185,6 +189,14 @@ fn handle_request(
     if request.method == "GET" {
         if let Some(name) = request.path.strip_prefix("/api/dagger-lab/sprites/asset/") {
             return serve_sprite_asset(stream, content_root, name);
+        }
+    }
+    if request.method == "POST" {
+        if let Some(name) = request
+            .path
+            .strip_prefix("/api/dagger-lab/sprites/manifest/")
+        {
+            return write_sprite_manifest(stream, content_root, name, &request.body);
         }
     }
     if request.method == "GET" && !request.path.starts_with("/api/") {
@@ -367,6 +379,75 @@ fn serve_sprite_asset(stream: &mut TcpStream, content_root: &Path, name: &str) -
     write_bytes_response(stream, 200, content_type, &bytes)
 }
 
+/// Persist one edited sprite manifest (the lab's sprite review tab writes
+/// derived metadata: pivots, fps, frame rects). Validates that the body is a
+/// JSON object, writes it pretty-printed and atomically, then re-stamps the
+/// project documents so the manifest and docs never drift. A regeneration
+/// failure is reported in the response, not hidden and not fatal to the
+/// write — the operator decides what to do with a stale doc.
+fn write_sprite_manifest(
+    stream: &mut TcpStream,
+    content_root: &Path,
+    name: &str,
+    body: &str,
+) -> Result<()> {
+    let name = name.split('?').next().unwrap_or(name);
+    let valid = name.ends_with(".json")
+        && !name.contains('/')
+        && !name.contains('\\')
+        && !name.contains("..")
+        && !name.starts_with('.');
+    if !valid {
+        return write_response(stream, 404, r#"{"error":"unknown sprite manifest"}"#);
+    }
+    let value: serde_json::Value = match serde_json::from_str::<serde_json::Value>(body) {
+        Ok(value) if value.is_object() => value,
+        Ok(_) => {
+            return write_response(stream, 400, r#"{"error":"manifest must be a JSON object"}"#)
+        }
+        Err(error) => {
+            return write_response(
+                stream,
+                400,
+                &serde_json::json!({ "error": format!("invalid manifest JSON: {error}") })
+                    .to_string(),
+            )
+        }
+    };
+    let path = content_root.join("textures").join(name);
+    let mut text = serde_json::to_string_pretty(&value).context("encode manifest JSON")?;
+    text.push('\n');
+    let tmp = path.with_extension("json.tmp");
+    std::fs::write(&tmp, &text).with_context(|| format!("write {}", tmp.display()))?;
+    std::fs::rename(&tmp, &path).with_context(|| format!("install {}", path.display()))?;
+
+    // Re-stamp project docs from the updated manifests (content config, not
+    // runtime authority). Best-effort: report the outcome in the response.
+    let repo_root = content_root.parent().unwrap_or(content_root);
+    let regenerate = match std::process::Command::new("python3")
+        .arg("scripts/generate-project.py")
+        .arg("--write")
+        .current_dir(repo_root)
+        .output()
+    {
+        Ok(output) if output.status.success() => "regenerated".to_string(),
+        Ok(output) => format!(
+            "failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+                .lines()
+                .next()
+                .unwrap_or("unknown error")
+        ),
+        Err(error) => format!("failed: {error}"),
+    };
+    write_response(
+        stream,
+        200,
+        &serde_json::json!({ "status": "ok", "manifest": name, "projectDocs": regenerate })
+            .to_string(),
+    )
+}
+
 struct HttpRequest {
     method: String,
     path: String,
@@ -410,7 +491,12 @@ fn read_request(stream: &mut TcpStream) -> Result<HttpRequest> {
         .transpose()
         .context("parse Content-Length")?
         .unwrap_or(0);
-    if header_end + content_length > MAX_REQUEST_BYTES {
+    let body_cap = if path.starts_with("/api/dagger-lab/sprites/manifest/") {
+        MAX_MANIFEST_WRITE_BYTES
+    } else {
+        MAX_REQUEST_BYTES
+    };
+    if header_end + content_length > body_cap {
         anyhow::bail!("request body exceeds bridge limit");
     }
     while bytes.len() < header_end + content_length {

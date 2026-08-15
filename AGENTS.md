@@ -86,12 +86,18 @@ work does not need donor ceremony. New Daggerfall behavior does.
   belongs outside this repository.
 - `content/` is generated output that doubles as a living content tree.
   Classic regeneration (`scripts/regenerate.sh`) is the default source and
-  will overwrite generated files; hand edits to content are legitimate and
-  expected to grow (Den task 6945 owns explicit preserve/overwrite controls).
-  Hash drift between manifests and on-disk bytes is surfaced as a loud
-  warning — generation stamps the actual bytes' identity and runtime serving
-  warns and publishes actual content — never a silent drop or a hard stop.
-  Commit hand edits you want to keep before running a full regeneration.
+  overwrites generated files, but hand edits are legitimate and expected:
+  sprite pivots, sizes, fps/loop, and playback sequences are editable in the
+  Dagger Lab sprite tab (writes go through the lab bridge, which pretty-writes
+  the manifest and restamps project docs), and an entry carrying
+  `"edited": true` keeps those tunable fields across regeneration.
+  `DAGGER_CLOBBER_SPRITES=1 scripts/regenerate.sh` rewrites everything from
+  classic defaults; clearing a marker in the UI restores classic values on
+  the next regeneration. Derived pixel layout (frame UVs) always follows the
+  fresh pack. Hash drift between manifests and on-disk bytes is surfaced as a
+  loud warning — generation stamps the actual bytes' identity and runtime
+  serving warns and publishes actual content — never a silent drop or a hard
+  stop.
 
 ## Code style and language authority
 

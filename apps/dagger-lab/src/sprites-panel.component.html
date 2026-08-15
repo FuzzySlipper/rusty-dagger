@@ -15,6 +15,16 @@
   <p *ngIf="loadError" class="inline-error" role="alert" data-testid="sprites-error">{{ loadError }}</p>
   <p *ngIf="loaded && entries.length === 0" class="muted">No sprite manifests were published by the content directory.</p>
 
+  <div class="sprite-savebar" *ngIf="dirtyManifests.size > 0" data-testid="sprite-savebar">
+    <span>edited: {{ dirtyList() }}</span>
+    <button type="button" class="primary" data-testid="sprite-save" [disabled]="saving" (click)="saveAll()">
+      {{ saving ? 'Saving…' : 'Save & restamp project docs' }}
+    </button>
+    <button type="button" data-testid="sprite-discard" [disabled]="saving" (click)="discardAll()">Discard</button>
+    <small data-testid="sprite-save-status">{{ saveStatus }}</small>
+  </div>
+  <p class="muted" *ngIf="saveStatus && dirtyManifests.size === 0" data-testid="sprite-save-final">{{ saveStatus }}</p>
+
   <div class="sprites-layout" *ngIf="entries.length > 0">
     <div class="sprite-browser">
       <label class="filter"><span>Find a sprite or manifest</span>
@@ -40,6 +50,10 @@
           <h3 data-testid="sprite-title">{{ entry.label }}</h3>
         </div>
         <span class="schema">{{ entry.detail }}</span>
+        <span class="schema edited-badge" *ngIf="isEdited(entry)" data-testid="sprite-edited-badge">edited</span>
+        <button type="button" class="sprite-clear" *ngIf="isEdited(entry)" data-testid="sprite-clear-edits"
+          title="Remove the hand-edit marker; classic defaults return on next full regeneration"
+          (click)="clearEdits(entry)">clear edits</button>
       </div>
 
       <div class="sprite-stage-row">
@@ -49,7 +63,9 @@
               [ngStyle]="stageBoxStyle(entry, rect)">
               <div class="sprite-frame-pixels" data-testid="sprite-frame-pixels" [ngStyle]="stagePixelStyle(entry, rect)"></div>
               <span *ngIf="pivotStyle(entry, rect) as pivot" class="sprite-pivot" data-testid="sprite-pivot"
-                [ngStyle]="pivot" title="pivot (origin bottom-left)"></span>
+                [class.draggable]="pivotEditable(entry)"
+                [ngStyle]="pivot" title="pivot (origin bottom-left) — drag to adjust"
+                (pointerdown)="pivotEditable(entry) && startPivotDrag($event, entry)"></span>
             </div>
           </ng-container>
           <img *ngIf="entry.frames.length === 0" class="sprite-plain-image" [src]="assetUrl(entry)" [alt]="entry.label" />
@@ -58,7 +74,14 @@
           <div><span>Atlas</span><code data-testid="sprite-atlas-path">{{ entry.imagePath }}</code></div>
           <div *ngIf="atlasDims(entry).width > 0"><span>Atlas pixels</span><strong>{{ atlasDims(entry).width }} × {{ atlasDims(entry).height }}</strong></div>
           <div *ngIf="entry.worldSize"><span>World size</span><strong>{{ format(entry.worldSize?.[0]) }} × {{ format(entry.worldSize?.[1]) }}</strong></div>
-          <div *ngIf="entry.pivot"><span>Pivot</span><strong data-testid="sprite-pivot-value">{{ format(entry.pivot?.[0]) }}, {{ format(entry.pivot?.[1]) }}</strong></div>
+          <div *ngIf="entry.pivot" class="sprite-pivot-edit"><span>Pivot</span>
+            <input data-testid="sprite-pivot-x" type="number" step="0.05" [ngModel]="pivotValue(entry, 0)" (ngModelChange)="setPivotAxis(entry, 0, $event)" />
+            <input data-testid="sprite-pivot-y" type="number" step="0.05" [ngModel]="pivotValue(entry, 1)" (ngModelChange)="setPivotAxis(entry, 1, $event)" />
+          </div>
+          <div *ngIf="entry.worldSize && entry.manifest === 'billboard-manifest.json'" class="sprite-pivot-edit"><span>World size</span>
+            <input data-testid="sprite-worldsize-x" type="number" step="0.05" [ngModel]="worldSizeValue(entry, 0)" (ngModelChange)="setWorldSizeAxis(entry, 'worldSize', 0, $event)" />
+            <input data-testid="sprite-worldsize-y" type="number" step="0.05" [ngModel]="worldSizeValue(entry, 1)" (ngModelChange)="setWorldSizeAxis(entry, 'worldSize', 1, $event)" />
+          </div>
           <div><span>Frames</span><strong>{{ entry.frames.length }}</strong></div>
           <label class="zoom"><span>Zoom</span>
             <select data-testid="sprite-zoom" [(ngModel)]="zoom">
@@ -96,8 +119,19 @@
               </span>
             </div>
           </div>
-          <div class="sprite-sequence" *ngIf="animation.sequence as sequence" data-testid="sprite-sequence">
-            <span>classic sequence</span>
+          <div class="sprite-anim-edit">
+            <label><span>fps</span>
+              <input data-testid="sprite-fps" type="number" min="0" step="1"
+                [ngModel]="animationField(entry, animation, 'fps')"
+                (ngModelChange)="setAnimationField(entry, animation, 'fps', $event)" />
+            </label>
+            <label *ngIf="hasAnimationLoop(entry, animation)"><span>loop</span>
+              <input data-testid="sprite-loop" type="checkbox"
+                [ngModel]="animationField(entry, animation, 'loop')"
+                (ngModelChange)="setAnimationField(entry, animation, 'loop', $event)" />
+            </label>
+          </div>
+          <div class="sprite-sequence" *ngIf="animation.sequence as sequence" data-testid="sprite-sequence">            <span>classic sequence</span>
             <code>{{ sequenceText(sequence) }}</code>
             <small>⚔ = melee damage beat (no visible time)</small>
           </div>
@@ -139,10 +173,16 @@
         </div>
         <div class="sprite-inspector" *ngIf="currentRect() as rect" data-testid="sprite-inspector">
           <span>frame {{ rect.frame }}</span>
-          <code>uv {{ format(rect.uvMin[0]) }}, {{ format(rect.uvMin[1]) }} → {{ format(rect.uvMax[0]) }}, {{ format(rect.uvMax[1]) }}</code>
           <code *ngIf="rect.size" data-testid="sprite-frame-size">world size {{ format(rect.size[0]) }} × {{ format(rect.size[1]) }}</code>
           <code *ngIf="rect.sourceSize">source size {{ format(rect.sourceSize[0]) }} × {{ format(rect.sourceSize[1]) }}</code>
           <code *ngIf="rect.sourceOffset">source offset {{ format(rect.sourceOffset[0]) }}, {{ format(rect.sourceOffset[1]) }}</code>
+          <div class="sprite-uv-edit">
+            <span>uv</span>
+            <label>min x <input data-testid="sprite-uv-minx" type="number" step="0.005" [ngModel]="frameUvValue('uvMin', 0)" (ngModelChange)="setFrameUv(entry, 'uvMin', 0, $event)" /></label>
+            <label>min y <input data-testid="sprite-uv-miny" type="number" step="0.005" [ngModel]="frameUvValue('uvMin', 1)" (ngModelChange)="setFrameUv(entry, 'uvMin', 1, $event)" /></label>
+            <label>max x <input data-testid="sprite-uv-maxx" type="number" step="0.005" [ngModel]="frameUvValue('uvMax', 0)" (ngModelChange)="setFrameUv(entry, 'uvMax', 0, $event)" /></label>
+            <label>max y <input data-testid="sprite-uv-maxy" type="number" step="0.005" [ngModel]="frameUvValue('uvMax', 1)" (ngModelChange)="setFrameUv(entry, 'uvMax', 1, $event)" /></label>
+          </div>
         </div>
       </div>
     </section>

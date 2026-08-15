@@ -20,17 +20,21 @@ struct Args {
     format: String,
     texture_dir: Option<PathBuf>,
     table_mode: dungeon::TextureTableMode,
+    /// Ignore hand-edit markers in existing sprite manifests and rewrite
+    /// every tunable field from classic defaults.
+    clobber_sprites: bool,
 }
 
 fn parse_args() -> Result<Args, String> {
     let mut arena2_dir = PathBuf::from("local/arena2");
     let mut region = 17usize;
     let mut location = "Privateer's Hold".to_string();
-    let mut out = PathBuf::from("content/privateers-hold.glb");
+    let mut out = PathBuf::from("content/privateers-hold.glb".to_string());
     let mut textured = true;
     let mut format = "glb".to_string();
     let mut texture_dir: Option<PathBuf> = None;
     let mut table_mode = dungeon::TextureTableMode::Classic;
+    let mut clobber_sprites = false;
     let mut it = std::env::args().skip(1);
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -63,6 +67,7 @@ fn parse_args() -> Result<Args, String> {
                 }
             }
             "--untextured" => textured = false,
+            "--clobber-sprites" => clobber_sprites = true,
             "--help" | "-h" => return Err(usage()),
             other => return Err(format!("unknown arg {other}\n{}", usage())),
         }
@@ -79,6 +84,7 @@ fn parse_args() -> Result<Args, String> {
         format,
         texture_dir,
         table_mode,
+        clobber_sprites,
     })
 }
 
@@ -252,9 +258,20 @@ fn main() {
     // from the same bytes.
     if let Some(dir) = &args.texture_dir {
         publish_textures(dir, &output.textures);
-        publish_billboard_textures(dir, &args.arena2_dir, &output.scene.billboards);
-        publish_enemy_atlases(dir, &args.arena2_dir, &output.scene.enemies);
-        combat_assets::publish(dir, &args.arena2_dir).expect("publish classic combat assets");
+        publish_billboard_textures(
+            dir,
+            &args.arena2_dir,
+            &output.scene.billboards,
+            args.clobber_sprites,
+        );
+        publish_enemy_atlases(
+            dir,
+            &args.arena2_dir,
+            &output.scene.enemies,
+            args.clobber_sprites,
+        );
+        combat_assets::publish(dir, &args.arena2_dir, args.clobber_sprites)
+            .expect("publish classic combat assets");
     }
 }
 
@@ -286,6 +303,126 @@ fn publish_textures(dir: &std::path::Path, textures: &[glb::TextureInput]) {
         count,
         bytes_total
     );
+}
+
+/// Hand-edit preservation (Den 6945): a manifest entry carrying
+/// `"edited": true` keeps its tunable fields when regeneration rewrites the
+/// manifest from classic data; everything else takes the freshly computed
+/// defaults. `--clobber-sprites` ignores all markers. What is preserved is
+/// deliberately the operator-tunable layer (pivots, sizes, fps/loop, playback
+/// sequences) — never the derived pixel layout (frame UVs always follow the
+/// freshly packed atlas).
+fn preserve_manifest_edits(
+    existing: Option<&str>,
+    new_text: String,
+    manifest_kind: &str,
+    clobber: bool,
+) -> String {
+    if clobber {
+        return new_text;
+    }
+    let Some(existing) = existing else {
+        return new_text;
+    };
+    let Ok(old) = serde_json::from_str::<serde_json::Value>(existing) else {
+        return new_text;
+    };
+    let Ok(mut new) = serde_json::from_str::<serde_json::Value>(&new_text) else {
+        return new_text;
+    };
+    let (list_key, id_of): (&str, fn(&serde_json::Value) -> String) = match manifest_kind {
+        "enemy" => ("enemies", |entry| {
+            entry
+                .get("mobileId")
+                .and_then(|id| id.as_u64())
+                .map(|id| id.to_string())
+                .unwrap_or_default()
+        }),
+        _ => ("billboards", |entry| {
+            format!(
+                "{}.{}",
+                entry.get("archive").and_then(|v| v.as_u64()).unwrap_or(0),
+                entry.get("record").and_then(|v| v.as_u64()).unwrap_or(0)
+            )
+        }),
+    };
+    let (Some(old_entries), Some(new_entries)) = (
+        old.get(list_key).and_then(|list| list.as_array()),
+        new.get_mut(list_key).and_then(|list| list.as_array_mut()),
+    ) else {
+        return new_text;
+    };
+    for new_entry in new_entries.iter_mut() {
+        let id = id_of(new_entry);
+        let Some(old_entry) = old_entries.iter().find(|entry| id_of(entry) == id) else {
+            continue;
+        };
+        if old_entry.get("edited").and_then(|flag| flag.as_bool()) != Some(true) {
+            continue;
+        }
+        let mut preserved = Vec::new();
+        // Top-level tunables.
+        let top: &[&str] = match manifest_kind {
+            "enemy" => &["pivot", "normalizedSize"],
+            _ => &["pivot", "worldSize", "fps"],
+        };
+        for field in top {
+            if let Some(value) = old_entry.get(field) {
+                new_entry[field] = value.clone();
+                preserved.push(field.to_string());
+            }
+        }
+        // Per-state animation tunables (enemy move/idle/attack/hurt).
+        if let (Some(old_states), Some(new_states)) = (
+            old_entry.get("states").and_then(|s| s.as_object()),
+            new_entry.get_mut("states").and_then(|s| s.as_object_mut()),
+        ) {
+            for (state_name, old_state) in old_states {
+                let Some(new_state) = new_states.get_mut(state_name) else {
+                    continue;
+                };
+                for field in ["fps", "loop", "sequence", "alternateSequences"] {
+                    if let Some(value) = old_state.get(field) {
+                        new_state[field] = value.clone();
+                        preserved.push(format!("states.{state_name}.{field}"));
+                    }
+                }
+            }
+        }
+        // Per-frame world sizes (match on frame index).
+        if let (Some(old_frames), Some(new_frames)) = (
+            old_entry.get("frames").and_then(|f| f.as_array()),
+            new_entry.get_mut("frames").and_then(|f| f.as_array_mut()),
+        ) {
+            for old_frame in old_frames {
+                let Some(frame_id) = old_frame.get("frame").and_then(|f| f.as_u64()) else {
+                    continue;
+                };
+                let Some(new_frame) = new_frames.iter_mut().find(|candidate| {
+                    candidate.get("frame").and_then(|f| f.as_u64()) == Some(frame_id)
+                }) else {
+                    continue;
+                };
+                if let Some(size) = old_frame.get("size") {
+                    new_frame["size"] = size.clone();
+                    preserved.push(format!("frames[{frame_id}].size"));
+                }
+            }
+        }
+        new_entry["edited"] = serde_json::Value::Bool(true);
+        // Summarize: one entry per field kind, not per frame.
+        let mut kinds: Vec<String> = preserved
+            .iter()
+            .map(|field| field.split('[').next().unwrap_or(field).to_string())
+            .collect();
+        kinds.sort();
+        kinds.dedup();
+        eprintln!(
+            "sprite preservation: {manifest_kind} entry {id} keeps hand-edited {}",
+            kinds.join(", ")
+        );
+    }
+    serde_json::to_string_pretty(&new).unwrap_or(new_text)
 }
 
 /// Remove previously generated PNGs with an exporter-owned prefix so renames
@@ -335,6 +472,7 @@ fn publish_billboard_textures(
     dir: &std::path::Path,
     arena2_dir: &std::path::Path,
     billboards: &[dungeon::BillboardFlat],
+    clobber_sprites: bool,
 ) {
     use arena2::palette::Palette;
     use arena2::texture::TextureFile;
@@ -467,7 +605,7 @@ fn publish_billboard_textures(
             String::new()
         };
         entries.push(format!(
-            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"atlasWidth\":{atlas_w},\"atlasHeight\":{atlas_h},\"worldSize\":[{:?},{:?}]{name_field}{}}}",
+            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"atlasWidth\":{atlas_w},\"atlasHeight\":{atlas_h},\"pivot\":[0.5,0.5],\"worldSize\":[{:?},{:?}]{name_field}{}}}",
             png.len(),
             world[0],
             world[1],
@@ -478,6 +616,14 @@ fn publish_billboard_textures(
     let manifest = format!(
         "{{\n  \"schemaVersion\": 1,\n  \"billboards\": [\n{}\n  ]\n}}\n",
         entries.join(",\n")
+    );
+    let manifest = preserve_manifest_edits(
+        std::fs::read_to_string(dir.join("billboard-manifest.json"))
+            .ok()
+            .as_deref(),
+        manifest,
+        "billboard",
+        clobber_sprites,
     );
     std::fs::write(dir.join("billboard-manifest.json"), manifest)
         .expect("write billboard manifest");
@@ -497,6 +643,7 @@ fn publish_enemy_atlases(
     dir: &std::path::Path,
     arena2_dir: &std::path::Path,
     enemies: &[dungeon::EnemyScene],
+    clobber_sprites: bool,
 ) {
     use arena2::mobile::{
         mobile_type, record_world_size, standing_anims, HURT_ANIMS, HURT_ANIM_SPEED,
@@ -737,7 +884,7 @@ fn publish_enemy_atlases(
                 "null".to_string()
             });
         entries.push(format!(
-            "    {{\"mobileId\":{},\"name\":\"{}\",\"archive\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{atlas_w},\"height\":{atlas_h},\"normalizedSize\":[{:?},{:?}],\"states\":{{{state_entries}}},\"corpse\":{corpse},\"frames\":[\n{}\n    ]}}",
+            "    {{\"mobileId\":{},\"name\":\"{}\",\"archive\":{},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{atlas_w},\"height\":{atlas_h},\"normalizedSize\":[{:?},{:?}],\"pivot\":[0.5,0.0],\"states\":{{{state_entries}}},\"corpse\":{corpse},\"frames\":[\n{}\n    ]}}",
             mobile.id, mobile.name, mobile.texture_archive,
             png.len(),
             normalized_size[0], normalized_size[1],
@@ -748,6 +895,14 @@ fn publish_enemy_atlases(
     let manifest = format!(
         "{{\n  \"schemaVersion\": 1,\n  \"enemies\": [\n{}\n  ]\n}}\n",
         entries.join(",\n")
+    );
+    let manifest = preserve_manifest_edits(
+        std::fs::read_to_string(dir.join("enemy-manifest.json"))
+            .ok()
+            .as_deref(),
+        manifest,
+        "enemy",
+        clobber_sprites,
     );
     std::fs::write(dir.join("enemy-manifest.json"), manifest).expect("write enemy manifest");
     println!(
@@ -835,4 +990,49 @@ fn crop_visible_rgba(rgba: &[u8], width: usize, height: usize) -> (usize, usize,
             .copy_from_slice(&rgba[source..source + cropped_w * 4]);
     }
     (cropped_w, cropped_h, cropped)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn edited_entries_keep_tunables_across_regeneration() {
+        let old = r#"{"enemies":[
+            {"mobileId":0,"pivot":[0.6,0.0],"normalizedSize":[2.0,0.8],"edited":true,
+             "states":{"attack":{"frameStart":72,"framesPerOrientation":6,"fps":13,"loop":false,"sequence":[0,1,2]}},
+             "frames":[{"frame":0,"uvMin":[0,0],"uvMax":[0.1,0.1],"size":[1.6,1.5]}]},
+            {"mobileId":1,"pivot":[0.5,0.0],"states":{"attack":{"fps":10,"loop":false}},
+             "frames":[{"frame":0,"uvMin":[0,0],"uvMax":[0.1,0.1],"size":[2.0,1.7]}]}
+        ]}"#;
+        let new = r#"{"enemies":[
+            {"mobileId":0,"pivot":[0.5,0.0],"normalizedSize":[1.6,0.8],
+             "states":{"attack":{"frameStart":72,"framesPerOrientation":6,"fps":10,"loop":false,"sequence":[0,1,2,-1,3,4,5]}},
+             "frames":[{"frame":0,"uvMin":[0,0],"uvMax":[0.2,0.2],"size":[1.6,1.5]}]},
+            {"mobileId":1,"pivot":[0.5,0.0],"states":{"attack":{"fps":10,"loop":false}},
+             "frames":[{"frame":0,"uvMin":[0,0],"uvMax":[0.2,0.2],"size":[2.0,1.7]}]}
+        ]}"#
+            .to_string();
+        let merged = preserve_manifest_edits(Some(old), new, "enemy", false);
+        let value: serde_json::Value = serde_json::from_str(&merged).expect("merged json");
+        let rat = &value["enemies"][0];
+        assert_eq!(rat["pivot"], serde_json::json!([0.6, 0.0]));
+        assert_eq!(rat["states"]["attack"]["fps"], serde_json::json!(13));
+        assert_eq!(
+            rat["states"]["attack"]["sequence"],
+            serde_json::json!([0, 1, 2]),
+            "edited playback sequence preserved"
+        );
+        // Derived pixel layout always follows the fresh pack.
+        assert_eq!(rat["frames"][0]["uvMax"], serde_json::json!([0.2, 0.2]));
+        assert_eq!(rat["edited"], serde_json::json!(true));
+        // Unmarked entries take freshly computed values.
+        let imp = &value["enemies"][1];
+        assert_eq!(imp["frames"][0]["uvMax"], serde_json::json!([0.2, 0.2]));
+        assert!(imp.get("edited").is_none());
+        // Clobber ignores all markers.
+        let clobbered = preserve_manifest_edits(Some(old), merged, "enemy", true);
+        let value: serde_json::Value = serde_json::from_str(&clobbered).expect("clobbered json");
+        assert_eq!(value["enemies"][0]["pivot"], serde_json::json!([0.6, 0.0]));
+    }
 }
