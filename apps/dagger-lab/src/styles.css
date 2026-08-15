@@ -193,6 +193,22 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
 .sprite-inspector { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; padding: 12px 14px; border: 1px solid #293638; border-radius: 8px; background: #101718; }
 .sprite-inspector span { color: #8ca09d; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
 .sprite-inspector code { color: #b9cbc7; font-size: .74rem; }
+.sprite-savebar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 16px 0; padding: 12px 16px; border: 1px solid #c7a96a; border-radius: 10px; background: #231d12; }
+.sprite-savebar span { color: #e8d5a8; font-size: .8rem; }
+.sprite-savebar small { color: #9eb0ae; }
+.edited-badge { color: #e8d5a8; border: 1px solid #c7a96a; }
+.sprite-clear { padding: 5px 10px; font-size: .72rem; }
+.sprite-pivot.draggable { pointer-events: auto; cursor: grab; border-color: #ffd479; }
+.sprite-pivot-edit { display: flex; align-items: center; gap: 8px; }
+.sprite-pivot-edit span, .sprite-anim-edit span { color: #80908e; font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; }
+.sprite-pivot-edit input { width: 84px; text-align: left; padding: 7px 10px; }
+.sprite-anim-edit { display: flex; gap: 16px; margin-top: 12px; align-items: center; }
+.sprite-anim-edit label { display: flex; flex-direction: row; align-items: center; gap: 8px; margin: 0; }
+.sprite-anim-edit input[type="number"] { width: 72px; text-align: left; padding: 7px 10px; }
+.sprite-uv-edit { display: flex; flex-wrap: wrap; gap: 8px 14px; width: 100%; margin-top: 8px; }
+.sprite-uv-edit span { color: #8ca09d; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; }
+.sprite-uv-edit label { display: flex; align-items: center; gap: 6px; color: #9facaa; font-size: .72rem; }
+.sprite-uv-edit input { width: 92px; text-align: left; padding: 6px 8px; font-size: .76rem; }
 
 @media (max-width: 820px) {
   header { display: grid; }

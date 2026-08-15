@@ -371,7 +371,7 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
                 "sprite": {
                     "asset": f"texture/{slug}",
                     "billboard": "cylindrical",
-                    "pivot": [0.5, 0.5],
+                    "pivot": tex.get("pivot", [0.5, 0.5]),
                     "size": tex.get("worldSize", [1.0, 1.0]),
                     "sizeMode": "world",
                     "shading": "lit",
@@ -405,7 +405,7 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
                 "sprite": {
                     "asset": f"texture/{slug}",
                     "frame": 0,
-                    "pivot": [0.5, 0.0],
+                    "pivot": enemy_entry.get("pivot", [0.5, 0.0]),
                     "size": normalized_size,
                     "billboard": "cylindrical",
                     "sizeMode": "world",
@@ -562,7 +562,7 @@ def build_encounter_gallery(project: dict, enemy_manifest: dict) -> tuple[dict, 
             "id": handle,
             "name": f"gallery-enemy-{mobile_id}-{index}",
             "translation": position,
-            "sprite": {"asset": f"texture/enemy-{mobile_id}-atlas", "frame": 0, "pivot": [0.5, 0.0], "size": size, "billboard": "cylindrical", "sizeMode": "world", "shading": "lit", "depth": "default", "visible": True},
+            "sprite": {"asset": f"texture/enemy-{mobile_id}-atlas", "frame": 0, "pivot": enemy_entry.get("pivot", [0.5, 0.0]), "size": size, "billboard": "cylindrical", "sizeMode": "world", "shading": "lit", "depth": "default", "visible": True},
         })
         corpse = enemy_entry.get("corpse")
         if isinstance(corpse, dict):

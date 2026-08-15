@@ -47,6 +47,11 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
   /** 0 = fit the stage box. */
   zoom = 0;
   inspectedFrame: number | undefined;
+  /** Raw manifest documents, as served; edits mutate these and save whole. */
+  private manifestDocs: Record<string, Record<string, unknown>> = {};
+  readonly dirtyManifests = new Set<string>();
+  saving = false;
+  saveStatus = '';
 
   ngOnInit(): void {
     void this.load();
@@ -60,6 +65,7 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
     this.loadError = '';
     try {
       const index = await this.api.spriteIndex();
+      this.manifestDocs = index.manifests as Record<string, Record<string, unknown>>;
       this.entries = normalizeSpriteIndex(index);
       this.loaded = true;
       this.selectedKey = this.selectedKey ?? this.entries.at(0)?.key;
@@ -221,6 +227,228 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
 
   trackEntry(_index: number, entry: SpriteEntry): string {
     return entry.key;
+  }
+
+  // --- Manifest editing (Den 6945) ---------------------------------------
+  // Edits mutate the raw manifest document and set the entry's "edited"
+  // marker; the exporter preserves marked tunable fields across regeneration
+  // (DAGGER_CLOBBER_SPRITES=1 ignores markers). Saving posts the whole
+  // manifest; the lab bridge then restamps the project documents.
+
+  /** The raw manifest entry object behind a normalized sprite entry. */
+  rawEntry(entry: SpriteEntry): Record<string, unknown> | undefined {
+    const doc = this.manifestDocs[entry.manifest];
+    if (doc === undefined) return undefined;
+    const id = entry.key.slice(entry.key.indexOf(':') + 1);
+    const records = (list: unknown): Record<string, unknown>[] =>
+      Array.isArray(list)
+        ? list.filter(
+            (item): item is Record<string, unknown> =>
+              typeof item === 'object' && item !== null,
+          )
+        : [];
+    if (id.startsWith('mobile-')) {
+      return records(doc['enemies']).find((e) => String(e['mobileId']) === id.slice(7));
+    }
+    if (id.startsWith('billboard-')) {
+      const [archive, record] = id.slice(10).split('-');
+      return records(doc['billboards']).find(
+        (e) => String(e['archive']) === archive && String(e['record']) === record,
+      );
+    }
+    const weapon = doc['weapon'];
+    if (typeof weapon === 'object' && weapon !== null) {
+      const weaponDoc = weapon as Record<string, unknown>;
+      if (weaponDoc['id'] === id) return weaponDoc;
+    }
+    const effect = records(doc['effects']).find((e) => e['id'] === id);
+    if (effect !== undefined) return effect;
+    return records(doc['textures']).find((e) => e['path'] === id);
+  }
+
+  isEdited(entry: SpriteEntry): boolean {
+    return this.rawEntry(entry)?.['edited'] === true;
+  }
+
+  dirtyList(): string {
+    return [...this.dirtyManifests].join(', ');
+  }
+
+  pivotEditable(entry: SpriteEntry): boolean {
+    return entry.pivot !== undefined;
+  }
+
+  pivotValue(entry: SpriteEntry, axis: 0 | 1): number {
+    const pivot = this.rawEntry(entry)?.['pivot'];
+    return Array.isArray(pivot) && typeof pivot[axis] === 'number' ? pivot[axis] : 0.5;
+  }
+
+  setPivotAxis(entry: SpriteEntry, axis: 0 | 1, value: number): void {
+    const raw = this.rawEntry(entry);
+    if (raw === undefined || !Number.isFinite(value)) return;
+    const pivot: [number, number] = [this.pivotValue(entry, 0), this.pivotValue(entry, 1)];
+    pivot[axis] = Math.round(value * 1000) / 1000;
+    raw['pivot'] = pivot;
+    this.markEdited(entry);
+  }
+
+  /** Drag the stage pivot marker; pivot origin is the quad's bottom-left. */
+  startPivotDrag(event: PointerEvent, entry: SpriteEntry): void {
+    const marker = event.currentTarget as HTMLElement | null;
+    const box = marker?.parentElement;
+    if (marker === null || box === null || box === undefined) return;
+    event.preventDefault();
+    marker.setPointerCapture(event.pointerId);
+    const rect = box.getBoundingClientRect();
+    const move = (e: PointerEvent) => {
+      const x = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
+      const y = 1 - Math.min(Math.max((e.clientY - rect.top) / rect.height, 0), 1);
+      this.setPivotAxis(entry, 0, x);
+      this.setPivotAxis(entry, 1, y);
+    };
+    const stop = () => {
+      marker.removeEventListener('pointermove', move);
+      marker.removeEventListener('pointerup', stop);
+      marker.removeEventListener('pointercancel', stop);
+    };
+    marker.addEventListener('pointermove', move);
+    marker.addEventListener('pointerup', stop);
+    marker.addEventListener('pointercancel', stop);
+  }
+
+  /** The raw object carrying an animation's fps/loop fields. */
+  private animationDoc(
+    entry: SpriteEntry,
+    animation: SpriteAnimation,
+  ): Record<string, unknown> | undefined {
+    const raw = this.rawEntry(entry);
+    if (raw === undefined) return undefined;
+    const states = raw['states'];
+    if (typeof states === 'object' && states !== null && animation.name in states) {
+      return (states as Record<string, unknown>)[animation.name] as Record<string, unknown>;
+    }
+    const animations = raw['animations'];
+    if (Array.isArray(animations)) {
+      const match = animations.find(
+        (item) =>
+          typeof item === 'object' &&
+          item !== null &&
+          (item as Record<string, unknown>)['action'] === animation.name,
+      );
+      if (match !== undefined) return match as Record<string, unknown>;
+    }
+    return raw;
+  }
+
+  animationField(entry: SpriteEntry, animation: SpriteAnimation, field: string): unknown {
+    return this.animationDoc(entry, animation)?.[field];
+  }
+
+  hasAnimationLoop(entry: SpriteEntry, animation: SpriteAnimation): boolean {
+    return this.animationDoc(entry, animation)?.['loop'] !== undefined;
+  }
+
+  setAnimationField(
+    entry: SpriteEntry,
+    animation: SpriteAnimation,
+    field: 'fps' | 'loop',
+    value: number | boolean,
+  ): void {
+    const doc = this.animationDoc(entry, animation);
+    if (doc === undefined) return;
+    if (field === 'fps' && (typeof value !== 'number' || !Number.isFinite(value))) return;
+    doc[field] = field === 'fps' ? Math.max(0, Math.round(value as number)) : value === true;
+    this.markEdited(entry);
+  }
+
+  /** Numeric fields of the inspected frame rect: uvMin/uvMax corners. */
+  setFrameUv(entry: SpriteEntry, corner: 'uvMin' | 'uvMax', axis: 0 | 1, value: number): void {
+    const raw = this.rawEntry(entry);
+    const frame = this.currentFrame();
+    if (raw === undefined || frame === undefined || !Number.isFinite(value)) return;
+    const frames = raw['frames'];
+    if (!Array.isArray(frames)) return;
+    const target = frames.find(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        (item as Record<string, unknown>)['frame'] === frame,
+    ) as Record<string, unknown> | undefined;
+    const rect = target?.[corner];
+    if (!Array.isArray(rect) || rect.length < 2) return;
+    rect[axis] = Math.round(value * 10000) / 10000;
+    this.markEdited(entry);
+  }
+
+  frameUvValue(corner: 'uvMin' | 'uvMax', axis: 0 | 1): number {
+    const rect = this.currentRect();
+    if (rect === undefined) return 0;
+    return corner === 'uvMin' ? rect.uvMin[axis] : rect.uvMax[axis];
+  }
+
+  setWorldSizeAxis(entry: SpriteEntry, field: 'worldSize' | 'normalizedSize', axis: 0 | 1, value: number): void {
+    const raw = this.rawEntry(entry);
+    if (raw === undefined || !Number.isFinite(value)) return;
+    const size = raw[field];
+    if (!Array.isArray(size) || size.length < 2) return;
+    size[axis] = Math.round(value * 1000) / 1000;
+    this.markEdited(entry);
+  }
+
+  worldSizeValue(entry: SpriteEntry, axis: 0 | 1): number {
+    return entry.worldSize?.[axis] ?? 0;
+  }
+
+  /** Remove the hand-edit marker; classic defaults return on next full regeneration. */
+  clearEdits(entry: SpriteEntry): void {
+    const raw = this.rawEntry(entry);
+    if (raw === undefined) return;
+    delete raw['edited'];
+    this.dirtyManifests.add(entry.manifest);
+    this.saveStatus = 'Edit marker cleared — classic defaults return on next full regeneration (save to persist the cleared marker).';
+    this.changeDetector.markForCheck();
+  }
+
+  async saveAll(): Promise<void> {
+    this.saving = true;
+    this.saveStatus = '';
+    const problems: string[] = [];
+    try {
+      for (const name of this.dirtyManifests) {
+        const doc = this.manifestDocs[name];
+        if (doc === undefined) continue;
+        const result = await this.api.saveSpriteManifest(name, doc);
+        if (result.projectDocs !== 'regenerated') {
+          problems.push(`${name}: project docs ${result.projectDocs}`);
+        }
+      }
+      this.dirtyManifests.clear();
+      this.saveStatus =
+        problems.length > 0
+          ? `Saved, but ${problems.join('; ')}`
+          : 'Saved; project docs restamped.';
+    } catch (error: unknown) {
+      this.saveStatus = error instanceof Error ? error.message : 'save failed';
+    } finally {
+      this.saving = false;
+      this.changeDetector.markForCheck();
+    }
+  }
+
+  async discardAll(): Promise<void> {
+    this.dirtyManifests.clear();
+    this.saveStatus = '';
+    await this.load();
+  }
+
+  private markEdited(entry: SpriteEntry): void {
+    const raw = this.rawEntry(entry);
+    if (raw === undefined) return;
+    raw['edited'] = true;
+    this.dirtyManifests.add(entry.manifest);
+    // Rebuild the normalized view so the stage reflects the edit live.
+    this.entries = normalizeSpriteIndex({ manifests: this.manifestDocs, files: {} });
+    this.changeDetector.markForCheck();
   }
 
   format(value: number | undefined): string {

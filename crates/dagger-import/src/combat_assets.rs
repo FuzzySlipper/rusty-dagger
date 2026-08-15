@@ -36,7 +36,7 @@ struct PackedAtlas {
     frames: Vec<Value>,
 }
 
-pub fn publish(texture_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
+pub fn publish(texture_dir: &Path, arena2_dir: &Path, clobber_sprites: bool) -> Result<(), String> {
     fs::create_dir_all(texture_dir).map_err(|error| error.to_string())?;
     let audio_dir = texture_dir
         .parent()
@@ -47,13 +47,14 @@ pub fn publish(texture_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
     let weapon = publish_weapon(texture_dir, arena2_dir)?;
     let effects = publish_effects(texture_dir, arena2_dir)?;
     let audio = publish_audio(&audio_dir, arena2_dir)?;
-    let manifest = json!({
+    let mut manifest = json!({
         "schemaVersion": 1,
         "cloneBaseline": "classic-daggerfall-dfu",
         "weapon": weapon,
         "effects": effects,
         "audio": audio,
     });
+    preserve_combat_edits(texture_dir, &mut manifest, clobber_sprites);
     fs::write(
         texture_dir.join("combat-manifest.json"),
         serde_json::to_vec_pretty(&manifest).map_err(|error| error.to_string())?,
@@ -327,6 +328,92 @@ fn sha256(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
 }
 
+/// Hand-edit preservation for the combat manifest (Den 6945): entries marked
+/// `"edited": true` keep their operator tunables — weapon pivot and per-action
+/// fps/alignment/screenOffset, effect pivot/fps/loop — across regeneration.
+/// `--clobber-sprites` ignores all markers.
+fn preserve_combat_edits(texture_dir: &Path, manifest: &mut Value, clobber: bool) {
+    if clobber {
+        return;
+    }
+    let Ok(existing) = fs::read_to_string(texture_dir.join("combat-manifest.json")) else {
+        return;
+    };
+    let Ok(old) = serde_json::from_str::<Value>(&existing) else {
+        return;
+    };
+
+    if let (Some(old_weapon), Some(new_weapon)) = (
+        old.get("weapon")
+            .filter(|w| w.get("edited") == Some(&Value::Bool(true))),
+        manifest.get_mut("weapon"),
+    ) {
+        let mut preserved = Vec::new();
+        if let Some(pivot) = old_weapon.get("pivot") {
+            new_weapon["pivot"] = pivot.clone();
+            preserved.push("pivot".to_string());
+        }
+        if let (Some(old_anims), Some(new_anims)) = (
+            old_weapon.get("animations").and_then(|a| a.as_array()),
+            new_weapon
+                .get_mut("animations")
+                .and_then(|a| a.as_array_mut()),
+        ) {
+            for old_anim in old_anims {
+                let Some(action) = old_anim.get("action").and_then(|a| a.as_str()) else {
+                    continue;
+                };
+                let Some(new_anim) = new_anims.iter_mut().find(|candidate| {
+                    candidate.get("action").and_then(|a| a.as_str()) == Some(action)
+                }) else {
+                    continue;
+                };
+                for field in ["fps", "alignment", "screenOffset"] {
+                    if let Some(value) = old_anim.get(field) {
+                        new_anim[field] = value.clone();
+                        preserved.push(format!("animations.{action}.{field}"));
+                    }
+                }
+            }
+        }
+        new_weapon["edited"] = Value::Bool(true);
+        eprintln!(
+            "sprite preservation: combat weapon keeps hand-edited {}",
+            preserved.join(", ")
+        );
+    }
+
+    if let (Some(old_effects), Some(new_effects)) = (
+        old.get("effects").and_then(|e| e.as_array()),
+        manifest.get_mut("effects").and_then(|e| e.as_array_mut()),
+    ) {
+        for new_effect in new_effects.iter_mut() {
+            let Some(id) = new_effect
+                .get("id")
+                .and_then(|i| i.as_str())
+                .map(str::to_owned)
+            else {
+                continue;
+            };
+            let Some(old_effect) = old_effects.iter().find(|candidate| {
+                candidate.get("id").and_then(|i| i.as_str()) == Some(id.as_str())
+                    && candidate.get("edited") == Some(&Value::Bool(true))
+            }) else {
+                continue;
+            };
+            let mut preserved = Vec::new();
+            for field in ["pivot", "fps", "loop"] {
+                if let Some(value) = old_effect.get(field) {
+                    new_effect[field] = value.clone();
+                    preserved.push(field.to_string());
+                }
+            }
+            new_effect["edited"] = Value::Bool(true);
+            eprintln!("sprite preservation: combat effect {id} keeps hand-edited {preserved:?}");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -351,7 +438,7 @@ mod tests {
         );
         let root = std::env::temp_dir().join(unique);
         let textures = root.join("textures");
-        publish(&textures, &arena2).expect("publish real classic combat assets");
+        publish(&textures, &arena2, false).expect("publish real classic combat assets");
         let manifest: Value = serde_json::from_slice(
             &fs::read(textures.join("combat-manifest.json")).expect("read combat manifest"),
         )

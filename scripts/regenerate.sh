@@ -10,8 +10,16 @@ RUSTY_ASSET_IMPORT="${RUSTY_ASSET_IMPORT:-/home/dev/rusty-engine/target/debug/ru
 
 cargo run -q -p dagger-import --bin dagger-import -- \
     --out content/privateers-hold.glb
+# Hand-edited sprite manifest fields (pivots, sizes, fps, playback sequences)
+# survive regeneration via each entry's "edited" marker;
+# DAGGER_CLOBBER_SPRITES=1 rewrites everything from classic defaults.
+CLOBBER_ARGS=()
+if [[ "${DAGGER_CLOBBER_SPRITES:-0}" == "1" ]]; then
+  CLOBBER_ARGS+=(--clobber-sprites)
+fi
 cargo run -q -p dagger-import --bin dagger-import -- \
-    --format mesh-json --texture-dir content/textures --out content/privateers-hold.mesh.json
+    --format mesh-json --texture-dir content/textures --out content/privateers-hold.mesh.json \
+    "${CLOBBER_ARGS[@]}"
 "$RUSTY_ASSET_IMPORT" write content/privateers-hold.mesh.json content/imported
 python3 scripts/generate-project.py --write
 cargo run -q -p dagger-runtime --bin dagger-walkthrough
