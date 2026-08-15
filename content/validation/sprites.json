@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-14T11:59:43.897116507+00:00",
+  "generated": "2026-08-14T23:57:02.620505098+00:00",
   "enemies": [
     {
       "mobileId": 0,
       "name": "Rat",
       "archive": 255,
-      "atlas": "enemy-0-atlas.png",
+      "atlas": "enemy-rat-atlas.png",
       "atlasSize": [
         3996,
         470
@@ -2113,7 +2113,7 @@
       "mobileId": 1,
       "name": "Imp",
       "archive": 256,
-      "atlas": "enemy-1-atlas.png",
+      "atlas": "enemy-imp-atlas.png",
       "atlasSize": [
         3956,
         510
@@ -3860,7 +3860,7 @@
       "mobileId": 3,
       "name": "GiantBat",
       "archive": 258,
-      "atlas": "enemy-3-atlas.png",
+      "atlas": "enemy-giantbat-atlas.png",
       "atlasSize": [
         4085,
         642
@@ -5607,7 +5607,7 @@
       "mobileId": 4,
       "name": "GrizzlyBear",
       "archive": 259,
-      "atlas": "enemy-4-atlas.png",
+      "atlas": "enemy-grizzlybear-atlas.png",
       "atlasSize": [
         3933,
         588
@@ -6994,7 +6994,7 @@
       "mobileId": 7,
       "name": "Orc",
       "archive": 262,
-      "atlas": "enemy-7-atlas.png",
+      "atlas": "enemy-orc-atlas.png",
       "atlasSize": [
         3982,
         775
@@ -8621,7 +8621,7 @@
       "mobileId": 15,
       "name": "SkeletalWarrior",
       "archive": 270,
-      "atlas": "enemy-15-atlas.png",
+      "atlas": "enemy-skeletalwarrior-atlas.png",
       "atlasSize": [
         3990,
         537
@@ -10248,7 +10248,7 @@
       "mobileId": 138,
       "name": "Thief",
       "archive": 484,
-      "atlas": "enemy-138-atlas.png",
+      "atlas": "enemy-thief-atlas.png",
       "atlasSize": [
         4068,
         357
@@ -11875,7 +11875,7 @@
       "mobileId": 141,
       "name": "Archer",
       "archive": 482,
-      "atlas": "enemy-141-atlas.png",
+      "atlas": "enemy-archer-atlas.png",
       "atlasSize": [
         4033,
         429
@@ -13503,7 +13503,7 @@
     {
       "archive": 203,
       "record": 5,
-      "path": "billboard-203-5.png",
+      "path": "billboard-pillar-fluted.png",
       "atlasSize": [
         32,
         119
@@ -13518,7 +13518,7 @@
     {
       "archive": 203,
       "record": 6,
-      "path": "billboard-203-6.png",
+      "path": "billboard-pillar-plain.png",
       "atlasSize": [
         22,
         121
@@ -13533,7 +13533,7 @@
     {
       "archive": 206,
       "record": 0,
-      "path": "billboard-206-0.png",
+      "path": "billboard-skull.png",
       "atlasSize": [
         13,
         13
@@ -13548,7 +13548,7 @@
     {
       "archive": 206,
       "record": 1,
-      "path": "billboard-206-1.png",
+      "path": "billboard-skull-front.png",
       "atlasSize": [
         13,
         15
@@ -13563,7 +13563,7 @@
     {
       "archive": 206,
       "record": 3,
-      "path": "billboard-206-3.png",
+      "path": "billboard-skull-jawed.png",
       "atlasSize": [
         53,
         34
@@ -13578,7 +13578,7 @@
     {
       "archive": 206,
       "record": 4,
-      "path": "billboard-206-4.png",
+      "path": "billboard-skull-weathered.png",
       "atlasSize": [
         18,
         23
@@ -13593,7 +13593,7 @@
     {
       "archive": 206,
       "record": 5,
-      "path": "billboard-206-5.png",
+      "path": "billboard-skull-profile.png",
       "atlasSize": [
         17,
         27
@@ -13608,7 +13608,7 @@
     {
       "archive": 206,
       "record": 6,
-      "path": "billboard-206-6.png",
+      "path": "billboard-skull-lying.png",
       "atlasSize": [
         25,
         17
@@ -13623,7 +13623,7 @@
     {
       "archive": 206,
       "record": 8,
-      "path": "billboard-206-8.png",
+      "path": "billboard-skull-pile.png",
       "atlasSize": [
         62,
         32
@@ -13638,7 +13638,7 @@
     {
       "archive": 206,
       "record": 14,
-      "path": "billboard-206-14.png",
+      "path": "billboard-corpse-pile.png",
       "atlasSize": [
         87,
         40
@@ -13653,7 +13653,7 @@
     {
       "archive": 206,
       "record": 17,
-      "path": "billboard-206-17.png",
+      "path": "billboard-skull-pike.png",
       "atlasSize": [
         43,
         87
@@ -13668,7 +13668,7 @@
     {
       "archive": 210,
       "record": 0,
-      "path": "billboard-210-0.png",
+      "path": "billboard-brazier.png",
       "atlasSize": [
         40,
         52
@@ -13683,7 +13683,7 @@
     {
       "archive": 210,
       "record": 1,
-      "path": "billboard-210-1.png",
+      "path": "billboard-campfire.png",
       "atlasSize": [
         48,
         49
@@ -13698,7 +13698,7 @@
     {
       "archive": 210,
       "record": 2,
-      "path": "billboard-210-2.png",
+      "path": "billboard-urn-flame.png",
       "atlasSize": [
         13,
         29
@@ -13713,7 +13713,7 @@
     {
       "archive": 210,
       "record": 3,
-      "path": "billboard-210-3.png",
+      "path": "billboard-candle.png",
       "atlasSize": [
         9,
         19
@@ -13728,7 +13728,7 @@
     {
       "archive": 210,
       "record": 4,
-      "path": "billboard-210-4.png",
+      "path": "billboard-candle-dish.png",
       "atlasSize": [
         15,
         21
@@ -13743,7 +13743,7 @@
     {
       "archive": 210,
       "record": 6,
-      "path": "billboard-210-6.png",
+      "path": "billboard-torch-pole.png",
       "atlasSize": [
         16,
         94
@@ -13758,7 +13758,7 @@
     {
       "archive": 210,
       "record": 8,
-      "path": "billboard-210-8.png",
+      "path": "billboard-hanging-brazier-blue.png",
       "atlasSize": [
         59,
         97
@@ -13773,7 +13773,7 @@
     {
       "archive": 210,
       "record": 9,
-      "path": "billboard-210-9.png",
+      "path": "billboard-chandelier.png",
       "atlasSize": [
         56,
         110
@@ -13788,7 +13788,7 @@
     {
       "archive": 210,
       "record": 11,
-      "path": "billboard-210-11.png",
+      "path": "billboard-hanging-lantern-round.png",
       "atlasSize": [
         29,
         61
@@ -13803,7 +13803,7 @@
     {
       "archive": 210,
       "record": 12,
-      "path": "billboard-210-12.png",
+      "path": "billboard-hanging-lantern-skull.png",
       "atlasSize": [
         36,
         54
@@ -13818,7 +13818,7 @@
     {
       "archive": 210,
       "record": 13,
-      "path": "billboard-210-13.png",
+      "path": "billboard-hanging-lantern-globe.png",
       "atlasSize": [
         36,
         53
@@ -13833,7 +13833,7 @@
     {
       "archive": 210,
       "record": 16,
-      "path": "billboard-210-16.png",
+      "path": "billboard-wall-torch.png",
       "atlasSize": [
         13,
         54
@@ -13848,7 +13848,7 @@
     {
       "archive": 210,
       "record": 17,
-      "path": "billboard-210-17.png",
+      "path": "billboard-wall-torch-brass.png",
       "atlasSize": [
         13,
         50
@@ -13863,7 +13863,7 @@
     {
       "archive": 210,
       "record": 18,
-      "path": "billboard-210-18.png",
+      "path": "billboard-wall-torch-tall.png",
       "atlasSize": [
         16,
         55
@@ -13878,7 +13878,7 @@
     {
       "archive": 210,
       "record": 19,
-      "path": "billboard-210-19.png",
+      "path": "billboard-torch-stand.png",
       "atlasSize": [
         41,
         93
@@ -13893,7 +13893,7 @@
     {
       "archive": 210,
       "record": 20,
-      "path": "billboard-210-20.png",
+      "path": "billboard-torch-pole-slim.png",
       "atlasSize": [
         16,
         86
@@ -13908,7 +13908,7 @@
     {
       "archive": 210,
       "record": 22,
-      "path": "billboard-210-22.png",
+      "path": "billboard-hanging-lantern.png",
       "atlasSize": [
         18,
         73
@@ -13923,7 +13923,7 @@
     {
       "archive": 213,
       "record": 7,
-      "path": "billboard-213-7.png",
+      "path": "billboard-hanging-roots.png",
       "atlasSize": [
         13,
         65
@@ -13938,7 +13938,7 @@
     {
       "archive": 213,
       "record": 8,
-      "path": "billboard-213-8.png",
+      "path": "billboard-hanging-roots-b.png",
       "atlasSize": [
         34,
         75
@@ -13953,7 +13953,7 @@
     {
       "archive": 213,
       "record": 9,
-      "path": "billboard-213-9.png",
+      "path": "billboard-hanging-roots-c.png",
       "atlasSize": [
         37,
         87
@@ -13968,7 +13968,7 @@
     {
       "archive": 213,
       "record": 10,
-      "path": "billboard-213-10.png",
+      "path": "billboard-hanging-roots-d.png",
       "atlasSize": [
         27,
         66

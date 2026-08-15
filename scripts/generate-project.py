@@ -356,11 +356,13 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
     # (Y-facing) billboard with a transparent texture. Positions are glTF world
     # space from dagger-import.
     billboard_entities = []
-    billboard_sizes = {t['path']: t for t in billboard_manifest.get('billboards', [])}
+    # Manifest entries are keyed by (archive, record); the exporter may name
+    # the PNG file after a hand-authored nickname instead of the numeric slug.
+    billboard_sizes = {(t['archive'], t['record']): t for t in billboard_manifest.get('billboards', [])}
     if scene_meta and scene_meta.get("billboards"):
         for index, b in enumerate(scene_meta["billboards"]):
             slug = f"billboard-{b['textureArchive']}-{b['textureRecord']}"
-            tex = billboard_sizes.get(f"{slug}.png", {})
+            tex = billboard_sizes.get((b['textureArchive'], b['textureRecord']), {})
             # DFU GetScaledBillboardSize world dims, center-anchored quad.
             billboard_entities.append({
                 "id": 1000 + index,

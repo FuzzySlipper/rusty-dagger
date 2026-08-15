@@ -370,7 +370,7 @@ async function assertSpriteReviewTab(page, output) {
     .evaluate((element) => getComputedStyle(element).backgroundImage);
   assert.match(
     background,
-    /sprites\/asset\/textures\/enemy-0-atlas\.png/,
+    /sprites\/asset\/textures\/enemy-rat-atlas\.png/,
     'stage frame is not blitted from the lab asset route',
   );
   const frameTransform = await page

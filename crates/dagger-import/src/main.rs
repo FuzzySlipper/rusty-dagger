@@ -288,6 +288,45 @@ fn publish_textures(dir: &std::path::Path, textures: &[glb::TextureInput]) {
     );
 }
 
+/// Remove previously generated PNGs with an exporter-owned prefix so renames
+/// never leave stale files in the content tree.
+fn remove_generated(dir: &std::path::Path, prefix: &str) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        if name.starts_with(prefix) && name.ends_with(".png") {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
+}
+
+/// Hand-authored sprite display names (data/sprite-names.json). Content
+/// configuration: missing or malformed files just mean numeric slugs.
+fn load_sprite_names() -> std::collections::BTreeMap<String, String> {
+    let Ok(text) = std::fs::read_to_string("data/sprite-names.json") else {
+        return Default::default();
+    };
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(&text) else {
+        eprintln!(
+            "sprite names warning: data/sprite-names.json is not valid JSON, using numeric slugs"
+        );
+        return Default::default();
+    };
+    value
+        .get("billboards")
+        .and_then(|billboards| billboards.as_object())
+        .map(|billboards| {
+            billboards
+                .iter()
+                .filter_map(|(key, name)| name.as_str().map(|name| (key.clone(), name.to_string())))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// Decode unique billboard (archive, record) textures to transparent PNGs
 /// (palette index 0 = transparent, the Daggerfall billboard rule) plus a
 /// billboard manifest mapping each texture to its PNG sourcePath/hash/dims.
@@ -301,7 +340,12 @@ fn publish_billboard_textures(
     use arena2::texture::TextureFile;
     use std::collections::BTreeMap;
 
+    // The exporter owns billboard-*.png; clear stale outputs so renamed
+    // exports never linger beside their replacements.
+    remove_generated(dir, "billboard-");
     let palette = Palette::load(&arena2_dir.join("PAL.PAL")).expect("PAL.PAL");
+    let sprite_names = load_sprite_names();
+    let mut used_slugs = std::collections::BTreeSet::new();
     let mut unique: BTreeMap<(u16, u16), ()> = BTreeMap::new();
     for b in billboards {
         unique.insert((b.texture_archive, b.texture_record), ());
@@ -373,10 +417,27 @@ fn publish_billboard_textures(
         };
 
         let png = crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &rgba);
-        let slug = format!("billboard-{archive}-{record}");
+        // Hand-authored nickname when the overlay has one (content config);
+        // numeric slug otherwise. A nickname collision falls back to numeric
+        // with a warning rather than overwriting a sibling export.
+        let nickname = sprite_names.get(&format!("{archive}.{record}"));
+        let slug = match nickname {
+            Some(name) if used_slugs.insert(name.clone()) => format!("billboard-{name}"),
+            Some(name) => {
+                eprintln!(
+                    "sprite names warning: nickname \"{name}\" is used more than once; billboard-{archive}-{record} keeps its numeric slug"
+                );
+                format!("billboard-{archive}-{record}")
+            }
+            None => format!("billboard-{archive}-{record}"),
+        };
         let file = format!("{slug}.png");
         std::fs::write(dir.join(&file), &png).expect("write billboard png");
         let hash = format!("sha256:{:x}", Sha256::digest(&png));
+        let name_field = match nickname {
+            Some(name) if slug == format!("billboard-{name}") => format!(",\"name\":\"{name}\""),
+            _ => String::new(),
+        };
 
         // Manifest entry: single-frame records stay backward-compatible
         // (no frameCount/frames). Multi-frame records add frameCount, fps,
@@ -406,7 +467,7 @@ fn publish_billboard_textures(
             String::new()
         };
         entries.push(format!(
-            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"atlasWidth\":{atlas_w},\"atlasHeight\":{atlas_h},\"worldSize\":[{:?},{:?}]{}}}",
+            "    {{\"archive\":{archive},\"record\":{record},\"path\":\"{file}\",\"sha256\":\"{hash}\",\"byteLength\":{},\"width\":{w},\"height\":{h},\"atlasWidth\":{atlas_w},\"atlasHeight\":{atlas_h},\"worldSize\":[{:?},{:?}]{name_field}{}}}",
             png.len(),
             world[0],
             world[1],
@@ -446,6 +507,9 @@ fn publish_enemy_atlases(
     use arena2::texture::TextureFile;
     use std::collections::BTreeMap;
 
+    // The exporter owns enemy-*.png; clear stale outputs so renames never
+    // linger beside their replacements.
+    remove_generated(dir, "enemy-");
     let palette = Palette::load(&arena2_dir.join("PAL.PAL")).expect("PAL.PAL");
     let mut unique: BTreeMap<u8, ()> = BTreeMap::new();
     for e in enemies {
@@ -622,7 +686,7 @@ fn publish_enemy_atlases(
             ));
         }
         let png = crate::png::encode_rgba(atlas_w as u32, atlas_h as u32, &atlas);
-        let slug = format!("enemy-{}-atlas", mobile.id);
+        let slug = format!("enemy-{}-atlas", mobile.name.to_lowercase());
         let file = format!("{slug}.png");
         std::fs::write(dir.join(&file), &png).expect("write enemy atlas png");
         let hash = format!("sha256:{:x}", Sha256::digest(&png));
@@ -716,7 +780,7 @@ fn publish_enemy_corpse(
     let rgba = palette.to_rgba_transparent(&indexed);
     let (trimmed_width, trimmed_height, trimmed) = crop_visible_rgba(&rgba, width, height);
     let png = crate::png::encode_rgba(trimmed_width as u32, trimmed_height as u32, &trimmed);
-    let file = format!("enemy-{}-corpse.png", mobile.id);
+    let file = format!("enemy-{}-corpse.png", mobile.name.to_lowercase());
     std::fs::write(dir.join(&file), &png).map_err(|error| error.to_string())?;
     let hash = format!("sha256:{:x}", Sha256::digest(&png));
     let world_size = record_world_size(info.width, info.height, info.scale_x, info.scale_y);

@@ -53,7 +53,7 @@ export interface SpriteEntry {
   readonly manifest: string;
   readonly label: string;
   readonly detail: string;
-  /** Path relative to the served content root (e.g. `textures/enemy-0-atlas.png`). */
+  /** Path relative to the served content root (e.g. `textures/enemy-rat-atlas.png`). */
   readonly imagePath: string;
   /** Atlas pixel dimensions; 0 when the manifest does not record them. */
   readonly imageWidth: number;
@@ -133,7 +133,9 @@ function billboardEntry(manifest: string, raw: JsonObject): SpriteEntry {
   return {
     key: `${manifest}:billboard-${archive}-${record}`,
     manifest,
-    label: `billboard ${archive}-${record}`,
+    // Hand-authored nickname from data/sprite-names.json when the exporter
+    // had one; numeric identity otherwise.
+    label: string(raw['name']) ?? `billboard ${archive}-${record}`,
     detail: `archive ${archive ?? '?'} record ${record ?? '?'}`,
     imagePath: contentPath(string(raw['path']) ?? ''),
     imageWidth,
