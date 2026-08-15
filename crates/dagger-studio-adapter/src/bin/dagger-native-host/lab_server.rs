@@ -379,12 +379,46 @@ fn serve_sprite_asset(stream: &mut TcpStream, content_root: &Path, name: &str) -
     write_bytes_response(stream, 200, content_type, &bytes)
 }
 
+/// The manifest documents the lab may overwrite, with the top-level
+/// collections each must carry. This table is the single place a manifest
+/// opts into lab edits — anything not listed is not a write target.
+const KNOWN_SPRITE_MANIFESTS: &[(&str, &[&str])] = &[
+    ("billboard-manifest.json", &["billboards"]),
+    ("combat-manifest.json", &["effects", "audio"]),
+    ("enemy-manifest.json", &["enemies"]),
+    ("manifest.json", &["textures"]),
+];
+
+/// Light structural validation for a manifest document: current schema
+/// version, and each required collection present as an array of objects.
+/// Deliberately shallow — field-level meaning belongs to the import pipeline
+/// and the lab, and a malformed document is caught here before it can replace
+/// a good one on disk.
+fn validate_sprite_manifest(collections: &[&str], value: &serde_json::Value) -> Result<(), String> {
+    let object = value
+        .as_object()
+        .ok_or_else(|| "manifest must be a JSON object".to_string())?;
+    match object.get("schemaVersion") {
+        Some(serde_json::Value::Number(version)) if version.as_u64() == Some(1) => {}
+        _ => return Err("schemaVersion must be 1".to_string()),
+    }
+    for key in collections {
+        match object.get(*key) {
+            Some(serde_json::Value::Array(items)) if items.iter().all(|item| item.is_object()) => {}
+            _ => return Err(format!("\"{key}\" must be an array of objects")),
+        }
+    }
+    Ok(())
+}
+
 /// Persist one edited sprite manifest (the lab's sprite review tab writes
-/// derived metadata: pivots, fps, frame rects). Validates that the body is a
-/// JSON object, writes it pretty-printed and atomically, then re-stamps the
-/// project documents so the manifest and docs never drift. A regeneration
-/// failure is reported in the response, not hidden and not fatal to the
-/// write — the operator decides what to do with a stale doc.
+/// derived metadata: pivots, fps, frame rects). Only known manifest documents
+/// that pass `validate_sprite_manifest` are written — unknown names and
+/// malformed documents are rejected before anything touches disk. Valid
+/// documents are written pretty-printed and atomically, then the project
+/// documents are re-stamped so the manifest and docs never drift. A
+/// regeneration failure is reported in the response, not hidden and not
+/// fatal to the write — the operator decides what to do with a stale doc.
 fn write_sprite_manifest(
     stream: &mut TcpStream,
     content_root: &Path,
@@ -392,19 +426,14 @@ fn write_sprite_manifest(
     body: &str,
 ) -> Result<()> {
     let name = name.split('?').next().unwrap_or(name);
-    let valid = name.ends_with(".json")
-        && !name.contains('/')
-        && !name.contains('\\')
-        && !name.contains("..")
-        && !name.starts_with('.');
-    if !valid {
+    let Some((_, collections)) = KNOWN_SPRITE_MANIFESTS
+        .iter()
+        .find(|(known, _)| *known == name)
+    else {
         return write_response(stream, 404, r#"{"error":"unknown sprite manifest"}"#);
-    }
+    };
     let value: serde_json::Value = match serde_json::from_str::<serde_json::Value>(body) {
-        Ok(value) if value.is_object() => value,
-        Ok(_) => {
-            return write_response(stream, 400, r#"{"error":"manifest must be a JSON object"}"#)
-        }
+        Ok(value) => value,
         Err(error) => {
             return write_response(
                 stream,
@@ -414,6 +443,13 @@ fn write_sprite_manifest(
             )
         }
     };
+    if let Err(error) = validate_sprite_manifest(collections, &value) {
+        return write_response(
+            stream,
+            400,
+            &serde_json::json!({ "error": error }).to_string(),
+        );
+    }
     let path = content_root.join("textures").join(name);
     let mut text = serde_json::to_string_pretty(&value).context("encode manifest JSON")?;
     text.push('\n');
