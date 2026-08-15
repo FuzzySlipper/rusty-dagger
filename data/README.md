@@ -1,9 +1,12 @@
 # data/ — hand-authored experiment defaults
 
-This directory may hold committed JSON defaults for the Dagger gameplay-lab
-experiment document. It is not generated. `content/` is different: its files
-are committed generated output and must be regenerated with
-`scripts/regenerate.sh`, never hand-edited.
+This directory holds committed hand-authored JSON: experiment defaults,
+encounter routes, and content overlays like `sprite-names.json` (display
+nicknames that `dagger-import` consults when naming exported billboard
+files). It is not generated. `content/` is different: its files are committed
+generated output (regenerated with `scripts/regenerate.sh`); hand edits are
+legitimate there but are overwritten by a full regeneration — see the
+`content/` posture in AGENTS.md.
 
 ## Current convention (program 6682, tasks 6683 through 6685)
 
