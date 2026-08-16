@@ -172,23 +172,6 @@ fn compile_program(
                 .map(|value| compile_program(*value, nodes, next_depth).map(Box::new))
                 .transpose()?,
         }),
-        AuthoredProgram::ForEach {
-            selector,
-            maximum,
-            body,
-        } => {
-            if maximum == 0 {
-                return Err(DaggerGameplayError::InvalidValue {
-                    path: "payload.actions[].program.maximum".to_string(),
-                    reason: "must be positive".to_string(),
-                });
-            }
-            Ok(Program::ForEach {
-                selector: compile_selector(selector),
-                maximum,
-                body: Box::new(compile_program(*body, nodes, next_depth)?),
-            })
-        }
         AuthoredProgram::Operation { operation } => {
             Ok(Program::Operation(compile_operation(operation)?))
         }
@@ -216,9 +199,12 @@ fn compile_operation(value: AuthoredOperation) -> Result<DaggerOperation, Dagger
             require_positive("payload.actions[].program.operation.amount", amount)?;
             Ok(DaggerOperation::SpendMagicka { amount })
         }
-        AuthoredOperation::Damage { amount } => {
+        AuthoredOperation::Damage { target, amount } => {
             require_positive("payload.actions[].program.operation.amount", amount)?;
-            Ok(DaggerOperation::Damage { amount })
+            Ok(DaggerOperation::Damage {
+                target: compile_selector(target),
+                amount,
+            })
         }
     }
 }

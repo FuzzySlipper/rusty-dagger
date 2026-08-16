@@ -1,7 +1,6 @@
 import {
   action,
   evidenceAtLeast,
-  forIntentTarget,
   item,
   operation,
   packageEnvelope,
@@ -21,7 +20,11 @@ const payload = {
         evidenceAtLeast("spell-hit", 50),
         sequence(
           operation({ kind: "spendMagicka", amount: 5 }),
-          forIntentTarget(operation({ kind: "damage", amount: 12 })),
+          operation({
+            kind: "damage",
+            target: { kind: "intentTarget" },
+            amount: 12,
+          }),
         ),
       ),
     ),
