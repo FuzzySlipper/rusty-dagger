@@ -570,6 +570,7 @@ dependencies = [
 name = "dagger-rpg"
 version = "0.1.0"
 dependencies = [
+ "rusty-engine",
  "serde",
  "serde_json",
 ]
@@ -979,6 +980,10 @@ dependencies = [
  "serde_json",
  "sha2",
 ]
+
+[[package]]
+name = "gameplay-resolution"
+version = "0.1.0"
 
 [[package]]
 name = "gameplay-rules"
@@ -2824,6 +2829,7 @@ dependencies = [
  "entity-state",
  "environment-authoring",
  "gameplay-mechanics",
+ "gameplay-resolution",
  "gameplay-rules",
  "render-host-contracts",
  "render-model",
