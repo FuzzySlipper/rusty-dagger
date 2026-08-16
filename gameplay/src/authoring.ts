@@ -10,7 +10,7 @@ export type Selector = Readonly<{
 
 export type Operation =
   | Readonly<{ kind: "spendMagicka"; amount: number }>
-  | Readonly<{ kind: "damage"; amount: number }>;
+  | Readonly<{ kind: "damage"; target: Selector; amount: number }>;
 
 export type Program =
   | Readonly<{ kind: "sequence"; steps: readonly Program[] }>
@@ -19,12 +19,6 @@ export type Program =
       predicate: Predicate;
       thenProgram: Program;
       otherwiseProgram?: Program;
-    }>
-  | Readonly<{
-      kind: "forEach";
-      selector: Selector;
-      maximum: number;
-      body: Program;
     }>
   | Readonly<{ kind: "operation"; operation: Operation }>;
 
@@ -70,13 +64,6 @@ export const when = (
   predicate,
   thenProgram,
   ...(otherwiseProgram === undefined ? {} : { otherwiseProgram }),
-});
-
-export const forIntentTarget = (body: Program): Program => ({
-  kind: "forEach",
-  selector: { kind: "intentTarget" },
-  maximum: 1,
-  body,
 });
 
 export const operation = (value: Operation): Program => ({

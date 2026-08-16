@@ -58,17 +58,13 @@
                 }
               },
               {
-                "kind": "forEach",
-                "selector": {
-                  "kind": "intentTarget"
-                },
-                "maximum": 1,
-                "body": {
-                  "kind": "operation",
-                  "operation": {
-                    "kind": "damage",
-                    "amount": 12
-                  }
+                "kind": "operation",
+                "operation": {
+                  "kind": "damage",
+                  "target": {
+                    "kind": "intentTarget"
+                  },
+                  "amount": 12
                 }
               }
             ]

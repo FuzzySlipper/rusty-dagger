@@ -28,8 +28,6 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
     type Intent = DaggerAdmittedIntent;
     type Facts = DaggerFacts;
     type Predicate = DaggerPredicate;
-    type Selector = DaggerSelector;
-    type Subject = String;
     type Operation = DaggerOperation;
     type Effect = DaggerEffect;
     type Event = DaggerEvent;
@@ -160,7 +158,6 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
     fn evaluate_predicate(
         &mut self,
         predicate: &DaggerPredicate,
-        _subject: Option<&String>,
         _intent: &DaggerAdmittedIntent,
         _facts: &DaggerFacts,
         evidence: &[DaggerEvidence],
@@ -185,24 +182,9 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         }
     }
 
-    fn select(
-        &mut self,
-        selector: &DaggerSelector,
-        _subject: Option<&String>,
-        intent: &DaggerAdmittedIntent,
-        _facts: &DaggerFacts,
-        _evidence: &[DaggerEvidence],
-        _trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
-    ) -> PolicyResult<Vec<String>, DaggerRejection, DaggerFault, DaggerSuspension> {
-        match selector {
-            DaggerSelector::IntentTarget => Ok(vec![intent.target.clone()]),
-        }
-    }
-
     fn plan_operation(
         &mut self,
         operation: &DaggerOperation,
-        subject: Option<&String>,
         intent: &DaggerAdmittedIntent,
         facts: &DaggerFacts,
         _evidence: &[DaggerEvidence],
@@ -233,12 +215,10 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                     amount: *amount,
                 });
             }
-            DaggerOperation::Damage { amount } => {
-                let target = subject.ok_or_else(|| {
-                    PolicyFailure::Fault(DaggerFault::InvalidProgram(
-                        "damage operation requires a selected subject".to_string(),
-                    ))
-                })?;
+            DaggerOperation::Damage { target, amount } => {
+                let target = match target {
+                    DaggerSelector::IntentTarget => &intent.target,
+                };
                 plan.push_effect(DaggerEffect::Damage {
                     target: target.clone(),
                     amount: *amount,

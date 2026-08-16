@@ -43,11 +43,6 @@ pub enum AuthoredProgram {
         #[serde(default, rename = "otherwiseProgram")]
         otherwise_program: Option<Box<Self>>,
     },
-    ForEach {
-        selector: AuthoredSelector,
-        maximum: u16,
-        body: Box<Self>,
-    },
     Operation {
         operation: AuthoredOperation,
     },
@@ -68,8 +63,13 @@ pub enum AuthoredSelector {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
 pub enum AuthoredOperation {
-    SpendMagicka { amount: i64 },
-    Damage { amount: i64 },
+    SpendMagicka {
+        amount: i64,
+    },
+    Damage {
+        target: AuthoredSelector,
+        amount: i64,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -135,7 +135,7 @@ impl DaggerGameplayCatalog {
     }
 }
 
-pub type DaggerProgram = Program<DaggerPredicate, DaggerSelector, DaggerOperation>;
+pub type DaggerProgram = Program<DaggerPredicate, DaggerOperation>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DaggerActionDefinition {
@@ -157,7 +157,7 @@ pub enum DaggerSelector {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DaggerOperation {
     SpendMagicka { amount: i64 },
-    Damage { amount: i64 },
+    Damage { target: DaggerSelector, amount: i64 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
