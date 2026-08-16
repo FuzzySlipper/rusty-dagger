@@ -1,0 +1,97 @@
+{
+  "kind": "rusty.gameplay-rules.package",
+  "schemaVersion": 1,
+  "domain": "dagger",
+  "package": "core",
+  "version": 1,
+  "dependencies": [],
+  "sources": [
+    {
+      "id": "dagger-core",
+      "path": "gameplay/src/privateers-hold.ts"
+    }
+  ],
+  "provenance": [
+    {
+      "subject": "action.ember-lance",
+      "source": "dagger-core",
+      "line": 13,
+      "column": 3
+    },
+    {
+      "subject": "item.ruby-ward",
+      "source": "dagger-core",
+      "line": 31,
+      "column": 3
+    },
+    {
+      "subject": "rule.silence",
+      "source": "dagger-core",
+      "line": 38,
+      "column": 3
+    }
+  ],
+  "payload": {
+    "schemaVersion": 1,
+    "actions": [
+      {
+        "id": "ember-lance",
+        "tags": [
+          "spell",
+          "fire"
+        ],
+        "program": {
+          "kind": "when",
+          "predicate": {
+            "kind": "evidenceAtLeast",
+            "evidence": "spell-hit",
+            "minimum": 50
+          },
+          "thenProgram": {
+            "kind": "sequence",
+            "steps": [
+              {
+                "kind": "operation",
+                "operation": {
+                  "kind": "spendMagicka",
+                  "amount": 5
+                }
+              },
+              {
+                "kind": "forEach",
+                "selector": {
+                  "kind": "intentTarget"
+                },
+                "maximum": 1,
+                "body": {
+                  "kind": "operation",
+                  "operation": {
+                    "kind": "damage",
+                    "amount": 12
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "items": [
+      {
+        "id": "ruby-ward",
+        "interceptor": {
+          "kind": "reduceDamage",
+          "amount": 3
+        }
+      }
+    ],
+    "rules": [
+      {
+        "id": "silence",
+        "kind": "rejectTagWhileCondition",
+        "tag": "spell",
+        "condition": "silenced"
+      }
+    ]
+  }
+}

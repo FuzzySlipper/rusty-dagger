@@ -10,6 +10,10 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
+mod resolution;
+
+pub use resolution::*;
+
 pub const EXPERIMENT_SCHEMA_VERSION: u32 = 1;
 pub const MIN_MOVE_SPEED_UNITS_PER_SECOND: f32 = 0.1;
 pub const MAX_MOVE_SPEED_UNITS_PER_SECOND: f32 = 50.0;

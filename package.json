@@ -5,6 +5,9 @@
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "scripts": {
+    "gameplay:typecheck": "tsc -p gameplay/tsconfig.json --noEmit",
+    "gameplay:build": "tsc -p gameplay/tsconfig.json && node gameplay/scripts/materialize.mjs",
+    "gameplay:check": "pnpm gameplay:build && git diff --exit-code -- data/gameplay/dagger-core.package.json",
     "lab:build": "ng build dagger-lab",
     "lab:serve": "ng serve dagger-lab --host 127.0.0.1 --port 4200 --proxy-config apps/dagger-lab/proxy.conf.json",
     "lab:typecheck": "tsc -p apps/dagger-lab/tsconfig.app.json --noEmit",

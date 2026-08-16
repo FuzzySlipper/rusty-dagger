@@ -26,3 +26,7 @@ path = "src/bin/dagger-sprite-frames.rs"
 [[bin]]
 name = "dagger-navgrid"
 path = "src/bin/dagger-navgrid.rs"
+
+[[bin]]
+name = "dagger-gameplay-check"
+path = "src/bin/dagger-gameplay-check.rs"

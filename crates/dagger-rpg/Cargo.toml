@@ -5,6 +5,7 @@ edition.workspace = true
 description = "Host-neutral Rust gameplay semantics, experiment admission, and designer-facing resolution records for the Dagger lab"
 
 [dependencies]
+rusty-engine.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
