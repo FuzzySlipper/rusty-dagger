@@ -185,13 +185,17 @@ surfaces as a loud warning with operator choice, not a hard stop. When adding
 a new hard failure, state in one sentence what loss it prevents; if you
 can't, make it a warning.
 
-Run the narrowest check first, then the gate that owns the changed surface:
+Run the narrowest check first, then the gate that owns the changed surface.
+The automatic gate (`scripts/verify.sh`, run by CI) is deliberately slim,
+deterministic, and Playwright-free:
 
 ```bash
 cargo test                        # arena2 parser tests against the real data files
 scripts/regenerate.sh             # extraction -> engine import -> studio project doc
 cargo run -p dagger-runtime --bin dagger-walkthrough
 cargo run -p dagger-runtime --bin dagger-navgrid -- --check  # nav grid proof + artifact freshness
+cargo run -p dagger-runtime --bin dagger-gameplay-check  # authored package resolution proof
+pnpm gameplay:check               # gameplay package build + drift check
 scripts/verify-native-host.sh     # Engine facade/native renderer/input/pick/lifecycle proof
 python3 scripts/check-adapter.py  # local adapter; env override is diagnostic-only
 ```
@@ -204,7 +208,13 @@ while the Engine-owned Studio host is running:
 
 ```bash
 python3 scripts/check-adapter.py       # focused adapter protocol check
-scripts/check-dagger-lab-browser.sh    # real Chromium desktop+narrow render proof
 ```
+
+`scripts/check-dagger-lab-browser.sh` is a manual opt-in Playwright
+diagnostic, not an automatic gate: heavyweight browser choreography proved
+too slow and brittle for CI. Run it by hand when a change touches the
+browser product surface (renderer mounting, input arbitration, Lab UI), and
+say so in the task packet. Gameplay semantics are proven by deterministic
+Rust tests, not by browser choreography.
 
 Report exactly which commands ran and which relevant live checks were skipped.

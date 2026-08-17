@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# MANUAL OPT-IN diagnostic — deliberately NOT part of the automatic gates
+# (scripts/verify.sh / CI). The automatic suite is slim and deterministic;
+# this full Playwright choreography is run by hand when a change touches the
+# browser product surface (renderer mounting, input arbitration, Lab UI).
+# Expect several minutes on a software-rendering runner.
 set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)

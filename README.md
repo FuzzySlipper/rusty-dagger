@@ -84,7 +84,7 @@ cargo run -p dagger-studio-adapter --bin dagger-native-host -- --browser-product
 # without resizing the Engine-owned canvas. Rust owns the connected runtime,
 # content bundle, input meaning, and authoritative readback. Return to play
 # restores gameplay focus in the same session.
-./scripts/check-dagger-lab-browser.sh # profiles/preview/apply/explain/A-B play + responsive proof
+./scripts/check-dagger-lab-browser.sh # manual opt-in Playwright diagnostic (not an automatic gate)
 python3 scripts/check-adapter.py   # local adapter; env override is diagnostic-only
 # Engine-hosted Studio is normally the persistent sibling Engine service:
 curl http://127.0.0.1:4310/health
