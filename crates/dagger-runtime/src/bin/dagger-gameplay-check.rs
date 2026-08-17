@@ -1,7 +1,9 @@
-//! Production-path proof for the authored Dagger gameplay package.
+//! Production-path proof for the authored Dagger gameplay package: admits the
+//! committed package, spawns actors through the derived-track authority, and
+//! resolves the same authored melee action for player and AI origins.
 
 use dagger_rpg::{
-    compile_gameplay_package, resolve_dagger_action, DaggerActorState, DaggerEvidence,
+    compile_gameplay_package, initial_actor_state, resolve_dagger_action, DaggerEvidence,
     DaggerGameplayState, DaggerIntent, DaggerIntentOrigin,
 };
 use rusty_engine::gameplay_resolution::{
@@ -11,14 +13,24 @@ use rusty_engine::gameplay_resolution::{
 const PACKAGE: &[u8] = include_bytes!("../../../../data/gameplay/dagger-core.package.json");
 
 fn state() -> DaggerGameplayState {
+    let catalog = compile_gameplay_package(PACKAGE).expect("admit authored gameplay package");
     let mut state = DaggerGameplayState::default();
     state.insert_actor(
-        "caster",
-        DaggerActorState::new(20, 20).expect("valid caster"),
+        "player",
+        initial_actor_state(&catalog, "player", &[]).expect("spawn player"),
     );
-    let mut target = DaggerActorState::new(30, 0).expect("valid target");
-    target.add_item("ruby-ward");
-    state.insert_actor("target", target);
+    state.insert_actor(
+        "rat-2007",
+        initial_actor_state(
+            &catalog,
+            "rat",
+            &[DaggerEvidence {
+                id: "rat.health".to_string(),
+                value: 12,
+            }],
+        )
+        .expect("spawn rat"),
+    );
     state
 }
 
@@ -27,7 +39,7 @@ fn resolve(origin: DaggerIntentOrigin, resolution: u64) -> (DaggerGameplayState,
     let mut state = state();
     let identity = ResolutionIdentity::root(
         ResolutionId::new(resolution).expect("non-zero resolution id"),
-        CorrelationId::new(7032).expect("non-zero correlation id"),
+        CorrelationId::new(7044).expect("non-zero correlation id"),
     );
     let (receipt, readout) = resolve_dagger_action(
         &catalog,
@@ -35,15 +47,21 @@ fn resolve(origin: DaggerIntentOrigin, resolution: u64) -> (DaggerGameplayState,
         identity,
         ResolutionMode::Apply,
         DaggerIntent {
-            action: "ember-lance".to_string(),
-            actor: "caster".to_string(),
-            target: "target".to_string(),
+            action: "melee-attack".to_string(),
+            actor: "player".to_string(),
+            target: "rat-2007".to_string(),
             origin,
         },
-        vec![DaggerEvidence {
-            id: "spell-hit".to_string(),
-            value: 80,
-        }],
+        vec![
+            DaggerEvidence {
+                id: "melee-attack.d100".to_string(),
+                value: 25,
+            },
+            DaggerEvidence {
+                id: "weapon-damage.iron-longsword".to_string(),
+                value: 8,
+            },
+        ],
     );
     assert!(receipt.succeeded(), "authored action must resolve");
     (

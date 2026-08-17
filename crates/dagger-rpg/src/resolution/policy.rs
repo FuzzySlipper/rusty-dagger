@@ -4,10 +4,11 @@ use rusty_engine::gameplay_resolution::{
     StandardResolver,
 };
 
+use super::eval::{evaluate_expr, ExprContext};
 use super::{
-    DaggerAdmittedIntent, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerFacts, DaggerFault,
-    DaggerGameplayCatalog, DaggerGameplayState, DaggerIntent, DaggerInterceptor,
-    DaggerInterceptorKind, DaggerOperation, DaggerPredicate, DaggerRejection,
+    DaggerActorDefinition, DaggerAdmittedIntent, DaggerEffect, DaggerEvent, DaggerEvidence,
+    DaggerFacts, DaggerFault, DaggerGameplayCatalog, DaggerGameplayState, DaggerIntent,
+    DaggerInterceptor, DaggerInterceptorKind, DaggerOperation, DaggerPredicate, DaggerRejection,
     DaggerResolutionReadout, DaggerResolutionReceipt, DaggerRuleDefinition, DaggerSelector,
     DaggerSuspension, DaggerTraceDetail, DaggerTransactionError,
 };
@@ -20,6 +21,38 @@ pub struct DaggerResolutionPolicy<'a> {
 impl<'a> DaggerResolutionPolicy<'a> {
     pub fn new(catalog: &'a DaggerGameplayCatalog, snapshot: DaggerGameplayState) -> Self {
         Self { catalog, snapshot }
+    }
+
+    fn definition(
+        &self,
+        actor_id: &str,
+    ) -> PolicyResult<&DaggerActorDefinition, DaggerRejection, DaggerFault, DaggerSuspension> {
+        let state = self.snapshot.actor(actor_id).ok_or_else(|| {
+            PolicyFailure::Rejected(DaggerRejection::UnknownActor(actor_id.to_string()))
+        })?;
+        self.catalog
+            .actors()
+            .get(state.definition())
+            .ok_or_else(|| {
+                PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                    "actor {actor_id} references unknown definition {}",
+                    state.definition()
+                )))
+            })
+    }
+
+    fn expr_context<'b>(
+        &'b self,
+        actor_definition: &'b DaggerActorDefinition,
+        target_definition: Option<&'b DaggerActorDefinition>,
+        evidence: &'b [DaggerEvidence],
+    ) -> ExprContext<'b> {
+        ExprContext {
+            catalog: self.catalog,
+            actor: actor_definition,
+            target: target_definition,
+            evidence,
+        }
     }
 }
 
@@ -143,13 +176,15 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         let mut interceptors = Vec::new();
         for item in facts.target.items() {
             if let Some(definition) = self.catalog.items().get(item) {
-                trace.record(DaggerTraceDetail::Source {
-                    id: definition.id.clone(),
-                });
-                interceptors.push(DaggerInterceptor {
-                    source: definition.id.clone(),
-                    kind: definition.interceptor.clone(),
-                });
+                if let Some(kind) = &definition.interceptor {
+                    trace.record(DaggerTraceDetail::Source {
+                        id: definition.id.clone(),
+                    });
+                    interceptors.push(DaggerInterceptor {
+                        source: definition.id.clone(),
+                        kind: kind.clone(),
+                    });
+                }
             }
         }
         Ok(interceptors)
@@ -158,26 +193,25 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
     fn evaluate_predicate(
         &mut self,
         predicate: &DaggerPredicate,
-        _intent: &DaggerAdmittedIntent,
+        intent: &DaggerAdmittedIntent,
         _facts: &DaggerFacts,
         evidence: &[DaggerEvidence],
         trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
     ) -> PolicyResult<bool, DaggerRejection, DaggerFault, DaggerSuspension> {
         match predicate {
-            DaggerPredicate::EvidenceAtLeast {
-                evidence: id,
-                minimum,
-            } => {
-                let value = evidence
-                    .iter()
-                    .find(|candidate| candidate.id == *id)
-                    .ok_or_else(|| {
-                        PolicyFailure::Rejected(DaggerRejection::MissingEvidence(id.clone()))
-                    })?;
+            DaggerPredicate::Cmp { op, left, right } => {
+                let actor_definition = self.definition(&intent.actor)?;
+                let target_definition = self.definition(&intent.target)?;
+                let context =
+                    self.expr_context(actor_definition, Some(target_definition), evidence);
+                let left_value = evaluate_expr(left, &context).map_err(PolicyFailure::Rejected)?;
+                let right_value =
+                    evaluate_expr(right, &context).map_err(PolicyFailure::Rejected)?;
+                let result = op.compare(left_value, right_value);
                 trace.record(DaggerTraceDetail::Decision {
-                    reason: format!("evidence {id}={} against {minimum}", value.value),
+                    reason: format!("{left_value} {op:?} {right_value} = {result}"),
                 });
-                Ok(value.value >= *minimum)
+                Ok(result)
             }
         }
     }
@@ -187,7 +221,7 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         operation: &DaggerOperation,
         intent: &DaggerAdmittedIntent,
         facts: &DaggerFacts,
-        _evidence: &[DaggerEvidence],
+        evidence: &[DaggerEvidence],
         trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
     ) -> PolicyResult<
         ResolutionPlan<DaggerEffect, DaggerEvent, DaggerIntent, DaggerEvidence>,
@@ -196,42 +230,54 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         DaggerSuspension,
     > {
         let mut plan = ResolutionPlan::new();
+        let actor_definition = self.definition(&intent.actor)?;
+        let target_definition = self.definition(&intent.target)?;
+        let context = self.expr_context(actor_definition, Some(target_definition), evidence);
         match operation {
-            DaggerOperation::SpendMagicka { amount } => {
-                if facts.actor.magicka() < *amount {
+            DaggerOperation::SpendTrack { track, amount } => {
+                let amount = evaluate_expr(amount, &context).map_err(PolicyFailure::Rejected)?;
+                let available = facts.actor.track(track).unwrap_or(0);
+                if available < amount {
                     return Err(PolicyFailure::Rejected(
-                        DaggerRejection::InsufficientMagicka {
-                            available: facts.actor.magicka(),
-                            required: *amount,
+                        DaggerRejection::InsufficientTrack {
+                            track: track.clone(),
+                            available,
+                            required: amount,
                         },
                     ));
                 }
-                plan.push_effect(DaggerEffect::SpendMagicka {
+                plan.push_effect(DaggerEffect::SpendTrack {
                     actor: intent.actor.clone(),
-                    amount: *amount,
+                    track: track.clone(),
+                    amount,
                 });
-                plan.push_event(DaggerEvent::MagickaSpent {
+                plan.push_event(DaggerEvent::TrackSpent {
                     actor: intent.actor.clone(),
-                    amount: *amount,
+                    track: track.clone(),
+                    amount,
+                });
+                trace.record(DaggerTraceDetail::Decision {
+                    reason: format!("spend {amount} {track} of {available}"),
                 });
             }
             DaggerOperation::Damage { target, amount } => {
                 let target = match target {
                     DaggerSelector::IntentTarget => &intent.target,
                 };
+                let amount = evaluate_expr(amount, &context).map_err(PolicyFailure::Rejected)?;
                 plan.push_effect(DaggerEffect::Damage {
                     target: target.clone(),
-                    amount: *amount,
+                    amount,
                 });
                 plan.push_event(DaggerEvent::DamageApplied {
                     target: target.clone(),
-                    amount: *amount,
+                    amount,
+                });
+                trace.record(DaggerTraceDetail::Decision {
+                    reason: format!("damage {amount} to {target}"),
                 });
             }
         }
-        trace.record(DaggerTraceDetail::Decision {
-            reason: format!("planned {operation:?}"),
-        });
         Ok(plan)
     }
 
@@ -296,10 +342,14 @@ impl ResolutionTransaction for DaggerTransaction<'_> {
         let mut candidate = self.state.clone();
         for effect in &self.staged {
             match effect {
-                DaggerEffect::SpendMagicka { actor, amount } => candidate
+                DaggerEffect::SpendTrack {
+                    actor,
+                    track,
+                    amount,
+                } => candidate
                     .actor_mut(actor)
                     .ok_or_else(|| DaggerTransactionError::UnknownActor(actor.clone()))?
-                    .spend_magicka(*amount)?,
+                    .spend_track(track, *amount)?,
                 DaggerEffect::Damage { target, amount } => candidate
                     .actor_mut(target)
                     .ok_or_else(|| DaggerTransactionError::UnknownActor(target.clone()))?

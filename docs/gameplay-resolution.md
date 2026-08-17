@@ -20,12 +20,17 @@ preview/apply, ordered interception, child correlation,
 staged commit, quotas, and receipt/trace collection. It does not know health,
 magicka, spells, items, actors, damage, or Daggerfall formulas.
 
-The initial authored slice is intentionally small but crosses the important
-boundaries. `ember-lance` uses evidence, spends magicka, and carries its
-Dagger-owned target selector inside the opaque damage operation; `ruby-ward`
-intercepts and reduces that damage; and `silence` rejects
-spell-tagged actions when the actor has the matching condition. Player and AI
-origins enter the same policy path.
+The initial authored slice crosses the important boundaries with real
+content. `gameplay/src/catalogs/stats.ts` declares the classic attribute and
+skill vocabulary; `actors.ts` defines the player plus table-driven classic
+monsters (Rat, Skeletal Warrior) with derived track maximums and encounter
+behavior tuning; `actions.ts` authors the shared melee hit-check shape
+(d100 against skill plus target armor vulnerability, clamped 3..97) and each
+actor's attack as resolution programs; `items.ts` carries weapon damage
+ranges that `weaponDice` rolls read; `encounters.ts` owns named encounter
+content. All rolls are bounded named evidence supplied by the caller, so
+resolution is deterministic and replayable. Player and AI origins enter the
+same policy path.
 
 `dagger-gameplay-check` is the production Rust diagnostic. It admits the
 committed package, resolves the same controlled action for player and AI
