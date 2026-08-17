@@ -1,11 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import {
-  ExperimentDocument,
-  ExperimentEvaluation,
-  ExperimentReadout,
-} from './lab-contract';
+import { LabReadout } from './lab-contract';
 import { SpriteIndex } from './sprite-contract';
 
 export interface SpriteManifestSaveResult {
@@ -20,33 +16,21 @@ const API_URL = '/api/dagger-lab';
 export class LabApiService {
   private readonly http = inject(HttpClient);
 
-  read(): Promise<ExperimentReadout> {
-    return firstValueFrom(this.http.get<ExperimentReadout>(API_URL));
+  read(): Promise<LabReadout> {
+    return firstValueFrom(this.http.get<LabReadout>(API_URL));
   }
 
-  apply(document: ExperimentDocument): Promise<ExperimentReadout> {
+  reset(): Promise<LabReadout> {
+    return firstValueFrom(this.http.post<LabReadout>(`${API_URL}/reset`, null));
+  }
+
+  play(): Promise<LabReadout> {
+    return firstValueFrom(this.http.post<LabReadout>(`${API_URL}/play`, null));
+  }
+
+  jumpToContent(id: number): Promise<LabReadout> {
     return firstValueFrom(
-      this.http.put<ExperimentReadout>(`${API_URL}/experiment`, document),
-    );
-  }
-
-  evaluate(document: ExperimentDocument): Promise<ExperimentEvaluation> {
-    return firstValueFrom(
-      this.http.post<ExperimentEvaluation>(`${API_URL}/evaluate`, document),
-    );
-  }
-
-  reset(): Promise<ExperimentReadout> {
-    return firstValueFrom(this.http.post<ExperimentReadout>(`${API_URL}/reset`, null));
-  }
-
-  play(): Promise<ExperimentReadout> {
-    return firstValueFrom(this.http.post<ExperimentReadout>(`${API_URL}/play`, null));
-  }
-
-  jumpToContent(id: number): Promise<ExperimentReadout> {
-    return firstValueFrom(
-      this.http.post<ExperimentReadout>(`${API_URL}/content/jump`, { id }),
+      this.http.post<LabReadout>(`${API_URL}/content/jump`, { id }),
     );
   }
 

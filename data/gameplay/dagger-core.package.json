@@ -220,7 +220,8 @@
               "id": "intelligence"
             }
           }
-        ]
+        ],
+        "moveSpeedMilli": 3500
       },
       {
         "id": "rat",
@@ -433,7 +434,9 @@
               }
             }
           ]
-        }
+        },
+        "reachMilli": 2250,
+        "cooldownMillis": 750
       },
       {
         "id": "rat-bite",
@@ -682,7 +685,9 @@
               }
             }
           ]
-        }
+        },
+        "reachMilli": 2250,
+        "cooldownMillis": 1200
       }
     ],
     "items": [

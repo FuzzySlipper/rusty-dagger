@@ -178,13 +178,7 @@ fn handle_command(
                 ),
             }
         }
-        LabCommand::Read { reply } => send_runtime_result(reply, runtime.experiment_readout()),
-        LabCommand::Apply { document, reply } => {
-            send_runtime_result(reply, runtime.apply_experiment_json(&document))
-        }
-        LabCommand::Evaluate { document, reply } => {
-            send_runtime_result(reply, runtime.evaluate_experiment_json(&document))
-        }
+        LabCommand::Read { reply } => send_runtime_result(reply, runtime.lab_readout()),
         LabCommand::Reset { reply } | LabCommand::Play { reply } => {
             send_runtime_result(reply, runtime.reset_play_session())
         }
@@ -660,7 +654,7 @@ mod tests {
         .expect("ordinary gallery attack without Lab focus");
         assert_eq!(
             runtime
-                .experiment_readout()
+                .lab_readout()
                 .expect("gallery readout")
                 .combat_attempts
                 .len(),
@@ -748,7 +742,7 @@ mod tests {
             input(1, &[], &["Digit1"], [0.0, 0.0]),
         )
         .expect("Rat route");
-        let rat = runtime.experiment_readout().expect("Rat readout");
+        let rat = runtime.lab_readout().expect("Rat readout");
         assert_eq!(
             rat.active_encounter.expect("active Rat").id,
             "rat-introduction"
@@ -761,7 +755,7 @@ mod tests {
             input(2, &[], &["Digit2"], [0.0, 0.0]),
         )
         .expect("Skeleton route");
-        let skeleton = runtime.experiment_readout().expect("Skeleton readout");
+        let skeleton = runtime.lab_readout().expect("Skeleton readout");
         assert_eq!(
             skeleton.active_encounter.expect("active Skeleton").id,
             "skeletal-guardroom"
@@ -817,7 +811,7 @@ mod tests {
         );
         assert_eq!(
             runtime
-                .experiment_readout()
+                .lab_readout()
                 .expect("readout")
                 .combat_attempts
                 .len(),

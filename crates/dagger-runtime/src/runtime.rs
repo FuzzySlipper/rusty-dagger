@@ -2,9 +2,8 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
     action_roll_evidence, compile_gameplay_package, restore_actor_tracks, track_maximum,
-    AdmittedActorValues, AdmittedEnemyValues, AdmittedExperiment, CalculationRecord, DaggerEvent,
-    DaggerEvidence, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
-    DaggerIntentOrigin, ExperimentDocument, ExperimentError,
+    AuthoredGameplayPayload, DaggerEvent, DaggerEvidence, DaggerGameplayCatalog,
+    DaggerGameplayError, DaggerGameplayState, DaggerIntent, DaggerIntentOrigin,
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
@@ -34,7 +33,6 @@ use crate::project::{AdmittedProject, ContentEntity, ProjectAdmissionError, PLAY
 #[derive(Debug)]
 pub enum RuntimeError {
     Admission(ProjectAdmissionError),
-    Experiment(ExperimentError),
     Gameplay(DaggerGameplayError),
     Player(PlayerError),
     Content(ContentError),
@@ -74,11 +72,9 @@ pub struct DaggerRuntime {
     player_command_sequence: u64,
     player_start: Vec3,
     player_start_look_state: FirstPersonLookState,
-    experiment: AdmittedExperiment,
     gameplay_catalog: DaggerGameplayCatalog,
+    gameplay_payload: AuthoredGameplayPayload,
     gameplay: DaggerGameplayState,
-    calculation_sequence: u64,
-    calculation_history: VecDeque<SessionCalculationRecord>,
     combat_sequence: u64,
     combat_history: VecDeque<CombatRecord>,
     combat_attempt_sequence: u64,
@@ -101,12 +97,10 @@ pub struct DaggerRuntime {
     active_encounter_engaged: bool,
 }
 
-pub const STARTER_EXPERIMENT_JSON: &str =
-    include_str!("../../../data/experiments/privateers-hold-starter.json");
 pub const GAMEPLAY_PACKAGE: &[u8] =
     include_bytes!("../../../data/gameplay/dagger-core.package.json");
 pub const PLAYER_ACTOR_ID: &str = "player";
-pub const CALCULATION_HISTORY_LIMIT: usize = 16;
+pub const MELEE_ACTION_ID: &str = "melee-attack";
 pub const COMBAT_HISTORY_LIMIT: usize = 32;
 pub const ENCOUNTER_HISTORY_LIMIT: usize = 32;
 pub const MELEE_ANTICIPATION_SECONDS: f32 = 0.22;
@@ -115,18 +109,19 @@ pub const MELEE_RECOVERY_SECONDS: f32 = 0.72;
 pub const MELEE_REJECTION_SECONDS: f32 = 0.72;
 const MELEE_AIM_MIN_DOT: f32 = 0.64;
 
+/// Read-only lab readout: catalog definitions, live state, and resolution
+/// explanation. There is no editable document — the committed gameplay
+/// package is the only source of gameplay truth.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ExperimentReadout {
-    pub document: ExperimentDocument,
+pub struct LabReadout {
+    pub gameplay_package: GameplayPackageReadout,
     pub move_speed_units_per_second: f32,
     pub max_health: f32,
     pub current_health: f32,
     pub player_stats: ActorGameplayReadout,
-    pub enemy_stats: Vec<EnemyStatsReadout>,
     pub player_position: [f32; 3],
     pub player_yaw_degrees: f32,
-    pub calculations: Vec<SessionCalculationRecord>,
     pub combat: Vec<CombatRecord>,
     pub combat_attempts: Vec<CombatAttemptRecord>,
     pub player_attack_cooldown_remaining: f32,
@@ -136,6 +131,16 @@ pub struct ExperimentReadout {
     pub focused_content_id: Option<u64>,
     pub named_encounters: Vec<NamedEncounterReadout>,
     pub active_encounter: Option<NamedEncounterReadout>,
+}
+
+/// The committed gameplay package's definitions plus its admission
+/// fingerprint, served read-only for the lab's definition panels.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameplayPackageReadout {
+    pub fingerprint: String,
+    #[serde(flatten)]
+    pub payload: AuthoredGameplayPayload,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -235,21 +240,21 @@ fn spawn_roll(entity_id: u64, evidence_id: &str, min: i64, max: i64) -> i64 {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActorGameplayReadout {
-    pub attributes: dagger_rpg::ActorAttributes,
+    pub attributes: ActorAttributeReadout,
     pub max_health: f32,
     pub max_stamina: f32,
     pub max_magicka: f32,
     pub current_health: f32,
     pub current_stamina: f32,
     pub current_magicka: f32,
-    pub calculations: Vec<CalculationRecord>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct EnemyStatsReadout {
-    pub mobile_id: u8,
-    pub stats: AdmittedActorValues,
+pub struct ActorAttributeReadout {
+    pub strength: f32,
+    pub endurance: f32,
+    pub intelligence: f32,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -417,54 +422,13 @@ pub struct EnemyPresentationReadout {
     pub dead: bool,
 }
 
-/// A side-effect-free evaluation through the same admission and calculation
-/// authority used when an experiment is applied to play.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExperimentEvaluation {
-    pub document: ExperimentDocument,
-    pub move_speed_units_per_second: f32,
-    pub max_health: f32,
-    pub calculation: CalculationRecord,
-    pub player_stats: AdmittedActorValues,
-    pub enemy_stats: Vec<AdmittedEnemyValues>,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SessionCalculationRecord {
-    pub sequence: u64,
-    #[serde(flatten)]
-    pub calculation: CalculationRecord,
-}
-
 impl DaggerRuntime {
     pub fn from_project_json(document: &str) -> Result<Self, RuntimeError> {
-        Self::from_project_and_experiment_json(document, STARTER_EXPERIMENT_JSON)
-    }
-
-    pub fn from_project_and_experiment_json(
-        project_document: &str,
-        experiment_document: &str,
-    ) -> Result<Self, RuntimeError> {
-        let admitted =
-            AdmittedProject::from_json(project_document).map_err(RuntimeError::Admission)?;
-        let experiment =
-            dagger_rpg::admit_json(experiment_document).map_err(RuntimeError::Experiment)?;
-        Self::from_admitted_project_and_experiment(admitted, experiment)
+        let admitted = AdmittedProject::from_json(document).map_err(RuntimeError::Admission)?;
+        Self::from_admitted_project(admitted)
     }
 
     pub fn from_admitted_project(admitted: AdmittedProject) -> Result<Self, RuntimeError> {
-        let experiment =
-            dagger_rpg::admit_json(STARTER_EXPERIMENT_JSON).map_err(RuntimeError::Experiment)?;
-        Self::from_admitted_project_and_experiment(admitted, experiment)
-    }
-
-    fn from_admitted_project_and_experiment(
-        admitted: AdmittedProject,
-        experiment: AdmittedExperiment,
-    ) -> Result<Self, RuntimeError> {
-        validate_enemy_definitions(&admitted.content_entities, &experiment)?;
         let mut collision_scene = admitted.collision_scene;
         // Register the dungeon trimesh collider so the kinematic motion sweep
         // blocks on the full dungeon geometry (floors, walls, ramps) with no
@@ -486,18 +450,31 @@ impl DaggerRuntime {
                     )))
                 })?;
         }
-        let mut player_controller = admitted.player_controller;
-        player_controller.move_speed_units_per_second =
-            experiment.player.move_speed_units_per_second;
-        player_controller.configure_engine();
-        let initial_calculation = SessionCalculationRecord {
-            sequence: 1,
-            calculation: player_health_calculation(&experiment).clone(),
-        };
         let player_start = admitted.player_start;
         let player_start_look_state = admitted.player_look_state;
         let gameplay_catalog =
             compile_gameplay_package(GAMEPLAY_PACKAGE).map_err(RuntimeError::Gameplay)?;
+        let gameplay_payload: AuthoredGameplayPayload = {
+            let package = rusty_engine::gameplay_rules::decode_rule_package(GAMEPLAY_PACKAGE)
+                .map_err(|error| {
+                    RuntimeError::Gameplay(DaggerGameplayError::Package(error.to_string()))
+                })?;
+            serde_json::from_value(package.payload().clone()).map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::Payload(error.to_string()))
+            })?
+        };
+        let mut player_controller = admitted.player_controller;
+        player_controller.move_speed_units_per_second = gameplay_catalog
+            .actors()
+            .get(PLAYER_ACTOR_ID)
+            .and_then(|player| player.move_speed)
+            .ok_or_else(|| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidValue {
+                    path: "actors[player].moveSpeedMilli".to_string(),
+                    reason: "player actor must declare a movement speed".to_string(),
+                })
+            })?;
+        player_controller.configure_engine();
         let gameplay = spawn_live_actors(&gameplay_catalog, &admitted.content_entities)?;
         let enemy_presentation_sequences = admitted
             .content_entities
@@ -519,11 +496,9 @@ impl DaggerRuntime {
             player_command_sequence: 0,
             player_start,
             player_start_look_state,
-            experiment,
             gameplay_catalog,
+            gameplay_payload,
             gameplay,
-            calculation_sequence: 1,
-            calculation_history: VecDeque::from([initial_calculation]),
             combat_sequence: 0,
             player_action_sequence: 0,
             combat_history: VecDeque::new(),
@@ -664,7 +639,7 @@ impl DaggerRuntime {
         Ok(())
     }
 
-    pub fn start_named_encounter(&mut self, id: &str) -> Result<ExperimentReadout, RuntimeError> {
+    pub fn start_named_encounter(&mut self, id: &str) -> Result<LabReadout, RuntimeError> {
         let encounter = self
             .named_encounters
             .iter()
@@ -675,7 +650,7 @@ impl DaggerRuntime {
         self.active_encounter_id = Some(encounter.id);
         self.active_encounter_outcome = NamedEncounterOutcome::Active;
         self.active_encounter_engaged = false;
-        self.experiment_readout()
+        self.lab_readout()
     }
 
     pub fn route_named_encounter(&mut self, route_code: &str) -> Result<bool, RuntimeError> {
@@ -725,35 +700,29 @@ impl DaggerRuntime {
             self.melee_presentation = None;
         }
         let player = self.player_position()?;
-        // Behavior tuning still comes from the applied document (7047 moves
-        // it to the catalog); the action each enemy attempts comes from the
-        // admitted gameplay catalog and resolves through the shared policy.
+        // Behavior tuning and the attempted action both come from the
+        // admitted gameplay catalog; the action resolves through the shared
+        // policy.
         let behaviors = self
             .content_entities
             .iter()
             .filter_map(|entity| {
-                let tuning = self
-                    .experiment
-                    .enemies
-                    .iter()
-                    .find(|enemy| enemy.mobile_id == entity.mobile_id)?;
-                let action = self
+                let behavior = self
                     .gameplay_catalog
                     .actors()
                     .values()
                     .find(|actor| actor.mobile_id == Some(entity.mobile_id))
-                    .and_then(|actor| actor.behavior.as_ref())
-                    .map(|behavior| behavior.action.clone())?;
+                    .and_then(|actor| actor.behavior.as_ref())?;
                 u32::try_from(entity.id).ok().map(|handle| {
                     (
                         handle,
                         crate::patrol::EncounterBehavior {
-                            detection_range: tuning.behavior.detection_range,
-                            patrol_speed: tuning.behavior.patrol_speed,
-                            chase_speed: tuning.behavior.chase_speed,
-                            attack_range: tuning.behavior.attack_range,
-                            attack_cooldown_seconds: tuning.behavior.attack_cooldown_seconds,
-                            action,
+                            detection_range: behavior.detection_range,
+                            patrol_speed: behavior.patrol_speed,
+                            chase_speed: behavior.chase_speed,
+                            attack_range: behavior.attack_range,
+                            attack_cooldown_seconds: behavior.attack_cooldown_seconds,
+                            action: behavior.action.clone(),
                         },
                     )
                 })
@@ -940,6 +909,18 @@ impl DaggerRuntime {
             .map(ActiveMeleePresentation::readout)
     }
 
+    /// One required field of the wired melee action (reach, cooldown).
+    fn melee_action_field(
+        &self,
+        field: impl Fn(&dagger_rpg::DaggerActionDefinition) -> Option<f32>,
+    ) -> f32 {
+        self.gameplay_catalog
+            .actions()
+            .get(MELEE_ACTION_ID)
+            .and_then(field)
+            .unwrap_or_else(|| panic!("{MELEE_ACTION_ID} must declare this field"))
+    }
+
     pub fn player_stamina(&self) -> (f32, f32) {
         (
             self.live_track(PLAYER_ACTOR_ID, "stamina"),
@@ -979,9 +960,8 @@ impl DaggerRuntime {
         }
     }
 
-    /// Player stats panel: live values from the mechanics binding, attribute
-    /// values from the admitted player definition, and the applied
-    /// document's calculation records (transitional display until 7047).
+    /// Player stats panel: live values from the mechanics binding and
+    /// attribute values from the admitted player definition.
     fn player_gameplay_readout(&self) -> ActorGameplayReadout {
         let definition = self
             .gameplay_catalog
@@ -990,7 +970,7 @@ impl DaggerRuntime {
             .expect("player actor definition");
         let stat = |id: &str| definition.stats.get(id).copied().unwrap_or(0) as f32;
         ActorGameplayReadout {
-            attributes: dagger_rpg::ActorAttributes {
+            attributes: ActorAttributeReadout {
                 strength: stat("strength"),
                 endurance: stat("endurance"),
                 intelligence: stat("intelligence"),
@@ -1001,7 +981,6 @@ impl DaggerRuntime {
             current_health: self.live_track(PLAYER_ACTOR_ID, "health"),
             current_stamina: self.live_track(PLAYER_ACTOR_ID, "stamina"),
             current_magicka: self.live_track(PLAYER_ACTOR_ID, "magicka"),
-            calculations: self.experiment.player.stats.calculations.clone(),
         }
     }
 
@@ -1061,70 +1040,9 @@ impl DaggerRuntime {
         }
     }
 
-    /// Admit and apply one complete authoring document. Admission and all
-    /// calculations happen before live state changes, so a rejected edit
-    /// cannot partially mutate the running experiment.
-    pub fn apply_experiment_json(
-        &mut self,
-        document: &str,
-    ) -> Result<ExperimentReadout, RuntimeError> {
-        let admitted = dagger_rpg::admit_json(document).map_err(RuntimeError::Experiment)?;
-        validate_enemy_definitions(&self.content_entities, &admitted)?;
-        // The applied document owns movement/combat/behavior values until
-        // 7046/7047; durable stats and tracks stay bound to the gameplay
-        // package, so live actors are restored to catalog spawn values.
-        self.restore_live_actors()?;
-        self.calculation_sequence = self.calculation_sequence.saturating_add(1);
-        self.player_controller.move_speed_units_per_second =
-            admitted.player.move_speed_units_per_second;
-        self.player_controller.configure_engine();
-        self.combat_sequence = 0;
-        self.player_action_sequence = 0;
-        self.combat_history.clear();
-        self.combat_attempt_sequence = 0;
-        self.combat_attempt_history.clear();
-        self.player_attack_cooldown_remaining = 0.0;
-        self.melee_presentation = None;
-        self.encounter_sequence = 0;
-        self.encounter_history.clear();
-        self.reset_enemy_presentation_sequences();
-        if self.active_encounter_id.is_some() {
-            self.active_encounter_outcome = NamedEncounterOutcome::Active;
-            self.active_encounter_engaged = false;
-        }
-        self.calculation_history
-            .push_back(SessionCalculationRecord {
-                sequence: self.calculation_sequence,
-                calculation: player_health_calculation(&admitted).clone(),
-            });
-        while self.calculation_history.len() > CALCULATION_HISTORY_LIMIT {
-            self.calculation_history.pop_front();
-        }
-        self.experiment = admitted;
-        self.experiment_readout()
-    }
-
-    /// Evaluate one complete authoring document without changing the active
-    /// experiment, player, or calculation history.
-    pub fn evaluate_experiment_json(
-        &self,
-        document: &str,
-    ) -> Result<ExperimentEvaluation, RuntimeError> {
-        let admitted = dagger_rpg::admit_json(document).map_err(RuntimeError::Experiment)?;
-        validate_enemy_definitions(&self.content_entities, &admitted)?;
-        Ok(ExperimentEvaluation {
-            document: admitted.document.clone(),
-            move_speed_units_per_second: admitted.player.move_speed_units_per_second,
-            max_health: admitted.player.stats.max_health,
-            calculation: player_health_calculation(&admitted).clone(),
-            player_stats: admitted.player.stats,
-            enemy_stats: admitted.enemies,
-        })
-    }
-
-    /// Reset the playable run to the committed Privateer's Hold start while
-    /// retaining the currently applied experiment document.
-    pub fn reset_play_session(&mut self) -> Result<ExperimentReadout, RuntimeError> {
+    /// Reset the playable run to the committed Privateer's Hold start,
+    /// restoring catalog spawn state.
+    pub fn reset_play_session(&mut self) -> Result<LabReadout, RuntimeError> {
         if let Some(active) = self.active_encounter_id.clone() {
             return self.start_named_encounter(&active);
         }
@@ -1150,13 +1068,13 @@ impl DaggerRuntime {
                 .collect();
         }
         self.focused_content_id = None;
-        self.experiment_readout()
+        self.lab_readout()
     }
 
     /// Reset the player beside one admitted live content entity and face it.
     /// The collision scene chooses the floor; Angular never supplies a raw
     /// teleport coordinate.
-    pub fn jump_to_content(&mut self, id: u64) -> Result<ExperimentReadout, RuntimeError> {
+    pub fn jump_to_content(&mut self, id: u64) -> Result<LabReadout, RuntimeError> {
         let target = self
             .content_live_positions
             .get(&id)
@@ -1227,7 +1145,7 @@ impl DaggerRuntime {
                 self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
                 self.active_encounter_engaged = false;
                 self.focused_content_id = Some(id);
-                return self.experiment_readout();
+                return self.lab_readout();
             }
         }
         self.set_player_position(original_position)?;
@@ -1239,13 +1157,13 @@ impl DaggerRuntime {
     /// Start a first-person attack from a physical input edge. A target is not
     /// required to begin the swing; Dagger resolves the aimed contact only
     /// when the Rust-owned action reaches its contact frame.
-    pub fn attack_focused_target(&mut self) -> Result<ExperimentReadout, RuntimeError> {
+    pub fn attack_focused_target(&mut self) -> Result<LabReadout, RuntimeError> {
         if self.active_encounter_id.is_some() {
             self.active_encounter_engaged = true;
         }
         let cooldown_before = self.player_attack_cooldown_remaining;
         let stamina_before = self.live_track(PLAYER_ACTOR_ID, "stamina");
-        let cooldown_duration = self.experiment.player.combat.attack_cooldown_seconds;
+        let cooldown_duration = self.melee_action_field(|action| action.cooldown_seconds);
         if cooldown_before > 0.0 {
             self.push_combat_attempt(CombatAttemptRecord {
                 sequence: 0,
@@ -1259,7 +1177,7 @@ impl DaggerRuntime {
                 stamina_cost: 0.0,
                 stamina_after: stamina_before,
             });
-            return self.experiment_readout();
+            return self.lab_readout();
         }
         // The authored melee action owns its stamina cost and spends it
         // during resolution; scheduling here only gates the swing cooldown.
@@ -1293,7 +1211,7 @@ impl DaggerRuntime {
             died: false,
             contact_resolved: false,
         });
-        self.experiment_readout()
+        self.lab_readout()
     }
 
     fn resolve_melee_contact(&mut self) -> Result<(), RuntimeError> {
@@ -1302,7 +1220,7 @@ impl DaggerRuntime {
             .as_ref()
             .map(|action| action.attempt_sequence)
             .ok_or_else(|| RuntimeError::Encounter("melee contact has no active action".into()))?;
-        let attack_range = self.experiment.player.combat.attack_range;
+        let attack_range = self.melee_action_field(|action| action.reach);
         let player_position = self.player_position()?;
         let live_enemy_resources = self
             .content_entities
@@ -1555,7 +1473,7 @@ impl DaggerRuntime {
         self.combat_attempt_sequence
     }
 
-    pub fn experiment_readout(&self) -> Result<ExperimentReadout, RuntimeError> {
+    pub fn lab_readout(&self) -> Result<LabReadout, RuntimeError> {
         let position = self.player_position()?;
         let encounter_states = self
             .patrol
@@ -1616,24 +1534,17 @@ impl DaggerRuntime {
                     .find(|encounter| encounter.id == id)
             })
             .map(|encounter| self.named_encounter_readout(encounter));
-        Ok(ExperimentReadout {
-            document: self.experiment.document.clone(),
+        Ok(LabReadout {
+            gameplay_package: GameplayPackageReadout {
+                fingerprint: self.gameplay_catalog.fingerprint().to_string(),
+                payload: self.gameplay_payload.clone(),
+            },
             move_speed_units_per_second: self.player_controller.move_speed_units_per_second,
             max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
             current_health: self.player_health(),
             player_stats: self.player_gameplay_readout(),
-            enemy_stats: self
-                .experiment
-                .enemies
-                .iter()
-                .map(|enemy| EnemyStatsReadout {
-                    mobile_id: enemy.mobile_id,
-                    stats: enemy.stats.clone(),
-                })
-                .collect(),
             player_position: [position.x, position.y, position.z],
             player_yaw_degrees: self.player_state().yaw_degrees,
-            calculations: self.calculation_history.iter().cloned().collect(),
             combat: self.combat_history.iter().cloned().collect(),
             combat_attempts: self.combat_attempt_history.iter().cloned().collect(),
             player_attack_cooldown_remaining: self.player_attack_cooldown_remaining,
@@ -1791,33 +1702,6 @@ fn select_aimed_melee_target(
                 .then_with(|| right.0.cmp(&left.0))
         })
         .map(|candidate| candidate.0)
-}
-
-fn player_health_calculation(experiment: &AdmittedExperiment) -> &CalculationRecord {
-    experiment
-        .player
-        .stats
-        .calculations
-        .first()
-        .expect("admitted player stats always include max-health calculation")
-}
-
-fn validate_enemy_definitions(
-    content_entities: &[ContentEntity],
-    experiment: &AdmittedExperiment,
-) -> Result<(), RuntimeError> {
-    for definition in &experiment.enemies {
-        if !content_entities
-            .iter()
-            .any(|entity| entity.mobile_id == definition.mobile_id)
-        {
-            return Err(RuntimeError::Experiment(ExperimentError::InvalidValue {
-                path: format!("enemies[mobileId={}].mobileId", definition.mobile_id),
-                reason: "does not identify an enemy in the admitted project".to_string(),
-            }));
-        }
-    }
-    Ok(())
 }
 
 fn collision_hit_distance(hit: SpatialCollisionHit) -> f64 {

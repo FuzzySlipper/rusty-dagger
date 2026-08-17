@@ -1,204 +1,101 @@
-export interface ExperimentDocument {
-  readonly schemaVersion: 1;
-  readonly player: {
-    readonly movement: { readonly speedUnitsPerSecond: number };
-    readonly stats: ActorStatsInputs;
-    readonly combat: PlayerCombatTerms;
-  };
-  readonly enemies: readonly EnemyExperiment[];
+/**
+ * Read-only lab contract: mirrors the Rust `LabReadout` — the committed
+ * gameplay package's definitions plus live state and resolution explanation.
+ * There is no editable document here; `gameplay/src` owns gameplay truth.
+ */
+
+export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+
+export interface StatsSection {
+  readonly attributes: readonly string[];
+  readonly skills: readonly string[];
+  readonly tracks: readonly string[];
 }
 
-export interface ExperimentDraft {
-  schemaVersion: 1;
-  player: {
-    movement: { speedUnitsPerSecond: number };
-    stats: ActorStatsDraft;
-    combat: PlayerCombatTermsDraft;
-  };
-  enemies: EnemyExperimentDraft[];
+export interface TrackDefinition {
+  readonly id: string;
+  readonly max: Json;
 }
 
-export interface EnemyExperiment {
-  readonly mobileId: number;
-  readonly stats: ActorStatsInputs;
-  readonly combat: EnemyCombatTerms;
-  readonly behavior: EnemyBehaviorTerms;
+export interface BehaviorDefinition {
+  readonly detectionRangeMilli: number;
+  readonly patrolSpeedMilli: number;
+  readonly chaseSpeedMilli: number;
+  readonly attackRangeMilli: number;
+  readonly attackCooldownMillis: number;
+  readonly action: string;
 }
 
-export interface EnemyExperimentDraft {
-  mobileId: number;
-  stats: ActorStatsDraft;
-  combat: EnemyCombatTermsDraft;
-  behavior: EnemyBehaviorTermsDraft;
+export interface ActorDefinition {
+  readonly id: string;
+  readonly kind: 'player' | 'monster';
+  readonly mobileId?: number;
+  readonly stats: Readonly<Record<string, number>>;
+  readonly skills: Readonly<Record<string, number>>;
+  readonly armorValue: number;
+  readonly tracks: readonly TrackDefinition[];
+  readonly moveSpeedMilli?: number;
+  readonly behavior?: BehaviorDefinition;
 }
 
-export interface PlayerCombatTerms {
-  readonly attackRange: number;
-  readonly attackCooldownSeconds: number;
-  readonly staminaCost: number;
-  readonly hitBonus: number;
-  readonly baseDamage: number;
-  readonly damagePerStrength: number;
+export interface ActionDefinition {
+  readonly id: string;
+  readonly tags: readonly string[];
+  readonly program: Json;
+  readonly reachMilli?: number;
+  readonly cooldownMillis?: number;
 }
 
-export interface PlayerCombatTermsDraft {
-  attackRange: number;
-  attackCooldownSeconds: number;
-  staminaCost: number;
-  hitBonus: number;
-  baseDamage: number;
-  damagePerStrength: number;
+export interface WeaponDefinition {
+  readonly damage: Readonly<{ min: number; max: number }>;
+  readonly material: string;
+  readonly skill: string;
 }
 
-export interface EnemyCombatTerms {
-  readonly defense: number;
-  readonly armor: number;
+export interface ItemDefinition {
+  readonly id: string;
+  readonly weapon?: WeaponDefinition;
+  readonly interceptor?: Readonly<{ kind: string; amount: number }>;
 }
 
-export interface EnemyCombatTermsDraft {
-  defense: number;
-  armor: number;
+export interface RuleDefinition {
+  readonly id: string;
+  readonly kind: string;
+  readonly tag: string;
+  readonly condition: string;
 }
 
-export interface EnemyBehaviorTerms {
-  readonly detectionRange: number;
-  readonly patrolSpeed: number;
-  readonly chaseSpeed: number;
-  readonly attackRange: number;
-  readonly attackCooldownSeconds: number;
-  readonly attackDamage: number;
-}
-
-export interface EnemyBehaviorTermsDraft {
-  detectionRange: number;
-  patrolSpeed: number;
-  chaseSpeed: number;
-  attackRange: number;
-  attackCooldownSeconds: number;
-  attackDamage: number;
-}
-
-export interface ActorStatsInputs {
-  readonly attributes: ActorAttributes;
-  readonly resources: ActorResourceTerms;
-}
-
-export interface ActorStatsDraft {
-  attributes: { strength: number; endurance: number; intelligence: number };
-  resources: {
-    baseHealth: number;
-    healthPerEndurance: number;
-    baseStamina: number;
-    staminaPerAttribute: number;
-    baseMagicka: number;
-    magickaPerIntelligence: number;
-  };
-}
-
-export interface ActorAttributes {
-  readonly strength: number;
-  readonly endurance: number;
-  readonly intelligence: number;
-}
-
-export interface ActorResourceTerms {
-  readonly baseHealth: number;
-  readonly healthPerEndurance: number;
-  readonly baseStamina: number;
-  readonly staminaPerAttribute: number;
-  readonly baseMagicka: number;
-  readonly magickaPerIntelligence: number;
-}
-
-export interface CalculationStep {
-  readonly operation: string;
-  readonly left: number;
-  readonly right: number;
-  readonly result: number;
-}
-
-export interface CalculationDetails {
-  readonly rule: string;
-  readonly expression: string;
-  readonly inputs: readonly { readonly name: string; readonly value: number }[];
-  readonly steps: readonly CalculationStep[];
-  readonly result: number;
-}
-
-export interface CalculationRecord extends CalculationDetails {
-  readonly sequence: number;
-}
-
-export interface AdmittedActorStats {
-  readonly attributes: ActorAttributes;
-  readonly maxHealth: number;
-  readonly maxStamina: number;
-  readonly maxMagicka: number;
-  readonly calculations: readonly CalculationDetails[];
-}
-
-export interface ActorGameplayReadout extends AdmittedActorStats {
-  readonly currentHealth: number;
-  readonly currentStamina: number;
-  readonly currentMagicka: number;
-}
-
-export interface EnemyStatsReadout {
-  readonly mobileId: number;
-  readonly stats: AdmittedActorStats;
-}
-
-export interface ExperimentEvaluation {
-  readonly document: ExperimentDocument;
-  readonly moveSpeedUnitsPerSecond: number;
-  readonly maxHealth: number;
-  readonly calculation: CalculationDetails;
-  readonly playerStats: AdmittedActorStats;
-  readonly enemyStats: readonly EnemyStatsReadout[];
-}
-
-export interface ExperimentReadout {
-  readonly document: ExperimentDocument;
-  readonly moveSpeedUnitsPerSecond: number;
-  readonly maxHealth: number;
-  readonly currentHealth: number;
-  readonly playerStats: ActorGameplayReadout;
-  readonly enemyStats: readonly EnemyStatsReadout[];
-  readonly playerPosition: readonly [number, number, number];
-  readonly playerYawDegrees: number;
-  readonly calculations: readonly CalculationRecord[];
-  readonly combat: readonly CombatRecord[];
-  readonly combatAttempts: readonly CombatAttemptRecord[];
-  readonly playerAttackCooldownRemaining: number;
-  readonly encounterDecisions: readonly EncounterDecisionRecord[];
-  readonly content: readonly ContentEntityReadout[];
-  readonly focusedContentId: number | null;
-  readonly namedEncounters: readonly NamedEncounterReadout[];
-  readonly activeEncounter: NamedEncounterReadout | null;
-}
-
-export interface NamedEncounterReadout {
+export interface EncounterDefinition {
   readonly id: string;
   readonly name: string;
   readonly objective: string;
   readonly routeCode: string;
   readonly memberEntityIds: readonly number[];
-  readonly status: 'available' | 'active' | 'victory' | 'defeat';
 }
 
-export interface EncounterDecisionRecord {
-  readonly sequence: number;
-  readonly enemyId: number;
-  readonly enemyName: string;
-  readonly decision: string;
-  readonly from: string | null;
-  readonly to: string | null;
-  readonly distanceToPlayer: number;
-  readonly damage: number | null;
-  readonly lineOfSightClear: boolean | null;
-  readonly playerHealthBefore: number | null;
-  readonly playerHealthAfter: number | null;
-  readonly playerDied: boolean;
+export interface GameplayPackageReadout {
+  readonly fingerprint: string;
+  readonly schemaVersion: number;
+  readonly stats: StatsSection;
+  readonly actors: readonly ActorDefinition[];
+  readonly actions: readonly ActionDefinition[];
+  readonly items: readonly ItemDefinition[];
+  readonly rules: readonly RuleDefinition[];
+  readonly encounters: readonly EncounterDefinition[];
+}
+
+export interface ActorGameplayReadout {
+  readonly attributes: {
+    readonly strength: number;
+    readonly endurance: number;
+    readonly intelligence: number;
+  };
+  readonly maxHealth: number;
+  readonly maxStamina: number;
+  readonly maxMagicka: number;
+  readonly currentHealth: number;
+  readonly currentStamina: number;
+  readonly currentMagicka: number;
 }
 
 export interface CombatRecord {
@@ -233,6 +130,46 @@ export interface CombatAttemptRecord {
   readonly staminaAfter: number;
 }
 
+export interface MeleePresentationReadout {
+  readonly attemptSequence: number;
+  readonly phase: 'anticipation' | 'contact' | 'recovery' | 'rejected';
+  readonly phaseProgress: number;
+  readonly accepted: boolean;
+  readonly outcome: string;
+  readonly targetId: number | null;
+  readonly staminaBefore: number;
+  readonly staminaAfter: number;
+  readonly targetHealthBefore: number | null;
+  readonly targetHealthAfter: number | null;
+  readonly targetMaxHealth: number | null;
+  readonly finalDamage: number | null;
+  readonly died: boolean;
+}
+
+export interface NamedEncounterReadout {
+  readonly id: string;
+  readonly name: string;
+  readonly objective: string;
+  readonly routeCode: string;
+  readonly memberEntityIds: readonly number[];
+  readonly status: 'available' | 'active' | 'victory' | 'defeat';
+}
+
+export interface EncounterDecisionRecord {
+  readonly sequence: number;
+  readonly enemyId: number;
+  readonly enemyName: string;
+  readonly decision: string;
+  readonly from: string | null;
+  readonly to: string | null;
+  readonly distanceToPlayer: number;
+  readonly damage: number | null;
+  readonly lineOfSightClear: boolean | null;
+  readonly playerHealthBefore: number | null;
+  readonly playerHealthAfter: number | null;
+  readonly playerDied: boolean;
+}
+
 export interface ContentEntityReadout {
   readonly id: number;
   readonly kind: 'enemy';
@@ -257,43 +194,21 @@ export interface ContentEntityReadout {
   };
 }
 
-export function cloneExperiment(document: ExperimentDocument): ExperimentDraft {
-  return {
-    schemaVersion: 1,
-    player: {
-      movement: { speedUnitsPerSecond: document.player.movement.speedUnitsPerSecond },
-      stats: cloneActorStats(document.player.stats),
-      combat: { ...document.player.combat },
-    },
-    enemies: document.enemies.map((enemy) => ({
-      mobileId: enemy.mobileId,
-      stats: cloneActorStats(enemy.stats),
-      combat: { ...enemy.combat },
-      behavior: { ...enemy.behavior },
-    })),
-  };
-}
-
-export function cloneActorStats(stats: ActorStatsInputs): ActorStatsDraft {
-  return {
-    attributes: { ...stats.attributes },
-    resources: { ...stats.resources },
-  };
-}
-
-export function documentFromDraft(draft: ExperimentDraft): ExperimentDocument {
-  return {
-    schemaVersion: 1,
-    player: {
-      movement: { speedUnitsPerSecond: draft.player.movement.speedUnitsPerSecond },
-      stats: cloneActorStats(draft.player.stats),
-      combat: { ...draft.player.combat },
-    },
-    enemies: draft.enemies.map((enemy) => ({
-      mobileId: enemy.mobileId,
-      stats: cloneActorStats(enemy.stats),
-      combat: { ...enemy.combat },
-      behavior: { ...enemy.behavior },
-    })),
-  };
+export interface LabReadout {
+  readonly gameplayPackage: GameplayPackageReadout;
+  readonly moveSpeedUnitsPerSecond: number;
+  readonly maxHealth: number;
+  readonly currentHealth: number;
+  readonly playerStats: ActorGameplayReadout;
+  readonly playerPosition: readonly [number, number, number];
+  readonly playerYawDegrees: number;
+  readonly combat: readonly CombatRecord[];
+  readonly combatAttempts: readonly CombatAttemptRecord[];
+  readonly playerAttackCooldownRemaining: number;
+  readonly meleePresentation: MeleePresentationReadout | null;
+  readonly encounterDecisions: readonly EncounterDecisionRecord[];
+  readonly content: readonly ContentEntityReadout[];
+  readonly focusedContentId: number | null;
+  readonly namedEncounters: readonly NamedEncounterReadout[];
+  readonly activeEncounter: NamedEncounterReadout | null;
 }
