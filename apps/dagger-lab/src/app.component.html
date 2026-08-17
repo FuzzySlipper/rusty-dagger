@@ -349,14 +349,13 @@
       </div>
       <div class="derived-grid combat-records" *ngIf="live.combat.length > 0">
         <article *ngFor="let combat of live.combat" [attr.data-testid]="'combat-' + combat.sequence">
-          <span>#{{ combat.sequence }} · {{ combat.actor }} → {{ combat.target }}</span>
-          <strong>{{ combat.hit ? 'HIT' : 'MISS' }} · {{ format(combat.finalDamage) }} damage</strong>
-          <code>d100 {{ combat.rawRoll }} + {{ format(combat.hitBonus) }} = {{ format(combat.attackTotal) }} vs defense {{ format(combat.targetDefense) }}</code>
+          <span>#{{ combat.sequence }} · {{ combat.action }} → {{ combat.targetId }}</span>
+          <strong>{{ combat.hit ? 'HIT' : 'MISS' }} · {{ format(combat.damage) }} damage</strong>
+          <code>d100 {{ combat.roll }} · {{ combat.decisions.join(' · ') }}</code>
           <div class="derived-inputs">
             <small>range {{ format(combat.range) }} / {{ format(combat.attackRange) }}</small>
             <small>line of sight {{ combat.lineOfSightClear ? 'clear' : 'blocked' }}</small>
-            <small>base {{ format(combat.baseDamage) }} + STR {{ format(combat.strength) }} × {{ format(combat.damagePerStrength) }}</small>
-            <small>armor {{ format(combat.armor) }}</small>
+            <small *ngFor="let event of combat.events">{{ event }}</small>
           </div>
           <p data-testid="combat-health">Health {{ format(combat.healthBefore) }} → {{ format(combat.healthAfter) }} <strong *ngIf="combat.died">· DEAD</strong></p>
         </article>

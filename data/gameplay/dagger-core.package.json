@@ -344,7 +344,7 @@
                 "track": "stamina",
                 "amount": {
                   "kind": "const",
-                  "value": 10
+                  "value": 5
                 }
               }
             },

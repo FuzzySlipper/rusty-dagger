@@ -1,10 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
-    compile_gameplay_package, restore_actor_tracks, spend_actor_track, track_maximum,
-    AdmittedActorValues, AdmittedEnemyValues, AdmittedExperiment, CalculationRecord,
-    DaggerEvidence, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState,
-    ExperimentDocument, ExperimentError, MeleeResolutionInput, MeleeResolutionRecord,
+    action_roll_evidence, compile_gameplay_package, restore_actor_tracks, track_maximum,
+    AdmittedActorValues, AdmittedEnemyValues, AdmittedExperiment, CalculationRecord, DaggerEvent,
+    DaggerEvidence, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
+    DaggerIntentOrigin, ExperimentDocument, ExperimentError,
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
@@ -14,6 +14,9 @@ use rusty_engine::engine_spatial::{
 use rusty_engine::entity_state::{
     replace_character_motion_state, CharacterMotionComponent, CharacterMotionStateReplacement,
     EntityState, TransformComponent,
+};
+use rusty_engine::gameplay_resolution::{
+    CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
 };
 use rusty_engine::svc_collision::{
     StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
@@ -81,6 +84,7 @@ pub struct DaggerRuntime {
     combat_attempt_sequence: u64,
     combat_attempt_history: VecDeque<CombatAttemptRecord>,
     player_attack_cooldown_remaining: f32,
+    player_action_sequence: u64,
     melee_presentation: Option<ActiveMeleePresentation>,
     encounter_sequence: u64,
     encounter_history: VecDeque<EncounterDecisionRecord>,
@@ -256,8 +260,17 @@ pub struct CombatRecord {
     pub range: f32,
     pub attack_range: f32,
     pub line_of_sight_clear: bool,
-    #[serde(flatten)]
-    pub resolution: MeleeResolutionRecord,
+    pub action: String,
+    pub status: String,
+    pub roll: i64,
+    pub hit: bool,
+    pub damage: i64,
+    pub died: bool,
+    pub health_before: f32,
+    pub health_after: f32,
+    pub target_max_health: f32,
+    pub decisions: Vec<String>,
+    pub events: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -512,6 +525,7 @@ impl DaggerRuntime {
             calculation_sequence: 1,
             calculation_history: VecDeque::from([initial_calculation]),
             combat_sequence: 0,
+            player_action_sequence: 0,
             combat_history: VecDeque::new(),
             combat_attempt_sequence: 0,
             combat_attempt_history: VecDeque::new(),
@@ -711,19 +725,38 @@ impl DaggerRuntime {
             self.melee_presentation = None;
         }
         let player = self.player_position()?;
+        // Behavior tuning still comes from the applied document (7047 moves
+        // it to the catalog); the action each enemy attempts comes from the
+        // admitted gameplay catalog and resolves through the shared policy.
         let behaviors = self
             .content_entities
             .iter()
             .filter_map(|entity| {
-                self.experiment
+                let tuning = self
+                    .experiment
                     .enemies
                     .iter()
-                    .find(|enemy| enemy.mobile_id == entity.mobile_id)
-                    .and_then(|enemy| {
-                        u32::try_from(entity.id)
-                            .ok()
-                            .map(|handle| (handle, enemy.behavior.clone()))
-                    })
+                    .find(|enemy| enemy.mobile_id == entity.mobile_id)?;
+                let action = self
+                    .gameplay_catalog
+                    .actors()
+                    .values()
+                    .find(|actor| actor.mobile_id == Some(entity.mobile_id))
+                    .and_then(|actor| actor.behavior.as_ref())
+                    .map(|behavior| behavior.action.clone())?;
+                u32::try_from(entity.id).ok().map(|handle| {
+                    (
+                        handle,
+                        crate::patrol::EncounterBehavior {
+                            detection_range: tuning.behavior.detection_range,
+                            patrol_speed: tuning.behavior.patrol_speed,
+                            chase_speed: tuning.behavior.chase_speed,
+                            attack_range: tuning.behavior.attack_range,
+                            attack_cooldown_seconds: tuning.behavior.attack_cooldown_seconds,
+                            action,
+                        },
+                    )
+                })
             })
             .collect::<BTreeMap<_, _>>();
         let dead = self
@@ -773,24 +806,28 @@ impl DaggerRuntime {
                 continue;
             }
             let line_of_sight_clear = self.enemy_line_of_sight_clear(id, player);
-            if line_of_sight_clear {
-                if let Some(sequence) = self.enemy_attack_sequences.get_mut(&id) {
+            let (damage, after) = if line_of_sight_clear {
+                // AI attack intents resolve through the same authored action
+                // policy as the player's attempts; damage is never flat.
+                // Rolls draw from this enemy's own attack stream.
+                let roll_sequence = {
+                    let sequence = self.enemy_attack_sequences.entry(id).or_insert(0);
                     *sequence = sequence.saturating_add(1);
-                }
-            }
-            let damage = if line_of_sight_clear {
-                attack.damage
+                    *sequence
+                };
+                let attempt = self.resolve_action_attempt(
+                    &attack.action,
+                    &enemy_actor_id(id),
+                    PLAYER_ACTOR_ID,
+                    DaggerIntentOrigin::Ai,
+                    id,
+                    roll_sequence,
+                )?;
+                let after = self.player_health();
+                (Some(attempt.damage as f32), Some(after))
             } else {
-                0.0
+                (Some(0.0), Some(before))
             };
-            let after = spend_actor_track(
-                &mut self.gameplay,
-                &self.gameplay_catalog,
-                PLAYER_ACTOR_ID,
-                "health",
-                damage as i64,
-            )
-            .map_err(RuntimeError::Gameplay)? as f32;
             self.push_encounter_record(EncounterDecisionRecord {
                 sequence: 0,
                 enemy_id: id,
@@ -804,11 +841,11 @@ impl DaggerRuntime {
                 from: None,
                 to: None,
                 distance_to_player: attack.distance_to_player,
-                damage: Some(damage),
+                damage,
                 line_of_sight_clear: Some(line_of_sight_clear),
                 player_health_before: Some(before),
-                player_health_after: Some(after),
-                player_died: before > 0.0 && after <= 0.0,
+                player_health_after: after,
+                player_died: before > 0.0 && after.is_some_and(|after| after <= 0.0),
             });
         }
         self.refresh_named_encounter_outcome();
@@ -1042,6 +1079,7 @@ impl DaggerRuntime {
             admitted.player.move_speed_units_per_second;
         self.player_controller.configure_engine();
         self.combat_sequence = 0;
+        self.player_action_sequence = 0;
         self.combat_history.clear();
         self.combat_attempt_sequence = 0;
         self.combat_attempt_history.clear();
@@ -1094,6 +1132,7 @@ impl DaggerRuntime {
         self.player_look_state = self.player_start_look_state;
         self.restore_live_actors()?;
         self.combat_sequence = 0;
+        self.player_action_sequence = 0;
         self.combat_history.clear();
         self.combat_attempt_sequence = 0;
         self.combat_attempt_history.clear();
@@ -1175,6 +1214,7 @@ impl DaggerRuntime {
                 self.player_look_state = facing_state;
                 self.restore_live_actors()?;
                 self.combat_sequence = 0;
+                self.player_action_sequence = 0;
                 self.combat_history.clear();
                 self.combat_attempt_sequence = 0;
                 self.combat_attempt_history.clear();
@@ -1206,7 +1246,6 @@ impl DaggerRuntime {
         let cooldown_before = self.player_attack_cooldown_remaining;
         let stamina_before = self.live_track(PLAYER_ACTOR_ID, "stamina");
         let cooldown_duration = self.experiment.player.combat.attack_cooldown_seconds;
-        let stamina_cost = self.experiment.player.combat.stamina_cost;
         if cooldown_before > 0.0 {
             self.push_combat_attempt(CombatAttemptRecord {
                 sequence: 0,
@@ -1217,23 +1256,15 @@ impl DaggerRuntime {
                 cooldown_after: cooldown_before,
                 cooldown_duration,
                 stamina_before,
-                stamina_cost,
+                stamina_cost: 0.0,
                 stamina_after: stamina_before,
             });
             return self.experiment_readout();
         }
-        // Classic/DFU starts the weapon action and then applies bounded
-        // fatigue loss; low fatigue does not suppress the visible swing. Keep
-        // the authored cost in the semantic record while saturating the live
-        // resource at zero.
-        let stamina_after = spend_actor_track(
-            &mut self.gameplay,
-            &self.gameplay_catalog,
-            PLAYER_ACTOR_ID,
-            "stamina",
-            stamina_cost as i64,
-        )
-        .map_err(RuntimeError::Gameplay)? as f32;
+        // The authored melee action owns its stamina cost and spends it
+        // during resolution; scheduling here only gates the swing cooldown.
+        // The attempt record's stamina cost/after update when the contact
+        // resolves with the actual spend.
         self.player_attack_cooldown_remaining = cooldown_duration;
         let attempt_sequence = self.push_combat_attempt(CombatAttemptRecord {
             sequence: 0,
@@ -1244,8 +1275,8 @@ impl DaggerRuntime {
             cooldown_after: cooldown_duration,
             cooldown_duration,
             stamina_before,
-            stamina_cost,
-            stamina_after,
+            stamina_cost: 0.0,
+            stamina_after: stamina_before,
         });
         self.melee_presentation = Some(ActiveMeleePresentation {
             attempt_sequence,
@@ -1254,7 +1285,7 @@ impl DaggerRuntime {
             outcome: "swinging".to_string(),
             target_id: None,
             stamina_before,
-            stamina_after,
+            stamina_after: stamina_before,
             target_health_before: None,
             target_health_after: None,
             target_max_health: None,
@@ -1291,17 +1322,6 @@ impl DaggerRuntime {
             self.finish_melee_contact(attempt_sequence, None, "miss", None);
             return Ok(());
         };
-        let entity = self
-            .content_entities
-            .iter()
-            .find(|entity| entity.id == id)
-            .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
-        let enemy = self
-            .experiment
-            .enemies
-            .iter()
-            .find(|enemy| enemy.mobile_id == entity.mobile_id)
-            .ok_or(RuntimeError::Content(ContentError::NoCombatDefinition(id)))?;
         let target_position = self
             .content_live_positions
             .get(&id)
@@ -1336,51 +1356,62 @@ impl DaggerRuntime {
         }
         let health_before = self.enemy_health(id);
         let target_max_health = self.live_track_max(&enemy_actor_id(id), "health");
-        let raw_roll = next_combat_roll(self.combat_sequence, id);
-        let resolution = dagger_rpg::resolve_melee_attack(MeleeResolutionInput {
-            actor: "Player",
-            target: &format!("{} {id}", entity.mobile_name),
-            raw_roll,
-            player: &self.experiment.player,
-            enemy,
-            target_health_before: health_before,
-        });
-        // 7046 moves the attempt itself onto resolve_dagger_action; the
-        // resolved damage already commits through the mechanics binding.
-        let health_after = spend_actor_track(
-            &mut self.gameplay,
-            &self.gameplay_catalog,
+        // The player's melee contact resolves through the same authored
+        // action policy as AI attacks; range, aim, and line of sight above
+        // remain runtime world facts. Rolls draw from the player-action
+        // stream so outcomes are deterministic per swing.
+        self.player_action_sequence = self.player_action_sequence.saturating_add(1);
+        let roll_sequence = self.player_action_sequence;
+        let attempt = self.resolve_action_attempt(
+            "melee-attack",
+            PLAYER_ACTOR_ID,
             &enemy_actor_id(id),
-            "health",
-            resolution.final_damage as i64,
-        )
-        .map_err(RuntimeError::Gameplay)? as f32;
-        let resolution = MeleeResolutionRecord {
-            health_after,
-            died: resolution.hit && health_after <= 0.0,
-            ..resolution
-        };
-        if resolution.hit {
+            DaggerIntentOrigin::Player,
+            id,
+            roll_sequence,
+        )?;
+        let health_after = self.enemy_health(id);
+        let hit = attempt.damage > 0;
+        let died = health_before > 0.0 && health_after <= 0.0;
+        if hit {
             if let Some(sequence) = self.enemy_hurt_sequences.get_mut(&id) {
                 *sequence = sequence.saturating_add(1);
             }
         }
-        let outcome = if resolution.died {
+        let outcome = if !attempt.succeeded {
+            "rejected"
+        } else if died {
             "killed"
-        } else if resolution.hit {
+        } else if hit {
             "hit"
         } else {
             "miss"
         };
         self.focused_content_id = Some(id);
-        self.combat_sequence = self.combat_sequence.saturating_add(1);
+        // Combat records sequence contiguously within the history; the
+        // shared combat_sequence also advances on enemy resolutions and is
+        // only a resolution identity, not a display sequence.
+        let record_sequence = self
+            .combat_history
+            .back()
+            .map_or(1, |record| record.sequence.saturating_add(1));
         self.combat_history.push_back(CombatRecord {
-            sequence: self.combat_sequence,
+            sequence: record_sequence,
             target_id: id,
             range: distance,
             attack_range,
             line_of_sight_clear: true,
-            resolution: resolution.clone(),
+            action: "melee-attack".to_string(),
+            status: attempt.status.clone(),
+            roll: attempt.roll,
+            hit,
+            damage: attempt.damage,
+            died,
+            health_before,
+            health_after,
+            target_max_health,
+            decisions: attempt.decisions.clone(),
+            events: attempt.events.clone(),
         });
         while self.combat_history.len() > COMBAT_HISTORY_LIMIT {
             self.combat_history.pop_front();
@@ -1389,9 +1420,95 @@ impl DaggerRuntime {
             attempt_sequence,
             Some(id),
             outcome,
-            Some((resolution, target_max_health)),
+            Some(MeleeContactResult {
+                damage: attempt.damage,
+                stamina_spent: attempt.stamina_spent,
+                stamina_after: self.live_track(PLAYER_ACTOR_ID, "stamina"),
+                health_before,
+                health_after,
+                target_max_health,
+                died,
+            }),
         );
         Ok(())
+    }
+
+    /// Resolve one authored action attempt through the shared policy with
+    /// deterministic combat rolls supplied as evidence. Used identically for
+    /// player melee contacts and AI attack intents.
+    fn resolve_action_attempt(
+        &mut self,
+        action: &str,
+        actor: &str,
+        target: &str,
+        origin: DaggerIntentOrigin,
+        target_entity: u64,
+        roll_sequence: u64,
+    ) -> Result<ActionAttemptOutcome, RuntimeError> {
+        self.combat_sequence = self.combat_sequence.saturating_add(1);
+        let sequence = self.combat_sequence;
+        let roll = deterministic_roll(roll_sequence, target_entity, 1, 1, 100);
+        let mut evidence = vec![DaggerEvidence {
+            id: format!("{action}.d100"),
+            value: roll,
+        }];
+        for (id, min, max) in
+            action_roll_evidence(&self.gameplay_catalog, action).map_err(RuntimeError::Gameplay)?
+        {
+            evidence.push(DaggerEvidence {
+                value: deterministic_roll(roll_sequence, target_entity, 2, min, max),
+                id,
+            });
+        }
+        let (receipt, readout) = dagger_rpg::resolve_dagger_action(
+            &self.gameplay_catalog,
+            &mut self.gameplay,
+            ResolutionIdentity::root(
+                ResolutionId::new(sequence).expect("non-zero resolution id"),
+                CorrelationId::new(7046).expect("non-zero correlation id"),
+            ),
+            ResolutionMode::Apply,
+            DaggerIntent {
+                action: action.to_string(),
+                actor: actor.to_string(),
+                target: target.to_string(),
+                origin,
+            },
+            evidence,
+        );
+        let mut damage = 0_i64;
+        let mut stamina_spent = 0_i64;
+        for event in receipt.events() {
+            match event {
+                DaggerEvent::DamageApplied { amount, .. } => damage += amount,
+                DaggerEvent::TrackSpent { track, amount, .. } if track == "stamina" => {
+                    stamina_spent += amount;
+                }
+                _ => {}
+            }
+        }
+        Ok(ActionAttemptOutcome {
+            succeeded: receipt.succeeded(),
+            status: readout.status.clone(),
+            roll,
+            damage,
+            stamina_spent,
+            decisions: readout
+                .trace
+                .iter()
+                .filter_map(|record| match &record.detail {
+                    Some(dagger_rpg::DaggerTraceDetail::Decision { reason }) => {
+                        Some(reason.clone())
+                    }
+                    _ => None,
+                })
+                .collect(),
+            events: readout
+                .events
+                .iter()
+                .map(|event| format!("{event:?}"))
+                .collect(),
+        })
     }
 
     fn finish_melee_contact(
@@ -1399,7 +1516,7 @@ impl DaggerRuntime {
         attempt_sequence: u64,
         target_id: Option<u64>,
         outcome: &str,
-        result: Option<(dagger_rpg::MeleeResolutionRecord, f32)>,
+        result: Option<MeleeContactResult>,
     ) {
         if let Some(attempt) = self
             .combat_attempt_history
@@ -1408,17 +1525,22 @@ impl DaggerRuntime {
         {
             attempt.target_id = target_id;
             attempt.outcome = outcome.to_string();
+            if let Some(result) = &result {
+                attempt.stamina_cost = result.stamina_spent as f32;
+                attempt.stamina_after = result.stamina_after;
+            }
         }
         if let Some(action) = self.melee_presentation.as_mut() {
             action.contact_resolved = true;
             action.outcome = outcome.to_string();
             action.target_id = target_id;
-            if let Some((resolution, target_max_health)) = result {
-                action.target_health_before = Some(resolution.health_before);
-                action.target_health_after = Some(resolution.health_after);
-                action.target_max_health = Some(target_max_health);
-                action.final_damage = Some(resolution.final_damage);
-                action.died = resolution.died;
+            if let Some(result) = result {
+                action.stamina_after = result.stamina_after;
+                action.target_health_before = Some(result.health_before);
+                action.target_health_after = Some(result.health_after);
+                action.target_max_health = Some(result.target_max_health);
+                action.final_damage = Some(result.damage as f32);
+                action.died = result.died;
             }
         }
     }
@@ -1705,6 +1827,44 @@ fn collision_hit_distance(hit: SpatialCollisionHit) -> f64 {
     }
 }
 
+/// Outcome of one authored action resolution in live play.
+struct ActionAttemptOutcome {
+    succeeded: bool,
+    status: String,
+    roll: i64,
+    damage: i64,
+    stamina_spent: i64,
+    decisions: Vec<String>,
+    events: Vec<String>,
+}
+
+/// Resolved melee contact facts for the attempt record and presentation.
+struct MeleeContactResult {
+    damage: i64,
+    stamina_spent: i64,
+    stamina_after: f32,
+    health_before: f32,
+    health_after: f32,
+    target_max_health: f32,
+    died: bool,
+}
+
+/// Deterministic combat roll: seeded by attempt sequence, target, and salt —
+/// no time source, so encounters are replayable and diagnostics and browser
+/// gates can assert exact outcomes. Salt 1 is the d100 hit roll; salt 2 is
+/// the damage dice roll.
+fn deterministic_roll(sequence: u64, target_id: u64, salt: u64, min: i64, max: i64) -> i64 {
+    let mut value = sequence
+        .rotate_left(17)
+        .wrapping_add(target_id.rotate_left(31))
+        .wrapping_add(salt.wrapping_mul(0x9E37_79B9_7F4A_7C15));
+    value ^= value >> 29;
+    value = value.wrapping_mul(0x2545_F491_4F6C_DD1D);
+    value ^= value >> 27;
+    let span = (max - min + 1) as u64;
+    min + (value % span) as i64
+}
+
 /// Spawn the live player and one actor instance per admitted content entity
 /// whose mobile has an actor definition in the gameplay catalog. Entities
 /// without a definition (currently the Thief, mobile 138 — an enemy-class
@@ -1755,18 +1915,6 @@ fn ai_mode_name(mode: EnemyAiMode) -> &'static str {
         EnemyAiMode::Attack => "attack",
         EnemyAiMode::Dead => "dead",
     }
-}
-
-fn next_combat_roll(sequence: u64, target_id: u64) -> u8 {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| u64::from(duration.subsec_nanos()));
-    let mut value = nanos ^ sequence.rotate_left(17) ^ target_id.rotate_left(31);
-    value ^= value >> 12;
-    value ^= value << 25;
-    value ^= value >> 27;
-    ((value.wrapping_mul(0x2545_F491_4F6C_DD1D) % 100) + 1) as u8
 }
 
 #[cfg(test)]

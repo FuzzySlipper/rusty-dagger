@@ -11,10 +11,15 @@
 //! combat AI with detection, pursuit, and melee). DFU has no standalone
 //! wander behavior — its AI is detection-based. A deterministic seeded
 //! random-walk is sufficient and simpler for this demo.
+//!
+//! AI seam (task 7046): this service is a downstream producer of typed
+//! intents only. It reads world facts (distances, nav levels) and behavior
+//! tuning, and emits position updates, mode decisions, and attack intents
+//! naming an authored action id. It never carries resolved damage, health
+//! deltas, or applies any gameplay mutation — the runtime resolves attack
+//! intents through `dagger_rpg::resolve_dagger_action`.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-
-use dagger_rpg::EnemyBehaviorExperiment;
 
 /// Cell size from the nav grid (0.5m).
 const CELL_SIZE: f32 = 0.5;
@@ -130,6 +135,19 @@ impl PatrolGrid {
     }
 }
 
+/// Behavior tuning for one NPC: speed/range/cooldown knobs plus the authored
+/// action id attempted when the player is in attack range. The service reads
+/// these; it never resolves the action itself.
+#[derive(Debug, Clone, PartialEq)]
+pub struct EncounterBehavior {
+    pub detection_range: f32,
+    pub patrol_speed: f32,
+    pub chase_speed: f32,
+    pub attack_range: f32,
+    pub attack_cooldown_seconds: f32,
+    pub action: String,
+}
+
 /// One NPC in the patrol system.
 struct PatrolNpc {
     handle: u32,
@@ -185,10 +203,11 @@ pub struct EnemyDecision {
     pub distance_to_player: f32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EnemyAttackIntent {
     pub handle: u32,
-    pub damage: f32,
+    /// Authored action id to resolve through the shared action policy.
+    pub action: String,
     pub distance_to_player: f32,
 }
 
@@ -276,7 +295,7 @@ impl PatrolService {
         &mut self,
         dt: f32,
         player_position: [f32; 3],
-        behaviors: &BTreeMap<u32, EnemyBehaviorExperiment>,
+        behaviors: &BTreeMap<u32, EncounterBehavior>,
         dead: &BTreeSet<u32>,
     ) -> PatrolEvaluation {
         let mut updates = Vec::new();
@@ -329,7 +348,7 @@ impl PatrolService {
                     if npc.attack_cooldown_remaining <= 0.0 {
                         attacks.push(EnemyAttackIntent {
                             handle: npc.handle,
-                            damage: behavior.attack_damage,
+                            action: behavior.action.clone(),
                             distance_to_player,
                         });
                         npc.attack_cooldown_remaining = behavior.attack_cooldown_seconds;
@@ -482,14 +501,14 @@ fn move_toward(npc: &mut PatrolNpc, grid: &PatrolGrid, target: [f32; 3], speed: 
 mod tests {
     use super::*;
 
-    fn encounter_behavior() -> EnemyBehaviorExperiment {
-        EnemyBehaviorExperiment {
+    fn encounter_behavior() -> EncounterBehavior {
+        EncounterBehavior {
             detection_range: 20.0,
             patrol_speed: 0.0,
             chase_speed: 2.0,
             attack_range: 2.0,
             attack_cooldown_seconds: 1.0,
-            attack_damage: 4.0,
+            action: "rat-bite".to_string(),
         }
     }
 

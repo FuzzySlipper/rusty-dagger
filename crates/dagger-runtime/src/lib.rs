@@ -403,67 +403,49 @@ mod tests {
     fn fights_a_real_privateers_hold_rat_and_resets_death_authoritatively() {
         let mut runtime =
             DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
-        let mut experiment: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        experiment["player"]["combat"]["hitBonus"] = serde_json::Value::from(100.0);
-        experiment["player"]["combat"]["baseDamage"] = serde_json::Value::from(10.0);
-        experiment["enemies"][0]["combat"]["armor"] = serde_json::Value::from(0.0);
-        runtime
-            .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
-            .expect("apply lethal profile");
         runtime.jump_to_content(2007).expect("jump beside real Rat");
 
-        let swinging = runtime
-            .attack_focused_target()
-            .expect("attack focused real Rat");
-        assert!(swinging.combat.is_empty());
-        let accepted = swinging
-            .combat_attempts
-            .last()
-            .expect("accepted physical attack attempt");
-        assert!(accepted.accepted);
-        assert_eq!(accepted.outcome, "swinging");
-        assert_eq!(accepted.target_id, None);
-        assert_eq!(accepted.stamina_before, 90.0);
-        assert_eq!(accepted.stamina_after, 80.0);
-        assert_eq!(accepted.cooldown_after, 0.75);
-        let melee = swinging
-            .melee_presentation
-            .as_ref()
-            .expect("accepted attack starts visible Rust action state");
-        assert_eq!(melee.phase, super::MeleePresentationPhase::Anticipation);
-        assert_eq!(melee.target_id, None);
-        assert_eq!(melee.target_health_before, None);
-
-        let attacked = runtime
-            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
-            .and_then(|_| runtime.experiment_readout())
-            .expect("resolve melee only at deterministic contact");
-        let record = attacked.combat.last().expect("semantic combat record");
-        assert_eq!(record.target_id, 2007);
-        assert!(record.line_of_sight_clear);
-        assert!(record.resolution.hit);
-        assert!(record.resolution.died);
-        assert_eq!(record.resolution.health_before, 14.0);
-        assert_eq!(record.resolution.health_after, 0.0);
-        let accepted = attacked
-            .combat_attempts
-            .last()
-            .expect("accepted physical attack attempt");
-        assert!(accepted.accepted);
-        assert_eq!(accepted.outcome, "killed");
-        assert_eq!(accepted.target_id, Some(2007));
-        let melee = attacked
-            .melee_presentation
-            .as_ref()
-            .expect("accepted attack starts visible Rust action state");
-        assert_eq!(melee.phase, super::MeleePresentationPhase::Contact);
-        assert_eq!(melee.target_id, Some(2007));
-        assert_eq!(melee.target_health_before, Some(14.0));
-        assert_eq!(melee.target_health_after, Some(0.0));
-        assert_eq!(melee.target_max_health, Some(14.0));
-        assert_eq!(melee.final_damage, Some(15.0));
-        assert!(melee.died);
+        // Player attacks resolve through the authored melee action with
+        // deterministic player-stream rolls: swings 1-6 miss (40% chance),
+        // swing 7 hits for 7, swings 8-9 miss, swing 10 hits for 14 and
+        // kills the 14-health Rat.
+        for _ in 0..10 {
+            runtime.attack_focused_target().expect("physical swing");
+            runtime
+                .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+                .expect("resolve melee contact");
+            for _ in 0..3 {
+                runtime
+                    .tick_play_session(0.25)
+                    .expect("advance authoritative attack cooldown");
+            }
+        }
+        let attacked = runtime.experiment_readout().expect("fight readout");
+        let records = &attacked.combat;
+        assert_eq!(records.len(), 10);
+        assert!(
+            records[..6]
+                .iter()
+                .all(|record| !record.hit && record.damage == 0 && record.health_after == 14.0),
+            "first six swings must miss without touching Rat health: {records:?}"
+        );
+        let seventh = &records[6];
+        assert!(seventh.hit);
+        assert_eq!(seventh.damage, 7);
+        assert_eq!(seventh.health_before, 14.0);
+        assert_eq!(seventh.health_after, 7.0);
+        let tenth = &records[9];
+        assert!(tenth.hit);
+        // Rolled 14 against 7 remaining health; the plan clamps damage to
+        // what can apply (health floors at zero).
+        assert_eq!(tenth.damage, 7);
+        assert_eq!(tenth.health_after, 0.0);
+        assert!(tenth.died);
+        assert!(records
+            .iter()
+            .all(|record| record.action == "melee-attack" && record.line_of_sight_clear));
+        // Every accepted swing spent the authored cost: 90 - 10 * 5.
+        assert_eq!(attacked.player_stats.current_stamina, 40.0);
         let rat = attacked
             .content
             .iter()
@@ -471,45 +453,6 @@ mod tests {
             .expect("attacked Rat readout");
         assert_eq!(rat.live.resources.unwrap().current_health, 0.0);
 
-        let rejected = runtime
-            .attack_focused_target()
-            .expect("cooldown rejection remains readable");
-        let rejected = rejected
-            .combat_attempts
-            .last()
-            .expect("cooldown attempt record");
-        assert!(!rejected.accepted);
-        assert_eq!(rejected.outcome, "cooldown");
-        assert_eq!(rejected.stamina_before, rejected.stamina_after);
-        assert_eq!(
-            runtime.melee_presentation().unwrap().phase,
-            super::MeleePresentationPhase::Contact
-        );
-        for _ in 0..3 {
-            runtime
-                .tick_play_session(0.25)
-                .expect("advance authoritative attack cooldown");
-        }
-        let empty = runtime
-            .attack_focused_target()
-            .expect("dead target does not suppress a new swing");
-        assert_eq!(
-            empty.melee_presentation.unwrap().phase,
-            super::MeleePresentationPhase::Anticipation
-        );
-        runtime
-            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
-            .expect("resolve dead-target swing as empty contact");
-        assert_eq!(
-            runtime
-                .experiment_readout()
-                .unwrap()
-                .combat_attempts
-                .last()
-                .unwrap()
-                .outcome,
-            "miss"
-        );
         let reset = runtime.reset_play_session().expect("reset combat run");
         assert!(reset.combat.is_empty());
         assert!(reset.combat_attempts.is_empty());
@@ -527,46 +470,59 @@ mod tests {
                 .current_health,
             14.0
         );
+        assert_eq!(reset.player_stats.current_health, 85.0);
+        assert_eq!(reset.player_stats.current_stamina, 90.0);
+    }
 
-        experiment["player"]["combat"]["staminaCost"] = serde_json::Value::from(100.0);
+    #[test]
+    fn exhausted_player_attack_is_rejected_at_contact_without_mutation() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
         runtime
-            .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
-            .expect("apply exhausting profile");
-        runtime
-            .jump_to_content(2007)
-            .expect("jump beside Rat with exhausting profile");
-        let exhausted = runtime
-            .attack_focused_target()
-            .expect("low stamina still starts the classic swing");
-        assert!(exhausted.combat.is_empty());
-        let exhausted = exhausted
-            .combat_attempts
-            .last()
-            .expect("low-stamina attempt");
-        assert!(exhausted.accepted);
-        assert_eq!(exhausted.outcome, "swinging");
-        assert_eq!(exhausted.stamina_before, 90.0);
-        assert_eq!(exhausted.stamina_after, 0.0);
-        assert_eq!(
-            runtime.melee_presentation().unwrap().phase,
-            super::MeleePresentationPhase::Anticipation
-        );
-        for _ in 0..3 {
+            .jump_to_content(2000)
+            .expect("jump beside Skeletal Warrior");
+
+        // 18 swings at the authored cost of 5 drain stamina to zero (the 57
+        // health Skeletal Warrior survives the drain); the 19th swing still
+        // starts (classic) but the authored action rejects at contact with
+        // InsufficientTrack and no damage or further spend.
+        for _ in 0..18 {
+            runtime.attack_focused_target().expect("physical swing");
             runtime
-                .tick_play_session(0.25)
-                .expect("finish low-stamina swing and cooldown");
+                .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+                .expect("resolve melee contact");
+            for _ in 0..3 {
+                runtime
+                    .tick_play_session(0.25)
+                    .expect("advance authoritative attack cooldown");
+            }
         }
-        let zero_stamina = runtime
-            .attack_focused_target()
-            .expect("zero stamina still starts another classic swing");
-        let zero_stamina = zero_stamina
-            .combat_attempts
-            .last()
-            .expect("zero-stamina attempt");
-        assert!(zero_stamina.accepted);
-        assert_eq!(zero_stamina.outcome, "swinging");
-        assert_eq!(zero_stamina.stamina_before, 0.0);
-        assert_eq!(zero_stamina.stamina_after, 0.0);
+        assert_eq!(
+            runtime
+                .experiment_readout()
+                .unwrap()
+                .player_stats
+                .current_stamina,
+            0.0
+        );
+        let before = runtime.experiment_readout().unwrap();
+        runtime.attack_focused_target().expect("zero-stamina swing");
+        runtime
+            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+            .expect("resolve zero-stamina contact");
+        let rejected = runtime.experiment_readout().expect("rejected readout");
+        let attempt = rejected.combat_attempts.last().expect("rejected attempt");
+        assert_eq!(attempt.outcome, "rejected");
+        assert_eq!(attempt.stamina_before, 0.0);
+        assert_eq!(attempt.stamina_after, 0.0);
+        let record = rejected.combat.last().expect("rejected combat record");
+        assert!(!record.hit);
+        assert_eq!(record.damage, 0);
+        assert!(record.status.starts_with("rejected"));
+        assert_eq!(
+            rejected.player_stats.current_stamina,
+            before.player_stats.current_stamina
+        );
     }
 
     #[test]
@@ -577,8 +533,10 @@ mod tests {
             .install_encounter_navigation_json(NAVGRID)
             .expect("install committed navigation");
 
+        // AI attacks resolve through authored actions: rat-bite lands 1-4
+        // damage on a 10% check, so the first hit takes a while of ticks.
         runtime.jump_to_content(2007).expect("jump beside Rat");
-        for _ in 0..20 {
+        for _ in 0..400 {
             runtime.tick_play_session(0.1).expect("Rat encounter tick");
             if runtime
                 .experiment_readout()
@@ -595,13 +553,22 @@ mod tests {
             .encounter_decisions
             .iter()
             .any(|record| record.enemy_id == 2007 && record.to.as_deref() == Some("chase")));
-        assert!(rat.encounter_decisions.iter().any(|record| {
-            record.enemy_id == 2007
-                && record.decision == "melee attack"
-                && record.damage == Some(4.0)
-                && record.line_of_sight_clear == Some(true)
-        }));
-        assert_eq!(rat.player_stats.current_health, 81.0);
+        let rat_hit = rat
+            .encounter_decisions
+            .iter()
+            .find(|record| {
+                record.enemy_id == 2007
+                    && record.decision == "melee attack"
+                    && record.line_of_sight_clear == Some(true)
+                    && record.damage.is_some_and(|damage| damage > 0.0)
+            })
+            .expect("Rat eventually lands rat-bite through authored resolution");
+        let rat_damage = rat_hit.damage.unwrap();
+        assert!(
+            (1.0..=4.0).contains(&rat_damage),
+            "rat-bite damage must be the authored 1-4 dice, got {rat_damage}"
+        );
+        assert_eq!(rat.player_stats.current_health, 85.0 - rat_damage);
 
         runtime
             .reset_play_session()
@@ -609,7 +576,7 @@ mod tests {
         runtime
             .jump_to_content(2000)
             .expect("jump beside Skeletal Warrior");
-        for _ in 0..20 {
+        for _ in 0..400 {
             runtime
                 .tick_play_session(0.1)
                 .expect("Skeletal Warrior encounter tick");
@@ -626,12 +593,21 @@ mod tests {
         let skeleton = runtime
             .experiment_readout()
             .expect("Skeletal Warrior encounter readout");
-        assert!(skeleton.encounter_decisions.iter().any(|record| {
-            record.enemy_id == 2000
-                && record.decision == "melee attack"
-                && record.damage == Some(8.0)
-        }));
-        assert_eq!(skeleton.player_stats.current_health, 77.0);
+        let skeleton_hit = skeleton
+            .encounter_decisions
+            .iter()
+            .find(|record| {
+                record.enemy_id == 2000
+                    && record.decision == "melee attack"
+                    && record.damage.is_some_and(|damage| damage > 0.0)
+            })
+            .expect("Skeletal Warrior lands skeleton-strike through authored resolution");
+        let skeleton_damage = skeleton_hit.damage.unwrap();
+        assert!(
+            (5.0..=15.0).contains(&skeleton_damage),
+            "skeleton-strike damage must be the authored 5-15 dice, got {skeleton_damage}"
+        );
+        assert_eq!(skeleton.player_stats.current_health, 85.0 - skeleton_damage);
 
         let mut quiet: serde_json::Value =
             serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
@@ -669,14 +645,6 @@ mod tests {
         assert_eq!(initial.named_encounters.len(), 2);
         assert!(initial.active_encounter.is_none());
 
-        let mut lethal: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        lethal["player"]["combat"]["hitBonus"] = serde_json::Value::from(100.0);
-        lethal["player"]["combat"]["baseDamage"] = serde_json::Value::from(10.0);
-        lethal["enemies"][0]["combat"]["armor"] = serde_json::Value::from(0.0);
-        runtime
-            .apply_experiment_json(&serde_json::to_string(&lethal).unwrap())
-            .expect("apply lethal profile");
         assert!(runtime
             .route_named_encounter("Digit1")
             .expect("route Rat room"));
@@ -706,10 +674,17 @@ mod tests {
             85.0
         );
 
-        runtime.attack_focused_target().expect("start Rat attack");
-        runtime
-            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
-            .expect("resolve Rat contact");
+        // Victory requires actually killing the Rat through authored
+        // resolution: the deterministic player stream kills on swing 10.
+        for _ in 0..10 {
+            runtime.attack_focused_target().expect("Rat room swing");
+            runtime
+                .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+                .expect("resolve Rat room contact");
+            for _ in 0..3 {
+                runtime.tick_play_session(0.25).expect("advance cooldown");
+            }
+        }
         assert_eq!(
             runtime
                 .experiment_readout()
@@ -723,22 +698,22 @@ mod tests {
         assert_eq!(retried.active_encounter.unwrap().status, "active");
         assert_eq!(retried.focused_content_id, Some(2007));
 
-        let mut fragile: serde_json::Value =
+        // Defeat: the applied document still owns behavior tuning, so a
+        // frantic Skeletal Warrior cooldown drives the fight; every hit
+        // lands through the authored skeleton-strike action (5-15 damage).
+        let mut frantic: serde_json::Value =
             serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        // 7045: document stat edits no longer shrink live player health (it
-        // stays the catalog 85), so the defeat profile drives it with lethal
-        // enemy damage instead.
-        fragile["enemies"][1]["behavior"]["attackDamage"] = serde_json::Value::from(200.0);
+        frantic["enemies"][1]["behavior"]["attackCooldownSeconds"] = serde_json::Value::from(0.1);
         runtime
-            .apply_experiment_json(&serde_json::to_string(&fragile).unwrap())
-            .expect("apply fragile profile");
+            .apply_experiment_json(&serde_json::to_string(&frantic).unwrap())
+            .expect("apply frantic profile");
         assert!(runtime
             .route_named_encounter("Digit2")
             .expect("route Skeleton room"));
         runtime
             .attack_focused_target()
             .expect("engage Skeleton room");
-        for _ in 0..30 {
+        for _ in 0..600 {
             runtime.tick_play_session(0.1).expect("Skeleton room tick");
             if runtime
                 .experiment_readout()
@@ -753,6 +728,13 @@ mod tests {
         let defeated = runtime.experiment_readout().unwrap();
         assert_eq!(defeated.active_encounter.unwrap().status, "defeat");
         assert_eq!(defeated.player_stats.current_health, 0.0);
+        assert!(defeated.encounter_decisions.iter().any(|record| {
+            record.enemy_id == 2000
+                && record.decision == "melee attack"
+                && record
+                    .damage
+                    .is_some_and(|damage| (5.0..=15.0).contains(&damage))
+        }));
         let attack_sequences = runtime
             .enemy_presentation()
             .into_iter()

@@ -137,14 +137,14 @@ fn player_melee_hit_spends_stamina_and_applies_weapon_damage() {
     assert!(receipt.effects().contains(&DaggerEffect::SpendTrack {
         actor: "player".to_string(),
         track: "stamina".to_string(),
-        amount: 10,
+        amount: 5,
     }));
     assert_eq!(state.track_value("rat-2007", "health"), Some(4));
-    assert_eq!(state.track_value("player", "stamina"), Some(80));
+    assert_eq!(state.track_value("player", "stamina"), Some(85));
     assert!(receipt.events().contains(&DaggerEvent::TrackSpent {
         actor: "player".to_string(),
         track: "stamina".to_string(),
-        amount: 10,
+        amount: 5,
     }));
     assert_eq!(readout.package_fingerprint, catalog.fingerprint());
     assert!(readout.trace.iter().any(|record| record.detail.is_some()));
@@ -170,7 +170,7 @@ fn player_melee_miss_still_spends_stamina_but_applies_no_damage() {
         .iter()
         .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("rat-2007", "health"), Some(12));
-    assert_eq!(state.track_value("player", "stamina"), Some(80));
+    assert_eq!(state.track_value("player", "stamina"), Some(85));
 }
 
 #[test]

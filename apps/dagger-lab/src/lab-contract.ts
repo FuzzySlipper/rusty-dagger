@@ -207,23 +207,17 @@ export interface CombatRecord {
   readonly range: number;
   readonly attackRange: number;
   readonly lineOfSightClear: boolean;
-  readonly actor: string;
   readonly action: string;
-  readonly target: string;
-  readonly rawRoll: number;
-  readonly hitBonus: number;
-  readonly attackTotal: number;
-  readonly targetDefense: number;
+  readonly status: string;
+  readonly roll: number;
   readonly hit: boolean;
-  readonly baseDamage: number;
-  readonly strength: number;
-  readonly damagePerStrength: number;
-  readonly damageBeforeArmor: number;
-  readonly armor: number;
-  readonly finalDamage: number;
+  readonly damage: number;
+  readonly died: boolean;
   readonly healthBefore: number;
   readonly healthAfter: number;
-  readonly died: boolean;
+  readonly targetMaxHealth: number;
+  readonly decisions: readonly string[];
+  readonly events: readonly string[];
 }
 
 export interface CombatAttemptRecord {

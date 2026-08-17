@@ -171,10 +171,10 @@ impl NativeApplication {
         if let Some(combat) = readout.combat.last() {
             title.push_str(&format!(
                 " — {} {:.0}",
-                if combat.resolution.hit { "HIT" } else { "MISS" },
-                combat.resolution.final_damage
+                if combat.hit { "HIT" } else { "MISS" },
+                combat.damage
             ));
-            if combat.resolution.died {
+            if combat.died {
                 title.push_str(" DEAD");
             }
         }
@@ -377,17 +377,16 @@ impl NativeApplication {
                         );
                     } else if let Some(combat) = readout.combat.last() {
                         println!(
-                            "DAGGER_COMBAT_APPLIED sequence={} target={} roll={} total={:.1} defense={:.1} hit={} damage={:.1} health={:.1}->{:.1} died={}",
+                            "DAGGER_COMBAT_APPLIED sequence={} target={} action={} roll={} hit={} damage={} health={:.1}->{:.1} died={}",
                             combat.sequence,
                             combat.target_id,
-                            combat.resolution.raw_roll,
-                            combat.resolution.attack_total,
-                            combat.resolution.target_defense,
-                            combat.resolution.hit,
-                            combat.resolution.final_damage,
-                            combat.resolution.health_before,
-                            combat.resolution.health_after,
-                            combat.resolution.died,
+                            combat.action,
+                            combat.roll,
+                            combat.hit,
+                            combat.damage,
+                            combat.health_before,
+                            combat.health_after,
+                            combat.died,
                         );
                     }
                 }

@@ -232,18 +232,15 @@ try {
   await fillExact(page, 'endurance', '70');
   await fillExact(page, 'rat-strength', '30');
   await fillExact(page, 'rat-health-per-endurance', '0.3');
-  await fillExact(page, 'hit-bonus', '100');
-  await fillExact(page, 'base-damage', '10');
+  // 7046: hit chance, damage, defense, armor, and stamina cost are authored
+  // in the gameplay catalogs and no longer editable here. Attack cooldown
+  // and enemy behavior tuning remain document-owned until 7047.
   await fillExact(page, 'player-attack-cooldown', '0.2');
-  await fillExact(page, 'player-stamina-cost', '20');
-  await fillExact(page, 'rat-defense', '0');
-  await fillExact(page, 'rat-armor', '0');
   await page.getByTestId('content-filter').fill('skeletal');
   await page.getByTestId('content-2000').click();
   await fillExact(page, 'enemy-detection-range', '100');
   await fillExact(page, 'enemy-attack-range', '4');
   await fillExact(page, 'enemy-attack-cooldown', '0.5');
-  await fillExact(page, 'enemy-attack-damage', '12');
   await page.getByTestId('save-profile').click();
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
@@ -260,25 +257,16 @@ try {
     page,
     2000,
     spawnPosition,
-    'HIT',
-    'hit',
-    '57.00 → 45.00',
-    '90.00 → 70.00',
+    'MISS',
+    'miss',
+    '57.00 → 57.00',
+    '90.00 → 85.00',
     false,
   );
   await page.getByTestId('content-filter').fill('rat');
-  const profileBCombat = await jumpAndPhysicallyAttack(
-    page,
-    2007,
-    spawnPosition,
-    'HIT',
-    'killed',
-    '14.00 → 0.00',
-    '90.00 → 70.00',
-    false,
-  );
+  const profileBCombat = await jumpAndFightToTheDeath(page, 2007, spawnPosition);
   await page.getByTestId('content-filter').fill('skeletal');
-  const skeletonEncounter = await jumpAndObserveEnemyAttack(page, 2000, spawnPosition, 12);
+  const skeletonEncounter = await jumpAndObserveEnemyAttack(page, 2000, spawnPosition, 5, 15);
 
   // Closing the product tab must not reset the Rust session. Reopen it in the
   // same browser profile and reattach to the
@@ -881,7 +869,14 @@ async function jumpAndPhysicallyAttack(
   await runPhysicalAttack(page, contentId, expectedTitle, outcome, presentationOutcome);
   await page.getByTestId('combat-count').filter({ hasText: '1 attack' }).waitFor({ timeout: 10_000 });
   const record = page.getByTestId('combat-1');
-  await record.filter({ hasText: outcome }).waitFor();
+  try {
+    await record.filter({ hasText: outcome }).waitFor({ timeout: 10_000 });
+  } catch (error) {
+    throw new Error(
+      `combat-1 did not show ${outcome}: ${JSON.stringify(await record.innerText())}`,
+      { cause: error },
+    );
+  }
   await record.filter({ hasText: healthText }).waitFor();
   const text = await record.innerText();
   const acceptedAttempt = page.getByTestId('combat-attempt-1');
@@ -904,7 +899,8 @@ async function jumpAndPhysicallyAttack(
     assert.equal(await page.getByTestId('combat-count').innerText(), '1 ATTACKS');
     await page.screenshot({ path: `${output}/combat-cooldown-desktop.png`, fullPage: true });
   }
-  assert.match(text, /d100 \d+ .* defense/i);
+  assert.match(text, /d100 \d+/i);
+  assert.match(text, /melee-attack/i);
   assert.match(text, /line of sight clear/i);
   if (outcome === 'HIT') {
     await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
@@ -1019,7 +1015,7 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
   }
 }
 
-async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage) {
+async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, minDamage, maxDamage) {
   await page.getByTestId(`content-${contentId}`).click();
   await page.getByTestId('jump-content').click();
   await page.waitForFunction(
@@ -1032,24 +1028,26 @@ async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage)
   // key-release from earlier browser work.
   await pressPhysical(page, 'KeyA');
   let attack;
-  try {
-    const observation = await page.waitForFunction(
-      async ({ id, expectedDamage }) => {
-        const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
-        if (!response.ok) return false;
-        const live = await response.json();
-        return live.encounterDecisions?.find((decision) => (
-          decision.enemyId === id
-          && decision.decision === 'melee attack'
-          && decision.damage === expectedDamage
-          && decision.lineOfSightClear === true
-        )) ?? false;
-      },
-      { id: contentId, expectedDamage: damage },
-      { timeout: 20_000 },
-    );
-    attack = await observation.jsonValue();
-  } catch (error) {
+  // Poll from Node: waitForFunction does not poll async predicates (it
+  // resolves on the first falsy return), so the observation must be driven
+  // here. The skeleton attacks through authored resolution on a 15% check
+  // with 5-15 damage; its record lands within the bounded window.
+  const attackDeadline = Date.now() + 20_000;
+  while (!attack && Date.now() < attackDeadline) {
+    const live = await page.evaluate(async () => {
+      const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
+      return response.ok ? response.json() : undefined;
+    });
+    attack = live?.encounterDecisions?.find((decision) => (
+      decision.enemyId === contentId
+      && decision.decision === 'melee attack'
+      && decision.damage >= minDamage
+      && decision.damage <= maxDamage
+      && decision.lineOfSightClear === true
+    ));
+    if (!attack) await page.waitForTimeout(400);
+  }
+  if (!attack) {
     const live = await page.evaluate(async () => {
       const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
       return response.json();
@@ -1059,12 +1057,14 @@ async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage)
       .allInnerTexts();
     const position = await page.getByTestId('player-position').innerText();
     throw new Error(
-      `enemy ${contentId} did not produce damage ${damage.toFixed(2)} at ${JSON.stringify(position)}; health=${String(live.playerStats?.currentHealth)}; decisions=${JSON.stringify(live.encounterDecisions?.slice(-8))}; records=${JSON.stringify(records)}`,
-      { cause: error },
+      `enemy ${contentId} did not produce authored damage in ${minDamage}-${maxDamage} at ${JSON.stringify(position)}; health=${String(live.playerStats?.currentHealth)}; decisions=${JSON.stringify(live.encounterDecisions?.slice(-8))}; records=${JSON.stringify(records)}`,
     );
   }
-  assert.equal(attack.lineOfSightClear, true);
-  assert.equal(attack.damage, damage);
+  assert.equal(attack?.lineOfSightClear, true);
+  assert.ok(
+    attack.damage >= minDamage && attack.damage <= maxDamage,
+    `enemy attack damage ${attack.damage} outside authored ${minDamage}-${maxDamage}`,
+  );
   const text = `${attack.enemyName} ${attack.enemyId}: melee attack damage ${attack.damage.toFixed(2)}; player ${attack.playerHealthBefore.toFixed(2)} → ${attack.playerHealthAfter.toFixed(2)}; LOS clear`;
   await page.screenshot({ path: `${output}/skeleton-encounter-desktop.png`, fullPage: true });
   await openInterface(page);
@@ -1072,6 +1072,42 @@ async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, damage)
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   await openInterface(page);
   return text;
+}
+
+// 7046: killing the 14-health Rat takes repeated authored swings (40% hit
+// chance, 2-16 damage); the deterministic player stream kills on swing 10.
+async function jumpAndFightToTheDeath(page, contentId, spawnPosition) {
+  await page.getByTestId(`content-${contentId}`).click();
+  await page.getByTestId('jump-content').click();
+  await page.waitForFunction(
+    (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
+    contentId,
+    { timeout: 10_000 },
+  );
+  let killText;
+  for (let swing = 1; swing <= 20 && !killText; swing += 1) {
+    const priorInput = Number(await page.locator('body').getAttribute('data-dagger-input-sequence'));
+    await pressPhysical(page, 'Space');
+    await page.waitForFunction(
+      (sequence) => Number(document.body.dataset.daggerInputSequence ?? '0') > sequence,
+      priorInput,
+      { timeout: 10_000 },
+    );
+    await page.waitForTimeout(900);
+    const records = await page.locator('[data-testid^="combat-"]').allInnerTexts();
+    killText = records.find((text) => text.includes('DEAD'));
+  }
+  assert.ok(killText, 'Rat died through authored melee resolution within 20 swings');
+  assert.match(killText, /HIT · \d+\.\d\d damage/);
+  assert.match(killText, /Health 7\.00 → 0\.00/);
+  const attempts = await page.locator('[data-testid^="combat-attempt-"]').allInnerTexts();
+  const killAttempt = attempts.find((text) => text.includes('killed'));
+  assert.ok(killAttempt, 'kill attempt recorded');
+  assert.match(killAttempt, /stamina 45\.00 → 40\.00 · cost 5\.00/);
+  await pressPhysical(page, 'KeyR');
+  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
+  await openInterface(page);
+  return { killRecord: killText, killAttempt };
 }
 
 async function physicallyMove(page, resetPosition, keys = ['w', 'w', 'w'], expectedTitle) {
