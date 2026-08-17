@@ -26,10 +26,40 @@ pub const MAX_DAGGER_ID_BYTES: usize = 96;
 pub const MAX_DAGGER_TEXT_BYTES: usize = 512;
 pub const MAX_BEHAVIOR_VALUE: f32 = 1_000.0;
 
+/// Integer payload field crossing the schema-2 binary64 wire. The canonical
+/// spelling writes every number as binary64 (`5.0`); this newtype accepts
+/// integral binary64 values and rejects non-integral ones, so exact
+/// formula data stays integer-backed without a second float encoding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(transparent)]
+pub struct Binary64I64(pub i64);
+
+impl<'de> Deserialize<'de> for Binary64I64 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let number = serde_json::Number::deserialize(deserializer)?;
+        if let Some(value) = number.as_i64() {
+            return Ok(Self(value));
+        }
+        let float = number
+            .as_f64()
+            .ok_or_else(|| serde::de::Error::custom("expected a number"))?;
+        if float.fract() == 0.0 && float >= i64::MIN as f64 && float <= i64::MAX as f64 {
+            Ok(Self(float as i64))
+        } else {
+            Err(serde::de::Error::custom(format!(
+                "expected an integral number, got {float}"
+            )))
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoredGameplayPayload {
-    pub schema_version: u32,
+    pub schema_version: Binary64I64,
     pub stats: AuthoredStatsSection,
     pub actors: Vec<AuthoredActorDefinition>,
     pub actions: Vec<AuthoredActionDefinition>,
@@ -52,13 +82,13 @@ pub struct AuthoredActorDefinition {
     pub id: String,
     pub kind: AuthoredActorKind,
     #[serde(default)]
-    pub mobile_id: Option<u8>,
-    pub stats: BTreeMap<String, i64>,
-    pub skills: BTreeMap<String, i64>,
-    pub armor_value: i64,
+    pub mobile_id: Option<Binary64I64>,
+    pub stats: BTreeMap<String, Binary64I64>,
+    pub skills: BTreeMap<String, Binary64I64>,
+    pub armor_value: Binary64I64,
     pub tracks: Vec<AuthoredTrackDefinition>,
     #[serde(default)]
-    pub move_speed_milli: Option<i64>,
+    pub move_speed: Option<f64>,
     #[serde(default)]
     pub behavior: Option<AuthoredBehaviorDefinition>,
 }
@@ -77,16 +107,16 @@ pub struct AuthoredTrackDefinition {
     pub max: AuthoredExpr,
 }
 
-/// Behavior values serialize as milli-unit integers because the rules-package
-/// envelope is canonical integer-only JSON. The compiled catalog carries f32.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Behavior tuning values are schema-2 binary64 numbers; the compiled
+/// catalog carries f32 (converted at one named boundary in the compiler).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoredBehaviorDefinition {
-    pub detection_range_milli: i64,
-    pub patrol_speed_milli: i64,
-    pub chase_speed_milli: i64,
-    pub attack_range_milli: i64,
-    pub attack_cooldown_millis: i64,
+    pub detection_range: f64,
+    pub patrol_speed: f64,
+    pub chase_speed: f64,
+    pub attack_range: f64,
+    pub attack_cooldown_seconds: f64,
     pub action: String,
 }
 
@@ -94,7 +124,7 @@ pub struct AuthoredBehaviorDefinition {
 #[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
 pub enum AuthoredExpr {
     Const {
-        value: i64,
+        value: Binary64I64,
     },
     Stat {
         subject: AuthoredSubject,
@@ -112,8 +142,8 @@ pub enum AuthoredExpr {
     },
     Dice {
         id: String,
-        min: i64,
-        max: i64,
+        min: Binary64I64,
+        max: Binary64I64,
     },
     WeaponDice {
         item: String,
@@ -208,16 +238,16 @@ pub enum AuthoredProgram {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoredActionDefinition {
     pub id: String,
     pub tags: Vec<String>,
     pub program: AuthoredProgram,
     #[serde(default)]
-    pub reach_milli: Option<i64>,
+    pub reach: Option<f64>,
     #[serde(default)]
-    pub cooldown_millis: Option<i64>,
+    pub cooldown_seconds: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -241,14 +271,14 @@ pub struct AuthoredWeaponDefinition {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoredDamageRange {
-    pub min: i64,
-    pub max: i64,
+    pub min: Binary64I64,
+    pub max: Binary64I64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
 pub enum AuthoredInterceptor {
-    ReduceDamage { amount: i64 },
+    ReduceDamage { amount: Binary64I64 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -268,7 +298,7 @@ pub struct AuthoredEncounterDefinition {
     pub name: String,
     pub objective: String,
     pub route_code: String,
-    pub member_entity_ids: Vec<u64>,
+    pub member_entity_ids: Vec<Binary64I64>,
 }
 
 #[derive(Debug, Clone)]

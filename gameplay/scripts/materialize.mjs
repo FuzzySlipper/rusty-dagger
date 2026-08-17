@@ -18,12 +18,13 @@ const entries = (await readdir(packagesDirectory))
 await mkdir(outputDirectory, { recursive: true });
 for (const entry of entries) {
   const module = await import(pathToFileURL(resolve(packagesDirectory, entry)).href);
-  const gameplayPackage = module.gameplayPackage;
-  if (gameplayPackage === undefined) {
-    throw new Error(`${entry} does not export gameplayPackage`);
+  const artifact = module.gameplayPackage;
+  if (artifact?.canonicalJson === undefined) {
+    throw new Error(`${entry} does not export a canonical gameplayPackage artifact`);
   }
-  const name = `${gameplayPackage.domain}-${gameplayPackage.package}.package.json`;
+  const name = `${artifact.package.domain}-${artifact.package.package}.package.json`;
   const output = resolve(outputDirectory, name);
-  await writeFile(output, `${JSON.stringify(gameplayPackage, null, 2)}\n`, "utf8");
-  console.log(`materialized ${name}`);
+  // canonicalJson is the exact byte string the Engine fingerprints.
+  await writeFile(output, `${artifact.canonicalJson}\n`, "utf8");
+  console.log(`materialized ${name} (${artifact.fingerprint})`);
 }

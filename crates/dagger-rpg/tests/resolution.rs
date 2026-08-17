@@ -342,6 +342,113 @@ fn injected_rule_rejects_a_tagged_action_while_condition_without_mutating() {
 }
 
 #[test]
+fn binary64_behavior_tuning_crosses_admission_at_one_f32_boundary() {
+    let package: serde_json::Value =
+        serde_json::from_slice(PACKAGE).expect("parse committed package");
+    let compile_with = |patch: &[&str], value: serde_json::Value| {
+        let mut mutated = package.clone();
+        let mut node = &mut mutated;
+        for segment in &patch[..patch.len() - 1] {
+            node = match segment.parse::<usize>() {
+                Ok(index) => &mut node[index],
+                Err(_) => &mut node[*segment],
+            };
+        }
+        let last = patch.last().expect("patch segment");
+        node[*last] = value;
+        compile_gameplay_package(&serde_json::to_vec(&mutated).expect("encode mutated package"))
+    };
+
+    // Common decimal, exact multiplier, and a small range value all cross
+    // without extra precision loss beyond the single f64 -> f32 boundary.
+    let catalog = compile_with(
+        &["payload", "actors", "1", "behavior", "patrolSpeed"],
+        serde_json::Value::from(0.1),
+    )
+    .expect("0.1 patrol speed admits");
+    assert_eq!(
+        catalog.actors()["rat"]
+            .behavior
+            .as_ref()
+            .unwrap()
+            .patrol_speed,
+        0.1_f32
+    );
+    let catalog = compile_with(
+        &["payload", "actors", "1", "behavior", "patrolSpeed"],
+        serde_json::Value::from(1.5),
+    )
+    .expect("1.5 patrol speed admits");
+    assert_eq!(
+        catalog.actors()["rat"]
+            .behavior
+            .as_ref()
+            .unwrap()
+            .patrol_speed,
+        1.5_f32
+    );
+    let catalog = compile_with(
+        &["payload", "actors", "1", "behavior", "detectionRange"],
+        serde_json::Value::from(0.005),
+    )
+    .expect("small detection range admits");
+    assert_eq!(
+        catalog.actors()["rat"]
+            .behavior
+            .as_ref()
+            .unwrap()
+            .detection_range,
+        0.005_f32
+    );
+
+    // Negative zero normalizes to zero where the field permits zero.
+    let catalog = compile_with(
+        &["payload", "actors", "1", "behavior", "patrolSpeed"],
+        serde_json::Value::from(-0.0),
+    )
+    .expect("negative zero patrol speed admits");
+    assert_eq!(
+        catalog.actors()["rat"]
+            .behavior
+            .as_ref()
+            .unwrap()
+            .patrol_speed,
+        0.0
+    );
+
+    // Dagger semantic ranges reject out-of-range and non-finite values.
+    assert!(matches!(
+        compile_with(
+            &["payload", "actors", "1", "behavior", "detectionRange"],
+            serde_json::Value::from(2000.0)
+        ),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    assert!(matches!(
+        compile_with(
+            &["payload", "actors", "1", "behavior", "detectionRange"],
+            serde_json::Value::from(0.0005)
+        ),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    assert!(matches!(
+        compile_with(
+            &["payload", "actors", "1", "behavior", "detectionRange"],
+            serde_json::Value::from(f64::NAN)
+        ),
+        Err(DaggerGameplayError::Payload(_)) | Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+
+    // The explicit f64 -> f32 boundary on the player movement speed.
+    let catalog = compile_with(
+        &["payload", "actors", "0", "moveSpeed"],
+        serde_json::Value::from(4.75),
+    )
+    .expect("fractional move speed admits");
+    assert_eq!(catalog.actors()["player"].move_speed, Some(4.75_f32));
+}
+
+#[test]
 fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
     let package: serde_json::Value =
         serde_json::from_slice(PACKAGE).expect("parse committed package");

@@ -17,6 +17,27 @@ use super::{
     MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
 };
 
+const MIN_TUNING_VALUE: f64 = 0.001;
+
+/// The single binary64 -> f32 boundary: every approximate behavior/tuning
+/// value crosses here, with Dagger-owned semantic ranges applied. Rejects
+/// non-finite and out-of-range values; nothing is silently cast or
+/// truncated anywhere else.
+fn tuning_to_f32(
+    path: &str,
+    value: f64,
+    minimum: f64,
+    maximum: f64,
+) -> Result<f32, DaggerGameplayError> {
+    if !value.is_finite() || value < minimum || value > maximum {
+        return Err(DaggerGameplayError::InvalidValue {
+            path: path.to_string(),
+            reason: format!("must be finite and between {minimum} and {maximum}, got {value}"),
+        });
+    }
+    Ok(value as f32)
+}
+
 pub fn compile_gameplay_package(
     input: &[u8],
 ) -> Result<DaggerGameplayCatalog, DaggerGameplayError> {
@@ -32,9 +53,9 @@ pub fn compile_gameplay_package(
     }
     let payload = serde_json::from_value::<AuthoredGameplayPayload>(package.payload().clone())
         .map_err(|error| DaggerGameplayError::Payload(error.to_string()))?;
-    if payload.schema_version != DAGGER_GAMEPLAY_SCHEMA_VERSION {
+    if payload.schema_version.0 != i64::from(DAGGER_GAMEPLAY_SCHEMA_VERSION) {
         return Err(DaggerGameplayError::UnsupportedSchema {
-            actual: payload.schema_version,
+            actual: payload.schema_version.0 as u32,
             expected: DAGGER_GAMEPLAY_SCHEMA_VERSION,
         });
     }
@@ -103,12 +124,12 @@ fn compile_items(
             .weapon
             .map(
                 |weapon| -> Result<DaggerWeaponDefinition, DaggerGameplayError> {
-                    if weapon.damage.min < 0 || weapon.damage.min > weapon.damage.max {
+                    if weapon.damage.min.0 < 0 || weapon.damage.min > weapon.damage.max {
                         return Err(DaggerGameplayError::InvalidValue {
                             path: format!("payload.items[{index}].weapon.damage"),
                             reason: format!(
                                 "must satisfy 0 <= min <= max, got {}..{}",
-                                weapon.damage.min, weapon.damage.max
+                                weapon.damage.min.0, weapon.damage.max.0
                             ),
                         });
                     }
@@ -122,8 +143,8 @@ fn compile_items(
                         &stats.skills,
                     )?;
                     Ok(DaggerWeaponDefinition {
-                        damage_min: weapon.damage.min,
-                        damage_max: weapon.damage.max,
+                        damage_min: weapon.damage.min.0,
+                        damage_max: weapon.damage.max.0,
                         material: weapon.material,
                         skill: weapon.skill,
                     })
@@ -134,8 +155,11 @@ fn compile_items(
             .interceptor
             .map(|interceptor| match interceptor {
                 AuthoredInterceptor::ReduceDamage { amount } => {
-                    require_positive(format!("payload.items[{index}].interceptor.amount"), amount)?;
-                    Ok(DaggerInterceptorKind::ReduceDamage { amount })
+                    require_positive(
+                        format!("payload.items[{index}].interceptor.amount"),
+                        amount.0,
+                    )?;
+                    Ok(DaggerInterceptorKind::ReduceDamage { amount: amount.0 })
                 }
             })
             .transpose()?;
@@ -178,20 +202,28 @@ fn compile_actions(
         }
         let mut nodes = 0_usize;
         let program = compile_program(action.program, &mut nodes, 0, stats, items)?;
-        let from_milli = |field: &str,
-                          value: Option<i64>|
-         -> Result<Option<f32>, DaggerGameplayError> {
-            match value {
-                Some(milli) if milli > 0 && milli <= 1_000_000 => Ok(Some(milli as f32 / 1000.0)),
-                Some(milli) => Err(DaggerGameplayError::InvalidValue {
-                    path: format!("payload.actions[{index}].{field}"),
-                    reason: format!("must be 1..=1000000 milli, got {milli}"),
-                }),
-                None => Ok(None),
-            }
-        };
-        let reach = from_milli("reachMilli", action.reach_milli)?;
-        let cooldown_seconds = from_milli("cooldownMillis", action.cooldown_millis)?;
+        let reach = action
+            .reach
+            .map(|value| {
+                tuning_to_f32(
+                    &format!("payload.actions[{index}].reach"),
+                    value,
+                    MIN_TUNING_VALUE,
+                    f64::from(MAX_BEHAVIOR_VALUE),
+                )
+            })
+            .transpose()?;
+        let cooldown_seconds = action
+            .cooldown_seconds
+            .map(|value| {
+                tuning_to_f32(
+                    &format!("payload.actions[{index}].cooldownSeconds"),
+                    value,
+                    MIN_TUNING_VALUE,
+                    f64::from(MAX_BEHAVIOR_VALUE),
+                )
+            })
+            .transpose()?;
         let id = action.id;
         if actions
             .insert(
@@ -227,23 +259,33 @@ fn compile_actors(
             super::AuthoredActorKind::Player => DaggerActorKind::Player,
             super::AuthoredActorKind::Monster => DaggerActorKind::Monster,
         };
-        let move_speed = match actor.move_speed_milli {
-            Some(milli) if milli > 0 && milli <= 1_000_000 => Some(milli as f32 / 1000.0),
-            Some(milli) => {
-                return Err(DaggerGameplayError::InvalidValue {
-                    path: format!("{path}.moveSpeedMilli"),
-                    reason: format!("must be 1..=1000000 milli, got {milli}"),
-                })
-            }
-            None => None,
-        };
+        let move_speed = actor
+            .move_speed
+            .map(|value| {
+                tuning_to_f32(
+                    &format!("{path}.moveSpeed"),
+                    value,
+                    MIN_TUNING_VALUE,
+                    f64::from(MAX_BEHAVIOR_VALUE),
+                )
+            })
+            .transpose()?;
         if kind == DaggerActorKind::Player && move_speed.is_none() {
             return Err(DaggerGameplayError::InvalidValue {
-                path: format!("{path}.moveSpeedMilli"),
+                path: format!("{path}.moveSpeed"),
                 reason: "player actors must declare a movement speed".to_string(),
             });
         }
-        if let Some(mobile_id) = actor.mobile_id {
+        let mobile_id = actor
+            .mobile_id
+            .map(|mobile_id| {
+                u8::try_from(mobile_id.0).map_err(|_| DaggerGameplayError::InvalidValue {
+                    path: format!("{path}.mobileId"),
+                    reason: format!("must be between 0 and 255, got {}", mobile_id.0),
+                })
+            })
+            .transpose()?;
+        if let Some(mobile_id) = mobile_id {
             if !mobile_ids.insert(mobile_id) {
                 return Err(DaggerGameplayError::DuplicateId {
                     kind: "actor mobileId",
@@ -254,12 +296,12 @@ fn compile_actors(
         let mut actor_stats = BTreeMap::new();
         for (id, value) in actor.stats {
             validate_declared(&format!("{path}.stats"), &id, &stats.attributes)?;
-            actor_stats.insert(id, value);
+            actor_stats.insert(id, value.0);
         }
         let mut actor_skills = BTreeMap::new();
         for (id, value) in actor.skills {
             validate_declared(&format!("{path}.skills"), &id, &stats.skills)?;
-            actor_skills.insert(id, value);
+            actor_skills.insert(id, value.0);
         }
         let mut track_ids = BTreeSet::new();
         let mut tracks = Vec::with_capacity(actor.tracks.len());
@@ -285,25 +327,6 @@ fn compile_actors(
             .behavior
             .map(
                 |behavior| -> Result<DaggerBehaviorDefinition, DaggerGameplayError> {
-                    let milli_max = i64::from(MAX_BEHAVIOR_VALUE as u32) * 1000;
-                    for (field, value, minimum) in [
-                        ("detectionRangeMilli", behavior.detection_range_milli, 1_i64),
-                        ("patrolSpeedMilli", behavior.patrol_speed_milli, 0_i64),
-                        ("chaseSpeedMilli", behavior.chase_speed_milli, 0_i64),
-                        ("attackRangeMilli", behavior.attack_range_milli, 1_i64),
-                        (
-                            "attackCooldownMillis",
-                            behavior.attack_cooldown_millis,
-                            1_i64,
-                        ),
-                    ] {
-                        if value < minimum || value > milli_max {
-                            return Err(DaggerGameplayError::InvalidValue {
-                                path: format!("{path}.behavior.{field}"),
-                                reason: format!("must be between {minimum} and {milli_max}"),
-                            });
-                        }
-                    }
                     validate_id(&format!("{path}.behavior.action"), &behavior.action)?;
                     if !actions.contains_key(&behavior.action) {
                         return Err(DaggerGameplayError::InvalidValue {
@@ -311,13 +334,37 @@ fn compile_actors(
                             reason: format!("unknown action {}", behavior.action),
                         });
                     }
-                    let from_milli = |value: i64| value as f32 / 1000.0;
                     Ok(DaggerBehaviorDefinition {
-                        detection_range: from_milli(behavior.detection_range_milli),
-                        patrol_speed: from_milli(behavior.patrol_speed_milli),
-                        chase_speed: from_milli(behavior.chase_speed_milli),
-                        attack_range: from_milli(behavior.attack_range_milli),
-                        attack_cooldown_seconds: from_milli(behavior.attack_cooldown_millis),
+                        detection_range: tuning_to_f32(
+                            &format!("{path}.behavior.detectionRange"),
+                            behavior.detection_range,
+                            MIN_TUNING_VALUE,
+                            f64::from(MAX_BEHAVIOR_VALUE),
+                        )?,
+                        patrol_speed: tuning_to_f32(
+                            &format!("{path}.behavior.patrolSpeed"),
+                            behavior.patrol_speed,
+                            0.0,
+                            f64::from(MAX_BEHAVIOR_VALUE),
+                        )?,
+                        chase_speed: tuning_to_f32(
+                            &format!("{path}.behavior.chaseSpeed"),
+                            behavior.chase_speed,
+                            0.0,
+                            f64::from(MAX_BEHAVIOR_VALUE),
+                        )?,
+                        attack_range: tuning_to_f32(
+                            &format!("{path}.behavior.attackRange"),
+                            behavior.attack_range,
+                            MIN_TUNING_VALUE,
+                            f64::from(MAX_BEHAVIOR_VALUE),
+                        )?,
+                        attack_cooldown_seconds: tuning_to_f32(
+                            &format!("{path}.behavior.attackCooldownSeconds"),
+                            behavior.attack_cooldown_seconds,
+                            MIN_TUNING_VALUE,
+                            f64::from(MAX_BEHAVIOR_VALUE),
+                        )?,
                         action: behavior.action,
                     })
                 },
@@ -330,10 +377,10 @@ fn compile_actors(
                 DaggerActorDefinition {
                     id: id.clone(),
                     kind,
-                    mobile_id: actor.mobile_id,
+                    mobile_id,
                     stats: actor_stats,
                     skills: actor_skills,
-                    armor_value: actor.armor_value,
+                    armor_value: actor.armor_value.0,
                     tracks,
                     move_speed,
                     behavior,
@@ -404,7 +451,16 @@ fn compile_encounters(
                     name: encounter.name,
                     objective: encounter.objective,
                     route_code: encounter.route_code,
-                    member_entity_ids: encounter.member_entity_ids,
+                    member_entity_ids: encounter
+                        .member_entity_ids
+                        .into_iter()
+                        .map(|id| {
+                            u64::try_from(id.0).map_err(|_| DaggerGameplayError::InvalidValue {
+                                path: format!("{path}.memberEntityIds"),
+                                reason: format!("entity id {} must be non-negative", id.0),
+                            })
+                        })
+                        .collect::<Result<Vec<_>, _>>()?,
                 },
             )
             .is_some()
@@ -567,7 +623,7 @@ fn compile_expr(
         maximum: usize::from(MAX_DAGGER_EXPR_DEPTH),
     })?;
     match expr {
-        AuthoredExpr::Const { value } => Ok(DaggerExpr::Const { value }),
+        AuthoredExpr::Const { value } => Ok(DaggerExpr::Const { value: value.0 }),
         AuthoredExpr::Stat { subject, id } => {
             validate_declared("expression.stat", &id, &stats.attributes)?;
             Ok(DaggerExpr::Stat {
@@ -591,6 +647,7 @@ fn compile_expr(
         }
         AuthoredExpr::Dice { id, min, max } => {
             validate_id("expression.dice", &id)?;
+            let (min, max) = (min.0, max.0);
             if min < 0 || min > max {
                 return Err(DaggerGameplayError::InvalidValue {
                     path: format!("expression.dice.{id}"),

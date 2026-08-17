@@ -310,7 +310,7 @@ mod tests {
             .payload
             .actors
             .iter()
-            .any(|actor| actor.id == "rat" && actor.mobile_id == Some(0)));
+            .any(|actor| actor.id == "rat" && actor.mobile_id.map(|id| id.0) == Some(0)));
         assert!(readout
             .gameplay_package
             .payload

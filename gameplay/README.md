@@ -28,6 +28,15 @@ House rules:
   replayable.
 - Content is inclusive classic Daggerfall data. Nothing here is scoped or
   validated down to "only what the current dungeon needs".
+- Numbers: the package envelope is schema-2 canonical binary64, composed
+  through the Engine's `authorBinary64RulePackage`. Approximate tuning
+  values (speeds, ranges, cooldowns, multipliers, coefficients) are ordinary
+  JSON numbers with explicit units in the field name — never ad-hoc
+  encodings like milli-integers. Exact data (dice bounds, counters,
+  identifiers, expression constants) stays integer-backed: the Rust
+  admission accepts integral binary64 into integer fields and rejects
+  non-integral values. The single `f64 -> f32` conversion boundary lives in
+  the Rust compiler (`tuning_to_f32`).
 
 ## Commands
 

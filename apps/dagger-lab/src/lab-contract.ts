@@ -18,11 +18,11 @@ export interface TrackDefinition {
 }
 
 export interface BehaviorDefinition {
-  readonly detectionRangeMilli: number;
-  readonly patrolSpeedMilli: number;
-  readonly chaseSpeedMilli: number;
-  readonly attackRangeMilli: number;
-  readonly attackCooldownMillis: number;
+  readonly detectionRange: number;
+  readonly patrolSpeed: number;
+  readonly chaseSpeed: number;
+  readonly attackRange: number;
+  readonly attackCooldownSeconds: number;
   readonly action: string;
 }
 
@@ -34,7 +34,7 @@ export interface ActorDefinition {
   readonly skills: Readonly<Record<string, number>>;
   readonly armorValue: number;
   readonly tracks: readonly TrackDefinition[];
-  readonly moveSpeedMilli?: number;
+  readonly moveSpeed?: number;
   readonly behavior?: BehaviorDefinition;
 }
 
@@ -42,8 +42,10 @@ export interface ActionDefinition {
   readonly id: string;
   readonly tags: readonly string[];
   readonly program: Json;
-  readonly reachMilli?: number;
-  readonly cooldownMillis?: number;
+  /** Melee reach in world units, when the action has one. */
+  readonly reach?: number;
+  /** Cooldown between attempts in seconds. */
+  readonly cooldownSeconds?: number;
 }
 
 export interface WeaponDefinition {
