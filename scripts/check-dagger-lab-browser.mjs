@@ -87,6 +87,16 @@ try {
   const contentRevisionBeforePlay = (await applicationReadout(page)).contentRevision;
   await page.getByTestId('return-to-play').click();
   await page.waitForFunction(() => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'gameplay');
+  // Remount deliberately releases interface capture; wait for the public host
+  // to reacquire gameplay pointer lock before sampling physical input.
+  await page.waitForFunction(
+    () => {
+      const readout = window.__daggerApplicationHost?.readout();
+      return readout?.interactionMode === 'gameplay' && readout.pointerLocked === true;
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
   const inputCadence = await assertMouseLookDoesNotMultiplyMovementTicks(page);
