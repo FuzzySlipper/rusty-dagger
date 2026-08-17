@@ -81,15 +81,15 @@ pub struct AuthoredStatsSection {
 pub struct AuthoredActorDefinition {
     pub id: String,
     pub kind: AuthoredActorKind,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mobile_id: Option<Binary64I64>,
     pub stats: BTreeMap<String, Binary64I64>,
     pub skills: BTreeMap<String, Binary64I64>,
     pub armor_value: Binary64I64,
     pub tracks: Vec<AuthoredTrackDefinition>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub move_speed: Option<f64>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub behavior: Option<AuthoredBehaviorDefinition>,
 }
 
@@ -244,9 +244,9 @@ pub struct AuthoredActionDefinition {
     pub id: String,
     pub tags: Vec<String>,
     pub program: AuthoredProgram,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reach: Option<f64>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cooldown_seconds: Option<f64>,
 }
 
@@ -254,9 +254,9 @@ pub struct AuthoredActionDefinition {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoredItemDefinition {
     pub id: String,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub weapon: Option<AuthoredWeaponDefinition>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub interceptor: Option<AuthoredInterceptor>,
 }
 
