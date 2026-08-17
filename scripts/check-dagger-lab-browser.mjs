@@ -148,7 +148,7 @@ try {
   await page.getByTestId('content-name').filter({ hasText: 'Rat' }).waitFor();
   assert.equal(await page.getByTestId('content-mobile-id').innerText(), '0');
   assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /3\.00 health · 10\.00 stamina · 0\.00 magicka/i);
-  assert.match(await page.getByTestId('content-live-resources').innerText(), /Live 3\.00 H · 10\.00 S · 0\.00 M/i);
+  assert.match(await page.getByTestId('content-live-resources').innerText(), /Live 14\.00 H · 0\.00 S · 0\.00 M/i);
   await page.getByTestId('content-filter').fill('skeletal');
   await page.getByTestId('content-2000').click();
   await page.getByTestId('content-name').filter({ hasText: 'SkeletalWarrior' }).waitFor();
@@ -175,7 +175,12 @@ try {
   await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
 
   // Profile A is authored from the draft, saved locally, admitted by Rust,
-  // reset, and physically played.
+  // reset, and physically played. 7045: durable stats/tracks are bound to the
+  // gameplay package — document stat edits still drive the old-model derived
+  // displays, movement, combat terms, and behavior, but live player values
+  // stay the catalog spawn values (health 85, stamina 90) and enemy live
+  // health is the deterministic classic spawn roll (rat 2007: 14 of 9-16,
+  // skeleton 2000: 57 of 17-66).
   await fillExact(page, 'movement-speed', '4');
   await fillExact(page, 'endurance', '50');
   await fillExact(page, 'rat-strength', '20');
@@ -196,7 +201,7 @@ try {
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Measured pace' }).waitFor();
   await page.getByTestId('live-speed').filter({ hasText: '4.00' }).waitFor();
-  await page.getByTestId('max-health').filter({ hasText: '100.00' }).waitFor();
+  await page.getByTestId('max-health').filter({ hasText: '85.00' }).waitFor();
   await page.getByTestId('rat-max-health').filter({ hasText: '5.00' }).waitFor();
   await page.getByTestId('rat-max-stamina').filter({ hasText: '15.00' }).waitFor();
   await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
@@ -207,8 +212,8 @@ try {
     spawnPosition,
     'MISS',
     'miss',
-    '5.00 → 5.00',
-    '100.00 → 95.00',
+    '14.00 → 14.00',
+    '90.00 → 85.00',
     true,
   );
 
@@ -243,7 +248,7 @@ try {
   await page.getByTestId('activate-profile').click();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   await page.getByTestId('live-speed').filter({ hasText: admittedProfileBSpeed.toFixed(2) }).waitFor();
-  await page.getByTestId('max-health').filter({ hasText: '130.00' }).waitFor();
+  await page.getByTestId('max-health').filter({ hasText: '85.00' }).waitFor();
   await page.getByTestId('rat-max-health').filter({ hasText: '7.00' }).waitFor();
   await page.getByTestId('rat-max-stamina').filter({ hasText: '20.00' }).waitFor();
   await page.getByTestId('rat-derived-traces').filter({ hasText: 'enemy.mobile0.maxHealth' }).waitFor();
@@ -257,8 +262,8 @@ try {
     spawnPosition,
     'HIT',
     'hit',
-    '20.00 → 8.00',
-    '120.00 → 100.00',
+    '57.00 → 45.00',
+    '90.00 → 70.00',
     false,
   );
   await page.getByTestId('content-filter').fill('rat');
@@ -268,8 +273,8 @@ try {
     spawnPosition,
     'HIT',
     'killed',
-    '7.00 → 0.00',
-    '120.00 → 100.00',
+    '14.00 → 0.00',
+    '90.00 → 70.00',
     false,
   );
   await page.getByTestId('content-filter').fill('skeletal');
@@ -286,7 +291,7 @@ try {
   await openLabFromGameplay(page);
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
-  assert.equal(await page.getByTestId('max-health').innerText(), '130.00');
+  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   assert.equal(await page.getByTestId('rat-max-health').innerText(), '7.00');
   assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
   assert.equal(await page.getByTestId('player-position').innerText(), beforeClosePosition);
@@ -311,7 +316,7 @@ try {
   await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
   await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
   assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
-  assert.equal(await page.getByTestId('max-health').innerText(), '130.00');
+  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   const reloadMove = await resetAndPhysicallyMove(page, spawnPosition);
   assert.equal(
     await page.evaluate(() => document.body.dataset.daggerProductInputError),
@@ -375,7 +380,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/100.00 profileB=${admittedProfileBSpeed}/130.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} reloadMove=${JSON.stringify(reloadMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/85.00 profileB=${admittedProfileBSpeed}/85.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} reloadMove=${JSON.stringify(reloadMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
   );
 } finally {
   await browser.close();
@@ -894,7 +899,7 @@ async function jumpAndPhysicallyAttack(
       .filter({ hasText: 'REJECTED · cooldown' })
       .first();
     await rejectedAttempt.waitFor({ timeout: 10_000 });
-    await rejectedAttempt.filter({ hasText: 'stamina 95.00 → 95.00' }).waitFor();
+    await rejectedAttempt.filter({ hasText: 'stamina 85.00 → 85.00' }).waitFor();
     cooldownRejection = await rejectedAttempt.innerText();
     assert.equal(await page.getByTestId('combat-count').innerText(), '1 ATTACKS');
     await page.screenshot({ path: `${output}/combat-cooldown-desktop.png`, fullPage: true });

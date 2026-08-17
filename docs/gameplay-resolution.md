@@ -20,6 +20,21 @@ preview/apply, ordered interception, child correlation,
 staged commit, quotas, and receipt/trace collection. It does not know health,
 magicka, spells, items, actors, damage, or Daggerfall formulas.
 
+Durable stat and track state is mechanics-backed. Package admission also
+builds an Engine `MechanicsCatalog` from the declared vocabulary: each
+attribute and skill is a stat (classic 0..=100), and each track gets a
+synthetic `{track}-max` stat so its maximum is stat-derived. The Dagger
+expression evaluator computes track maxima at spawn (derived rules are
+arbitrary Dagger-owned expressions the neutral catalog does not model) and
+stores them as the entity's stat bases. `spawn_actor` is the single spawn
+authority; resolution reads live stats through `StatService`, and effects
+commit through `TrackService` inside the kernel's staged transaction. The
+live runtime (`DaggerRuntime`) holds the same mechanics-backed
+`DaggerGameplayState`, so the player and every combatant enemy resolve
+through the same binding in the product — the old experiment document
+remains only for movement, combat terms, and behavior tuning until those
+move onto authored actions.
+
 The initial authored slice crosses the important boundaries with real
 content. `gameplay/src/catalogs/stats.ts` declares the classic attribute and
 skill vocabulary; `actors.ts` defines the player plus table-driven classic

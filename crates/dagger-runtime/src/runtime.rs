@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
+    compile_gameplay_package, restore_actor_tracks, spend_actor_track, track_maximum,
     AdmittedActorValues, AdmittedEnemyValues, AdmittedExperiment, CalculationRecord,
+    DaggerEvidence, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState,
     ExperimentDocument, ExperimentError, MeleeResolutionInput, MeleeResolutionRecord,
 };
 use rusty_engine::core_ids::EntityId;
@@ -30,6 +32,7 @@ use crate::project::{AdmittedProject, ContentEntity, ProjectAdmissionError, PLAY
 pub enum RuntimeError {
     Admission(ProjectAdmissionError),
     Experiment(ExperimentError),
+    Gameplay(DaggerGameplayError),
     Player(PlayerError),
     Content(ContentError),
     Encounter(String),
@@ -69,8 +72,8 @@ pub struct DaggerRuntime {
     player_start: Vec3,
     player_start_look_state: FirstPersonLookState,
     experiment: AdmittedExperiment,
-    player_resources: LiveActorResources,
-    enemy_resources: BTreeMap<u64, LiveActorResources>,
+    gameplay_catalog: DaggerGameplayCatalog,
+    gameplay: DaggerGameplayState,
     calculation_sequence: u64,
     calculation_history: VecDeque<SessionCalculationRecord>,
     combat_sequence: u64,
@@ -96,6 +99,9 @@ pub struct DaggerRuntime {
 
 pub const STARTER_EXPERIMENT_JSON: &str =
     include_str!("../../../data/experiments/privateers-hold-starter.json");
+pub const GAMEPLAY_PACKAGE: &[u8] =
+    include_bytes!("../../../data/gameplay/dagger-core.package.json");
+pub const PLAYER_ACTOR_ID: &str = "player";
 pub const CALCULATION_HISTORY_LIMIT: usize = 16;
 pub const COMBAT_HISTORY_LIMIT: usize = 32;
 pub const ENCOUNTER_HISTORY_LIMIT: usize = 32;
@@ -204,14 +210,22 @@ pub struct LiveActorResources {
     pub current_magicka: f32,
 }
 
-impl LiveActorResources {
-    fn full(stats: &AdmittedActorValues) -> Self {
-        Self {
-            current_health: stats.max_health,
-            current_stamina: stats.max_stamina,
-            current_magicka: stats.max_magicka,
-        }
-    }
+/// Scenario id of one enemy instance in the live gameplay state.
+fn enemy_actor_id(id: u64) -> String {
+    format!("enemy-{id}")
+}
+
+/// Deterministic spawn roll for one entity's bounded roll evidence: stable
+/// across resets so spawned actors are reproducible.
+fn spawn_roll(entity_id: u64, evidence_id: &str, min: i64, max: i64) -> i64 {
+    let mut value = entity_id
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        .wrapping_add(u64::from(u32::from_ne_bytes(
+            evidence_id.as_bytes()[..4].try_into().unwrap_or([0; 4]),
+        )));
+    value ^= value >> 29;
+    let span = (max - min + 1) as u64;
+    min + (value % span) as i64
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -469,8 +483,9 @@ impl DaggerRuntime {
         };
         let player_start = admitted.player_start;
         let player_start_look_state = admitted.player_look_state;
-        let player_resources = LiveActorResources::full(&experiment.player.stats);
-        let enemy_resources = reset_enemy_resources(&admitted.content_entities, &experiment);
+        let gameplay_catalog =
+            compile_gameplay_package(GAMEPLAY_PACKAGE).map_err(RuntimeError::Gameplay)?;
+        let gameplay = spawn_live_actors(&gameplay_catalog, &admitted.content_entities)?;
         let enemy_presentation_sequences = admitted
             .content_entities
             .iter()
@@ -492,8 +507,8 @@ impl DaggerRuntime {
             player_start,
             player_start_look_state,
             experiment,
-            player_resources,
-            enemy_resources,
+            gameplay_catalog,
+            gameplay,
             calculation_sequence: 1,
             calculation_history: VecDeque::from([initial_calculation]),
             combat_sequence: 0,
@@ -616,7 +631,11 @@ impl DaggerRuntime {
                 )));
             }
             for member in &encounter.member_entity_ids {
-                if !self.enemy_resources.contains_key(member) {
+                if !self
+                    .content_entities
+                    .iter()
+                    .any(|entity| entity.id == *member)
+                {
                     return Err(RuntimeError::Encounter(format!(
                         "named encounter {} references unsupported enemy {}",
                         encounter.id, member
@@ -708,18 +727,19 @@ impl DaggerRuntime {
             })
             .collect::<BTreeMap<_, _>>();
         let dead = self
-            .enemy_resources
+            .content_entities
             .iter()
-            .filter_map(|(id, resources)| {
-                (resources.current_health <= 0.0)
-                    .then(|| u32::try_from(*id).ok())
+            .filter_map(|entity| {
+                self.is_enemy_dead(entity.id)
+                    .then(|| u32::try_from(entity.id).ok())
                     .flatten()
             })
             .collect::<std::collections::BTreeSet<_>>();
+        let player_alive = self.player_health() > 0.0;
         let Some(patrol) = self.patrol.as_mut() else {
             return Ok(Vec::new());
         };
-        let player_target = if self.player_resources.current_health > 0.0 {
+        let player_target = if player_alive {
             [player.x, player.y, player.z]
         } else {
             [f32::INFINITY; 3]
@@ -748,7 +768,7 @@ impl DaggerRuntime {
         }
         for attack in evaluation.attacks {
             let id = u64::from(attack.handle);
-            let before = self.player_resources.current_health;
+            let before = self.player_health();
             if before <= 0.0 {
                 continue;
             }
@@ -763,8 +783,14 @@ impl DaggerRuntime {
             } else {
                 0.0
             };
-            let after = (before - damage).max(0.0);
-            self.player_resources.current_health = after;
+            let after = spend_actor_track(
+                &mut self.gameplay,
+                &self.gameplay_catalog,
+                PLAYER_ACTOR_ID,
+                "health",
+                damage as i64,
+            )
+            .map_err(RuntimeError::Gameplay)? as f32;
             self.push_encounter_record(EncounterDecisionRecord {
                 sequence: 0,
                 enemy_id: id,
@@ -793,7 +819,7 @@ impl DaggerRuntime {
         if self.active_encounter_outcome != NamedEncounterOutcome::Active {
             return;
         }
-        if self.player_resources.current_health <= 0.0 {
+        if self.player_health() <= 0.0 {
             self.active_encounter_outcome = NamedEncounterOutcome::Defeat;
             return;
         }
@@ -804,11 +830,11 @@ impl DaggerRuntime {
         else {
             return;
         };
-        if encounter.member_entity_ids.iter().all(|id| {
-            self.enemy_resources
-                .get(id)
-                .is_some_and(|resources| resources.current_health <= 0.0)
-        }) {
+        if encounter
+            .member_entity_ids
+            .iter()
+            .all(|id| self.is_enemy_dead(*id))
+        {
             self.active_encounter_outcome = NamedEncounterOutcome::Victory;
         }
     }
@@ -879,31 +905,111 @@ impl DaggerRuntime {
 
     pub fn player_stamina(&self) -> (f32, f32) {
         (
-            self.player_resources.current_stamina,
-            self.experiment.player.stats.max_stamina,
+            self.live_track(PLAYER_ACTOR_ID, "stamina"),
+            self.live_track_max(PLAYER_ACTOR_ID, "stamina"),
         )
     }
 
-    pub fn dead_encounter_ids(&self) -> BTreeSet<u32> {
-        self.enemy_resources
+    fn live_track(&self, actor: &str, track: &str) -> f32 {
+        self.gameplay.track_value(actor, track).unwrap_or(0) as f32
+    }
+
+    fn live_track_max(&self, actor: &str, track: &str) -> f32 {
+        track_maximum(&self.gameplay, &self.gameplay_catalog, actor, track).unwrap_or(0) as f32
+    }
+
+    fn player_health(&self) -> f32 {
+        self.live_track(PLAYER_ACTOR_ID, "health")
+    }
+
+    fn enemy_health(&self, id: u64) -> f32 {
+        self.live_track(&enemy_actor_id(id), "health")
+    }
+
+    fn has_live_actor(&self, id: u64) -> bool {
+        self.gameplay.actor(&enemy_actor_id(id)).is_some()
+    }
+
+    fn is_enemy_dead(&self, id: u64) -> bool {
+        self.has_live_actor(id) && self.enemy_health(id) <= 0.0
+    }
+
+    fn live_resources(&self, actor: &str) -> LiveActorResources {
+        LiveActorResources {
+            current_health: self.live_track(actor, "health"),
+            current_stamina: self.live_track(actor, "stamina"),
+            current_magicka: self.live_track(actor, "magicka"),
+        }
+    }
+
+    /// Player stats panel: live values from the mechanics binding, attribute
+    /// values from the admitted player definition, and the applied
+    /// document's calculation records (transitional display until 7047).
+    fn player_gameplay_readout(&self) -> ActorGameplayReadout {
+        let definition = self
+            .gameplay_catalog
+            .actors()
+            .get(PLAYER_ACTOR_ID)
+            .expect("player actor definition");
+        let stat = |id: &str| definition.stats.get(id).copied().unwrap_or(0) as f32;
+        ActorGameplayReadout {
+            attributes: dagger_rpg::ActorAttributes {
+                strength: stat("strength"),
+                endurance: stat("endurance"),
+                intelligence: stat("intelligence"),
+            },
+            max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
+            max_stamina: self.live_track_max(PLAYER_ACTOR_ID, "stamina"),
+            max_magicka: self.live_track_max(PLAYER_ACTOR_ID, "magicka"),
+            current_health: self.live_track(PLAYER_ACTOR_ID, "health"),
+            current_stamina: self.live_track(PLAYER_ACTOR_ID, "stamina"),
+            current_magicka: self.live_track(PLAYER_ACTOR_ID, "magicka"),
+            calculations: self.experiment.player.stats.calculations.clone(),
+        }
+    }
+
+    fn restore_live_actors(&mut self) -> Result<(), RuntimeError> {
+        restore_actor_tracks(&mut self.gameplay, &self.gameplay_catalog, PLAYER_ACTOR_ID)
+            .map_err(RuntimeError::Gameplay)?;
+        let enemy_ids = self
+            .content_entities
             .iter()
-            .filter_map(|(&id, resources)| {
-                (resources.current_health <= 0.0)
-                    .then(|| u32::try_from(id).ok())
+            .map(|entity| entity.id)
+            .filter(|id| self.has_live_actor(*id))
+            .collect::<Vec<_>>();
+        for id in enemy_ids {
+            restore_actor_tracks(
+                &mut self.gameplay,
+                &self.gameplay_catalog,
+                &enemy_actor_id(id),
+            )
+            .map_err(RuntimeError::Gameplay)?;
+        }
+        Ok(())
+    }
+
+    pub fn dead_encounter_ids(&self) -> BTreeSet<u32> {
+        self.content_entities
+            .iter()
+            .filter_map(|entity| {
+                self.is_enemy_dead(entity.id)
+                    .then(|| u32::try_from(entity.id).ok())
                     .flatten()
             })
             .collect()
     }
 
     pub fn enemy_presentation(&self) -> Vec<EnemyPresentationReadout> {
-        self.enemy_resources
+        self.content_entities
             .iter()
-            .filter_map(|(&id, resources)| {
+            .filter(|entity| self.has_live_actor(entity.id))
+            .filter_map(|entity| {
+                let id = entity.id;
                 Some(EnemyPresentationReadout {
                     handle: u32::try_from(id).ok()?,
                     attack_sequence: self.enemy_attack_sequences.get(&id).copied().unwrap_or(0),
                     hurt_sequence: self.enemy_hurt_sequences.get(&id).copied().unwrap_or(0),
-                    dead: resources.current_health <= 0.0,
+                    dead: self.is_enemy_dead(id),
                 })
             })
             .collect()
@@ -927,13 +1033,14 @@ impl DaggerRuntime {
     ) -> Result<ExperimentReadout, RuntimeError> {
         let admitted = dagger_rpg::admit_json(document).map_err(RuntimeError::Experiment)?;
         validate_enemy_definitions(&self.content_entities, &admitted)?;
-        let enemy_resources = reset_enemy_resources(&self.content_entities, &admitted);
+        // The applied document owns movement/combat/behavior values until
+        // 7046/7047; durable stats and tracks stay bound to the gameplay
+        // package, so live actors are restored to catalog spawn values.
+        self.restore_live_actors()?;
         self.calculation_sequence = self.calculation_sequence.saturating_add(1);
         self.player_controller.move_speed_units_per_second =
             admitted.player.move_speed_units_per_second;
         self.player_controller.configure_engine();
-        self.player_resources = LiveActorResources::full(&admitted.player.stats);
-        self.enemy_resources = enemy_resources;
         self.combat_sequence = 0;
         self.combat_history.clear();
         self.combat_attempt_sequence = 0;
@@ -985,8 +1092,7 @@ impl DaggerRuntime {
         }
         self.set_player_position(self.player_start)?;
         self.player_look_state = self.player_start_look_state;
-        self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
-        self.enemy_resources = reset_enemy_resources(&self.content_entities, &self.experiment);
+        self.restore_live_actors()?;
         self.combat_sequence = 0;
         self.combat_history.clear();
         self.combat_attempt_sequence = 0;
@@ -1067,9 +1173,7 @@ impl DaggerRuntime {
             if navigable && self.enemy_line_of_sight_clear(id, position) {
                 self.set_player_position(position)?;
                 self.player_look_state = facing_state;
-                self.player_resources = LiveActorResources::full(&self.experiment.player.stats);
-                self.enemy_resources =
-                    reset_enemy_resources(&self.content_entities, &self.experiment);
+                self.restore_live_actors()?;
                 self.combat_sequence = 0;
                 self.combat_history.clear();
                 self.combat_attempt_sequence = 0;
@@ -1100,7 +1204,7 @@ impl DaggerRuntime {
             self.active_encounter_engaged = true;
         }
         let cooldown_before = self.player_attack_cooldown_remaining;
-        let stamina_before = self.player_resources.current_stamina;
+        let stamina_before = self.live_track(PLAYER_ACTOR_ID, "stamina");
         let cooldown_duration = self.experiment.player.combat.attack_cooldown_seconds;
         let stamina_cost = self.experiment.player.combat.stamina_cost;
         if cooldown_before > 0.0 {
@@ -1122,9 +1226,15 @@ impl DaggerRuntime {
         // fatigue loss; low fatigue does not suppress the visible swing. Keep
         // the authored cost in the semantic record while saturating the live
         // resource at zero.
-        self.player_resources.current_stamina = (stamina_before - stamina_cost).max(0.0);
+        let stamina_after = spend_actor_track(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            PLAYER_ACTOR_ID,
+            "stamina",
+            stamina_cost as i64,
+        )
+        .map_err(RuntimeError::Gameplay)? as f32;
         self.player_attack_cooldown_remaining = cooldown_duration;
-        let stamina_after = self.player_resources.current_stamina;
         let attempt_sequence = self.push_combat_attempt(CombatAttemptRecord {
             sequence: 0,
             target_id: None,
@@ -1163,13 +1273,19 @@ impl DaggerRuntime {
             .ok_or_else(|| RuntimeError::Encounter("melee contact has no active action".into()))?;
         let attack_range = self.experiment.player.combat.attack_range;
         let player_position = self.player_position()?;
+        let live_enemy_resources = self
+            .content_entities
+            .iter()
+            .filter(|entity| self.has_live_actor(entity.id))
+            .map(|entity| (entity.id, self.live_resources(&enemy_actor_id(entity.id))))
+            .collect::<BTreeMap<_, _>>();
         let target = select_aimed_melee_target(
             player_position,
             self.player_state().yaw_degrees,
             attack_range,
             &self.content_entities,
             &self.content_live_positions,
-            &self.enemy_resources,
+            &live_enemy_resources,
         );
         let Some(id) = target else {
             self.finish_melee_contact(attempt_sequence, None, "miss", None);
@@ -1218,12 +1334,8 @@ impl DaggerRuntime {
                 return Ok(());
             }
         }
-        let health_before = self
-            .enemy_resources
-            .get(&id)
-            .ok_or(RuntimeError::Content(ContentError::NoCombatDefinition(id)))?
-            .current_health;
-        let target_max_health = enemy.stats.max_health;
+        let health_before = self.enemy_health(id);
+        let target_max_health = self.live_track_max(&enemy_actor_id(id), "health");
         let raw_roll = next_combat_roll(self.combat_sequence, id);
         let resolution = dagger_rpg::resolve_melee_attack(MeleeResolutionInput {
             actor: "Player",
@@ -1233,10 +1345,21 @@ impl DaggerRuntime {
             enemy,
             target_health_before: health_before,
         });
-        self.enemy_resources
-            .get_mut(&id)
-            .expect("combat definition checked above")
-            .current_health = resolution.health_after;
+        // 7046 moves the attempt itself onto resolve_dagger_action; the
+        // resolved damage already commits through the mechanics binding.
+        let health_after = spend_actor_track(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            &enemy_actor_id(id),
+            "health",
+            resolution.final_damage as i64,
+        )
+        .map_err(RuntimeError::Gameplay)? as f32;
+        let resolution = MeleeResolutionRecord {
+            health_after,
+            died: resolution.hit && health_after <= 0.0,
+            ..resolution
+        };
         if resolution.hit {
             if let Some(sequence) = self.enemy_hurt_sequences.get_mut(&id) {
                 *sequence = sequence.saturating_add(1);
@@ -1349,7 +1472,9 @@ impl DaggerRuntime {
                         distance_from_player: (live_position[0] - position.x)
                             .hypot(live_position[1] - position.y)
                             .hypot(live_position[2] - position.z),
-                        resources: self.enemy_resources.get(&entity.id).copied(),
+                        resources: self
+                            .has_live_actor(entity.id)
+                            .then(|| self.live_resources(&enemy_actor_id(entity.id))),
                         ai_state: encounter_states.get(&entity.id).copied(),
                     },
                 }
@@ -1372,9 +1497,9 @@ impl DaggerRuntime {
         Ok(ExperimentReadout {
             document: self.experiment.document.clone(),
             move_speed_units_per_second: self.player_controller.move_speed_units_per_second,
-            max_health: self.experiment.player.stats.max_health,
-            current_health: self.player_resources.current_health,
-            player_stats: actor_readout(&self.experiment.player.stats, self.player_resources),
+            max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
+            current_health: self.player_health(),
+            player_stats: self.player_gameplay_readout(),
             enemy_stats: self
                 .experiment
                 .enemies
@@ -1573,40 +1698,54 @@ fn validate_enemy_definitions(
     Ok(())
 }
 
-fn reset_enemy_resources(
-    content_entities: &[ContentEntity],
-    experiment: &AdmittedExperiment,
-) -> BTreeMap<u64, LiveActorResources> {
-    content_entities
-        .iter()
-        .filter_map(|entity| {
-            experiment
-                .enemies
-                .iter()
-                .find(|enemy| enemy.mobile_id == entity.mobile_id)
-                .map(|enemy| (entity.id, LiveActorResources::full(&enemy.stats)))
-        })
-        .collect()
-}
-
-fn actor_readout(stats: &AdmittedActorValues, current: LiveActorResources) -> ActorGameplayReadout {
-    ActorGameplayReadout {
-        attributes: stats.attributes.clone(),
-        max_health: stats.max_health,
-        max_stamina: stats.max_stamina,
-        max_magicka: stats.max_magicka,
-        current_health: current.current_health,
-        current_stamina: current.current_stamina,
-        current_magicka: current.current_magicka,
-        calculations: stats.calculations.clone(),
-    }
-}
-
 fn collision_hit_distance(hit: SpatialCollisionHit) -> f64 {
     match hit {
         SpatialCollisionHit::Voxel(hit) => hit.distance,
         SpatialCollisionHit::StaticMesh(hit) => hit.distance,
     }
+}
+
+/// Spawn the live player and one actor instance per admitted content entity
+/// whose mobile has an actor definition in the gameplay catalog. Entities
+/// without a definition (currently the Thief, mobile 138 — an enemy-class
+/// mobile the catalogs don't model yet, see task 7056) get no live gameplay
+/// state, matching the previous experiment model: they patrol but are not
+/// combatants. Spawn rolls are deterministic per entity so resets are
+/// reproducible.
+fn spawn_live_actors(
+    catalog: &DaggerGameplayCatalog,
+    content_entities: &[ContentEntity],
+) -> Result<DaggerGameplayState, RuntimeError> {
+    let mut state = DaggerGameplayState::default();
+    dagger_rpg::spawn_actor(&mut state, catalog, PLAYER_ACTOR_ID, PLAYER_ACTOR_ID, &[])
+        .map_err(RuntimeError::Gameplay)?;
+    for entity in content_entities {
+        let Some(definition) = catalog
+            .actors()
+            .values()
+            .find(|actor| actor.mobile_id == Some(entity.mobile_id))
+        else {
+            continue;
+        };
+        let rolls = dagger_rpg::required_roll_evidence(catalog, &definition.id)
+            .map_err(RuntimeError::Gameplay)?;
+        let evidence = rolls
+            .into_iter()
+            .map(|(id, min, max)| DaggerEvidence {
+                value: spawn_roll(entity.id, &id, min, max),
+                id,
+            })
+            .collect::<Vec<_>>();
+        dagger_rpg::spawn_actor(
+            &mut state,
+            catalog,
+            &definition.id.clone(),
+            &enemy_actor_id(entity.id),
+            &evidence,
+        )
+        .map_err(RuntimeError::Gameplay)?;
+    }
+    Ok(state)
 }
 
 fn ai_mode_name(mode: EnemyAiMode) -> &'static str {

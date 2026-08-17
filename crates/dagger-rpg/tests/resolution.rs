@@ -1,7 +1,7 @@
 use dagger_rpg::{
-    compile_gameplay_package, initial_actor_state, resolve_dagger_action, DaggerActorState,
-    DaggerEffect, DaggerEvent, DaggerEvidence, DaggerGameplayError, DaggerGameplayState,
-    DaggerIntent, DaggerIntentOrigin, DaggerRejection,
+    compile_gameplay_package, resolve_dagger_action, set_actor_track, spawn_actor, DaggerEffect,
+    DaggerEvent, DaggerEvidence, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
+    DaggerIntentOrigin, DaggerRejection,
 };
 use rusty_engine::gameplay_resolution::{
     AttemptStatus, CommitStatus, CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
@@ -19,25 +19,20 @@ fn identity(value: u64) -> ResolutionIdentity {
 /// Fixed spawn and combat rolls: rat health rolls 12 of 9..16, the player
 /// rolls 25 on d100 (a hit against the rat's armor vulnerability), and the
 /// longsword rolls 8 of 2..16.
-fn spawn_state() -> DaggerGameplayState {
-    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+fn spawn_state(catalog: &dagger_rpg::DaggerGameplayCatalog) -> DaggerGameplayState {
     let mut state = DaggerGameplayState::default();
-    state.insert_actor(
-        "player",
-        initial_actor_state(&catalog, "player", &[]).expect("spawn player"),
-    );
-    state.insert_actor(
+    spawn_actor(&mut state, catalog, "player", "player", &[]).expect("spawn player");
+    spawn_actor(
+        &mut state,
+        catalog,
+        "rat",
         "rat-2007",
-        initial_actor_state(
-            &catalog,
-            "rat",
-            &[DaggerEvidence {
-                id: "rat.health".to_string(),
-                value: 12,
-            }],
-        )
-        .expect("spawn rat"),
-    );
+        &[DaggerEvidence {
+            id: "rat.health".to_string(),
+            value: 12,
+        }],
+    )
+    .expect("spawn rat");
     state
 }
 
@@ -84,15 +79,18 @@ fn typescript_package_compiles_the_real_catalogs() {
 }
 
 #[test]
-fn derived_track_maximums_evaluate_at_spawn() {
+fn spawn_attaches_mechanics_components_with_derived_track_maxima() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    let player = initial_actor_state(&catalog, "player", &[]).expect("spawn player");
-    assert_eq!(player.track("health"), Some(85));
-    assert_eq!(player.track("stamina"), Some(90));
-    assert_eq!(player.track("magicka"), Some(50));
+    let mut state = DaggerGameplayState::default();
+    spawn_actor(&mut state, &catalog, "player", "player", &[]).expect("spawn player");
+    assert_eq!(state.track_value("player", "health"), Some(85));
+    assert_eq!(state.track_value("player", "stamina"), Some(90));
+    assert_eq!(state.track_value("player", "magicka"), Some(50));
 
-    let rat = initial_actor_state(
+    spawn_actor(
+        &mut state,
         &catalog,
+        "rat",
         "rat",
         &[DaggerEvidence {
             id: "rat.health".to_string(),
@@ -100,10 +98,13 @@ fn derived_track_maximums_evaluate_at_spawn() {
         }],
     )
     .expect("spawn rat");
-    assert_eq!(rat.track("health"), Some(16));
+    assert_eq!(state.track_value("rat", "health"), Some(16));
 
-    let out_of_bounds = initial_actor_state(
+    let mut state = DaggerGameplayState::default();
+    let out_of_bounds = spawn_actor(
+        &mut state,
         &catalog,
+        "rat",
         "rat",
         &[DaggerEvidence {
             id: "rat.health".to_string(),
@@ -116,7 +117,7 @@ fn derived_track_maximums_evaluate_at_spawn() {
 #[test]
 fn player_melee_hit_spends_stamina_and_applies_weapon_damage() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    let mut state = spawn_state();
+    let mut state = spawn_state(&catalog);
     let (receipt, readout) = resolve_dagger_action(
         &catalog,
         &mut state,
@@ -138,8 +139,8 @@ fn player_melee_hit_spends_stamina_and_applies_weapon_damage() {
         track: "stamina".to_string(),
         amount: 10,
     }));
-    assert_eq!(state.actor("rat-2007").unwrap().track("health"), Some(4));
-    assert_eq!(state.actor("player").unwrap().track("stamina"), Some(80));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(4));
+    assert_eq!(state.track_value("player", "stamina"), Some(80));
     assert!(receipt.events().contains(&DaggerEvent::TrackSpent {
         actor: "player".to_string(),
         track: "stamina".to_string(),
@@ -152,7 +153,7 @@ fn player_melee_hit_spends_stamina_and_applies_weapon_damage() {
 #[test]
 fn player_melee_miss_still_spends_stamina_but_applies_no_damage() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    let mut state = spawn_state();
+    let mut state = spawn_state(&catalog);
     // Chance vs rat: 60 skill + 30 armor - 50 = 40, so a roll of 90 misses.
     let (receipt, _) = resolve_dagger_action(
         &catalog,
@@ -168,15 +169,15 @@ fn player_melee_miss_still_spends_stamina_but_applies_no_damage() {
         .effects()
         .iter()
         .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
-    assert_eq!(state.actor("rat-2007").unwrap().track("health"), Some(12));
-    assert_eq!(state.actor("player").unwrap().track("stamina"), Some(80));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
+    assert_eq!(state.track_value("player", "stamina"), Some(80));
 }
 
 #[test]
 fn player_and_ai_origins_share_the_same_policy_path() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    let mut player_state = spawn_state();
-    let mut ai_state = spawn_state();
+    let mut player_state = spawn_state(&catalog);
+    let mut ai_state = spawn_state(&catalog);
     resolve_dagger_action(
         &catalog,
         &mut player_state,
@@ -193,19 +194,22 @@ fn player_and_ai_origins_share_the_same_policy_path() {
         player_melee_intent(DaggerIntentOrigin::Ai),
         melee_evidence(25),
     );
-    assert_eq!(player_state, ai_state);
+    for actor in ["player", "rat-2007"] {
+        for track in ["health", "stamina", "magicka"] {
+            assert_eq!(
+                player_state.track_value(actor, track),
+                ai_state.track_value(actor, track),
+                "{actor}.{track} diverged between origins"
+            );
+        }
+    }
 }
 
 #[test]
 fn insufficient_stamina_rejects_before_mutation() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    let mut state = spawn_state();
-    let exhausted = DaggerActorState::new("player")
-        .with_track("health", 85)
-        .with_track("stamina", 4)
-        .with_track("magicka", 50);
-    state.insert_actor("player", exhausted);
-    let before = state.clone();
+    let mut state = spawn_state(&catalog);
+    set_actor_track(&mut state, &catalog, "player", "stamina", 4).expect("drain stamina");
     let (receipt, _) = resolve_dagger_action(
         &catalog,
         &mut state,
@@ -220,13 +224,14 @@ fn insufficient_stamina_rejects_before_mutation() {
         receipt.attempt().status(),
         AttemptStatus::Rejected(DaggerRejection::InsufficientTrack { .. })
     ));
-    assert_eq!(state, before);
+    assert_eq!(state.track_value("player", "stamina"), Some(4));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
 }
 
 #[test]
 fn roll_evidence_outside_declared_bounds_rejects() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    let mut state = spawn_state();
+    let mut state = spawn_state(&catalog);
     // A hitting d100 roll reaches the damage operation, where the declared
     // weapon dice bounds (2..16) reject the supplied 99.
     let (receipt, _) = resolve_dagger_action(
@@ -257,7 +262,7 @@ fn roll_evidence_outside_declared_bounds_rejects() {
 #[test]
 fn power_attack_hits_harder_and_costs_more_stamina() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    let mut state = spawn_state();
+    let mut state = spawn_state(&catalog);
     let (receipt, _) = resolve_dagger_action(
         &catalog,
         &mut state,
@@ -292,8 +297,8 @@ fn power_attack_hits_harder_and_costs_more_stamina() {
         track: "stamina".to_string(),
         amount: 25,
     }));
-    assert_eq!(state.actor("rat-2007").unwrap().track("health"), Some(0));
-    assert_eq!(state.actor("player").unwrap().track("stamina"), Some(65));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(0));
+    assert_eq!(state.track_value("player", "stamina"), Some(65));
 }
 
 #[test]
@@ -314,25 +319,10 @@ fn injected_rule_rejects_a_tagged_action_while_condition_without_mutating() {
         compile_gameplay_package(&serde_json::to_vec(&mutated).expect("encode mutated package"))
             .expect("compile rule-injected package");
 
-    let catalog_for_state = compile_gameplay_package(PACKAGE).expect("compile authored package");
-    let mut state = DaggerGameplayState::default();
-    let mut player = initial_actor_state(&catalog_for_state, "player", &[]).expect("spawn player");
+    let mut state = spawn_state(&catalog);
+    let mut player = state.actors()["player"].clone();
     player.add_condition("exhausted");
     state.insert_actor("player", player);
-    state.insert_actor(
-        "rat-2007",
-        initial_actor_state(
-            &catalog_for_state,
-            "rat",
-            &[DaggerEvidence {
-                id: "rat.health".to_string(),
-                value: 12,
-            }],
-        )
-        .expect("spawn rat"),
-    );
-    let before = state.clone();
-
     let (receipt, _) = resolve_dagger_action(
         &catalog,
         &mut state,
@@ -347,7 +337,8 @@ fn injected_rule_rejects_a_tagged_action_while_condition_without_mutating() {
         receipt.attempt().status(),
         AttemptStatus::Rejected(DaggerRejection::Rule { .. })
     ));
-    assert_eq!(state, before);
+    assert_eq!(state.track_value("player", "stamina"), Some(90));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
 }
 
 #[test]
