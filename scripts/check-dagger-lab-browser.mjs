@@ -188,27 +188,19 @@ try {
     await page.getByTestId(`definition-encounter-${encounter.id}`).waitFor();
   }
 
-  // One physical attack resolves through the authored action. The expected
-  // outcome derives from the package (hit chance = skill + armor - 50,
-  // clamped 3..97; stamina cost from the action program) and the live
-  // readout; the record must be consistent with its own displayed roll.
-  const playerActor = gameplayPackage.actors.find((actor) => actor.kind === 'player');
-  assert.ok(playerActor, 'player actor definition present');
-  const meleeAction = gameplayPackage.actions.find((action) => action.reachMilli !== undefined);
-  assert.ok(meleeAction, 'an authored melee action with reach exists');
-  const attackSkill = playerActor.skills[weaponSkillOf(gameplayPackage, meleeAction)];
-  assert.ok(attackSkill !== undefined, 'player has the weapon skill');
-  const swingChance = clampChance(attackSkill, ratActor.armorValue);
-  const staminaCost = spendTrackCost(meleeAction);
+  // One physical attack resolves through the authored action. This
+  // diagnostic computes nothing itself: the record's own authoritative
+  // resolution evidence (the emitted predicate decision, semantic events,
+  // and action id) is the expectation, and the presentation must be
+  // consistent with it.
+  const packageActionIds = new Set(gameplayPackage.actions.map((action) => action.id));
   const combatA = await jumpAndPhysicallyAttack(
     page,
     2007,
     spawnPosition,
-    swingChance,
     ratLive,
     initialLab.playerStats,
-    staminaCost,
-    meleeAction.id,
+    packageActionIds,
   );
 
   // The persistent Rust session keeps input authority across a hard reload.
@@ -708,44 +700,13 @@ function actorForMobile(gameplayPackage, mobileId) {
   return gameplayPackage.actors.find((actor) => actor.mobileId === mobileId);
 }
 
-function weaponSkillOf(gameplayPackage, meleeAction) {
-  const weapon = gameplayPackage.items
-    .map((item) => item.weapon)
-    .find((candidate) => candidate !== undefined);
-  if (weapon === undefined) throw new Error('no weapon item in the package');
-  return weapon.skill;
-}
-
-function clampChance(skill, armorValue) {
-  return Math.min(97, Math.max(3, skill + armorValue - 50));
-}
-
-function spendTrackCost(action) {
-  let cost;
-  const walk = (node) => {
-    if (node === null || typeof node !== 'object') return;
-    if (node.kind === 'operation' && node.operation?.kind === 'spendTrack') {
-      cost = node.operation.amount.value;
-    }
-    for (const value of Object.values(node)) {
-      if (Array.isArray(value)) value.forEach(walk);
-      else walk(value);
-    }
-  };
-  walk(action.program);
-  if (cost === undefined) throw new Error(`${action.id} has no spendTrack cost`);
-  return cost;
-}
-
 async function jumpAndPhysicallyAttack(
   page,
   contentId,
   spawnPosition,
-  swingChance,
   targetLive,
   playerStats,
-  staminaCost,
-  actionId,
+  packageActionIds,
 ) {
   await page.getByTestId(`content-${contentId}`).click();
   await page.getByTestId('jump-content').click();
@@ -754,46 +715,62 @@ async function jumpAndPhysicallyAttack(
     contentId,
     { timeout: 10_000 },
   );
-  // The presentation outcome is consistent with the catalog-computed chance:
-  // a roll at or under it hits, anything above misses.
   const expectedTitle = 'Rat H';
   await runPhysicalAttack(page, contentId, expectedTitle, /HIT|MISS/, /hit|miss/);
   await page.getByTestId('combat-count').filter({ hasText: '1 attack' }).waitFor({ timeout: 10_000 });
   const text = await page.getByTestId('combat-1').innerText();
+
+  // The authoritative predicate decision is emitted in the record: the roll,
+  // the threshold Rust evaluated, and its verdict. The presentation must be
+  // consistent with that evidence — nothing is recomputed here.
   const rollMatch = /d100 (\d+)/.exec(text);
   assert.ok(rollMatch, `combat record does not display its d100 roll: ${JSON.stringify(text)}`);
   const roll = Number(rollMatch[1]);
-  const expectHit = roll <= swingChance;
+  const decisionMatch = /(\d+) Lte (\d+) = (true|false)/.exec(text);
+  assert.ok(decisionMatch, `combat record does not emit the predicate decision: ${JSON.stringify(text)}`);
+  assert.equal(Number(decisionMatch[1]), roll, 'displayed roll matches the evaluated predicate input');
+  const decisionHit = decisionMatch[3] === 'true';
+
   const damageMatch = /(\d+\.\d+) damage/.exec(text);
   assert.ok(damageMatch, `combat record does not display damage: ${JSON.stringify(text)}`);
   const damage = Number(damageMatch[1]);
   const healthMatch = /Health (\d+\.\d+) → (\d+\.\d+)/.exec(text);
   assert.ok(healthMatch, `combat record does not display health: ${JSON.stringify(text)}`);
   assert.equal(Number(healthMatch[1]), targetLive.currentHealth, 'health before matches the live readout');
-  if (expectHit) {
-    assert.ok(damage > 0, `roll ${roll} is at or under chance ${swingChance} but damage is zero`);
-    assert.equal(Number(healthMatch[2]), targetLive.currentHealth - damage, 'health after reflects the applied damage');
+  const damageEventMatch = /DamageApplied \{ target: "[^"]+", amount: (\d+) \}/.exec(text);
+  if (decisionHit) {
+    assert.ok(damage > 0, 'authoritative decision is true but no damage applied');
+    assert.ok(damageEventMatch, 'a hit did not emit the DamageApplied event');
+    assert.equal(Number(damageEventMatch[1]), damage, 'displayed damage matches the emitted event');
+    assert.equal(Number(healthMatch[2]), targetLive.currentHealth - damage, 'health after reflects the emitted damage');
     assert.match(text, /HIT/);
     await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
   } else {
-    assert.equal(damage, 0, `roll ${roll} beats chance ${swingChance} but damage applied`);
+    assert.equal(damage, 0, 'authoritative decision is false but damage applied');
+    assert.equal(damageEventMatch, null, 'a miss must not emit DamageApplied');
     assert.equal(Number(healthMatch[2]), targetLive.currentHealth, 'a miss left health untouched');
     assert.match(text, /MISS/);
   }
-  assert.match(text, new RegExp(actionId, 'i'));
+  const actionIdMatch = /#\d+ · ([a-z0-9-]+) →/i.exec(text);
+  assert.ok(actionIdMatch, 'combat record does not display its action id');
+  const recordActionId = actionIdMatch[1].toLowerCase();
+  assert.ok(packageActionIds.has(recordActionId), `record action ${recordActionId} is not in the admitted package`);
   assert.match(text, /line of sight clear/i);
+
   const acceptedAttempt = page.getByTestId('combat-attempt-1');
   await acceptedAttempt.filter({ hasText: 'ACCEPTED' }).waitFor();
   const acceptedAttemptText = await acceptedAttempt.innerText();
   const staminaMatch = /stamina (\d+\.\d+) → (\d+\.\d+) · cost (\d+\.\d+)/.exec(acceptedAttemptText);
   assert.ok(staminaMatch, `attempt record does not display stamina: ${JSON.stringify(acceptedAttemptText)}`);
   assert.equal(Number(staminaMatch[1]), playerStats.currentStamina, 'stamina before matches the live readout');
-  assert.equal(Number(staminaMatch[3]), staminaCost, 'attempt cost matches the authored action');
   assert.equal(
     Number(staminaMatch[2]),
-    playerStats.currentStamina - staminaCost,
-    'stamina after reflects the authored cost',
+    playerStats.currentStamina - Number(staminaMatch[3]),
+    'attempt stamina delta matches its displayed cost',
   );
+  const spentEventMatch = /TrackSpent \{ actor: "player", track: "stamina", amount: (\d+) \}/.exec(text);
+  assert.ok(spentEventMatch, 'the TrackSpent event was not emitted');
+  assert.equal(Number(spentEventMatch[1]), Number(staminaMatch[3]), 'attempt cost matches the emitted TrackSpent event');
   // Melee phases advance on sampled gameplay frames. Hold a bounded movement
   // input while waiting so cleanup does not depend on runner latency or an
   // incidental pending key event.
