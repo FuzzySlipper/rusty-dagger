@@ -14,7 +14,8 @@ use rusty_engine::gameplay_mechanics::{
 use super::mechanics::{mechanics_catalog_version, track_max_stat_id};
 use super::{
     DaggerActorDefinition, DaggerActorState, DaggerEvidence, DaggerExpr, DaggerGameplayCatalog,
-    DaggerGameplayError, DaggerGameplayState, DaggerRejection, DaggerSubject,
+    DaggerGameplayError, DaggerGameplayState, DaggerOperation, DaggerPredicate, DaggerProgram,
+    DaggerRejection, DaggerSubject,
 };
 
 /// Materialized stat values (attributes and skills) for one subject. The
@@ -177,25 +178,96 @@ pub fn required_roll_evidence(
             })?;
     let mut rolls = Vec::new();
     for track in &definition.tracks {
-        collect_dice(&track.max, &mut rolls);
+        collect_dice(catalog, &track.max, &mut rolls);
     }
     Ok(rolls)
 }
 
-fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
+/// Roll evidence an action's program requires: every dice node as
+/// (evidence id, min, max), with weapon dice bounded by the item's declared
+/// damage range. Callers supply values and pass them to
+/// `resolve_dagger_action` alongside the action's hit-roll evidence
+/// (convention: `{action}.d100`, an unbounded d100 read).
+pub fn action_roll_evidence(
+    catalog: &DaggerGameplayCatalog,
+    action_id: &str,
+) -> Result<Vec<(String, i64, i64)>, DaggerGameplayError> {
+    let action =
+        catalog
+            .actions()
+            .get(action_id)
+            .ok_or_else(|| DaggerGameplayError::InvalidValue {
+                path: format!("actions[{action_id}]"),
+                reason: "unknown action definition".to_string(),
+            })?;
+    let mut rolls = Vec::new();
+    collect_program_dice(catalog, &action.program, &mut rolls);
+    Ok(rolls)
+}
+
+fn collect_program_dice(
+    catalog: &DaggerGameplayCatalog,
+    program: &DaggerProgram,
+    rolls: &mut Vec<(String, i64, i64)>,
+) {
+    use rusty_engine::gameplay_resolution::Program;
+    match program {
+        Program::Sequence { steps } => {
+            for step in steps {
+                collect_program_dice(catalog, step, rolls);
+            }
+        }
+        Program::When {
+            predicate,
+            then_program,
+            otherwise_program,
+        } => {
+            let DaggerPredicate::Cmp { left, right, .. } = predicate;
+            collect_dice(catalog, left, rolls);
+            collect_dice(catalog, right, rolls);
+            collect_program_dice(catalog, then_program, rolls);
+            if let Some(otherwise) = otherwise_program {
+                collect_program_dice(catalog, otherwise, rolls);
+            }
+        }
+        Program::Operation(operation) => match operation {
+            DaggerOperation::SpendTrack { amount, .. } => collect_dice(catalog, amount, rolls),
+            DaggerOperation::Damage { amount, .. } => collect_dice(catalog, amount, rolls),
+        },
+    }
+}
+
+fn collect_dice(
+    catalog: &DaggerGameplayCatalog,
+    expr: &DaggerExpr,
+    rolls: &mut Vec<(String, i64, i64)>,
+) {
     match expr {
         DaggerExpr::Dice { id, min, max } => rolls.push((id.clone(), *min, *max)),
+        DaggerExpr::WeaponDice { item } => {
+            if let Some(weapon) = catalog
+                .items()
+                .get(item)
+                .and_then(|definition| definition.weapon.as_ref())
+            {
+                rolls.push((
+                    format!("weapon-damage.{item}"),
+                    weapon.damage_min,
+                    weapon.damage_max,
+                ));
+            }
+        }
         DaggerExpr::Add { terms }
         | DaggerExpr::Mul { terms }
         | DaggerExpr::Min { terms }
         | DaggerExpr::Max { terms } => {
             for term in terms {
-                collect_dice(term, rolls);
+                collect_dice(catalog, term, rolls);
             }
         }
         DaggerExpr::Sub { left, right } | DaggerExpr::DivFloor { left, right } => {
-            collect_dice(left, rolls);
-            collect_dice(right, rolls);
+            collect_dice(catalog, left, rolls);
+            collect_dice(catalog, right, rolls);
         }
         _ => {}
     }

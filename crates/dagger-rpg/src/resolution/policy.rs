@@ -353,16 +353,20 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                     DaggerSelector::IntentTarget => &intent.target,
                 };
                 let amount = evaluate_expr(amount, &context).map_err(PolicyFailure::Rejected)?;
+                // Health floors at zero: damage beyond the target's current
+                // health is wasted, so the plan clamps to what can apply.
+                let target_health = facts.target.track("health").unwrap_or(0);
+                let applied = amount.clamp(0, target_health);
                 plan.push_effect(DaggerEffect::Damage {
                     target: target.clone(),
-                    amount,
+                    amount: applied,
                 });
                 plan.push_event(DaggerEvent::DamageApplied {
                     target: target.clone(),
-                    amount,
+                    amount: applied,
                 });
                 trace.record(DaggerTraceDetail::Decision {
-                    reason: format!("damage {amount} to {target}"),
+                    reason: format!("damage {applied} to {target} (rolled {amount})"),
                 });
             }
         }

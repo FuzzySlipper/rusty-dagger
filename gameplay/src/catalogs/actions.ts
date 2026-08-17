@@ -44,7 +44,7 @@ export const actions: readonly ActionDefinition[] = [
     "melee-attack",
     ["attack", "melee"],
     sequence(
-      operation(spendTrack("stamina", constant(10))),
+      operation(spendTrack("stamina", constant(5))),
       when(
         meleeHit("melee-attack.d100", "long-blade"),
         operation(
