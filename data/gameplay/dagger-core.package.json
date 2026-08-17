@@ -61,12 +61,12 @@
       "source": "actions"
     },
     {
-      "subject": "item.iron-longsword",
-      "source": "items"
+      "subject": "action.power-attack",
+      "source": "actions"
     },
     {
-      "subject": "rule.silence",
-      "source": "rules"
+      "subject": "item.iron-longsword",
+      "source": "items"
     },
     {
       "subject": "encounter.rat-introduction",
@@ -572,6 +572,117 @@
             }
           }
         }
+      },
+      {
+        "id": "power-attack",
+        "tags": [
+          "attack",
+          "melee"
+        ],
+        "program": {
+          "kind": "sequence",
+          "steps": [
+            {
+              "kind": "operation",
+              "operation": {
+                "kind": "spendTrack",
+                "track": "stamina",
+                "amount": {
+                  "kind": "const",
+                  "value": 25
+                }
+              }
+            },
+            {
+              "kind": "when",
+              "predicate": {
+                "kind": "cmp",
+                "op": "lte",
+                "left": {
+                  "kind": "evidence",
+                  "id": "power-attack.d100"
+                },
+                "right": {
+                  "kind": "min",
+                  "terms": [
+                    {
+                      "kind": "const",
+                      "value": 97
+                    },
+                    {
+                      "kind": "max",
+                      "terms": [
+                        {
+                          "kind": "const",
+                          "value": 3
+                        },
+                        {
+                          "kind": "add",
+                          "terms": [
+                            {
+                              "kind": "skill",
+                              "subject": "actor",
+                              "id": "long-blade"
+                            },
+                            {
+                              "kind": "armor",
+                              "subject": "target"
+                            },
+                            {
+                              "kind": "const",
+                              "value": -50
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              "thenProgram": {
+                "kind": "operation",
+                "operation": {
+                  "kind": "damage",
+                  "target": {
+                    "kind": "intentTarget"
+                  },
+                  "amount": {
+                    "kind": "add",
+                    "terms": [
+                      {
+                        "kind": "weaponDice",
+                        "item": "iron-longsword"
+                      },
+                      {
+                        "kind": "divFloor",
+                        "left": {
+                          "kind": "sub",
+                          "left": {
+                            "kind": "stat",
+                            "subject": "actor",
+                            "id": "strength"
+                          },
+                          "right": {
+                            "kind": "const",
+                            "value": 50
+                          }
+                        },
+                        "right": {
+                          "kind": "const",
+                          "value": 5
+                        }
+                      },
+                      {
+                        "kind": "const",
+                        "value": 4
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
       }
     ],
     "items": [
@@ -587,14 +698,7 @@
         }
       }
     ],
-    "rules": [
-      {
-        "id": "silence",
-        "kind": "rejectTagWhileCondition",
-        "tag": "spell",
-        "condition": "silenced"
-      }
-    ],
+    "rules": [],
     "encounters": [
       {
         "id": "rat-introduction",

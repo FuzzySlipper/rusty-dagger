@@ -255,6 +255,102 @@ fn roll_evidence_outside_declared_bounds_rejects() {
 }
 
 #[test]
+fn power_attack_hits_harder_and_costs_more_stamina() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state();
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        DaggerIntent {
+            action: "power-attack".to_string(),
+            actor: "player".to_string(),
+            target: "rat-2007".to_string(),
+            origin: DaggerIntentOrigin::Player,
+        },
+        vec![
+            DaggerEvidence {
+                id: "power-attack.d100".to_string(),
+                value: 25,
+            },
+            DaggerEvidence {
+                id: "weapon-damage.iron-longsword".to_string(),
+                value: 8,
+            },
+        ],
+    );
+
+    assert!(receipt.succeeded());
+    // Weapon roll 8 + strength modifier 0 + power bonus 4 = 12 damage.
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "rat-2007".to_string(),
+        amount: 12,
+    }));
+    assert!(receipt.effects().contains(&DaggerEffect::SpendTrack {
+        actor: "player".to_string(),
+        track: "stamina".to_string(),
+        amount: 25,
+    }));
+    assert_eq!(state.actor("rat-2007").unwrap().track("health"), Some(0));
+    assert_eq!(state.actor("player").unwrap().track("stamina"), Some(65));
+}
+
+#[test]
+fn injected_rule_rejects_a_tagged_action_while_condition_without_mutating() {
+    let package: serde_json::Value =
+        serde_json::from_slice(PACKAGE).expect("parse committed package");
+    let mut mutated = package.clone();
+    mutated["payload"]["rules"]
+        .as_array_mut()
+        .unwrap()
+        .push(serde_json::json!({
+            "id": "fatigue-lockout",
+            "kind": "rejectTagWhileCondition",
+            "tag": "melee",
+            "condition": "exhausted"
+        }));
+    let catalog =
+        compile_gameplay_package(&serde_json::to_vec(&mutated).expect("encode mutated package"))
+            .expect("compile rule-injected package");
+
+    let catalog_for_state = compile_gameplay_package(PACKAGE).expect("compile authored package");
+    let mut state = DaggerGameplayState::default();
+    let mut player = initial_actor_state(&catalog_for_state, "player", &[]).expect("spawn player");
+    player.add_condition("exhausted");
+    state.insert_actor("player", player);
+    state.insert_actor(
+        "rat-2007",
+        initial_actor_state(
+            &catalog_for_state,
+            "rat",
+            &[DaggerEvidence {
+                id: "rat.health".to_string(),
+                value: 12,
+            }],
+        )
+        .expect("spawn rat"),
+    );
+    let before = state.clone();
+
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        melee_evidence(25),
+    );
+
+    assert!(!receipt.succeeded());
+    assert!(matches!(
+        receipt.attempt().status(),
+        AttemptStatus::Rejected(DaggerRejection::Rule { .. })
+    ));
+    assert_eq!(state, before);
+}
+
+#[test]
 fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
     let package: serde_json::Value =
         serde_json::from_slice(PACKAGE).expect("parse committed package");
