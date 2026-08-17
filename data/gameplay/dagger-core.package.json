@@ -7,77 +7,583 @@
   "dependencies": [],
   "sources": [
     {
-      "id": "dagger-core",
-      "path": "gameplay/src/privateers-hold.ts"
+      "id": "stats",
+      "path": "gameplay/src/catalogs/stats.ts"
+    },
+    {
+      "id": "actors",
+      "path": "gameplay/src/catalogs/actors.ts"
+    },
+    {
+      "id": "actions",
+      "path": "gameplay/src/catalogs/actions.ts"
+    },
+    {
+      "id": "items",
+      "path": "gameplay/src/catalogs/items.ts"
+    },
+    {
+      "id": "rules",
+      "path": "gameplay/src/catalogs/rules.ts"
+    },
+    {
+      "id": "encounters",
+      "path": "gameplay/src/catalogs/encounters.ts"
     }
   ],
   "provenance": [
     {
-      "subject": "action.ember-lance",
-      "source": "dagger-core",
-      "line": 13,
-      "column": 3
+      "subject": "stats",
+      "source": "stats"
     },
     {
-      "subject": "item.ruby-ward",
-      "source": "dagger-core",
-      "line": 31,
-      "column": 3
+      "subject": "actor.player",
+      "source": "actors"
+    },
+    {
+      "subject": "actor.rat",
+      "source": "actors"
+    },
+    {
+      "subject": "actor.skeletal-warrior",
+      "source": "actors"
+    },
+    {
+      "subject": "action.melee-attack",
+      "source": "actions"
+    },
+    {
+      "subject": "action.rat-bite",
+      "source": "actions"
+    },
+    {
+      "subject": "action.skeleton-strike",
+      "source": "actions"
+    },
+    {
+      "subject": "item.iron-longsword",
+      "source": "items"
     },
     {
       "subject": "rule.silence",
-      "source": "dagger-core",
-      "line": 38,
-      "column": 3
+      "source": "rules"
+    },
+    {
+      "subject": "encounter.rat-introduction",
+      "source": "encounters"
+    },
+    {
+      "subject": "encounter.skeletal-guardroom",
+      "source": "encounters"
     }
   ],
   "payload": {
     "schemaVersion": 1,
+    "stats": {
+      "attributes": [
+        "strength",
+        "intelligence",
+        "willpower",
+        "agility",
+        "endurance",
+        "personality",
+        "speed",
+        "luck"
+      ],
+      "skills": [
+        "medical",
+        "etiquette",
+        "streetwise",
+        "jumping",
+        "orcish",
+        "harpy",
+        "giantish",
+        "dragonish",
+        "nymph",
+        "daedric",
+        "spriggan",
+        "centaurian",
+        "impish",
+        "lockpicking",
+        "mercantile",
+        "pickpocket",
+        "stealth",
+        "swimming",
+        "climbing",
+        "backstabbing",
+        "dodging",
+        "running",
+        "destruction",
+        "restoration",
+        "illusion",
+        "alteration",
+        "thaumaturgy",
+        "mysticism",
+        "short-blade",
+        "long-blade",
+        "hand-to-hand",
+        "axe",
+        "blunt-weapon",
+        "archery",
+        "critical-strike"
+      ],
+      "tracks": [
+        "health",
+        "stamina",
+        "magicka"
+      ]
+    },
+    "actors": [
+      {
+        "id": "player",
+        "kind": "player",
+        "stats": {
+          "strength": 50,
+          "endurance": 40,
+          "intelligence": 50,
+          "willpower": 50,
+          "agility": 50,
+          "personality": 50,
+          "speed": 50,
+          "luck": 50
+        },
+        "skills": {
+          "long-blade": 60
+        },
+        "armorValue": 0,
+        "tracks": [
+          {
+            "id": "health",
+            "max": {
+              "kind": "add",
+              "terms": [
+                {
+                  "kind": "const",
+                  "value": 25
+                },
+                {
+                  "kind": "divFloor",
+                  "left": {
+                    "kind": "mul",
+                    "terms": [
+                      {
+                        "kind": "stat",
+                        "subject": "actor",
+                        "id": "endurance"
+                      },
+                      {
+                        "kind": "const",
+                        "value": 3
+                      }
+                    ]
+                  },
+                  "right": {
+                    "kind": "const",
+                    "value": 2
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "id": "stamina",
+            "max": {
+              "kind": "mul",
+              "terms": [
+                {
+                  "kind": "add",
+                  "terms": [
+                    {
+                      "kind": "stat",
+                      "subject": "actor",
+                      "id": "strength"
+                    },
+                    {
+                      "kind": "stat",
+                      "subject": "actor",
+                      "id": "endurance"
+                    }
+                  ]
+                },
+                {
+                  "kind": "const",
+                  "value": 1
+                }
+              ]
+            }
+          },
+          {
+            "id": "magicka",
+            "max": {
+              "kind": "stat",
+              "subject": "actor",
+              "id": "intelligence"
+            }
+          }
+        ]
+      },
+      {
+        "id": "rat",
+        "kind": "monster",
+        "mobileId": 0,
+        "stats": {
+          "strength": 10,
+          "endurance": 10,
+          "intelligence": 0,
+          "willpower": 0,
+          "agility": 40,
+          "personality": 0,
+          "speed": 50,
+          "luck": 50
+        },
+        "skills": {
+          "hand-to-hand": 60
+        },
+        "armorValue": 30,
+        "tracks": [
+          {
+            "id": "health",
+            "max": {
+              "kind": "dice",
+              "id": "rat.health",
+              "min": 9,
+              "max": 16
+            }
+          },
+          {
+            "id": "stamina",
+            "max": {
+              "kind": "const",
+              "value": 0
+            }
+          },
+          {
+            "id": "magicka",
+            "max": {
+              "kind": "const",
+              "value": 0
+            }
+          }
+        ],
+        "behavior": {
+          "action": "rat-bite",
+          "detectionRangeMilli": 6000,
+          "patrolSpeedMilli": 1000,
+          "chaseSpeedMilli": 2000,
+          "attackRangeMilli": 1250,
+          "attackCooldownMillis": 1500
+        }
+      },
+      {
+        "id": "skeletal-warrior",
+        "kind": "monster",
+        "mobileId": 15,
+        "stats": {
+          "strength": 35,
+          "endurance": 30,
+          "intelligence": 0,
+          "willpower": 10,
+          "agility": 40,
+          "personality": 0,
+          "speed": 40,
+          "luck": 50
+        },
+        "skills": {
+          "long-blade": 65
+        },
+        "armorValue": 10,
+        "tracks": [
+          {
+            "id": "health",
+            "max": {
+              "kind": "dice",
+              "id": "skeletal-warrior.health",
+              "min": 17,
+              "max": 66
+            }
+          },
+          {
+            "id": "stamina",
+            "max": {
+              "kind": "const",
+              "value": 0
+            }
+          },
+          {
+            "id": "magicka",
+            "max": {
+              "kind": "const",
+              "value": 0
+            }
+          }
+        ],
+        "behavior": {
+          "action": "skeleton-strike",
+          "detectionRangeMilli": 8000,
+          "patrolSpeedMilli": 800,
+          "chaseSpeedMilli": 1500,
+          "attackRangeMilli": 1500,
+          "attackCooldownMillis": 2000
+        }
+      }
+    ],
     "actions": [
       {
-        "id": "ember-lance",
+        "id": "melee-attack",
         "tags": [
-          "spell",
-          "fire"
+          "attack",
+          "melee"
         ],
         "program": {
-          "kind": "when",
-          "predicate": {
-            "kind": "evidenceAtLeast",
-            "evidence": "spell-hit",
-            "minimum": 50
-          },
-          "thenProgram": {
-            "kind": "sequence",
-            "steps": [
-              {
-                "kind": "operation",
-                "operation": {
-                  "kind": "spendMagicka",
-                  "amount": 5
+          "kind": "sequence",
+          "steps": [
+            {
+              "kind": "operation",
+              "operation": {
+                "kind": "spendTrack",
+                "track": "stamina",
+                "amount": {
+                  "kind": "const",
+                  "value": 10
+                }
+              }
+            },
+            {
+              "kind": "when",
+              "predicate": {
+                "kind": "cmp",
+                "op": "lte",
+                "left": {
+                  "kind": "evidence",
+                  "id": "melee-attack.d100"
+                },
+                "right": {
+                  "kind": "min",
+                  "terms": [
+                    {
+                      "kind": "const",
+                      "value": 97
+                    },
+                    {
+                      "kind": "max",
+                      "terms": [
+                        {
+                          "kind": "const",
+                          "value": 3
+                        },
+                        {
+                          "kind": "add",
+                          "terms": [
+                            {
+                              "kind": "skill",
+                              "subject": "actor",
+                              "id": "long-blade"
+                            },
+                            {
+                              "kind": "armor",
+                              "subject": "target"
+                            },
+                            {
+                              "kind": "const",
+                              "value": -50
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
                 }
               },
-              {
+              "thenProgram": {
                 "kind": "operation",
                 "operation": {
                   "kind": "damage",
                   "target": {
                     "kind": "intentTarget"
                   },
-                  "amount": 12
+                  "amount": {
+                    "kind": "add",
+                    "terms": [
+                      {
+                        "kind": "weaponDice",
+                        "item": "iron-longsword"
+                      },
+                      {
+                        "kind": "divFloor",
+                        "left": {
+                          "kind": "sub",
+                          "left": {
+                            "kind": "stat",
+                            "subject": "actor",
+                            "id": "strength"
+                          },
+                          "right": {
+                            "kind": "const",
+                            "value": 50
+                          }
+                        },
+                        "right": {
+                          "kind": "const",
+                          "value": 5
+                        }
+                      }
+                    ]
+                  }
                 }
               }
-            ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "rat-bite",
+        "tags": [
+          "attack",
+          "melee"
+        ],
+        "program": {
+          "kind": "when",
+          "predicate": {
+            "kind": "cmp",
+            "op": "lte",
+            "left": {
+              "kind": "evidence",
+              "id": "rat-bite.d100"
+            },
+            "right": {
+              "kind": "min",
+              "terms": [
+                {
+                  "kind": "const",
+                  "value": 97
+                },
+                {
+                  "kind": "max",
+                  "terms": [
+                    {
+                      "kind": "const",
+                      "value": 3
+                    },
+                    {
+                      "kind": "add",
+                      "terms": [
+                        {
+                          "kind": "skill",
+                          "subject": "actor",
+                          "id": "hand-to-hand"
+                        },
+                        {
+                          "kind": "armor",
+                          "subject": "target"
+                        },
+                        {
+                          "kind": "const",
+                          "value": -50
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "thenProgram": {
+            "kind": "operation",
+            "operation": {
+              "kind": "damage",
+              "target": {
+                "kind": "intentTarget"
+              },
+              "amount": {
+                "kind": "dice",
+                "id": "rat-bite.damage",
+                "min": 1,
+                "max": 4
+              }
+            }
+          }
+        }
+      },
+      {
+        "id": "skeleton-strike",
+        "tags": [
+          "attack",
+          "melee"
+        ],
+        "program": {
+          "kind": "when",
+          "predicate": {
+            "kind": "cmp",
+            "op": "lte",
+            "left": {
+              "kind": "evidence",
+              "id": "skeleton-strike.d100"
+            },
+            "right": {
+              "kind": "min",
+              "terms": [
+                {
+                  "kind": "const",
+                  "value": 97
+                },
+                {
+                  "kind": "max",
+                  "terms": [
+                    {
+                      "kind": "const",
+                      "value": 3
+                    },
+                    {
+                      "kind": "add",
+                      "terms": [
+                        {
+                          "kind": "skill",
+                          "subject": "actor",
+                          "id": "long-blade"
+                        },
+                        {
+                          "kind": "armor",
+                          "subject": "target"
+                        },
+                        {
+                          "kind": "const",
+                          "value": -50
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "thenProgram": {
+            "kind": "operation",
+            "operation": {
+              "kind": "damage",
+              "target": {
+                "kind": "intentTarget"
+              },
+              "amount": {
+                "kind": "dice",
+                "id": "skeleton-strike.damage",
+                "min": 5,
+                "max": 15
+              }
+            }
           }
         }
       }
     ],
     "items": [
       {
-        "id": "ruby-ward",
-        "interceptor": {
-          "kind": "reduceDamage",
-          "amount": 3
+        "id": "iron-longsword",
+        "weapon": {
+          "damage": {
+            "min": 2,
+            "max": 16
+          },
+          "material": "iron",
+          "skill": "long-blade"
         }
       }
     ],
@@ -87,6 +593,26 @@
         "kind": "rejectTagWhileCondition",
         "tag": "spell",
         "condition": "silenced"
+      }
+    ],
+    "encounters": [
+      {
+        "id": "rat-introduction",
+        "name": "Rat Cellar",
+        "objective": "Defeat the rat and inspect its classic corpse marker.",
+        "routeCode": "Digit1",
+        "memberEntityIds": [
+          2007
+        ]
+      },
+      {
+        "id": "skeletal-guardroom",
+        "name": "Skeletal Guardroom",
+        "objective": "Defeat the tougher Skeletal Warrior and survive its slower, heavier attacks.",
+        "routeCode": "Digit2",
+        "memberEntityIds": [
+          2000
+        ]
       }
     ]
   }

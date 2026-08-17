@@ -1,0 +1,35 @@
+/**
+ * The core Dagger gameplay package: classic stat vocabulary, actors, actions,
+ * items, rules, and encounters composed into the deterministic envelope Rust
+ * admits. Materialization walks `packages/`; one entry per package.
+ */
+
+import { composePackage } from "../authoring/mod.js";
+import { actions } from "../catalogs/actions.js";
+import { actors } from "../catalogs/actors.js";
+import { encounters } from "../catalogs/encounters.js";
+import { items } from "../catalogs/items.js";
+import { rules } from "../catalogs/rules.js";
+import { stats } from "../catalogs/stats.js";
+
+export const gameplayPackage = composePackage({
+  packageId: "core",
+  version: 1,
+  sources: {
+    stats: "gameplay/src/catalogs/stats.ts",
+    actors: "gameplay/src/catalogs/actors.ts",
+    actions: "gameplay/src/catalogs/actions.ts",
+    items: "gameplay/src/catalogs/items.ts",
+    rules: "gameplay/src/catalogs/rules.ts",
+    encounters: "gameplay/src/catalogs/encounters.ts",
+  },
+  payload: {
+    schemaVersion: 1,
+    stats,
+    actors,
+    actions,
+    items,
+    rules,
+    encounters,
+  },
+});
