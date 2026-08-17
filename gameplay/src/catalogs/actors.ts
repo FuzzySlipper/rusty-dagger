@@ -1,16 +1,14 @@
 /**
- * Actor definitions: the player and table-driven classic monsters. Ids join
- * enemies to admitted projects by `mobileId` (arena2 identity).
+ * Non-table actor definitions: the player and class-career enemies.
+ * Table-driven monsters (Rat, Skeletal Warrior, and the full classic table)
+ * live in `monsters.ts`.
  *
- * Donor provenance (Utility/EnemyBasics.cs, MobileEnemy table — adapted):
- * - Rat (mobile 0): damage 1-4, health roll 9-16, level 1, armor value 6
- *   (×5 = 30 on the classic to-hit scale), vermin.
- * - Skeletal Warrior (mobile 15): damage 5-15, health roll 17-66, level 9,
- *   armor value 2 (×5 = 10), undead, sees through invisibility.
- *
- * Armor values use the classic convention: higher is EASIER to hit.
- * Behavior speeds/ranges are the current live tuning, carried over unchanged
- * from the starter experiment profile.
+ * Class-career enemies (donor: `Entities/EnemyEntity.cs SetEnemyCareer` +
+ * `Entities/DaggerfallEntity.cs GetClassCareerTemplate` — adapted) draw
+ * stats and career skill lists from the classic CLASS*.CFG career records
+ * in `local/arena2` (parsed per DFU's ClassFile layout). Enemy skills are
+ * level-derived (min(100, level * 5 + 30)); class enemies level to the
+ * player in classic — table values carry that derivation at level 1.
  */
 
 import {
@@ -39,7 +37,7 @@ export const actors: readonly ActorDefinition[] = [
       speed: 50,
       luck: 50,
     },
-    skills: { "long-blade": 60 },
+    skills: { "long-blade": 60, "hand-to-hand": 40, medical: 30, backstabbing: 30 },
     armorValue: 0,
     moveSpeed: 3.5,
     tracks: [
@@ -48,7 +46,8 @@ export const actors: readonly ActorDefinition[] = [
         "health",
         add(constant(25), divFloor(mul(stat("actor", "endurance"), constant(3)), constant(2))),
       ),
-      // (strength + endurance) * 1
+      // (strength + endurance) * 1 — simplified stamina profile, not the
+      // classic (strength + endurance) * 64 fatigue units (see derived.ts)
       track(
         "stamina",
         mul(add(stat("actor", "strength"), stat("actor", "endurance")), constant(1)),
@@ -57,61 +56,51 @@ export const actors: readonly ActorDefinition[] = [
     ],
   }),
 
-  actor("rat", {
-    kind: "monster",
-    mobileId: 0,
+  // Thief (mobile 138, class career CLASS10.CFG): attributes and career
+  // skills from the classic record; health 10 + level rolls of 1-10
+  // (RollEnemyClassMaxHealth at level 1).
+  actor("thief", {
+    kind: "enemy-class",
+    mobileId: 138,
     stats: {
-      strength: 10,
-      endurance: 10,
-      intelligence: 0,
-      willpower: 0,
-      agility: 40,
-      personality: 0,
-      speed: 50,
+      strength: 45,
+      intelligence: 47,
+      willpower: 45,
+      agility: 58,
+      endurance: 50,
+      personality: 47,
+      speed: 58,
       luck: 50,
     },
-    skills: { "hand-to-hand": 60 },
-    armorValue: 30,
+    skills: {
+      pickpocket: 35,
+      stealth: 35,
+      "short-blade": 35,
+      backstabbing: 35,
+      climbing: 35,
+      lockpicking: 35,
+      "critical-strike": 35,
+      jumping: 35,
+      running: 35,
+      dodging: 35,
+      streetwise: 35,
+      mercantile: 35,
+    },
+    // No armor: class enemies armor from equipment, not yet modeled.
+    armorValue: 0,
     tracks: [
-      track("health", dice("rat.health", 9, 16)),
+      track("health", dice("thief.health", 11, 20)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    behavior: behavior("rat-bite", {
-      detectionRange: 6.0,
-      patrolSpeed: 1.0,
-      chaseSpeed: 2.0,
-      attackRange: 1.25,
-      attackCooldownSeconds: 1.5,
-    }),
-  }),
-
-  actor("skeletal-warrior", {
-    kind: "monster",
-    mobileId: 15,
-    stats: {
-      strength: 35,
-      endurance: 30,
-      intelligence: 0,
-      willpower: 10,
-      agility: 40,
-      personality: 0,
-      speed: 40,
-      luck: 50,
-    },
-    skills: { "long-blade": 65 },
-    armorValue: 10,
-    tracks: [
-      track("health", dice("skeletal-warrior.health", 17, 66)),
-      track("stamina", constant(0)),
-      track("magicka", constant(0)),
-    ],
-    behavior: behavior("skeleton-strike", {
+    behavior: behavior("thief-strike", {
       detectionRange: 8.0,
-      patrolSpeed: 0.8,
-      chaseSpeed: 1.5,
+      patrolSpeed: 1.0,
+      chaseSpeed: 2.5,
       attackRange: 1.5,
-      attackCooldownSeconds: 2.0,
+      attackCooldownSeconds: 1.2,
     }),
+    team: "criminals",
+    lootTableKey: "T",
   }),
 ];

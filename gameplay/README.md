@@ -11,8 +11,11 @@ meaning, and is the only evaluator. See `docs/gameplay-resolution.md`.
 - `src/authoring/` — the grammar: expressions, programs, definition shapes,
   envelope composition. `mod.ts` is the single import surface for catalogs.
 - `src/catalogs/` — the everyday editing surface, one file per domain
-  (`stats`, `actors`, `actions`, `items`, `rules`, `encounters`). Entries
-  read as data with builder helpers, not control flow.
+  (`stats`, `actors`, `monsters`, `actions`, `items`, `rules`, `encounters`,
+  `derived`). Entries read as data with builder helpers, not control flow.
+  `actors` holds the player and class-career enemies; `monsters` holds the
+  full classic table-driven monster table; `derived` holds the named
+  classic formula catalog.
 - `src/packages/` — one entry per package composing catalogs into the
   deterministic envelope. Materialization walks this directory.
 

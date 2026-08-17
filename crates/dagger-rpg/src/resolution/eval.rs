@@ -421,6 +421,51 @@ pub fn set_actor_track(
     Ok(())
 }
 
+/// Evaluate one named derived rule against an actor definition's base
+/// stats. Derived rules are the classic formula catalog; action resolution
+/// and diagnostics evaluate them through this one authority.
+pub fn evaluate_derived_rule(
+    catalog: &DaggerGameplayCatalog,
+    rule_id: &str,
+    actor_id: &str,
+    evidence: &[DaggerEvidence],
+) -> Result<i64, DaggerGameplayError> {
+    let rule = catalog
+        .derived()
+        .get(rule_id)
+        .ok_or_else(|| DaggerGameplayError::InvalidValue {
+            path: format!("derived[{rule_id}]"),
+            reason: "unknown derived rule".to_string(),
+        })?;
+    let definition =
+        catalog
+            .actors()
+            .get(actor_id)
+            .ok_or_else(|| DaggerGameplayError::InvalidValue {
+                path: format!("actors[{actor_id}]"),
+                reason: "unknown actor definition".to_string(),
+            })?;
+    let base_stats: BTreeMap<String, i64> = definition
+        .stats
+        .iter()
+        .chain(definition.skills.iter())
+        .map(|(id, value)| (id.clone(), *value))
+        .collect();
+    let context = ExprContext {
+        catalog,
+        actor: ActorExprValues {
+            definition,
+            stats: &base_stats,
+        },
+        target: None,
+        evidence,
+    };
+    evaluate_expr(&rule.expr, &context).map_err(|rejection| DaggerGameplayError::InvalidValue {
+        path: format!("derived[{rule_id}]"),
+        reason: format!("evaluation rejected: {rejection:?}"),
+    })
+}
+
 /// Spawn one actor instance: evaluate the definition's derived track
 /// maximums (roll evidence supplied by the caller, so spawns are
 /// deterministic and replayable), create the entity, and attach the

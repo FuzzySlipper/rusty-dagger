@@ -362,7 +362,7 @@ fn binary64_behavior_tuning_crosses_admission_at_one_f32_boundary() {
     // Common decimal, exact multiplier, and a small range value all cross
     // without extra precision loss beyond the single f64 -> f32 boundary.
     let catalog = compile_with(
-        &["payload", "actors", "1", "behavior", "patrolSpeed"],
+        &["payload", "actors", "2", "behavior", "patrolSpeed"],
         serde_json::Value::from(0.1),
     )
     .expect("0.1 patrol speed admits");
@@ -375,7 +375,7 @@ fn binary64_behavior_tuning_crosses_admission_at_one_f32_boundary() {
         0.1_f32
     );
     let catalog = compile_with(
-        &["payload", "actors", "1", "behavior", "patrolSpeed"],
+        &["payload", "actors", "2", "behavior", "patrolSpeed"],
         serde_json::Value::from(1.5),
     )
     .expect("1.5 patrol speed admits");
@@ -388,7 +388,7 @@ fn binary64_behavior_tuning_crosses_admission_at_one_f32_boundary() {
         1.5_f32
     );
     let catalog = compile_with(
-        &["payload", "actors", "1", "behavior", "detectionRange"],
+        &["payload", "actors", "2", "behavior", "detectionRange"],
         serde_json::Value::from(0.005),
     )
     .expect("small detection range admits");
@@ -403,7 +403,7 @@ fn binary64_behavior_tuning_crosses_admission_at_one_f32_boundary() {
 
     // Negative zero normalizes to zero where the field permits zero.
     let catalog = compile_with(
-        &["payload", "actors", "1", "behavior", "patrolSpeed"],
+        &["payload", "actors", "2", "behavior", "patrolSpeed"],
         serde_json::Value::from(-0.0),
     )
     .expect("negative zero patrol speed admits");
@@ -419,21 +419,21 @@ fn binary64_behavior_tuning_crosses_admission_at_one_f32_boundary() {
     // Dagger semantic ranges reject out-of-range and non-finite values.
     assert!(matches!(
         compile_with(
-            &["payload", "actors", "1", "behavior", "detectionRange"],
+            &["payload", "actors", "2", "behavior", "detectionRange"],
             serde_json::Value::from(2000.0)
         ),
         Err(DaggerGameplayError::InvalidValue { .. })
     ));
     assert!(matches!(
         compile_with(
-            &["payload", "actors", "1", "behavior", "detectionRange"],
+            &["payload", "actors", "2", "behavior", "detectionRange"],
             serde_json::Value::from(0.0005)
         ),
         Err(DaggerGameplayError::InvalidValue { .. })
     ));
     assert!(matches!(
         compile_with(
-            &["payload", "actors", "1", "behavior", "detectionRange"],
+            &["payload", "actors", "2", "behavior", "detectionRange"],
             serde_json::Value::from(f64::NAN)
         ),
         Err(DaggerGameplayError::Payload(_)) | Err(DaggerGameplayError::InvalidValue { .. })
@@ -465,7 +465,7 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
 
     // Behavior referencing an unknown action.
     let mut mutated = package.clone();
-    mutated["payload"]["actors"][1]["behavior"]["action"] = serde_json::Value::from("rat-explode");
+    mutated["payload"]["actors"][2]["behavior"]["action"] = serde_json::Value::from("rat-explode");
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
         Err(DaggerGameplayError::InvalidValue { .. })
@@ -473,7 +473,7 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
 
     // Dice with min > max.
     let mut mutated = package.clone();
-    mutated["payload"]["actors"][1]["tracks"][0]["max"] = serde_json::json!({
+    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
         "kind": "dice", "id": "rat.health", "min": 16, "max": 9
     });
     assert!(matches!(
@@ -483,7 +483,13 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
 
     // weaponDice referencing an item without a weapon block.
     let mut mutated = package.clone();
-    mutated["payload"]["items"][0] = serde_json::json!({ "id": "iron-longsword" });
+    let longsword_index = mutated["payload"]["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .position(|item| item["id"] == "iron-longsword")
+        .expect("iron-longsword in the package");
+    mutated["payload"]["items"][longsword_index] = serde_json::json!({ "id": "iron-longsword" });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
         Err(DaggerGameplayError::InvalidValue { .. })
@@ -491,7 +497,7 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
 
     // Duplicate actor id.
     let mut mutated = package.clone();
-    let rat = mutated["payload"]["actors"][1].clone();
+    let rat = mutated["payload"]["actors"][2].clone();
     mutated["payload"]["actors"]
         .as_array_mut()
         .unwrap()

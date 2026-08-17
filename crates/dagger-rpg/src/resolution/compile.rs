@@ -7,14 +7,14 @@ use super::{
     AuthoredGameplayPayload, AuthoredInterceptor, AuthoredItemDefinition, AuthoredOperation,
     AuthoredPredicate, AuthoredProgram, AuthoredRuleDefinition, AuthoredSelector, AuthoredSubject,
     DaggerActionDefinition, DaggerActorDefinition, DaggerActorKind, DaggerBehaviorDefinition,
-    DaggerCmpOp, DaggerEncounterDefinition, DaggerExpr, DaggerGameplayCatalog, DaggerGameplayError,
-    DaggerInterceptorKind, DaggerItemDefinition, DaggerOperation, DaggerPredicate, DaggerProgram,
-    DaggerRuleDefinition, DaggerSelector, DaggerStatsSection, DaggerSubject, DaggerTrackDefinition,
-    DaggerWeaponDefinition, DAGGER_GAMEPLAY_SCHEMA_VERSION, MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS,
-    MAX_DAGGER_ACTORS, MAX_DAGGER_DECLARED_IDS, MAX_DAGGER_ENCOUNTERS,
-    MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_EXPR_DEPTH, MAX_DAGGER_EXPR_NODES,
-    MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_PROGRAM_DEPTH, MAX_DAGGER_PROGRAM_NODES,
-    MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
+    DaggerCmpOp, DaggerDerivedRule, DaggerEncounterDefinition, DaggerExpr, DaggerGameplayCatalog,
+    DaggerGameplayError, DaggerInterceptorKind, DaggerItemDefinition, DaggerOperation,
+    DaggerPredicate, DaggerProgram, DaggerRuleDefinition, DaggerSelector, DaggerStatsSection,
+    DaggerSubject, DaggerTrackDefinition, DaggerWeaponDefinition, DAGGER_GAMEPLAY_SCHEMA_VERSION,
+    MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS, MAX_DAGGER_ACTORS, MAX_DAGGER_DECLARED_IDS,
+    MAX_DAGGER_DERIVED, MAX_DAGGER_ENCOUNTERS, MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_EXPR_DEPTH,
+    MAX_DAGGER_EXPR_NODES, MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_PROGRAM_DEPTH,
+    MAX_DAGGER_PROGRAM_NODES, MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
 };
 
 const MIN_TUNING_VALUE: f64 = 0.001;
@@ -68,6 +68,7 @@ pub fn compile_gameplay_package(
         payload.encounters.len(),
         MAX_DAGGER_ENCOUNTERS,
     )?;
+    enforce_quota("derived", payload.derived.len(), MAX_DAGGER_DERIVED)?;
 
     let stats = compile_stats(&payload)?;
     let mechanics = super::mechanics::compile_mechanics_catalog(&stats)?;
@@ -76,6 +77,7 @@ pub fn compile_gameplay_package(
     let actors = compile_actors(payload.actors, &stats, &actions, &items)?;
     let rules = compile_rules(payload.rules)?;
     let encounters = compile_encounters(payload.encounters)?;
+    let derived = compile_derived(payload.derived, &stats, &items)?;
     Ok(DaggerGameplayCatalog::new(
         package.fingerprint().as_str().to_string(),
         stats,
@@ -84,8 +86,38 @@ pub fn compile_gameplay_package(
         items,
         rules,
         encounters,
+        derived,
         mechanics,
     ))
+}
+
+fn compile_derived(
+    definitions: Vec<super::AuthoredDerivedRule>,
+    stats: &DaggerStatsSection,
+    items: &BTreeMap<String, DaggerItemDefinition>,
+) -> Result<BTreeMap<String, DaggerDerivedRule>, DaggerGameplayError> {
+    let mut derived = BTreeMap::new();
+    for (index, rule) in definitions.into_iter().enumerate() {
+        validate_id(&format!("payload.derived[{index}].id"), &rule.id)?;
+        let mut nodes = 0_usize;
+        let expr = compile_expr(rule.expr, &mut nodes, 0, stats, items)?;
+        if derived
+            .insert(
+                rule.id.clone(),
+                DaggerDerivedRule {
+                    id: rule.id.clone(),
+                    expr,
+                },
+            )
+            .is_some()
+        {
+            return Err(DaggerGameplayError::DuplicateId {
+                kind: "derived rule",
+                id: rule.id,
+            });
+        }
+    }
+    Ok(derived)
 }
 
 fn compile_stats(
@@ -258,6 +290,7 @@ fn compile_actors(
         let kind = match actor.kind {
             super::AuthoredActorKind::Player => DaggerActorKind::Player,
             super::AuthoredActorKind::Monster => DaggerActorKind::Monster,
+            super::AuthoredActorKind::EnemyClass => DaggerActorKind::EnemyClass,
         };
         let move_speed = actor
             .move_speed
@@ -384,6 +417,11 @@ fn compile_actors(
                     tracks,
                     move_speed,
                     behavior,
+                    level: actor.level.map(|value| value.0),
+                    weight: actor.weight.map(|value| value.0),
+                    min_metal_to_hit: actor.min_metal_to_hit,
+                    team: actor.team,
+                    loot_table_key: actor.loot_table_key,
                 },
             )
             .is_some()
