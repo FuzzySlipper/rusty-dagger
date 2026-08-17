@@ -49,6 +49,7 @@ pub fn compile_gameplay_package(
     )?;
 
     let stats = compile_stats(&payload)?;
+    let mechanics = super::mechanics::compile_mechanics_catalog(&stats)?;
     let items = compile_items(payload.items, &stats)?;
     let actions = compile_actions(payload.actions, &stats, &items)?;
     let actors = compile_actors(payload.actors, &stats, &actions, &items)?;
@@ -62,6 +63,7 @@ pub fn compile_gameplay_package(
         items,
         rules,
         encounters,
+        mechanics,
     ))
 }
 

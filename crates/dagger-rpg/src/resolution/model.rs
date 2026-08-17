@@ -1,5 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use rusty_engine::core_ids::EntityId;
+use rusty_engine::entity_state::EntityState;
+use rusty_engine::gameplay_mechanics::{
+    gameplay_component_registry, MechanicsCatalog, TrackId, TracksComponent,
+};
 use rusty_engine::gameplay_resolution::{
     AttemptStatus, CommitStatus, Program, ResolutionMode, ResolutionReceipt,
 };
@@ -260,7 +265,7 @@ pub struct AuthoredEncounterDefinition {
     pub member_entity_ids: Vec<u64>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct DaggerGameplayCatalog {
     fingerprint: String,
     stats: DaggerStatsSection,
@@ -269,6 +274,7 @@ pub struct DaggerGameplayCatalog {
     items: BTreeMap<String, DaggerItemDefinition>,
     rules: Vec<DaggerRuleDefinition>,
     encounters: BTreeMap<String, DaggerEncounterDefinition>,
+    mechanics: MechanicsCatalog,
 }
 
 impl DaggerGameplayCatalog {
@@ -300,6 +306,12 @@ impl DaggerGameplayCatalog {
         &self.encounters
     }
 
+    /// The Engine mechanics catalog admitted from this package's declared
+    /// stats and tracks. All durable stat/track state resolves through it.
+    pub fn mechanics(&self) -> &MechanicsCatalog {
+        &self.mechanics
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         fingerprint: String,
@@ -309,6 +321,7 @@ impl DaggerGameplayCatalog {
         items: BTreeMap<String, DaggerItemDefinition>,
         rules: Vec<DaggerRuleDefinition>,
         encounters: BTreeMap<String, DaggerEncounterDefinition>,
+        mechanics: MechanicsCatalog,
     ) -> Self {
         Self {
             fingerprint,
@@ -318,6 +331,7 @@ impl DaggerGameplayCatalog {
             items,
             rules,
             encounters,
+            mechanics,
         }
     }
 }
@@ -480,9 +494,28 @@ pub struct DaggerEncounterDefinition {
     pub member_entity_ids: Vec<u64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// Mechanics-backed live gameplay state: an entity-state store holding the
+/// Engine's stat/track components, plus Dagger-owned actor bindings (which
+/// catalog definition each actor embodies, conditions, carried items).
+#[derive(Debug, Clone)]
 pub struct DaggerGameplayState {
+    entities: EntityState,
     actors: BTreeMap<String, DaggerActorState>,
+    next_entity: u64,
+}
+
+impl Default for DaggerGameplayState {
+    fn default() -> Self {
+        Self {
+            entities: EntityState::from_definitions_with_registry(
+                gameplay_component_registry().expect("gameplay component registry is valid"),
+                [],
+            )
+            .expect("gameplay component registry admits an empty state"),
+            actors: BTreeMap::new(),
+            next_entity: 1,
+        }
+    }
 }
 
 impl DaggerGameplayState {
@@ -498,47 +531,61 @@ impl DaggerGameplayState {
         &self.actors
     }
 
-    pub(crate) fn actor_mut(&mut self, id: &str) -> Option<&mut DaggerActorState> {
-        self.actors.get_mut(id)
+    pub fn entities(&self) -> &EntityState {
+        &self.entities
+    }
+
+    pub(crate) fn entities_mut(&mut self) -> &mut EntityState {
+        &mut self.entities
+    }
+
+    pub(crate) fn allocate_entity(&mut self) -> EntityId {
+        let raw = self.next_entity;
+        self.next_entity = self.next_entity.saturating_add(1);
+        EntityId::new(raw)
+    }
+
+    /// Current value of one actor's track from the mechanics component.
+    pub fn track_value(&self, id: &str, track: &str) -> Option<i64> {
+        let binding = self.actors.get(id)?;
+        let component = self
+            .entities
+            .component::<TracksComponent>(binding.entity())
+            .ok()??;
+        let track_id = TrackId::parse(track).ok()?;
+        component.current(&track_id).map(|value| value.get())
     }
 }
 
-/// Live state of one actor instance: which catalog definition it embodies,
-/// current track values, conditions, and carried items. Track maximums are
-/// derived rules on the definition; this struct holds only live values.
+/// Live binding of one actor instance: its entity (which carries the
+/// mechanics stat/track components), which catalog definition it embodies,
+/// and Dagger-owned condition/item sets. Conditions stay Dagger-owned until
+/// spell effects introduce the Engine's active-effects model; carried items
+/// stay Dagger-owned until the loot campaign introduces inventories.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DaggerActorState {
+    entity: EntityId,
     definition: String,
-    tracks: BTreeMap<String, i64>,
     conditions: BTreeSet<String>,
     items: BTreeSet<String>,
 }
 
 impl DaggerActorState {
-    pub fn new(definition: impl Into<String>) -> Self {
+    pub fn new(entity: EntityId, definition: impl Into<String>) -> Self {
         Self {
+            entity,
             definition: definition.into(),
-            tracks: BTreeMap::new(),
             conditions: BTreeSet::new(),
             items: BTreeSet::new(),
         }
     }
 
+    pub const fn entity(&self) -> EntityId {
+        self.entity
+    }
+
     pub fn definition(&self) -> &str {
         &self.definition
-    }
-
-    pub fn with_track(mut self, id: impl Into<String>, value: i64) -> Self {
-        self.tracks.insert(id.into(), value.max(0));
-        self
-    }
-
-    pub fn track(&self, id: &str) -> Option<i64> {
-        self.tracks.get(id).copied()
-    }
-
-    pub fn tracks(&self) -> &BTreeMap<String, i64> {
-        &self.tracks
     }
 
     pub fn conditions(&self) -> &BTreeSet<String> {
@@ -555,40 +602,6 @@ impl DaggerActorState {
 
     pub fn add_item(&mut self, item: impl Into<String>) {
         self.items.insert(item.into());
-    }
-
-    pub(crate) fn spend_track(
-        &mut self,
-        track: &str,
-        amount: i64,
-    ) -> Result<(), DaggerTransactionError> {
-        if amount < 0 {
-            return Err(DaggerTransactionError::InvalidEffect(
-                "spend amount must be non-negative".to_string(),
-            ));
-        }
-        let available = self.tracks.get(track).copied().unwrap_or(0);
-        if available < amount {
-            return Err(DaggerTransactionError::InsufficientTrack {
-                track: track.to_string(),
-                available,
-                required: amount,
-            });
-        }
-        self.tracks.insert(track.to_string(), available - amount);
-        Ok(())
-    }
-
-    pub(crate) fn apply_damage(&mut self, amount: i64) -> Result<(), DaggerTransactionError> {
-        if amount < 0 {
-            return Err(DaggerTransactionError::InvalidEffect(
-                "damage must be non-negative".to_string(),
-            ));
-        }
-        let health = self.tracks.get("health").copied().unwrap_or(0);
-        self.tracks
-            .insert("health".to_string(), health.saturating_sub(amount).max(0));
-        Ok(())
     }
 }
 
@@ -615,10 +628,26 @@ pub struct DaggerAdmittedIntent {
     pub origin: DaggerIntentOrigin,
 }
 
+/// Materialized per-actor facts gathered for one resolution: current track
+/// values read from the mechanics components plus the Dagger-owned sets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerActorFacts {
+    pub definition: String,
+    pub tracks: BTreeMap<String, i64>,
+    pub conditions: BTreeSet<String>,
+    pub items: BTreeSet<String>,
+}
+
+impl DaggerActorFacts {
+    pub fn track(&self, id: &str) -> Option<i64> {
+        self.tracks.get(id).copied()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DaggerFacts {
-    pub actor: DaggerActorState,
-    pub target: DaggerActorState,
+    pub actor: DaggerActorFacts,
+    pub target: DaggerActorFacts,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -713,12 +742,7 @@ pub struct DaggerSuspension {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DaggerTransactionError {
     UnknownActor(String),
-    InsufficientTrack {
-        track: String,
-        available: i64,
-        required: i64,
-    },
-    InvalidEffect(String),
+    Mechanics(String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

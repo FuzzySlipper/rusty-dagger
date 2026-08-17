@@ -138,10 +138,14 @@ curl http://127.0.0.1:4310/health
   the X11 native host remains the separate fixed-surface diagnostic above.
 - Gameplay lab: the Angular surface edits the same schema-1 document as
   `data/experiments/privateers-hold-starter.json`. Rust atomically admits the
-  complete candidate, installs movement speed plus player/Rat stats, calculates
-  and explains fixed health, stamina, and magicka rules, retains the latest 16
-  Apply calculations, resets the playable run to the committed start, and
-  exposes live authoritative position/resource/controller readback. Rat
+  complete candidate, installs movement speed plus combat and behavior terms,
+  and explains the document's fixed health, stamina, and magicka rules.
+  Durable live stats and tracks are bound to the committed gameplay package
+  (`data/gameplay/dagger-core.package.json`, authored in `gameplay/src/`)
+  through the Engine's mechanics components and services — document stat
+  edits no longer change live actor values. The run resets to catalog spawn
+  values, and the surface exposes live authoritative
+  position/resource/controller readback. Rat
   gameplay values key to Arena2 mobile ID 0 without duplicating classic
   identity data in `dagger-rpg`. Invalid candidates leave the active experiment
   untouched. Its live content browser exposes the

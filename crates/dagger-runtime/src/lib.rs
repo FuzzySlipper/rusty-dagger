@@ -310,8 +310,11 @@ mod tests {
             .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
             .expect("apply experiment");
         assert_eq!(readout.move_speed_units_per_second, 7.0);
-        assert_eq!(readout.max_health, 115.0);
-        assert_eq!(readout.player_stats.max_stamina, 110.0);
+        // 7045: the applied document still owns movement/combat/behavior, but
+        // durable stats/tracks are bound to the gameplay package — document
+        // stat edits no longer change live state (player health 85, stamina 90).
+        assert_eq!(readout.max_health, 85.0);
+        assert_eq!(readout.player_stats.max_stamina, 90.0);
         let rat_stats = readout
             .enemy_stats
             .iter()
@@ -328,8 +331,8 @@ mod tests {
         let reset = runtime.reset_play_session().expect("reset live run");
         assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
         assert_eq!(reset.move_speed_units_per_second, 7.0);
-        assert_eq!(reset.current_health, 115.0);
-        assert_eq!(reset.player_stats.current_stamina, 110.0);
+        assert_eq!(reset.current_health, 85.0);
+        assert_eq!(reset.player_stats.current_stamina, 90.0);
     }
 
     #[test]
@@ -362,8 +365,10 @@ mod tests {
             .expect("committed Rat identity");
         let rat_resources = rat.live.resources.expect("Rat live resources");
         assert_eq!(rat.reference.mobile_name, "Rat");
-        assert_eq!(rat_resources.current_health, 3.0);
-        assert_eq!(rat_resources.current_stamina, 10.0);
+        // 7045: live resources come from the gameplay package — Rat health is
+        // the deterministic spawn roll of the classic 9-16 range.
+        assert!((9.0..=16.0).contains(&rat_resources.current_health));
+        assert_eq!(rat_resources.current_stamina, 0.0);
 
         let jumped = runtime.jump_to_content(2001).expect("jump beside thief");
         assert_eq!(jumped.focused_content_id, Some(2001));
@@ -439,7 +444,7 @@ mod tests {
         assert!(record.line_of_sight_clear);
         assert!(record.resolution.hit);
         assert!(record.resolution.died);
-        assert_eq!(record.resolution.health_before, 3.0);
+        assert_eq!(record.resolution.health_before, 14.0);
         assert_eq!(record.resolution.health_after, 0.0);
         let accepted = attacked
             .combat_attempts
@@ -454,9 +459,9 @@ mod tests {
             .expect("accepted attack starts visible Rust action state");
         assert_eq!(melee.phase, super::MeleePresentationPhase::Contact);
         assert_eq!(melee.target_id, Some(2007));
-        assert_eq!(melee.target_health_before, Some(3.0));
+        assert_eq!(melee.target_health_before, Some(14.0));
         assert_eq!(melee.target_health_after, Some(0.0));
-        assert_eq!(melee.target_max_health, Some(3.0));
+        assert_eq!(melee.target_max_health, Some(14.0));
         assert_eq!(melee.final_damage, Some(15.0));
         assert!(melee.died);
         let rat = attacked
@@ -520,7 +525,7 @@ mod tests {
                 .resources
                 .unwrap()
                 .current_health,
-            3.0
+            14.0
         );
 
         experiment["player"]["combat"]["staminaCost"] = serde_json::Value::from(100.0);
@@ -720,9 +725,10 @@ mod tests {
 
         let mut fragile: serde_json::Value =
             serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        fragile["player"]["stats"]["attributes"]["endurance"] = serde_json::Value::from(0.0);
-        fragile["player"]["stats"]["resources"]["baseHealth"] = serde_json::Value::from(1.0);
-        fragile["enemies"][1]["behavior"]["attackDamage"] = serde_json::Value::from(20.0);
+        // 7045: document stat edits no longer shrink live player health (it
+        // stays the catalog 85), so the defeat profile drives it with lethal
+        // enemy damage instead.
+        fragile["enemies"][1]["behavior"]["attackDamage"] = serde_json::Value::from(200.0);
         runtime
             .apply_experiment_json(&serde_json::to_string(&fragile).unwrap())
             .expect("apply fragile profile");
