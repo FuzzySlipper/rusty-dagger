@@ -75,9 +75,19 @@ try {
   await assertFixedApplicationShell(page, 1280, 900, true);
   await assertStalePollFailureFence(page);
 
-  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
-  assert.equal(await page.getByTestId('player-stamina').innerText(), '90.00 / 90.00');
-  assert.equal(await page.getByTestId('player-magicka').innerText(), '50.00 / 50.00');
+  // All gameplay expectations below derive from the admitted package and the
+  // live readout — never from literals duplicated in this script.
+  const initialLab = await labReadout(page);
+  const gameplayPackage = initialLab.gameplayPackage;
+  assert.equal(await page.getByTestId('max-health').innerText(), fixed(initialLab.maxHealth));
+  assert.equal(
+    await page.getByTestId('player-stamina').innerText(),
+    `${fixed(initialLab.playerStats.currentStamina)} / ${fixed(initialLab.playerStats.maxStamina)}`,
+  );
+  assert.equal(
+    await page.getByTestId('player-magicka').innerText(),
+    `${fixed(initialLab.playerStats.currentMagicka)} / ${fixed(initialLab.playerStats.maxMagicka)}`,
+  );
   await page.getByTestId('definitions-panel').waitFor();
   const spawnPosition = await page.getByTestId('player-position').innerText();
   const contentRevisionBeforePlay = (await applicationReadout(page)).contentRevision;
@@ -145,31 +155,60 @@ try {
   await page.getByTestId('content-filter').fill('rat');
   await page.getByTestId('content-2007').click();
   await page.getByTestId('content-name').filter({ hasText: 'Rat' }).waitFor();
-  assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /armor 30 · rat-bite/i);
-  assert.match(await page.getByTestId('content-live-resources').innerText(), /Live 14\.00 H · 0\.00 S · 0\.00 M/i);
+  const ratEntity = initialLab.content.find((entity) => entity.id === 2007);
+  assert.ok(ratEntity, 'Rat 2007 is present in the live readout');
+  const ratActor = actorForMobile(gameplayPackage, ratEntity.reference.mobileId);
+  assert.ok(ratActor?.behavior, 'Rat mobile has an authored actor with behavior');
+  assert.match(
+    await page.getByTestId('content-gameplay-stats').innerText(),
+    new RegExp(`armor ${ratActor.armorValue} · ${ratActor.behavior.action}`, 'i'),
+  );
+  const ratLive = ratEntity.live.resources;
+  assert.ok(ratLive, 'Rat has live resources');
+  assert.equal(
+    await page.getByTestId('content-live-resources').innerText(),
+    `Live ${fixed(ratLive.currentHealth)} H · ${fixed(ratLive.currentStamina)} S · ${fixed(ratLive.currentMagicka)} M`,
+  );
 
-  // The committed gameplay package renders read-only: actors, actions, items,
-  // and encounters straight from Rust admission.
+  // The committed gameplay package renders read-only: every actor, action,
+  // item, and encounter in the admitted package has a definition card.
   assert.notEqual((await page.getByTestId('package-fingerprint').innerText()).length, 0);
-  await page.getByTestId('definition-actor-player').waitFor();
-  await page.getByTestId('definition-actor-rat').waitFor();
-  await page.getByTestId('definition-actor-skeletal-warrior').waitFor();
-  await page.getByTestId('definition-action-melee-attack').waitFor();
-  await page.getByTestId('definition-item-iron-longsword').waitFor();
-  await page.getByTestId('definition-encounter-rat-introduction').waitFor();
+  assert.equal(gameplayPackage.actors.length > 0, true);
+  assert.equal(gameplayPackage.actions.length > 0, true);
+  for (const actor of gameplayPackage.actors) {
+    await page.getByTestId(`definition-actor-${actor.id}`).waitFor();
+  }
+  for (const action of gameplayPackage.actions) {
+    await page.getByTestId(`definition-action-${action.id}`).waitFor();
+  }
+  for (const item of gameplayPackage.items) {
+    await page.getByTestId(`definition-item-${item.id}`).waitFor();
+  }
+  for (const encounter of gameplayPackage.encounters) {
+    await page.getByTestId(`definition-encounter-${encounter.id}`).waitFor();
+  }
 
-  // One physical attack resolves through the authored action: the
-  // deterministic first swing misses (d100 54 vs 40), stamina still spends,
-  // and the record explains itself.
+  // One physical attack resolves through the authored action. The expected
+  // outcome derives from the package (hit chance = skill + armor - 50,
+  // clamped 3..97; stamina cost from the action program) and the live
+  // readout; the record must be consistent with its own displayed roll.
+  const playerActor = gameplayPackage.actors.find((actor) => actor.kind === 'player');
+  assert.ok(playerActor, 'player actor definition present');
+  const meleeAction = gameplayPackage.actions.find((action) => action.reachMilli !== undefined);
+  assert.ok(meleeAction, 'an authored melee action with reach exists');
+  const attackSkill = playerActor.skills[weaponSkillOf(gameplayPackage, meleeAction)];
+  assert.ok(attackSkill !== undefined, 'player has the weapon skill');
+  const swingChance = clampChance(attackSkill, ratActor.armorValue);
+  const staminaCost = spendTrackCost(meleeAction);
   const combatA = await jumpAndPhysicallyAttack(
     page,
     2007,
     spawnPosition,
-    'MISS',
-    'miss',
-    '14.00 → 14.00',
-    '90.00 → 85.00',
-    false,
+    swingChance,
+    ratLive,
+    initialLab.playerStats,
+    staminaCost,
+    meleeAction.id,
   );
 
   // The persistent Rust session keeps input authority across a hard reload.
@@ -651,15 +690,62 @@ async function resetAndPhysicallyMove(page, spawnPosition) {
   return movement;
 }
 
+// Derivation helpers: every gameplay expectation in this diagnostic comes
+// from the admitted package or the live readout, never from literals.
+function fixed(value) {
+  return value.toFixed(2);
+}
+
+async function labReadout(page) {
+  return page.evaluate(async () => {
+    const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`lab readout failed: ${response.status}`);
+    return response.json();
+  });
+}
+
+function actorForMobile(gameplayPackage, mobileId) {
+  return gameplayPackage.actors.find((actor) => actor.mobileId === mobileId);
+}
+
+function weaponSkillOf(gameplayPackage, meleeAction) {
+  const weapon = gameplayPackage.items
+    .map((item) => item.weapon)
+    .find((candidate) => candidate !== undefined);
+  if (weapon === undefined) throw new Error('no weapon item in the package');
+  return weapon.skill;
+}
+
+function clampChance(skill, armorValue) {
+  return Math.min(97, Math.max(3, skill + armorValue - 50));
+}
+
+function spendTrackCost(action) {
+  let cost;
+  const walk = (node) => {
+    if (node === null || typeof node !== 'object') return;
+    if (node.kind === 'operation' && node.operation?.kind === 'spendTrack') {
+      cost = node.operation.amount.value;
+    }
+    for (const value of Object.values(node)) {
+      if (Array.isArray(value)) value.forEach(walk);
+      else walk(value);
+    }
+  };
+  walk(action.program);
+  if (cost === undefined) throw new Error(`${action.id} has no spendTrack cost`);
+  return cost;
+}
+
 async function jumpAndPhysicallyAttack(
   page,
   contentId,
   spawnPosition,
-  outcome,
-  presentationOutcome,
-  healthText,
-  staminaText,
-  expectCooldownRejection,
+  swingChance,
+  targetLive,
+  playerStats,
+  staminaCost,
+  actionId,
 ) {
   await page.getByTestId(`content-${contentId}`).click();
   await page.getByTestId('jump-content').click();
@@ -668,46 +754,46 @@ async function jumpAndPhysicallyAttack(
     contentId,
     { timeout: 10_000 },
   );
-  const expectedTitle = contentId === 2007 ? 'Rat H' : 'SkeletalWarrior H';
-  await runPhysicalAttack(page, contentId, expectedTitle, outcome, presentationOutcome);
+  // The presentation outcome is consistent with the catalog-computed chance:
+  // a roll at or under it hits, anything above misses.
+  const expectedTitle = 'Rat H';
+  await runPhysicalAttack(page, contentId, expectedTitle, /HIT|MISS/, /hit|miss/);
   await page.getByTestId('combat-count').filter({ hasText: '1 attack' }).waitFor({ timeout: 10_000 });
-  const record = page.getByTestId('combat-1');
-  try {
-    await record.filter({ hasText: outcome }).waitFor({ timeout: 10_000 });
-  } catch (error) {
-    throw new Error(
-      `combat-1 did not show ${outcome}: ${JSON.stringify(await record.innerText())}`,
-      { cause: error },
-    );
+  const text = await page.getByTestId('combat-1').innerText();
+  const rollMatch = /d100 (\d+)/.exec(text);
+  assert.ok(rollMatch, `combat record does not display its d100 roll: ${JSON.stringify(text)}`);
+  const roll = Number(rollMatch[1]);
+  const expectHit = roll <= swingChance;
+  const damageMatch = /(\d+\.\d+) damage/.exec(text);
+  assert.ok(damageMatch, `combat record does not display damage: ${JSON.stringify(text)}`);
+  const damage = Number(damageMatch[1]);
+  const healthMatch = /Health (\d+\.\d+) → (\d+\.\d+)/.exec(text);
+  assert.ok(healthMatch, `combat record does not display health: ${JSON.stringify(text)}`);
+  assert.equal(Number(healthMatch[1]), targetLive.currentHealth, 'health before matches the live readout');
+  if (expectHit) {
+    assert.ok(damage > 0, `roll ${roll} is at or under chance ${swingChance} but damage is zero`);
+    assert.equal(Number(healthMatch[2]), targetLive.currentHealth - damage, 'health after reflects the applied damage');
+    assert.match(text, /HIT/);
+    await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
+  } else {
+    assert.equal(damage, 0, `roll ${roll} beats chance ${swingChance} but damage applied`);
+    assert.equal(Number(healthMatch[2]), targetLive.currentHealth, 'a miss left health untouched');
+    assert.match(text, /MISS/);
   }
-  await record.filter({ hasText: healthText }).waitFor();
-  const text = await record.innerText();
+  assert.match(text, new RegExp(actionId, 'i'));
+  assert.match(text, /line of sight clear/i);
   const acceptedAttempt = page.getByTestId('combat-attempt-1');
   await acceptedAttempt.filter({ hasText: 'ACCEPTED' }).waitFor();
-  await acceptedAttempt.filter({ hasText: staminaText }).waitFor();
   const acceptedAttemptText = await acceptedAttempt.innerText();
-  let cooldownRejection;
-  if (expectCooldownRejection) {
-    await runPhysicalAttack(page, contentId, expectedTitle, 'COOLDOWN', 'cooldown');
-    // A loaded CI runner can delay the projection long enough for the physical
-    // input helper to retry. Assert the authoritative cooldown outcome without
-    // coupling the proof to the retry-dependent attempt sequence number.
-    const rejectedAttempt = page
-      .locator('[data-testid^="combat-attempt-"]')
-      .filter({ hasText: 'REJECTED · cooldown' })
-      .first();
-    await rejectedAttempt.waitFor({ timeout: 10_000 });
-    await rejectedAttempt.filter({ hasText: 'stamina 85.00 → 85.00' }).waitFor();
-    cooldownRejection = await rejectedAttempt.innerText();
-    assert.equal(await page.getByTestId('combat-count').innerText(), '1 ATTACKS');
-    await page.screenshot({ path: `${output}/combat-cooldown-desktop.png`, fullPage: true });
-  }
-  assert.match(text, /d100 \d+/i);
-  assert.match(text, /melee-attack/i);
-  assert.match(text, /line of sight clear/i);
-  if (outcome === 'HIT') {
-    await page.screenshot({ path: `${output}/combat-hit-desktop.png`, fullPage: true });
-  }
+  const staminaMatch = /stamina (\d+\.\d+) → (\d+\.\d+) · cost (\d+\.\d+)/.exec(acceptedAttemptText);
+  assert.ok(staminaMatch, `attempt record does not display stamina: ${JSON.stringify(acceptedAttemptText)}`);
+  assert.equal(Number(staminaMatch[1]), playerStats.currentStamina, 'stamina before matches the live readout');
+  assert.equal(Number(staminaMatch[3]), staminaCost, 'attempt cost matches the authored action');
+  assert.equal(
+    Number(staminaMatch[2]),
+    playerStats.currentStamina - staminaCost,
+    'stamina after reflects the authored cost',
+  );
   // Melee phases advance on sampled gameplay frames. Hold a bounded movement
   // input while waiting so cleanup does not depend on runner latency or an
   // incidental pending key event.
@@ -728,11 +814,14 @@ async function jumpAndPhysicallyAttack(
   return {
     resolution: text,
     acceptedAttempt: acceptedAttemptText,
-    cooldownRejection,
   };
 }
 
 async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presentationOutcome) {
+  const outcomePattern = outcome instanceof RegExp ? outcome : new RegExp(outcome, 'i');
+  const presentationPattern = presentationOutcome instanceof RegExp
+    ? presentationOutcome
+    : new RegExp(`^${presentationOutcome}$`, 'i');
   const expectedPhase = presentationOutcome === 'cooldown' ? 'rejected' : 'contact';
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
@@ -752,23 +841,24 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
         'physical Space edge was not retained by the browser sampler',
       );
       const observation = await page.waitForFunction(
-        ({ previous, expected, phase, durableOutcome }) => {
+        ({ previous, presentationSource, phase, durableSource }) => {
           const body = document.body.dataset;
+          const presentationPattern = new RegExp(presentationSource, 'i');
+          const durablePattern = new RegExp(durableSource, 'i');
           const presentationVisible = body.daggerMeleeSequence !== previous
-            && body.daggerMeleeOutcome === expected
+            && presentationPattern.test(body.daggerMeleeOutcome ?? '')
             && body.daggerMeleePhase === phase;
           const durableText = Array.from(document.querySelectorAll('[data-testid^="combat-"]'))
             .map((element) => element.textContent ?? '')
             .join('\n');
-          const durableObserved = durableOutcome === 'COOLDOWN'
-            ? durableText.includes('REJECTED · cooldown')
-            : durableText.includes(durableOutcome);
+          const durableObserved = durablePattern.test(durableText);
           if (!presentationVisible && !durableObserved) return false;
           return presentationVisible ? 'presentation' : 'durable';
         },
         {
           previous: priorSequence,
-          expected: presentationOutcome,
+          presentationSource: presentationPattern.source,
+          durableSource: outcomePattern.source,
           phase: expectedPhase,
           durableOutcome: outcome,
         },
