@@ -78,8 +78,10 @@ work does not need donor ceremony. New Daggerfall behavior does.
 - `crates/dagger-studio-adapter` owns the protocol-14 Studio adapter.
   Unsupported mutations fail closed until a Dagger authority exists; do not
   add speculative write paths.
-- Do not copy Engine implementations into this repository; promote a smaller
-  Engine seam upstream only when reuse is proven. Consume the adjacent
+- Do not copy Engine implementations into this repository. When Dagger work
+  exposes a seam that looks upstream-shaped, promote it through the two-beat
+  process in "Upstream promotion (two-beat)" below, not as a deferred
+  follow-up. Consume the adjacent
   `../rusty-engine` checkout through the unconditional facade as it stands and
   fix forward when upstream drift breaks something. Downstream does not fetch,
   mutate, pin, or enforce freshness for that checkout; operator update policy
@@ -98,6 +100,29 @@ work does not need donor ceremony. New Daggerfall behavior does.
   loud warning — generation stamps the actual bytes' identity and runtime
   serving warns and publishes actual content — never a silent drop or a hard
   stop.
+
+## Upstream promotion (two-beat)
+
+"Promote a seam upstream when reuse is proven" has repeatedly failed because
+promotion is not an observable outcome of a downstream task and never gets a
+forcing function. Replace it with a two-beat effort whenever Dagger work exposes
+something that looks like it belongs in rusty-engine:
+
+- **Beat 1 — co-develop.** One effort owns both the candidate rusty-engine seam
+  (crate or API) and its first Dagger consumer. Write the upstream/downstream
+  line before work starts — what is generic mechanism vs. what is Dagger meaning
+  — and hold it while iterating. Moving the line is a recorded decision with a
+  reason, never a slow drift.
+- **Beat 2 — de-overfit.** Immediately port the candidate to a second,
+  mechanically different consumer: not a second game of the same shape, but a
+  different resolution shape (for a combat/RPG-flavored seam, the doom demo in
+  `../rusty-engine-demo` is the right kind of test). Write an overfitting report
+  listing what moved across the line because the second consumer needed it. The
+  report is the completion evidence; a second consumer that forces changes is
+  the success case, not a failure.
+
+Do not promote the candidate to the stable `../rusty-engine` checkout until
+beat 2's report exists. The two beats are one unit of work, not two backlogs.
 
 ## Code style and language authority
 
