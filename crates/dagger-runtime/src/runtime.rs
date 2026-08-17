@@ -470,7 +470,7 @@ impl DaggerRuntime {
             .and_then(|player| player.move_speed)
             .ok_or_else(|| {
                 RuntimeError::Gameplay(DaggerGameplayError::InvalidValue {
-                    path: "actors[player].moveSpeedMilli".to_string(),
+                    path: "actors[player].moveSpeed".to_string(),
                     reason: "player actor must declare a movement speed".to_string(),
                 })
             })?;

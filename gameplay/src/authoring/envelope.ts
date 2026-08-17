@@ -1,8 +1,15 @@
 /**
- * Package envelope composition. Provenance is computed here from the section
- * → source-file map the package entry supplies, so no catalog file ever
+ * Package envelope composition through the Engine's canonical binary64
+ * authoring API (schema 2). Provenance is computed here from the section →
+ * source-file map the package entry supplies, so no catalog file ever
  * hand-writes line/column pairs that rot on the next edit.
+ *
+ * The artifact's canonicalJson is the exact byte string the Engine
+ * fingerprints; materialization writes it verbatim (plus a trailing
+ * newline), keeping TypeScript output and Rust admission byte-identical.
  */
+
+import { authorBinary64RulePackage } from "@rusty-engine/gameplay-rules-authoring";
 
 import type {
   ActionDefinition,
@@ -65,15 +72,13 @@ export const composePackage = (input: PackageInput) => {
     "encounters",
     payload.encounters.map((entry) => `encounter.${entry.id}`),
   );
-  return {
-    kind: "rusty.gameplay-rules.package" as const,
-    schemaVersion: 1 as const,
+  return authorBinary64RulePackage({
     domain: "dagger",
     package: input.packageId,
     version: input.version,
-    dependencies: [] as const,
+    dependencies: [],
     sources,
     provenance,
     payload,
-  };
+  });
 };

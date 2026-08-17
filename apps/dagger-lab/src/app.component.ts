@@ -94,8 +94,8 @@ export class AppComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
-  fromMilli(value: number | undefined): string {
-    return value === undefined ? '—' : this.format(value / 1000);
+  optional(value: number | undefined): string {
+    return value === undefined ? '—' : this.format(value);
   }
 
   statEntries(definition: ActorDefinition): readonly { key: string; value: number }[] {

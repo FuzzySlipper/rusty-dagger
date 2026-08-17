@@ -15,6 +15,8 @@
   },
   "dependencies": {
     "@rusty-engine/application-host": "file:../rusty-engine/render/artifacts/application-host",
+    "@rusty-engine/gameplay-rules-authoring": "file:../rusty-engine/rules/packages/gameplay-rules-authoring",
+    "@rusty-engine/gameplay-rules-contracts": "file:../rusty-engine/rules/packages/gameplay-rules-contracts",
     "@angular/common": "~21.2.0",
     "@angular/compiler": "~21.2.0",
     "@angular/core": "~21.2.0",

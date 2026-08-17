@@ -22,16 +22,15 @@ export type TrackDefinition = Readonly<{
 
 /**
  * Encounter behavior tuning consumed by the Rust patrol/AI owner. Speeds and
- * ranges are authored as world-unit floats and serialized as milli-unit
- * integers (the rules-package envelope is canonical integer-only JSON).
+ * ranges are ordinary world-unit numbers (schema-2 binary64 on the wire);
  * `action` references an authored action id the enemy attempts when in range.
  */
 export type BehaviorDefinition = Readonly<{
-  detectionRangeMilli: number;
-  patrolSpeedMilli: number;
-  chaseSpeedMilli: number;
-  attackRangeMilli: number;
-  attackCooldownMillis: number;
+  detectionRange: number;
+  patrolSpeed: number;
+  chaseSpeed: number;
+  attackRange: number;
+  attackCooldownSeconds: number;
   action: string;
 }>;
 
@@ -47,8 +46,8 @@ export type ActorDefinition = Readonly<{
   /** Classic convention: higher armor value is EASIER to hit (signed). */
   armorValue: number;
   tracks: readonly TrackDefinition[];
-  /** Player movement speed in world units/second (serialized as milli). */
-  moveSpeedMilli?: number;
+  /** Player movement speed in world units/second. */
+  moveSpeed?: number;
   behavior?: BehaviorDefinition;
 }>;
 
@@ -56,10 +55,10 @@ export type ActionDefinition = Readonly<{
   id: string;
   tags: readonly string[];
   program: Program;
-  /** Melee reach in world units (serialized as milli), when the action has one. */
-  reachMilli?: number;
-  /** Cooldown between attempts in seconds (serialized as milli). */
-  cooldownMillis?: number;
+  /** Melee reach in world units, when the action has one. */
+  reach?: number;
+  /** Cooldown between attempts in seconds. */
+  cooldownSeconds?: number;
 }>;
 
 export type WeaponDefinition = Readonly<{
@@ -104,13 +103,6 @@ export const statsSection = (
 
 export const track = (id: string, max: Expr): TrackDefinition => ({ id, max });
 
-const toMilli = (value: number, field: string): number => {
-  if (!Number.isFinite(value) || value < 0) {
-    throw new Error(`behavior ${field} must be a finite non-negative number, got ${value}`);
-  }
-  return Math.round(value * 1000);
-};
-
 export const behavior = (
   action: string,
   values: Readonly<{
@@ -120,14 +112,14 @@ export const behavior = (
     attackRange: number;
     attackCooldownSeconds: number;
   }>,
-): BehaviorDefinition => ({
-  action,
-  detectionRangeMilli: toMilli(values.detectionRange, "detectionRange"),
-  patrolSpeedMilli: toMilli(values.patrolSpeed, "patrolSpeed"),
-  chaseSpeedMilli: toMilli(values.chaseSpeed, "chaseSpeed"),
-  attackRangeMilli: toMilli(values.attackRange, "attackRange"),
-  attackCooldownMillis: toMilli(values.attackCooldownSeconds, "attackCooldownSeconds"),
-});
+): BehaviorDefinition => {
+  for (const [field, value] of Object.entries(values)) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new Error(`behavior ${field} must be a finite non-negative number, got ${value}`);
+    }
+  }
+  return { action, ...values };
+};
 
 export const actor = (
   id: string,
@@ -141,16 +133,7 @@ export const actor = (
     moveSpeed?: number;
     behavior?: BehaviorDefinition;
   }>,
-): ActorDefinition => {
-  const { moveSpeed, ...rest } = definition;
-  return {
-    id,
-    ...rest,
-    ...(moveSpeed === undefined
-      ? {}
-      : { moveSpeedMilli: toMilli(moveSpeed, "moveSpeed") }),
-  };
-};
+): ActorDefinition => ({ id, ...definition });
 
 export const action = (
   id: string,
@@ -161,12 +144,10 @@ export const action = (
   id,
   tags,
   program,
-  ...(options?.reach === undefined
-    ? {}
-    : { reachMilli: toMilli(options.reach, "reach") }),
+  ...(options?.reach === undefined ? {} : { reach: options.reach }),
   ...(options?.cooldownSeconds === undefined
     ? {}
-    : { cooldownMillis: toMilli(options.cooldownSeconds, "cooldownSeconds") }),
+    : { cooldownSeconds: options.cooldownSeconds }),
 });
 
 export const weapon = (

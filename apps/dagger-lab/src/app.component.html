@@ -132,7 +132,7 @@
       <div class="derived-grid" data-testid="definition-actors">
         <article *ngFor="let actor of live.gameplayPackage.actors" [attr.data-testid]="'definition-actor-' + actor.id">
           <span>{{ actor.id }} · {{ actor.kind }}<span *ngIf="actor.mobileId !== undefined"> · mobile {{ actor.mobileId }}</span></span>
-          <strong *ngIf="actor.moveSpeedMilli !== undefined">move {{ fromMilli(actor.moveSpeedMilli) }} u/s</strong>
+          <strong *ngIf="actor.moveSpeed !== undefined">move {{ optional(actor.moveSpeed) }} u/s</strong>
           <div class="derived-inputs">
             <small>armor {{ actor.armorValue }}</small>
             <small *ngFor="let stat of statEntries(actor)">{{ stat.key }} {{ stat.value }}</small>
@@ -142,8 +142,8 @@
             <small>{{ track.id }} max <code>{{ track.max | json }}</code></small>
           </div>
           <div class="derived-inputs" *ngIf="actor.behavior as behavior">
-            <small>detect {{ fromMilli(behavior.detectionRangeMilli) }} · patrol {{ fromMilli(behavior.patrolSpeedMilli) }} · chase {{ fromMilli(behavior.chaseSpeedMilli) }}</small>
-            <small>attack {{ behavior.action }} · range {{ fromMilli(behavior.attackRangeMilli) }} · cooldown {{ fromMilli(behavior.attackCooldownMillis) }}s</small>
+            <small>detect {{ optional(behavior.detectionRange) }} · patrol {{ optional(behavior.patrolSpeed) }} · chase {{ optional(behavior.chaseSpeed) }}</small>
+            <small>attack {{ behavior.action }} · range {{ optional(behavior.attackRange) }} · cooldown {{ optional(behavior.attackCooldownSeconds) }}s</small>
           </div>
         </article>
       </div>
@@ -152,7 +152,7 @@
       <div class="derived-grid" data-testid="definition-actions">
         <article *ngFor="let action of live.gameplayPackage.actions" [attr.data-testid]="'definition-action-' + action.id">
           <span>{{ action.id }} · {{ action.tags.join(', ') }}</span>
-          <strong *ngIf="action.reachMilli !== undefined">reach {{ fromMilli(action.reachMilli) }} · cooldown {{ fromMilli(action.cooldownMillis) }}s</strong>
+          <strong *ngIf="action.reach !== undefined">reach {{ optional(action.reach) }} · cooldown {{ optional(action.cooldownSeconds) }}s</strong>
           <code class="expression">{{ action.program | json }}</code>
         </article>
       </div>
