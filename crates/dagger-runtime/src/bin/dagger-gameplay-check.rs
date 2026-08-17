@@ -79,4 +79,46 @@ fn main() {
         }
     }
     println!("{player_readout}");
+
+    // Derived-rule proof: the classic formula catalog evaluates against the
+    // admitted player definition through the same evaluator.
+    let catalog = compile_gameplay_package(PACKAGE).expect("admit authored gameplay package");
+    let evidence_for = |id: &str| -> Vec<DaggerEvidence> {
+        let value = |evidence_id: &str, value: i64| DaggerEvidence {
+            id: evidence_id.to_string(),
+            value,
+        };
+        match id {
+            "health-recovery-rate" => vec![value("max-health", 85)],
+            "fatigue-recovery-rate" => vec![value("max-fatigue", 5760)],
+            "spell-point-recovery-rate" => vec![value("max-magicka", 50)],
+            "backstab-chance" => vec![value("target-facing-away", 1)],
+            "player-level" => vec![
+                value("current-level-up-skills-sum", 70),
+                value("starting-level-up-skills-sum", 32),
+            ],
+            "hit-points-per-level-up" => vec![value("hp-level-up-roll", 7)],
+            "skill-uses-for-advancement" => vec![
+                value("skill-value", 60),
+                value("skill-advancement-multiplier", 2),
+                value("career-advancement-multiplier", 1),
+            ],
+            _ => Vec::new(),
+        }
+    };
+    let derived = catalog
+        .derived()
+        .keys()
+        .map(|id| {
+            let value =
+                dagger_rpg::evaluate_derived_rule(&catalog, id, "player", &evidence_for(id))
+                    .unwrap_or_else(|error| panic!("derived rule {id}: {error}"));
+            serde_json::json!({ "id": id, "value": value })
+        })
+        .collect::<Vec<_>>();
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({ "derived": derived }))
+            .expect("serialize derived readout")
+    );
 }

@@ -34,7 +34,7 @@ export type BehaviorDefinition = Readonly<{
   action: string;
 }>;
 
-export type ActorKind = "player" | "monster";
+export type ActorKind = "player" | "monster" | "enemy-class";
 
 export type ActorDefinition = Readonly<{
   id: string;
@@ -49,6 +49,22 @@ export type ActorDefinition = Readonly<{
   /** Player movement speed in world units/second. */
   moveSpeed?: number;
   behavior?: BehaviorDefinition;
+  /** Classic errata: mobile level (drives enemy skill levels and class health). */
+  level?: number;
+  /** Classic errata: weight, used for knockback resistance. */
+  weight?: number;
+  /** Classic errata: minimum weapon material required to damage this actor. */
+  minMetalToHit?: string;
+  /** Classic errata: mobile team/faction id. */
+  team?: string;
+  /** Classic errata: loot table key used when generating drops. */
+  lootTableKey?: string;
+}>;
+
+/** A named classic formula over one subject's stats, evaluated on demand. */
+export type DerivedRule = Readonly<{
+  id: string;
+  expr: Expr;
 }>;
 
 export type ActionDefinition = Readonly<{
@@ -132,8 +148,15 @@ export const actor = (
     tracks: readonly TrackDefinition[];
     moveSpeed?: number;
     behavior?: BehaviorDefinition;
+    level?: number;
+    weight?: number;
+    minMetalToHit?: string;
+    team?: string;
+    lootTableKey?: string;
   }>,
 ): ActorDefinition => ({ id, ...definition });
+
+export const derivedRule = (id: string, expr: Expr): DerivedRule => ({ id, expr });
 
 export const action = (
   id: string,

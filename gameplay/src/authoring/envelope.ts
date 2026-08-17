@@ -14,6 +14,7 @@ import { authorBinary64RulePackage } from "@rusty-engine/gameplay-rules-authorin
 import type {
   ActionDefinition,
   ActorDefinition,
+  DerivedRule,
   EncounterDefinition,
   ItemDefinition,
   RuleDefinition,
@@ -28,6 +29,7 @@ export type DaggerGameplayPayload = Readonly<{
   items: readonly ItemDefinition[];
   rules: readonly RuleDefinition[];
   encounters: readonly EncounterDefinition[];
+  derived: readonly DerivedRule[];
 }>;
 
 export type PackageInput = Readonly<{
@@ -71,6 +73,10 @@ export const composePackage = (input: PackageInput) => {
   record(
     "encounters",
     payload.encounters.map((entry) => `encounter.${entry.id}`),
+  );
+  record(
+    "derived",
+    payload.derived.map((entry) => `derived.${entry.id}`),
   );
   return authorBinary64RulePackage({
     domain: "dagger",

@@ -134,8 +134,22 @@ try {
   assert.equal(await page.getByTestId('content-authored-position').innerText(), '11.07, 33.02, -6.88');
   const thiefLivePosition = await page.getByTestId('content-live-position').innerText();
   assert.match(thiefLivePosition, /Authoritative live patrol position/i);
-  // The Thief has no gameplay actor: it patrols but is not a combatant.
-  assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /no actor definition/i);
+  // The Thief is a class-career combatant (7056): its actor and live
+  // resources come from the admitted package.
+  const thiefEntity = initialLab.content.find((entity) => entity.id === 2001);
+  assert.ok(thiefEntity, 'Thief 2001 is present in the live readout');
+  const thiefActor = actorForMobile(gameplayPackage, thiefEntity.reference.mobileId);
+  assert.ok(thiefActor?.behavior, 'Thief mobile has an authored actor with behavior');
+  assert.match(
+    await page.getByTestId('content-gameplay-stats').innerText(),
+    new RegExp(`armor ${thiefActor.armorValue} · ${thiefActor.behavior.action}`, 'i'),
+  );
+  const thiefLive = thiefEntity.live.resources;
+  assert.ok(thiefLive, 'Thief has live resources');
+  assert.equal(
+    await page.getByTestId('content-live-resources').innerText(),
+    `Live ${fixed(thiefLive.currentHealth)} H · ${fixed(thiefLive.currentStamina)} S · ${fixed(thiefLive.currentMagicka)} M`,
+  );
   await page.getByTestId('jump-content').click();
   await page.getByTestId('content-detail').filter({ hasText: 'focused' }).waitFor();
   const jumpDeadline = Date.now() + 10_000;
@@ -238,7 +252,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-no-actor/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-class-career/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
   );
 } finally {
   await browser.close();

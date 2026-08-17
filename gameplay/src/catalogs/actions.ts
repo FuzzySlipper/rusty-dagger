@@ -78,6 +78,17 @@ export const actions: readonly ActionDefinition[] = [
     ),
   ),
 
+  // Approximate pending equipment modeling: the class thief fights with a
+  // low-tier blade rather than its classic equipment roll.
+  action(
+    "thief-strike",
+    ["attack", "melee"],
+    when(
+      meleeHit("thief-strike.d100", "short-blade"),
+      operation(damage(dice("thief-strike.damage", 2, 8))),
+    ),
+  ),
+
   // A slower, heavier swing for pacing experiments: higher stamina cost and
   // a flat damage bonus over the standard melee attack.
   action(

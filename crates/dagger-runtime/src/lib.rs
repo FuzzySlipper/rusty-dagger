@@ -347,7 +347,11 @@ mod tests {
         assert_eq!(thief.reference.mobile_id, 138);
         assert_eq!(thief.reference.mobile_name, "Thief");
         assert_eq!(thief.reference.texture_archive, 484);
-        assert_eq!(thief.live.resources, None);
+        // 7056: the Thief is a combatant with an enemy-class actor — live
+        // resources are the deterministic spawn roll of its 11-20 range.
+        let thief_resources = thief.live.resources.expect("Thief live resources");
+        assert!((11.0..=20.0).contains(&thief_resources.current_health));
+        assert_eq!(thief_resources.current_stamina, 0.0);
         let live_thief = thief.live.position;
         let rat = initial
             .content

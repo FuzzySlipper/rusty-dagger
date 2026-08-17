@@ -16,6 +16,7 @@ pub const MAX_DAGGER_ITEMS: usize = 256;
 pub const MAX_DAGGER_RULES: usize = 256;
 pub const MAX_DAGGER_ACTORS: usize = 256;
 pub const MAX_DAGGER_ENCOUNTERS: usize = 64;
+pub const MAX_DAGGER_DERIVED: usize = 256;
 pub const MAX_DAGGER_ENCOUNTER_MEMBERS: usize = 256;
 pub const MAX_DAGGER_DECLARED_IDS: usize = 128;
 pub const MAX_DAGGER_PROGRAM_NODES: usize = 4_096;
@@ -66,6 +67,15 @@ pub struct AuthoredGameplayPayload {
     pub items: Vec<AuthoredItemDefinition>,
     pub rules: Vec<AuthoredRuleDefinition>,
     pub encounters: Vec<AuthoredEncounterDefinition>,
+    #[serde(default)]
+    pub derived: Vec<AuthoredDerivedRule>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredDerivedRule {
+    pub id: String,
+    pub expr: AuthoredExpr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -91,13 +101,26 @@ pub struct AuthoredActorDefinition {
     pub move_speed: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub behavior: Option<AuthoredBehaviorDefinition>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<Binary64I64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weight: Option<Binary64I64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_metal_to_hit: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub team: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub loot_table_key: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub enum AuthoredActorKind {
+    #[serde(rename = "player")]
     Player,
+    #[serde(rename = "monster")]
     Monster,
+    #[serde(rename = "enemy-class")]
+    EnemyClass,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -310,6 +333,7 @@ pub struct DaggerGameplayCatalog {
     items: BTreeMap<String, DaggerItemDefinition>,
     rules: Vec<DaggerRuleDefinition>,
     encounters: BTreeMap<String, DaggerEncounterDefinition>,
+    derived: BTreeMap<String, DaggerDerivedRule>,
     mechanics: MechanicsCatalog,
 }
 
@@ -342,6 +366,10 @@ impl DaggerGameplayCatalog {
         &self.encounters
     }
 
+    pub fn derived(&self) -> &BTreeMap<String, DaggerDerivedRule> {
+        &self.derived
+    }
+
     /// The Engine mechanics catalog admitted from this package's declared
     /// stats and tracks. All durable stat/track state resolves through it.
     pub fn mechanics(&self) -> &MechanicsCatalog {
@@ -357,6 +385,7 @@ impl DaggerGameplayCatalog {
         items: BTreeMap<String, DaggerItemDefinition>,
         rules: Vec<DaggerRuleDefinition>,
         encounters: BTreeMap<String, DaggerEncounterDefinition>,
+        derived: BTreeMap<String, DaggerDerivedRule>,
         mechanics: MechanicsCatalog,
     ) -> Self {
         Self {
@@ -367,6 +396,7 @@ impl DaggerGameplayCatalog {
             items,
             rules,
             encounters,
+            derived,
             mechanics,
         }
     }
@@ -429,6 +459,7 @@ impl DaggerCmpOp {
 pub enum DaggerActorKind {
     Player,
     Monster,
+    EnemyClass,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -442,6 +473,17 @@ pub struct DaggerActorDefinition {
     pub tracks: Vec<DaggerTrackDefinition>,
     pub move_speed: Option<f32>,
     pub behavior: Option<DaggerBehaviorDefinition>,
+    pub level: Option<i64>,
+    pub weight: Option<i64>,
+    pub min_metal_to_hit: Option<String>,
+    pub team: Option<String>,
+    pub loot_table_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerDerivedRule {
+    pub id: String,
+    pub expr: DaggerExpr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

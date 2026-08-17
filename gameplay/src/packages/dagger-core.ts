@@ -7,8 +7,10 @@
 import { composePackage } from "../authoring/mod.js";
 import { actions } from "../catalogs/actions.js";
 import { actors } from "../catalogs/actors.js";
+import { derived } from "../catalogs/derived.js";
 import { encounters } from "../catalogs/encounters.js";
 import { items } from "../catalogs/items.js";
+import { monsters } from "../catalogs/monsters.js";
 import { rules } from "../catalogs/rules.js";
 import { stats } from "../catalogs/stats.js";
 
@@ -18,18 +20,21 @@ export const gameplayPackage = composePackage({
   sources: {
     stats: "gameplay/src/catalogs/stats.ts",
     actors: "gameplay/src/catalogs/actors.ts",
+    monsters: "gameplay/src/catalogs/monsters.ts",
     actions: "gameplay/src/catalogs/actions.ts",
     items: "gameplay/src/catalogs/items.ts",
     rules: "gameplay/src/catalogs/rules.ts",
     encounters: "gameplay/src/catalogs/encounters.ts",
+    derived: "gameplay/src/catalogs/derived.ts",
   },
   payload: {
     schemaVersion: 1,
     stats,
-    actors,
+    actors: [...actors, ...monsters],
     actions,
     items,
     rules,
     encounters,
+    derived,
   },
 });
