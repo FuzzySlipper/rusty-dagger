@@ -58,10 +58,10 @@ The connected Dagger product and the fixed native renderer diagnostic are
 separate from Studio:
 
 ```sh
-./scripts/check-dagger-lab-browser.sh
-./scripts/verify-native-host.sh
+./scripts/check-dagger-lab-browser.sh  # manual opt-in, not an automatic gate
+./scripts/verify-native-host.sh        # automatic gate
 ```
 
-Those gates prove the Dagger gameplay/application-host product and Engine's
-public native renderer facade respectively; neither makes Dagger a Studio or
-renderer implementation owner.
+The native-host proof is part of the automatic suite; the Playwright browser
+diagnostic is run by hand when the browser product surface changes. Neither
+makes Dagger a Studio or renderer implementation owner.
