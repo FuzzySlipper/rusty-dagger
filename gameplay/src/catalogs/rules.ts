@@ -1,12 +1,10 @@
 /**
- * Rule definitions: global constraints evaluated during action checks.
- * Conditions are applied by future gameplay (spell effects); rules reference
- * them by id ahead of time so constrained actions are authored once.
+ * Rule definitions: global constraints evaluated during action checks
+ * (tag + condition rejection). Empty until gameplay introduces conditions —
+ * the grammar is admitted and exercised by the Rust resolution tests, which
+ * inject rules into the package rather than carrying inert content here.
  */
 
-import { rule, type RuleDefinition } from "../authoring/mod.js";
+import type { RuleDefinition } from "../authoring/mod.js";
 
-export const rules: readonly RuleDefinition[] = [
-  // A silenced actor cannot attempt spell-tagged actions.
-  rule("silence", "spell", "silenced"),
-];
+export const rules: readonly RuleDefinition[] = [];

@@ -76,4 +76,26 @@ export const actions: readonly ActionDefinition[] = [
       operation(damage(dice("skeleton-strike.damage", 5, 15))),
     ),
   ),
+
+  // A slower, heavier swing for pacing experiments: higher stamina cost and
+  // a flat damage bonus over the standard melee attack.
+  action(
+    "power-attack",
+    ["attack", "melee"],
+    sequence(
+      operation(spendTrack("stamina", constant(25))),
+      when(
+        meleeHit("power-attack.d100", "long-blade"),
+        operation(
+          damage(
+            add(
+              weaponDice("iron-longsword"),
+              statModifier("actor", "strength", 5),
+              constant(4),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
 ];
