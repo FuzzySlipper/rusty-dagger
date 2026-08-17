@@ -33,13 +33,29 @@ try {
   const connectedDiagnostics = await assertConnectedDiagnosticKeys(page);
   assert.ok(await renderedPixelVariety(page), 'real Rust resource-backed scene did not render visible pixels');
   if (process.env.DAGGER_SKIP_BROWSER_REMOUNT === '1') {
-    // verify-native-host already certifies stale_handle_replaced=true. Keep CI's
-    // software-rendered Chromium focused on visible product behavior until the
-    // separate remount/SwiftShader saturation defect is resolved.
-    console.error('DAGGER_BROWSER_REMOUNT_SKIPPED reason=software-rendered-ci native_replacement_proof=required');
+    // verify-native-host separately certifies stale_handle_replaced=true. Keep
+    // this explicit opt-out for diagnostic/manual runs that isolate visible
+    // product behavior from the browser remount proof.
+    console.error('DAGGER_BROWSER_REMOUNT_SKIPPED reason=explicit_diagnostic_opt_out native_replacement_proof=required');
   } else {
     const initialCanvas = await page.locator('canvas').elementHandle();
     assert.ok(initialCanvas);
+    // A gameplay canvas with pointer lock can retarget Playwright's button
+    // click to the canvas. Release it through the public host UI port without
+    // opening the Lab overlay, then wait for the readout before clicking.
+    await page.evaluate(() => {
+      const host = window.__daggerApplicationHost;
+      if (host === undefined) throw new Error('application host missing');
+      host.ui.setInteractionMode('interface');
+    });
+    await page.waitForFunction(
+      () => {
+        const readout = window.__daggerApplicationHost?.readout();
+        return readout?.interactionMode === 'interface' && readout.pointerLocked === false;
+      },
+      undefined,
+      { timeout: 30_000 },
+    );
     await page.getByTestId('refresh-scene').click();
     await page.waitForFunction(
       () => window.__daggerApplicationHost?.readout().contentRevision === 2,
