@@ -31,9 +31,9 @@ authority; resolution reads live stats through `StatService`, and effects
 commit through `TrackService` inside the kernel's staged transaction. The
 live runtime (`DaggerRuntime`) holds the same mechanics-backed
 `DaggerGameplayState`, so the player and every combatant enemy resolve
-through the same binding in the product — the old experiment document
-remains only for movement, combat terms, and behavior tuning until those
-move onto authored actions.
+through the same binding in the product. The committed package is the only
+source of gameplay truth; Dagger Lab is a read-only explorer over the
+admitted definitions, live state, and resolution explanation.
 
 The initial authored slice crosses the important boundaries with real
 content. `gameplay/src/catalogs/stats.ts` declares the classic attribute and

@@ -39,14 +39,6 @@ pub(crate) enum LabCommand {
     Read {
         reply: Sender<LabReply>,
     },
-    Apply {
-        document: String,
-        reply: Sender<LabReply>,
-    },
-    Evaluate {
-        document: String,
-        reply: Sender<LabReply>,
-    },
     Reset {
         reply: Sender<LabReply>,
     },
@@ -225,14 +217,6 @@ fn handle_request(
                 }
             }
             ("GET", "/api/dagger-lab") => LabCommand::Read { reply: send_reply },
-            ("PUT", "/api/dagger-lab/experiment") => LabCommand::Apply {
-                document: request.body,
-                reply: send_reply,
-            },
-            ("POST", "/api/dagger-lab/evaluate") => LabCommand::Evaluate {
-                document: request.body,
-                reply: send_reply,
-            },
             ("POST", "/api/dagger-lab/reset") => LabCommand::Reset { reply: send_reply },
             ("POST", "/api/dagger-lab/play") => LabCommand::Play { reply: send_reply },
             ("POST", "/api/dagger-lab/content/jump") => {

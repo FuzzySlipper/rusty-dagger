@@ -57,6 +57,7 @@ export const actions: readonly ActionDefinition[] = [
         ),
       ),
     ),
+    { reach: 2.25, cooldownSeconds: 0.75 },
   ),
 
   action(
@@ -97,5 +98,6 @@ export const actions: readonly ActionDefinition[] = [
         ),
       ),
     ),
+    { reach: 2.25, cooldownSeconds: 1.2 },
   ),
 ];

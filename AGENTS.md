@@ -75,6 +75,12 @@ work does not need donor ceremony. New Daggerfall behavior does.
   texture publication). Keep it an offline CLI; no runtime or browser seams.
 - `crates/dagger-runtime` owns the Daggerfall-side runtime boundary (project
   admission, first-person controller, collision walkthrough).
+- `gameplay/` is the normal home for Dagger gameplay authoring: a standalone
+  TypeScript workspace (`authoring/` grammar, `catalogs/` content,
+  `packages/` envelopes) that materializes the deterministic package in
+  `data/gameplay/`. TypeScript authors but never evaluates; `crates/dagger-rpg`
+  admits the package, owns its meaning, and is the only evaluator. See
+  `gameplay/README.md` and `docs/gameplay-resolution.md`.
 - `crates/dagger-studio-adapter` owns the protocol-14 Studio adapter.
   Unsupported mutations fail closed until a Dagger authority exists; do not
   add speculative write paths.

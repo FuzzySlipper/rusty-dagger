@@ -78,11 +78,7 @@ try {
   assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   assert.equal(await page.getByTestId('player-stamina').innerText(), '90.00 / 90.00');
   assert.equal(await page.getByTestId('player-magicka').innerText(), '50.00 / 50.00');
-  assert.equal(await page.getByTestId('rat-max-health').innerText(), '3.00');
-  assert.equal(await page.getByTestId('rat-max-stamina').innerText(), '10.00');
-  assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
-  assert.equal(await page.getByTestId('profile-count').innerText(), '1 PROFILES');
-  await page.getByTestId('active-profile').filter({ hasText: "Privateer's Hold starter" }).waitFor();
+  await page.getByTestId('definitions-panel').waitFor();
   const spawnPosition = await page.getByTestId('player-position').innerText();
   const contentRevisionBeforePlay = (await applicationReadout(page)).contentRevision;
   await page.getByTestId('return-to-play').click();
@@ -128,8 +124,8 @@ try {
   assert.equal(await page.getByTestId('content-authored-position').innerText(), '11.07, 33.02, -6.88');
   const thiefLivePosition = await page.getByTestId('content-live-position').innerText();
   assert.match(thiefLivePosition, /Authoritative live patrol position/i);
-  await page.getByTestId('edit-content-rules').click();
-  assert.equal(await page.getByTestId('movement-speed').evaluate((element) => element === document.activeElement), true);
+  // The Thief has no gameplay actor: it patrols but is not a combatant.
+  assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /no actor definition/i);
   await page.getByTestId('jump-content').click();
   await page.getByTestId('content-detail').filter({ hasText: 'focused' }).waitFor();
   const jumpDeadline = Date.now() + 10_000;
@@ -143,70 +139,29 @@ try {
   await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
   await openInterface(page);
   assert.equal(await page.getByTestId('combat-count').innerText(), '0 ATTACKS');
+
+  // The Rat has authored gameplay in the committed package; the live enemy
+  // carries the deterministic spawn roll.
   await page.getByTestId('content-filter').fill('rat');
   await page.getByTestId('content-2007').click();
   await page.getByTestId('content-name').filter({ hasText: 'Rat' }).waitFor();
-  assert.equal(await page.getByTestId('content-mobile-id').innerText(), '0');
-  assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /3\.00 health · 10\.00 stamina · 0\.00 magicka/i);
+  assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /armor 30 · rat-bite/i);
   assert.match(await page.getByTestId('content-live-resources').innerText(), /Live 14\.00 H · 0\.00 S · 0\.00 M/i);
-  await page.getByTestId('content-filter').fill('skeletal');
-  await page.getByTestId('content-2000').click();
-  await page.getByTestId('content-name').filter({ hasText: 'SkeletalWarrior' }).waitFor();
-  assert.match(await page.getByTestId('content-gameplay-stats').innerText(), /20\.00 health/i);
-  await page.getByTestId('content-filter').fill('rat');
-  await page.getByTestId('content-2007').click();
 
-  // The worksheet calls the same Rust authority without applying or adding a
-  // live history record.
-  await fillExact(page, 'worksheet-base', '20');
-  await fillExact(page, 'worksheet-endurance', '70');
-  await fillExact(page, 'worksheet-rate', '2');
-  await page.getByTestId('evaluate').click();
-  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
-  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
-  assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
+  // The committed gameplay package renders read-only: actors, actions, items,
+  // and encounters straight from Rust admission.
+  assert.notEqual((await page.getByTestId('package-fingerprint').innerText()).length, 0);
+  await page.getByTestId('definition-actor-player').waitFor();
+  await page.getByTestId('definition-actor-rat').waitFor();
+  await page.getByTestId('definition-actor-skeletal-warrior').waitFor();
+  await page.getByTestId('definition-action-melee-attack').waitFor();
+  await page.getByTestId('definition-item-iron-longsword').waitFor();
+  await page.getByTestId('definition-encounter-rat-introduction').waitFor();
 
-  await fillExact(page, 'worksheet-base', '-1');
-  await page.getByTestId('evaluate').click();
-  await page.getByTestId('worksheet-error').filter({ hasText: 'player.stats.resources.baseHealth' }).waitFor();
-  assert.equal(await page.getByTestId('history-count').innerText(), '1 RECORDS');
-  await fillExact(page, 'worksheet-base', '20');
-  await page.getByTestId('evaluate').click();
-  await page.getByTestId('worksheet-result').filter({ hasText: '160.00' }).waitFor();
-
-  // Profile A is authored from the draft, saved locally, admitted by Rust,
-  // reset, and physically played. 7045: durable stats/tracks are bound to the
-  // gameplay package — document stat edits still drive the old-model derived
-  // displays, movement, combat terms, and behavior, but live player values
-  // stay the catalog spawn values (health 85, stamina 90) and enemy live
-  // health is the deterministic classic spawn roll (rat 2007: 14 of 9-16,
-  // skeleton 2000: 57 of 17-66).
-  await fillExact(page, 'movement-speed', '4');
-  await fillExact(page, 'endurance', '50');
-  await fillExact(page, 'rat-strength', '20');
-  await fillExact(page, 'rat-base-health', '4');
-  await fillExact(page, 'attack-range', '4');
-  // Keep the cooldown open across a loaded CI runner's projection latency so
-  // the following physical retry still proves authoritative rejection.
-  await fillExact(page, 'player-attack-cooldown', '10');
-  await fillExact(page, 'player-stamina-cost', '5');
-  await fillExact(page, 'hit-bonus', '-100');
-  await fillExact(page, 'rat-defense', '200');
-  await fillExact(page, 'enemy-detection-range', '0.5');
-  await fillExact(page, 'enemy-patrol-speed', '0');
-  await fillExact(page, 'enemy-attack-range', '0.4');
-  await page.getByTestId('profile-name').fill('Measured pace');
-  await page.getByTestId('save-as-profile').click();
-  await page.getByTestId('profile-count').filter({ hasText: '2 profiles' }).waitFor();
-  await page.getByTestId('activate-profile').click();
-  await page.getByTestId('active-profile').filter({ hasText: 'Measured pace' }).waitFor();
-  await page.getByTestId('live-speed').filter({ hasText: '4.00' }).waitFor();
-  await page.getByTestId('max-health').filter({ hasText: '85.00' }).waitFor();
-  await page.getByTestId('rat-max-health').filter({ hasText: '5.00' }).waitFor();
-  await page.getByTestId('rat-max-stamina').filter({ hasText: '15.00' }).waitFor();
-  await page.getByTestId('history-count').filter({ hasText: '2 records' }).waitFor();
-  const profileAMove = await resetAndPhysicallyMove(page, spawnPosition);
-  const profileACombat = await jumpAndPhysicallyAttack(
+  // One physical attack resolves through the authored action: the
+  // deterministic first swing misses (d100 54 vs 40), stamina still spends,
+  // and the record explains itself.
+  const combatA = await jumpAndPhysicallyAttack(
     page,
     2007,
     spawnPosition,
@@ -214,97 +169,13 @@ try {
     'miss',
     '14.00 → 14.00',
     '90.00 → 85.00',
-    true,
-  );
-
-  // Profile B starts as a duplicate, is renamed and edited in place, then is
-  // admitted and physically played as a meaningfully different alternative.
-  await page.getByTestId('duplicate-profile').click();
-  await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
-  await page.getByTestId('profile-name').fill('Fast and hardy');
-  await page.getByTestId('rename-profile').click();
-  // This valid value cannot be represented exactly as Rust f32. Successful
-  // admission must persist Rust's canonical document so polling and reload do
-  // not discard the active profile identity.
-  const authoredProfileBSpeed = 9.123456789;
-  const admittedProfileBSpeed = Math.fround(authoredProfileBSpeed);
-  await fillExact(page, 'movement-speed', String(authoredProfileBSpeed));
-  await fillExact(page, 'endurance', '70');
-  await fillExact(page, 'rat-strength', '30');
-  await fillExact(page, 'rat-health-per-endurance', '0.3');
-  // 7046: hit chance, damage, defense, armor, and stamina cost are authored
-  // in the gameplay catalogs and no longer editable here. Attack cooldown
-  // and enemy behavior tuning remain document-owned until 7047.
-  await fillExact(page, 'player-attack-cooldown', '0.2');
-  await page.getByTestId('content-filter').fill('skeletal');
-  await page.getByTestId('content-2000').click();
-  await fillExact(page, 'enemy-detection-range', '100');
-  await fillExact(page, 'enemy-attack-range', '4');
-  await fillExact(page, 'enemy-attack-cooldown', '0.5');
-  await page.getByTestId('save-profile').click();
-  await page.getByTestId('activate-profile').click();
-  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
-  await page.getByTestId('live-speed').filter({ hasText: admittedProfileBSpeed.toFixed(2) }).waitFor();
-  await page.getByTestId('max-health').filter({ hasText: '85.00' }).waitFor();
-  await page.getByTestId('rat-max-health').filter({ hasText: '7.00' }).waitFor();
-  await page.getByTestId('rat-max-stamina').filter({ hasText: '20.00' }).waitFor();
-  await page.getByTestId('rat-derived-traces').filter({ hasText: 'enemy.mobile0.maxHealth' }).waitFor();
-  await page.getByTestId('rat-derived-traces').filter({ hasText: 'healthPerEndurance = 0.30' }).waitFor();
-  await page.getByTestId('history-count').filter({ hasText: '3 records' }).waitFor();
-  const profileBMove = await resetAndPhysicallyMove(page, spawnPosition);
-  await page.getByTestId('content-filter').fill('skeletal');
-  const profileBHit = await jumpAndPhysicallyAttack(
-    page,
-    2000,
-    spawnPosition,
-    'MISS',
-    'miss',
-    '57.00 → 57.00',
-    '90.00 → 85.00',
     false,
   );
-  await page.getByTestId('content-filter').fill('rat');
-  const profileBCombat = await jumpAndFightToTheDeath(page, 2007, spawnPosition);
-  await page.getByTestId('content-filter').fill('skeletal');
-  const skeletonEncounter = await jumpAndObserveEnemyAttack(page, 2000, spawnPosition, 5, 15);
 
-  // Closing the product tab must not reset the Rust session. Reopen it in the
-  // same browser profile and reattach to the
-  // exact authoritative values, history, and player position left above.
-  const beforeClosePosition = await page.getByTestId('player-position').innerText();
-  await page.close();
-  page = await context.newPage();
-  await page.goto(process.env.DAGGER_PRODUCT_URL ?? 'http://127.0.0.1:4274', { waitUntil: 'domcontentloaded' });
-  await waitForConnection(page);
-  await openLabFromGameplay(page);
-  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
-  assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
-  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
-  assert.equal(await page.getByTestId('rat-max-health').innerText(), '7.00');
-  assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
-  assert.equal(await page.getByTestId('player-position').innerText(), beforeClosePosition);
-
-  await page.waitForTimeout(750);
-  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
-  const persistedProfileBSpeed = await page.evaluate(() => {
-    const profiles = JSON.parse(
-      localStorage.getItem('rusty-dagger.experiment-profiles') ?? '[]',
-    );
-    return profiles.find((profile) => profile.name === 'Fast and hardy')?.document.player
-      .movement.speedUnitsPerSecond;
-  });
-  assert.equal(Math.fround(persistedProfileBSpeed), admittedProfileBSpeed);
-  assert.notEqual(persistedProfileBSpeed, authoredProfileBSpeed);
-
-  // Local profiles survive a page reload, while the active label is restored
-  // only by matching the document the still-running Rust session reports.
+  // The persistent Rust session keeps input authority across a hard reload.
   await page.reload({ waitUntil: 'domcontentloaded' });
   await waitForConnection(page);
   await openLabFromGameplay(page);
-  await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
-  await page.getByTestId('active-profile').filter({ hasText: 'Fast and hardy' }).waitFor();
-  assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
-  assert.equal(await page.getByTestId('max-health').innerText(), '85.00');
   const reloadMove = await resetAndPhysicallyMove(page, spawnPosition);
   assert.equal(
     await page.evaluate(() => document.body.dataset.daggerProductInputError),
@@ -312,40 +183,9 @@ try {
     'physical input after reload was rejected by the persistent Rust session',
   );
 
-  // Invalid documents may be kept as drafts, but activating one must surface
-  // the Rust author error and preserve the prior active session and history.
-  await fillExact(page, 'movement-speed', '0');
-  await page.getByTestId('profile-name').fill('Broken draft');
-  await page.getByTestId('save-as-profile').click();
-  await page.getByTestId('profile-count').filter({ hasText: '4 profiles' }).waitFor();
-  await page.getByTestId('activate-profile').click();
-  await page.getByTestId('command-error').filter({ hasText: 'player.movement.speedUnitsPerSecond' }).waitFor();
-  assert.equal(await page.getByTestId('active-profile').innerText(), 'Fast and hardy');
-  assert.equal(await page.getByTestId('live-speed').innerText(), admittedProfileBSpeed.toFixed(2));
-  assert.equal(await page.getByTestId('history-count').innerText(), '3 RECORDS');
-
-  page.once('dialog', (dialog) => dialog.accept());
-  await page.getByTestId('delete-profile').click();
-  await page.getByTestId('profile-count').filter({ hasText: '3 profiles' }).waitFor();
-  assert.equal(await page.getByTestId('active-profile').innerText(), 'Fast and hardy');
-
-  await page.getByTestId('history-filter').fill('#2');
-  // Live Rust polling refreshes this list every 100 ms. Resolve and click the
-  // current button atomically so Playwright does not wait for a DOM node that
-  // Angular legitimately replaces before its stability check completes.
-  await page.waitForFunction(() => document.querySelector('[data-testid="history-2"]') instanceof HTMLButtonElement);
-  await page.evaluate(() => {
-    const history = document.querySelector('[data-testid="history-2"]');
-    if (!(history instanceof HTMLButtonElement)) throw new Error('history record #2 is unavailable');
-    history.click();
-  });
-  await page.getByTestId('history-detail').filter({ hasText: 'Why record #2' }).waitFor();
-  assert.equal(await page.getByTestId('trace-result').innerText(), '100.00');
-  await page.getByTestId('history-filter').fill('');
   await page.getByTestId('content-filter').fill('rat');
   await page.getByTestId('content-2007').click();
-  await page.getByTestId('content-name').filter({ hasText: 'Rat' }).waitFor();
-  await page.screenshot({ path: `${output}/profiles-desktop.png`, fullPage: true });
+  await page.screenshot({ path: `${output}/explorer-desktop.png`, fullPage: true });
 
   // Sprite review tab: derived manifests publish through the lab bridge, the
   // Rat atlas renders through the asset route, its attack animation advances
@@ -354,21 +194,20 @@ try {
   const spriteReview = await assertSpriteReviewTab(page, output);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByTestId('profile-list').scrollIntoViewIfNeeded();
+  await page.getByTestId('definitions-panel').scrollIntoViewIfNeeded();
   await assertFixedApplicationShell(page, 390, 844, true);
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
     true,
     'narrow Dagger Lab overflows horizontally',
   );
-  await page.getByTestId('history-detail').waitFor();
-  await page.screenshot({ path: `${output}/profiles-narrow.png`, fullPage: true });
+  await page.screenshot({ path: `${output}/explorer-narrow.png`, fullPage: true });
 
   await page.evaluate(() => window.__daggerApplicationHost?.dispose());
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=tab-closed-reopened/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} melee=miss/hit/killed/cooldown content=rat-2007/mobile-0 ratA=5.00H/15.00S ratB=7.00H/20.00S ratTrace=enemy.mobile0.maxHealth combatA=${JSON.stringify(profileACombat)} combatHit=${JSON.stringify(profileBHit)} combatB=${JSON.stringify(profileBCombat)} skeleton=${JSON.stringify(skeletonEncounter)} profiles=3 active="Fast and hardy" profileA=4.00/85.00 profileB=${admittedProfileBSpeed}/85.00 canonicalized_from=${authoredProfileBSpeed} preview=160.00 history=3 inspected=#2 connectedMove=${JSON.stringify(connectedMove)} reloadMove=${JSON.stringify(reloadMove)} profileAMove=${JSON.stringify(profileAMove)} profileBMove=${JSON.stringify(profileBMove)} desktop=${output}/profiles-desktop.png narrow=${output}/profiles-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-no-actor/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
   );
 } finally {
   await browser.close();
@@ -466,8 +305,8 @@ async function assertSpriteReviewTab(page, output) {
 
   assert.equal(await page.locator('canvas').count(), 1, 'sprite review must not add a canvas');
   await page.screenshot({ path: `${output}/sprites-desktop.png`, fullPage: true });
-  await page.getByTestId('tab-experiments').click();
-  await page.getByTestId('history-detail').waitFor();
+  await page.getByTestId('tab-explorer').click();
+  await page.getByTestId('definitions-panel').waitFor();
   return { entries: count, ratAttackFrames: `${firstFrame}->${playedFrame}`, manifestEdit: 'fps/pivot persisted+restored' };
 }
 
@@ -718,24 +557,6 @@ async function pressPhysical(page, code) {
   await page.keyboard.up(key);
 }
 
-async function fillExact(page, testId, value) {
-  const input = page.getByTestId(testId);
-  // A slow change-detection pass can restore the prior number between the
-  // clear and replacement events used by Playwright. Only continue once the
-  // blurred control confirms the authored value, with a bounded retry.
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await input.fill(value);
-    await input.blur();
-    await page.waitForTimeout(100);
-    if (await input.inputValue() === value) return;
-  }
-  assert.equal(
-    await input.inputValue(),
-    value,
-    `browser authoring did not commit the exact ${testId} value`,
-  );
-}
-
 async function openInterface(page) {
   await page.keyboard.press('Escape');
   await page.waitForFunction(
@@ -828,24 +649,6 @@ async function resetAndPhysicallyMove(page, spawnPosition) {
   const movement = await physicallyMove(page, resetPosition);
   await openInterface(page);
   return movement;
-}
-
-async function jumpAndPhysicallyMove(page, contentId, spawnPosition) {
-  await page.getByTestId(`content-${contentId}`).click();
-  await page.getByTestId('jump-content').click();
-  await page.waitForFunction(
-    (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
-    contentId,
-    { timeout: 10_000 },
-  );
-  const jumpPosition = await page.getByTestId('player-position').innerText();
-  assert.notEqual(jumpPosition, spawnPosition, 'content jump did not reposition the authoritative player');
-  const expectedTitle = contentId === 2007 ? 'Rat H' : undefined;
-  const move = await physicallyMove(page, jumpPosition, ['a', 'd', 's'], expectedTitle);
-  await page.getByTestId('reset').click();
-  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
-  await openInterface(page);
-  return move;
 }
 
 async function jumpAndPhysicallyAttack(
@@ -1013,101 +816,6 @@ async function runPhysicalAttack(page, contentId, expectedTitle, outcome, presen
       console.error(`physical Space action not observed after attempt ${attempt}; retrying`);
     }
   }
-}
-
-async function jumpAndObserveEnemyAttack(page, contentId, spawnPosition, minDamage, maxDamage) {
-  await page.getByTestId(`content-${contentId}`).click();
-  await page.getByTestId('jump-content').click();
-  await page.waitForFunction(
-    (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
-    contentId,
-    { timeout: 10_000 },
-  );
-  // Enemy authority advances on sampled physical input. Drive one bounded
-  // frame after the HTTP jump instead of depending on an unrelated pending
-  // key-release from earlier browser work.
-  await pressPhysical(page, 'KeyA');
-  let attack;
-  // Poll from Node: waitForFunction does not poll async predicates (it
-  // resolves on the first falsy return), so the observation must be driven
-  // here. The skeleton attacks through authored resolution on a 15% check
-  // with 5-15 damage; its record lands within the bounded window.
-  const attackDeadline = Date.now() + 20_000;
-  while (!attack && Date.now() < attackDeadline) {
-    const live = await page.evaluate(async () => {
-      const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
-      return response.ok ? response.json() : undefined;
-    });
-    attack = live?.encounterDecisions?.find((decision) => (
-      decision.enemyId === contentId
-      && decision.decision === 'melee attack'
-      && decision.damage >= minDamage
-      && decision.damage <= maxDamage
-      && decision.lineOfSightClear === true
-    ));
-    if (!attack) await page.waitForTimeout(400);
-  }
-  if (!attack) {
-    const live = await page.evaluate(async () => {
-      const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
-      return response.json();
-    });
-    const records = await page
-      .locator('[data-testid^="encounter-"]:not([data-testid="encounter-panel"])')
-      .allInnerTexts();
-    const position = await page.getByTestId('player-position').innerText();
-    throw new Error(
-      `enemy ${contentId} did not produce authored damage in ${minDamage}-${maxDamage} at ${JSON.stringify(position)}; health=${String(live.playerStats?.currentHealth)}; decisions=${JSON.stringify(live.encounterDecisions?.slice(-8))}; records=${JSON.stringify(records)}`,
-    );
-  }
-  assert.equal(attack?.lineOfSightClear, true);
-  assert.ok(
-    attack.damage >= minDamage && attack.damage <= maxDamage,
-    `enemy attack damage ${attack.damage} outside authored ${minDamage}-${maxDamage}`,
-  );
-  const text = `${attack.enemyName} ${attack.enemyId}: melee attack damage ${attack.damage.toFixed(2)}; player ${attack.playerHealthBefore.toFixed(2)} → ${attack.playerHealthAfter.toFixed(2)}; LOS clear`;
-  await page.screenshot({ path: `${output}/skeleton-encounter-desktop.png`, fullPage: true });
-  await openInterface(page);
-  await page.getByTestId('reset').click();
-  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
-  await openInterface(page);
-  return text;
-}
-
-// 7046: killing the 14-health Rat takes repeated authored swings (40% hit
-// chance, 2-16 damage); the deterministic player stream kills on swing 10.
-async function jumpAndFightToTheDeath(page, contentId, spawnPosition) {
-  await page.getByTestId(`content-${contentId}`).click();
-  await page.getByTestId('jump-content').click();
-  await page.waitForFunction(
-    (id) => document.querySelector(`[data-testid="content-${id}"]`)?.classList.contains('active'),
-    contentId,
-    { timeout: 10_000 },
-  );
-  let killText;
-  for (let swing = 1; swing <= 20 && !killText; swing += 1) {
-    const priorInput = Number(await page.locator('body').getAttribute('data-dagger-input-sequence'));
-    await pressPhysical(page, 'Space');
-    await page.waitForFunction(
-      (sequence) => Number(document.body.dataset.daggerInputSequence ?? '0') > sequence,
-      priorInput,
-      { timeout: 10_000 },
-    );
-    await page.waitForTimeout(900);
-    const records = await page.locator('[data-testid^="combat-"]').allInnerTexts();
-    killText = records.find((text) => text.includes('DEAD'));
-  }
-  assert.ok(killText, 'Rat died through authored melee resolution within 20 swings');
-  assert.match(killText, /HIT · \d+\.\d\d damage/);
-  assert.match(killText, /Health 7\.00 → 0\.00/);
-  const attempts = await page.locator('[data-testid^="combat-attempt-"]').allInnerTexts();
-  const killAttempt = attempts.find((text) => text.includes('killed'));
-  assert.ok(killAttempt, 'kill attempt recorded');
-  assert.match(killAttempt, /stamina 45\.00 → 40\.00 · cost 5\.00/);
-  await pressPhysical(page, 'KeyR');
-  await page.getByTestId('player-position').filter({ hasText: spawnPosition.replace('POSITION\n', '') }).waitFor();
-  await openInterface(page);
-  return { killRecord: killText, killAttempt };
 }
 
 async function physicallyMove(page, resetPosition, keys = ['w', 'w', 'w'], expectedTitle) {

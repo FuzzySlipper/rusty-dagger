@@ -34,19 +34,20 @@ current task state in the Den `rusty-dagger` project.
 - `crates/dagger-runtime` — Daggerfall-owned Rust runtime boundary. It admits
   the committed Privateer's Hold project, adapts Dagger input and policy to
   Rusty Engine's canonical first-person controller,
-  applies admitted experiments, owns reset/readback, bounded calculation and
-  combat/encounter history, and provides the real-project collision walkthrough
+  resolves player and AI actions through the shared gameplay policy, owns
+  reset/readback and bounded combat/encounter history, and provides the
+  real-project collision walkthrough
   plus nav-aware patrol/detect/chase/attack authority without importing the
   loading-bay game.
-- `crates/dagger-rpg` — host-neutral Rust authority for the compact gameplay
-  experiment document, validation, derived values, melee resolution, and
-  designer-facing semantic records.
-- `apps/dagger-lab` — Dagger-owned Angular authoring/readback surface mounted
-  into Engine's public application host. It submits whole documents and side-effect-free
-  formula worksheets to Rust, exposes live player/combat state plus semantic
-  calculation, attack, and encounter-decision records, and keeps a small
-  browser-local shelf of named complete experiment profiles. Profile
-  activation still goes through Rust admission;
+- `crates/dagger-rpg` — host-neutral Rust authority for the committed gameplay
+  package: admission, the Dagger expression evaluator, actor spawns, live stat
+  reads, effect commits through Engine mechanics services, and
+  designer-facing resolution records.
+- `apps/dagger-lab` — Dagger-owned Angular read-only explorer mounted
+  into Engine's public application host. It renders the committed gameplay
+  package's definitions, live player/combat state, and resolution/encounter
+  explanation records, and offers jump/reset play controls. Gameplay is
+  authored in `gameplay/src`, never in the browser;
   the app has no gameplay evaluator and depends only on the bundled
   `@rusty-engine/application-host`, never renderer implementation packages.
 - `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
@@ -136,41 +137,37 @@ curl http://127.0.0.1:4310/health
   proves physical W input changes Rust authority while interface-mode W is a
   no-op, and reopens against the same Rust session. No X11 display is involved;
   the X11 native host remains the separate fixed-surface diagnostic above.
-- Gameplay lab: the Angular surface edits the same schema-1 document as
-  `data/experiments/privateers-hold-starter.json`. Rust atomically admits the
-  complete candidate, installs movement speed plus combat and behavior terms,
-  and explains the document's fixed health, stamina, and magicka rules.
-  Durable live stats and tracks are bound to the committed gameplay package
-  (`data/gameplay/dagger-core.package.json`, authored in `gameplay/src/`)
-  through the Engine's mechanics components and services — document stat
-  edits no longer change live actor values. The run resets to catalog spawn
-  values, and the surface exposes live authoritative
-  position/resource/controller readback. Rat
+- Gameplay lab: the Angular surface is a read-only explorer over the
+  committed gameplay package (`data/gameplay/dagger-core.package.json`,
+  authored in `gameplay/src/`). It renders admitted actor/action/item/
+  encounter definitions, live authoritative position/resource/controller
+  readback, and resolution explanation; play controls are jump/reset only.
+  Durable live stats and tracks resolve through the Engine's mechanics
+  components and services. Rat
   gameplay values key to Arena2 mobile ID 0 without duplicating classic
-  identity data in `dagger-rpg`. Invalid candidates leave the active experiment
-  untouched. Its live content browser exposes the
+  identity data in `dagger-rpg`. Its live content browser exposes the
   committed enemy catalog through Rust: decoded mobile ID/name/archive and
-  authored spawn remain separate from live patrol position and active player
-  experiment values. Jump-to-play names an admitted entity; `dagger-runtime`
+  authored spawn remain separate from live patrol position and live actor
+  state. Jump-to-play names an admitted entity; `dagger-runtime`
   chooses a grounded navigable approach and returns the connected application
   to gameplay mode rather than accepting browser-authored coordinates. Closing
   and reopening the product tab reattaches to the same Rust runtime rather
   than creating a second gameplay authority.
-- Melee experiment: the same document exposes bounded player reach/hit/damage
-  terms, attack cooldown, stamina cost, and mobile-0 Rat defense/armor. With a
-  Rat focused, physical `Space`
+- Melee: the authored `melee-attack` action owns stamina cost, the classic
+  clamped hit check, and weapon dice damage. With a Rat focused, physical
+  `Space`
   enters Rust, which checks live range and Engine collision line of sight,
-  admits authoritative cooldown/stamina, rolls, resolves hit/damage/armor,
-  mutates resources and Rat health/death, and emits flat designer-readable
-  resolution and accepted/rejected attempt records. Applying a profile or
-  resetting play restores resources/timers and clears the combat run; Angular
+  admits authoritative cooldown, supplies deterministic rolls, resolves the
+  action through the shared policy, commits through mechanics services, and
+  emits designer-readable resolution and accepted/rejected attempt records.
+  Resetting play restores live actors and clears the combat run; Angular
   never runs a timer, rolls, or mutates combat.
-- Encounter experiment: Rat and Skeletal Warrior profiles expose bounded
-  detection, patrol/chase speed, attack range/cooldown, and damage terms.
-  `dagger-runtime` uses the committed navgrid and Engine collision line of sight
-  to own patrol, detect, chase, melee attack, cooldown, and player-health
-  mutation. Angular edits/readbacks and the native title present concise Rust
-  decisions; neither owns AI state or timing.
+- Encounters: enemy behavior (detection, patrol/chase speed, attack
+  range/cooldown, candidate action) is authored per actor in the gameplay
+  catalogs. `dagger-runtime` uses the committed navgrid and Engine collision
+  line of sight to own patrol, detect, chase, typed attack intents, cooldown,
+  and player-health mutation; intents resolve through the same authored
+  action policy as player attacks.
 
 ## Data provenance & conventions
 

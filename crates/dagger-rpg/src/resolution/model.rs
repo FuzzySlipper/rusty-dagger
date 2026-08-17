@@ -58,6 +58,8 @@ pub struct AuthoredActorDefinition {
     pub armor_value: i64,
     pub tracks: Vec<AuthoredTrackDefinition>,
     #[serde(default)]
+    pub move_speed_milli: Option<i64>,
+    #[serde(default)]
     pub behavior: Option<AuthoredBehaviorDefinition>,
 }
 
@@ -212,6 +214,10 @@ pub struct AuthoredActionDefinition {
     pub id: String,
     pub tags: Vec<String>,
     pub program: AuthoredProgram,
+    #[serde(default)]
+    pub reach_milli: Option<i64>,
+    #[serde(default)]
+    pub cooldown_millis: Option<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -404,6 +410,7 @@ pub struct DaggerActorDefinition {
     pub skills: BTreeMap<String, i64>,
     pub armor_value: i64,
     pub tracks: Vec<DaggerTrackDefinition>,
+    pub move_speed: Option<f32>,
     pub behavior: Option<DaggerBehaviorDefinition>,
 }
 
@@ -423,11 +430,13 @@ pub struct DaggerBehaviorDefinition {
     pub action: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DaggerActionDefinition {
     pub id: String,
     pub tags: BTreeSet<String>,
     pub program: DaggerProgram,
+    pub reach: Option<f32>,
+    pub cooldown_seconds: Option<f32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -620,7 +629,7 @@ pub struct DaggerIntent {
     pub origin: DaggerIntentOrigin,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct DaggerAdmittedIntent {
     pub action: DaggerActionDefinition,
     pub actor: String,

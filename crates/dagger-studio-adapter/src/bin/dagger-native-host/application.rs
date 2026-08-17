@@ -145,7 +145,7 @@ impl NativeApplication {
     }
 
     fn native_window_title(&self) -> Result<String> {
-        let readout = self.runtime.experiment_readout()?;
+        let readout = self.runtime.lab_readout()?;
         let player = &readout.player_stats;
         let mut title = format!(
             "Privateer's Hold — Player H {:.0} S {:.0} M {:.0}",

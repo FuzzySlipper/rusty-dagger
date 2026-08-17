@@ -34,21 +34,19 @@ pub use player::{
 };
 pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
-    ActorGameplayReadout, CombatAttemptRecord, CombatRecord, ContentEntityReadout, ContentError,
-    ContentLiveReadout, DaggerRuntime, EnemyPresentationReadout, EnemyReferenceReadout,
-    EnemyStatsReadout, ExperimentEvaluation, ExperimentReadout, LiveActorResources,
-    MeleePresentationPhase, MeleePresentationReadout, NamedEncounterReadout, RuntimeError,
-    SessionCalculationRecord, CALCULATION_HISTORY_LIMIT, MELEE_ANTICIPATION_SECONDS,
-    MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS, MELEE_REJECTION_SECONDS,
-    STARTER_EXPERIMENT_JSON,
+    ActorAttributeReadout, ActorGameplayReadout, CombatAttemptRecord, CombatRecord,
+    ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
+    EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, LabReadout,
+    LiveActorResources, MeleePresentationPhase, MeleePresentationReadout, NamedEncounterReadout,
+    RuntimeError, MELEE_ACTION_ID, MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS,
+    MELEE_RECOVERY_SECONDS, MELEE_REJECTION_SECONDS,
 };
 
 #[cfg(test)]
 mod tests {
     use super::{
         AdmittedProject, DaggerRuntime, PlayerControlFact, ProjectAdmissionError,
-        ResolvedPlayerAction, ResolvedPlayerFrame, RuntimeError, CALCULATION_HISTORY_LIMIT,
-        STARTER_EXPERIMENT_JSON,
+        ResolvedPlayerAction, ResolvedPlayerFrame, RuntimeError,
     };
     use rusty_engine::core_math::Vec3;
 
@@ -295,42 +293,37 @@ mod tests {
     }
 
     #[test]
-    fn applies_a_complete_experiment_and_resets_the_live_run_to_spawn() {
+    fn committed_gameplay_package_drives_the_live_run_and_reset() {
         let mut runtime =
             DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
         let spawn = runtime.player_position().expect("spawn position");
-        let mut experiment: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(7.0);
-        experiment["player"]["stats"]["attributes"]["endurance"] = serde_json::Value::from(60.0);
-        experiment["enemies"][0]["stats"]["attributes"]["strength"] = serde_json::Value::from(20.0);
-        experiment["enemies"][0]["stats"]["resources"]["baseHealth"] = serde_json::Value::from(4.0);
-
-        let readout = runtime
-            .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
-            .expect("apply experiment");
-        assert_eq!(readout.move_speed_units_per_second, 7.0);
-        // 7045: the applied document still owns movement/combat/behavior, but
-        // durable stats/tracks are bound to the gameplay package — document
-        // stat edits no longer change live state (player health 85, stamina 90).
+        let readout = runtime.lab_readout().expect("initial readout");
+        // Movement speed, durable stats, and definitions all come from the
+        // committed gameplay package — there is no editable document.
+        assert_eq!(readout.move_speed_units_per_second, 3.5);
         assert_eq!(readout.max_health, 85.0);
         assert_eq!(readout.player_stats.max_stamina, 90.0);
-        let rat_stats = readout
-            .enemy_stats
+        assert_eq!(readout.player_stats.attributes.strength, 50.0);
+        assert!(!readout.gameplay_package.fingerprint.is_empty());
+        assert!(readout
+            .gameplay_package
+            .payload
+            .actors
             .iter()
-            .find(|enemy| enemy.mobile_id == 0)
-            .expect("Rat gameplay definition");
-        assert_eq!(rat_stats.stats.attributes.strength, 20.0);
-        assert_eq!(rat_stats.stats.max_health, 5.0);
-        assert_eq!(rat_stats.stats.max_stamina, 15.0);
-        assert_eq!(readout.calculations.last().unwrap().sequence, 2);
+            .any(|actor| actor.id == "rat" && actor.mobile_id == Some(0)));
+        assert!(readout
+            .gameplay_package
+            .payload
+            .actions
+            .iter()
+            .any(|action| action.id == "melee-attack"));
 
         runtime
             .set_player_position(Vec3::new(spawn.x + 5.0, spawn.y, spawn.z))
             .expect("move away from spawn");
         let reset = runtime.reset_play_session().expect("reset live run");
         assert_eq!(reset.player_position, [spawn.x, spawn.y, spawn.z]);
-        assert_eq!(reset.move_speed_units_per_second, 7.0);
+        assert_eq!(reset.move_speed_units_per_second, 3.5);
         assert_eq!(reset.current_health, 85.0);
         assert_eq!(reset.player_stats.current_stamina, 90.0);
     }
@@ -343,9 +336,7 @@ mod tests {
             .install_encounter_navigation_json(NAVGRID)
             .expect("install committed live navigation");
         let spawn = runtime.player_position().expect("spawn position");
-        let initial = runtime
-            .experiment_readout()
-            .expect("initial content readout");
+        let initial = runtime.lab_readout().expect("initial content readout");
         assert_eq!(initial.content.len(), 43);
         let thief = initial
             .content
@@ -385,12 +376,12 @@ mod tests {
         );
         assert_ne!(jumped.player_position, [spawn.x, spawn.y, spawn.z]);
 
-        let before_unknown = runtime.experiment_readout().unwrap();
+        let before_unknown = runtime.lab_readout().unwrap();
         let error = runtime
             .jump_to_content(999_999)
             .expect_err("unknown content must fail closed");
         assert!(matches!(error, RuntimeError::Content(_)));
-        assert_eq!(runtime.experiment_readout().unwrap(), before_unknown);
+        assert_eq!(runtime.lab_readout().unwrap(), before_unknown);
 
         let reset = runtime
             .reset_play_session()
@@ -420,7 +411,7 @@ mod tests {
                     .expect("advance authoritative attack cooldown");
             }
         }
-        let attacked = runtime.experiment_readout().expect("fight readout");
+        let attacked = runtime.lab_readout().expect("fight readout");
         let records = &attacked.combat;
         assert_eq!(records.len(), 10);
         assert!(
@@ -498,19 +489,15 @@ mod tests {
             }
         }
         assert_eq!(
-            runtime
-                .experiment_readout()
-                .unwrap()
-                .player_stats
-                .current_stamina,
+            runtime.lab_readout().unwrap().player_stats.current_stamina,
             0.0
         );
-        let before = runtime.experiment_readout().unwrap();
+        let before = runtime.lab_readout().unwrap();
         runtime.attack_focused_target().expect("zero-stamina swing");
         runtime
             .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
             .expect("resolve zero-stamina contact");
-        let rejected = runtime.experiment_readout().expect("rejected readout");
+        let rejected = runtime.lab_readout().expect("rejected readout");
         let attempt = rejected.combat_attempts.last().expect("rejected attempt");
         assert_eq!(attempt.outcome, "rejected");
         assert_eq!(attempt.stamina_before, 0.0);
@@ -538,17 +525,11 @@ mod tests {
         runtime.jump_to_content(2007).expect("jump beside Rat");
         for _ in 0..400 {
             runtime.tick_play_session(0.1).expect("Rat encounter tick");
-            if runtime
-                .experiment_readout()
-                .unwrap()
-                .player_stats
-                .current_health
-                < 85.0
-            {
+            if runtime.lab_readout().unwrap().player_stats.current_health < 85.0 {
                 break;
             }
         }
-        let rat = runtime.experiment_readout().expect("Rat encounter readout");
+        let rat = runtime.lab_readout().expect("Rat encounter readout");
         assert!(rat
             .encounter_decisions
             .iter()
@@ -580,18 +561,12 @@ mod tests {
             runtime
                 .tick_play_session(0.1)
                 .expect("Skeletal Warrior encounter tick");
-            if runtime
-                .experiment_readout()
-                .unwrap()
-                .player_stats
-                .current_health
-                < 85.0
-            {
+            if runtime.lab_readout().unwrap().player_stats.current_health < 85.0 {
                 break;
             }
         }
         let skeleton = runtime
-            .experiment_readout()
+            .lab_readout()
             .expect("Skeletal Warrior encounter readout");
         let skeleton_hit = skeleton
             .encounter_decisions
@@ -608,28 +583,6 @@ mod tests {
             "skeleton-strike damage must be the authored 5-15 dice, got {skeleton_damage}"
         );
         assert_eq!(skeleton.player_stats.current_health, 85.0 - skeleton_damage);
-
-        let mut quiet: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        quiet["enemies"][0]["behavior"]["detectionRange"] = serde_json::Value::from(0.5);
-        quiet["enemies"][0]["behavior"]["attackRange"] = serde_json::Value::from(0.4);
-        quiet["enemies"][0]["behavior"]["patrolSpeed"] = serde_json::Value::from(0.0);
-        runtime
-            .apply_experiment_json(&serde_json::to_string(&quiet).unwrap())
-            .expect("apply quiet Rat behavior");
-        runtime.reset_play_session().expect("reset quiet run");
-        runtime
-            .jump_to_content(2007)
-            .expect("jump beside quiet Rat");
-        for _ in 0..20 {
-            runtime.tick_play_session(0.1).expect("quiet Rat tick");
-        }
-        let quiet = runtime.experiment_readout().expect("quiet Rat readout");
-        assert_eq!(quiet.player_stats.current_health, 85.0);
-        assert!(quiet
-            .encounter_decisions
-            .iter()
-            .all(|record| record.enemy_id != 2007 || record.decision != "melee attack"));
     }
 
     #[test]
@@ -641,18 +594,14 @@ mod tests {
         runtime
             .install_named_encounters_json(NAMED_ENCOUNTERS)
             .expect("install named encounters");
-        let initial = runtime.experiment_readout().expect("initial readout");
+        let initial = runtime.lab_readout().expect("initial readout");
         assert_eq!(initial.named_encounters.len(), 2);
         assert!(initial.active_encounter.is_none());
 
         assert!(runtime
             .route_named_encounter("Digit1")
             .expect("route Rat room"));
-        let active = runtime
-            .experiment_readout()
-            .unwrap()
-            .active_encounter
-            .unwrap();
+        let active = runtime.lab_readout().unwrap().active_encounter.unwrap();
         assert_eq!(active.id, "rat-introduction");
         assert_eq!(active.status, "active");
         assert!(
@@ -667,7 +616,7 @@ mod tests {
         }
         assert_eq!(
             runtime
-                .experiment_readout()
+                .lab_readout()
                 .expect("waiting readout")
                 .player_stats
                 .current_health,
@@ -687,7 +636,7 @@ mod tests {
         }
         assert_eq!(
             runtime
-                .experiment_readout()
+                .lab_readout()
                 .unwrap()
                 .active_encounter
                 .unwrap()
@@ -698,25 +647,19 @@ mod tests {
         assert_eq!(retried.active_encounter.unwrap().status, "active");
         assert_eq!(retried.focused_content_id, Some(2007));
 
-        // Defeat: the applied document still owns behavior tuning, so a
-        // frantic Skeletal Warrior cooldown drives the fight; every hit
-        // lands through the authored skeleton-strike action (5-15 damage).
-        let mut frantic: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        frantic["enemies"][1]["behavior"]["attackCooldownSeconds"] = serde_json::Value::from(0.1);
-        runtime
-            .apply_experiment_json(&serde_json::to_string(&frantic).unwrap())
-            .expect("apply frantic profile");
+        // Defeat: the Skeletal Warrior's authored behavior drives the fight
+        // (2s cooldown, 15% check, 5-15 damage) — defeat takes a couple of
+        // game-minutes of ticks.
         assert!(runtime
             .route_named_encounter("Digit2")
             .expect("route Skeleton room"));
         runtime
             .attack_focused_target()
             .expect("engage Skeleton room");
-        for _ in 0..600 {
+        for _ in 0..2500 {
             runtime.tick_play_session(0.1).expect("Skeleton room tick");
             if runtime
-                .experiment_readout()
+                .lab_readout()
                 .unwrap()
                 .active_encounter
                 .as_ref()
@@ -725,7 +668,7 @@ mod tests {
                 break;
             }
         }
-        let defeated = runtime.experiment_readout().unwrap();
+        let defeated = runtime.lab_readout().unwrap();
         assert_eq!(defeated.active_encounter.unwrap().status, "defeat");
         assert_eq!(defeated.player_stats.current_health, 0.0);
         assert!(defeated.encounter_decisions.iter().any(|record| {
@@ -756,91 +699,9 @@ mod tests {
             "enemy attack animation counters must stop after defeat"
         );
         assert!(
-            runtime
-                .experiment_readout()
-                .unwrap()
-                .encounter_decisions
-                .len()
-                <= history_len + 1,
+            runtime.lab_readout().unwrap().encounter_decisions.len() <= history_len + 1,
             "post-defeat ticks may record one state transition, not repeated attacks"
         );
-    }
-
-    #[test]
-    fn evaluates_an_experiment_without_mutating_the_play_session() {
-        let runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
-        let before = runtime
-            .experiment_readout()
-            .expect("readout before preview");
-        let mut experiment: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(8.0);
-        experiment["player"]["stats"]["resources"]["baseHealth"] = serde_json::Value::from(20.0);
-        experiment["player"]["stats"]["attributes"]["endurance"] = serde_json::Value::from(70.0);
-        experiment["player"]["stats"]["resources"]["healthPerEndurance"] =
-            serde_json::Value::from(2.0);
-
-        let evaluation = runtime
-            .evaluate_experiment_json(&serde_json::to_string(&experiment).unwrap())
-            .expect("preview experiment");
-        assert_eq!(evaluation.move_speed_units_per_second, 8.0);
-        assert_eq!(evaluation.max_health, 160.0);
-        assert_eq!(evaluation.calculation.result, 160.0);
-        assert_eq!(evaluation.player_stats.max_stamina, 120.0);
-        assert_eq!(evaluation.enemy_stats[0].stats.max_health, 3.0);
-        assert_eq!(runtime.experiment_readout().unwrap(), before);
-
-        experiment["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(0.0);
-        let error = runtime
-            .evaluate_experiment_json(&serde_json::to_string(&experiment).unwrap())
-            .expect_err("invalid preview must fail closed");
-        assert!(matches!(error, RuntimeError::Experiment(_)));
-        assert_eq!(runtime.experiment_readout().unwrap(), before);
-    }
-
-    #[test]
-    fn rejected_experiment_is_failure_atomic_and_history_is_bounded() {
-        let mut runtime =
-            DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
-        let before = runtime
-            .experiment_readout()
-            .expect("readout before rejection");
-        let mut invalid: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        invalid["player"]["movement"]["speedUnitsPerSecond"] = serde_json::Value::from(0.0);
-        let error = runtime
-            .apply_experiment_json(&serde_json::to_string(&invalid).unwrap())
-            .expect_err("zero speed must be rejected");
-        assert!(matches!(error, RuntimeError::Experiment(_)));
-        assert_eq!(
-            runtime
-                .experiment_readout()
-                .expect("readout after rejection"),
-            before
-        );
-
-        let mut missing_mobile: serde_json::Value =
-            serde_json::from_str(STARTER_EXPERIMENT_JSON).expect("starter experiment");
-        missing_mobile["enemies"][0]["mobileId"] = serde_json::Value::from(254);
-        let error = runtime
-            .apply_experiment_json(&serde_json::to_string(&missing_mobile).unwrap())
-            .expect_err("unknown project mobile must be rejected");
-        assert!(format!("{error}").contains("does not identify an enemy"));
-        assert_eq!(runtime.experiment_readout().unwrap(), before);
-
-        for speed_tenths in 1..=(CALCULATION_HISTORY_LIMIT + 4) {
-            let speed = 1.0 + speed_tenths as f32 / 10.0;
-            let mut experiment: serde_json::Value =
-                serde_json::from_str(STARTER_EXPERIMENT_JSON).unwrap();
-            experiment["player"]["movement"]["speedUnitsPerSecond"] =
-                serde_json::Value::from(speed);
-            runtime
-                .apply_experiment_json(&serde_json::to_string(&experiment).unwrap())
-                .expect("apply bounded-history experiment");
-        }
-        let history = runtime.experiment_readout().unwrap().calculations;
-        assert_eq!(history.len(), CALCULATION_HISTORY_LIMIT);
-        assert!(history.first().unwrap().sequence > 1);
     }
 
     #[test]

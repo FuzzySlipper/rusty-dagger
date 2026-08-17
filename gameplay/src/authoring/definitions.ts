@@ -47,6 +47,8 @@ export type ActorDefinition = Readonly<{
   /** Classic convention: higher armor value is EASIER to hit (signed). */
   armorValue: number;
   tracks: readonly TrackDefinition[];
+  /** Player movement speed in world units/second (serialized as milli). */
+  moveSpeedMilli?: number;
   behavior?: BehaviorDefinition;
 }>;
 
@@ -54,6 +56,10 @@ export type ActionDefinition = Readonly<{
   id: string;
   tags: readonly string[];
   program: Program;
+  /** Melee reach in world units (serialized as milli), when the action has one. */
+  reachMilli?: number;
+  /** Cooldown between attempts in seconds (serialized as milli). */
+  cooldownMillis?: number;
 }>;
 
 export type WeaponDefinition = Readonly<{
@@ -132,15 +138,36 @@ export const actor = (
     skills: Readonly<Record<string, number>>;
     armorValue: number;
     tracks: readonly TrackDefinition[];
+    moveSpeed?: number;
     behavior?: BehaviorDefinition;
   }>,
-): ActorDefinition => ({ id, ...definition });
+): ActorDefinition => {
+  const { moveSpeed, ...rest } = definition;
+  return {
+    id,
+    ...rest,
+    ...(moveSpeed === undefined
+      ? {}
+      : { moveSpeedMilli: toMilli(moveSpeed, "moveSpeed") }),
+  };
+};
 
 export const action = (
   id: string,
   tags: readonly string[],
   program: Program,
-): ActionDefinition => ({ id, tags, program });
+  options?: Readonly<{ reach?: number; cooldownSeconds?: number }>,
+): ActionDefinition => ({
+  id,
+  tags,
+  program,
+  ...(options?.reach === undefined
+    ? {}
+    : { reachMilli: toMilli(options.reach, "reach") }),
+  ...(options?.cooldownSeconds === undefined
+    ? {}
+    : { cooldownMillis: toMilli(options.cooldownSeconds, "cooldownSeconds") }),
+});
 
 export const weapon = (
   min: number,

@@ -41,6 +41,7 @@ export const actors: readonly ActorDefinition[] = [
     },
     skills: { "long-blade": 60 },
     armorValue: 0,
+    moveSpeed: 3.5,
     tracks: [
       // baseHealth 25 + endurance * 1.5 (classic HitPointsModifier flavor)
       track(

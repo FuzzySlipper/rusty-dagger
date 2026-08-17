@@ -178,6 +178,20 @@ fn compile_actions(
         }
         let mut nodes = 0_usize;
         let program = compile_program(action.program, &mut nodes, 0, stats, items)?;
+        let from_milli = |field: &str,
+                          value: Option<i64>|
+         -> Result<Option<f32>, DaggerGameplayError> {
+            match value {
+                Some(milli) if milli > 0 && milli <= 1_000_000 => Ok(Some(milli as f32 / 1000.0)),
+                Some(milli) => Err(DaggerGameplayError::InvalidValue {
+                    path: format!("payload.actions[{index}].{field}"),
+                    reason: format!("must be 1..=1000000 milli, got {milli}"),
+                }),
+                None => Ok(None),
+            }
+        };
+        let reach = from_milli("reachMilli", action.reach_milli)?;
+        let cooldown_seconds = from_milli("cooldownMillis", action.cooldown_millis)?;
         let id = action.id;
         if actions
             .insert(
@@ -186,6 +200,8 @@ fn compile_actions(
                     id: id.clone(),
                     tags,
                     program,
+                    reach,
+                    cooldown_seconds,
                 },
             )
             .is_some()
@@ -211,6 +227,22 @@ fn compile_actors(
             super::AuthoredActorKind::Player => DaggerActorKind::Player,
             super::AuthoredActorKind::Monster => DaggerActorKind::Monster,
         };
+        let move_speed = match actor.move_speed_milli {
+            Some(milli) if milli > 0 && milli <= 1_000_000 => Some(milli as f32 / 1000.0),
+            Some(milli) => {
+                return Err(DaggerGameplayError::InvalidValue {
+                    path: format!("{path}.moveSpeedMilli"),
+                    reason: format!("must be 1..=1000000 milli, got {milli}"),
+                })
+            }
+            None => None,
+        };
+        if kind == DaggerActorKind::Player && move_speed.is_none() {
+            return Err(DaggerGameplayError::InvalidValue {
+                path: format!("{path}.moveSpeedMilli"),
+                reason: "player actors must declare a movement speed".to_string(),
+            });
+        }
         if let Some(mobile_id) = actor.mobile_id {
             if !mobile_ids.insert(mobile_id) {
                 return Err(DaggerGameplayError::DuplicateId {
@@ -303,6 +335,7 @@ fn compile_actors(
                     skills: actor_skills,
                     armor_value: actor.armor_value,
                     tracks,
+                    move_speed,
                     behavior,
                 },
             )
