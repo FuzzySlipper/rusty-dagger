@@ -1373,10 +1373,15 @@ impl DaggerRuntime {
         for (id, min, max) in
             action_roll_evidence(&self.gameplay_catalog, action).map_err(RuntimeError::Gameplay)?
         {
-            evidence.push(DaggerEvidence {
-                value: deterministic_roll(roll_sequence, target_entity, 2, min, max),
-                id,
-            });
+            // Career and swing facts (proficiency, racial bonuses, swing
+            // state) are 0 until careers and swing states are modeled;
+            // genuine rolls get a deterministic in-bounds value.
+            let value = if zeroed_career_fact(&id) {
+                0
+            } else {
+                deterministic_roll(roll_sequence, target_entity, 2, min, max)
+            };
+            evidence.push(DaggerEvidence { value, id });
         }
         let (receipt, readout) = dagger_rpg::resolve_dagger_action(
             &self.gameplay_catalog,
@@ -1731,6 +1736,21 @@ struct MeleeContactResult {
     health_after: f32,
     target_max_health: f32,
     died: bool,
+}
+
+/// Career/swing evidence ids (authored in `gameplay/src/catalogs/actions.ts`)
+/// are supplied as 0 until careers and swing states are modeled: an actor
+/// without a career gets no proficiency/racial bonus, and no swing state
+/// means no swing modifier.
+fn zeroed_career_fact(evidence_id: &str) -> bool {
+    const SUFFIXES: [&str; 5] = [
+        ".swing-to-hit",
+        ".proficiency-to-hit",
+        ".racial-to-hit",
+        ".proficiency-damage",
+        ".racial-damage",
+    ];
+    SUFFIXES.iter().any(|suffix| evidence_id.ends_with(suffix))
 }
 
 /// Deterministic combat roll: seeded by attempt sequence, target, and salt —

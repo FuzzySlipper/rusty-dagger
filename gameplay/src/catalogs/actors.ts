@@ -36,6 +36,9 @@ export const actors: readonly ActorDefinition[] = [
       personality: 50,
       speed: 50,
       luck: 50,
+      // Classic default reflexes (Average); player-owned in classic, so
+      // monsters do not declare it.
+      reflexes: 2,
     },
     skills: { "long-blade": 60, "hand-to-hand": 40, medical: 30, backstabbing: 30 },
     armorValue: 0,

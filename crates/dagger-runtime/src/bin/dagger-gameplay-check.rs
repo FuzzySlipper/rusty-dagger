@@ -57,6 +57,27 @@ fn resolve(origin: DaggerIntentOrigin, resolution: u64) -> (DaggerGameplayState,
                 id: "weapon-damage.iron-longsword".to_string(),
                 value: 8,
             },
+            // Career/swing facts are 0 until careers and swing states exist.
+            DaggerEvidence {
+                id: "melee-attack.swing-to-hit".to_string(),
+                value: 0,
+            },
+            DaggerEvidence {
+                id: "melee-attack.proficiency-to-hit".to_string(),
+                value: 0,
+            },
+            DaggerEvidence {
+                id: "melee-attack.racial-to-hit".to_string(),
+                value: 0,
+            },
+            DaggerEvidence {
+                id: "melee-attack.proficiency-damage".to_string(),
+                value: 0,
+            },
+            DaggerEvidence {
+                id: "melee-attack.racial-damage".to_string(),
+                value: 0,
+            },
         ],
     );
     assert!(receipt.succeeded(), "authored action must resolve");
@@ -89,9 +110,13 @@ fn main() {
             value,
         };
         match id {
-            "health-recovery-rate" => vec![value("max-health", 85)],
+            "health-recovery-rate" => {
+                vec![value("max-health", 85), value("rapid-healing-active", 0)]
+            }
             "fatigue-recovery-rate" => vec![value("max-fatigue", 5760)],
-            "spell-point-recovery-rate" => vec![value("max-magicka", 50)],
+            "spell-point-recovery-rate" => {
+                vec![value("max-magicka", 50), value("no-regen-spell-points", 0)]
+            }
             "backstab-chance" => vec![value("target-facing-away", 1)],
             "player-level" => vec![
                 value("current-level-up-skills-sum", 70),
@@ -100,6 +125,14 @@ fn main() {
             "hit-points-per-level-up" => vec![value("hp-level-up-roll", 7)],
             // Career-owned multiplier (milli): evaluate the default 1.5x here.
             "spell-points" => vec![value("spell-point-multiplier-milli", 1500)],
+            // Donor golden: skill 30, advancement multiplier 2, career
+            // multiplier 1.30 (centi), level 1 yields 33.
+            "skill-uses-for-advancement" => vec![
+                value("skill-value", 30),
+                value("skill-advancement-multiplier", 2),
+                value("career-advancement-multiplier-centi", 130),
+                value("level", 1),
+            ],
             _ => Vec::new(),
         }
     };

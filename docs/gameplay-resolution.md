@@ -39,13 +39,20 @@ The initial authored slice crosses the important boundaries with real
 content. `gameplay/src/catalogs/stats.ts` declares the classic attribute and
 skill vocabulary; `actors.ts` defines the player plus table-driven classic
 monsters (Rat, Skeletal Warrior) with derived track maximums and encounter
-behavior tuning; `actions.ts` authors the shared melee hit-check shape
-(d100 against skill plus target armor vulnerability, clamped 3..97) and each
-actor's attack as resolution programs; `items.ts` carries weapon damage
-ranges that `weaponDice` rolls read; `encounters.ts` owns named encounter
-content. All rolls are bounded named evidence supplied by the caller, so
-resolution is deterministic and replayable. Player and AI origins enter the
-same policy path.
+behavior tuning; `actions.ts` authors the shared melee hit-check shape (d100
+against skill plus target armor vulnerability, luck/agility differentials,
+and the target's dodging penalty, clamped 3..97 — player melee adds the
+swing/proficiency/racial and adrenaline classic terms) and each actor's
+attack as resolution programs; `items.ts` carries weapon damage ranges that
+`weaponDice` rolls read; `encounters.ts` owns named encounter content. All
+rolls are bounded named evidence supplied by the caller (dice bounds may be
+negative — swing modifiers span -10..+10), and career/world facts
+(proficiency, racial bonuses, rapid-healing and no-regen flags) cross the
+same way, 0 until careers are modeled, so resolution is deterministic and
+replayable. Beyond stats and evidence, expressions read live track currents
+(`track`), spawn-derived track maxima (`trackMax`, the `{track}-max` stat),
+and fixed-point powers (`powMilli`, base^exponent scaled by 1000 with floor
+at each step). Player and AI origins enter the same policy path.
 
 `dagger-gameplay-check` is the production Rust diagnostic. It admits the
 committed package, resolves the same controlled action for player and AI

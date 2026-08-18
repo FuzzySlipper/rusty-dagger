@@ -724,10 +724,12 @@ fn compile_expr(
         AuthoredExpr::Dice { id, min, max } => {
             validate_id("expression.dice", &id)?;
             let (min, max) = (min.0, max.0);
-            if min < 0 || min > max {
+            // Negative bounded evidence is legitimate (swing modifiers span
+            // -10..+10); only ordering is enforced.
+            if min > max {
                 return Err(DaggerGameplayError::InvalidValue {
                     path: format!("expression.dice.{id}"),
-                    reason: format!("must satisfy 0 <= min <= max, got {min}..{max}"),
+                    reason: format!("must satisfy min <= max, got {min}..{max}"),
                 });
             }
             Ok(DaggerExpr::Dice { id, min, max })
@@ -744,6 +746,24 @@ fn compile_expr(
                 }),
             }
         }
+        AuthoredExpr::Track { subject, id } => {
+            validate_declared("expression.track", &id, &stats.tracks)?;
+            Ok(DaggerExpr::Track {
+                subject: compile_subject(subject),
+                id,
+            })
+        }
+        AuthoredExpr::TrackMax { subject, id } => {
+            validate_declared("expression.trackMax", &id, &stats.tracks)?;
+            Ok(DaggerExpr::TrackMax {
+                subject: compile_subject(subject),
+                id,
+            })
+        }
+        AuthoredExpr::PowMilli { base, exponent } => Ok(DaggerExpr::PowMilli {
+            base: Box::new(compile_expr(*base, nodes, next_depth, stats, items)?),
+            exponent: Box::new(compile_expr(*exponent, nodes, next_depth, stats, items)?),
+        }),
         AuthoredExpr::Add { terms } => Ok(DaggerExpr::Add {
             terms: compile_expr_terms(terms, nodes, next_depth, stats, items)?,
         }),
