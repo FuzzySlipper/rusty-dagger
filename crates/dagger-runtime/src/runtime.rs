@@ -1,9 +1,11 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
-    action_roll_evidence, compile_gameplay_package, restore_actor_tracks, track_maximum,
-    AuthoredGameplayPayload, DaggerEvent, DaggerEvidence, DaggerGameplayCatalog,
-    DaggerGameplayError, DaggerGameplayState, DaggerIntent, DaggerIntentOrigin,
+    action_dynamic_roll_evidence, action_roll_evidence, compile_gameplay_package,
+    definition_base_stats, equipped_weapon, restore_actor_tracks, struck_body_part_name,
+    track_maximum, unarmed_damage_range, AuthoredGameplayPayload, DaggerDynamicRoll, DaggerEvent,
+    DaggerEvidence, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
+    DaggerIntentOrigin,
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
@@ -95,6 +97,11 @@ pub struct DaggerRuntime {
     active_encounter_id: Option<String>,
     active_encounter_outcome: NamedEncounterOutcome,
     active_encounter_engaged: bool,
+    equipment_log: VecDeque<EquipmentLogRecord>,
+    equipment_log_sequence: u64,
+    /// Cursor into the stable carried-equippable ordering: index of the item
+    /// the last equip-cycle press applied to (`None` before the first press).
+    equip_cycle_cursor: Option<usize>,
 }
 
 pub const GAMEPLAY_PACKAGE: &[u8] =
@@ -134,6 +141,8 @@ pub struct LabReadout {
     /// The player's upstream inventory/equipment view (`InventoryService::view`
     /// plus the EquipmentComponent's slot assignments).
     pub player_inventory: PlayerInventoryReadout,
+    /// Ordered equip/unequip/swap receipts from the equip-cycle verb.
+    pub equipment_log: Vec<EquipmentLogRecord>,
 }
 
 /// Capacity usage for one metric in quarter-kg units (`used` / `maximum`).
@@ -312,8 +321,30 @@ pub struct CombatRecord {
     pub health_before: f32,
     pub health_after: f32,
     pub target_max_health: f32,
+    /// Weapon item id the swing resolved with, or "unarmed".
+    pub weapon: String,
+    /// The body part the struck-part roll selected, when the action reads one.
+    pub struck_part: Option<String>,
+    /// True when the target's minMetalToHit gated the damage to 0.
+    pub material_ineffective: bool,
     pub decisions: Vec<String>,
     pub events: Vec<String>,
+}
+
+/// One equipment mutation receipt summary (equip-cycle verb history).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EquipmentLogRecord {
+    pub sequence: u64,
+    /// equip | unequip | swap
+    pub operation: String,
+    /// Item definition id the mutation applied to.
+    pub item: String,
+    pub slots: Vec<String>,
+    /// For a swap, the item definition id it replaced.
+    pub replaced_item: Option<String>,
+    /// Committed equipment-component revision after the mutation.
+    pub equipment_revision: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -557,6 +588,9 @@ impl DaggerRuntime {
             active_encounter_id: None,
             active_encounter_outcome: NamedEncounterOutcome::Inactive,
             active_encounter_engaged: false,
+            equipment_log: VecDeque::new(),
+            equipment_log_sequence: 0,
+            equip_cycle_cursor: None,
         })
     }
 
@@ -1097,6 +1131,9 @@ impl DaggerRuntime {
         self.encounter_sequence = 0;
         self.encounter_history.clear();
         self.reset_enemy_presentation_sequences();
+        self.equipment_log.clear();
+        self.equipment_log_sequence = 0;
+        self.equip_cycle_cursor = None;
         if let Some(patrol) = self.patrol.as_mut() {
             patrol.reset();
             self.content_live_positions = patrol
@@ -1340,6 +1377,8 @@ impl DaggerRuntime {
             "killed"
         } else if hit {
             "hit"
+        } else if attempt.material_ineffective {
+            "ineffective"
         } else {
             "miss"
         };
@@ -1366,6 +1405,9 @@ impl DaggerRuntime {
             health_before,
             health_after,
             target_max_health,
+            weapon: attempt.weapon.clone(),
+            struck_part: attempt.struck_part.clone(),
+            material_ineffective: attempt.material_ineffective,
             decisions: attempt.decisions.clone(),
             events: attempt.events.clone(),
         });
@@ -1421,6 +1463,60 @@ impl DaggerRuntime {
             };
             evidence.push(DaggerEvidence { value, id });
         }
+        // Equipment-driven evidence: the weapon damage roll is bounded by the
+        // actor's CURRENTLY equipped weapon (unarmed: the derived
+        // hand-to-hand range) so evaluation bounds never spuriously reject,
+        // and the struck-body-part roll selects the armor part the hit check
+        // reads.
+        let weapon = equipped_weapon(&self.gameplay, &self.gameplay_catalog, actor)
+            .map_err(RuntimeError::Gameplay)?;
+        let weapon_label = weapon
+            .map_or("unarmed", |item| item.id.as_str())
+            .to_string();
+        let mut struck_part = None;
+        for (id, kind) in action_dynamic_roll_evidence(&self.gameplay_catalog, action)
+            .map_err(RuntimeError::Gameplay)?
+        {
+            let value = match kind {
+                DaggerDynamicRoll::StruckBodyPart => {
+                    let value = deterministic_roll(roll_sequence, target_entity, 3, 0, 19);
+                    struck_part = struck_body_part_name(value).map(str::to_string);
+                    value
+                }
+                DaggerDynamicRoll::EquippedWeaponDamage => {
+                    let (min, max) = match weapon {
+                        Some(item) => {
+                            let weapon = item.weapon.as_ref().expect("weapon item");
+                            (weapon.damage_min, weapon.damage_max)
+                        }
+                        None => {
+                            // Evidence bounds follow the definition-base
+                            // skills; nothing in the current packages modifies
+                            // skills at runtime, and any future divergence
+                            // fails closed as a RollOutOfBounds rejection.
+                            let binding = self.gameplay.actor(actor).ok_or_else(|| {
+                                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                                    "unknown actor {actor}"
+                                )))
+                            })?;
+                            let definition = self
+                                .gameplay_catalog
+                                .actors()
+                                .get(binding.definition())
+                                .expect("bound actor definition");
+                            unarmed_damage_range(
+                                &self.gameplay_catalog,
+                                definition,
+                                &definition_base_stats(definition),
+                            )
+                            .map_err(RuntimeError::Gameplay)?
+                        }
+                    };
+                    deterministic_roll(roll_sequence, target_entity, 2, min, max)
+                }
+            };
+            evidence.push(DaggerEvidence { value, id });
+        }
         let (receipt, readout) = dagger_rpg::resolve_dagger_action(
             &self.gameplay_catalog,
             &mut self.gameplay,
@@ -1448,12 +1544,21 @@ impl DaggerRuntime {
                 _ => {}
             }
         }
+        let material_ineffective = readout.trace.iter().any(|record| {
+            matches!(
+                record.detail,
+                Some(dagger_rpg::DaggerTraceDetail::MaterialIneffective { .. })
+            )
+        });
         Ok(ActionAttemptOutcome {
             succeeded: receipt.succeeded(),
             status: readout.status.clone(),
             roll,
             damage,
             stamina_spent,
+            weapon: weapon_label,
+            struck_part,
+            material_ineffective,
             decisions: readout
                 .trace
                 .iter()
@@ -1584,6 +1689,212 @@ impl DaggerRuntime {
         })
     }
 
+    /// Equip-cycle verb (KeyE in the native host): each press equips the next
+    /// carried equippable item in the stable entity ordering, skipping
+    /// already-equipped items and swapping when the item's legal slot is
+    /// occupied. When every carried equippable is already equipped, the press
+    /// unequips the next item after the cursor instead, so the verb can also
+    /// strip gear. Every mutation receipt lands in the equipment log.
+    pub fn equip_cycle(&mut self) -> Result<LabReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{
+            EquipmentEquipRequest, EquipmentService, EquipmentSlotId, EquipmentSwapRequest,
+            EquipmentUnequipRequest, InventoryService, OperationId, SourceInstanceId,
+            SourceInstanceIdentity,
+        };
+
+        let owner = self
+            .gameplay
+            .actor(PLAYER_ACTOR_ID)
+            .expect("player actor binding")
+            .entity();
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "player inventory view: {error:?}"
+            )))
+        })?;
+        let equipment = self
+            .gameplay
+            .entities()
+            .component::<rusty_engine::gameplay_mechanics::EquipmentComponent>(owner)
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment component: {error}"
+                )))
+            })?
+            .ok_or_else(|| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(
+                    "player has no equipment component".to_string(),
+                ))
+            })?;
+        // Stable ordering: unique item entities are allocated at spawn in
+        // loadout order, so raw entity id order is deterministic.
+        let mut carried = view
+            .unique_items()
+            .iter()
+            .filter(|entry| {
+                self.gameplay_catalog
+                    .items()
+                    .get(entry.definition.as_str())
+                    .is_some_and(dagger_rpg::DaggerItemDefinition::equippable)
+            })
+            .map(|entry| (entry.entity, entry.definition.as_str().to_string()))
+            .collect::<Vec<_>>();
+        carried.sort_by_key(|(entity, _)| entity.raw());
+        if carried.is_empty() {
+            return self.lab_readout();
+        }
+        let equipped = |entity: EntityId| {
+            equipment
+                .assignments()
+                .iter()
+                .any(|assignment| assignment.item == entity)
+        };
+        let n = carried.len();
+        let cursor = self.equip_cycle_cursor.unwrap_or(n - 1);
+        let target = (1..=n)
+            .map(|offset| (cursor + offset) % n)
+            .find(|index| !equipped(carried[*index].0));
+        let operation = OperationId::parse("dagger-equip-cycle").expect("fixed operation identity");
+        let source = SourceInstanceIdentity::Request {
+            operation: operation.clone(),
+            instance: SourceInstanceId::parse("dagger-equip-cycle").expect("fixed source identity"),
+        };
+        let expected_state_revision = self.gameplay.entities().revision();
+        let receipt = match target {
+            Some(index) => {
+                let (item_entity, item_id) = &carried[index];
+                let slot = self.preferred_equip_slot(item_id).ok_or_else(|| {
+                    RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                        "no legal equipment slot for {item_id}"
+                    )))
+                })?;
+                let slot_id = EquipmentSlotId::parse(slot.clone()).map_err(|error| {
+                    RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
+                        path: "equipCycle.slot".to_string(),
+                        value: format!("{slot}: {error:?}"),
+                    })
+                })?;
+                self.equip_cycle_cursor = Some(index);
+                match equipment
+                    .assignment(&slot_id)
+                    .map(|assignment| assignment.item)
+                {
+                    Some(outgoing) => EquipmentService::swap(
+                        self.gameplay.entities_mut(),
+                        self.gameplay_catalog.mechanics(),
+                        EquipmentSwapRequest {
+                            operation,
+                            source,
+                            owner,
+                            outgoing_item: outgoing,
+                            incoming_item: *item_entity,
+                            incoming_slots: vec![slot_id],
+                            expected_equipment_revision: None,
+                            expected_state_revision,
+                        },
+                    ),
+                    None => EquipmentService::equip(
+                        self.gameplay.entities_mut(),
+                        self.gameplay_catalog.mechanics(),
+                        EquipmentEquipRequest {
+                            operation,
+                            source,
+                            owner,
+                            item: *item_entity,
+                            slots: vec![slot_id],
+                            expected_equipment_revision: None,
+                            expected_state_revision,
+                        },
+                    ),
+                }
+            }
+            None => {
+                // Everything equippable is already equipped: strip the next
+                // item after the cursor.
+                let index = (cursor + 1) % n;
+                let (item_entity, _) = &carried[index];
+                self.equip_cycle_cursor = Some(index);
+                EquipmentService::unequip(
+                    self.gameplay.entities_mut(),
+                    self.gameplay_catalog.mechanics(),
+                    EquipmentUnequipRequest {
+                        operation,
+                        source,
+                        owner,
+                        item: *item_entity,
+                        expected_equipment_revision: None,
+                        expected_state_revision,
+                    },
+                )
+            }
+        }
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "equip cycle rejected: {error:?}"
+            )))
+        })?;
+        let item_name = |entity: EntityId| {
+            carried
+                .iter()
+                .find(|(candidate, _)| *candidate == entity)
+                .map(|(_, id)| id.clone())
+                .unwrap_or_else(|| format!("entity-{}", entity.raw()))
+        };
+        self.push_equipment_record(EquipmentLogRecord {
+            sequence: 0,
+            operation: format!("{:?}", receipt.kind).to_lowercase(),
+            item: item_name(receipt.item),
+            slots: receipt
+                .changes
+                .iter()
+                .map(|change| change.slot.as_str().to_string())
+                .collect(),
+            replaced_item: receipt.replaced_item.map(&item_name),
+            equipment_revision: receipt.committed_equipment_revision,
+        });
+        self.lab_readout()
+    }
+
+    /// The item's preferred equip slot: right hand for one/two-handed
+    /// weapons, left hand for left-only weapons and shields, and the first
+    /// authored slot accepting an armor piece's classification otherwise.
+    fn preferred_equip_slot(&self, item_id: &str) -> Option<String> {
+        let item = self.gameplay_catalog.items().get(item_id)?;
+        if let Some(weapon) = &item.weapon {
+            return Some(
+                match weapon.hands {
+                    dagger_rpg::DaggerWeaponHands::LeftOnly => "left-hand",
+                    _ => "right-hand",
+                }
+                .to_string(),
+            );
+        }
+        if item.shield.is_some() {
+            return Some("left-hand".to_string());
+        }
+        let classification = item.classifications.first()?;
+        self.gameplay_catalog
+            .equipment()
+            .slots
+            .iter()
+            .find(|slot| slot.allowed_classifications.contains(classification))
+            .map(|slot| slot.id.clone())
+    }
+
+    fn push_equipment_record(&mut self, mut record: EquipmentLogRecord) {
+        self.equipment_log_sequence = self.equipment_log_sequence.saturating_add(1);
+        record.sequence = self.equipment_log_sequence;
+        self.equipment_log.push_back(record);
+        while self.equipment_log.len() > COMBAT_HISTORY_LIMIT {
+            self.equipment_log.pop_front();
+        }
+    }
+
     pub fn lab_readout(&self) -> Result<LabReadout, RuntimeError> {
         let position = self.player_position()?;
         let encounter_states = self
@@ -1666,6 +1977,7 @@ impl DaggerRuntime {
             named_encounters,
             active_encounter,
             player_inventory: self.player_inventory_readout()?,
+            equipment_log: self.equipment_log.iter().cloned().collect(),
         })
     }
 
@@ -1830,6 +2142,9 @@ struct ActionAttemptOutcome {
     roll: i64,
     damage: i64,
     stamina_spent: i64,
+    weapon: String,
+    struck_part: Option<String>,
+    material_ineffective: bool,
     decisions: Vec<String>,
     events: Vec<String>,
 }
@@ -1865,7 +2180,8 @@ fn zeroed_career_fact(evidence_id: &str) -> bool {
 /// Deterministic combat roll: seeded by attempt sequence, target, and salt —
 /// no time source, so encounters are replayable and diagnostics and browser
 /// gates can assert exact outcomes. Salt 1 is the d100 hit roll; salt 2 is
-/// the damage dice roll.
+/// the damage dice roll (bounded by the actor's live weapon); salt 3 is the
+/// struck-body-part roll (0..=19).
 fn deterministic_roll(sequence: u64, target_id: u64, salt: u64, min: i64, max: i64) -> i64 {
     let mut value = sequence
         .rotate_left(17)

@@ -114,6 +114,10 @@ pub struct AuthoredStatsSection {
     pub attributes: Vec<String>,
     pub skills: Vec<String>,
     pub tracks: Vec<String>,
+    /// Classic body parts; each becomes an `armor-<part>` stat. Optional and
+    /// additive under payload schema 1.
+    #[serde(default)]
+    pub armor_parts: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -191,7 +195,7 @@ pub enum AuthoredExpr {
         subject: AuthoredSubject,
         id: String,
     },
-    Armor {
+    EquippedWeaponSkill {
         subject: AuthoredSubject,
     },
     Evidence {
@@ -202,8 +206,13 @@ pub enum AuthoredExpr {
         min: Binary64I64,
         max: Binary64I64,
     },
-    WeaponDice {
-        item: String,
+    EquippedWeaponDice {
+        subject: AuthoredSubject,
+        id: String,
+    },
+    StruckArmor {
+        subject: AuthoredSubject,
+        id: String,
     },
     Track {
         subject: AuthoredSubject,
@@ -492,6 +501,8 @@ pub struct DaggerStatsSection {
     pub attributes: BTreeSet<String>,
     pub skills: BTreeSet<String>,
     pub tracks: BTreeSet<String>,
+    /// Classic body parts; each compiles to an `armor-<part>` stat.
+    pub armor_parts: BTreeSet<String>,
 }
 
 pub type DaggerProgram = Program<DaggerPredicate, DaggerOperation>;
@@ -509,7 +520,7 @@ pub enum DaggerExpr {
         subject: DaggerSubject,
         id: String,
     },
-    Armor {
+    EquippedWeaponSkill {
         subject: DaggerSubject,
     },
     Evidence {
@@ -520,8 +531,13 @@ pub enum DaggerExpr {
         min: i64,
         max: i64,
     },
-    WeaponDice {
-        item: String,
+    EquippedWeaponDice {
+        subject: DaggerSubject,
+        id: String,
+    },
+    StruckArmor {
+        subject: DaggerSubject,
+        id: String,
     },
     Track {
         subject: DaggerSubject,
@@ -974,10 +990,80 @@ pub enum DaggerEvent {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DaggerTraceDetail {
-    Definition { id: String },
-    Facts { actor: String, target: String },
-    Decision { reason: String },
-    Source { id: String },
+    Definition {
+        id: String,
+    },
+    Facts {
+        actor: String,
+        target: String,
+    },
+    Decision {
+        reason: String,
+    },
+    Source {
+        id: String,
+    },
+    /// The target's `minMetalToHit` exceeded the attacker weapon's material
+    /// rank, so the damage plan clamped to 0 (donor materialIneffective).
+    MaterialIneffective {
+        required_material: String,
+        weapon_material: String,
+    },
+}
+
+/// The struck-body-part roll's part names in classic `BodyParts` enum order
+/// (donor EntityStructs.cs — adopted): the `struckArmor` table below indexes
+/// into this, and each name selects the `armor-<part>` stat.
+pub const STRUCK_PART_NAMES: [&str; 7] = [
+    "head",
+    "right-arm",
+    "left-arm",
+    "chest",
+    "hands",
+    "legs",
+    "feet",
+];
+
+/// Classic struck-body-part distribution (donor
+/// `FormulaHelper.CalculateStruckBodyPart` — adopted as an evaluator
+/// constant): a 0..=19 roll maps to a `STRUCK_PART_NAMES` index.
+pub const STRUCK_BODY_PART_TABLE: [usize; 20] =
+    [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6];
+
+/// The stat id holding one body part's armor value.
+pub fn armor_part_stat_id(part: &str) -> String {
+    format!("armor-{part}")
+}
+
+/// Map a struck-body-part roll (0..=19) to its part name.
+pub fn struck_body_part_name(roll: i64) -> Option<&'static str> {
+    usize::try_from(roll)
+        .ok()
+        .and_then(|index| STRUCK_BODY_PART_TABLE.get(index))
+        .map(|part| STRUCK_PART_NAMES[*part])
+}
+
+/// Classic weapon material ranks (donor `ItemEnums.cs WeaponMaterialTypes`
+/// ordinal order — adopted): `minMetalToHit` gates damage by ordinal
+/// comparison. Leather/chain are armor-only materials and carry no weapon
+/// rank.
+pub fn weapon_material_rank(material: &str) -> Option<u8> {
+    const RANKS: [&str; 10] = [
+        "iron",
+        "steel",
+        "silver",
+        "elven",
+        "dwarven",
+        "mithril",
+        "adamantium",
+        "ebony",
+        "orcish",
+        "daedric",
+    ];
+    RANKS
+        .iter()
+        .position(|name| *name == material)
+        .and_then(|rank| u8::try_from(rank).ok())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

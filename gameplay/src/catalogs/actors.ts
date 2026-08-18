@@ -41,6 +41,9 @@ export const actors: readonly ActorDefinition[] = [
       reflexes: 2,
     },
     skills: { "long-blade": 60, "hand-to-hand": 40, medical: 30, backstabbing: 30 },
+    // Experiment profile: classic naked armor is 100 (easiest to hit); the
+    // player is authored at 0 so equipment effects are observable. Each
+    // `armor-<part>` stat starts at this flat value.
     armorValue: 0,
     moveSpeed: 3.5,
     tracks: [
@@ -58,9 +61,12 @@ export const actors: readonly ActorDefinition[] = [
       track("magicka", stat("actor", "intelligence")),
     ],
     // Spawn loadout bound into the upstream inventory/equipment components:
-    // a longsword in the right hand plus a fungible gold stack.
+    // a longsword in the right hand, a carried dagger and cuirass for the
+    // equip-cycle verb, plus a fungible gold stack.
     inventory: [
       { item: "iron-longsword", equipSlot: "right-hand" },
+      { item: "iron-dagger" },
+      { item: "iron-cuirass" },
       { item: "gold-piece", quantity: 25 },
     ],
   }),

@@ -110,6 +110,40 @@ donor at the declared revision:
   components (`InventoryComponent`/`EquipmentComponent` with entity-state
   containment), not in a Dagger-owned container model.
 
+## Equipment combat effects
+
+The equip/unequip interaction and equipment combat effects (Den task 7072)
+draw on the Daggerfall Unity donor at the declared revision:
+
+- `Formulas/FormulaHelper.cs` `CalculateStruckBodyPart` — adopted as an
+  evaluator constant: the 20-entry roll table mapping 0..19 to classic
+  `BodyParts` indices; `struckArmor` reads the subject's `armor-<part>` stat
+  for the rolled part.
+- `Game/Entities/DaggerfallEntity.cs` `UpdateEquippedArmorValues` — adopted:
+  an equipped armor piece or shield subtracts its value × 5 from each covered
+  body part; mapped onto upstream attributed sources (`StatContribution::Add`
+  on the `armor-<part>` stats, Sum stacking) rather than Unity's per-entity
+  armor array.
+- `Game/Items/DaggerfallUnityItem.cs` `GetShieldProtectedBodyParts` —
+  adopted: buckler covers left-arm/hands, round and kite add legs, tower adds
+  head. Shield coverage is derived from the per-type shield value (1..4),
+  which is the shield's classic identity.
+- `Formulas/FormulaHelper.cs` `CalculateWeaponDamage` / `GetWeaponSkillUsed`
+  — adopted: the equipped weapon supplies both the hit-check skill and the
+  damage bounds; the right hand is primary and unarmed attacks fall back to
+  hand-to-hand skill and the derived hand-to-hand damage range.
+- `Formulas/FormulaHelper.cs` `CalculateWeaponDamage`'s material gate
+  (`target.MinMetalToHit > (WeaponMaterialTypes)weapon.NativeMaterialValue`
+  → 0 damage, `materialIneffective`) — adopted as Dagger combat law in the
+  Rust policy (not an authored expression): the damage plan clamps to 0 with
+  a `MaterialIneffective` trace detail. Unarmed attacks are always effective;
+  the donor has no bare-hand material to compare.
+- Flat → per-part armor — adapted: classic and the donor track seven armor
+  values per actor; our actor definitions keep the flat authored
+  `armorValue`, replicated as every `armor-<part>` spawn base. The player is
+  authored at 0 (experiment profile; classic naked is 100) so equipment
+  effects are observable.
+
 ## Collision authority
 
 The collision authority is the dungeon static mesh itself (rusty-engine task

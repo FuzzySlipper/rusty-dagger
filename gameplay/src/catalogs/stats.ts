@@ -65,4 +65,20 @@ export const SKILLS = [
 
 export const TRACKS = ["health", "stamina", "magicka"] as const;
 
-export const stats = statsSection(ATTRIBUTES, SKILLS, TRACKS);
+/**
+ * Classic body parts in donor `BodyParts` enum order (EntityStructs.cs) —
+ * adopted. Each part becomes an `armor-<part>` stat (classic sbyte range
+ * -128..=127; good gear drives armor negative); the struck-body-part roll
+ * table indexes this order.
+ */
+export const ARMOR_PARTS = [
+  "head",
+  "right-arm",
+  "left-arm",
+  "chest",
+  "hands",
+  "legs",
+  "feet",
+] as const;
+
+export const stats = statsSection(ATTRIBUTES, SKILLS, TRACKS, ARMOR_PARTS);

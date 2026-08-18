@@ -204,6 +204,7 @@ fn apply_product_input(
     let pressed_edges = input.pressed_edges.into_iter().collect::<BTreeSet<_>>();
     let attack_pressed = pressed_edges.contains("Space") || input.button_pressed_edges & 1 != 0;
     let reset_pressed = pressed_edges.contains("KeyR");
+    let equip_pressed = pressed_edges.contains("KeyE");
     let patrol_debug_pressed = pressed_edges.contains("KeyG");
     let nav_debug_pressed = pressed_edges.contains("KeyN");
     let active = |code| pressed.contains(code) || pressed_edges.contains(code);
@@ -221,6 +222,9 @@ fn apply_product_input(
     }
     if attack_pressed {
         let _ = runtime.attack_focused_target()?;
+    }
+    if equip_pressed {
+        let _ = runtime.equip_cycle()?;
     }
     for route_code in ["Digit1", "Digit2"] {
         if pressed_edges.contains(route_code) {

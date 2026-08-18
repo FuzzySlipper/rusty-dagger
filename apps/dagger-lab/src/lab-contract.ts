@@ -10,6 +10,7 @@ export interface StatsSection {
   readonly attributes: readonly string[];
   readonly skills: readonly string[];
   readonly tracks: readonly string[];
+  readonly armorParts?: readonly string[];
 }
 
 export interface TrackDefinition {
@@ -160,6 +161,12 @@ export interface CombatRecord {
   readonly healthBefore: number;
   readonly healthAfter: number;
   readonly targetMaxHealth: number;
+  /** Weapon item id the swing resolved with, or "unarmed". */
+  readonly weapon: string;
+  /** The body part the struck-part roll selected, when the action reads one. */
+  readonly struckPart: string | null;
+  /** True when the target's minMetalToHit gated the damage to 0. */
+  readonly materialIneffective: boolean;
   readonly decisions: readonly string[];
   readonly events: readonly string[];
 }
@@ -264,6 +271,20 @@ export interface PlayerInventoryReadout {
   readonly items: readonly InventoryItemReadout[];
 }
 
+/** One equipment mutation receipt summary (equip-cycle verb history). */
+export interface EquipmentLogRecord {
+  readonly sequence: number;
+  /** equip | unequip | swap */
+  readonly operation: string;
+  /** Item definition id the mutation applied to. */
+  readonly item: string;
+  readonly slots: readonly string[];
+  /** For a swap, the item definition id it replaced. */
+  readonly replacedItem: string | null;
+  /** Committed equipment-component revision after the mutation. */
+  readonly equipmentRevision: number;
+}
+
 export interface LabReadout {
   readonly gameplayPackage: GameplayPackageReadout;
   readonly moveSpeedUnitsPerSecond: number;
@@ -282,4 +303,6 @@ export interface LabReadout {
   readonly namedEncounters: readonly NamedEncounterReadout[];
   readonly activeEncounter: NamedEncounterReadout | null;
   readonly playerInventory: PlayerInventoryReadout;
+  /** Ordered equip/unequip/swap receipts from the equip-cycle verb (E). */
+  readonly equipmentLog: readonly EquipmentLogRecord[];
 }
