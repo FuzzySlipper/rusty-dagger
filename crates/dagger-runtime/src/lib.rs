@@ -783,9 +783,116 @@ mod tests {
         let revisions = readout
             .equipment_log
             .iter()
-            .map(|record| record.equipment_revision)
+            .map(|record| {
+                record
+                    .committed_revision
+                    .expect("accepted mutation has a revision")
+            })
             .collect::<Vec<_>>();
         assert!(revisions.windows(2).all(|pair| pair[0] < pair[1]));
+        assert!(readout.equipment_log.iter().all(|record| record.accepted));
+    }
+
+    #[test]
+    fn equipment_verbs_log_rejections_with_reasons() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+
+        // Not a carried equippable item: rejection is logged, not thrown.
+        let readout = runtime.equip_item(99_999).expect("rejection readout");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert!(!record.accepted);
+        assert_eq!(record.operation, "equip");
+        assert!(record
+            .reason
+            .as_deref()
+            .expect("rejection reason")
+            .contains("not a carried equippable item"));
+        assert!(record.committed_revision.is_none());
+
+        // Unequipping an empty slot: rejection logged.
+        let readout = runtime
+            .unequip_slot("left-hand")
+            .expect("rejection readout");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert!(!record.accepted);
+        assert_eq!(record.operation, "unequip");
+        assert_eq!(record.slots, ["left-hand".to_string()]);
+        assert_eq!(record.reason.as_deref(), Some("slot is empty"));
+
+        // Equip the carried dagger through the explicit verb (swaps the
+        // longsword out of the right hand), then unequip the slot.
+        let dagger = readout
+            .player_inventory
+            .items
+            .iter()
+            .find(|item| item.item == "iron-dagger")
+            .expect("carried dagger")
+            .entity;
+        let readout = runtime.equip_item(dagger).expect("equip readout");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert!(record.accepted);
+        assert_eq!(record.operation, "swap");
+        assert_eq!(record.item, "iron-dagger");
+        let readout = runtime.unequip_slot("right-hand").expect("unequip readout");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert!(record.accepted);
+        assert_eq!(record.operation, "unequip");
+        assert_eq!(record.item, "iron-dagger");
+        assert!(readout
+            .player_inventory
+            .items
+            .iter()
+            .all(|item| item.equip_slot.is_none()));
+    }
+
+    #[test]
+    fn grant_item_logs_grants_and_capacity_rejections() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+
+        // A small arrow grant succeeds and is logged.
+        let readout = runtime.grant_item("arrow", 10).expect("grant readout");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert!(record.accepted);
+        assert_eq!(record.operation, "grant");
+        assert_eq!(record.item, "arrow");
+        assert_eq!(record.quantity, Some(10));
+        assert!(readout
+            .player_inventory
+            .stacks
+            .iter()
+            .any(|stack| stack.item == "arrow" && stack.quantity == 10));
+
+        // The player's weight limit is 300 quarter-kg with 70 used; 400
+        // arrows (1 unit each) blow past it and the upstream rejection is
+        // logged with the reason.
+        let readout = runtime
+            .grant_item("arrow", 400)
+            .expect("capacity rejection readout");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert!(!record.accepted);
+        assert_eq!(record.operation, "grant");
+        assert!(record
+            .reason
+            .as_deref()
+            .expect("rejection reason")
+            .contains("InventoryCapacityExceeded"));
+        assert!(readout
+            .player_inventory
+            .stacks
+            .iter()
+            .any(|stack| stack.item == "arrow" && stack.quantity == 10));
+
+        // Unique (equippable) items and unknown items reject too.
+        let readout = runtime
+            .grant_item("iron-dagger", 1)
+            .expect("non-fungible rejection readout");
+        assert!(!readout.equipment_log.last().expect("log entry").accepted);
+        let readout = runtime
+            .grant_item("mithril-ladle", 1)
+            .expect("unknown item rejection readout");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert!(!record.accepted);
+        assert_eq!(record.reason.as_deref(), Some("unknown item"));
     }
 
     #[test]

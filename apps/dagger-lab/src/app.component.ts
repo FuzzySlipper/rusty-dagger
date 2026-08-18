@@ -35,6 +35,8 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedContentId: number | undefined;
   labOpen = false;
   activeTab: 'explorer' | 'sprites' = 'explorer';
+  grantItemId = 'gold-piece';
+  grantQuantity = 25;
 
   trackContent(_index: number, entity: ContentEntityReadout): number {
     return entity.id;
@@ -157,6 +159,26 @@ export class AppComponent implements OnInit, OnDestroy {
       this.selectedContentId = selected.id;
       this.returnToPlay();
     }
+  }
+
+  async equipItem(item: InventoryItemReadout): Promise<void> {
+    await this.runCommand(() => this.api.equipItem(item.entity));
+  }
+
+  async unequipItem(item: InventoryItemReadout): Promise<void> {
+    if (item.equipSlot === null) return;
+    await this.runCommand(() => this.api.unequipSlot(item.equipSlot!));
+  }
+
+  async grantItem(): Promise<void> {
+    await this.runCommand(() => this.api.grantItem(this.grantItemId, Math.trunc(this.grantQuantity)));
+  }
+
+  /** Fungible (stackable) item definitions from the committed package. */
+  fungibleItems(): readonly { readonly id: string }[] {
+    return (this.readout?.gameplayPackage.items ?? []).filter(
+      (item) => !item.weapon && !item.armor && !item.shield,
+    );
   }
 
   private async refresh(): Promise<void> {

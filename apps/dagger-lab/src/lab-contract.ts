@@ -271,18 +271,23 @@ export interface PlayerInventoryReadout {
   readonly items: readonly InventoryItemReadout[];
 }
 
-/** One equipment mutation receipt summary (equip-cycle verb history). */
+/** One equipment mutation receipt summary (equip verb history, successes and rejections). */
 export interface EquipmentLogRecord {
   readonly sequence: number;
-  /** equip | unequip | swap */
+  /** equip | unequip | swap | grant */
   readonly operation: string;
   /** Item definition id the mutation applied to. */
   readonly item: string;
   readonly slots: readonly string[];
   /** For a swap, the item definition id it replaced. */
   readonly replacedItem: string | null;
-  /** Committed equipment-component revision after the mutation. */
-  readonly equipmentRevision: number;
+  /** Stack size for fungible grants. */
+  readonly quantity: number | null;
+  readonly accepted: boolean;
+  /** Upstream rejection reason when the mutation was refused. */
+  readonly reason: string | null;
+  /** Committed component revision after the mutation; null on rejection. */
+  readonly committedRevision: number | null;
 }
 
 export interface LabReadout {
