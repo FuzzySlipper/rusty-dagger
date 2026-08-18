@@ -28,7 +28,13 @@ House rules:
   change — that coupling is intentional.
 - All randomness is bounded named evidence (`dice`, `weaponDice`); the
   caller supplies roll values, so resolution is deterministic and
-  replayable.
+  replayable. Career/world facts (proficiency, racial bonuses, swing state,
+  rapid-healing and no-regen flags) cross as bounded named evidence too,
+  0 until careers and swing states are modeled. Dice bounds may be
+  negative (swing modifiers span -10..+10).
+- Expressions can also read live track currents (`track`), spawn-derived
+  track maxima (`trackMax`), and fixed-point powers (`powMilli` — base^exp
+  scaled by 1000, floor at each step).
 - Content is inclusive classic Daggerfall data. Nothing here is scoped or
   validated down to "only what the current dungeon needs".
 - Numbers: the package envelope is schema-2 canonical binary64, composed

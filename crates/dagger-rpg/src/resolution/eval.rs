@@ -20,10 +20,13 @@ use super::{
 
 /// Materialized stat values (attributes and skills) for one subject. The
 /// caller materializes them: definition bases at spawn, live evaluated
-/// values during resolution.
+/// values during resolution. `tracks` carries live current track values;
+/// it is `None` where reading them would be circular (spawn, derived-rule
+/// evaluation of a track maximum), so track reads there reject honestly.
 pub struct ActorExprValues<'a> {
     pub definition: &'a DaggerActorDefinition,
     pub stats: &'a BTreeMap<String, i64>,
+    pub tracks: Option<&'a BTreeMap<String, i64>>,
 }
 
 /// Everything expression evaluation may read: the catalog (items, actor
@@ -100,6 +103,49 @@ pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, Da
                 });
             }
             Ok(value)
+        }
+        DaggerExpr::Track { subject, id } => {
+            let values = context.subject_values(*subject)?;
+            values
+                .tracks
+                .and_then(|tracks| tracks.get(id))
+                .copied()
+                .ok_or_else(|| {
+                    DaggerRejection::MissingValue(format!("track.{id}@{}", values.definition.id))
+                })
+        }
+        DaggerExpr::TrackMax { subject, id } => {
+            let values = context.subject_values(*subject)?;
+            let stat_id = track_max_stat_id(id);
+            values.stats.get(&stat_id).copied().ok_or_else(|| {
+                DaggerRejection::MissingValue(format!("stat.{stat_id}@{}", values.definition.id))
+            })
+        }
+        DaggerExpr::PowMilli { base, exponent } => {
+            let base = evaluate_expr(base, context)?;
+            let exponent = evaluate_expr(exponent, context)?;
+            if base < 0 {
+                return Err(DaggerRejection::InvalidExpression(format!(
+                    "powMilli base must be non-negative, got {base}"
+                )));
+            }
+            if !(0..=64).contains(&exponent) {
+                return Err(DaggerRejection::InvalidExpression(format!(
+                    "powMilli exponent must be 0..=64, got {exponent}"
+                )));
+            }
+            // Fixed-point power scaled by 1000: floor division at each step
+            // is the documented integer approximation of the donor's f64 pow.
+            let mut accumulator = 1_000_i64;
+            for _ in 0..exponent {
+                accumulator = accumulator
+                    .checked_mul(base)
+                    .ok_or_else(|| {
+                        DaggerRejection::InvalidExpression("powMilli overflow".to_string())
+                    })?
+                    .div_euclid(1_000);
+            }
+            Ok(accumulator)
         }
         DaggerExpr::Add { terms } => terms.iter().try_fold(0_i64, |total, term| {
             let value = evaluate_expr(term, context)?;
@@ -268,6 +314,10 @@ fn collect_dice(
         DaggerExpr::Sub { left, right } | DaggerExpr::DivFloor { left, right } => {
             collect_dice(catalog, left, rolls);
             collect_dice(catalog, right, rolls);
+        }
+        DaggerExpr::PowMilli { base, exponent } => {
+            collect_dice(catalog, base, rolls);
+            collect_dice(catalog, exponent, rolls);
         }
         _ => {}
     }
@@ -456,6 +506,9 @@ pub fn evaluate_derived_rule(
         actor: ActorExprValues {
             definition,
             stats: &base_stats,
+            // Derived rules evaluate against definition bases; live track
+            // currents do not exist in this context.
+            tracks: None,
         },
         target: None,
         evidence,
@@ -490,6 +543,8 @@ pub fn spawn_actor(
             })?;
     // Spawn evaluation reads definition base stats; the components that
     // would carry live values are exactly what this spawn is constructing.
+    // Track-current reads here would be circular (a track-max expression
+    // reading the current value it defines), so they reject honestly.
     let base_stats: BTreeMap<String, i64> = definition
         .stats
         .iter()
@@ -501,6 +556,7 @@ pub fn spawn_actor(
         actor: ActorExprValues {
             definition,
             stats: &base_stats,
+            tracks: None,
         },
         target: None,
         evidence,

@@ -1,7 +1,10 @@
+use std::collections::BTreeMap;
+
 use dagger_rpg::{
-    compile_gameplay_package, resolve_dagger_action, set_actor_track, spawn_actor, DaggerEffect,
-    DaggerEvent, DaggerEvidence, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
-    DaggerIntentOrigin, DaggerRejection,
+    compile_gameplay_package, evaluate_expr, resolve_dagger_action, set_actor_track, spawn_actor,
+    track_maximum, ActorExprValues, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerExpr,
+    DaggerGameplayError, DaggerGameplayState, DaggerIntent, DaggerIntentOrigin, DaggerRejection,
+    DaggerSubject, ExprContext,
 };
 use rusty_engine::gameplay_resolution::{
     AttemptStatus, CommitStatus, CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
@@ -45,8 +48,26 @@ fn player_melee_intent(origin: DaggerIntentOrigin) -> DaggerIntent {
     }
 }
 
+/// The player-only career/swing dice, supplied as 0 until careers and swing
+/// states are modeled.
+fn zeroed_player_dice(action: &str) -> Vec<DaggerEvidence> {
+    [
+        "swing-to-hit",
+        "proficiency-to-hit",
+        "racial-to-hit",
+        "proficiency-damage",
+        "racial-damage",
+    ]
+    .iter()
+    .map(|suffix| DaggerEvidence {
+        id: format!("{action}.{suffix}"),
+        value: 0,
+    })
+    .collect()
+}
+
 fn melee_evidence(d100: i64) -> Vec<DaggerEvidence> {
-    vec![
+    let mut evidence = vec![
         DaggerEvidence {
             id: "melee-attack.d100".to_string(),
             value: d100,
@@ -55,7 +76,9 @@ fn melee_evidence(d100: i64) -> Vec<DaggerEvidence> {
             id: "weapon-damage.iron-longsword".to_string(),
             value: 8,
         },
-    ]
+    ];
+    evidence.extend(zeroed_player_dice("melee-attack"));
+    evidence
 }
 
 #[test]
@@ -154,7 +177,8 @@ fn player_melee_hit_spends_stamina_and_applies_weapon_damage() {
 fn player_melee_miss_still_spends_stamina_but_applies_no_damage() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
     let mut state = spawn_state(&catalog);
-    // Chance vs rat: 60 skill + 30 armor - 50 = 40, so a roll of 90 misses.
+    // Chance vs rat: 60 skill + 30 armor - 50 + luck 0 + agility -3 = 37,
+    // so a roll of 90 misses.
     let (receipt, _) = resolve_dagger_action(
         &catalog,
         &mut state,
@@ -234,22 +258,19 @@ fn roll_evidence_outside_declared_bounds_rejects() {
     let mut state = spawn_state(&catalog);
     // A hitting d100 roll reaches the damage operation, where the declared
     // weapon dice bounds (2..16) reject the supplied 99.
+    let mut evidence = melee_evidence(25);
+    evidence
+        .iter_mut()
+        .find(|entry| entry.id == "weapon-damage.iron-longsword")
+        .expect("weapon evidence")
+        .value = 99;
     let (receipt, _) = resolve_dagger_action(
         &catalog,
         &mut state,
         identity(1),
         ResolutionMode::Apply,
         player_melee_intent(DaggerIntentOrigin::Player),
-        vec![
-            DaggerEvidence {
-                id: "melee-attack.d100".to_string(),
-                value: 25,
-            },
-            DaggerEvidence {
-                id: "weapon-damage.iron-longsword".to_string(),
-                value: 99,
-            },
-        ],
+        evidence,
     );
 
     assert!(!receipt.succeeded());
@@ -263,6 +284,17 @@ fn roll_evidence_outside_declared_bounds_rejects() {
 fn power_attack_hits_harder_and_costs_more_stamina() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
     let mut state = spawn_state(&catalog);
+    let mut evidence = vec![
+        DaggerEvidence {
+            id: "power-attack.d100".to_string(),
+            value: 25,
+        },
+        DaggerEvidence {
+            id: "weapon-damage.iron-longsword".to_string(),
+            value: 8,
+        },
+    ];
+    evidence.extend(zeroed_player_dice("power-attack"));
     let (receipt, _) = resolve_dagger_action(
         &catalog,
         &mut state,
@@ -274,16 +306,7 @@ fn power_attack_hits_harder_and_costs_more_stamina() {
             target: "rat-2007".to_string(),
             origin: DaggerIntentOrigin::Player,
         },
-        vec![
-            DaggerEvidence {
-                id: "power-attack.d100".to_string(),
-                value: 25,
-            },
-            DaggerEvidence {
-                id: "weapon-damage.iron-longsword".to_string(),
-                value: 8,
-            },
-        ],
+        evidence,
     );
 
     assert!(receipt.succeeded());
@@ -545,4 +568,286 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
         compile_gameplay_package(&encode(mutated)),
         Err(DaggerGameplayError::DuplicateId { .. })
     ));
+}
+
+#[test]
+fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let definition = &catalog.actors()["player"];
+    let stats = BTreeMap::new();
+    let context = ExprContext {
+        catalog: &catalog,
+        actor: ActorExprValues {
+            definition,
+            stats: &stats,
+            tracks: None,
+        },
+        target: None,
+        evidence: &[],
+    };
+    let pow = |base: i64, exponent: i64| DaggerExpr::PowMilli {
+        base: Box::new(DaggerExpr::Const { value: base }),
+        exponent: Box::new(DaggerExpr::Const { value: exponent }),
+    };
+    assert_eq!(evaluate_expr(&pow(1040, 0), &context), Ok(1000));
+    assert_eq!(evaluate_expr(&pow(1040, 1), &context), Ok(1040));
+    // 1040 * 1040 / 1000 floors to 1081.
+    assert_eq!(evaluate_expr(&pow(1040, 2), &context), Ok(1081));
+    assert!(matches!(
+        evaluate_expr(&pow(1040, 65), &context),
+        Err(DaggerRejection::InvalidExpression(_))
+    ));
+    assert!(matches!(
+        evaluate_expr(&pow(-1, 2), &context),
+        Err(DaggerRejection::InvalidExpression(_))
+    ));
+}
+
+#[test]
+fn adrenaline_rush_reads_live_tracks_through_resolution() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+
+    // Full health (85 of 85): no adrenaline bonus; chance vs rat is 37, so a
+    // roll of 38 misses.
+    let mut state = spawn_state(&catalog);
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        melee_evidence(38),
+    );
+    assert!(receipt.succeeded());
+    assert!(!receipt
+        .effects()
+        .iter()
+        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
+
+    // Health below max/8 (85/8 = 10): adrenaline adds +5, so the chance is
+    // 42 and the same roll of 38 hits.
+    let mut state = spawn_state(&catalog);
+    set_actor_track(&mut state, &catalog, "player", "health", 5).expect("lower player health");
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        melee_evidence(38),
+    );
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "rat-2007".to_string(),
+        amount: 8,
+    }));
+}
+
+#[test]
+fn track_reads_reject_where_live_values_do_not_exist() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let definition = &catalog.actors()["player"];
+    let stats = BTreeMap::new();
+    let context = ExprContext {
+        catalog: &catalog,
+        actor: ActorExprValues {
+            definition,
+            stats: &stats,
+            tracks: None,
+        },
+        target: None,
+        evidence: &[],
+    };
+    let track = DaggerExpr::Track {
+        subject: DaggerSubject::Actor,
+        id: "health".to_string(),
+    };
+    assert!(matches!(
+        evaluate_expr(&track, &context),
+        Err(DaggerRejection::MissingValue(_))
+    ));
+    // TrackMax reads the `{track}-max` stat; definition-base maps (derived
+    // rules, spawn) do not carry it, so the read rejects honestly.
+    let track_max = DaggerExpr::TrackMax {
+        subject: DaggerSubject::Actor,
+        id: "health".to_string(),
+    };
+    assert!(matches!(
+        evaluate_expr(&track_max, &context),
+        Err(DaggerRejection::MissingValue(_))
+    ));
+
+    // A track-max expression reading a track current compiles (the id is
+    // declared) but spawn rejects it: the value it would read is what the
+    // spawn is constructing.
+    let package: serde_json::Value =
+        serde_json::from_slice(PACKAGE).expect("parse committed package");
+    let mut mutated = package.clone();
+    mutated["payload"]["actors"][0]["tracks"][0]["max"] = serde_json::json!({
+        "kind": "track", "subject": "actor", "id": "health"
+    });
+    let catalog =
+        compile_gameplay_package(&serde_json::to_vec(&mutated).expect("encode mutated package"))
+            .expect("track-current track max compiles");
+    let mut state = DaggerGameplayState::default();
+    assert!(spawn_actor(&mut state, &catalog, "player", "player", &[]).is_err());
+}
+
+#[test]
+fn negative_bounded_dice_admits_and_evaluates() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    // The authored melee-attack carries dice("melee-attack.swing-to-hit",
+    // -10, 10); admission succeeding proves negative bounds compile. A
+    // negative in-bounds swing value evaluates (chance 37 - 5 = 32, roll 25
+    // still hits).
+    let mut state = spawn_state(&catalog);
+    let mut evidence = melee_evidence(25);
+    evidence
+        .iter_mut()
+        .find(|entry| entry.id == "melee-attack.swing-to-hit")
+        .expect("swing evidence")
+        .value = -5;
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence,
+    );
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "rat-2007".to_string(),
+        amount: 8,
+    }));
+
+    // Out of the negative bound still rejects.
+    let mut state = spawn_state(&catalog);
+    let mut evidence = melee_evidence(25);
+    evidence
+        .iter_mut()
+        .find(|entry| entry.id == "melee-attack.swing-to-hit")
+        .expect("swing evidence")
+        .value = -11;
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence,
+    );
+    assert!(!receipt.succeeded());
+    assert!(matches!(
+        receipt.attempt().status(),
+        AttemptStatus::Rejected(DaggerRejection::RollOutOfBounds { .. })
+    ));
+}
+
+#[test]
+fn skill_uses_for_advancement_matches_the_donor_golden() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let value = |evidence_id: &str, value: i64| DaggerEvidence {
+        id: evidence_id.to_string(),
+        value,
+    };
+    // Donor golden (FormulaHelper.CalculateSkillUsesForAdvancement): skill
+    // 30, advancement multiplier 2, career multiplier 1.30 (centi), level 1
+    // yields floor(30 * 2 * 1.30 * 1.04 * 2 / 5 + 1) = 33.
+    let uses = dagger_rpg::evaluate_derived_rule(
+        &catalog,
+        "skill-uses-for-advancement",
+        "player",
+        &[
+            value("skill-value", 30),
+            value("skill-advancement-multiplier", 2),
+            value("career-advancement-multiplier-centi", 130),
+            value("level", 1),
+        ],
+    )
+    .expect("evaluate skill-uses-for-advancement");
+    assert_eq!(uses, 33);
+
+    // Player reflexes 2 (classic Average) scale skill uses by 1.0.
+    let scale = dagger_rpg::evaluate_derived_rule(
+        &catalog,
+        "reflexes-skill-use-scale-milli",
+        "player",
+        &[],
+    )
+    .expect("evaluate reflexes-skill-use-scale-milli");
+    assert_eq!(scale, 1000);
+}
+
+#[test]
+fn career_flag_evidence_gates_recovery_rates() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let value = |evidence_id: &str, value: i64| DaggerEvidence {
+        id: evidence_id.to_string(),
+        value,
+    };
+    // Base form unchanged with the flag off; RapidHealing raises +60 to +100.
+    let recover = |rapid_healing: i64| {
+        dagger_rpg::evaluate_derived_rule(
+            &catalog,
+            "health-recovery-rate",
+            "player",
+            &[
+                value("max-health", 85),
+                value("rapid-healing-active", rapid_healing),
+            ],
+        )
+        .expect("evaluate health-recovery-rate")
+    };
+    assert_eq!(recover(0), 6);
+    assert_eq!(recover(1), 10);
+
+    // NoRegenSpellPoints zeroes spell-point recovery.
+    let recover_spell_points = |no_regen: i64| {
+        dagger_rpg::evaluate_derived_rule(
+            &catalog,
+            "spell-point-recovery-rate",
+            "player",
+            &[
+                value("max-magicka", 50),
+                value("no-regen-spell-points", no_regen),
+            ],
+        )
+        .expect("evaluate spell-point-recovery-rate")
+    };
+    assert_eq!(recover_spell_points(0), 6);
+    assert_eq!(recover_spell_points(1), 0);
+}
+
+#[test]
+fn policy_live_stats_include_track_max_bases() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let state = spawn_state(&catalog);
+    // The spawn-stored `{track}-max` stat base the TrackMax node reads.
+    assert_eq!(
+        track_maximum(&state, &catalog, "player", "health"),
+        Some(85)
+    );
+    assert_eq!(
+        track_maximum(&state, &catalog, "rat-2007", "health"),
+        Some(12)
+    );
+}
+
+#[test]
+fn action_roll_evidence_surfaces_the_player_career_dice() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let rolls = dagger_rpg::action_roll_evidence(&catalog, "melee-attack")
+        .expect("melee-attack roll evidence");
+    let by_id: BTreeMap<&str, (i64, i64)> = rolls
+        .iter()
+        .map(|(id, min, max)| (id.as_str(), (*min, *max)))
+        .collect();
+    assert_eq!(by_id["melee-attack.swing-to-hit"], (-10, 10));
+    assert_eq!(by_id["melee-attack.proficiency-to-hit"], (0, 30));
+    assert_eq!(by_id["melee-attack.racial-to-hit"], (0, 30));
+    assert_eq!(by_id["melee-attack.proficiency-damage"], (0, 30));
+    assert_eq!(by_id["melee-attack.racial-damage"], (0, 30));
+    assert_eq!(by_id["weapon-damage.iron-longsword"], (2, 16));
 }

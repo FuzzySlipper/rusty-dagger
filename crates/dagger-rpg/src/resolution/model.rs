@@ -173,6 +173,18 @@ pub enum AuthoredExpr {
     WeaponDice {
         item: String,
     },
+    Track {
+        subject: AuthoredSubject,
+        id: String,
+    },
+    TrackMax {
+        subject: AuthoredSubject,
+        id: String,
+    },
+    PowMilli {
+        base: Box<Self>,
+        exponent: Box<Self>,
+    },
     Add {
         terms: Vec<Self>,
     },
@@ -415,19 +427,63 @@ pub type DaggerProgram = Program<DaggerPredicate, DaggerOperation>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DaggerExpr {
-    Const { value: i64 },
-    Stat { subject: DaggerSubject, id: String },
-    Skill { subject: DaggerSubject, id: String },
-    Armor { subject: DaggerSubject },
-    Evidence { id: String },
-    Dice { id: String, min: i64, max: i64 },
-    WeaponDice { item: String },
-    Add { terms: Vec<Self> },
-    Sub { left: Box<Self>, right: Box<Self> },
-    Mul { terms: Vec<Self> },
-    DivFloor { left: Box<Self>, right: Box<Self> },
-    Min { terms: Vec<Self> },
-    Max { terms: Vec<Self> },
+    Const {
+        value: i64,
+    },
+    Stat {
+        subject: DaggerSubject,
+        id: String,
+    },
+    Skill {
+        subject: DaggerSubject,
+        id: String,
+    },
+    Armor {
+        subject: DaggerSubject,
+    },
+    Evidence {
+        id: String,
+    },
+    Dice {
+        id: String,
+        min: i64,
+        max: i64,
+    },
+    WeaponDice {
+        item: String,
+    },
+    Track {
+        subject: DaggerSubject,
+        id: String,
+    },
+    TrackMax {
+        subject: DaggerSubject,
+        id: String,
+    },
+    PowMilli {
+        base: Box<Self>,
+        exponent: Box<Self>,
+    },
+    Add {
+        terms: Vec<Self>,
+    },
+    Sub {
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+    Mul {
+        terms: Vec<Self>,
+    },
+    DivFloor {
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+    Min {
+        terms: Vec<Self>,
+    },
+    Max {
+        terms: Vec<Self>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

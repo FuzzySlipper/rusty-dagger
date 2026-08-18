@@ -11,6 +11,7 @@ use rusty_engine::gameplay_resolution::{
 };
 
 use super::eval::{evaluate_expr, ActorExprValues, ExprContext};
+use super::mechanics::track_max_stat_id;
 use super::{
     DaggerActorDefinition, DaggerActorFacts, DaggerActorState, DaggerAdmittedIntent, DaggerEffect,
     DaggerEvent, DaggerEvidence, DaggerFacts, DaggerFault, DaggerGameplayCatalog,
@@ -56,7 +57,11 @@ impl<'a> DaggerResolutionPolicy<'a> {
     }
 
     /// Materialize live stat values for one actor through the mechanics
-    /// stat service: base values plus any active attributed sources.
+    /// stat service: base values plus any active attributed sources. The
+    /// spawn-stored `{track}-max` stats are included so `trackMax`
+    /// expressions read the same map `stat` reads. Classic actors possess
+    /// every declared attribute and skill at some value, so ids the
+    /// definition omits (untrained skills, monster reflexes) read as 0.
     fn live_stats(
         &self,
         actor_id: &str,
@@ -64,8 +69,19 @@ impl<'a> DaggerResolutionPolicy<'a> {
         let binding = self.binding(actor_id)?;
         let definition = self.definition(actor_id)?;
         let operation = eval_operation_id();
+        let ids = definition
+            .stats
+            .keys()
+            .chain(definition.skills.keys())
+            .cloned()
+            .chain(
+                definition
+                    .tracks
+                    .iter()
+                    .map(|track| track_max_stat_id(&track.id)),
+            );
         let mut values = BTreeMap::new();
-        for id in definition.stats.keys().chain(definition.skills.keys()) {
+        for id in ids {
             let stat = StatId::parse(id.clone()).map_err(|error| {
                 PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
                     "stat id {id}: {error:?}"
@@ -86,15 +102,43 @@ impl<'a> DaggerResolutionPolicy<'a> {
             })?;
             values.insert(id.clone(), evaluation.value.get());
         }
+        for declared in self
+            .catalog
+            .stats()
+            .attributes
+            .iter()
+            .chain(self.catalog.stats().skills.iter())
+        {
+            values.entry(declared.clone()).or_insert(0);
+        }
         Ok(values)
     }
 
+    /// Materialize live current track values for one actor from the
+    /// mechanics track components.
+    fn live_tracks(
+        &self,
+        actor_id: &str,
+    ) -> PolicyResult<BTreeMap<String, i64>, DaggerRejection, DaggerFault, DaggerSuspension> {
+        let definition = self.definition(actor_id)?;
+        let mut values = BTreeMap::new();
+        for track in &definition.tracks {
+            if let Some(value) = self.snapshot.track_value(actor_id, &track.id) {
+                values.insert(track.id.clone(), value);
+            }
+        }
+        Ok(values)
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn expr_context<'b>(
         &'b self,
         actor_id: &str,
         target_id: &str,
         actor_stats: &'b BTreeMap<String, i64>,
+        actor_tracks: &'b BTreeMap<String, i64>,
         target_stats: &'b BTreeMap<String, i64>,
+        target_tracks: &'b BTreeMap<String, i64>,
         evidence: &'b [DaggerEvidence],
     ) -> PolicyResult<ExprContext<'b>, DaggerRejection, DaggerFault, DaggerSuspension> {
         Ok(ExprContext {
@@ -102,10 +146,12 @@ impl<'a> DaggerResolutionPolicy<'a> {
             actor: ActorExprValues {
                 definition: self.definition(actor_id)?,
                 stats: actor_stats,
+                tracks: Some(actor_tracks),
             },
             target: Some(ActorExprValues {
                 definition: self.definition(target_id)?,
                 stats: target_stats,
+                tracks: Some(target_tracks),
             }),
             evidence,
         })
@@ -279,11 +325,15 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
             DaggerPredicate::Cmp { op, left, right } => {
                 let actor_stats = self.live_stats(&intent.actor)?;
                 let target_stats = self.live_stats(&intent.target)?;
+                let actor_tracks = self.live_tracks(&intent.actor)?;
+                let target_tracks = self.live_tracks(&intent.target)?;
                 let context = self.expr_context(
                     &intent.actor,
                     &intent.target,
                     &actor_stats,
+                    &actor_tracks,
                     &target_stats,
+                    &target_tracks,
                     evidence,
                 )?;
                 let left_value = evaluate_expr(left, &context).map_err(PolicyFailure::Rejected)?;
@@ -314,11 +364,15 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         let mut plan = ResolutionPlan::new();
         let actor_stats = self.live_stats(&intent.actor)?;
         let target_stats = self.live_stats(&intent.target)?;
+        let actor_tracks = self.live_tracks(&intent.actor)?;
+        let target_tracks = self.live_tracks(&intent.target)?;
         let context = self.expr_context(
             &intent.actor,
             &intent.target,
             &actor_stats,
+            &actor_tracks,
             &target_stats,
+            &target_tracks,
             evidence,
         )?;
         match operation {

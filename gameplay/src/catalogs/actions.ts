@@ -3,11 +3,16 @@
  * resolution programs. Player, AI, and diagnostics all resolve these through
  * the same Rust policy path.
  *
- * Hit checks follow the classic shape (donor: FormulaHelper
- * CalculateSuccessfulHit — adapted): d100 against skill + target armor
- * vulnerability + the classic -50 adjustment, clamped to 3..97. All rolls
- * are bounded named evidence supplied by the caller; nothing here rolls its
- * own dice.
+ * Hit checks follow the fuller classic shape (donor: FormulaHelper
+ * CalculateSuccessfulHit / CalculateAttackDamage — adapted): d100 against
+ * skill + target armor vulnerability + the classic -50 adjustment + the
+ * general CalculateStatsToHit terms (attacker/target luck and agility
+ * differentials, /10 each) + the CalculateSkillsToHit dodging penalty,
+ * clamped to 3..97. Player melee additionally carries the player-only
+ * classic terms: swing state, expert-proficiency and racial weapon bonuses,
+ * and the adrenaline rush. Career facts (proficiency, racial, swing state)
+ * arrive as bounded named evidence — 0 until careers and swing states are
+ * modeled. Nothing here rolls its own dice.
  */
 
 import {
@@ -19,25 +24,91 @@ import {
   constant,
   damage,
   dice,
+  divFloor,
   evidence,
+  maxOf,
+  minOf,
+  mul,
   operation,
   sequence,
   skill,
   spendTrack,
+  stat,
   statModifier,
+  sub,
+  trackCurrent,
+  trackMax,
   weaponDice,
   when,
   type ActionDefinition,
+  type Expr,
   type Predicate,
 } from "../authoring/mod.js";
 
-/** Classic melee hit check: roll ≤ clamp(skill + target armor − 50, 3, 97). */
-const meleeHit = (rollEvidence: string, attackSkill: string): Predicate =>
+/**
+ * Shared classic melee hit check: roll ≤ clamp(skill + target armor − 50 +
+ * general terms, 3, 97). General terms (CalculateStatsToHit /
+ * CalculateSkillsToHit): luck and agility differentials /10, and
+ * − target dodging / 4 (donor comment: classic was bugged to read the
+ * attacker's dodging; the corrected shape reads the target's).
+ */
+const meleeHit = (
+  rollEvidence: string,
+  attackSkill: string,
+  ...extraTerms: readonly Expr[]
+): Predicate =>
   cmp(
     "lte",
     evidence(rollEvidence),
-    clampedChance(skill("actor", attackSkill), armor("target"), constant(-50)),
+    clampedChance(
+      skill("actor", attackSkill),
+      armor("target"),
+      constant(-50),
+      divFloor(sub(stat("actor", "luck"), stat("target", "luck")), constant(10)),
+      divFloor(sub(stat("actor", "agility"), stat("target", "agility")), constant(10)),
+      mul(divFloor(skill("target", "dodging"), constant(4)), constant(-1)),
+      ...extraTerms,
+    ),
   );
+
+/**
+ * Player-only classic to-hit terms, all bounded named evidence except the
+ * adrenaline rush: swing state (CalculateSwingModifiers: StrikeUp +10 …
+ * StrikeDown −10; 0 until swing states exist), expert-proficiency careers
+ * adding attacker level (CalculateProficiencyModifiers; 0 until careers
+ * exist), racial weapon bonuses (CalculateRacialModifiers: Dark Elf
+ * +level/4, Wood Elf archery +level/3, Redguard non-bow +level/3; 0 until
+ * careers exist), and the adrenaline rush (CalculateAdrenalineRushToHit: +5
+ * while current health is below max/8).
+ */
+const playerToHitTerms = (actionId: string): readonly Expr[] => [
+  dice(`${actionId}.swing-to-hit`, -10, 10),
+  dice(`${actionId}.proficiency-to-hit`, 0, 30),
+  dice(`${actionId}.racial-to-hit`, 0, 30),
+  mul(
+    constant(5),
+    minOf(
+      constant(1),
+      maxOf(
+        constant(0),
+        sub(
+          divFloor(trackMax("actor", "health"), constant(8)),
+          trackCurrent("actor", "health"),
+        ),
+      ),
+    ),
+  ),
+];
+
+/**
+ * Player-only classic damage terms (same donor functions as the to-hit
+ * side): expert-proficiency and racial damage bonuses as bounded named
+ * evidence, 0 until careers exist.
+ */
+const playerDamageTerms = (actionId: string): readonly Expr[] => [
+  dice(`${actionId}.proficiency-damage`, 0, 30),
+  dice(`${actionId}.racial-damage`, 0, 30),
+];
 
 export const actions: readonly ActionDefinition[] = [
   action(
@@ -46,12 +117,13 @@ export const actions: readonly ActionDefinition[] = [
     sequence(
       operation(spendTrack("stamina", constant(5))),
       when(
-        meleeHit("melee-attack.d100", "long-blade"),
+        meleeHit("melee-attack.d100", "long-blade", ...playerToHitTerms("melee-attack")),
         operation(
           damage(
             add(
               weaponDice("iron-longsword"),
               statModifier("actor", "strength", 5),
+              ...playerDamageTerms("melee-attack"),
             ),
           ),
         ),
@@ -97,13 +169,14 @@ export const actions: readonly ActionDefinition[] = [
     sequence(
       operation(spendTrack("stamina", constant(25))),
       when(
-        meleeHit("power-attack.d100", "long-blade"),
+        meleeHit("power-attack.d100", "long-blade", ...playerToHitTerms("power-attack")),
         operation(
           damage(
             add(
               weaponDice("iron-longsword"),
               statModifier("actor", "strength", 5),
               constant(4),
+              ...playerDamageTerms("power-attack"),
             ),
           ),
         ),

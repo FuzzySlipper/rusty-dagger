@@ -19,6 +19,10 @@ export const ATTRIBUTES = [
   "personality",
   "speed",
   "luck",
+  // Classic player-chosen reflex enum 0=very-high..4=very-low (donor
+  // `PlayerReflexes`, EntityEnums.cs:171-178), declared as a stat so
+  // expressions can read it; semantically it is not a 0..100 attribute.
+  "reflexes",
 ] as const;
 
 export const SKILLS = [

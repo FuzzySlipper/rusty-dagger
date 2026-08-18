@@ -25,6 +25,9 @@ export type Expr =
   | Readonly<{ kind: "evidence"; id: string }>
   | Readonly<{ kind: "dice"; id: string; min: number; max: number }>
   | Readonly<{ kind: "weaponDice"; item: string }>
+  | Readonly<{ kind: "track"; subject: Subject; id: string }>
+  | Readonly<{ kind: "trackMax"; subject: Subject; id: string }>
+  | Readonly<{ kind: "powMilli"; base: Expr; exponent: Expr }>
   | Readonly<{ kind: "add"; terms: readonly Expr[] }>
   | Readonly<{ kind: "sub"; left: Expr; right: Expr }>
   | Readonly<{ kind: "mul"; terms: readonly Expr[] }>
@@ -62,6 +65,32 @@ export const dice = (id: string, min: number, max: number): Expr => ({
 
 /** Bounded roll over a weapon item's declared damage range. */
 export const weaponDice = (item: string): Expr => ({ kind: "weaponDice", item });
+
+/** Current value of one of the subject's resource tracks. */
+export const trackCurrent = (subject: Subject, id: string): Expr => ({
+  kind: "track",
+  subject,
+  id,
+});
+
+/** Spawn-derived maximum of one of the subject's tracks (its `{id}-max` stat). */
+export const trackMax = (subject: Subject, id: string): Expr => ({
+  kind: "trackMax",
+  subject,
+  id,
+});
+
+/**
+ * Fixed-point power: `base^exponent` scaled by 1000 (milli), computed
+ * iteratively with floor division at each step — the deterministic integer
+ * approximation of the donor's f64 pow (e.g. 1.04^level is
+ * `powMilli(constant(1040), evidence("level"))`).
+ */
+export const powMilli = (base: Expr, exponent: Expr): Expr => ({
+  kind: "powMilli",
+  base,
+  exponent,
+});
 
 export const add = (...terms: readonly Expr[]): Expr => ({
   kind: "add",
