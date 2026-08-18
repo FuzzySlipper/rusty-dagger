@@ -88,12 +88,18 @@ expressions, like the remaining-health clamp. The classic material gate
 materialIneffective) clamps a Damage plan to 0 with a `MaterialIneffective`
 trace detail when the target's `minMetalToHit` outranks the attacker weapon's
 material (iron < steel < silver < … < daedric); unarmed attacks are always
-effective because classic has no bare-hand material. And the runtime's
-equip-cycle verb (KeyE in the native host) rotates the player's carried
-equippable items through their legal slots via `EquipmentService` swap
-semantics, logging every equip/unequip/swap receipt into the readout's
-`equipmentLog`; combat records report the weapon used (or "unarmed"), the
-struck body part, and material-ineffective outcomes.
+effective because classic has no bare-hand material. And the runtime owns the
+player's equipment verbs: the equip-cycle (KeyE in the native host) rotates
+carried equippable items through their legal slots via `EquipmentService`
+swap semantics, while the lab panel drives explicit `equip_item`,
+`unequip_slot`, and `grant_item` verbs through the lab server
+(equip/unequip/grant routes). `grant_item` is experiment instrumentation for
+fungible stacks only (unique items equip; entity allocation stays with the
+spawn loadout) and exists to exercise capacity-limit rejections live. Every
+attempt — success or upstream rejection — appends an equipment-log record
+with the operation, item/slot, and rejection reason; combat records report
+the weapon used (or "unarmed"), the struck body part, and
+material-ineffective outcomes.
 
 `dagger-gameplay-check` is the production Rust diagnostic. It admits the
 committed package, resolves the same controlled action for player and AI

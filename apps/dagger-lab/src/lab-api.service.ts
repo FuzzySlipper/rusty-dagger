@@ -34,6 +34,18 @@ export class LabApiService {
     );
   }
 
+  equipItem(item: number): Promise<LabReadout> {
+    return firstValueFrom(this.http.post<LabReadout>(`${API_URL}/equipment/equip`, { item }));
+  }
+
+  unequipSlot(slot: string): Promise<LabReadout> {
+    return firstValueFrom(this.http.post<LabReadout>(`${API_URL}/equipment/unequip`, { slot }));
+  }
+
+  grantItem(item: string, quantity: number): Promise<LabReadout> {
+    return firstValueFrom(this.http.post<LabReadout>(`${API_URL}/inventory/grant`, { item, quantity }));
+  }
+
   spriteIndex(): Promise<SpriteIndex> {
     return firstValueFrom(this.http.get<SpriteIndex>(`${API_URL}/sprites/index`));
   }

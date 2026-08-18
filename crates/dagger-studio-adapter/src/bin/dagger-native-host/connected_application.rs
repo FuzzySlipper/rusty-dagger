@@ -183,6 +183,15 @@ fn handle_command(
             send_runtime_result(reply, runtime.reset_play_session())
         }
         LabCommand::Jump { id, reply } => send_runtime_result(reply, runtime.jump_to_content(id)),
+        LabCommand::Equip { item, reply } => send_runtime_result(reply, runtime.equip_item(item)),
+        LabCommand::Unequip { slot, reply } => {
+            send_runtime_result(reply, runtime.unequip_slot(&slot))
+        }
+        LabCommand::Grant {
+            item,
+            quantity,
+            reply,
+        } => send_runtime_result(reply, runtime.grant_item(&item, quantity)),
     }
 }
 

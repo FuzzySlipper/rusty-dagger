@@ -49,6 +49,19 @@ pub(crate) enum LabCommand {
         id: u64,
         reply: Sender<LabReply>,
     },
+    Equip {
+        item: u64,
+        reply: Sender<LabReply>,
+    },
+    Unequip {
+        slot: String,
+        reply: Sender<LabReply>,
+    },
+    Grant {
+        item: String,
+        quantity: u64,
+        reply: Sender<LabReply>,
+    },
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -234,6 +247,52 @@ fn handle_request(
                     reply: send_reply,
                 }
             }
+            ("POST", "/api/dagger-lab/equipment/equip") => {
+                let body: EquipRequest = match serde_json::from_str(&request.body) {
+                    Ok(body) => body,
+                    Err(error) => return write_response(
+                        stream,
+                        400,
+                        &serde_json::json!({ "error": format!("invalid equip request: {error}") })
+                            .to_string(),
+                    ),
+                };
+                LabCommand::Equip {
+                    item: body.item,
+                    reply: send_reply,
+                }
+            }
+            ("POST", "/api/dagger-lab/equipment/unequip") => {
+                let body: UnequipRequest = match serde_json::from_str(&request.body) {
+                    Ok(body) => body,
+                    Err(error) => return write_response(
+                        stream,
+                        400,
+                        &serde_json::json!({ "error": format!("invalid unequip request: {error}") })
+                            .to_string(),
+                    ),
+                };
+                LabCommand::Unequip {
+                    slot: body.slot,
+                    reply: send_reply,
+                }
+            }
+            ("POST", "/api/dagger-lab/inventory/grant") => {
+                let body: GrantRequest = match serde_json::from_str(&request.body) {
+                    Ok(body) => body,
+                    Err(error) => return write_response(
+                        stream,
+                        400,
+                        &serde_json::json!({ "error": format!("invalid grant request: {error}") })
+                            .to_string(),
+                    ),
+                };
+                LabCommand::Grant {
+                    item: body.item,
+                    quantity: body.quantity,
+                    reply: send_reply,
+                }
+            }
             _ => {
                 return write_response(stream, 404, r#"{"error":"unknown Dagger Lab route"}"#);
             }
@@ -250,6 +309,25 @@ fn handle_request(
 #[derive(serde::Deserialize)]
 struct JumpRequest {
     id: u64,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct EquipRequest {
+    item: u64,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct UnequipRequest {
+    slot: String,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct GrantRequest {
+    item: String,
+    quantity: u64,
 }
 
 fn serve_static(stream: &mut TcpStream, root: &Path, request_path: &str) -> Result<()> {

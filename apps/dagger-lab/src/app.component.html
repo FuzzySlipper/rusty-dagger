@@ -140,6 +140,8 @@
         <article *ngFor="let item of equippedItems(live)" [attr.data-testid]="'inventory-slot-' + item.equipSlot">
           <span>{{ item.equipSlot }}</span>
           <strong>{{ item.item }}</strong>
+          <button type="button" class="item-action" [disabled]="pending"
+            [attr.data-testid]="'unequip-' + item.equipSlot" (click)="unequipItem(item)">Unequip</button>
         </article>
         <p class="muted" *ngIf="equippedItems(live).length === 0">Nothing equipped.</p>
       </div>
@@ -152,17 +154,30 @@
         <article *ngFor="let item of carriedItems(live)" [attr.data-testid]="'inventory-item-' + item.item">
           <span>{{ item.item }}</span>
           <strong>unequipped</strong>
+          <button type="button" class="item-action" [disabled]="pending"
+            [attr.data-testid]="'equip-' + item.item" (click)="equipItem(item)">Equip</button>
         </article>
         <p class="muted" *ngIf="live.playerInventory.stacks.length === 0 && carriedItems(live).length === 0">Empty.</p>
       </div>
+      <p class="kicker field-kicker">Grant (experiment instrumentation)</p>
+      <div class="grant-row" data-testid="grant-row">
+        <select data-testid="grant-item" [(ngModel)]="grantItemId">
+          <option *ngFor="let item of fungibleItems()" [value]="item.id">{{ item.id }}</option>
+        </select>
+        <input data-testid="grant-quantity" type="number" min="1" [(ngModel)]="grantQuantity" />
+        <button type="button" data-testid="grant-submit" [disabled]="pending" (click)="grantItem()">Grant</button>
+      </div>
+      <p class="muted">Fungible stacks only; over-capacity grants reject and the rejection lands in the log below.</p>
       <p class="kicker field-kicker">Equipment log</p>
       <div class="derived-grid" data-testid="equipment-log">
-        <article *ngFor="let record of live.equipmentLog" [attr.data-testid]="'equipment-log-' + record.sequence">
-          <span>#{{ record.sequence }} · {{ record.operation }} · {{ record.item }}</span>
-          <strong>{{ record.slots.join(', ') }}<span *ngIf="record.replacedItem"> · replaced {{ record.replacedItem }}</span></strong>
-          <div class="derived-inputs"><small>equipment revision {{ record.equipmentRevision }}</small></div>
+        <article *ngFor="let record of live.equipmentLog" [class.rejected]="!record.accepted"
+          [attr.data-testid]="'equipment-log-' + record.sequence">
+          <span>#{{ record.sequence }} · {{ record.operation }} · {{ record.item }}<span *ngIf="record.quantity !== null"> × {{ record.quantity }}</span></span>
+          <strong *ngIf="record.accepted">{{ record.slots.join(', ') }}<span *ngIf="record.replacedItem"> · replaced {{ record.replacedItem }}</span></strong>
+          <strong *ngIf="!record.accepted" [attr.data-testid]="'equipment-log-' + record.sequence + '-rejected'">REJECTED · {{ record.reason }}</strong>
+          <div class="derived-inputs" *ngIf="record.committedRevision !== null"><small>revision {{ record.committedRevision }}</small></div>
         </article>
-        <p class="muted" *ngIf="live.equipmentLog.length === 0">Press E on the gameplay surface to cycle carried equipment.</p>
+        <p class="muted" *ngIf="live.equipmentLog.length === 0">Press E on the gameplay surface to cycle carried equipment, or use the equip actions above.</p>
       </div>
     </article>
 

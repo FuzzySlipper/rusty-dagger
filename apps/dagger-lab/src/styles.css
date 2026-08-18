@@ -125,6 +125,13 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
 .derived-grid code { grid-column: 1 / -1; color: #b9cbc7; overflow-wrap: anywhere; }
 .derived-inputs { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
 .derived-inputs small { padding: 4px 6px; border-radius: 5px; background: #1d2829; color: #aebdb9; font: .68rem ui-monospace, monospace; }
+.item-action { grid-column: 2; padding: 5px 10px; font-size: .72rem; }
+.grant-row { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.grant-row select, .grant-row input { padding: 6px 8px; border: 1px solid #405052; border-radius: 6px; background: #101718; color: #e6e9e4; font: inherit; }
+.grant-row input { width: 90px; }
+.grant-row button { padding: 6px 12px; font-size: .78rem; }
+.derived-grid article.rejected { border-color: #6d3d34; }
+.derived-grid article.rejected strong { color: #efb9ac; overflow-wrap: anywhere; }
 .derived-grid ol { grid-column: 1 / -1; display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; color: #839391; font: .68rem ui-monospace, monospace; }
 .history { grid-column: 1 / -1; }
 .filter { display: flex; justify-content: space-between; gap: 16px; margin: 0 0 16px; color: #9facaa; font-size: .8rem; }
