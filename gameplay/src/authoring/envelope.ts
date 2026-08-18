@@ -16,6 +16,7 @@ import type {
   ActorDefinition,
   DerivedRule,
   EncounterDefinition,
+  EquipmentSection,
   ItemDefinition,
   RuleDefinition,
   StatsSection,
@@ -30,6 +31,8 @@ export type DaggerGameplayPayload = Readonly<{
   rules: readonly RuleDefinition[];
   encounters: readonly EncounterDefinition[];
   derived: readonly DerivedRule[];
+  /** Equipment slots and capacity metrics items bind against (additive). */
+  equipment?: EquipmentSection;
 }>;
 
 export type PackageInput = Readonly<{
@@ -78,6 +81,12 @@ export const composePackage = (input: PackageInput) => {
     "derived",
     payload.derived.map((entry) => `derived.${entry.id}`),
   );
+  if (payload.equipment !== undefined) {
+    record("equipment", [
+      ...payload.equipment.capacityMetrics.map((id) => `equipment.capacity-metric.${id}`),
+      ...payload.equipment.slots.map((entry) => `equipment.slot.${entry.id}`),
+    ]);
+  }
   return authorBinary64RulePackage({
     domain: "dagger",
     package: input.packageId,

@@ -78,6 +78,38 @@ semantic IDs (`weapon.dagger.steel`, `effect.*`, `audio.melee.*`) to runtime
 consumers. Gameplay code therefore does not embed Arena2 filenames, record
 numbers, frame counts, or UV layouts.
 
+## Gameplay item model
+
+The gameplay item vocabulary (Den task 6686) draws on the Daggerfall Unity
+donor at the declared revision:
+
+- `Formulas/FormulaHelper.cs` `CalculateWeaponMinDamage` /
+  `CalculateWeaponMaxDamage` — adopted: the classic per-weapon-type damage
+  ranges authored in `gameplay/src/catalogs/items.ts`.
+- `Game/Items/DaggerfallUnityItem.cs` `GetWeaponSkillUsed` — adopted: the
+  weapon-type to proficiency-skill mapping.
+- `Game/Items/ItemEquipTable.cs` `GetItemHands` — adopted: either/both/leftOnly
+  handedness per weapon type and left-only shields; two-handed weapons and
+  shields sharing a `hands` exclusivity group is our adaptation of classic
+  hand occupancy to the upstream exclusivity mechanism.
+- `Game/Items/DaggerfallUnityItem.cs` `GetMaterialArmorValue` /
+  `GetShieldArmorValue` — adopted: armor value is per-material (leather 3
+  through daedric 21), shields per-type (buckler 1 through tower 4).
+- `Game/Items/ItemEnums.cs` `EquipSlots` — adopted: the 25 classic paper-doll
+  slots (classic's two Unknown slots skipped).
+- `Formulas/FormulaHelper.cs` `MaxEncumbrance` — adopted: floor(STR x 1.5) kg;
+  the capacity metric weighs in the classic quarter-kg unit.
+- `Assets/Resources/ItemTemplates.txt` — adopted: the FALL.EXE item template
+  export DFU commits is the weight/value source for the authored items.
+  `API/ItemsFile.cs` documents the underlying FALL.EXE record layout
+  (288 templates, 48-byte records) as the future extraction source when the
+  loot campaign needs the full table from the local Arena2 data.
+- `Game/Items/ItemCollection.cs` and `ItemEquipTable`'s Unity-side equip
+  runtime (ItemCollection dictionaries, Unity entity topology) — rejected:
+  inventory/equipment state lives in the upstream Engine mechanics
+  components (`InventoryComponent`/`EquipmentComponent` with entity-state
+  containment), not in a Dagger-owned container model.
+
 ## Collision authority
 
 The collision authority is the dungeon static mesh itself (rusty-engine task

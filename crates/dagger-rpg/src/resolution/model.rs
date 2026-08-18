@@ -69,6 +69,36 @@ pub struct AuthoredGameplayPayload {
     pub encounters: Vec<AuthoredEncounterDefinition>,
     #[serde(default)]
     pub derived: Vec<AuthoredDerivedRule>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub equipment: Option<AuthoredEquipmentSection>,
+}
+
+/// Capacity metrics and equipment slots the package's items bind against.
+/// Optional and additive under payload schema 1; required by admission once
+/// any item is equippable or weighs anything.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredEquipmentSection {
+    pub capacity_metrics: Vec<String>,
+    pub slots: Vec<AuthoredEquipmentSlot>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredEquipmentSlot {
+    pub id: String,
+    pub allowed_classifications: Vec<String>,
+}
+
+/// One inventory entry in an actor's spawn loadout.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredLoadoutEntry {
+    pub item: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quantity: Option<Binary64I64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub equip_slot: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,6 +143,8 @@ pub struct AuthoredActorDefinition {
     pub loot_table_key: Option<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attacks: Vec<AuthoredDamageRange>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub inventory: Vec<AuthoredLoadoutEntry>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -294,7 +326,13 @@ pub struct AuthoredItemDefinition {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub weapon: Option<AuthoredWeaponDefinition>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub interceptor: Option<AuthoredInterceptor>,
+    pub armor: Option<AuthoredArmorDefinition>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shield: Option<AuthoredShieldDefinition>,
+    /// Weight in the classic quarter-kg unit.
+    pub weight_units: Binary64I64,
+    /// Value in gold pieces.
+    pub value: Binary64I64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -303,6 +341,33 @@ pub struct AuthoredWeaponDefinition {
     pub damage: AuthoredDamageRange,
     pub material: String,
     pub skill: String,
+    pub hands: AuthoredWeaponHands,
+}
+
+/// Weapon handedness (donor `ItemEquipTable.GetItemHands`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AuthoredWeaponHands {
+    #[serde(rename = "either")]
+    Either,
+    #[serde(rename = "both")]
+    Both,
+    #[serde(rename = "leftOnly")]
+    LeftOnly,
+}
+
+/// Armor is valued per material, not per piece; the piece selects the
+/// `armor-<piece>` classification and therefore its legal slots.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredArmorDefinition {
+    pub material: String,
+    pub piece: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredShieldDefinition {
+    pub value: Binary64I64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -310,12 +375,6 @@ pub struct AuthoredWeaponDefinition {
 pub struct AuthoredDamageRange {
     pub min: Binary64I64,
     pub max: Binary64I64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
-pub enum AuthoredInterceptor {
-    ReduceDamage { amount: Binary64I64 },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -348,6 +407,7 @@ pub struct DaggerGameplayCatalog {
     rules: Vec<DaggerRuleDefinition>,
     encounters: BTreeMap<String, DaggerEncounterDefinition>,
     derived: BTreeMap<String, DaggerDerivedRule>,
+    equipment: DaggerEquipmentSection,
     mechanics: MechanicsCatalog,
 }
 
@@ -384,6 +444,11 @@ impl DaggerGameplayCatalog {
         &self.derived
     }
 
+    /// The package's equipment vocabulary (capacity metrics, slot legality).
+    pub fn equipment(&self) -> &DaggerEquipmentSection {
+        &self.equipment
+    }
+
     /// The Engine mechanics catalog admitted from this package's declared
     /// stats and tracks. All durable stat/track state resolves through it.
     pub fn mechanics(&self) -> &MechanicsCatalog {
@@ -400,6 +465,7 @@ impl DaggerGameplayCatalog {
         rules: Vec<DaggerRuleDefinition>,
         encounters: BTreeMap<String, DaggerEncounterDefinition>,
         derived: BTreeMap<String, DaggerDerivedRule>,
+        equipment: DaggerEquipmentSection,
         mechanics: MechanicsCatalog,
     ) -> Self {
         Self {
@@ -411,6 +477,7 @@ impl DaggerGameplayCatalog {
             rules,
             encounters,
             derived,
+            equipment,
             mechanics,
         }
     }
@@ -538,6 +605,8 @@ pub struct DaggerActorDefinition {
     pub loot_table_key: Option<String>,
     /// Classic melee attack damage ranges (1-3 sub-attacks per swing).
     pub attacks: Vec<DaggerDamageRange>,
+    /// Spawn loadout bound into upstream inventory/equipment components.
+    pub inventory: Vec<DaggerLoadoutEntry>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -607,7 +676,26 @@ pub enum DaggerOperation {
 pub struct DaggerItemDefinition {
     pub id: String,
     pub weapon: Option<DaggerWeaponDefinition>,
-    pub interceptor: Option<DaggerInterceptorKind>,
+    /// Armor value is compiled here from the per-material classic table.
+    pub armor: Option<DaggerArmorDefinition>,
+    pub shield: Option<DaggerShieldDefinition>,
+    /// Weight in the classic quarter-kg unit.
+    pub weight_units: u64,
+    /// Value in gold pieces.
+    pub value: u64,
+    /// Fungible items (gold, arrows) are stacks; equippable items are unique
+    /// entities. Derived from the absence of weapon/armor/shield blocks.
+    pub fungible: bool,
+    /// Upstream mapping input: equipment classifications for slot legality.
+    pub classifications: Vec<String>,
+    /// Upstream mapping input: equipment policy for equippable items.
+    pub equipment: Option<DaggerItemEquipment>,
+}
+
+impl DaggerItemDefinition {
+    pub fn equippable(&self) -> bool {
+        self.equipment.is_some()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -616,11 +704,62 @@ pub struct DaggerWeaponDefinition {
     pub damage_max: i64,
     pub material: String,
     pub skill: String,
+    pub hands: DaggerWeaponHands,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DaggerWeaponHands {
+    Either,
+    Both,
+    LeftOnly,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DaggerInterceptorKind {
-    ReduceDamage { amount: i64 },
+pub struct DaggerArmorDefinition {
+    pub material: String,
+    pub piece: String,
+    /// Per-material armor value (classic inverted convention: higher is
+    /// easier to hit), compiled from the donor table.
+    pub value: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerShieldDefinition {
+    pub value: i64,
+}
+
+/// Equipment policy an equippable item carries into the upstream catalog.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerItemEquipment {
+    pub required_slots: u16,
+    pub exclusive_group: Option<String>,
+}
+
+/// The package's equipment vocabulary: capacity metrics and slot legality.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct DaggerEquipmentSection {
+    pub capacity_metrics: Vec<String>,
+    pub slots: Vec<DaggerEquipmentSlotDefinition>,
+}
+
+impl DaggerEquipmentSection {
+    pub fn slot(&self, id: &str) -> Option<&DaggerEquipmentSlotDefinition> {
+        self.slots.iter().find(|slot| slot.id == id)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerEquipmentSlotDefinition {
+    pub id: String,
+    pub allowed_classifications: Vec<String>,
+}
+
+/// One compiled spawn-loadout entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerLoadoutEntry {
+    pub item: String,
+    pub quantity: u64,
+    pub equip_slot: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -642,8 +781,8 @@ pub struct DaggerEncounterDefinition {
 }
 
 /// Mechanics-backed live gameplay state: an entity-state store holding the
-/// Engine's stat/track components, plus Dagger-owned actor bindings (which
-/// catalog definition each actor embodies, conditions, carried items).
+/// Engine's stat/track and inventory/equipment components, plus Dagger-owned
+/// actor bindings (which catalog definition each actor embodies, conditions).
 #[derive(Debug, Clone)]
 pub struct DaggerGameplayState {
     entities: EntityState,
@@ -682,7 +821,9 @@ impl DaggerGameplayState {
         &self.entities
     }
 
-    pub(crate) fn entities_mut(&mut self) -> &mut EntityState {
+    /// Mutable access to the entity store for driving upstream mechanics
+    /// services (equipment, inventory) against spawned actors.
+    pub fn entities_mut(&mut self) -> &mut EntityState {
         &mut self.entities
     }
 
@@ -706,15 +847,15 @@ impl DaggerGameplayState {
 
 /// Live binding of one actor instance: its entity (which carries the
 /// mechanics stat/track components), which catalog definition it embodies,
-/// and Dagger-owned condition/item sets. Conditions stay Dagger-owned until
-/// spell effects introduce the Engine's active-effects model; carried items
-/// stay Dagger-owned until the loot campaign introduces inventories.
+/// and Dagger-owned condition sets. Conditions stay Dagger-owned until spell
+/// effects introduce the Engine's active-effects model; inventory and
+/// equipment live on the entity as upstream Inventory/Equipment components
+/// attached at spawn.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DaggerActorState {
     entity: EntityId,
     definition: String,
     conditions: BTreeSet<String>,
-    items: BTreeSet<String>,
 }
 
 impl DaggerActorState {
@@ -723,7 +864,6 @@ impl DaggerActorState {
             entity,
             definition: definition.into(),
             conditions: BTreeSet::new(),
-            items: BTreeSet::new(),
         }
     }
 
@@ -739,16 +879,8 @@ impl DaggerActorState {
         &self.conditions
     }
 
-    pub fn items(&self) -> &BTreeSet<String> {
-        &self.items
-    }
-
     pub fn add_condition(&mut self, condition: impl Into<String>) {
         self.conditions.insert(condition.into());
-    }
-
-    pub fn add_item(&mut self, item: impl Into<String>) {
-        self.items.insert(item.into());
     }
 }
 
@@ -782,7 +914,6 @@ pub struct DaggerActorFacts {
     pub definition: String,
     pub tracks: BTreeMap<String, i64>,
     pub conditions: BTreeSet<String>,
-    pub items: BTreeSet<String>,
 }
 
 impl DaggerActorFacts {
@@ -830,16 +961,6 @@ pub enum DaggerEvent {
         target: String,
         amount: i64,
     },
-    InterceptorApplied {
-        source: String,
-        amount: i64,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DaggerInterceptor {
-    pub source: String,
-    pub kind: DaggerInterceptorKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

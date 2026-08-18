@@ -26,9 +26,15 @@ export interface BehaviorDefinition {
   readonly action: string;
 }
 
+export interface LoadoutEntry {
+  readonly item: string;
+  readonly quantity?: number;
+  readonly equipSlot?: string;
+}
+
 export interface ActorDefinition {
   readonly id: string;
-  readonly kind: 'player' | 'monster';
+  readonly kind: 'player' | 'monster' | 'enemy-class';
   readonly mobileId?: number;
   readonly stats: Readonly<Record<string, number>>;
   readonly skills: Readonly<Record<string, number>>;
@@ -36,6 +42,13 @@ export interface ActorDefinition {
   readonly tracks: readonly TrackDefinition[];
   readonly moveSpeed?: number;
   readonly behavior?: BehaviorDefinition;
+  readonly level?: number;
+  readonly weight?: number;
+  readonly minMetalToHit?: string;
+  readonly team?: string;
+  readonly lootTableKey?: string;
+  readonly attacks?: readonly Readonly<{ min: number; max: number }>[];
+  readonly inventory?: readonly LoadoutEntry[];
 }
 
 export interface ActionDefinition {
@@ -52,12 +65,42 @@ export interface WeaponDefinition {
   readonly damage: Readonly<{ min: number; max: number }>;
   readonly material: string;
   readonly skill: string;
+  readonly hands: 'either' | 'both' | 'leftOnly';
+}
+
+export interface ArmorDefinition {
+  readonly material: string;
+  readonly piece: string;
+}
+
+export interface ShieldDefinition {
+  readonly value: number;
 }
 
 export interface ItemDefinition {
   readonly id: string;
   readonly weapon?: WeaponDefinition;
-  readonly interceptor?: Readonly<{ kind: string; amount: number }>;
+  readonly armor?: ArmorDefinition;
+  readonly shield?: ShieldDefinition;
+  /** Weight in the classic quarter-kg unit. */
+  readonly weightUnits: number;
+  /** Value in gold pieces. */
+  readonly value: number;
+}
+
+export interface EquipmentSlotDefinition {
+  readonly id: string;
+  readonly allowedClassifications: readonly string[];
+}
+
+export interface EquipmentSection {
+  readonly capacityMetrics: readonly string[];
+  readonly slots: readonly EquipmentSlotDefinition[];
+}
+
+export interface DerivedRule {
+  readonly id: string;
+  readonly expr: Json;
 }
 
 export interface RuleDefinition {
@@ -84,6 +127,8 @@ export interface GameplayPackageReadout {
   readonly items: readonly ItemDefinition[];
   readonly rules: readonly RuleDefinition[];
   readonly encounters: readonly EncounterDefinition[];
+  readonly derived: readonly DerivedRule[];
+  readonly equipment?: EquipmentSection;
 }
 
 export interface ActorGameplayReadout {
@@ -196,6 +241,29 @@ export interface ContentEntityReadout {
   };
 }
 
+export interface InventoryCapacityReadout {
+  readonly metric: string;
+  readonly used: number;
+  readonly maximum: number | null;
+}
+
+export interface InventoryStackReadout {
+  readonly item: string;
+  readonly quantity: number;
+}
+
+export interface InventoryItemReadout {
+  readonly item: string;
+  readonly entity: number;
+  readonly equipSlot: string | null;
+}
+
+export interface PlayerInventoryReadout {
+  readonly capacity: readonly InventoryCapacityReadout[];
+  readonly stacks: readonly InventoryStackReadout[];
+  readonly items: readonly InventoryItemReadout[];
+}
+
 export interface LabReadout {
   readonly gameplayPackage: GameplayPackageReadout;
   readonly moveSpeedUnitsPerSecond: number;
@@ -213,4 +281,5 @@ export interface LabReadout {
   readonly focusedContentId: number | null;
   readonly namedEncounters: readonly NamedEncounterReadout[];
   readonly activeEncounter: NamedEncounterReadout | null;
+  readonly playerInventory: PlayerInventoryReadout;
 }

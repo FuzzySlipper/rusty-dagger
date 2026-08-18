@@ -9,6 +9,7 @@ import { actions } from "../catalogs/actions.js";
 import { actors } from "../catalogs/actors.js";
 import { derived } from "../catalogs/derived.js";
 import { encounters } from "../catalogs/encounters.js";
+import { equipment } from "../catalogs/equipment.js";
 import { items } from "../catalogs/items.js";
 import { monsters } from "../catalogs/monsters.js";
 import { rules } from "../catalogs/rules.js";
@@ -26,6 +27,7 @@ export const gameplayPackage = composePackage({
     rules: "gameplay/src/catalogs/rules.ts",
     encounters: "gameplay/src/catalogs/encounters.ts",
     derived: "gameplay/src/catalogs/derived.ts",
+    equipment: "gameplay/src/catalogs/equipment.ts",
   },
   payload: {
     schemaVersion: 1,
@@ -36,5 +38,6 @@ export const gameplayPackage = composePackage({
     rules,
     encounters,
     derived,
+    equipment,
   },
 });

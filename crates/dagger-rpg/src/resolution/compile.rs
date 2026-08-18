@@ -4,13 +4,15 @@ use rusty_engine::{gameplay_resolution::Program, gameplay_rules::decode_rule_pac
 
 use super::{
     AuthoredActorDefinition, AuthoredCmpOp, AuthoredEncounterDefinition, AuthoredExpr,
-    AuthoredGameplayPayload, AuthoredInterceptor, AuthoredItemDefinition, AuthoredOperation,
-    AuthoredPredicate, AuthoredProgram, AuthoredRuleDefinition, AuthoredSelector, AuthoredSubject,
-    DaggerActionDefinition, DaggerActorDefinition, DaggerActorKind, DaggerBehaviorDefinition,
-    DaggerCmpOp, DaggerDamageRange, DaggerDerivedRule, DaggerEncounterDefinition, DaggerExpr,
-    DaggerGameplayCatalog, DaggerGameplayError, DaggerInterceptorKind, DaggerItemDefinition,
-    DaggerOperation, DaggerPredicate, DaggerProgram, DaggerRuleDefinition, DaggerSelector,
-    DaggerStatsSection, DaggerSubject, DaggerTrackDefinition, DaggerWeaponDefinition,
+    AuthoredGameplayPayload, AuthoredItemDefinition, AuthoredOperation, AuthoredPredicate,
+    AuthoredProgram, AuthoredRuleDefinition, AuthoredSelector, AuthoredSubject,
+    DaggerActionDefinition, DaggerActorDefinition, DaggerActorKind, DaggerArmorDefinition,
+    DaggerBehaviorDefinition, DaggerCmpOp, DaggerDamageRange, DaggerDerivedRule,
+    DaggerEncounterDefinition, DaggerEquipmentSection, DaggerEquipmentSlotDefinition, DaggerExpr,
+    DaggerGameplayCatalog, DaggerGameplayError, DaggerItemDefinition, DaggerItemEquipment,
+    DaggerLoadoutEntry, DaggerOperation, DaggerPredicate, DaggerProgram, DaggerRuleDefinition,
+    DaggerSelector, DaggerShieldDefinition, DaggerStatsSection, DaggerSubject,
+    DaggerTrackDefinition, DaggerWeaponDefinition, DaggerWeaponHands,
     DAGGER_GAMEPLAY_SCHEMA_VERSION, MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS, MAX_DAGGER_ACTORS,
     MAX_DAGGER_DECLARED_IDS, MAX_DAGGER_DERIVED, MAX_DAGGER_ENCOUNTERS,
     MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_EXPR_DEPTH, MAX_DAGGER_EXPR_NODES,
@@ -23,6 +25,51 @@ const MIN_TUNING_VALUE: f64 = 0.001;
 /// Classic supports up to 5 sub-attacks per swing; no classic monster uses
 /// more than 3.
 const MAX_ATTACK_RANGES: usize = 5;
+
+/// The capacity metric id items weigh against (classic quarter-kg units).
+pub const WEIGHT_CAPACITY_METRIC: &str = "weight";
+
+/// The exclusivity group two-handed weapons and shields share (classic: a
+/// two-hander occupies both hands, so it conflicts with a shield).
+pub const HANDS_EXCLUSIVE_GROUP: &str = "hands";
+
+/// Classic armor value per material (donor
+/// `DaggerfallUnityItem.GetMaterialArmorValue` — adopted; armor value is a
+/// property of the material, not the piece). This fixed classic set is also
+/// the declared-material vocabulary weapon and armor materials validate
+/// against — one local table serves both checks.
+const ARMOR_VALUES_BY_MATERIAL: [(&str, i64); 12] = [
+    ("leather", 3),
+    ("chain", 6),
+    ("iron", 7),
+    ("steel", 9),
+    ("silver", 9),
+    ("elven", 11),
+    ("dwarven", 13),
+    ("mithril", 15),
+    ("adamantium", 15),
+    ("ebony", 17),
+    ("orcish", 19),
+    ("daedric", 21),
+];
+
+/// Armor pieces and the classification each maps to (`armor-<piece>`).
+const ARMOR_PIECES: [&str; 7] = [
+    "head",
+    "chest",
+    "right-arm",
+    "left-arm",
+    "legs",
+    "hands",
+    "feet",
+];
+
+fn armor_value_for_material(material: &str) -> Option<i64> {
+    ARMOR_VALUES_BY_MATERIAL
+        .iter()
+        .find(|(name, _)| *name == material)
+        .map(|(_, value)| *value)
+}
 
 fn compile_actor_attacks(
     path: &str,
@@ -108,13 +155,15 @@ pub fn compile_gameplay_package(
     enforce_quota("derived", payload.derived.len(), MAX_DAGGER_DERIVED)?;
 
     let stats = compile_stats(&payload)?;
-    let mechanics = super::mechanics::compile_mechanics_catalog(&stats)?;
     let items = compile_items(payload.items, &stats)?;
+    let equipment = compile_equipment(payload.equipment)?;
+    validate_item_equipment_references(&items, &equipment)?;
     let actions = compile_actions(payload.actions, &stats, &items)?;
-    let actors = compile_actors(payload.actors, &stats, &actions, &items)?;
+    let actors = compile_actors(payload.actors, &stats, &actions, &items, &equipment)?;
     let rules = compile_rules(payload.rules)?;
     let encounters = compile_encounters(payload.encounters)?;
     let derived = compile_derived(payload.derived, &stats, &items)?;
+    let mechanics = super::mechanics::compile_mechanics_catalog(&stats, &items, &equipment)?;
     Ok(DaggerGameplayCatalog::new(
         package.fingerprint().as_str().to_string(),
         stats,
@@ -124,8 +173,100 @@ pub fn compile_gameplay_package(
         rules,
         encounters,
         derived,
+        equipment,
         mechanics,
     ))
+}
+
+/// Reference integrity between items and the equipment section: an
+/// equippable item requires declared slots, and any weighed item requires
+/// the `weight` capacity metric. The section itself is optional under
+/// payload schema 1, but item vocabulary that binds against it is not.
+fn validate_item_equipment_references(
+    items: &BTreeMap<String, DaggerItemDefinition>,
+    equipment: &DaggerEquipmentSection,
+) -> Result<(), DaggerGameplayError> {
+    for item in items.values() {
+        if item.equippable() && equipment.slots.is_empty() {
+            return Err(DaggerGameplayError::InvalidValue {
+                path: format!("payload.items[{}]", item.id),
+                reason: "equippable items require an equipment section with slots".to_string(),
+            });
+        }
+        if item.weight_units > 0
+            && !equipment
+                .capacity_metrics
+                .iter()
+                .any(|metric| metric == WEIGHT_CAPACITY_METRIC)
+        {
+            return Err(DaggerGameplayError::InvalidValue {
+                path: format!("payload.items[{}].weightUnits", item.id),
+                reason: format!(
+                    "weighed items require the {WEIGHT_CAPACITY_METRIC} capacity metric"
+                ),
+            });
+        }
+    }
+    Ok(())
+}
+
+fn compile_equipment(
+    section: Option<super::AuthoredEquipmentSection>,
+) -> Result<DaggerEquipmentSection, DaggerGameplayError> {
+    let Some(section) = section else {
+        return Ok(DaggerEquipmentSection::default());
+    };
+    enforce_quota(
+        "equipment slots",
+        section.slots.len(),
+        MAX_DAGGER_DECLARED_IDS,
+    )?;
+    let mut capacity_metrics = Vec::with_capacity(section.capacity_metrics.len());
+    for (index, id) in section.capacity_metrics.iter().enumerate() {
+        validate_id(&format!("payload.equipment.capacityMetrics[{index}]"), id)?;
+        if capacity_metrics.contains(id) {
+            return Err(DaggerGameplayError::DuplicateId {
+                kind: "capacity metric",
+                id: id.clone(),
+            });
+        }
+        capacity_metrics.push(id.clone());
+    }
+    let mut slots: Vec<DaggerEquipmentSlotDefinition> = Vec::with_capacity(section.slots.len());
+    for (index, slot) in section.slots.into_iter().enumerate() {
+        let path = format!("payload.equipment.slots[{index}]");
+        validate_id(&format!("{path}.id"), &slot.id)?;
+        if slots.iter().any(|existing| existing.id == slot.id) {
+            return Err(DaggerGameplayError::DuplicateId {
+                kind: "equipment slot",
+                id: slot.id,
+            });
+        }
+        let mut allowed_classifications = Vec::with_capacity(slot.allowed_classifications.len());
+        for (classification_index, classification) in
+            slot.allowed_classifications.iter().enumerate()
+        {
+            validate_id(
+                &format!("{path}.allowedClassifications[{classification_index}]"),
+                classification,
+            )?;
+            if allowed_classifications.contains(classification) {
+                return Err(DaggerGameplayError::DuplicateId {
+                    kind: "equipment slot classification",
+                    id: classification.clone(),
+                });
+            }
+            allowed_classifications.push(classification.clone());
+        }
+        slots.push(DaggerEquipmentSlotDefinition {
+            id: slot.id,
+            allowed_classifications,
+        });
+    }
+    Ok(DaggerEquipmentSection {
+        capacity_metrics,
+        slots,
+    })
 }
 
 fn compile_derived(
@@ -188,26 +329,33 @@ fn compile_items(
 ) -> Result<BTreeMap<String, DaggerItemDefinition>, DaggerGameplayError> {
     let mut items = BTreeMap::new();
     for (index, item) in definitions.into_iter().enumerate() {
-        validate_id(&format!("payload.items[{index}].id"), &item.id)?;
+        let path = format!("payload.items[{index}]");
+        validate_id(&format!("{path}.id"), &item.id)?;
+        let weight_units =
+            u64::try_from(item.weight_units.0).map_err(|_| DaggerGameplayError::InvalidValue {
+                path: format!("{path}.weightUnits"),
+                reason: format!("must be non-negative, got {}", item.weight_units.0),
+            })?;
+        let value = u64::try_from(item.value.0).map_err(|_| DaggerGameplayError::InvalidValue {
+            path: format!("{path}.value"),
+            reason: format!("must be non-negative, got {}", item.value.0),
+        })?;
         let weapon = item
             .weapon
             .map(
                 |weapon| -> Result<DaggerWeaponDefinition, DaggerGameplayError> {
                     if weapon.damage.min.0 < 0 || weapon.damage.min > weapon.damage.max {
                         return Err(DaggerGameplayError::InvalidValue {
-                            path: format!("payload.items[{index}].weapon.damage"),
+                            path: format!("{path}.weapon.damage"),
                             reason: format!(
                                 "must satisfy 0 <= min <= max, got {}..{}",
                                 weapon.damage.min.0, weapon.damage.max.0
                             ),
                         });
                     }
-                    validate_id(
-                        &format!("payload.items[{index}].weapon.material"),
-                        &weapon.material,
-                    )?;
+                    validate_material(&format!("{path}.weapon.material"), &weapon.material)?;
                     validate_declared(
-                        &format!("payload.items[{index}].weapon.skill"),
+                        &format!("{path}.weapon.skill"),
                         &weapon.skill,
                         &stats.skills,
                     )?;
@@ -216,22 +364,81 @@ fn compile_items(
                         damage_max: weapon.damage.max.0,
                         material: weapon.material,
                         skill: weapon.skill,
+                        hands: match weapon.hands {
+                            super::AuthoredWeaponHands::Either => DaggerWeaponHands::Either,
+                            super::AuthoredWeaponHands::Both => DaggerWeaponHands::Both,
+                            super::AuthoredWeaponHands::LeftOnly => DaggerWeaponHands::LeftOnly,
+                        },
                     })
                 },
             )
             .transpose()?;
-        let interceptor = item
-            .interceptor
-            .map(|interceptor| match interceptor {
-                AuthoredInterceptor::ReduceDamage { amount } => {
-                    require_positive(
-                        format!("payload.items[{index}].interceptor.amount"),
-                        amount.0,
-                    )?;
-                    Ok(DaggerInterceptorKind::ReduceDamage { amount: amount.0 })
-                }
-            })
+        let armor = item
+            .armor
+            .map(
+                |armor| -> Result<DaggerArmorDefinition, DaggerGameplayError> {
+                    validate_material(&format!("{path}.armor.material"), &armor.material)?;
+                    if !ARMOR_PIECES.contains(&armor.piece.as_str()) {
+                        return Err(DaggerGameplayError::InvalidValue {
+                            path: format!("{path}.armor.piece"),
+                            reason: format!(
+                                "unknown armor piece {}; expected one of {ARMOR_PIECES:?}",
+                                armor.piece
+                            ),
+                        });
+                    }
+                    Ok(DaggerArmorDefinition {
+                        value: armor_value_for_material(&armor.material)
+                            .expect("validated material has a table entry"),
+                        material: armor.material,
+                        piece: armor.piece,
+                    })
+                },
+            )
             .transpose()?;
+        let shield = item
+            .shield
+            .map(
+                |shield| -> Result<DaggerShieldDefinition, DaggerGameplayError> {
+                    if shield.value.0 < 0 {
+                        return Err(DaggerGameplayError::InvalidValue {
+                            path: format!("{path}.shield.value"),
+                            reason: format!("must be non-negative, got {}", shield.value.0),
+                        });
+                    }
+                    Ok(DaggerShieldDefinition {
+                        value: shield.value.0,
+                    })
+                },
+            )
+            .transpose()?;
+        // An item with any equip block is a unique equippable entity; an
+        // item with none (gold, arrows) is a fungible stack.
+        let fungible = weapon.is_none() && armor.is_none() && shield.is_none();
+        let mut classifications = Vec::new();
+        let mut exclusive_group = None;
+        if let Some(weapon) = &weapon {
+            classifications.push(match weapon.hands {
+                DaggerWeaponHands::Either | DaggerWeaponHands::LeftOnly => {
+                    "weapon-one-hand".to_string()
+                }
+                DaggerWeaponHands::Both => "weapon-two-hand".to_string(),
+            });
+            if weapon.hands == DaggerWeaponHands::Both {
+                exclusive_group = Some(HANDS_EXCLUSIVE_GROUP.to_string());
+            }
+        }
+        if let Some(armor) = &armor {
+            classifications.push(format!("armor-{}", armor.piece));
+        }
+        if shield.is_some() {
+            classifications.push("shield".to_string());
+            exclusive_group = Some(HANDS_EXCLUSIVE_GROUP.to_string());
+        }
+        let equipment = (!fungible).then_some(DaggerItemEquipment {
+            required_slots: 1,
+            exclusive_group,
+        });
         let id = item.id;
         if items
             .insert(
@@ -239,7 +446,13 @@ fn compile_items(
                 DaggerItemDefinition {
                     id: id.clone(),
                     weapon,
-                    interceptor,
+                    armor,
+                    shield,
+                    weight_units,
+                    value,
+                    fungible,
+                    classifications,
+                    equipment,
                 },
             )
             .is_some()
@@ -248,6 +461,26 @@ fn compile_items(
         }
     }
     Ok(items)
+}
+
+/// Weapon and armor materials validate against the fixed classic material
+/// set (the armor-value table): one declared vocabulary serves both, rather
+/// than threading a second list through the stats section.
+fn validate_material(path: &str, material: &str) -> Result<(), DaggerGameplayError> {
+    validate_id(path, material)?;
+    if armor_value_for_material(material).is_none() {
+        return Err(DaggerGameplayError::InvalidValue {
+            path: path.to_string(),
+            reason: format!(
+                "unknown material {material}; expected one of {:?}",
+                ARMOR_VALUES_BY_MATERIAL
+                    .iter()
+                    .map(|(name, _)| name)
+                    .collect::<Vec<_>>()
+            ),
+        });
+    }
+    Ok(())
 }
 
 fn compile_actions(
@@ -318,6 +551,7 @@ fn compile_actors(
     stats: &DaggerStatsSection,
     actions: &BTreeMap<String, DaggerActionDefinition>,
     items: &BTreeMap<String, DaggerItemDefinition>,
+    equipment: &DaggerEquipmentSection,
 ) -> Result<BTreeMap<String, DaggerActorDefinition>, DaggerGameplayError> {
     let mut actors = BTreeMap::new();
     let mut mobile_ids = BTreeSet::new();
@@ -460,6 +694,7 @@ fn compile_actors(
                     team: actor.team,
                     loot_table_key: actor.loot_table_key,
                     attacks: compile_actor_attacks(&path, actor.attacks)?,
+                    inventory: compile_loadout(&path, actor.inventory, items, equipment)?,
                 },
             )
             .is_some()
@@ -468,6 +703,70 @@ fn compile_actors(
         }
     }
     Ok(actors)
+}
+
+/// Compile one actor's spawn loadout: reference integrity only (the item
+/// exists, quantities are sane for the item kind, and an equip slot exists
+/// and accepts an equippable item).
+fn compile_loadout(
+    path: &str,
+    entries: Vec<super::AuthoredLoadoutEntry>,
+    items: &BTreeMap<String, DaggerItemDefinition>,
+    equipment: &DaggerEquipmentSection,
+) -> Result<Vec<DaggerLoadoutEntry>, DaggerGameplayError> {
+    let mut loadout = Vec::with_capacity(entries.len());
+    for (index, entry) in entries.into_iter().enumerate() {
+        let path = format!("{path}.inventory[{index}]");
+        validate_id(&format!("{path}.item"), &entry.item)?;
+        let item = items
+            .get(&entry.item)
+            .ok_or_else(|| DaggerGameplayError::InvalidValue {
+                path: format!("{path}.item"),
+                reason: format!("unknown item {}", entry.item),
+            })?;
+        let quantity = entry.quantity.map(|value| value.0).unwrap_or(1);
+        let quantity = u64::try_from(quantity).map_err(|_| DaggerGameplayError::InvalidValue {
+            path: format!("{path}.quantity"),
+            reason: format!("must be positive, got {quantity}"),
+        })?;
+        if quantity == 0 {
+            return Err(DaggerGameplayError::InvalidValue {
+                path: format!("{path}.quantity"),
+                reason: "must be positive, got 0".to_string(),
+            });
+        }
+        if !item.fungible && quantity != 1 {
+            return Err(DaggerGameplayError::InvalidValue {
+                path: format!("{path}.quantity"),
+                reason: format!("unique item {} spawns as exactly one entity", item.id),
+            });
+        }
+        let equip_slot = entry
+            .equip_slot
+            .map(|slot| -> Result<String, DaggerGameplayError> {
+                validate_id(&format!("{path}.equipSlot"), &slot)?;
+                if equipment.slot(&slot).is_none() {
+                    return Err(DaggerGameplayError::InvalidValue {
+                        path: format!("{path}.equipSlot"),
+                        reason: format!("unknown equipment slot {slot}"),
+                    });
+                }
+                if !item.equippable() {
+                    return Err(DaggerGameplayError::InvalidValue {
+                        path: format!("{path}.equipSlot"),
+                        reason: format!("item {} is not equippable", item.id),
+                    });
+                }
+                Ok(slot)
+            })
+            .transpose()?;
+        loadout.push(DaggerLoadoutEntry {
+            item: entry.item,
+            quantity,
+            equip_slot,
+        });
+    }
+    Ok(loadout)
 }
 
 fn compile_rules(
@@ -834,17 +1133,6 @@ fn validate_declared(
         Err(DaggerGameplayError::InvalidValue {
             path: format!("{path}.{value}"),
             reason: "not declared in the stats section".to_string(),
-        })
-    }
-}
-
-fn require_positive(path: impl Into<String>, value: i64) -> Result<(), DaggerGameplayError> {
-    if value > 0 {
-        Ok(())
-    } else {
-        Err(DaggerGameplayError::InvalidValue {
-            path: path.into(),
-            reason: "must be positive".to_string(),
         })
     }
 }

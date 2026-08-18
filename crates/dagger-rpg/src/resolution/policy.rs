@@ -15,10 +15,9 @@ use super::mechanics::track_max_stat_id;
 use super::{
     DaggerActorDefinition, DaggerActorFacts, DaggerActorState, DaggerAdmittedIntent, DaggerEffect,
     DaggerEvent, DaggerEvidence, DaggerFacts, DaggerFault, DaggerGameplayCatalog,
-    DaggerGameplayState, DaggerIntent, DaggerInterceptor, DaggerInterceptorKind, DaggerOperation,
-    DaggerPredicate, DaggerRejection, DaggerResolutionReadout, DaggerResolutionReceipt,
-    DaggerRuleDefinition, DaggerSelector, DaggerSuspension, DaggerTraceDetail,
-    DaggerTransactionError,
+    DaggerGameplayState, DaggerIntent, DaggerOperation, DaggerPredicate, DaggerRejection,
+    DaggerResolutionReadout, DaggerResolutionReceipt, DaggerRuleDefinition, DaggerSelector,
+    DaggerSuspension, DaggerTraceDetail, DaggerTransactionError,
 };
 
 pub struct DaggerResolutionPolicy<'a> {
@@ -181,7 +180,6 @@ fn actor_facts(
         definition: binding.definition().to_string(),
         tracks,
         conditions: binding.conditions().clone(),
-        items: binding.items().clone(),
     })
 }
 
@@ -194,7 +192,9 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
     type Effect = DaggerEffect;
     type Event = DaggerEvent;
     type Evidence = DaggerEvidence;
-    type Interceptor = DaggerInterceptor;
+    // Item-borne interception is gone with the dead items-set path; 7072
+    // replaces it with upstream damage responses on equipped items.
+    type Interceptor = std::convert::Infallible;
     type TraceDetail = DaggerTraceDetail;
     type Rejection = DaggerRejection;
     type Fault = DaggerFault;
@@ -287,30 +287,6 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         DaggerSuspension,
     > {
         Ok(intent.action.program.clone())
-    }
-
-    fn interceptors(
-        &mut self,
-        _intent: &DaggerAdmittedIntent,
-        facts: &DaggerFacts,
-        _evidence: &[DaggerEvidence],
-        trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
-    ) -> PolicyResult<Vec<DaggerInterceptor>, DaggerRejection, DaggerFault, DaggerSuspension> {
-        let mut interceptors = Vec::new();
-        for item in &facts.target.items {
-            if let Some(definition) = self.catalog.items().get(item) {
-                if let Some(kind) = &definition.interceptor {
-                    trace.record(DaggerTraceDetail::Source {
-                        id: definition.id.clone(),
-                    });
-                    interceptors.push(DaggerInterceptor {
-                        source: definition.id.clone(),
-                        kind: kind.clone(),
-                    });
-                }
-            }
-        }
-        Ok(interceptors)
     }
 
     fn evaluate_predicate(
@@ -425,39 +401,6 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
             }
         }
         Ok(plan)
-    }
-
-    fn before_commit(
-        &mut self,
-        interceptor: &DaggerInterceptor,
-        _intent: &DaggerAdmittedIntent,
-        _facts: &DaggerFacts,
-        _evidence: &[DaggerEvidence],
-        plan: &mut ResolutionPlan<DaggerEffect, DaggerEvent, DaggerIntent, DaggerEvidence>,
-        trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
-    ) -> PolicyResult<(), DaggerRejection, DaggerFault, DaggerSuspension> {
-        match interceptor.kind {
-            DaggerInterceptorKind::ReduceDamage { amount } => {
-                for effect in plan.effects_mut() {
-                    if let DaggerEffect::Damage { amount: damage, .. } = effect {
-                        *damage = damage.saturating_sub(amount).max(0);
-                    }
-                }
-                for event in plan.events_mut() {
-                    if let DaggerEvent::DamageApplied { amount: damage, .. } = event {
-                        *damage = damage.saturating_sub(amount).max(0);
-                    }
-                }
-                plan.push_event(DaggerEvent::InterceptorApplied {
-                    source: interceptor.source.clone(),
-                    amount,
-                });
-                trace.record(DaggerTraceDetail::Source {
-                    id: interceptor.source.clone(),
-                });
-            }
-        }
-        Ok(())
     }
 }
 

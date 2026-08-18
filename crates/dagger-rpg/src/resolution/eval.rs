@@ -6,11 +6,16 @@
 
 use std::collections::BTreeMap;
 
-use rusty_engine::entity_state::{EntityAuthoringService, EntityDefinition};
+use rusty_engine::entity_state::{EntityAuthoringService, EntityDefinition, RelationshipCommand};
 use rusty_engine::gameplay_mechanics::{
-    MechanicsScalar, StatId, StatValue, StatsComponent, TrackId, TrackValue, TracksComponent,
+    CapacityMetricId, EquipmentComponent, EquipmentEquipRequest, EquipmentService, EquipmentSlotId,
+    InventoryCapacityLimit, InventoryComponent, InventoryMutationRequest, InventoryService,
+    ItemComponent, ItemDefinitionId, MechanicsScalar, OperationId, SourceInstanceId,
+    SourceInstanceIdentity, StatId, StatValue, StatsComponent, TrackId, TrackValue,
+    TracksComponent,
 };
 
+use super::compile::WEIGHT_CAPACITY_METRIC;
 use super::mechanics::{mechanics_catalog_version, track_max_stat_id};
 use super::{
     DaggerActorDefinition, DaggerActorState, DaggerEvidence, DaggerExpr, DaggerGameplayCatalog,
@@ -521,8 +526,10 @@ pub fn evaluate_derived_rule(
 
 /// Spawn one actor instance: evaluate the definition's derived track
 /// maximums (roll evidence supplied by the caller, so spawns are
-/// deterministic and replayable), create the entity, and attach the
-/// mechanics stat/track components with live values. `instance` is the
+/// deterministic and replayable), create the entity, attach the mechanics
+/// stat/track components with live values, attach upstream
+/// inventory/equipment components, and bind the authored loadout through
+/// the upstream inventory/equipment services. `instance` is the
 /// scenario-owned actor key (many instances may share one definition).
 /// This is the authority every consumer (diagnostics, runtime) uses to
 /// spawn an actor.
@@ -578,6 +585,39 @@ pub fn spawn_actor(
         track_maxima.push((track.id.clone(), value));
     }
 
+    // Encumbrance convention: the actor's weight capacity limit is its
+    // derived `max-encumbrance` rule (kg, classic floor(STR x 1.5)) converted
+    // to the quarter-kg units the catalog weighs in, when both the rule and
+    // the `weight` capacity metric exist in the package. Actors in a package
+    // without either carry no limit.
+    let mut capacity_limits = Vec::new();
+    let declares_weight_metric = catalog
+        .equipment()
+        .capacity_metrics
+        .iter()
+        .any(|metric| metric == WEIGHT_CAPACITY_METRIC);
+    if declares_weight_metric {
+        if let Some(rule) = catalog.derived().get("max-encumbrance") {
+            let kilograms = evaluate_expr(&rule.expr, &context).map_err(|rejection| {
+                DaggerGameplayError::InvalidValue {
+                    path: format!("actors[{definition_id}].derived[max-encumbrance]"),
+                    reason: format!("encumbrance rule rejected: {rejection:?}"),
+                }
+            })?;
+            let units = u64::try_from(kilograms)
+                .ok()
+                .and_then(|value| value.checked_mul(4))
+                .ok_or_else(|| DaggerGameplayError::InvalidValue {
+                    path: format!("actors[{definition_id}].derived[max-encumbrance]"),
+                    reason: format!("encumbrance must be non-negative, got {kilograms}"),
+                })?;
+            capacity_limits.push(InventoryCapacityLimit::new(
+                CapacityMetricId::parse(WEIGHT_CAPACITY_METRIC).expect("fixed metric identity"),
+                units,
+            ));
+        }
+    }
+
     let entity = state.allocate_entity();
     let state_revision = state.entities().revision();
     EntityAuthoringService
@@ -617,9 +657,10 @@ pub fn spawn_actor(
             ))
         })
         .collect::<Result<Vec<_>, DaggerGameplayError>>()?;
-    let tracks_component = TracksComponent::new(version, track_values).map_err(|error| {
-        DaggerGameplayError::InvalidState(format!("tracks component: {error:?}"))
-    })?;
+    let tracks_component =
+        TracksComponent::new(version.clone(), track_values).map_err(|error| {
+            DaggerGameplayError::InvalidState(format!("tracks component: {error:?}"))
+        })?;
 
     let stats_revision = state
         .entities()
@@ -646,6 +687,189 @@ pub fn spawn_actor(
         )
         .map_err(|error| DaggerGameplayError::InvalidState(format!("attach tracks: {error}")))?;
 
+    // Every actor carries upstream inventory and equipment components; the
+    // authored loadout binds through the upstream services below.
+    let inventory_component =
+        InventoryComponent::with_capacity_limits(version.clone(), Vec::new(), capacity_limits)
+            .map_err(|error| {
+                DaggerGameplayError::InvalidState(format!("inventory component: {error:?}"))
+            })?;
+    let inventory_revision = state
+        .entities()
+        .component_revision::<InventoryComponent>(entity)
+        .map_err(|error| {
+            DaggerGameplayError::InvalidState(format!("inventory revision: {error}"))
+        })?;
+    EntityAuthoringService
+        .attach_component(
+            state.entities_mut(),
+            inventory_revision,
+            entity,
+            inventory_component,
+        )
+        .map_err(|error| DaggerGameplayError::InvalidState(format!("attach inventory: {error}")))?;
+    let equipment_component =
+        EquipmentComponent::new(version.clone(), Vec::new()).map_err(|error| {
+            DaggerGameplayError::InvalidState(format!("equipment component: {error:?}"))
+        })?;
+    let equipment_revision = state
+        .entities()
+        .component_revision::<EquipmentComponent>(entity)
+        .map_err(|error| {
+            DaggerGameplayError::InvalidState(format!("equipment revision: {error}"))
+        })?;
+    EntityAuthoringService
+        .attach_component(
+            state.entities_mut(),
+            equipment_revision,
+            entity,
+            equipment_component,
+        )
+        .map_err(|error| DaggerGameplayError::InvalidState(format!("attach equipment: {error}")))?;
+
+    bind_loadout(
+        state,
+        catalog,
+        definition_id,
+        definition,
+        entity,
+        instance,
+        version,
+    )?;
+
     state.insert_actor(instance, DaggerActorState::new(entity, definition_id));
+    Ok(())
+}
+
+/// Bind one spawned actor's authored loadout through the upstream mechanics
+/// services: fungible entries grant stacks, unique entries allocate an item
+/// entity with an ItemComponent contained into the owner, and `equipSlot`
+/// entries equip through the equipment service. Upstream rejections surface
+/// with the item id in the error path.
+fn bind_loadout(
+    state: &mut DaggerGameplayState,
+    catalog: &DaggerGameplayCatalog,
+    definition_id: &str,
+    definition: &DaggerActorDefinition,
+    owner: rusty_engine::core_ids::EntityId,
+    instance: &str,
+    version: rusty_engine::gameplay_mechanics::CatalogVersion,
+) -> Result<(), DaggerGameplayError> {
+    let operation = OperationId::parse("dagger-spawn-loadout").expect("fixed operation identity");
+    let source = SourceInstanceIdentity::Request {
+        operation: operation.clone(),
+        instance: SourceInstanceId::parse("dagger-spawn").expect("fixed source identity"),
+    };
+    for (index, entry) in definition.inventory.iter().enumerate() {
+        let path = || format!("actors[{definition_id}].inventory[{index}].{}", entry.item);
+        let definition_ref =
+            catalog
+                .items()
+                .get(&entry.item)
+                .ok_or_else(|| DaggerGameplayError::InvalidValue {
+                    path: path(),
+                    reason: "unknown item".to_string(),
+                })?;
+        let item_id = ItemDefinitionId::parse(entry.item.clone()).map_err(|error| {
+            DaggerGameplayError::InvalidId {
+                path: path(),
+                value: format!("{}: {error:?}", entry.item),
+            }
+        })?;
+        if definition_ref.fungible {
+            InventoryService::grant(
+                state.entities_mut(),
+                catalog.mechanics(),
+                InventoryMutationRequest {
+                    operation: operation.clone(),
+                    source: source.clone(),
+                    owner,
+                    item: item_id,
+                    quantity: entry.quantity,
+                    expected_revision: None,
+                },
+            )
+            .map_err(|error| DaggerGameplayError::InvalidValue {
+                path: path(),
+                reason: format!("loadout grant rejected: {error:?}"),
+            })?;
+            continue;
+        }
+        // Unique items are entities: allocate, attach the ItemComponent, and
+        // contain into the owner.
+        let item_entity = state.allocate_entity();
+        let state_revision = state.entities().revision();
+        EntityAuthoringService
+            .admit(
+                state.entities_mut(),
+                state_revision,
+                [EntityDefinition::new(
+                    item_entity,
+                    format!("{instance}:{}", entry.item),
+                )],
+            )
+            .map_err(|error| DaggerGameplayError::InvalidValue {
+                path: path(),
+                reason: format!("item entity admission: {error}"),
+            })?;
+        let item_revision = state
+            .entities()
+            .component_revision::<ItemComponent>(item_entity)
+            .map_err(|error| DaggerGameplayError::InvalidValue {
+                path: path(),
+                reason: format!("item component revision: {error}"),
+            })?;
+        EntityAuthoringService
+            .attach_component(
+                state.entities_mut(),
+                item_revision,
+                item_entity,
+                ItemComponent::new(version.clone(), item_id),
+            )
+            .map_err(|error| DaggerGameplayError::InvalidValue {
+                path: path(),
+                reason: format!("attach item component: {error}"),
+            })?;
+        let state_revision = state.entities().revision();
+        state
+            .entities_mut()
+            .apply_relationship(
+                state_revision,
+                RelationshipCommand::SetContainment {
+                    child: item_entity,
+                    container: owner,
+                },
+            )
+            .map_err(|error| DaggerGameplayError::InvalidValue {
+                path: path(),
+                reason: format!("item containment: {error:?}"),
+            })?;
+        if let Some(slot) = &entry.equip_slot {
+            let slot_id = EquipmentSlotId::parse(slot.clone()).map_err(|error| {
+                DaggerGameplayError::InvalidId {
+                    path: path(),
+                    value: format!("{slot}: {error:?}"),
+                }
+            })?;
+            let state_revision = state.entities().revision();
+            EquipmentService::equip(
+                state.entities_mut(),
+                catalog.mechanics(),
+                EquipmentEquipRequest {
+                    operation: operation.clone(),
+                    source: source.clone(),
+                    owner,
+                    item: item_entity,
+                    slots: vec![slot_id],
+                    expected_equipment_revision: None,
+                    expected_state_revision: state_revision,
+                },
+            )
+            .map_err(|error| DaggerGameplayError::InvalidValue {
+                path: path(),
+                reason: format!("equip rejected: {error:?}"),
+            })?;
+        }
+    }
     Ok(())
 }
