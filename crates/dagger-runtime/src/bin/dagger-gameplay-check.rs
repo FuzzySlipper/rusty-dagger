@@ -151,4 +151,50 @@ fn main() {
         serde_json::to_string_pretty(&serde_json::json!({ "derived": derived }))
             .expect("serialize derived readout")
     );
+
+    // Player inventory proof: the upstream-sourced view of the spawned
+    // player's loadout (InventoryService::view + EquipmentComponent).
+    let catalog = compile_gameplay_package(PACKAGE).expect("admit authored gameplay package");
+    let mut state = DaggerGameplayState::default();
+    spawn_actor(&mut state, &catalog, "player", "player", &[]).expect("spawn player");
+    let owner = state.actor("player").expect("player binding").entity();
+    let view = rusty_engine::gameplay_mechanics::InventoryService::view(
+        state.entities(),
+        catalog.mechanics(),
+        owner,
+    )
+    .expect("player inventory view");
+    let equipment = state
+        .entities()
+        .component::<rusty_engine::gameplay_mechanics::EquipmentComponent>(owner)
+        .expect("player equipment component read")
+        .expect("player has an equipment component");
+    let slot_of = |entity: rusty_engine::core_ids::EntityId| {
+        equipment
+            .assignments()
+            .iter()
+            .find(|assignment| assignment.item == entity)
+            .map(|assignment| assignment.slot.as_str())
+    };
+    let inventory = serde_json::json!({
+        "capacity": view.capacity().iter().map(|usage| serde_json::json!({
+            "metric": usage.metric.as_str(),
+            "used": usage.used,
+            "maximum": usage.maximum,
+        })).collect::<Vec<_>>(),
+        "stacks": view.stacks().iter().map(|stack| serde_json::json!({
+            "item": stack.definition.as_str(),
+            "quantity": stack.quantity,
+        })).collect::<Vec<_>>(),
+        "items": view.unique_items().iter().map(|item| serde_json::json!({
+            "item": item.definition.as_str(),
+            "entity": item.entity.raw(),
+            "equipSlot": slot_of(item.entity),
+        })).collect::<Vec<_>>(),
+    });
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({ "playerInventory": inventory }))
+            .expect("serialize player inventory readout")
+    );
 }

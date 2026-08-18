@@ -12,7 +12,7 @@ The boundary deliberately has four representations:
 3. `dagger-rpg::compile_gameplay_package` validates the package and compiles its
    authoring grammar into the Engine's structural `Program` grammar.
 4. `dagger-rpg::resolve_dagger_action` supplies Dagger intent, facts, checks,
-   operations, interceptors, transaction behavior, events, and trace details to
+   operations, transaction behavior, events, and trace details to
    the Engine resolver.
 
 The Engine knows sequencing, conditional execution, resolution phases,
@@ -23,11 +23,19 @@ magicka, spells, items, actors, damage, or Daggerfall formulas.
 Durable stat and track state is mechanics-backed. Package admission also
 builds an Engine `MechanicsCatalog` from the declared vocabulary: each
 attribute and skill is a stat (classic 0..=100), and each track gets a
-synthetic `{track}-max` stat so its maximum is stat-derived. The Dagger
+synthetic `{track}-max` stat so its maximum is stat-derived. The item
+vocabulary binds into the same catalog: compiled items become upstream item
+definitions (fungible stacks vs unique entities, `weightUnits` as a `weight`
+capacity cost, equipment policy with the `hands` exclusivity group for
+two-handed weapons and shields), and the optional `equipment` payload section
+becomes the upstream capacity metrics and equipment slots. The Dagger
 expression evaluator computes track maxima at spawn (derived rules are
 arbitrary Dagger-owned expressions the neutral catalog does not model) and
 stores them as the entity's stat bases. `spawn_actor` is the single spawn
-authority; resolution reads live stats through `StatService`, and effects
+authority; it attaches upstream inventory and equipment components to every
+actor and binds the authored spawn loadout through `InventoryService::grant`
+and `EquipmentService::equip` (unique items are contained item entities).
+Resolution reads live stats through `StatService`, and effects
 commit through `TrackService` inside the kernel's staged transaction. The
 live runtime (`DaggerRuntime`) holds the same mechanics-backed
 `DaggerGameplayState`, so the player and every combatant enemy resolve
@@ -44,7 +52,8 @@ against skill plus target armor vulnerability, luck/agility differentials,
 and the target's dodging penalty, clamped 3..97 — player melee adds the
 swing/proficiency/racial and adrenaline classic terms) and each actor's
 attack as resolution programs; `items.ts` carries weapon damage ranges that
-`weaponDice` rolls read; `encounters.ts` owns named encounter content. All
+`weaponDice` rolls read; `equipment.ts` carries the classic slot/capacity
+vocabulary; `encounters.ts` owns named encounter content. All
 rolls are bounded named evidence supplied by the caller (dice bounds may be
 negative — swing modifiers span -10..+10), and career/world facts
 (proficiency, racial bonuses, rapid-healing and no-regen flags) cross the
@@ -56,8 +65,10 @@ at each step). Player and AI origins enter the same policy path.
 
 `dagger-gameplay-check` is the production Rust diagnostic. It admits the
 committed package, resolves the same controlled action for player and AI
-origins, verifies equivalent authoritative state, and prints the structured
-resolution readout. The readout exposes package identity, status, commit mode,
+origins, verifies equivalent authoritative state, prints the structured
+resolution readout, and prints the spawned player's upstream inventory view
+(capacity usage, stacks, and equipped item entities). The readout exposes
+package identity, status, commit mode,
 effects, semantic events, and the phase trace. A future Dagger Explorer can
 render these records alongside source definitions; it does not need a runtime
 value editor or a second implementation of resolution logic.

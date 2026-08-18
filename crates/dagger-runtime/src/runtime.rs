@@ -131,6 +131,44 @@ pub struct LabReadout {
     pub focused_content_id: Option<u64>,
     pub named_encounters: Vec<NamedEncounterReadout>,
     pub active_encounter: Option<NamedEncounterReadout>,
+    /// The player's upstream inventory/equipment view (`InventoryService::view`
+    /// plus the EquipmentComponent's slot assignments).
+    pub player_inventory: PlayerInventoryReadout,
+}
+
+/// Capacity usage for one metric in quarter-kg units (`used` / `maximum`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryCapacityReadout {
+    pub metric: String,
+    pub used: u64,
+    pub maximum: Option<u64>,
+}
+
+/// One fungible stack in the player's inventory.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryStackReadout {
+    pub item: String,
+    pub quantity: u64,
+}
+
+/// One unique item entity the player carries, with its equip slot if assigned.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryItemReadout {
+    pub item: String,
+    pub entity: u64,
+    pub equip_slot: Option<String>,
+}
+
+/// Read-only view of the player's upstream inventory and equipment state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerInventoryReadout {
+    pub capacity: Vec<InventoryCapacityReadout>,
+    pub stacks: Vec<InventoryStackReadout>,
+    pub items: Vec<InventoryItemReadout>,
 }
 
 /// The committed gameplay package's definitions plus its admission
@@ -1478,6 +1516,74 @@ impl DaggerRuntime {
         self.combat_attempt_sequence
     }
 
+    /// The player's upstream inventory/equipment view, sourced from
+    /// `InventoryService::view` plus the entity's EquipmentComponent.
+    fn player_inventory_readout(&self) -> Result<PlayerInventoryReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{EquipmentComponent, InventoryService};
+
+        let owner = self
+            .gameplay
+            .actor(PLAYER_ACTOR_ID)
+            .expect("player actor binding")
+            .entity();
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "player inventory view: {error:?}"
+            )))
+        })?;
+        let equipment = self
+            .gameplay
+            .entities()
+            .component::<EquipmentComponent>(owner)
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment component: {error}"
+                )))
+            })?;
+        let slot_of = |entity: rusty_engine::core_ids::EntityId| {
+            equipment.and_then(|component| {
+                component
+                    .assignments()
+                    .iter()
+                    .find(|assignment| assignment.item == entity)
+                    .map(|assignment| assignment.slot.as_str().to_string())
+            })
+        };
+        Ok(PlayerInventoryReadout {
+            capacity: view
+                .capacity()
+                .iter()
+                .map(|usage| InventoryCapacityReadout {
+                    metric: usage.metric.as_str().to_string(),
+                    used: usage.used,
+                    maximum: usage.maximum,
+                })
+                .collect(),
+            stacks: view
+                .stacks()
+                .iter()
+                .map(|stack| InventoryStackReadout {
+                    item: stack.definition.as_str().to_string(),
+                    quantity: stack.quantity,
+                })
+                .collect(),
+            items: view
+                .unique_items()
+                .iter()
+                .map(|item| InventoryItemReadout {
+                    item: item.definition.as_str().to_string(),
+                    entity: item.entity.raw(),
+                    equip_slot: slot_of(item.entity),
+                })
+                .collect(),
+        })
+    }
+
     pub fn lab_readout(&self) -> Result<LabReadout, RuntimeError> {
         let position = self.player_position()?;
         let encounter_states = self
@@ -1559,6 +1665,7 @@ impl DaggerRuntime {
             focused_content_id: self.focused_content_id,
             named_encounters,
             active_encounter,
+            player_inventory: self.player_inventory_readout()?,
         })
     }
 

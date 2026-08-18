@@ -121,6 +121,42 @@
       </div>
     </article>
 
+    <article class="panel inventory" *ngIf="readout as live" data-testid="inventory-panel">
+      <div class="panel-heading">
+        <div><p class="kicker">Upstream inventory &amp; equipment services</p><h2>Player inventory</h2></div>
+        <span class="pulse">live</span>
+      </div>
+      <p class="muted">Sourced from <code>InventoryService::view</code> and the player's equipment component; weights are the classic quarter-kg unit shown as kg.</p>
+      <div class="metrics" data-testid="inventory-capacity">
+        <div *ngFor="let capacity of live.playerInventory.capacity">
+          <span>{{ capacity.metric }}</span>
+          <strong [attr.data-testid]="'inventory-capacity-' + capacity.metric">
+            {{ capacity.used / 4 }} / {{ capacity.maximum === null ? '—' : capacity.maximum / 4 }} kg
+          </strong>
+        </div>
+      </div>
+      <p class="kicker field-kicker">Equipped</p>
+      <div class="derived-grid" data-testid="inventory-equipped">
+        <article *ngFor="let item of equippedItems(live)" [attr.data-testid]="'inventory-slot-' + item.equipSlot">
+          <span>{{ item.equipSlot }}</span>
+          <strong>{{ item.item }}</strong>
+        </article>
+        <p class="muted" *ngIf="equippedItems(live).length === 0">Nothing equipped.</p>
+      </div>
+      <p class="kicker field-kicker">Carried</p>
+      <div class="derived-grid" data-testid="inventory-carried">
+        <article *ngFor="let stack of live.playerInventory.stacks" [attr.data-testid]="'inventory-stack-' + stack.item">
+          <span>{{ stack.item }}</span>
+          <strong>× {{ stack.quantity }}</strong>
+        </article>
+        <article *ngFor="let item of carriedItems(live)" [attr.data-testid]="'inventory-item-' + item.item">
+          <span>{{ item.item }}</span>
+          <strong>unequipped</strong>
+        </article>
+        <p class="muted" *ngIf="live.playerInventory.stacks.length === 0 && carriedItems(live).length === 0">Empty.</p>
+      </div>
+    </article>
+
     <article class="panel definitions" *ngIf="readout as live" data-testid="definitions-panel">
       <div class="panel-heading">
         <div><p class="kicker">Committed gameplay package</p><h2>Definitions</h2></div>
@@ -161,8 +197,14 @@
       <div class="derived-grid" data-testid="definition-items">
         <article *ngFor="let item of live.gameplayPackage.items" [attr.data-testid]="'definition-item-' + item.id">
           <span>{{ item.id }}</span>
-          <strong *ngIf="item.weapon as weapon">{{ weapon.damage.min }}-{{ weapon.damage.max }} · {{ weapon.material }} · {{ weapon.skill }}</strong>
-          <strong *ngIf="item.interceptor as interceptor">{{ interceptor.kind }} {{ interceptor.amount }}</strong>
+          <strong *ngIf="item.weapon as weapon">{{ weapon.damage.min }}-{{ weapon.damage.max }} · {{ weapon.material }} · {{ weapon.skill }} · {{ weapon.hands }}</strong>
+          <strong *ngIf="item.armor as armor">armor · {{ armor.material }} · {{ armor.piece }}</strong>
+          <strong *ngIf="item.shield as shield">shield · value {{ shield.value }}</strong>
+          <div class="derived-inputs">
+            <small>{{ item.weightUnits / 4 }} kg</small>
+            <small>{{ item.value }} gp</small>
+            <small *ngIf="!item.weapon && !item.armor && !item.shield">fungible</small>
+          </div>
         </article>
       </div>
 

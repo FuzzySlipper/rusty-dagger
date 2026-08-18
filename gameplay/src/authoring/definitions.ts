@@ -39,6 +39,16 @@ export type BehaviorDefinition = Readonly<{
 
 export type ActorKind = "player" | "monster" | "enemy-class";
 
+/** One inventory entry in an actor's spawn loadout. */
+export type LoadoutEntry = Readonly<{
+  /** Item definition id from the items catalog. */
+  item: string;
+  /** Stack size for fungible items; unique items are always one entity. */
+  quantity?: number;
+  /** Equipment slot id (from the equipment section) to equip into at spawn. */
+  equipSlot?: string;
+}>;
+
 export type ActorDefinition = Readonly<{
   id: string;
   kind: ActorKind;
@@ -68,6 +78,8 @@ export type ActorDefinition = Readonly<{
    * authored attack actions carry their own dice.
    */
   attacks?: readonly DamageRange[];
+  /** Spawn loadout bound into upstream inventory/equipment components. */
+  inventory?: readonly LoadoutEntry[];
 }>;
 
 /** A named classic formula over one subject's stats, evaluated on demand. */
@@ -86,22 +98,68 @@ export type ActionDefinition = Readonly<{
   cooldownSeconds?: number;
 }>;
 
+/**
+ * Weapon handedness (donor `ItemEquipTable.GetItemHands` — adopted):
+ * `either` hand, `both` hands (two-handed), or `leftOnly`.
+ */
+export type WeaponHands = "either" | "both" | "leftOnly";
+
 export type WeaponDefinition = Readonly<{
   damage: Readonly<{ min: number; max: number }>;
   material: string;
   /** Skill id the weapon maps to for hit checks. */
   skill: string;
+  hands: WeaponHands;
 }>;
 
-export type Interceptor = Readonly<{
-  kind: "reduceDamage";
-  amount: number;
+/** Body slot an armor piece occupies; drives its `armor-<piece>` classification. */
+export type ArmorPiece =
+  | "head"
+  | "chest"
+  | "right-arm"
+  | "left-arm"
+  | "legs"
+  | "hands"
+  | "feet";
+
+/**
+ * Armor is valued per MATERIAL, not per piece (donor
+ * `DaggerfallUnityItem.GetMaterialArmorValue` — adopted): the Rust compiler
+ * derives the piece's armor value from this material via the classic table.
+ */
+export type ArmorDefinition = Readonly<{
+  material: string;
+  piece: ArmorPiece;
 }>;
 
+/** Shields carry their own per-type armor value (donor `GetShieldArmorValue`). */
+export type ShieldDefinition = Readonly<{ value: number }>;
+
+/**
+ * One item definition. Items with a weapon/armor/shield block are unique
+ * equippable entities; items without one (gold, arrows) are fungible stacks.
+ */
 export type ItemDefinition = Readonly<{
   id: string;
   weapon?: WeaponDefinition;
-  interceptor?: Interceptor;
+  armor?: ArmorDefinition;
+  shield?: ShieldDefinition;
+  /** Weight in the classic quarter-kg unit (integer; the name carries the unit). */
+  weightUnits: number;
+  /** Value in gold pieces. */
+  value: number;
+}>;
+
+/** One classic equipment slot; empty classifications mean unrestricted. */
+export type EquipmentSlotDefinition = Readonly<{
+  id: string;
+  allowedClassifications: readonly string[];
+}>;
+
+/** Capacity metrics and equipment slots the package's items bind against. */
+export type EquipmentSection = Readonly<{
+  capacityMetrics: readonly string[];
+  slots: readonly EquipmentSlotDefinition[];
 }>;
 
 export type RuleDefinition = Readonly<{
@@ -163,6 +221,7 @@ export const actor = (
     team?: string;
     lootTableKey?: string;
     attacks?: readonly DamageRange[];
+    inventory?: readonly LoadoutEntry[];
   }>,
 ): ActorDefinition => ({ id, ...definition });
 
@@ -188,12 +247,36 @@ export const weapon = (
   max: number,
   material: string,
   skill: string,
-): WeaponDefinition => ({ damage: { min, max }, material, skill });
+  hands: WeaponHands,
+): WeaponDefinition => ({ damage: { min, max }, material, skill, hands });
+
+export const armorPiece = (material: string, piece: ArmorPiece): ArmorDefinition => ({
+  material,
+  piece,
+});
+
+export const shield = (value: number): ShieldDefinition => ({ value });
 
 export const item = (
   id: string,
-  definition: Readonly<{ weapon?: WeaponDefinition; interceptor?: Interceptor }>,
+  definition: Readonly<{
+    weapon?: WeaponDefinition;
+    armor?: ArmorDefinition;
+    shield?: ShieldDefinition;
+    weightUnits: number;
+    value: number;
+  }>,
 ): ItemDefinition => ({ id, ...definition });
+
+export const equipmentSlot = (
+  id: string,
+  allowedClassifications: readonly string[],
+): EquipmentSlotDefinition => ({ id, allowedClassifications });
+
+export const equipmentSection = (
+  capacityMetrics: readonly string[],
+  slots: readonly EquipmentSlotDefinition[],
+): EquipmentSection => ({ capacityMetrics, slots });
 
 export const rule = (
   id: string,

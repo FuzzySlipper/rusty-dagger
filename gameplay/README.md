@@ -11,17 +11,28 @@ meaning, and is the only evaluator. See `docs/gameplay-resolution.md`.
 - `src/authoring/` — the grammar: expressions, programs, definition shapes,
   envelope composition. `mod.ts` is the single import surface for catalogs.
 - `src/catalogs/` — the everyday editing surface, one file per domain
-  (`stats`, `actors`, `monsters`, `actions`, `items`, `rules`, `encounters`,
-  `derived`). Entries read as data with builder helpers, not control flow.
-  `actors` holds the player and class-career enemies; `monsters` holds the
-  full classic table-driven monster table; `derived` holds the named
-  classic formula catalog.
+  (`stats`, `actors`, `monsters`, `actions`, `items`, `equipment`, `rules`,
+  `encounters`, `derived`). Entries read as data with builder helpers, not
+  control flow. `actors` holds the player and class-career enemies;
+  `monsters` holds the full classic table-driven monster table; `derived`
+  holds the named classic formula catalog; `items` holds the classic iron-tier
+  item vocabulary (weapons with damage/handedness/skill, armor valued per
+  material, shields, gold, arrows) and `equipment` the classic slot and
+  capacity-metric vocabulary items bind against.
 - `src/packages/` — one entry per package composing catalogs into the
   deterministic envelope. Materialization walks this directory.
 
 House rules:
 
 - Catalogs import only from `../authoring/mod.js`.
+- Items carry weight in the classic quarter-kg unit (`weightUnits`) and value
+  in gold pieces. An item with a weapon/armor/shield block is a unique
+  equippable entity; an item without one is a fungible stack. Actor
+  definitions may declare a spawn `inventory` loadout (`item`, `quantity`,
+  `equipSlot`); at spawn Rust binds it into upstream `InventoryComponent` /
+  `EquipmentComponent` state through the Engine's inventory and equipment
+  services, with the weight capacity limit derived from `max-encumbrance`
+  (kg) in quarter-kg units.
 - Adding content (an actor, action, item, rule, encounter) is a one-file
   catalog edit. Extending the grammar itself means editing `authoring/` and
   the Rust compiler in `crates/dagger-rpg/src/resolution/` in the same

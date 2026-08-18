@@ -6,6 +6,7 @@ import { LabApiService } from './lab-api.service';
 import {
   ActorDefinition,
   ContentEntityReadout,
+  InventoryItemReadout,
   LabReadout,
 } from './lab-contract';
 import { DAGGER_APPLICATION_CONTEXT, loadDaggerProductBootstrap } from './product-runtime';
@@ -114,6 +115,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
   playerDefinition(): ActorDefinition | undefined {
     return this.readout?.gameplayPackage.actors.find((actor) => actor.kind === 'player');
+  }
+
+  equippedItems(readout: LabReadout): readonly InventoryItemReadout[] {
+    return readout.playerInventory.items.filter((item) => item.equipSlot !== null);
+  }
+
+  carriedItems(readout: LabReadout): readonly InventoryItemReadout[] {
+    return readout.playerInventory.items.filter((item) => item.equipSlot === null);
   }
 
   filteredContent(): readonly ContentEntityReadout[] {

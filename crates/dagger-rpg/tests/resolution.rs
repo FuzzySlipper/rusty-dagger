@@ -551,7 +551,8 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
         .iter()
         .position(|item| item["id"] == "iron-longsword")
         .expect("iron-longsword in the package");
-    mutated["payload"]["items"][longsword_index] = serde_json::json!({ "id": "iron-longsword" });
+    mutated["payload"]["items"][longsword_index] =
+        serde_json::json!({ "id": "iron-longsword", "weightUnits": 18, "value": 15 });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
         Err(DaggerGameplayError::InvalidValue { .. })
@@ -850,4 +851,370 @@ fn action_roll_evidence_surfaces_the_player_career_dice() {
     assert_eq!(by_id["melee-attack.proficiency-damage"], (0, 30));
     assert_eq!(by_id["melee-attack.racial-damage"], (0, 30));
     assert_eq!(by_id["weapon-damage.iron-longsword"], (2, 16));
+}
+
+fn mutated_package(patch: impl FnOnce(&mut serde_json::Value)) -> Vec<u8> {
+    let mut package: serde_json::Value =
+        serde_json::from_slice(PACKAGE).expect("parse committed package");
+    patch(&mut package);
+    serde_json::to_vec(&package).expect("encode mutated package")
+}
+
+#[test]
+fn equipment_section_compiles_into_the_mechanics_catalog() {
+    use rusty_engine::gameplay_mechanics::{
+        CapacityMetricId, EquipmentSlotId, ItemDefinitionId, ItemKind,
+    };
+
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    assert_eq!(catalog.equipment().capacity_metrics, ["weight".to_string()]);
+    assert_eq!(catalog.equipment().slots.len(), 25);
+    assert!(catalog.equipment().slot("right-hand").is_some());
+
+    let mechanics = catalog.mechanics();
+    assert!(mechanics
+        .capacity_metric(&CapacityMetricId::parse("weight").unwrap())
+        .is_some());
+    let right_hand = mechanics
+        .equipment_slot(&EquipmentSlotId::parse("right-hand").unwrap())
+        .expect("right-hand slot");
+    assert_eq!(
+        right_hand
+            .allowed_classifications
+            .iter()
+            .map(|id| id.as_str())
+            .collect::<Vec<_>>(),
+        ["weapon-one-hand", "weapon-two-hand"]
+    );
+
+    let longsword = mechanics
+        .item(&ItemDefinitionId::parse("iron-longsword").unwrap())
+        .expect("iron-longsword");
+    assert_eq!(longsword.kind, ItemKind::Unique);
+    assert_eq!(longsword.maximum_quantity, 1);
+    assert_eq!(
+        longsword
+            .classifications
+            .iter()
+            .map(|id| id.as_str())
+            .collect::<Vec<_>>(),
+        ["weapon-one-hand"]
+    );
+    let policy = longsword.equipment.as_ref().expect("equippable");
+    assert_eq!(policy.required_slots, 1);
+    assert!(policy.exclusive_group.is_none());
+    assert_eq!(
+        longsword
+            .capacity_costs
+            .iter()
+            .map(|cost| (cost.metric.as_str(), cost.units))
+            .collect::<Vec<_>>(),
+        [("weight", 18)]
+    );
+
+    // Two-handed weapons and shields share the hands exclusivity group.
+    let staff = mechanics
+        .item(&ItemDefinitionId::parse("iron-staff").unwrap())
+        .expect("iron-staff");
+    assert_eq!(
+        staff
+            .equipment
+            .as_ref()
+            .and_then(|policy| policy.exclusive_group.as_ref())
+            .map(|group| group.as_str()),
+        Some("hands")
+    );
+    let buckler = mechanics
+        .item(&ItemDefinitionId::parse("buckler").unwrap())
+        .expect("buckler");
+    assert_eq!(
+        buckler
+            .equipment
+            .as_ref()
+            .and_then(|policy| policy.exclusive_group.as_ref())
+            .map(|group| group.as_str()),
+        Some("hands")
+    );
+
+    // Gold is a fungible stack with no capacity cost (1/400 kg is below the
+    // quarter-kg unit resolution).
+    let gold = mechanics
+        .item(&ItemDefinitionId::parse("gold-piece").unwrap())
+        .expect("gold-piece");
+    assert_eq!(gold.kind, ItemKind::Fungible);
+    assert!(gold.capacity_costs.is_empty());
+    assert!(gold.equipment.is_none());
+
+    // Armor value derives from the per-material table at compile (iron 7).
+    assert_eq!(
+        catalog.items()["iron-cuirass"]
+            .armor
+            .as_ref()
+            .unwrap()
+            .value,
+        7
+    );
+    assert_eq!(
+        catalog.items()["tower-shield"]
+            .shield
+            .as_ref()
+            .unwrap()
+            .value,
+        4
+    );
+}
+
+#[test]
+fn equippable_items_without_an_equipment_section_reject() {
+    // Section absent entirely.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]
+                .as_object_mut()
+                .unwrap()
+                .remove("equipment");
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Section present but slot-less.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["equipment"]["slots"] = serde_json::json!([]);
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Weighted items without the weight capacity metric reject too.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["equipment"]["capacityMetrics"] = serde_json::json!([]);
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+}
+
+#[test]
+fn loadout_unknown_item_and_equip_slot_reject() {
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["actors"][0]["inventory"][0]["item"] =
+                serde_json::Value::from("mithril-ladle");
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["actors"][0]["inventory"][0]["equipSlot"] =
+                serde_json::Value::from("third-hand");
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // A fungible item cannot equip.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["actors"][0]["inventory"][1]["equipSlot"] =
+                serde_json::Value::from("left-hand");
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+}
+
+#[test]
+fn invalid_hands_material_and_interceptor_fields_reject() {
+    // Unknown hands variant fails payload admission (deny_unknown_fields /
+    // unknown enum variant).
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["items"][0]["weapon"]["hands"] = serde_json::Value::from("three");
+        })),
+        Err(DaggerGameplayError::Payload(_))
+    ));
+    // Unknown weapon material.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["items"][0]["weapon"]["material"] = serde_json::Value::from("glass");
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Unknown armor material (no table entry).
+    let cuirass = |package: &serde_json::Value| {
+        package["payload"]["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|item| item["id"] == "iron-cuirass")
+            .expect("iron-cuirass in the package")
+    };
+    let index = cuirass(&serde_json::from_slice(PACKAGE).expect("parse committed package"));
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["items"][index]["armor"]["material"] =
+                serde_json::Value::from("glass");
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // The retired interceptor block is now an unknown field.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["items"][index]["interceptor"] =
+                serde_json::json!({ "kind": "reduceDamage", "amount": 1 });
+        })),
+        Err(DaggerGameplayError::Payload(_))
+    ));
+}
+
+fn inventory_view(
+    state: &DaggerGameplayState,
+    catalog: &dagger_rpg::DaggerGameplayCatalog,
+    actor: &str,
+) -> rusty_engine::gameplay_mechanics::InventoryView {
+    let owner = state.actor(actor).expect("actor binding").entity();
+    rusty_engine::gameplay_mechanics::InventoryService::view(
+        state.entities(),
+        catalog.mechanics(),
+        owner,
+    )
+    .expect("inventory view")
+}
+
+#[test]
+fn spawn_binds_loadout_into_upstream_inventory_and_equipment() {
+    use rusty_engine::gameplay_mechanics::{
+        EquipmentComponent, EquipmentSlotId, InventoryCapacityLimit, InventoryComponent,
+    };
+
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = DaggerGameplayState::default();
+    spawn_actor(&mut state, &catalog, "player", "player", &[]).expect("spawn player");
+    let owner = state.actor("player").expect("player binding").entity();
+
+    // Capacity limit: derived max-encumbrance floor(50 STR x 1.5) = 75 kg,
+    // in quarter-kg units = 300.
+    let inventory = state
+        .entities()
+        .component::<InventoryComponent>(owner)
+        .expect("inventory component read")
+        .expect("player has an inventory component");
+    assert_eq!(
+        inventory.capacity_limits(),
+        &[InventoryCapacityLimit::new(
+            rusty_engine::gameplay_mechanics::CapacityMetricId::parse("weight").unwrap(),
+            300
+        )]
+    );
+
+    let view = inventory_view(&state, &catalog, "player");
+    assert_eq!(
+        view.stacks()
+            .iter()
+            .map(|stack| (stack.definition.as_str(), stack.quantity))
+            .collect::<Vec<_>>(),
+        [("gold-piece", 25)]
+    );
+    assert_eq!(view.unique_items().len(), 1);
+    let longsword = &view.unique_items()[0];
+    assert_eq!(longsword.definition.as_str(), "iron-longsword");
+    let capacity = view
+        .capacity()
+        .iter()
+        .map(|usage| (usage.metric.as_str(), usage.used, usage.maximum))
+        .collect::<Vec<_>>();
+    assert_eq!(capacity, [("weight", 18, Some(300))]);
+
+    let equipment = state
+        .entities()
+        .component::<EquipmentComponent>(owner)
+        .expect("equipment component read")
+        .expect("player has an equipment component");
+    let assignment = equipment
+        .assignment(&EquipmentSlotId::parse("right-hand").unwrap())
+        .expect("right-hand assignment");
+    assert_eq!(assignment.item, longsword.entity);
+}
+
+/// Player loadout carrying an unequipped two-hander, shield, two either-hand
+/// weapons, and a cuirass for equip-legality tests.
+fn equip_legality_state() -> (dagger_rpg::DaggerGameplayCatalog, DaggerGameplayState) {
+    let package = mutated_package(|package| {
+        package["payload"]["actors"][0]["inventory"] = serde_json::json!([
+            { "item": "iron-staff" },
+            { "item": "buckler" },
+            { "item": "iron-dagger" },
+            { "item": "iron-wakazashi" },
+            { "item": "iron-cuirass" }
+        ]);
+    });
+    let catalog = compile_gameplay_package(&package).expect("compile loadout package");
+    let mut state = DaggerGameplayState::default();
+    spawn_actor(&mut state, &catalog, "player", "player", &[]).expect("spawn player");
+    (catalog, state)
+}
+
+fn equip(
+    state: &mut DaggerGameplayState,
+    catalog: &dagger_rpg::DaggerGameplayCatalog,
+    item: &str,
+    slot: &str,
+) -> Result<(), String> {
+    use rusty_engine::gameplay_mechanics::{
+        EquipmentEquipRequest, EquipmentService, EquipmentSlotId, OperationId, SourceInstanceId,
+        SourceInstanceIdentity,
+    };
+
+    let owner = state.actor("player").expect("player binding").entity();
+    let view = inventory_view(state, catalog, "player");
+    let item_entity = view
+        .unique_items()
+        .iter()
+        .find(|entry| entry.definition.as_str() == item)
+        .expect("item in inventory")
+        .entity;
+    let operation = OperationId::parse("test-equip").unwrap();
+    let expected_state_revision = state.entities().revision();
+    EquipmentService::equip(
+        state.entities_mut(),
+        catalog.mechanics(),
+        EquipmentEquipRequest {
+            operation: operation.clone(),
+            source: SourceInstanceIdentity::Request {
+                operation,
+                instance: SourceInstanceId::parse("test").unwrap(),
+            },
+            owner,
+            item: item_entity,
+            slots: vec![EquipmentSlotId::parse(slot).unwrap()],
+            expected_equipment_revision: None,
+            expected_state_revision,
+        },
+    )
+    .map(|_| ())
+    .map_err(|error| format!("{error:?}"))
+}
+
+#[test]
+fn either_hand_dual_wield_is_legal() {
+    let (catalog, mut state) = equip_legality_state();
+    equip(&mut state, &catalog, "iron-dagger", "right-hand").expect("dagger equips right-hand");
+    equip(&mut state, &catalog, "iron-wakazashi", "left-hand").expect("wakazashi equips left-hand");
+}
+
+#[test]
+fn two_hander_conflicts_with_an_equipped_shield() {
+    let (catalog, mut state) = equip_legality_state();
+    equip(&mut state, &catalog, "buckler", "left-hand").expect("buckler equips left-hand");
+    let conflict = equip(&mut state, &catalog, "iron-staff", "right-hand");
+    assert!(
+        matches!(conflict, Err(ref error) if error.contains("EquipmentExclusivityConflict")),
+        "expected exclusivity conflict, got {conflict:?}"
+    );
+}
+
+#[test]
+fn armor_into_a_wrong_slot_rejects() {
+    let (catalog, mut state) = equip_legality_state();
+    let mismatch = equip(&mut state, &catalog, "iron-cuirass", "head");
+    assert!(
+        matches!(mismatch, Err(ref error) if error.contains("EquipmentSlotClassificationMismatch")),
+        "expected classification mismatch, got {mismatch:?}"
+    );
+    equip(&mut state, &catalog, "iron-cuirass", "chest-armor").expect("cuirass equips chest-armor");
 }

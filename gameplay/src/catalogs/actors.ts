@@ -57,6 +57,12 @@ export const actors: readonly ActorDefinition[] = [
       ),
       track("magicka", stat("actor", "intelligence")),
     ],
+    // Spawn loadout bound into the upstream inventory/equipment components:
+    // a longsword in the right hand plus a fungible gold stack.
+    inventory: [
+      { item: "iron-longsword", equipSlot: "right-hand" },
+      { item: "gold-piece", quantity: 25 },
+    ],
   }),
 
   // Thief (mobile 138, class career CLASS10.CFG): attributes and career
