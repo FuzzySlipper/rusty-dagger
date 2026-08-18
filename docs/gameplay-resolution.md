@@ -61,7 +61,9 @@ same way, 0 until careers are modeled, so resolution is deterministic and
 replayable. Beyond stats and evidence, expressions read live track currents
 (`track`), spawn-derived track maxima (`trackMax`, the `{track}-max` stat),
 and fixed-point powers (`powMilli`, base^exponent scaled by 1000 with floor
-at each step). Player and AI origins enter the same policy path.
+at each step). Division has floor (`divFloor`) and truncating (`divTrunc`)
+forms; signed differentials use `divTrunc`, the donor's C# integer
+semantics. Player and AI origins enter the same policy path.
 
 `dagger-gameplay-check` is the production Rust diagnostic. It admits the
 committed package, resolves the same controlled action for player and AI

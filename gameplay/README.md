@@ -45,7 +45,9 @@ House rules:
   negative (swing modifiers span -10..+10).
 - Expressions can also read live track currents (`track`), spawn-derived
   track maxima (`trackMax`), and fixed-point powers (`powMilli` — base^exp
-  scaled by 1000, floor at each step).
+  scaled by 1000, floor at each step). Division comes in floor (`divFloor`)
+  and truncating (`divTrunc`) forms; signed differentials use `divTrunc`,
+  the donor's C# integer semantics.
 - Content is inclusive classic Daggerfall data. Nothing here is scoped or
   validated down to "only what the current dungeon needs".
 - Numbers: the package envelope is schema-2 canonical binary64, composed

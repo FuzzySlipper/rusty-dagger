@@ -32,6 +32,7 @@ export type Expr =
   | Readonly<{ kind: "sub"; left: Expr; right: Expr }>
   | Readonly<{ kind: "mul"; terms: readonly Expr[] }>
   | Readonly<{ kind: "divFloor"; left: Expr; right: Expr }>
+  | Readonly<{ kind: "divTrunc"; left: Expr; right: Expr }>
   | Readonly<{ kind: "min"; terms: readonly Expr[] }>
   | Readonly<{ kind: "max"; terms: readonly Expr[] }>;
 
@@ -110,6 +111,17 @@ export const mul = (...terms: readonly Expr[]): Expr => ({
 
 export const divFloor = (left: Expr, right: Expr): Expr => ({
   kind: "divFloor",
+  left,
+  right,
+});
+
+/**
+ * Truncating division (toward zero): the donor's C# integer division
+ * semantics. Use for signed differentials where floor division would
+ * over-penalize negative nonmultiples ((attacker − target) / 10).
+ */
+export const divTrunc = (left: Expr, right: Expr): Expr => ({
+  kind: "divTrunc",
   left,
   right,
 });

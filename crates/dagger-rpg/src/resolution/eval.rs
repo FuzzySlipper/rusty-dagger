@@ -180,6 +180,19 @@ pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, Da
             }
             Ok(left.div_euclid(right))
         }
+        DaggerExpr::DivTrunc { left, right } => {
+            // The donor's C# integer division: truncation toward zero, which
+            // matters for signed differentials ((attacker - target) / 10).
+            let left = evaluate_expr(left, context)?;
+            let right = evaluate_expr(right, context)?;
+            if right == 0 {
+                return Err(DaggerRejection::InvalidExpression(
+                    "division by zero".to_string(),
+                ));
+            }
+            left.checked_div(right)
+                .ok_or_else(|| DaggerRejection::InvalidExpression("div overflow".to_string()))
+        }
         DaggerExpr::Min { terms } => terms
             .iter()
             .map(|term| evaluate_expr(term, context))
@@ -316,7 +329,9 @@ fn collect_dice(
                 collect_dice(catalog, term, rolls);
             }
         }
-        DaggerExpr::Sub { left, right } | DaggerExpr::DivFloor { left, right } => {
+        DaggerExpr::Sub { left, right }
+        | DaggerExpr::DivFloor { left, right }
+        | DaggerExpr::DivTrunc { left, right } => {
             collect_dice(catalog, left, rolls);
             collect_dice(catalog, right, rolls);
         }

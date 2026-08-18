@@ -57,6 +57,8 @@ fn zeroed_player_dice(action: &str) -> Vec<DaggerEvidence> {
         "racial-to-hit",
         "proficiency-damage",
         "racial-damage",
+        "adrenaline-rush",
+        "target-adrenaline-rush",
     ]
     .iter()
     .map(|suffix| DaggerEvidence {
@@ -605,11 +607,11 @@ fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
 }
 
 #[test]
-fn adrenaline_rush_reads_live_tracks_through_resolution() {
+fn adrenaline_rush_requires_the_career_flag() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
 
-    // Full health (85 of 85): no adrenaline bonus; chance vs rat is 37, so a
-    // roll of 38 misses.
+    // Full health (85 of 85): no adrenaline condition; chance vs rat is 37,
+    // so a roll of 38 misses regardless of flags.
     let mut state = spawn_state(&catalog);
     let (receipt, _) = resolve_dagger_action(
         &catalog,
@@ -626,8 +628,9 @@ fn adrenaline_rush_reads_live_tracks_through_resolution() {
         .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("rat-2007", "health"), Some(12));
 
-    // Health below max/8 (85/8 = 10): adrenaline adds +5, so the chance is
-    // 42 and the same roll of 38 hits.
+    // Low health (5 < 85/8 = 10) WITHOUT the career flag: no bonus (the
+    // donor gates adrenaline on Career.AdrenalineRush), so the same roll
+    // still misses.
     let mut state = spawn_state(&catalog);
     set_actor_track(&mut state, &catalog, "player", "health", 5).expect("lower player health");
     let (receipt, _) = resolve_dagger_action(
@@ -639,10 +642,166 @@ fn adrenaline_rush_reads_live_tracks_through_resolution() {
         melee_evidence(38),
     );
     assert!(receipt.succeeded());
+    assert!(!receipt
+        .effects()
+        .iter()
+        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
+
+    // Low health WITH the career flag: +5, so the chance is 42 and the same
+    // roll of 38 hits.
+    let mut state = spawn_state(&catalog);
+    set_actor_track(&mut state, &catalog, "player", "health", 5).expect("lower player health");
+    let mut evidence = melee_evidence(38);
+    evidence
+        .iter_mut()
+        .find(|entry| entry.id == "melee-attack.adrenaline-rush")
+        .expect("adrenaline evidence")
+        .value = 1;
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence,
+    );
+    assert!(receipt.succeeded());
     assert!(receipt.effects().contains(&DaggerEffect::Damage {
         target: "rat-2007".to_string(),
         amount: 8,
     }));
+}
+
+#[test]
+fn target_adrenaline_rush_penalizes_a_flagged_low_health_target() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+
+    // Rat spawned at its top health roll (16): max/8 = 2, so 1 health is
+    // below the threshold but still alive.
+    let low_health_rat_state = || {
+        let mut state = DaggerGameplayState::default();
+        spawn_actor(&mut state, &catalog, "player", "player", &[]).expect("spawn player");
+        spawn_actor(
+            &mut state,
+            &catalog,
+            "rat",
+            "rat-2007",
+            &[DaggerEvidence {
+                id: "rat.health".to_string(),
+                value: 16,
+            }],
+        )
+        .expect("spawn rat");
+        set_actor_track(&mut state, &catalog, "rat-2007", "health", 1).expect("lower rat health");
+        state
+    };
+
+    // Without the target's career flag the chance stays 37: roll 33 hits
+    // (damage clamps to the rat's 1 remaining health).
+    let mut state = low_health_rat_state();
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        melee_evidence(33),
+    );
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "rat-2007".to_string(),
+        amount: 1,
+    }));
+
+    // With the target's career flag the chance drops to 32: the same roll
+    // misses.
+    let mut state = low_health_rat_state();
+    let mut evidence = melee_evidence(33);
+    evidence
+        .iter_mut()
+        .find(|entry| entry.id == "melee-attack.target-adrenaline-rush")
+        .expect("target adrenaline evidence")
+        .value = 1;
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence,
+    );
+    assert!(receipt.succeeded());
+    assert!(!receipt
+        .effects()
+        .iter()
+        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(1));
+}
+
+#[test]
+fn signed_differentials_truncate_toward_zero() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let player = &catalog.actors()["player"];
+    let rat = &catalog.actors()["rat"];
+    // The CalculateStatsToHit term shape: (attacker luck - target luck) / 10.
+    let differential = || DaggerExpr::DivTrunc {
+        left: Box::new(DaggerExpr::Sub {
+            left: Box::new(DaggerExpr::Stat {
+                subject: DaggerSubject::Actor,
+                id: "luck".to_string(),
+            }),
+            right: Box::new(DaggerExpr::Stat {
+                subject: DaggerSubject::Target,
+                id: "luck".to_string(),
+            }),
+        }),
+        right: Box::new(DaggerExpr::Const { value: 10 }),
+    };
+    let evaluate = |actor_luck: i64, target_luck: i64| {
+        let actor_stats = BTreeMap::from([("luck".to_string(), actor_luck)]);
+        let target_stats = BTreeMap::from([("luck".to_string(), target_luck)]);
+        let context = ExprContext {
+            catalog: &catalog,
+            actor: ActorExprValues {
+                definition: player,
+                stats: &actor_stats,
+                tracks: None,
+            },
+            target: Some(ActorExprValues {
+                definition: rat,
+                stats: &target_stats,
+                tracks: None,
+            }),
+            evidence: &[],
+        };
+        evaluate_expr(&differential(), &context).expect("differential evaluates")
+    };
+    assert_eq!(evaluate(51, 50), 0); // +1 truncates to 0
+    assert_eq!(evaluate(61, 50), 1); // +11 truncates to 1
+    assert_eq!(evaluate(50, 51), 0); // -1 truncates to 0 (floor would be -1)
+    assert_eq!(evaluate(50, 61), -1); // -11 truncates to -1 (floor would be -2)
+
+    // Division by zero still rejects.
+    let zero = DaggerExpr::DivTrunc {
+        left: Box::new(DaggerExpr::Const { value: 1 }),
+        right: Box::new(DaggerExpr::Const { value: 0 }),
+    };
+    let stats = BTreeMap::new();
+    let context = ExprContext {
+        catalog: &catalog,
+        actor: ActorExprValues {
+            definition: player,
+            stats: &stats,
+            tracks: None,
+        },
+        target: None,
+        evidence: &[],
+    };
+    assert!(matches!(
+        evaluate_expr(&zero, &context),
+        Err(DaggerRejection::InvalidExpression(_))
+    ));
 }
 
 #[test]
@@ -850,6 +1009,8 @@ fn action_roll_evidence_surfaces_the_player_career_dice() {
     assert_eq!(by_id["melee-attack.racial-to-hit"], (0, 30));
     assert_eq!(by_id["melee-attack.proficiency-damage"], (0, 30));
     assert_eq!(by_id["melee-attack.racial-damage"], (0, 30));
+    assert_eq!(by_id["melee-attack.adrenaline-rush"], (0, 1));
+    assert_eq!(by_id["melee-attack.target-adrenaline-rush"], (0, 1));
     assert_eq!(by_id["weapon-damage.iron-longsword"], (2, 16));
 }
 
