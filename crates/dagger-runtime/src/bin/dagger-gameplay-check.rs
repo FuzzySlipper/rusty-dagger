@@ -53,8 +53,14 @@ fn resolve(origin: DaggerIntentOrigin, resolution: u64) -> (DaggerGameplayState,
                 id: "melee-attack.d100".to_string(),
                 value: 25,
             },
+            // Equipped-weapon damage (iron longsword 2..16) and the struck
+            // body part (8 selects chest through the classic table).
             DaggerEvidence {
-                id: "weapon-damage.iron-longsword".to_string(),
+                id: "melee-attack.equipped-weapon-damage".to_string(),
+                value: 8,
+            },
+            DaggerEvidence {
+                id: "melee-attack.struck-body-part".to_string(),
                 value: 8,
             },
             // Career/swing facts are 0 until careers and swing states exist.
@@ -108,6 +114,24 @@ fn main() {
         }
     }
     println!("{player_readout}");
+
+    // Equipment-driven combat facts: the player's equipped weapon and the
+    // struck body part the scripted evidence selected (8 maps to chest).
+    let catalog = compile_gameplay_package(PACKAGE).expect("admit authored gameplay package");
+    let weapon = dagger_rpg::equipped_weapon(&player_state, &catalog, "player")
+        .expect("player equipment read")
+        .map_or("unarmed", |item| item.id.as_str());
+    let struck_part =
+        dagger_rpg::struck_body_part_name(8).expect("struck-part roll 8 maps to a part");
+    assert_eq!(weapon, "iron-longsword");
+    assert_eq!(struck_part, "chest");
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "combat": { "weapon": weapon, "struckPart": struck_part }
+        }))
+        .expect("serialize combat facts")
+    );
 
     // Derived-rule proof: the classic formula catalog evaluates against the
     // admitted player definition through the same evaluator.

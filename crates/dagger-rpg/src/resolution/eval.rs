@@ -15,12 +15,13 @@ use rusty_engine::gameplay_mechanics::{
     TracksComponent,
 };
 
-use super::compile::WEIGHT_CAPACITY_METRIC;
+use super::compile::{LEFT_HAND_SLOT, RIGHT_HAND_SLOT, WEIGHT_CAPACITY_METRIC};
 use super::mechanics::{mechanics_catalog_version, track_max_stat_id};
 use super::{
-    DaggerActorDefinition, DaggerActorState, DaggerEvidence, DaggerExpr, DaggerGameplayCatalog,
-    DaggerGameplayError, DaggerGameplayState, DaggerOperation, DaggerPredicate, DaggerProgram,
-    DaggerRejection, DaggerSubject,
+    armor_part_stat_id, struck_body_part_name, DaggerActorDefinition, DaggerActorState,
+    DaggerEvidence, DaggerExpr, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState,
+    DaggerItemDefinition, DaggerOperation, DaggerPredicate, DaggerProgram, DaggerRejection,
+    DaggerSubject,
 };
 
 /// Materialized stat values (attributes and skills) for one subject. The
@@ -28,10 +29,24 @@ use super::{
 /// values during resolution. `tracks` carries live current track values;
 /// it is `None` where reading them would be circular (spawn, derived-rule
 /// evaluation of a track maximum), so track reads there reject honestly.
+/// `equipment` carries live equipment facts (equipped weapon, unarmed damage
+/// range); it is `None` where no live entity exists (spawn, derived-rule
+/// evaluation), so the equipped-weapon nodes reject honestly there.
 pub struct ActorExprValues<'a> {
     pub definition: &'a DaggerActorDefinition,
     pub stats: &'a BTreeMap<String, i64>,
     pub tracks: Option<&'a BTreeMap<String, i64>>,
+    pub equipment: Option<ActorEquipment<'a>>,
+}
+
+/// Live equipment facts for one subject: the equipped weapon item (right
+/// hand first, then left — the donor's primary-hand order; `None` means
+/// unarmed) and the subject's unarmed damage range, evaluated once by the
+/// caller from the derived `hand-to-hand-min/max-damage` rules.
+#[derive(Debug, Clone, Copy)]
+pub struct ActorEquipment<'a> {
+    pub weapon: Option<&'a DaggerItemDefinition>,
+    pub unarmed_damage: (i64, i64),
 }
 
 /// Everything expression evaluation may read: the catalog (items, actor
@@ -74,8 +89,20 @@ pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, Da
                 DaggerRejection::MissingValue(format!("skill.{id}@{}", values.definition.id))
             })
         }
-        DaggerExpr::Armor { subject } => {
-            Ok(context.subject_values(*subject)?.definition.armor_value)
+        DaggerExpr::EquippedWeaponSkill { subject } => {
+            let values = context.subject_values(*subject)?;
+            let equipment = values.equipment.ok_or_else(|| {
+                DaggerRejection::MissingValue(format!("equipment@{}", values.definition.id))
+            })?;
+            // Unarmed combat reads the hand-to-hand skill (donor
+            // CalculateAttackDamage: `skillID = HandToHand` when no weapon).
+            let skill_id = equipment
+                .weapon
+                .and_then(|item| item.weapon.as_ref())
+                .map_or("hand-to-hand", |weapon| weapon.skill.as_str());
+            values.stats.get(skill_id).copied().ok_or_else(|| {
+                DaggerRejection::MissingValue(format!("skill.{skill_id}@{}", values.definition.id))
+            })
         }
         DaggerExpr::Evidence { id } => evidence_value(context.evidence, id),
         DaggerExpr::Dice { id, min, max } => {
@@ -90,24 +117,45 @@ pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, Da
             }
             Ok(value)
         }
-        DaggerExpr::WeaponDice { item } => {
-            let weapon = context
-                .catalog
-                .items()
-                .get(item)
-                .and_then(|definition| definition.weapon.as_ref())
-                .ok_or_else(|| DaggerRejection::MissingValue(format!("item.{item}.weapon")))?;
-            let id = format!("weapon-damage.{item}");
-            let value = evidence_value(context.evidence, &id)?;
-            if value < weapon.damage_min || value > weapon.damage_max {
+        DaggerExpr::EquippedWeaponDice { subject, id } => {
+            let values = context.subject_values(*subject)?;
+            let equipment = values.equipment.ok_or_else(|| {
+                DaggerRejection::MissingValue(format!("equipment@{}", values.definition.id))
+            })?;
+            // Bounds come from the live equipment: the equipped weapon's
+            // declared damage range, or the unarmed range the caller
+            // materialized from the derived hand-to-hand rules.
+            let (min, max) = equipment
+                .weapon
+                .and_then(|item| item.weapon.as_ref())
+                .map_or(equipment.unarmed_damage, |weapon| {
+                    (weapon.damage_min, weapon.damage_max)
+                });
+            let value = evidence_value(context.evidence, id)?;
+            if value < min || value > max {
                 return Err(DaggerRejection::RollOutOfBounds {
-                    id,
+                    id: id.clone(),
                     value,
-                    min: weapon.damage_min,
-                    max: weapon.damage_max,
+                    min,
+                    max,
                 });
             }
             Ok(value)
+        }
+        DaggerExpr::StruckArmor { subject, id } => {
+            let values = context.subject_values(*subject)?;
+            let roll = evidence_value(context.evidence, id)?;
+            let part =
+                struck_body_part_name(roll).ok_or_else(|| DaggerRejection::RollOutOfBounds {
+                    id: id.clone(),
+                    value: roll,
+                    min: 0,
+                    max: 19,
+                })?;
+            let stat_id = armor_part_stat_id(part);
+            values.stats.get(&stat_id).copied().ok_or_else(|| {
+                DaggerRejection::MissingValue(format!("stat.{stat_id}@{}", values.definition.id))
+            })
         }
         DaggerExpr::Track { subject, id } => {
             let values = context.subject_values(*subject)?;
@@ -242,16 +290,16 @@ pub fn required_roll_evidence(
             })?;
     let mut rolls = Vec::new();
     for track in &definition.tracks {
-        collect_dice(catalog, &track.max, &mut rolls);
+        collect_dice(&track.max, &mut rolls);
     }
     Ok(rolls)
 }
 
-/// Roll evidence an action's program requires: every dice node as
-/// (evidence id, min, max), with weapon dice bounded by the item's declared
-/// damage range. Callers supply values and pass them to
+/// Roll evidence an action's program requires: every `dice` node as
+/// (evidence id, min, max). Callers supply values and pass them to
 /// `resolve_dagger_action` alongside the action's hit-roll evidence
-/// (convention: `{action}.d100`, an unbounded d100 read).
+/// (convention: `{action}.d100`, an unbounded d100 read). Equipment-driven
+/// nodes are NOT statically bound here — see `action_dynamic_roll_evidence`.
 pub fn action_roll_evidence(
     catalog: &DaggerGameplayCatalog,
     action_id: &str,
@@ -265,20 +313,50 @@ pub fn action_roll_evidence(
                 reason: "unknown action definition".to_string(),
             })?;
     let mut rolls = Vec::new();
-    collect_program_dice(catalog, &action.program, &mut rolls);
+    collect_program_dice(&action.program, &mut rolls);
     Ok(rolls)
 }
 
-fn collect_program_dice(
+/// Evidence an action's program reads with bounds that depend on live
+/// equipment state: `equippedWeaponDice` (bounded by the subject's CURRENTLY
+/// equipped weapon's damage range, or its unarmed range) and `struckArmor`
+/// (fixed 0..=19 struck-body-part roll). Callers roll these per attempt and
+/// supply them alongside `action_roll_evidence` values.
+pub fn action_dynamic_roll_evidence(
     catalog: &DaggerGameplayCatalog,
+    action_id: &str,
+) -> Result<Vec<(String, DaggerDynamicRoll)>, DaggerGameplayError> {
+    let action =
+        catalog
+            .actions()
+            .get(action_id)
+            .ok_or_else(|| DaggerGameplayError::InvalidValue {
+                path: format!("actions[{action_id}]"),
+                reason: "unknown action definition".to_string(),
+            })?;
+    let mut rolls = Vec::new();
+    collect_program_dynamic_rolls(&action.program, &mut rolls);
+    Ok(rolls)
+}
+
+/// The equipment-dependent evidence kinds an action program can read.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DaggerDynamicRoll {
+    /// `equippedWeaponDice`: bounds are the acting subject's live weapon range.
+    EquippedWeaponDamage,
+    /// `struckArmor`: fixed 0..=19 struck-body-part roll.
+    StruckBodyPart,
+}
+
+fn collect_program_dynamic_rolls(
     program: &DaggerProgram,
-    rolls: &mut Vec<(String, i64, i64)>,
+    rolls: &mut Vec<(String, DaggerDynamicRoll)>,
 ) {
     use rusty_engine::gameplay_resolution::Program;
     match program {
         Program::Sequence { steps } => {
             for step in steps {
-                collect_program_dice(catalog, step, rolls);
+                collect_program_dynamic_rolls(step, rolls);
             }
         }
         Program::When {
@@ -287,60 +365,209 @@ fn collect_program_dice(
             otherwise_program,
         } => {
             let DaggerPredicate::Cmp { left, right, .. } = predicate;
-            collect_dice(catalog, left, rolls);
-            collect_dice(catalog, right, rolls);
-            collect_program_dice(catalog, then_program, rolls);
+            collect_dynamic_rolls(left, rolls);
+            collect_dynamic_rolls(right, rolls);
+            collect_program_dynamic_rolls(then_program, rolls);
             if let Some(otherwise) = otherwise_program {
-                collect_program_dice(catalog, otherwise, rolls);
+                collect_program_dynamic_rolls(otherwise, rolls);
             }
         }
         Program::Operation(operation) => match operation {
-            DaggerOperation::SpendTrack { amount, .. } => collect_dice(catalog, amount, rolls),
-            DaggerOperation::Damage { amount, .. } => collect_dice(catalog, amount, rolls),
+            DaggerOperation::SpendTrack { amount, .. } => collect_dynamic_rolls(amount, rolls),
+            DaggerOperation::Damage { amount, .. } => collect_dynamic_rolls(amount, rolls),
         },
     }
 }
 
-fn collect_dice(
-    catalog: &DaggerGameplayCatalog,
-    expr: &DaggerExpr,
-    rolls: &mut Vec<(String, i64, i64)>,
-) {
+fn collect_dynamic_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, DaggerDynamicRoll)>) {
     match expr {
-        DaggerExpr::Dice { id, min, max } => rolls.push((id.clone(), *min, *max)),
-        DaggerExpr::WeaponDice { item } => {
-            if let Some(weapon) = catalog
-                .items()
-                .get(item)
-                .and_then(|definition| definition.weapon.as_ref())
-            {
-                rolls.push((
-                    format!("weapon-damage.{item}"),
-                    weapon.damage_min,
-                    weapon.damage_max,
-                ));
-            }
+        DaggerExpr::EquippedWeaponDice { id, .. } => {
+            rolls.push((id.clone(), DaggerDynamicRoll::EquippedWeaponDamage));
+        }
+        DaggerExpr::StruckArmor { id, .. } => {
+            rolls.push((id.clone(), DaggerDynamicRoll::StruckBodyPart));
         }
         DaggerExpr::Add { terms }
         | DaggerExpr::Mul { terms }
         | DaggerExpr::Min { terms }
         | DaggerExpr::Max { terms } => {
             for term in terms {
-                collect_dice(catalog, term, rolls);
+                collect_dynamic_rolls(term, rolls);
             }
         }
         DaggerExpr::Sub { left, right }
         | DaggerExpr::DivFloor { left, right }
         | DaggerExpr::DivTrunc { left, right } => {
-            collect_dice(catalog, left, rolls);
-            collect_dice(catalog, right, rolls);
+            collect_dynamic_rolls(left, rolls);
+            collect_dynamic_rolls(right, rolls);
         }
         DaggerExpr::PowMilli { base, exponent } => {
-            collect_dice(catalog, base, rolls);
-            collect_dice(catalog, exponent, rolls);
+            collect_dynamic_rolls(base, rolls);
+            collect_dynamic_rolls(exponent, rolls);
         }
         _ => {}
     }
+}
+
+fn collect_program_dice(program: &DaggerProgram, rolls: &mut Vec<(String, i64, i64)>) {
+    use rusty_engine::gameplay_resolution::Program;
+    match program {
+        Program::Sequence { steps } => {
+            for step in steps {
+                collect_program_dice(step, rolls);
+            }
+        }
+        Program::When {
+            predicate,
+            then_program,
+            otherwise_program,
+        } => {
+            let DaggerPredicate::Cmp { left, right, .. } = predicate;
+            collect_dice(left, rolls);
+            collect_dice(right, rolls);
+            collect_program_dice(then_program, rolls);
+            if let Some(otherwise) = otherwise_program {
+                collect_program_dice(otherwise, rolls);
+            }
+        }
+        Program::Operation(operation) => match operation {
+            DaggerOperation::SpendTrack { amount, .. } => collect_dice(amount, rolls),
+            DaggerOperation::Damage { amount, .. } => collect_dice(amount, rolls),
+        },
+    }
+}
+
+fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
+    match expr {
+        DaggerExpr::Dice { id, min, max } => rolls.push((id.clone(), *min, *max)),
+        DaggerExpr::Add { terms }
+        | DaggerExpr::Mul { terms }
+        | DaggerExpr::Min { terms }
+        | DaggerExpr::Max { terms } => {
+            for term in terms {
+                collect_dice(term, rolls);
+            }
+        }
+        DaggerExpr::Sub { left, right }
+        | DaggerExpr::DivFloor { left, right }
+        | DaggerExpr::DivTrunc { left, right } => {
+            collect_dice(left, rolls);
+            collect_dice(right, rolls);
+        }
+        DaggerExpr::PowMilli { base, exponent } => {
+            collect_dice(base, rolls);
+            collect_dice(exponent, rolls);
+        }
+        _ => {}
+    }
+}
+
+/// One actor's equipped weapon item: the right-hand assignment first, then
+/// the left hand (the donor's primary-hand order). A non-weapon assignment
+/// (a shield in the left hand) is not a weapon; `None` means unarmed.
+pub fn equipped_weapon<'a>(
+    state: &DaggerGameplayState,
+    catalog: &'a DaggerGameplayCatalog,
+    actor_id: &str,
+) -> Result<Option<&'a DaggerItemDefinition>, DaggerGameplayError> {
+    let binding = state
+        .actor(actor_id)
+        .ok_or_else(|| DaggerGameplayError::InvalidState(format!("unknown actor {actor_id}")))?;
+    let equipment = state
+        .entities()
+        .component::<EquipmentComponent>(binding.entity())
+        .map_err(|error| {
+            DaggerGameplayError::InvalidState(format!("equipment component: {error}"))
+        })?
+        .ok_or_else(|| {
+            DaggerGameplayError::InvalidState(format!("missing equipment component: {actor_id}"))
+        })?;
+    for slot in [RIGHT_HAND_SLOT, LEFT_HAND_SLOT] {
+        let Some(assignment) = equipment
+            .assignments()
+            .iter()
+            .find(|assignment| assignment.slot.as_str() == slot)
+        else {
+            continue;
+        };
+        let item = state
+            .entities()
+            .component::<ItemComponent>(assignment.item)
+            .map_err(|error| DaggerGameplayError::InvalidState(format!("item component: {error}")))?
+            .ok_or_else(|| {
+                DaggerGameplayError::InvalidState(format!(
+                    "equipped item entity missing ItemComponent: {actor_id}"
+                ))
+            })?;
+        let definition = catalog
+            .items()
+            .get(item.definition().as_str())
+            .ok_or_else(|| {
+                DaggerGameplayError::InvalidState(format!(
+                    "equipped item {} not in the catalog",
+                    item.definition().as_str()
+                ))
+            })?;
+        if definition.weapon.is_some() {
+            return Ok(Some(definition));
+        }
+    }
+    Ok(None)
+}
+
+/// One actor definition's base stats+skills map: the spawn/derived-rule
+/// evaluation shape, also used by callers that need a definition-base
+/// unarmed damage range for evidence bounds.
+pub fn definition_base_stats(definition: &DaggerActorDefinition) -> BTreeMap<String, i64> {
+    definition
+        .stats
+        .iter()
+        .chain(definition.skills.iter())
+        .map(|(id, value)| (id.clone(), *value))
+        .collect()
+}
+
+/// One subject's unarmed damage range, evaluated from the derived
+/// `hand-to-hand-min-damage`/`hand-to-hand-max-damage` rules against the
+/// given stat map — the rules are the formula authority; nothing here
+/// reimplements them. A package without those rules yields (0, 0), so an
+/// unarmed `equippedWeaponDice` there rejects honestly out of bounds.
+pub fn unarmed_damage_range(
+    catalog: &DaggerGameplayCatalog,
+    definition: &DaggerActorDefinition,
+    stats: &BTreeMap<String, i64>,
+) -> Result<(i64, i64), DaggerGameplayError> {
+    let evaluate = |rule_id: &str| -> Result<Option<i64>, DaggerGameplayError> {
+        let Some(rule) = catalog.derived().get(rule_id) else {
+            return Ok(None);
+        };
+        let context = ExprContext {
+            catalog,
+            actor: ActorExprValues {
+                definition,
+                stats,
+                // Unarmed damage is a pure stat formula; live tracks and
+                // equipment do not exist in this nested evaluation.
+                tracks: None,
+                equipment: None,
+            },
+            target: None,
+            evidence: &[],
+        };
+        evaluate_expr(&rule.expr, &context)
+            .map(Some)
+            .map_err(|rejection| DaggerGameplayError::InvalidValue {
+                path: format!("derived[{rule_id}]"),
+                reason: format!("unarmed damage rule rejected: {rejection:?}"),
+            })
+    };
+    let Some(min) = evaluate("hand-to-hand-min-damage")? else {
+        return Ok((0, 0));
+    };
+    let Some(max) = evaluate("hand-to-hand-max-damage")? else {
+        return Ok((0, 0));
+    };
+    Ok((min, max.max(min)))
 }
 
 /// Current maximum of one actor's track: the evaluated derived rule stored
@@ -515,20 +742,16 @@ pub fn evaluate_derived_rule(
                 path: format!("actors[{actor_id}]"),
                 reason: "unknown actor definition".to_string(),
             })?;
-    let base_stats: BTreeMap<String, i64> = definition
-        .stats
-        .iter()
-        .chain(definition.skills.iter())
-        .map(|(id, value)| (id.clone(), *value))
-        .collect();
+    let base_stats = definition_base_stats(definition);
     let context = ExprContext {
         catalog,
         actor: ActorExprValues {
             definition,
             stats: &base_stats,
             // Derived rules evaluate against definition bases; live track
-            // currents do not exist in this context.
+            // currents and equipment do not exist in this context.
             tracks: None,
+            equipment: None,
         },
         target: None,
         evidence,
@@ -565,20 +788,16 @@ pub fn spawn_actor(
             })?;
     // Spawn evaluation reads definition base stats; the components that
     // would carry live values are exactly what this spawn is constructing.
-    // Track-current reads here would be circular (a track-max expression
-    // reading the current value it defines), so they reject honestly.
-    let base_stats: BTreeMap<String, i64> = definition
-        .stats
-        .iter()
-        .chain(definition.skills.iter())
-        .map(|(id, value)| (id.clone(), *value))
-        .collect();
+    // Track-current and equipment reads here would be circular or undefined,
+    // so they reject honestly.
+    let base_stats = definition_base_stats(definition);
     let context = ExprContext {
         catalog,
         actor: ActorExprValues {
             definition,
             stats: &base_stats,
             tracks: None,
+            equipment: None,
         },
         target: None,
         evidence,
@@ -644,7 +863,9 @@ pub fn spawn_actor(
         .map_err(|error| DaggerGameplayError::InvalidState(format!("entity admission: {error}")))?;
 
     let version = mechanics_catalog_version();
-    let mut stat_values = Vec::with_capacity(base_stats.len() + track_maxima.len());
+    let mut stat_values = Vec::with_capacity(
+        base_stats.len() + track_maxima.len() + catalog.stats().armor_parts.len(),
+    );
     for (id, value) in &base_stats {
         stat_values.push(StatValue::new(
             StatId::parse(id.clone()).map_err(|error| DaggerGameplayError::InvalidId {
@@ -652,6 +873,15 @@ pub fn spawn_actor(
                 value: format!("{id}: {error:?}"),
             })?,
             scalar(*value, "stats")?,
+        ));
+    }
+    // Every actor's armor parts start at the definition's flat armor value
+    // (behavior-preserving: the flat value replicates per part). Equipped
+    // armor and shield sources subtract from these bases at evaluation.
+    for part in &catalog.stats().armor_parts {
+        stat_values.push(StatValue::new(
+            StatId::parse(armor_part_stat_id(part)).expect("validated armor part id"),
+            scalar(definition.armor_value, "stats.armor")?,
         ));
     }
     for (track, maximum) in &track_maxima {
@@ -751,6 +981,32 @@ pub fn spawn_actor(
         instance,
         version,
     )?;
+
+    // Capacity is spawn law: a loadout over the actor's capacity limits
+    // rejects (the containment path binds unique items, so the check runs
+    // against the post-bind inventory view rather than inside it; the view
+    // itself rejects over-limit state).
+    let view =
+        InventoryService::view(state.entities(), catalog.mechanics(), entity).map_err(|error| {
+            DaggerGameplayError::InvalidValue {
+                path: format!("actors[{definition_id}].inventory"),
+                reason: format!("loadout rejected by the inventory view: {error:?}"),
+            }
+        })?;
+    for usage in view.capacity() {
+        if let Some(maximum) = usage.maximum {
+            if usage.used > maximum {
+                return Err(DaggerGameplayError::InvalidValue {
+                    path: format!("actors[{definition_id}].inventory"),
+                    reason: format!(
+                        "loadout exceeds the {} capacity limit: {} > {maximum}",
+                        usage.metric.as_str(),
+                        usage.used
+                    ),
+                });
+            }
+        }
+    }
 
     state.insert_actor(instance, DaggerActorState::new(entity, definition_id));
     Ok(())

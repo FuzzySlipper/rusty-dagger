@@ -6,12 +6,16 @@
  * only evaluator. There is no arithmetic in this file beyond literal
  * construction.
  *
- * Rolls: `dice` and `weaponDice` are bounded named rolls. The evaluator never
- * generates randomness; the caller (runtime, diagnostic) supplies roll
- * evidence and admission declares the bounds. `dice("rat-bite.damage", 1, 4)`
- * reads evidence id "rat-bite.damage" and rejects values outside [1, 4].
- * `weaponDice("iron-longsword")` reads evidence id
- * `weapon-damage.iron-longsword` bounded by the item's declared damage range.
+ * Rolls: `dice`, `equippedWeaponDice`, and `struckArmor` are bounded named
+ * rolls. The evaluator never generates randomness; the caller (runtime,
+ * diagnostic) supplies roll evidence and admission declares the bounds.
+ * `dice("rat-bite.damage", 1, 4)` reads evidence id "rat-bite.damage" and
+ * rejects values outside [1, 4]. `equippedWeaponDice("actor",
+ * "melee-attack.equipped-weapon-damage")` reads that explicit evidence id,
+ * bounded at evaluation by the subject's CURRENTLY equipped weapon's damage
+ * range (unarmed: the derived hand-to-hand range). `struckArmor("target",
+ * "melee-attack.struck-body-part")` reads a 0..19 struck-body-part roll and
+ * maps it through the classic table to the target's `armor-<part>` stat.
  * Deterministic replay is therefore just "supply the same evidence".
  */
 
@@ -21,10 +25,11 @@ export type Expr =
   | Readonly<{ kind: "const"; value: number }>
   | Readonly<{ kind: "stat"; subject: Subject; id: string }>
   | Readonly<{ kind: "skill"; subject: Subject; id: string }>
-  | Readonly<{ kind: "armor"; subject: Subject }>
+  | Readonly<{ kind: "equippedWeaponSkill"; subject: Subject }>
   | Readonly<{ kind: "evidence"; id: string }>
   | Readonly<{ kind: "dice"; id: string; min: number; max: number }>
-  | Readonly<{ kind: "weaponDice"; item: string }>
+  | Readonly<{ kind: "equippedWeaponDice"; subject: Subject; id: string }>
+  | Readonly<{ kind: "struckArmor"; subject: Subject; id: string }>
   | Readonly<{ kind: "track"; subject: Subject; id: string }>
   | Readonly<{ kind: "trackMax"; subject: Subject; id: string }>
   | Readonly<{ kind: "powMilli"; base: Expr; exponent: Expr }>
@@ -50,8 +55,14 @@ export const skill = (subject: Subject, id: string): Expr => ({
   id,
 });
 
-/** Classic armor convention: higher armor value is EASIER to hit. */
-export const armor = (subject: Subject): Expr => ({ kind: "armor", subject });
+/**
+ * The subject's skill for the equipped weapon: right-hand weapon first, then
+ * left-hand (donor: the right hand is primary); unarmed reads hand-to-hand.
+ */
+export const equippedWeaponSkill = (subject: Subject): Expr => ({
+  kind: "equippedWeaponSkill",
+  subject,
+});
 
 /** Read one caller-supplied evidence value by exact id. */
 export const evidence = (id: string): Expr => ({ kind: "evidence", id });
@@ -64,8 +75,28 @@ export const dice = (id: string, min: number, max: number): Expr => ({
   max,
 });
 
-/** Bounded roll over a weapon item's declared damage range. */
-export const weaponDice = (item: string): Expr => ({ kind: "weaponDice", item });
+/**
+ * Bounded named roll over the subject's equipped weapon's damage range. The
+ * evidence id is explicit; the bounds are the live equipment's declared
+ * range (unarmed: the derived hand-to-hand range), checked at evaluation.
+ */
+export const equippedWeaponDice = (subject: Subject, id: string): Expr => ({
+  kind: "equippedWeaponDice",
+  subject,
+  id,
+});
+
+/**
+ * Struck-body-part armor: reads a caller-supplied 0..19 roll, maps it
+ * through the classic table (donor `FormulaHelper.CalculateStruckBodyPart`
+ * — adopted as an evaluator constant), then reads the subject's
+ * `armor-<part>` stat. Classic armor convention: higher is EASIER to hit.
+ */
+export const struckArmor = (subject: Subject, id: string): Expr => ({
+  kind: "struckArmor",
+  subject,
+  id,
+});
 
 /** Current value of one of the subject's resource tracks. */
 export const trackCurrent = (subject: Subject, id: string): Expr => ({

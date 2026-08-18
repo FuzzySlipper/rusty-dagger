@@ -730,6 +730,65 @@ mod tests {
     }
 
     #[test]
+    fn equip_cycle_swaps_gear_and_logs_receipts() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        let initial = runtime.lab_readout().expect("initial readout");
+        assert_eq!(
+            initial
+                .player_inventory
+                .items
+                .iter()
+                .map(|item| (item.item.as_str(), item.equip_slot.as_deref()))
+                .collect::<Vec<_>>(),
+            [
+                ("iron-longsword", Some("right-hand")),
+                ("iron-dagger", None),
+                ("iron-cuirass", None),
+            ]
+        );
+        assert!(initial.equipment_log.is_empty());
+
+        // First press: the next unequipped equippable (the dagger) swaps into
+        // the occupied right hand.
+        let readout = runtime.equip_cycle().expect("equip cycle");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert_eq!(record.operation, "swap");
+        assert_eq!(record.item, "iron-dagger");
+        assert_eq!(record.slots, ["right-hand".to_string()]);
+        assert_eq!(record.replaced_item.as_deref(), Some("iron-longsword"));
+        assert!(readout
+            .player_inventory
+            .items
+            .iter()
+            .any(|item| item.item == "iron-dagger"
+                && item.equip_slot.as_deref() == Some("right-hand")));
+
+        // Second press: the cuirass equips into the free chest-armor slot.
+        let readout = runtime.equip_cycle().expect("equip cycle");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert_eq!(record.operation, "equip");
+        assert_eq!(record.item, "iron-cuirass");
+        assert_eq!(record.slots, ["chest-armor".to_string()]);
+
+        // Third press: only the longsword is unequipped; it swaps back into
+        // the right hand, replacing the dagger.
+        let readout = runtime.equip_cycle().expect("equip cycle");
+        let record = readout.equipment_log.last().expect("log entry");
+        assert_eq!(record.operation, "swap");
+        assert_eq!(record.item, "iron-longsword");
+        assert_eq!(record.replaced_item.as_deref(), Some("iron-dagger"));
+        assert_eq!(readout.equipment_log.len(), 3);
+
+        // Revisions advance monotonically with each receipt.
+        let revisions = readout
+            .equipment_log
+            .iter()
+            .map(|record| record.equipment_revision)
+            .collect::<Vec<_>>();
+        assert!(revisions.windows(2).all(|pair| pair[0] < pair[1]));
+    }
+
+    #[test]
     fn canonical_controller_stops_at_a_real_project_wall_without_rising() {
         let document = adversarial_wall_project();
         let mut runtime = DaggerRuntime::from_project_json(&document).expect("admit project");

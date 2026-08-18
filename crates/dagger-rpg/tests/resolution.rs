@@ -75,8 +75,14 @@ fn melee_evidence(d100: i64) -> Vec<DaggerEvidence> {
             value: d100,
         },
         DaggerEvidence {
-            id: "weapon-damage.iron-longsword".to_string(),
+            id: "melee-attack.equipped-weapon-damage".to_string(),
             value: 8,
+        },
+        // Struck-part roll 0: head. Every rat armor part starts at the same
+        // flat 30, so the part choice does not change the hit math at base.
+        DaggerEvidence {
+            id: "melee-attack.struck-body-part".to_string(),
+            value: 0,
         },
     ];
     evidence.extend(zeroed_player_dice("melee-attack"));
@@ -258,12 +264,12 @@ fn insufficient_stamina_rejects_before_mutation() {
 fn roll_evidence_outside_declared_bounds_rejects() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
     let mut state = spawn_state(&catalog);
-    // A hitting d100 roll reaches the damage operation, where the declared
-    // weapon dice bounds (2..16) reject the supplied 99.
+    // A hitting d100 roll reaches the damage operation, where the equipped
+    // longsword's bounds (2..16) reject the supplied 99.
     let mut evidence = melee_evidence(25);
     evidence
         .iter_mut()
-        .find(|entry| entry.id == "weapon-damage.iron-longsword")
+        .find(|entry| entry.id == "melee-attack.equipped-weapon-damage")
         .expect("weapon evidence")
         .value = 99;
     let (receipt, _) = resolve_dagger_action(
@@ -292,8 +298,12 @@ fn power_attack_hits_harder_and_costs_more_stamina() {
             value: 25,
         },
         DaggerEvidence {
-            id: "weapon-damage.iron-longsword".to_string(),
+            id: "power-attack.equipped-weapon-damage".to_string(),
             value: 8,
+        },
+        DaggerEvidence {
+            id: "power-attack.struck-body-part".to_string(),
+            value: 0,
         },
     ];
     evidence.extend(zeroed_player_dice("power-attack"));
@@ -545,19 +555,23 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
         Err(DaggerGameplayError::InvalidValue { .. })
     ));
 
-    // weaponDice referencing an item without a weapon block.
+    // The retired armor/weaponDice expression kinds are now unknown fields at
+    // payload admission.
     let mut mutated = package.clone();
-    let longsword_index = mutated["payload"]["items"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .position(|item| item["id"] == "iron-longsword")
-        .expect("iron-longsword in the package");
-    mutated["payload"]["items"][longsword_index] =
-        serde_json::json!({ "id": "iron-longsword", "weightUnits": 18, "value": 15 });
+    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+        "kind": "armor", "subject": "target"
+    });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
-        Err(DaggerGameplayError::InvalidValue { .. })
+        Err(DaggerGameplayError::Payload(_))
+    ));
+    let mut mutated = package.clone();
+    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+        "kind": "weaponDice", "item": "iron-longsword"
+    });
+    assert!(matches!(
+        compile_gameplay_package(&encode(mutated)),
+        Err(DaggerGameplayError::Payload(_))
     ));
 
     // Duplicate actor id.
@@ -584,6 +598,7 @@ fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
             definition,
             stats: &stats,
             tracks: None,
+            equipment: None,
         },
         target: None,
         evidence: &[],
@@ -767,11 +782,13 @@ fn signed_differentials_truncate_toward_zero() {
                 definition: player,
                 stats: &actor_stats,
                 tracks: None,
+                equipment: None,
             },
             target: Some(ActorExprValues {
                 definition: rat,
                 stats: &target_stats,
                 tracks: None,
+                equipment: None,
             }),
             evidence: &[],
         };
@@ -794,6 +811,7 @@ fn signed_differentials_truncate_toward_zero() {
             definition: player,
             stats: &stats,
             tracks: None,
+            equipment: None,
         },
         target: None,
         evidence: &[],
@@ -815,6 +833,7 @@ fn track_reads_reject_where_live_values_do_not_exist() {
             definition,
             stats: &stats,
             tracks: None,
+            equipment: None,
         },
         target: None,
         evidence: &[],
@@ -1011,7 +1030,25 @@ fn action_roll_evidence_surfaces_the_player_career_dice() {
     assert_eq!(by_id["melee-attack.racial-damage"], (0, 30));
     assert_eq!(by_id["melee-attack.adrenaline-rush"], (0, 1));
     assert_eq!(by_id["melee-attack.target-adrenaline-rush"], (0, 1));
-    assert_eq!(by_id["weapon-damage.iron-longsword"], (2, 16));
+    // Equipment-driven evidence is not statically bounded; the dynamic
+    // collector surfaces it instead.
+    assert!(!by_id.contains_key("melee-attack.equipped-weapon-damage"));
+    assert!(!by_id.contains_key("melee-attack.struck-body-part"));
+    let dynamic = dagger_rpg::action_dynamic_roll_evidence(&catalog, "melee-attack")
+        .expect("melee-attack dynamic evidence");
+    assert_eq!(
+        dynamic,
+        vec![
+            (
+                "melee-attack.struck-body-part".to_string(),
+                dagger_rpg::DaggerDynamicRoll::StruckBodyPart
+            ),
+            (
+                "melee-attack.equipped-weapon-damage".to_string(),
+                dagger_rpg::DaggerDynamicRoll::EquippedWeaponDamage
+            ),
+        ]
+    );
 }
 
 fn mutated_package(patch: impl FnOnce(&mut serde_json::Value)) -> Vec<u8> {
@@ -1169,10 +1206,20 @@ fn loadout_unknown_item_and_equip_slot_reject() {
         })),
         Err(DaggerGameplayError::InvalidValue { .. })
     ));
-    // A fungible item cannot equip.
+    // A fungible item cannot equip. The gold stack is the last loadout entry.
+    let gold_index = {
+        let package: serde_json::Value =
+            serde_json::from_slice(PACKAGE).expect("parse committed package");
+        package["payload"]["actors"][0]["inventory"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .position(|entry| entry["item"] == "gold-piece")
+            .expect("gold-piece in the player loadout")
+    };
     assert!(matches!(
         compile_gameplay_package(&mutated_package(|package| {
-            package["payload"]["actors"][0]["inventory"][1]["equipSlot"] =
+            package["payload"]["actors"][0]["inventory"][gold_index]["equipSlot"] =
                 serde_json::Value::from("left-hand");
         })),
         Err(DaggerGameplayError::InvalidValue { .. })
@@ -1271,15 +1318,19 @@ fn spawn_binds_loadout_into_upstream_inventory_and_equipment() {
             .collect::<Vec<_>>(),
         [("gold-piece", 25)]
     );
-    assert_eq!(view.unique_items().len(), 1);
-    let longsword = &view.unique_items()[0];
-    assert_eq!(longsword.definition.as_str(), "iron-longsword");
+    // Longsword equipped at spawn plus the carried dagger and cuirass.
+    assert_eq!(view.unique_items().len(), 3);
+    let longsword = view
+        .unique_items()
+        .iter()
+        .find(|item| item.definition.as_str() == "iron-longsword")
+        .expect("longsword in the loadout");
     let capacity = view
         .capacity()
         .iter()
         .map(|usage| (usage.metric.as_str(), usage.used, usage.maximum))
         .collect::<Vec<_>>();
-    assert_eq!(capacity, [("weight", 18, Some(300))]);
+    assert_eq!(capacity, [("weight", 70, Some(300))]);
 
     let equipment = state
         .entities()
@@ -1378,4 +1429,476 @@ fn armor_into_a_wrong_slot_rejects() {
         "expected classification mismatch, got {mismatch:?}"
     );
     equip(&mut state, &catalog, "iron-cuirass", "chest-armor").expect("cuirass equips chest-armor");
+}
+
+fn item_entity(
+    state: &DaggerGameplayState,
+    catalog: &dagger_rpg::DaggerGameplayCatalog,
+    item: &str,
+) -> rusty_engine::core_ids::EntityId {
+    inventory_view(state, catalog, "player")
+        .unique_items()
+        .iter()
+        .find(|entry| entry.definition.as_str() == item)
+        .expect("item in inventory")
+        .entity
+}
+
+fn swap(
+    state: &mut DaggerGameplayState,
+    catalog: &dagger_rpg::DaggerGameplayCatalog,
+    outgoing: &str,
+    incoming: &str,
+    slot: &str,
+) {
+    use rusty_engine::gameplay_mechanics::{
+        EquipmentService, EquipmentSlotId, EquipmentSwapRequest, OperationId, SourceInstanceId,
+        SourceInstanceIdentity,
+    };
+
+    let owner = state.actor("player").expect("player binding").entity();
+    let operation = OperationId::parse("test-swap").unwrap();
+    let expected_state_revision = state.entities().revision();
+    let outgoing_item = item_entity(state, catalog, outgoing);
+    let incoming_item = item_entity(state, catalog, incoming);
+    EquipmentService::swap(
+        state.entities_mut(),
+        catalog.mechanics(),
+        EquipmentSwapRequest {
+            operation: operation.clone(),
+            source: SourceInstanceIdentity::Request {
+                operation,
+                instance: SourceInstanceId::parse("test").unwrap(),
+            },
+            owner,
+            outgoing_item,
+            incoming_item,
+            incoming_slots: vec![EquipmentSlotId::parse(slot).unwrap()],
+            expected_equipment_revision: None,
+            expected_state_revision,
+        },
+    )
+    .unwrap_or_else(|error| panic!("swap {outgoing} -> {incoming}: {error:?}"));
+}
+
+fn unequip(
+    state: &mut DaggerGameplayState,
+    catalog: &dagger_rpg::DaggerGameplayCatalog,
+    item: &str,
+) {
+    use rusty_engine::gameplay_mechanics::{
+        EquipmentService, EquipmentUnequipRequest, OperationId, SourceInstanceId,
+        SourceInstanceIdentity,
+    };
+
+    let owner = state.actor("player").expect("player binding").entity();
+    let operation = OperationId::parse("test-unequip").unwrap();
+    let expected_state_revision = state.entities().revision();
+    let item = item_entity(state, catalog, item);
+    EquipmentService::unequip(
+        state.entities_mut(),
+        catalog.mechanics(),
+        EquipmentUnequipRequest {
+            operation: operation.clone(),
+            source: SourceInstanceIdentity::Request {
+                operation,
+                instance: SourceInstanceId::parse("test").unwrap(),
+            },
+            owner,
+            item,
+            expected_equipment_revision: None,
+            expected_state_revision,
+        },
+    )
+    .unwrap_or_else(|error| panic!("unequip {item}: {error:?}"));
+}
+
+fn resolve_melee(
+    catalog: &dagger_rpg::DaggerGameplayCatalog,
+    state: &mut DaggerGameplayState,
+    sequence: u64,
+    evidence: Vec<DaggerEvidence>,
+) -> dagger_rpg::DaggerResolutionReceipt {
+    resolve_dagger_action(
+        catalog,
+        state,
+        identity(sequence),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence,
+    )
+    .0
+}
+
+fn with_weapon_damage(mut evidence: Vec<DaggerEvidence>, value: i64) -> Vec<DaggerEvidence> {
+    evidence
+        .iter_mut()
+        .find(|entry| entry.id == "melee-attack.equipped-weapon-damage")
+        .expect("weapon evidence")
+        .value = value;
+    evidence
+}
+
+#[test]
+fn equipped_weapon_drives_damage_bounds_and_hit_skill() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state(&catalog);
+
+    // Swap the right-hand longsword for the carried dagger: the damage
+    // evidence is now bounded by the dagger's 1..6 range. A d100 of 1 still
+    // hits (the short-blade chance clamps to the 3% floor), so evaluation
+    // reaches the damage operation and the out-of-range 8 rejects.
+    swap(
+        &mut state,
+        &catalog,
+        "iron-longsword",
+        "iron-dagger",
+        "right-hand",
+    );
+    let receipt = resolve_melee(
+        &catalog,
+        &mut state,
+        1,
+        with_weapon_damage(melee_evidence(1), 8),
+    );
+    assert!(matches!(
+        receipt.attempt().status(),
+        AttemptStatus::Rejected(DaggerRejection::RollOutOfBounds { .. })
+    ));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
+    assert_eq!(state.track_value("player", "stamina"), Some(90));
+
+    // The dagger maps to short-blade, which the player has at 0: the hit
+    // chance collapses to the 3% floor and the roll of 25 misses.
+    let receipt = resolve_melee(
+        &catalog,
+        &mut state,
+        2,
+        with_weapon_damage(melee_evidence(25), 3),
+    );
+    assert!(receipt.succeeded());
+    assert!(!receipt
+        .effects()
+        .iter()
+        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
+
+    // Swap the longsword back: long-blade 60 hits for the rolled damage.
+    swap(
+        &mut state,
+        &catalog,
+        "iron-dagger",
+        "iron-longsword",
+        "right-hand",
+    );
+    let receipt = resolve_melee(&catalog, &mut state, 3, melee_evidence(25));
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "rat-2007".to_string(),
+        amount: 8,
+    }));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(4));
+}
+
+#[test]
+fn unarmed_falls_back_to_hand_to_hand_skill_and_derived_damage() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state(&catalog);
+    unequip(&mut state, &catalog, "iron-longsword");
+
+    // Hand-to-hand 40: chance vs the rat is 40 + 30 - 50 + 0 - 3 = 17, so a
+    // roll of 18 misses and 17 hits. Unarmed damage bounds are the derived
+    // hand-to-hand range floor(40/10)+1 .. floor(40/5)+1 = 5..9.
+    let receipt = resolve_melee(
+        &catalog,
+        &mut state,
+        1,
+        with_weapon_damage(melee_evidence(18), 5),
+    );
+    assert!(receipt.succeeded());
+    assert_eq!(state.track_value("rat-2007", "health"), Some(12));
+    let receipt = resolve_melee(
+        &catalog,
+        &mut state,
+        2,
+        with_weapon_damage(melee_evidence(17), 5),
+    );
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "rat-2007".to_string(),
+        amount: 5,
+    }));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(7));
+
+    // Above the derived unarmed range rejects out of bounds.
+    let receipt = resolve_melee(
+        &catalog,
+        &mut state,
+        3,
+        with_weapon_damage(melee_evidence(17), 10),
+    );
+    assert!(matches!(
+        receipt.attempt().status(),
+        AttemptStatus::Rejected(DaggerRejection::RollOutOfBounds { .. })
+    ));
+    assert_eq!(state.track_value("rat-2007", "health"), Some(7));
+}
+
+#[test]
+fn equipped_cuirass_lowers_the_chest_armor_stat_and_hit_chance() {
+    use rusty_engine::gameplay_mechanics::{OperationId, StatId, StatService};
+
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let armor_chest = |state: &DaggerGameplayState| {
+        let owner = state.actor("player").expect("player binding").entity();
+        StatService::evaluate(
+            state.entities(),
+            catalog.mechanics(),
+            owner,
+            &StatId::parse("armor-chest").unwrap(),
+            &OperationId::parse("test-eval").unwrap(),
+            &[],
+        )
+        .expect("armor-chest evaluates")
+        .value
+        .get()
+    };
+
+    // Base: the player's flat authored armor value 0 replicates per part;
+    // the rat's 30 does the same.
+    let mut state = spawn_state(&catalog);
+    assert_eq!(armor_chest(&state), 0);
+
+    // Equipping the iron cuirass (value 7, donor x5) drops chest armor to -35.
+    equip(&mut state, &catalog, "iron-cuirass", "chest-armor").expect("cuirass equips chest-armor");
+    assert_eq!(armor_chest(&state), -35);
+
+    // Resolution level: a skeletal warrior (long-blade 75) striking the
+    // player. Chance without the cuirass is 75 + 0 - 50 + 0 + 3 = 28; with
+    // the cuirass on a chest strike it drops to -7, clamped to 3.
+    let strike = |state: &mut DaggerGameplayState, sequence: u64| {
+        resolve_dagger_action(
+            &catalog,
+            state,
+            identity(sequence),
+            ResolutionMode::Apply,
+            DaggerIntent {
+                action: "skeleton-strike".to_string(),
+                actor: "skeleton-1".to_string(),
+                target: "player".to_string(),
+                origin: DaggerIntentOrigin::Ai,
+            },
+            vec![
+                DaggerEvidence {
+                    id: "skeleton-strike.d100".to_string(),
+                    value: 10,
+                },
+                // 8 maps to chest through the classic struck-part table.
+                DaggerEvidence {
+                    id: "skeleton-strike.struck-body-part".to_string(),
+                    value: 8,
+                },
+                DaggerEvidence {
+                    id: "skeleton-strike.damage".to_string(),
+                    value: 7,
+                },
+            ],
+        )
+        .0
+    };
+    let spawn_skeleton = |state: &mut DaggerGameplayState| {
+        spawn_actor(
+            state,
+            &catalog,
+            "skeletal-warrior",
+            "skeleton-1",
+            &[DaggerEvidence {
+                id: "skeletal-warrior.health".to_string(),
+                value: 20,
+            }],
+        )
+        .expect("spawn skeletal warrior");
+    };
+
+    let mut state = spawn_state(&catalog);
+    spawn_skeleton(&mut state);
+    let receipt = strike(&mut state, 1);
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "player".to_string(),
+        amount: 7,
+    }));
+    assert_eq!(state.track_value("player", "health"), Some(78));
+
+    let mut state = spawn_state(&catalog);
+    spawn_skeleton(&mut state);
+    equip(&mut state, &catalog, "iron-cuirass", "chest-armor").expect("cuirass equips chest-armor");
+    let receipt = strike(&mut state, 1);
+    assert!(receipt.succeeded());
+    assert!(!receipt
+        .effects()
+        .iter()
+        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+    assert_eq!(state.track_value("player", "health"), Some(85));
+}
+
+#[test]
+fn struck_armor_maps_the_donor_body_part_table() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let definition = &catalog.actors()["player"];
+    // Spot-check the donor distribution: head 0-1, right-arm 2-4, left-arm
+    // 5-7, chest 8-11, hands 12-15, legs 16-18, feet 19.
+    let expected = [
+        "head",
+        "head",
+        "right-arm",
+        "right-arm",
+        "right-arm",
+        "left-arm",
+        "left-arm",
+        "left-arm",
+        "chest",
+        "chest",
+        "chest",
+        "chest",
+        "hands",
+        "hands",
+        "hands",
+        "hands",
+        "legs",
+        "legs",
+        "legs",
+        "feet",
+    ];
+    for (roll, part) in expected.iter().enumerate() {
+        assert_eq!(dagger_rpg::struck_body_part_name(roll as i64), Some(*part));
+    }
+
+    // The node reads the subject's armor-<part> stat for the rolled part.
+    let stats = BTreeMap::from([
+        ("armor-head".to_string(), 11),
+        ("armor-feet".to_string(), 66),
+    ]);
+    let struck = || DaggerExpr::StruckArmor {
+        subject: DaggerSubject::Target,
+        id: "test.struck-body-part".to_string(),
+    };
+    let evaluate = |roll: i64| {
+        let target = &catalog.actors()["rat"];
+        let context = ExprContext {
+            catalog: &catalog,
+            actor: ActorExprValues {
+                definition,
+                stats: &stats,
+                tracks: None,
+                equipment: None,
+            },
+            target: Some(ActorExprValues {
+                definition: target,
+                stats: &stats,
+                tracks: None,
+                equipment: None,
+            }),
+            evidence: &[DaggerEvidence {
+                id: "test.struck-body-part".to_string(),
+                value: roll,
+            }],
+        };
+        evaluate_expr(&struck(), &context)
+    };
+    assert_eq!(evaluate(0), Ok(11));
+    assert_eq!(evaluate(1), Ok(11));
+    assert_eq!(evaluate(19), Ok(66));
+    assert!(matches!(
+        evaluate(20),
+        Err(DaggerRejection::RollOutOfBounds { .. })
+    ));
+}
+
+#[test]
+fn min_metal_to_hit_gates_weapon_damage() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state(&catalog);
+    spawn_actor(
+        &mut state,
+        &catalog,
+        "imp",
+        "imp-1",
+        &[DaggerEvidence {
+            id: "imp.health".to_string(),
+            value: 15,
+        }],
+    )
+    .expect("spawn imp");
+
+    // Iron longsword vs the imp (requires steel): chance is
+    // 60 + 15 - 50 + 0 - 3 = 22, so the roll of 10 hits but the damage plan
+    // clamps to 0 with a MaterialIneffective trace marker.
+    let (receipt, readout) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        DaggerIntent {
+            action: "melee-attack".to_string(),
+            actor: "player".to_string(),
+            target: "imp-1".to_string(),
+            origin: DaggerIntentOrigin::Player,
+        },
+        melee_evidence(10),
+    );
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "imp-1".to_string(),
+        amount: 0,
+    }));
+    assert!(readout.trace.iter().any(|record| matches!(
+        record.detail,
+        Some(dagger_rpg::DaggerTraceDetail::MaterialIneffective { .. })
+    )));
+    assert_eq!(state.track_value("imp-1", "health"), Some(15));
+
+    // The rat has no material requirement: the same swing lands normally.
+    let (receipt, readout) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(2),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        melee_evidence(10),
+    );
+    assert!(receipt.succeeded());
+    assert!(receipt.effects().contains(&DaggerEffect::Damage {
+        target: "rat-2007".to_string(),
+        amount: 8,
+    }));
+    assert!(!readout.trace.iter().any(|record| matches!(
+        record.detail,
+        Some(dagger_rpg::DaggerTraceDetail::MaterialIneffective { .. })
+    )));
+}
+
+#[test]
+fn spawn_loadout_over_the_capacity_limit_rejects() {
+    // Six tower shields (50 units each) plus the longsword, dagger, and
+    // cuirass weigh 370 quarter-kg against the player's 300-unit limit.
+    let package = mutated_package(|package| {
+        package["payload"]["actors"][0]["inventory"] = serde_json::json!([
+            { "item": "iron-longsword", "equipSlot": "right-hand" },
+            { "item": "iron-dagger" },
+            { "item": "iron-cuirass" },
+            { "item": "tower-shield" },
+            { "item": "tower-shield" },
+            { "item": "tower-shield" },
+            { "item": "tower-shield" },
+            { "item": "tower-shield" },
+            { "item": "tower-shield" }
+        ]);
+    });
+    let catalog = compile_gameplay_package(&package).expect("compile loadout package");
+    let mut state = DaggerGameplayState::default();
+    assert!(matches!(
+        spawn_actor(&mut state, &catalog, "player", "player", &[]),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
 }

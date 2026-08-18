@@ -10,14 +10,18 @@ use rusty_engine::gameplay_resolution::{
     StandardResolver,
 };
 
-use super::eval::{evaluate_expr, ActorExprValues, ExprContext};
+use super::eval::{
+    equipped_weapon, evaluate_expr, unarmed_damage_range, ActorEquipment, ActorExprValues,
+    ExprContext,
+};
 use super::mechanics::track_max_stat_id;
 use super::{
-    DaggerActorDefinition, DaggerActorFacts, DaggerActorState, DaggerAdmittedIntent, DaggerEffect,
-    DaggerEvent, DaggerEvidence, DaggerFacts, DaggerFault, DaggerGameplayCatalog,
-    DaggerGameplayState, DaggerIntent, DaggerOperation, DaggerPredicate, DaggerRejection,
-    DaggerResolutionReadout, DaggerResolutionReceipt, DaggerRuleDefinition, DaggerSelector,
-    DaggerSuspension, DaggerTraceDetail, DaggerTransactionError,
+    armor_part_stat_id, weapon_material_rank, DaggerActorDefinition, DaggerActorFacts,
+    DaggerActorState, DaggerAdmittedIntent, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerFacts,
+    DaggerFault, DaggerGameplayCatalog, DaggerGameplayState, DaggerIntent, DaggerOperation,
+    DaggerPredicate, DaggerRejection, DaggerResolutionReadout, DaggerResolutionReceipt,
+    DaggerRuleDefinition, DaggerSelector, DaggerSuspension, DaggerTraceDetail,
+    DaggerTransactionError,
 };
 
 pub struct DaggerResolutionPolicy<'a> {
@@ -58,9 +62,11 @@ impl<'a> DaggerResolutionPolicy<'a> {
     /// Materialize live stat values for one actor through the mechanics
     /// stat service: base values plus any active attributed sources. The
     /// spawn-stored `{track}-max` stats are included so `trackMax`
-    /// expressions read the same map `stat` reads. Classic actors possess
-    /// every declared attribute and skill at some value, so ids the
-    /// definition omits (untrained skills, monster reflexes) read as 0.
+    /// expressions read the same map `stat` reads, and the `armor-<part>`
+    /// stats are included so `struckArmor` reads equipped-armor effects.
+    /// Classic actors possess every declared attribute and skill at some
+    /// value, so ids the definition omits (untrained skills, monster
+    /// reflexes) read as 0.
     fn live_stats(
         &self,
         actor_id: &str,
@@ -78,6 +84,13 @@ impl<'a> DaggerResolutionPolicy<'a> {
                     .tracks
                     .iter()
                     .map(|track| track_max_stat_id(&track.id)),
+            )
+            .chain(
+                self.catalog
+                    .stats()
+                    .armor_parts
+                    .iter()
+                    .map(|part| armor_part_stat_id(part)),
             );
         let mut values = BTreeMap::new();
         for id in ids {
@@ -129,6 +142,32 @@ impl<'a> DaggerResolutionPolicy<'a> {
         Ok(values)
     }
 
+    /// Materialize one subject's live equipment facts for expression
+    /// evaluation: the equipped weapon from the entity's EquipmentComponent
+    /// (right hand first) resolved against catalog items, and the unarmed
+    /// damage range evaluated once from the derived hand-to-hand rules.
+    fn actor_equipment<'b>(
+        &'b self,
+        actor_id: &str,
+        stats: &'b BTreeMap<String, i64>,
+    ) -> PolicyResult<ActorEquipment<'b>, DaggerRejection, DaggerFault, DaggerSuspension> {
+        let weapon = equipped_weapon(&self.snapshot, self.catalog, actor_id).map_err(|error| {
+            PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                "equipment read {actor_id}: {error}"
+            )))
+        })?;
+        let unarmed_damage = unarmed_damage_range(self.catalog, self.definition(actor_id)?, stats)
+            .map_err(|error| {
+                PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                    "unarmed damage {actor_id}: {error}"
+                )))
+            })?;
+        Ok(ActorEquipment {
+            weapon,
+            unarmed_damage,
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn expr_context<'b>(
         &'b self,
@@ -146,11 +185,13 @@ impl<'a> DaggerResolutionPolicy<'a> {
                 definition: self.definition(actor_id)?,
                 stats: actor_stats,
                 tracks: Some(actor_tracks),
+                equipment: Some(self.actor_equipment(actor_id, actor_stats)?),
             },
             target: Some(ActorExprValues {
                 definition: self.definition(target_id)?,
                 stats: target_stats,
                 tracks: Some(target_tracks),
+                equipment: Some(self.actor_equipment(target_id, target_stats)?),
             }),
             evidence,
         })
@@ -192,8 +233,9 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
     type Effect = DaggerEffect;
     type Event = DaggerEvent;
     type Evidence = DaggerEvidence;
-    // Item-borne interception is gone with the dead items-set path; 7072
-    // replaces it with upstream damage responses on equipped items.
+    // Item-borne interception is gone with the dead items-set path; equipped
+    // armor/shield items now act through attributed stat sources, and damage
+    // responses on equipped items remain future work.
     type Interceptor = std::convert::Infallible;
     type TraceDetail = DaggerTraceDetail;
     type Rejection = DaggerRejection;
@@ -386,7 +428,43 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                 // Health floors at zero: damage beyond the target's current
                 // health is wasted, so the plan clamps to what can apply.
                 let target_health = facts.target.track("health").unwrap_or(0);
-                let applied = amount.clamp(0, target_health);
+                let mut applied = amount.clamp(0, target_health);
+                // Classic material gate (donor FormulaHelper.CalculateWeapon-
+                // Damage: `target.MinMetalToHit > weapon material` means 0
+                // damage): Dagger combat law in the Rust authority, like the
+                // remaining-health clamp — not an authored expression.
+                // Unarmed attacks are always effective: classic has no
+                // bare-hand material to compare.
+                let target_definition = self.definition(target)?;
+                if let Some(required) = &target_definition.min_metal_to_hit {
+                    if let Some(weapon) = context.actor.equipment.and_then(|gear| gear.weapon) {
+                        let weapon_material = &weapon
+                            .weapon
+                            .as_ref()
+                            .expect("equipped_weapon returns weapon items")
+                            .material;
+                        let required_rank = weapon_material_rank(required).ok_or_else(|| {
+                            PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                                "actor {} minMetalToHit {required} is not a weapon material",
+                                target_definition.id
+                            )))
+                        })?;
+                        let weapon_rank =
+                            weapon_material_rank(weapon_material).ok_or_else(|| {
+                                PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                                    "weapon {} material {weapon_material} is not a weapon material",
+                                    weapon.id
+                                )))
+                            })?;
+                        if required_rank > weapon_rank {
+                            applied = 0;
+                            trace.record(DaggerTraceDetail::MaterialIneffective {
+                                required_material: required.clone(),
+                                weapon_material: weapon_material.clone(),
+                            });
+                        }
+                    }
+                }
                 plan.push_effect(DaggerEffect::Damage {
                     target: target.clone(),
                     amount: applied,

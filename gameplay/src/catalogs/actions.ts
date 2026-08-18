@@ -18,7 +18,6 @@
 import {
   action,
   add,
-  armor,
   clampedChance,
   cmp,
   constant,
@@ -26,6 +25,8 @@ import {
   dice,
   divFloor,
   divTrunc,
+  equippedWeaponDice,
+  equippedWeaponSkill,
   evidence,
   maxOf,
   minOf,
@@ -36,10 +37,10 @@ import {
   spendTrack,
   stat,
   statModifier,
+  struckArmor,
   sub,
   trackCurrent,
   trackMax,
-  weaponDice,
   when,
   type ActionDefinition,
   type Expr,
@@ -47,8 +48,13 @@ import {
 } from "../authoring/mod.js";
 
 /**
- * Shared classic melee hit check: roll ≤ clamp(skill + target armor − 50 +
- * general terms, 3, 97). General terms (CalculateStatsToHit /
+ * Shared classic melee hit check: roll ≤ clamp(skill + struck-part armor −
+ * 50 + general terms, 3, 97). The armor term reads the target's
+ * `armor-<part>` stat for the rolled struck body part (donor
+ * CalculateStruckBodyPart + CalculateArmorToHit — adopted); the caller
+ * supplies `{action}.struck-body-part` as bounded 0..19 evidence. The skill
+ * is an expression so player melee reads the equipped weapon's skill while
+ * monsters keep their static skills. General terms (CalculateStatsToHit /
  * CalculateSkillsToHit): luck and agility differentials /10 with the
  * donor's C# truncating integer division, and
  * − target dodging / 4 (donor comment: classic was bugged to read the
@@ -56,15 +62,16 @@ import {
  */
 const meleeHit = (
   rollEvidence: string,
-  attackSkill: string,
+  actionId: string,
+  attackSkill: Expr,
   ...extraTerms: readonly Expr[]
 ): Predicate =>
   cmp(
     "lte",
     evidence(rollEvidence),
     clampedChance(
-      skill("actor", attackSkill),
-      armor("target"),
+      attackSkill,
+      struckArmor("target", `${actionId}.struck-body-part`),
       constant(-50),
       divTrunc(sub(stat("actor", "luck"), stat("target", "luck")), constant(10)),
       divTrunc(sub(stat("actor", "agility"), stat("target", "agility")), constant(10)),
@@ -135,11 +142,16 @@ export const actions: readonly ActionDefinition[] = [
     sequence(
       operation(spendTrack("stamina", constant(5))),
       when(
-        meleeHit("melee-attack.d100", "long-blade", ...playerToHitTerms("melee-attack")),
+        meleeHit(
+          "melee-attack.d100",
+          "melee-attack",
+          equippedWeaponSkill("actor"),
+          ...playerToHitTerms("melee-attack"),
+        ),
         operation(
           damage(
             add(
-              weaponDice("iron-longsword"),
+              equippedWeaponDice("actor", "melee-attack.equipped-weapon-damage"),
               statModifier("actor", "strength", 5),
               ...playerDamageTerms("melee-attack"),
             ),
@@ -154,7 +166,7 @@ export const actions: readonly ActionDefinition[] = [
     "rat-bite",
     ["attack", "melee"],
     when(
-      meleeHit("rat-bite.d100", "hand-to-hand"),
+      meleeHit("rat-bite.d100", "rat-bite", skill("actor", "hand-to-hand")),
       operation(damage(dice("rat-bite.damage", 1, 4))),
     ),
   ),
@@ -163,7 +175,7 @@ export const actions: readonly ActionDefinition[] = [
     "skeleton-strike",
     ["attack", "melee"],
     when(
-      meleeHit("skeleton-strike.d100", "long-blade"),
+      meleeHit("skeleton-strike.d100", "skeleton-strike", skill("actor", "long-blade")),
       operation(damage(dice("skeleton-strike.damage", 5, 15))),
     ),
   ),
@@ -174,7 +186,7 @@ export const actions: readonly ActionDefinition[] = [
     "thief-strike",
     ["attack", "melee"],
     when(
-      meleeHit("thief-strike.d100", "short-blade"),
+      meleeHit("thief-strike.d100", "thief-strike", skill("actor", "short-blade")),
       operation(damage(dice("thief-strike.damage", 2, 8))),
     ),
   ),
@@ -187,11 +199,16 @@ export const actions: readonly ActionDefinition[] = [
     sequence(
       operation(spendTrack("stamina", constant(25))),
       when(
-        meleeHit("power-attack.d100", "long-blade", ...playerToHitTerms("power-attack")),
+        meleeHit(
+          "power-attack.d100",
+          "power-attack",
+          equippedWeaponSkill("actor"),
+          ...playerToHitTerms("power-attack"),
+        ),
         operation(
           damage(
             add(
-              weaponDice("iron-longsword"),
+              equippedWeaponDice("actor", "power-attack.equipped-weapon-damage"),
               statModifier("actor", "strength", 5),
               constant(4),
               ...playerDamageTerms("power-attack"),

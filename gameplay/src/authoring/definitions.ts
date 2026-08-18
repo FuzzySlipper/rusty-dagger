@@ -7,11 +7,16 @@
 import type { Expr } from "./expressions.js";
 import type { Program } from "./programs.js";
 
-/** Declared vocabulary: actor stat, skill, and track ids in one place. */
+/** Declared vocabulary: actor stat, skill, track, and armor-part ids in one place. */
 export type StatsSection = Readonly<{
   attributes: readonly string[];
   skills: readonly string[];
   tracks: readonly string[];
+  /**
+   * Classic body parts (head, right-arm, left-arm, chest, hands, legs,
+   * feet); each becomes an `armor-<part>` stat in the Rust compiler.
+   */
+  armorParts: readonly string[];
 }>;
 
 /** A classic melee damage range (one sub-attack's inclusive bounds). */
@@ -182,7 +187,8 @@ export const statsSection = (
   attributes: readonly string[],
   skills: readonly string[],
   tracks: readonly string[],
-): StatsSection => ({ attributes, skills, tracks });
+  armorParts: readonly string[],
+): StatsSection => ({ attributes, skills, tracks, armorParts });
 
 export const track = (id: string, max: Expr): TrackDefinition => ({ id, max });
 

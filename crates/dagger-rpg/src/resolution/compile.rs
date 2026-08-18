@@ -29,6 +29,11 @@ const MAX_ATTACK_RANGES: usize = 5;
 /// The capacity metric id items weigh against (classic quarter-kg units).
 pub const WEIGHT_CAPACITY_METRIC: &str = "weight";
 
+/// The primary and off-hand equipment slot ids (classic paper-doll names).
+/// Weapon reads prefer the right hand (the donor's primary hand).
+pub const RIGHT_HAND_SLOT: &str = "right-hand";
+pub const LEFT_HAND_SLOT: &str = "left-hand";
+
 /// The exclusivity group two-handed weapons and shields share (classic: a
 /// two-hander occupies both hands, so it conflicts with a shield).
 pub const HANDS_EXCLUSIVE_GROUP: &str = "hands";
@@ -158,11 +163,11 @@ pub fn compile_gameplay_package(
     let items = compile_items(payload.items, &stats)?;
     let equipment = compile_equipment(payload.equipment)?;
     validate_item_equipment_references(&items, &equipment)?;
-    let actions = compile_actions(payload.actions, &stats, &items)?;
+    let actions = compile_actions(payload.actions, &stats)?;
     let actors = compile_actors(payload.actors, &stats, &actions, &items, &equipment)?;
     let rules = compile_rules(payload.rules)?;
     let encounters = compile_encounters(payload.encounters)?;
-    let derived = compile_derived(payload.derived, &stats, &items)?;
+    let derived = compile_derived(payload.derived, &stats)?;
     let mechanics = super::mechanics::compile_mechanics_catalog(&stats, &items, &equipment)?;
     Ok(DaggerGameplayCatalog::new(
         package.fingerprint().as_str().to_string(),
@@ -272,13 +277,12 @@ fn compile_equipment(
 fn compile_derived(
     definitions: Vec<super::AuthoredDerivedRule>,
     stats: &DaggerStatsSection,
-    items: &BTreeMap<String, DaggerItemDefinition>,
 ) -> Result<BTreeMap<String, DaggerDerivedRule>, DaggerGameplayError> {
     let mut derived = BTreeMap::new();
     for (index, rule) in definitions.into_iter().enumerate() {
         validate_id(&format!("payload.derived[{index}].id"), &rule.id)?;
         let mut nodes = 0_usize;
-        let expr = compile_expr(rule.expr, &mut nodes, 0, stats, items)?;
+        let expr = compile_expr(rule.expr, &mut nodes, 0, stats)?;
         if derived
             .insert(
                 rule.id.clone(),
@@ -320,6 +324,7 @@ fn compile_stats(
         attributes: compile_ids("attributes", &payload.stats.attributes)?,
         skills: compile_ids("skills", &payload.stats.skills)?,
         tracks: compile_ids("tracks", &payload.stats.tracks)?,
+        armor_parts: compile_ids("armorParts", &payload.stats.armor_parts)?,
     })
 }
 
@@ -486,7 +491,6 @@ fn validate_material(path: &str, material: &str) -> Result<(), DaggerGameplayErr
 fn compile_actions(
     definitions: Vec<super::AuthoredActionDefinition>,
     stats: &DaggerStatsSection,
-    items: &BTreeMap<String, DaggerItemDefinition>,
 ) -> Result<BTreeMap<String, DaggerActionDefinition>, DaggerGameplayError> {
     let mut actions = BTreeMap::new();
     for (index, action) in definitions.into_iter().enumerate() {
@@ -503,7 +507,7 @@ fn compile_actions(
             }
         }
         let mut nodes = 0_usize;
-        let program = compile_program(action.program, &mut nodes, 0, stats, items)?;
+        let program = compile_program(action.program, &mut nodes, 0, stats)?;
         let reach = action
             .reach
             .map(|value| {
@@ -624,7 +628,7 @@ fn compile_actors(
             let mut nodes = 0_usize;
             tracks.push(DaggerTrackDefinition {
                 id: track.id,
-                max: compile_expr(track.max, &mut nodes, 0, stats, items)?,
+                max: compile_expr(track.max, &mut nodes, 0, stats)?,
             });
         }
         let behavior = actor
@@ -854,7 +858,6 @@ fn compile_program(
     nodes: &mut usize,
     depth: u16,
     stats: &DaggerStatsSection,
-    items: &BTreeMap<String, DaggerItemDefinition>,
 ) -> Result<DaggerProgram, DaggerGameplayError> {
     *nodes = nodes.checked_add(1).ok_or(DaggerGameplayError::Quota {
         field: "program nodes",
@@ -878,7 +881,7 @@ fn compile_program(
         AuthoredProgram::Sequence { steps } => Ok(Program::Sequence {
             steps: steps
                 .into_iter()
-                .map(|step| compile_program(step, nodes, next_depth, stats, items))
+                .map(|step| compile_program(step, nodes, next_depth, stats))
                 .collect::<Result<_, _>>()?,
         }),
         AuthoredProgram::When {
@@ -886,36 +889,29 @@ fn compile_program(
             then_program,
             otherwise_program,
         } => Ok(Program::When {
-            predicate: compile_predicate(predicate, stats, items)?,
-            then_program: Box::new(compile_program(
-                *then_program,
-                nodes,
-                next_depth,
-                stats,
-                items,
-            )?),
+            predicate: compile_predicate(predicate, stats)?,
+            then_program: Box::new(compile_program(*then_program, nodes, next_depth, stats)?),
             otherwise_program: otherwise_program
-                .map(|value| compile_program(*value, nodes, next_depth, stats, items).map(Box::new))
+                .map(|value| compile_program(*value, nodes, next_depth, stats).map(Box::new))
                 .transpose()?,
         }),
-        AuthoredProgram::Operation { operation } => Ok(Program::Operation(compile_operation(
-            operation, stats, items,
-        )?)),
+        AuthoredProgram::Operation { operation } => {
+            Ok(Program::Operation(compile_operation(operation, stats)?))
+        }
     }
 }
 
 fn compile_predicate(
     value: AuthoredPredicate,
     stats: &DaggerStatsSection,
-    items: &BTreeMap<String, DaggerItemDefinition>,
 ) -> Result<DaggerPredicate, DaggerGameplayError> {
     match value {
         AuthoredPredicate::Cmp { op, left, right } => {
             let mut nodes = 0_usize;
             Ok(DaggerPredicate::Cmp {
                 op: compile_cmp_op(op),
-                left: compile_expr(left, &mut nodes, 0, stats, items)?,
-                right: compile_expr(right, &mut nodes, 0, stats, items)?,
+                left: compile_expr(left, &mut nodes, 0, stats)?,
+                right: compile_expr(right, &mut nodes, 0, stats)?,
             })
         }
     }
@@ -947,7 +943,6 @@ fn compile_subject(value: AuthoredSubject) -> DaggerSubject {
 fn compile_operation(
     value: AuthoredOperation,
     stats: &DaggerStatsSection,
-    items: &BTreeMap<String, DaggerItemDefinition>,
 ) -> Result<DaggerOperation, DaggerGameplayError> {
     match value {
         AuthoredOperation::SpendTrack { track, amount } => {
@@ -959,14 +954,14 @@ fn compile_operation(
             let mut nodes = 0_usize;
             Ok(DaggerOperation::SpendTrack {
                 track,
-                amount: compile_expr(amount, &mut nodes, 0, stats, items)?,
+                amount: compile_expr(amount, &mut nodes, 0, stats)?,
             })
         }
         AuthoredOperation::Damage { target, amount } => {
             let mut nodes = 0_usize;
             Ok(DaggerOperation::Damage {
                 target: compile_selector(target),
-                amount: compile_expr(amount, &mut nodes, 0, stats, items)?,
+                amount: compile_expr(amount, &mut nodes, 0, stats)?,
             })
         }
     }
@@ -977,7 +972,6 @@ fn compile_expr(
     nodes: &mut usize,
     depth: u16,
     stats: &DaggerStatsSection,
-    items: &BTreeMap<String, DaggerItemDefinition>,
 ) -> Result<DaggerExpr, DaggerGameplayError> {
     *nodes = nodes.checked_add(1).ok_or(DaggerGameplayError::Quota {
         field: "expression nodes",
@@ -1013,7 +1007,7 @@ fn compile_expr(
                 id,
             })
         }
-        AuthoredExpr::Armor { subject } => Ok(DaggerExpr::Armor {
+        AuthoredExpr::EquippedWeaponSkill { subject } => Ok(DaggerExpr::EquippedWeaponSkill {
             subject: compile_subject(subject),
         }),
         AuthoredExpr::Evidence { id } => {
@@ -1033,17 +1027,25 @@ fn compile_expr(
             }
             Ok(DaggerExpr::Dice { id, min, max })
         }
-        AuthoredExpr::WeaponDice { item } => {
-            validate_id("expression.weaponDice", &item)?;
-            match items.get(&item) {
-                Some(definition) if definition.weapon.is_some() => {
-                    Ok(DaggerExpr::WeaponDice { item })
-                }
-                _ => Err(DaggerGameplayError::InvalidValue {
-                    path: "expression.weaponDice".to_string(),
-                    reason: format!("{item} is not a declared weapon item"),
-                }),
+        AuthoredExpr::EquippedWeaponDice { subject, id } => {
+            validate_id("expression.equippedWeaponDice", &id)?;
+            Ok(DaggerExpr::EquippedWeaponDice {
+                subject: compile_subject(subject),
+                id,
+            })
+        }
+        AuthoredExpr::StruckArmor { subject, id } => {
+            validate_id("expression.struckArmor", &id)?;
+            if stats.armor_parts.is_empty() {
+                return Err(DaggerGameplayError::InvalidValue {
+                    path: format!("expression.struckArmor.{id}"),
+                    reason: "requires declared stats.armorParts".to_string(),
+                });
             }
+            Ok(DaggerExpr::StruckArmor {
+                subject: compile_subject(subject),
+                id,
+            })
         }
         AuthoredExpr::Track { subject, id } => {
             validate_declared("expression.track", &id, &stats.tracks)?;
@@ -1060,32 +1062,32 @@ fn compile_expr(
             })
         }
         AuthoredExpr::PowMilli { base, exponent } => Ok(DaggerExpr::PowMilli {
-            base: Box::new(compile_expr(*base, nodes, next_depth, stats, items)?),
-            exponent: Box::new(compile_expr(*exponent, nodes, next_depth, stats, items)?),
+            base: Box::new(compile_expr(*base, nodes, next_depth, stats)?),
+            exponent: Box::new(compile_expr(*exponent, nodes, next_depth, stats)?),
         }),
         AuthoredExpr::Add { terms } => Ok(DaggerExpr::Add {
-            terms: compile_expr_terms(terms, nodes, next_depth, stats, items)?,
+            terms: compile_expr_terms(terms, nodes, next_depth, stats)?,
         }),
         AuthoredExpr::Sub { left, right } => Ok(DaggerExpr::Sub {
-            left: Box::new(compile_expr(*left, nodes, next_depth, stats, items)?),
-            right: Box::new(compile_expr(*right, nodes, next_depth, stats, items)?),
+            left: Box::new(compile_expr(*left, nodes, next_depth, stats)?),
+            right: Box::new(compile_expr(*right, nodes, next_depth, stats)?),
         }),
         AuthoredExpr::Mul { terms } => Ok(DaggerExpr::Mul {
-            terms: compile_expr_terms(terms, nodes, next_depth, stats, items)?,
+            terms: compile_expr_terms(terms, nodes, next_depth, stats)?,
         }),
         AuthoredExpr::DivFloor { left, right } => Ok(DaggerExpr::DivFloor {
-            left: Box::new(compile_expr(*left, nodes, next_depth, stats, items)?),
-            right: Box::new(compile_expr(*right, nodes, next_depth, stats, items)?),
+            left: Box::new(compile_expr(*left, nodes, next_depth, stats)?),
+            right: Box::new(compile_expr(*right, nodes, next_depth, stats)?),
         }),
         AuthoredExpr::DivTrunc { left, right } => Ok(DaggerExpr::DivTrunc {
-            left: Box::new(compile_expr(*left, nodes, next_depth, stats, items)?),
-            right: Box::new(compile_expr(*right, nodes, next_depth, stats, items)?),
+            left: Box::new(compile_expr(*left, nodes, next_depth, stats)?),
+            right: Box::new(compile_expr(*right, nodes, next_depth, stats)?),
         }),
         AuthoredExpr::Min { terms } => Ok(DaggerExpr::Min {
-            terms: compile_expr_terms(terms, nodes, next_depth, stats, items)?,
+            terms: compile_expr_terms(terms, nodes, next_depth, stats)?,
         }),
         AuthoredExpr::Max { terms } => Ok(DaggerExpr::Max {
-            terms: compile_expr_terms(terms, nodes, next_depth, stats, items)?,
+            terms: compile_expr_terms(terms, nodes, next_depth, stats)?,
         }),
     }
 }
@@ -1095,7 +1097,6 @@ fn compile_expr_terms(
     nodes: &mut usize,
     depth: u16,
     stats: &DaggerStatsSection,
-    items: &BTreeMap<String, DaggerItemDefinition>,
 ) -> Result<Vec<DaggerExpr>, DaggerGameplayError> {
     if terms.is_empty() {
         return Err(DaggerGameplayError::InvalidValue {
@@ -1105,7 +1106,7 @@ fn compile_expr_terms(
     }
     terms
         .into_iter()
-        .map(|term| compile_expr(term, nodes, depth, stats, items))
+        .map(|term| compile_expr(term, nodes, depth, stats))
         .collect()
 }
 

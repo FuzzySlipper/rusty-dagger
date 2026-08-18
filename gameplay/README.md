@@ -37,12 +37,22 @@ House rules:
   catalog edit. Extending the grammar itself means editing `authoring/` and
   the Rust compiler in `crates/dagger-rpg/src/resolution/` in the same
   change — that coupling is intentional.
-- All randomness is bounded named evidence (`dice`, `weaponDice`); the
-  caller supplies roll values, so resolution is deterministic and
-  replayable. Career/world facts (proficiency, racial bonuses, swing state,
-  rapid-healing and no-regen flags) cross as bounded named evidence too,
-  0 until careers and swing states are modeled. Dice bounds may be
-  negative (swing modifiers span -10..+10).
+- All randomness is bounded named evidence (`dice`, `equippedWeaponDice`,
+  `struckArmor`); the caller supplies roll values, so resolution is
+  deterministic and replayable. `equippedWeaponDice` reads an explicit
+  evidence id bounded at evaluation by the subject's currently equipped
+  weapon (unarmed: the derived hand-to-hand range); `struckArmor` reads a
+  0..19 struck-body-part roll and maps it through the classic table to the
+  target's `armor-<part>` stat; `equippedWeaponSkill` reads the equipped
+  weapon's skill (hand-to-hand when unarmed). Career/world facts
+  (proficiency, racial bonuses, swing state, rapid-healing and no-regen
+  flags) cross as bounded named evidence too, 0 until careers and swing
+  states are modeled. Dice bounds may be negative (swing modifiers span
+  -10..+10).
+- `stats.ts` also declares the classic body parts (`armorParts`); each
+  becomes an `armor-<part>` stat whose spawn base is the actor's flat
+  `armorValue` and which equipped armor/shield items subtract from through
+  upstream attributed sources.
 - Expressions can also read live track currents (`track`), spawn-derived
   track maxima (`trackMax`), and fixed-point powers (`powMilli` — base^exp
   scaled by 1000, floor at each step). Division comes in floor (`divFloor`)
