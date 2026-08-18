@@ -27,6 +27,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 40, intelligence: 10, willpower: 70, agility: 80, endurance: 55, personality: 50, speed: 45, luck: 50 },
     skills: { "climbing": 35, "backstabbing": 35, "stealth": 35, "axe": 35, "nymph": 35, "streetwise": 35, "centaurian": 35, "lockpicking": 35, "hand-to-hand": 35, "critical-strike": 35, "mysticism": 35, "giantish": 35 },
     armorValue: 30,
+    attacks: [{ min: 1, max: 4 }],
     tracks: [
       track("health", dice("rat.health", 9, 16)),
       track("stamina", constant(0)),
@@ -48,6 +49,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 40, intelligence: 65, willpower: 70, agility: 80, endurance: 55, personality: 50, speed: 70, luck: 50 },
     skills: { "stealth": 40, "daedric": 40, "archery": 40, "climbing": 40, "nymph": 40, "lockpicking": 40, "blunt-weapon": 40, "pickpocket": 40, "etiquette": 40, "streetwise": 40, "running": 40, "centaurian": 40 },
     armorValue: 15,
+    attacks: [{ min: 2, max: 15 }],
     tracks: [
       track("health", dice("imp.health", 11, 18)),
       track("stamina", constant(0)),
@@ -62,6 +64,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 80, intelligence: 50, willpower: 30, agility: 50, endurance: 75, personality: 50, speed: 40, luck: 50 },
     skills: { "dodging": 45, "climbing": 45, "stealth": 45, "backstabbing": 45, "etiquette": 45, "nymph": 45, "impish": 45, "daedric": 45, "centaurian": 45, "lockpicking": 45, "spriggan": 45, "orcish": 45 },
     armorValue: -20,
+    attacks: [{ min: 1, max: 8 }, { min: 1, max: 8 }, { min: 1, max: 10 }],
     tracks: [
       track("health", dice("spriggan.health", 12, 26)),
       track("stamina", constant(0)),
@@ -76,6 +79,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 50, intelligence: 40, willpower: 60, agility: 70, endurance: 55, personality: 40, speed: 70, luck: 50 },
     skills: { "archery": 45, "axe": 45, "climbing": 45, "streetwise": 45, "giantish": 45, "critical-strike": 45, "nymph": 45, "daedric": 45, "lockpicking": 45, "etiquette": 45, "running": 45, "centaurian": 45 },
     armorValue: 30,
+    attacks: [{ min: 2, max: 12 }],
     tracks: [
       track("health", dice("giant-bat.health", 12, 26)),
       track("stamina", constant(0)),
@@ -90,6 +94,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 90, intelligence: 10, willpower: 30, agility: 70, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "archery": 50, "axe": 50, "critical-strike": 50, "climbing": 50, "stealth": 50, "streetwise": 50, "nymph": 50, "etiquette": 50, "blunt-weapon": 50, "daedric": 50, "impish": 50, "spriggan": 50 },
     armorValue: 30,
+    attacks: [{ min: 1, max: 8 }, { min: 1, max: 8 }, { min: 1, max: 10 }],
     tracks: [
       track("health", dice("grizzly-bear.health", 13, 34)),
       track("stamina", constant(0)),
@@ -104,6 +109,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 90, intelligence: 60, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "backstabbing": 50, "long-blade": 50, "climbing": 50, "axe": 50, "hand-to-hand": 50, "nymph": 50, "thaumaturgy": 50, "etiquette": 50, "lockpicking": 50, "daedric": 50, "centaurian": 50 },
     armorValue: 30,
+    attacks: [{ min: 1, max: 10 }, { min: 1, max: 10 }, { min: 3, max: 15 }],
     tracks: [
       track("health", dice("sabertooth-tiger.health", 13, 34)),
       track("stamina", constant(0)),
@@ -118,6 +124,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 50, intelligence: 10, willpower: 30, agility: 80, endurance: 75, personality: 50, speed: 70, luck: 50 },
     skills: { "blunt-weapon": 50, "long-blade": 50, "hand-to-hand": 50, "dodging": 50, "harpy": 50, "axe": 50, "swimming": 50, "climbing": 50, "stealth": 50, "nymph": 50, "etiquette": 50, "daedric": 50 },
     armorValue: 25,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("spider.health", 13, 34)),
       track("stamina", constant(0)),
@@ -132,6 +139,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 90, intelligence: 40, willpower: 80, agility: 50, endurance: 75, personality: 50, speed: 50, luck: 50 },
     skills: { "long-blade": 55, "climbing": 55, "backstabbing": 55, "hand-to-hand": 55, "blunt-weapon": 55, "archery": 55, "axe": 55, "thaumaturgy": 55, "jumping": 55, "giantish": 55, "dodging": 55, "critical-strike": 55 },
     armorValue: 35,
+    attacks: [{ min: 1, max: 6 }],
     tracks: [
       track("health", dice("orc.health", 13, 34)),
       track("stamina", constant(0)),
@@ -146,6 +154,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 80, intelligence: 80, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "climbing": 55, "centaurian": 55, "backstabbing": 55, "hand-to-hand": 55, "archery": 55, "medical": 55, "blunt-weapon": 55, "alteration": 55, "swimming": 55, "axe": 55, "harpy": 55, "giantish": 55 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("centaur.health", 14, 46)),
       track("stamina", constant(0)),
@@ -160,6 +169,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 100, intelligence: 20, willpower: 40, agility: 80, endurance: 65, personality: 30, speed: 85, luck: 50 },
     skills: { "critical-strike": 60, "backstabbing": 60, "long-blade": 60, "axe": 60, "hand-to-hand": 60, "jumping": 60, "stealth": 60, "blunt-weapon": 60, "etiquette": 60, "lockpicking": 60, "giantish": 60, "orcish": 60 },
     armorValue: 25,
+    attacks: [{ min: 1, max: 10 }, { min: 1, max: 10 }, { min: 2, max: 12 }],
     tracks: [
       track("health", dice("werewolf.health", 17, 66)),
       track("stamina", constant(0)),
@@ -174,6 +184,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 40, intelligence: 70, willpower: 60, agility: 80, endurance: 55, personality: 60, speed: 70, luck: 50 },
     skills: { "blunt-weapon": 60, "backstabbing": 60, "axe": 60, "mercantile": 60, "long-blade": 60, "climbing": 60, "hand-to-hand": 60, "spriggan": 60, "pickpocket": 60, "harpy": 60, "orcish": 60, "daedric": 60 },
     armorValue: 0,
+    attacks: [{ min: 1, max: 5 }],
     tracks: [
       track("health", dice("nymph.health", 15, 50)),
       track("stamina", constant(0)),
@@ -188,6 +199,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 70, intelligence: 50, willpower: 80, agility: 80, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "mysticism": 65, "backstabbing": 65, "long-blade": 65, "archery": 65, "hand-to-hand": 65, "harpy": 65, "streetwise": 65, "nymph": 65, "daedric": 65, "lockpicking": 65, "etiquette": 65, "centaurian": 65 },
     armorValue: 30,
+    attacks: [{ min: 2, max: 12 }],
     tracks: [
       track("health", dice("slaughterfish.health", 15, 50)),
       track("stamina", constant(0)),
@@ -202,6 +214,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 90, intelligence: 50, willpower: 80, agility: 50, endurance: 75, personality: 50, speed: 50, luck: 50 },
     skills: { "axe": 65, "blunt-weapon": 65, "climbing": 65, "critical-strike": 65, "long-blade": 65, "dodging": 65, "hand-to-hand": 65, "harpy": 65, "orcish": 65, "etiquette": 65, "running": 65, "thaumaturgy": 65 },
     armorValue: 25,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("orc-sergeant.health", 15, 50)),
       track("stamina", constant(0)),
@@ -216,6 +229,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 70, intelligence: 50, willpower: 30, agility: 80, endurance: 55, personality: 50, speed: 70, luck: 50 },
     skills: { "axe": 70, "long-blade": 70, "archery": 70, "spriggan": 70, "pickpocket": 70, "hand-to-hand": 70, "etiquette": 70, "running": 70, "centaurian": 70, "orcish": 70, "harpy": 70, "giantish": 70 },
     armorValue: 10,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("harpy.health", 16, 85)),
       track("stamina", constant(0)),
@@ -230,6 +244,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 80, intelligence: 10, willpower: 40, agility: 70, endurance: 75, personality: 40, speed: 70, luck: 50 },
     skills: { "long-blade": 70, "archery": 70, "dodging": 70, "daedric": 70, "hand-to-hand": 70, "medical": 70, "dragonish": 70, "harpy": 70, "climbing": 70, "critical-strike": 70, "blunt-weapon": 70, "streetwise": 70 },
     armorValue: 15,
+    attacks: [{ min: 2, max: 12 }, { min: 2, max: 12 }, { min: 5, max: 15 }],
     tracks: [
       track("health", dice("wereboar.health", 17, 66)),
       track("stamina", constant(0)),
@@ -244,6 +259,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 50, intelligence: 65, willpower: 40, agility: 80, endurance: 55, personality: 50, speed: 70, luck: 50 },
     skills: { "archery": 75, "axe": 75, "long-blade": 75, "hand-to-hand": 75, "daedric": 75, "dodging": 75, "giantish": 75, "etiquette": 75, "dragonish": 75, "climbing": 75, "blunt-weapon": 75, "stealth": 75 },
     armorValue: 10,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("skeletal-warrior.health", 17, 66)),
       track("stamina", constant(0)),
@@ -265,6 +281,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 110, intelligence: 40, willpower: 50, agility: 70, endurance: 75, personality: 40, speed: 60, luck: 50 },
     skills: { "dodging": 80, "etiquette": 80, "hand-to-hand": 80, "impish": 80, "giantish": 80, "harpy": 80, "dragonish": 80, "long-blade": 80, "climbing": 80, "blunt-weapon": 80, "nymph": 80, "daedric": 80 },
     armorValue: 15,
+    attacks: [{ min: 10, max: 30 }],
     tracks: [
       track("health", dice("giant.health", 18, 74)),
       track("stamina", constant(0)),
@@ -279,6 +296,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 150, intelligence: 40, willpower: 90, agility: 80, endurance: 100, personality: 50, speed: 70, luck: 50 },
     skills: { "axe": 80, "critical-strike": 80, "long-blade": 80, "archery": 80, "etiquette": 80, "dragonish": 80, "mysticism": 80, "climbing": 80, "stealth": 80, "streetwise": 80, "blunt-weapon": 80, "hand-to-hand": 80 },
     armorValue: 0,
+    attacks: [{ min: 15, max: 50 }],
     tracks: [
       track("health", dice("zombie.health", 52, 66)),
       track("stamina", constant(0)),
@@ -293,6 +311,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 100, intelligence: 65, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "blunt-weapon": 85, "daedric": 85, "dodging": 85, "hand-to-hand": 85, "thaumaturgy": 85, "axe": 85, "etiquette": 85, "long-blade": 85, "harpy": 85, "critical-strike": 85, "climbing": 85, "stealth": 85 },
     armorValue: 0,
+    attacks: [{ min: 10, max: 35 }],
     tracks: [
       track("health", dice("ghost.health", 17, 66)),
       track("stamina", constant(0)),
@@ -307,6 +326,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 100, intelligence: 40, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "long-blade": 85, "thaumaturgy": 85, "daedric": 85, "critical-strike": 85, "dragonish": 85, "axe": 85, "climbing": 85, "stealth": 85, "blunt-weapon": 85, "hand-to-hand": 85, "streetwise": 85, "etiquette": 85 },
     armorValue: 10,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("mummy.health", 17, 66)),
       track("stamina", constant(0)),
@@ -321,6 +341,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 120, intelligence: 10, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "long-blade": 90, "dodging": 90, "alteration": 90, "axe": 90, "dragonish": 90, "giantish": 90, "climbing": 90, "short-blade": 90, "stealth": 90, "blunt-weapon": 90, "streetwise": 90, "hand-to-hand": 90 },
     armorValue: 0,
+    attacks: [{ min: 15, max: 25 }],
     tracks: [
       track("health", dice("giant-scorpion.health", 18, 74)),
       track("stamina", constant(0)),
@@ -335,6 +356,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 90, intelligence: 70, willpower: 80, agility: 50, endurance: 75, personality: 50, speed: 50, luck: 50 },
     skills: { "axe": 95, "backstabbing": 95, "long-blade": 95, "climbing": 95, "dodging": 95, "blunt-weapon": 95, "critical-strike": 95, "etiquette": 95, "archery": 95, "hand-to-hand": 95, "giantish": 95, "harpy": 95 },
     armorValue: 35,
+    attacks: [{ min: 2, max: 20 }],
     tracks: [
       track("health", dice("orc-shaman.health", 18, 74)),
       track("stamina", constant(0)),
@@ -349,6 +371,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 90, intelligence: 10, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 70, luck: 50 },
     skills: { "long-blade": 100, "archery": 100, "axe": 100, "hand-to-hand": 100, "orcish": 100, "thaumaturgy": 100, "dodging": 100, "daedric": 100, "etiquette": 100, "illusion": 100, "climbing": 100, "streetwise": 100 },
     armorValue: 0,
+    attacks: [{ min: 10, max: 15 }],
     tracks: [
       track("health", dice("gargoyle.health", 19, 82)),
       track("stamina", constant(0)),
@@ -363,6 +386,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 100, intelligence: 10, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 85, luck: 50 },
     skills: { "blunt-weapon": 100, "axe": 100, "dodging": 100, "climbing": 100, "centaurian": 100, "long-blade": 100, "hand-to-hand": 100, "thaumaturgy": 100, "giantish": 100, "archery": 100, "impish": 100, "etiquette": 100 },
     armorValue: 0,
+    attacks: [{ min: 20, max: 45 }],
     tracks: [
       track("health", dice("wraith.health", 30, 90)),
       track("stamina", constant(0)),
@@ -377,6 +401,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 100, intelligence: 70, willpower: 80, agility: 50, endurance: 75, personality: 50, speed: 50, luck: 50 },
     skills: { "backstabbing": 100, "long-blade": 100, "hand-to-hand": 100, "thaumaturgy": 100, "blunt-weapon": 100, "dodging": 100, "dragonish": 100, "etiquette": 100, "alteration": 100, "giantish": 100, "critical-strike": 100, "nymph": 100 },
     armorValue: 0,
+    attacks: [{ min: 5, max: 50 }],
     tracks: [
       track("health", dice("orc-warlord.health", 20, 90)),
       track("stamina", constant(0)),
@@ -391,6 +416,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 120, intelligence: 80, willpower: 30, agility: 80, endurance: 95, personality: 50, speed: 95, luck: 50 },
     skills: { "blunt-weapon": 100, "archery": 100, "centaurian": 100, "daedric": 100, "dodging": 100, "stealth": 100, "long-blade": 100, "hand-to-hand": 100, "axe": 100, "harpy": 100, "giantish": 100, "orcish": 100 },
     armorValue: -25,
+    attacks: [{ min: 50, max: 100 }],
     tracks: [
       track("health", dice("frost-daedra.health", 25, 130)),
       track("stamina", constant(0)),
@@ -405,6 +431,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 150, intelligence: 110, willpower: 70, agility: 100, endurance: 95, personality: 90, speed: 95, luck: 50 },
     skills: { "blunt-weapon": 100, "centaurian": 100, "daedric": 100, "climbing": 100, "stealth": 100, "dragonish": 100, "impish": 100, "critical-strike": 100, "long-blade": 100, "harpy": 100, "giantish": 100, "axe": 100 },
     armorValue: 5,
+    attacks: [{ min: 15, max: 50 }],
     tracks: [
       track("health", dice("fire-daedra.health", 26, 138)),
       track("stamina", constant(0)),
@@ -419,6 +446,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 150, intelligence: 110, willpower: 70, agility: 100, endurance: 95, personality: 90, speed: 100, luck: 50 },
     skills: { "blunt-weapon": 100, "archery": 100, "climbing": 100, "critical-strike": 100, "stealth": 100, "dodging": 100, "long-blade": 100, "hand-to-hand": 100, "dragonish": 100, "thaumaturgy": 100, "axe": 100, "etiquette": 100 },
     armorValue: 5,
+    attacks: [{ min: 15, max: 50 }],
     tracks: [
       track("health", dice("daedroth.health", 27, 146)),
       track("stamina", constant(0)),
@@ -433,6 +461,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 100, intelligence: 90, willpower: 80, agility: 100, endurance: 95, personality: 100, speed: 100, luck: 50 },
     skills: { "backstabbing": 100, "blunt-weapon": 100, "daedric": 100, "long-blade": 100, "hand-to-hand": 100, "axe": 100, "critical-strike": 100, "giantish": 100, "etiquette": 100, "orcish": 100, "harpy": 100, "thaumaturgy": 100 },
     armorValue: -10,
+    attacks: [{ min: 20, max: 50 }],
     tracks: [
       track("health", dice("vampire.health", 28, 154)),
       track("stamina", constant(0)),
@@ -447,6 +476,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 150, intelligence: 60, willpower: 70, agility: 100, endurance: 95, personality: 120, speed: 70, luck: 50 },
     skills: { "blunt-weapon": 100, "dragonish": 100, "archery": 100, "daedric": 100, "stealth": 100, "long-blade": 100, "etiquette": 100, "critical-strike": 100, "harpy": 100, "axe": 100, "hand-to-hand": 100, "impish": 100 },
     armorValue: 5,
+    attacks: [{ min: 15, max: 50 }],
     tracks: [
       track("health", dice("daedra-seducer.health", 27, 146)),
       track("stamina", constant(0)),
@@ -461,6 +491,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 120, intelligence: 90, willpower: 80, agility: 90, endurance: 95, personality: 100, speed: 120, luck: 50 },
     skills: { "long-blade": 100, "blunt-weapon": 100, "daedric": 100, "archery": 100, "stealth": 100, "backstabbing": 100, "giantish": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: -25,
+    attacks: [{ min: 20, max: 60 }],
     tracks: [
       track("health", dice("vampire-ancient.health", 30, 170)),
       track("stamina", constant(0)),
@@ -475,6 +506,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 150, intelligence: 110, willpower: 70, agility: 100, endurance: 95, personality: 90, speed: 120, luck: 50 },
     skills: { "axe": 100, "blunt-weapon": 100, "etiquette": 100, "dragonish": 100, "critical-strike": 100, "stealth": 100, "archery": 100, "long-blade": 100, "thaumaturgy": 100, "dodging": 100, "hand-to-hand": 100, "daedric": 100 },
     armorValue: -50,
+    attacks: [{ min: 15, max: 50 }],
     tracks: [
       track("health", dice("daedra-lord.health", 35, 210)),
       track("stamina", constant(0)),
@@ -489,6 +521,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 80, intelligence: 120, willpower: 95, agility: 90, endurance: 95, personality: 50, speed: 80, luck: 50 },
     skills: { "backstabbing": 100, "blunt-weapon": 100, "centaurian": 100, "archery": 100, "critical-strike": 100, "dragonish": 100, "giantish": 100, "orcish": 100, "harpy": 100, "thaumaturgy": 100, "long-blade": 100, "hand-to-hand": 100 },
     armorValue: -50,
+    attacks: [{ min: 70, max: 100 }],
     tracks: [
       track("health", dice("lich.health", 30, 170)),
       track("stamina", constant(0)),
@@ -503,6 +536,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 110, intelligence: 200, willpower: 95, agility: 90, endurance: 95, personality: 50, speed: 100, luck: 50 },
     skills: { "climbing": 100, "blunt-weapon": 100, "etiquette": 100, "dodging": 100, "critical-strike": 100, "thaumaturgy": 100, "long-blade": 100, "archery": 100, "axe": 100, "harpy": 100, "giantish": 100, "orcish": 100 },
     armorValue: -60,
+    attacks: [{ min: 70, max: 100 }],
     tracks: [
       track("health", dice("ancient-lich.health", 30, 170)),
       track("stamina", constant(0)),
@@ -517,6 +551,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 250, intelligence: 30, willpower: 70, agility: 100, endurance: 95, personality: 50, speed: 100, luck: 50 },
     skills: { "archery": 100, "axe": 100, "centaurian": 100, "critical-strike": 100, "climbing": 100, "stealth": 100, "blunt-weapon": 100, "streetwise": 100, "nymph": 100, "etiquette": 100, "lockpicking": 100, "daedric": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("dragonling.health", 14, 42)),
       track("stamina", constant(0)),
@@ -531,6 +566,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 130, intelligence: 78, willpower: 80, agility: 90, endurance: 95, personality: 100, speed: 60, luck: 50 },
     skills: { "long-blade": 100, "blunt-weapon": 100, "archery": 100, "running": 100, "stealth": 100, "etiquette": 100, "illusion": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("fire-atronach.health", 25, 130)),
       track("stamina", constant(0)),
@@ -545,6 +581,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 140, intelligence: 78, willpower: 80, agility: 90, endurance: 95, personality: 100, speed: 55, luck: 50 },
     skills: { "long-blade": 100, "blunt-weapon": 100, "archery": 100, "running": 100, "stealth": 100, "daedric": 100, "illusion": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("iron-atronach.health", 25, 130)),
       track("stamina", constant(0)),
@@ -559,6 +596,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 125, intelligence: 78, willpower: 80, agility: 90, endurance: 95, personality: 69, speed: 61, luck: 55 },
     skills: { "long-blade": 100, "blunt-weapon": 100, "archery": 100, "running": 100, "stealth": 100, "dragonish": 100, "illusion": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("flesh-atronach.health", 25, 130)),
       track("stamina", constant(0)),
@@ -573,6 +611,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 150, intelligence: 78, willpower: 80, agility: 90, endurance: 95, personality: 69, speed: 65, luck: 60 },
     skills: { "long-blade": 100, "blunt-weapon": 100, "centaurian": 100, "running": 100, "stealth": 100, "climbing": 100, "illusion": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("ice-atronach.health", 25, 130)),
       track("stamina", constant(0)),
@@ -588,6 +627,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 61, intelligence: 93, willpower: 80, agility: 80, endurance: 95, personality: 62, speed: 70, luck: 60 },
     skills: { "long-blade": 100, "blunt-weapon": 100, "archery": 100, "running": 100, "stealth": 100, "dragonish": 100, "illusion": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("dragonling-40.health", 14, 42)),
       track("stamina", constant(0)),
@@ -602,6 +642,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 71, intelligence: 84, willpower: 80, agility: 80, endurance: 95, personality: 62, speed: 70, luck: 60 },
     skills: { "backstabbing": 100, "blunt-weapon": 100, "daedric": 100, "running": 100, "stealth": 100, "etiquette": 100, "illusion": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("dreugh.health", 13, 34)),
       track("stamina", constant(0)),
@@ -616,6 +657,7 @@ export const monsters: readonly ActorDefinition[] = [
     stats: { strength: 75, intelligence: 84, willpower: 80, agility: 85, endurance: 95, personality: 62, speed: 65, luck: 70 },
     skills: { "backstabbing": 100, "blunt-weapon": 100, "climbing": 100, "running": 100, "stealth": 100, "dragonish": 100, "illusion": 100, "critical-strike": 100, "axe": 100, "hand-to-hand": 100, "thaumaturgy": 100, "orcish": 100 },
     armorValue: 30,
+    attacks: [{ min: 5, max: 15 }],
     tracks: [
       track("health", dice("lamia.health", 16, 58)),
       track("stamina", constant(0)),

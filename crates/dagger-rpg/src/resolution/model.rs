@@ -111,6 +111,8 @@ pub struct AuthoredActorDefinition {
     pub team: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loot_table_key: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attacks: Vec<AuthoredDamageRange>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -478,6 +480,14 @@ pub struct DaggerActorDefinition {
     pub min_metal_to_hit: Option<String>,
     pub team: Option<String>,
     pub loot_table_key: Option<String>,
+    /// Classic melee attack damage ranges (1-3 sub-attacks per swing).
+    pub attacks: Vec<DaggerDamageRange>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DaggerDamageRange {
+    pub min: i64,
+    pub max: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
