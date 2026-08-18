@@ -1850,12 +1850,14 @@ struct MeleeContactResult {
 /// without a career gets no proficiency/racial bonus, and no swing state
 /// means no swing modifier.
 fn zeroed_career_fact(evidence_id: &str) -> bool {
-    const SUFFIXES: [&str; 5] = [
+    const SUFFIXES: [&str; 7] = [
         ".swing-to-hit",
         ".proficiency-to-hit",
         ".racial-to-hit",
         ".proficiency-damage",
         ".racial-damage",
+        ".adrenaline-rush",
+        ".target-adrenaline-rush",
     ];
     SUFFIXES.iter().any(|suffix| evidence_id.ends_with(suffix))
 }

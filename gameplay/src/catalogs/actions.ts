@@ -25,6 +25,7 @@ import {
   damage,
   dice,
   divFloor,
+  divTrunc,
   evidence,
   maxOf,
   minOf,
@@ -48,7 +49,8 @@ import {
 /**
  * Shared classic melee hit check: roll ≤ clamp(skill + target armor − 50 +
  * general terms, 3, 97). General terms (CalculateStatsToHit /
- * CalculateSkillsToHit): luck and agility differentials /10, and
+ * CalculateSkillsToHit): luck and agility differentials /10 with the
+ * donor's C# truncating integer division, and
  * − target dodging / 4 (donor comment: classic was bugged to read the
  * attacker's dodging; the corrected shape reads the target's).
  */
@@ -64,22 +66,41 @@ const meleeHit = (
       skill("actor", attackSkill),
       armor("target"),
       constant(-50),
-      divFloor(sub(stat("actor", "luck"), stat("target", "luck")), constant(10)),
-      divFloor(sub(stat("actor", "agility"), stat("target", "agility")), constant(10)),
+      divTrunc(sub(stat("actor", "luck"), stat("target", "luck")), constant(10)),
+      divTrunc(sub(stat("actor", "agility"), stat("target", "agility")), constant(10)),
       mul(divFloor(skill("target", "dodging"), constant(4)), constant(-1)),
       ...extraTerms,
     ),
   );
 
 /**
+ * 1 while the subject's current health is below max/8, else 0 (the
+ * classic adrenaline-rush condition).
+ */
+const lowHealth = (subject: "actor" | "target"): Expr =>
+  minOf(
+    constant(1),
+    maxOf(
+      constant(0),
+      sub(
+        divFloor(trackMax(subject, "health"), constant(8)),
+        trackCurrent(subject, "health"),
+      ),
+    ),
+  );
+
+/**
  * Player-only classic to-hit terms, all bounded named evidence except the
- * adrenaline rush: swing state (CalculateSwingModifiers: StrikeUp +10 …
- * StrikeDown −10; 0 until swing states exist), expert-proficiency careers
- * adding attacker level (CalculateProficiencyModifiers; 0 until careers
- * exist), racial weapon bonuses (CalculateRacialModifiers: Dark Elf
- * +level/4, Wood Elf archery +level/3, Redguard non-bow +level/3; 0 until
- * careers exist), and the adrenaline rush (CalculateAdrenalineRushToHit: +5
- * while current health is below max/8).
+ * low-health condition: swing state (CalculateSwingModifiers: StrikeUp +10
+ * … StrikeDown −10; 0 until swing states exist), expert-proficiency
+ * careers adding attacker level (CalculateProficiencyModifiers; 0 until
+ * careers exist), racial weapon bonuses (CalculateRacialModifiers: Dark
+ * Elf +level/4, Wood Elf archery +level/3, Redguard non-bow +level/3; 0
+ * until careers exist), and the adrenaline rush
+ * (CalculateAdrenalineRushToHit): +5 for the attacker / −5 for the target
+ * while that side's current health is below max/8, each gated on that
+ * side's career flag as bounded 0/1 evidence — 0 until careers exist. The
+ * improved +8 magnitude is not modeled (recorded deviation).
  */
 const playerToHitTerms = (actionId: string): readonly Expr[] => [
   dice(`${actionId}.swing-to-hit`, -10, 10),
@@ -87,16 +108,13 @@ const playerToHitTerms = (actionId: string): readonly Expr[] => [
   dice(`${actionId}.racial-to-hit`, 0, 30),
   mul(
     constant(5),
-    minOf(
-      constant(1),
-      maxOf(
-        constant(0),
-        sub(
-          divFloor(trackMax("actor", "health"), constant(8)),
-          trackCurrent("actor", "health"),
-        ),
-      ),
-    ),
+    dice(`${actionId}.adrenaline-rush`, 0, 1),
+    lowHealth("actor"),
+  ),
+  mul(
+    constant(-5),
+    dice(`${actionId}.target-adrenaline-rush`, 0, 1),
+    lowHealth("target"),
   ),
 ];
 

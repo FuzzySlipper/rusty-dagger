@@ -78,6 +78,14 @@ fn resolve(origin: DaggerIntentOrigin, resolution: u64) -> (DaggerGameplayState,
                 id: "melee-attack.racial-damage".to_string(),
                 value: 0,
             },
+            DaggerEvidence {
+                id: "melee-attack.adrenaline-rush".to_string(),
+                value: 0,
+            },
+            DaggerEvidence {
+                id: "melee-attack.target-adrenaline-rush".to_string(),
+                value: 0,
+            },
         ],
     );
     assert!(receipt.succeeded(), "authored action must resolve");

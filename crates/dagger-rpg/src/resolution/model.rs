@@ -231,6 +231,10 @@ pub enum AuthoredExpr {
         left: Box<Self>,
         right: Box<Self>,
     },
+    DivTrunc {
+        left: Box<Self>,
+        right: Box<Self>,
+    },
     Min {
         terms: Vec<Self>,
     },
@@ -542,6 +546,10 @@ pub enum DaggerExpr {
         terms: Vec<Self>,
     },
     DivFloor {
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+    DivTrunc {
         left: Box<Self>,
         right: Box<Self>,
     },

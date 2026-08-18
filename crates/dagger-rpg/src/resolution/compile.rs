@@ -1077,6 +1077,10 @@ fn compile_expr(
             left: Box::new(compile_expr(*left, nodes, next_depth, stats, items)?),
             right: Box::new(compile_expr(*right, nodes, next_depth, stats, items)?),
         }),
+        AuthoredExpr::DivTrunc { left, right } => Ok(DaggerExpr::DivTrunc {
+            left: Box::new(compile_expr(*left, nodes, next_depth, stats, items)?),
+            right: Box::new(compile_expr(*right, nodes, next_depth, stats, items)?),
+        }),
         AuthoredExpr::Min { terms } => Ok(DaggerExpr::Min {
             terms: compile_expr_terms(terms, nodes, next_depth, stats, items)?,
         }),
