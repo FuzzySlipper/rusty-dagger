@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generated": "2026-08-15T03:24:02.869545334+00:00",
+  "generated": "2026-08-18T14:14:32.145126873+00:00",
   "enemies": [
     {
       "mobileId": 0,
@@ -13979,6 +13979,21 @@
       ],
       "frameCount": 1,
       "flags": []
+    },
+    {
+      "archive": 216,
+      "record": 0,
+      "path": "billboard-216-0.png",
+      "atlasSize": [
+        39,
+        26
+      ],
+      "worldSize": [
+        0.975,
+        0.65000004
+      ],
+      "frameCount": 1,
+      "flags": []
     }
   ],
   "summary": {
@@ -13986,7 +14001,7 @@
     "flaggedEnemies": 8,
     "warnCount": 0,
     "errorCount": 0,
-    "totalBillboards": 32,
+    "totalBillboards": 33,
     "flaggedBillboards": 0
   }
 }

@@ -18,6 +18,7 @@ import type {
   EncounterDefinition,
   EquipmentSection,
   ItemDefinition,
+  LootTableDefinition,
   RuleDefinition,
   StatsSection,
 } from "./definitions.js";
@@ -33,6 +34,8 @@ export type DaggerGameplayPayload = Readonly<{
   derived: readonly DerivedRule[];
   /** Equipment slots and capacity metrics items bind against (additive). */
   equipment?: EquipmentSection;
+  /** Classic loot tables (additive); actors reference them by `lootTableKey`. */
+  lootTables?: readonly LootTableDefinition[];
 }>;
 
 export type PackageInput = Readonly<{
@@ -86,6 +89,12 @@ export const composePackage = (input: PackageInput) => {
       ...payload.equipment.capacityMetrics.map((id) => `equipment.capacity-metric.${id}`),
       ...payload.equipment.slots.map((entry) => `equipment.slot.${entry.id}`),
     ]);
+  }
+  if (payload.lootTables !== undefined) {
+    record(
+      "lootTables",
+      payload.lootTables.map((entry) => `lootTable.${entry.key}`),
+    );
   }
   return authorBinary64RulePackage({
     domain: "dagger",

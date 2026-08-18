@@ -1,11 +1,12 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
-    action_dynamic_roll_evidence, action_roll_evidence, compile_gameplay_package,
-    definition_base_stats, equipped_weapon, restore_actor_tracks, struck_body_part_name,
-    track_maximum, unarmed_damage_range, AuthoredGameplayPayload, DaggerDynamicRoll, DaggerEvent,
-    DaggerEvidence, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
-    DaggerIntentOrigin,
+    action_dynamic_roll_evidence, action_roll_evidence, bind_actor_loot, compile_gameplay_package,
+    definition_base_stats, equipped_weapon, loot_roll_evidence, restore_actor_tracks,
+    spawn_container, struck_body_part_name, track_maximum, unarmed_damage_range,
+    AuthoredGameplayPayload, DaggerContainerState, DaggerDynamicRoll, DaggerEvent, DaggerEvidence,
+    DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
+    DaggerIntentOrigin, DaggerLootGeneration,
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
@@ -30,7 +31,9 @@ use crate::player::{
     PlayerControllerState, PlayerError, PlayerFrameReceipt, ResolvedPlayerAction,
     ResolvedPlayerFrame,
 };
-use crate::project::{AdmittedProject, ContentEntity, ProjectAdmissionError, PLAYER_HALF_EXTENTS};
+use crate::project::{
+    AdmittedProject, ContentEntity, ContentEntityKind, ProjectAdmissionError, PLAYER_HALF_EXTENTS,
+};
 
 #[derive(Debug)]
 pub enum RuntimeError {
@@ -115,6 +118,14 @@ pub const MELEE_CONTACT_SECONDS: f32 = 0.32;
 pub const MELEE_RECOVERY_SECONDS: f32 = 0.72;
 pub const MELEE_REJECTION_SECONDS: f32 = 0.72;
 const MELEE_AIM_MIN_DOT: f32 = 0.64;
+/// Reach of the interact/pickup verb (KeyF) in world units. Classic looting
+/// is a click on the adjacent container sprite; 2.5 units covers the
+/// jump-to-content standoff (1.5u) with margin for the low corpse piles.
+pub const LOOT_INTERACT_REACH: f32 = 2.5;
+/// Player level used for loot generation until real player levels arrive
+/// with 6688 (the donor multiplies gold and the C1/C2/P1/P2 category chances
+/// by player level).
+const LOOT_GENERATION_LEVEL: i64 = 1;
 
 /// Read-only lab readout: catalog definitions, live state, and resolution
 /// explanation. There is no editable document — the committed gameplay
@@ -143,6 +154,9 @@ pub struct LabReadout {
     pub player_inventory: PlayerInventoryReadout,
     /// Ordered equip/unequip/swap receipts from the equip-cycle verb.
     pub equipment_log: Vec<EquipmentLogRecord>,
+    /// Live loot containers: treasure piles and loot-bearing enemy corpses,
+    /// with contents and the generation receipt from spawn.
+    pub loot_containers: Vec<LootContainerReadout>,
 }
 
 /// Capacity usage for one metric in quarter-kg units (`used` / `maximum`).
@@ -228,13 +242,38 @@ enum NamedEncounterOutcome {
     Defeat,
 }
 
+/// Read-only view of one live loot container (treasure pile or enemy corpse).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LootContainerReadout {
+    /// Container instance id in the gameplay state (`treasure-<id>` /
+    /// `enemy-<id>`).
+    pub id: String,
+    /// treasure | corpse
+    pub kind: &'static str,
+    /// The scene content entity this container anchors to.
+    pub content_entity_id: u64,
+    pub loot_key: String,
+    /// Current contents (`InventoryService::view` on the container entity).
+    pub contents: PlayerInventoryReadout,
+    /// The spawn-time generation receipt, including the per-category
+    /// unsupported-coverage notes from the loot-table authority.
+    pub generation: DaggerLootGeneration,
+    /// True once nothing remains to take.
+    pub emptied: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ContentEntityReadout {
     pub id: u64,
+    /// enemy | treasure
     pub kind: &'static str,
     pub name: String,
-    pub reference: EnemyReferenceReadout,
+    /// Decoded mobile reference for enemies; `None` for treasure containers.
+    pub reference: Option<EnemyReferenceReadout>,
+    /// Classic loot table key for treasure containers; `None` for enemies.
+    pub loot_key: Option<String>,
     pub live: ContentLiveReadout,
 }
 
@@ -638,9 +677,13 @@ impl DaggerRuntime {
             serde_json::from_str(navgrid_document).map_err(|error| {
                 RuntimeError::Encounter(format!("invalid encounter navgrid: {error}"))
             })?;
+        // Only enemies patrol; treasure containers are static anchors. Their
+        // authored positions are re-merged below so the aimed queries and the
+        // lab keep seeing them.
         let spawns = self
             .content_entities
             .iter()
+            .filter(|entity| entity.enemy().is_some())
             .map(|entity| {
                 let handle = u32::try_from(entity.id).map_err(|_| {
                     RuntimeError::Encounter(format!(
@@ -657,6 +700,12 @@ impl DaggerRuntime {
             .positions()
             .into_iter()
             .map(|(handle, position, _, _)| (u64::from(handle), position))
+            .chain(
+                self.content_entities
+                    .iter()
+                    .filter(|entity| entity.enemy().is_none())
+                    .map(|entity| (entity.id, entity.authored_position)),
+            )
             .collect();
         self.patrol = Some(patrol);
         Ok(())
@@ -787,11 +836,12 @@ impl DaggerRuntime {
             .content_entities
             .iter()
             .filter_map(|entity| {
+                let reference = entity.enemy()?;
                 let behavior = self
                     .gameplay_catalog
                     .actors()
                     .values()
-                    .find(|actor| actor.mobile_id == Some(entity.mobile_id))
+                    .find(|actor| actor.mobile_id == Some(reference.mobile_id))
                     .and_then(|actor| actor.behavior.as_ref())?;
                 u32::try_from(entity.id).ok().map(|handle| {
                     (
@@ -929,10 +979,7 @@ impl DaggerRuntime {
         self.content_entities
             .iter()
             .find(|entity| entity.id == id)
-            .map_or_else(
-                || format!("Enemy {id}"),
-                |entity| entity.mobile_name.clone(),
-            )
+            .map_or_else(|| format!("Enemy {id}"), |entity| entity.name.clone())
     }
 
     fn enemy_line_of_sight_clear(&self, id: u64, player: Vec3) -> bool {
@@ -1148,6 +1195,12 @@ impl DaggerRuntime {
                 .positions()
                 .into_iter()
                 .map(|(handle, position, _, _)| (u64::from(handle), position))
+                .chain(
+                    self.content_entities
+                        .iter()
+                        .filter(|entity| entity.enemy().is_none())
+                        .map(|entity| (entity.id, entity.authored_position)),
+                )
                 .collect();
         }
         self.focused_content_id = None;
@@ -2016,6 +2069,181 @@ impl DaggerRuntime {
         self.lab_readout()
     }
 
+    /// Interact/pickup verb (KeyF in the native host): an aimed-interact
+    /// query — the `select_aimed_melee_target` cone shape over a different
+    /// candidate set: dead enemies (their actor entities are the corpse
+    /// containers; donor EnemyDeath.cs:123 keeps the loot in the enemy's
+    /// inventory) and treasure container entities (no live actor). Living
+    /// enemies are NOT lootable.
+    ///
+    /// On a hit the verb performs a take-all transfer: fungible stacks
+    /// through `InventoryService::transfer`, unique items through
+    /// `EquipmentService::transfer_unique_item`, respecting the player's
+    /// capacity per item and stopping at the first rejection (the donor loot
+    /// window's partial-take spirit via CanCarryAmount). Deviation from the
+    /// donor: no loot window UI with selective take — take-all with capacity
+    /// legality. Every transfer and the stopping rejection land in the
+    /// equipment log under a `loot:<container>` operation. An empty
+    /// container logs the donor's "nothing to take" note.
+    pub fn interact_loot(&mut self) -> Result<LabReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{
+            EquipmentService, InventoryService, InventoryTransferRequest, ItemTransferRequest,
+        };
+
+        let player_position = self.player_position()?;
+        let lootable = self
+            .content_entities
+            .iter()
+            .filter(|entity| entity.enemy().is_none() || self.is_enemy_dead(entity.id))
+            .map(|entity| entity.id)
+            .collect::<BTreeSet<_>>();
+        let target = select_aimed_loot_target(
+            player_position,
+            self.player_state().yaw_degrees,
+            LOOT_INTERACT_REACH,
+            &self.content_entities,
+            &self.content_live_positions,
+            &lootable,
+        );
+        let Some(id) = target else {
+            self.log_equipment_rejection(
+                "loot",
+                "—".to_string(),
+                Vec::new(),
+                None,
+                format!("no loot container within {LOOT_INTERACT_REACH} units of the aim"),
+            );
+            return self.lab_readout();
+        };
+        let entity = self
+            .content_entities
+            .iter()
+            .find(|entity| entity.id == id)
+            .expect("aimed target is a content entity");
+        let instance = match &entity.kind {
+            ContentEntityKind::Enemy(_) => enemy_actor_id(id),
+            ContentEntityKind::Treasure { .. } => treasure_container_id(id),
+        };
+        let no_treasure_note = |runtime: &mut Self| {
+            // Donor: clicking an empty corpse says "the body has no treasure".
+            runtime.log_equipment_rejection(
+                format!("loot:{instance}"),
+                "—".to_string(),
+                Vec::new(),
+                None,
+                "nothing to take (the body has no treasure)".to_string(),
+            );
+        };
+        let Some(container) = self.gameplay.container(&instance) else {
+            // Dead enemy whose definition carries no loot table (rat, bat):
+            // classic generates no loot for it.
+            no_treasure_note(self);
+            return self.lab_readout();
+        };
+        let from_owner = container.entity();
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            from_owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "container inventory view: {error:?}"
+            )))
+        })?;
+        let stacks = view.stacks().to_vec();
+        let items = view.unique_items().to_vec();
+        if stacks.is_empty() && items.is_empty() {
+            no_treasure_note(self);
+            return self.lab_readout();
+        }
+        let to_owner = self.player_actor_entity();
+        let (operation, source) = equipment_operation();
+        for stack in stacks {
+            let quantity = stack.quantity;
+            let item = stack.definition.as_str().to_string();
+            match InventoryService::transfer(
+                self.gameplay.entities_mut(),
+                self.gameplay_catalog.mechanics(),
+                InventoryTransferRequest {
+                    operation: operation.clone(),
+                    source: source.clone(),
+                    from_owner,
+                    to_owner,
+                    item: stack.definition.clone(),
+                    quantity,
+                    expected_from_revision: None,
+                    expected_to_revision: None,
+                },
+            ) {
+                Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: format!("loot:{instance}"),
+                    item,
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: Some(receipt.to_after - receipt.to_before),
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_to_revision),
+                }),
+                // Capacity (or any upstream) rejection: log and stop — the
+                // rest of the pile stays in the container.
+                Err(error) => {
+                    self.log_equipment_rejection(
+                        format!("loot:{instance}"),
+                        item,
+                        Vec::new(),
+                        Some(quantity),
+                        format!("{error:?}"),
+                    );
+                    return self.lab_readout();
+                }
+            }
+        }
+        for item in items {
+            let item_name = item.definition.as_str().to_string();
+            let relationship_revision = self.gameplay.entities().revision();
+            match EquipmentService::transfer_unique_item(
+                self.gameplay.entities_mut(),
+                self.gameplay_catalog.mechanics(),
+                ItemTransferRequest {
+                    operation: operation.clone(),
+                    source: source.clone(),
+                    item: item.entity,
+                    from_owner,
+                    to_owner,
+                    expected_relationship_revision: relationship_revision,
+                    expected_from_inventory_revision: None,
+                    expected_to_inventory_revision: None,
+                },
+            ) {
+                Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: format!("loot:{instance}"),
+                    item: item_name,
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.revision_after),
+                }),
+                Err(error) => {
+                    self.log_equipment_rejection(
+                        format!("loot:{instance}"),
+                        item_name,
+                        Vec::new(),
+                        None,
+                        format!("{error:?}"),
+                    );
+                    return self.lab_readout();
+                }
+            }
+        }
+        self.lab_readout()
+    }
+
     /// Equip-cycle verb (KeyE in the native host): each press equips the next
     /// carried equippable item in the stable entity ordering, skipping
     /// already-equipped items and swapping when the item's legal slot is
@@ -2147,18 +2375,32 @@ impl DaggerRuntime {
                     .get(&entity.id)
                     .copied()
                     .unwrap_or(entity.authored_position);
+                let (kind, reference, loot_key) = match entity.enemy() {
+                    Some(enemy) => (
+                        "enemy",
+                        Some(EnemyReferenceReadout {
+                            mobile_id: enemy.mobile_id,
+                            mobile_name: enemy.mobile_name.clone(),
+                            texture_archive: enemy.texture_archive,
+                            flying: enemy.flying,
+                            sprite_asset: entity.sprite_asset.clone(),
+                            authored_position: entity.authored_position,
+                        }),
+                        None,
+                    ),
+                    None => match &entity.kind {
+                        ContentEntityKind::Treasure { loot_key } => {
+                            ("treasure", None, Some(loot_key.clone()))
+                        }
+                        ContentEntityKind::Enemy(_) => unreachable!("handled above"),
+                    },
+                };
                 ContentEntityReadout {
                     id: entity.id,
-                    kind: "enemy",
+                    kind,
                     name: entity.name.clone(),
-                    reference: EnemyReferenceReadout {
-                        mobile_id: entity.mobile_id,
-                        mobile_name: entity.mobile_name.clone(),
-                        texture_archive: entity.texture_archive,
-                        flying: entity.flying,
-                        sprite_asset: entity.sprite_asset.clone(),
-                        authored_position: entity.authored_position,
-                    },
+                    reference,
+                    loot_key,
                     live: ContentLiveReadout {
                         position: live_position,
                         distance_from_player: (live_position[0] - position.x)
@@ -2208,6 +2450,87 @@ impl DaggerRuntime {
             active_encounter,
             player_inventory: self.player_inventory_readout()?,
             equipment_log: self.equipment_log.iter().cloned().collect(),
+            loot_containers: self.loot_containers_readout()?,
+        })
+    }
+
+    /// One readout per tracked loot container, ordered by instance id:
+    /// treasure piles from spawn_container and loot-bearing enemies from
+    /// bind_actor_loot. Contents are the live upstream inventory view, so
+    /// looted items disappear as they transfer.
+    fn loot_containers_readout(&self) -> Result<Vec<LootContainerReadout>, RuntimeError> {
+        self.gameplay
+            .containers()
+            .iter()
+            .map(|(instance, container)| {
+                let (kind, content_entity_id) = if let Some(id) = instance.strip_prefix("treasure-")
+                {
+                    ("treasure", id.parse::<u64>().ok())
+                } else if let Some(id) = instance.strip_prefix("enemy-") {
+                    ("corpse", id.parse::<u64>().ok())
+                } else {
+                    ("corpse", None)
+                };
+                let view = self.inventory_readout_for(container.entity())?;
+                let emptied = view.stacks.is_empty() && view.items.is_empty();
+                Ok(LootContainerReadout {
+                    id: instance.clone(),
+                    kind,
+                    content_entity_id: content_entity_id.unwrap_or(0),
+                    loot_key: container.key().to_string(),
+                    contents: view,
+                    generation: container.generation().clone(),
+                    emptied,
+                })
+            })
+            .collect()
+    }
+
+    /// `InventoryService::view` for any inventory-carrying entity (player or
+    /// container), rendered as the shared inventory readout shape.
+    fn inventory_readout_for(
+        &self,
+        owner: EntityId,
+    ) -> Result<PlayerInventoryReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::InventoryService;
+
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "inventory view: {error:?}"
+            )))
+        })?;
+        Ok(PlayerInventoryReadout {
+            capacity: view
+                .capacity()
+                .iter()
+                .map(|usage| InventoryCapacityReadout {
+                    metric: usage.metric.as_str().to_string(),
+                    used: usage.used,
+                    maximum: usage.maximum,
+                })
+                .collect(),
+            stacks: view
+                .stacks()
+                .iter()
+                .map(|stack| InventoryStackReadout {
+                    item: stack.definition.as_str().to_string(),
+                    quantity: stack.quantity,
+                })
+                .collect(),
+            items: view
+                .unique_items()
+                .iter()
+                .map(|item| InventoryItemReadout {
+                    item: item.definition.as_str().to_string(),
+                    entity: item.entity.raw(),
+                    equip_slot: None,
+                })
+                .collect(),
         })
     }
 
@@ -2358,6 +2681,46 @@ fn select_aimed_melee_target(
         .map(|candidate| candidate.0)
 }
 
+/// Aimed interact query for the loot verb: the same cone/range/ranking shape
+/// as `select_aimed_melee_target`, but over an explicit candidate set (dead
+/// enemies + treasure containers) instead of living actors.
+fn select_aimed_loot_target(
+    player_position: Vec3,
+    yaw_degrees: f32,
+    reach: f32,
+    entities: &[ContentEntity],
+    live_positions: &BTreeMap<u64, [f32; 3]>,
+    candidates: &BTreeSet<u64>,
+) -> Option<u64> {
+    let yaw = yaw_degrees.to_radians();
+    let forward = [yaw.sin(), -yaw.cos()];
+    entities
+        .iter()
+        .filter_map(|entity| {
+            if !candidates.contains(&entity.id) {
+                return None;
+            }
+            let position = live_positions.get(&entity.id)?;
+            let delta = [
+                position[0] - player_position.x,
+                position[2] - player_position.z,
+            ];
+            let distance = delta[0].hypot(delta[1]);
+            if distance <= 0.001 || distance > reach {
+                return None;
+            }
+            let dot = (delta[0] * forward[0] + delta[1] * forward[1]) / distance;
+            (dot >= MELEE_AIM_MIN_DOT).then_some((entity.id, dot, distance))
+        })
+        .max_by(|left, right| {
+            left.1
+                .total_cmp(&right.1)
+                .then_with(|| right.2.total_cmp(&left.2))
+                .then_with(|| right.0.cmp(&left.0))
+        })
+        .map(|candidate| candidate.0)
+}
+
 fn collision_hit_distance(hit: SpatialCollisionHit) -> f64 {
     match hit {
         SpatialCollisionHit::Voxel(hit) => hit.distance,
@@ -2439,6 +2802,12 @@ fn deterministic_roll(sequence: u64, target_id: u64, salt: u64, min: i64, max: i
     min + (value % span) as i64
 }
 
+/// Instance id of the loot container anchored to one treasure content
+/// entity (the 3000+ project id band).
+fn treasure_container_id(id: u64) -> String {
+    format!("treasure-{id}")
+}
+
 /// Spawn the live player and one actor instance per admitted content entity
 /// whose mobile has an actor definition in the gameplay catalog. Entities
 /// without a definition (currently the Thief, mobile 138 — an enemy-class
@@ -2446,38 +2815,108 @@ fn deterministic_roll(sequence: u64, target_id: u64, salt: u64, min: i64, max: i
 /// state, matching the previous experiment model: they patrol but are not
 /// combatants. Spawn rolls are deterministic per entity so resets are
 /// reproducible.
+///
+/// Loot (donor EnemyDeath.cs:123 model — contents are generated AT SPAWN
+/// into the enemy's inventory and transferred out at loot time):
+/// - enemies whose definition declares `loot_table_key` get
+///   `bind_actor_loot` with evidence drawn from that enemy's spawn stream
+///   (the plain `loot.<key>...` contract ids evaluated through
+///   `spawn_roll(entity_id, ...)`); rats/bats have no key and carry no loot,
+///   exactly as classic.
+/// - each treasure content entity gets `spawn_container` with the dungeon's
+///   loot key and the same per-entity stream.
+///
+/// Level is 1 until real player levels arrive with 6688.
 fn spawn_live_actors(
     catalog: &DaggerGameplayCatalog,
     content_entities: &[ContentEntity],
 ) -> Result<DaggerGameplayState, RuntimeError> {
+    /// Map a loot roll contract into one entity's deterministic spawn stream.
+    fn loot_evidence(
+        catalog: &DaggerGameplayCatalog,
+        entity_id: u64,
+        key: &str,
+    ) -> Result<Vec<DaggerEvidence>, RuntimeError> {
+        loot_roll_evidence(catalog, key)
+            .map_err(RuntimeError::Gameplay)?
+            .into_iter()
+            .map(|(id, min, max)| {
+                Ok(DaggerEvidence {
+                    value: spawn_roll(entity_id, &id, min, max),
+                    id,
+                })
+            })
+            .collect()
+    }
+
     let mut state = DaggerGameplayState::default();
     dagger_rpg::spawn_actor(&mut state, catalog, PLAYER_ACTOR_ID, PLAYER_ACTOR_ID, &[])
         .map_err(RuntimeError::Gameplay)?;
     for entity in content_entities {
-        let Some(definition) = catalog
-            .actors()
-            .values()
-            .find(|actor| actor.mobile_id == Some(entity.mobile_id))
-        else {
-            continue;
-        };
-        let rolls = dagger_rpg::required_roll_evidence(catalog, &definition.id)
-            .map_err(RuntimeError::Gameplay)?;
-        let evidence = rolls
-            .into_iter()
-            .map(|(id, min, max)| DaggerEvidence {
-                value: spawn_roll(entity.id, &id, min, max),
-                id,
-            })
-            .collect::<Vec<_>>();
-        dagger_rpg::spawn_actor(
-            &mut state,
-            catalog,
-            &definition.id.clone(),
-            &enemy_actor_id(entity.id),
-            &evidence,
-        )
-        .map_err(RuntimeError::Gameplay)?;
+        match entity.enemy() {
+            Some(reference) => {
+                let Some(definition) = catalog
+                    .actors()
+                    .values()
+                    .find(|actor| actor.mobile_id == Some(reference.mobile_id))
+                else {
+                    continue;
+                };
+                let rolls = dagger_rpg::required_roll_evidence(catalog, &definition.id)
+                    .map_err(RuntimeError::Gameplay)?;
+                let evidence = rolls
+                    .into_iter()
+                    .map(|(id, min, max)| DaggerEvidence {
+                        value: spawn_roll(entity.id, &id, min, max),
+                        id,
+                    })
+                    .collect::<Vec<_>>();
+                let instance = enemy_actor_id(entity.id);
+                dagger_rpg::spawn_actor(
+                    &mut state,
+                    catalog,
+                    &definition.id.clone(),
+                    &instance,
+                    &evidence,
+                )
+                .map_err(RuntimeError::Gameplay)?;
+                if let Some(key) = definition.loot_table_key.clone() {
+                    let evidence = loot_evidence(catalog, entity.id, &key)?;
+                    let generation = bind_actor_loot(
+                        &mut state,
+                        catalog,
+                        &instance,
+                        &key,
+                        LOOT_GENERATION_LEVEL,
+                        &evidence,
+                    )
+                    .map_err(RuntimeError::Gameplay)?;
+                    // Track the corpse container so the lab can enumerate it:
+                    // the contents live in the actor's own inventory.
+                    let container_entity =
+                        state.actor(&instance).expect("just-spawned actor").entity();
+                    state.insert_container(
+                        instance,
+                        DaggerContainerState::new(container_entity, key, generation),
+                    );
+                }
+            }
+            None => {
+                let ContentEntityKind::Treasure { loot_key } = &entity.kind else {
+                    continue;
+                };
+                let evidence = loot_evidence(catalog, entity.id, loot_key)?;
+                spawn_container(
+                    &mut state,
+                    catalog,
+                    &treasure_container_id(entity.id),
+                    loot_key,
+                    LOOT_GENERATION_LEVEL,
+                    &evidence,
+                )
+                .map_err(RuntimeError::Gameplay)?;
+            }
+        }
     }
     Ok(state)
 }
@@ -2499,12 +2938,14 @@ mod aimed_melee_tests {
         ContentEntity {
             id,
             name: format!("enemy-{id}"),
-            mobile_id: 0,
-            mobile_name: "Rat".to_string(),
-            texture_archive: 0,
-            flying: false,
             sprite_asset: "rat".to_string(),
             authored_position: [0.0; 3],
+            kind: ContentEntityKind::Enemy(crate::project::EnemyContentReference {
+                mobile_id: 0,
+                mobile_name: "Rat".to_string(),
+                texture_archive: 0,
+                flying: false,
+            }),
         }
     }
 

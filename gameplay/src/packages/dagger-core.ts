@@ -11,6 +11,7 @@ import { derived } from "../catalogs/derived.js";
 import { encounters } from "../catalogs/encounters.js";
 import { equipment } from "../catalogs/equipment.js";
 import { items } from "../catalogs/items.js";
+import { lootTables } from "../catalogs/loot.js";
 import { monsters } from "../catalogs/monsters.js";
 import { rules } from "../catalogs/rules.js";
 import { stats } from "../catalogs/stats.js";
@@ -28,6 +29,7 @@ export const gameplayPackage = composePackage({
     encounters: "gameplay/src/catalogs/encounters.ts",
     derived: "gameplay/src/catalogs/derived.ts",
     equipment: "gameplay/src/catalogs/equipment.ts",
+    lootTables: "gameplay/src/catalogs/loot.ts",
   },
   payload: {
     schemaVersion: 1,
@@ -39,5 +41,6 @@ export const gameplayPackage = composePackage({
     encounters,
     derived,
     equipment,
+    lootTables,
   },
 });

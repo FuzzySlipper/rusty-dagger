@@ -4,20 +4,20 @@ use rusty_engine::{gameplay_resolution::Program, gameplay_rules::decode_rule_pac
 
 use super::{
     AuthoredActorDefinition, AuthoredCmpOp, AuthoredEncounterDefinition, AuthoredExpr,
-    AuthoredGameplayPayload, AuthoredItemDefinition, AuthoredOperation, AuthoredPredicate,
-    AuthoredProgram, AuthoredRuleDefinition, AuthoredSelector, AuthoredSubject,
+    AuthoredGameplayPayload, AuthoredItemDefinition, AuthoredLootTable, AuthoredOperation,
+    AuthoredPredicate, AuthoredProgram, AuthoredRuleDefinition, AuthoredSelector, AuthoredSubject,
     DaggerActionDefinition, DaggerActorDefinition, DaggerActorKind, DaggerArmorDefinition,
     DaggerBehaviorDefinition, DaggerCmpOp, DaggerDamageRange, DaggerDerivedRule,
     DaggerEncounterDefinition, DaggerEquipmentSection, DaggerEquipmentSlotDefinition, DaggerExpr,
     DaggerGameplayCatalog, DaggerGameplayError, DaggerItemDefinition, DaggerItemEquipment,
-    DaggerLoadoutEntry, DaggerOperation, DaggerPredicate, DaggerProgram, DaggerRuleDefinition,
-    DaggerSelector, DaggerShieldDefinition, DaggerStatsSection, DaggerSubject,
-    DaggerTrackDefinition, DaggerWeaponDefinition, DaggerWeaponHands,
-    DAGGER_GAMEPLAY_SCHEMA_VERSION, MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS, MAX_DAGGER_ACTORS,
-    MAX_DAGGER_DECLARED_IDS, MAX_DAGGER_DERIVED, MAX_DAGGER_ENCOUNTERS,
+    DaggerLoadoutEntry, DaggerLootCategories, DaggerLootTable, DaggerOperation, DaggerPredicate,
+    DaggerProgram, DaggerRuleDefinition, DaggerSelector, DaggerShieldDefinition,
+    DaggerStatsSection, DaggerSubject, DaggerTrackDefinition, DaggerWeaponDefinition,
+    DaggerWeaponHands, DAGGER_GAMEPLAY_SCHEMA_VERSION, MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS,
+    MAX_DAGGER_ACTORS, MAX_DAGGER_DECLARED_IDS, MAX_DAGGER_DERIVED, MAX_DAGGER_ENCOUNTERS,
     MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_EXPR_DEPTH, MAX_DAGGER_EXPR_NODES,
-    MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_PROGRAM_DEPTH, MAX_DAGGER_PROGRAM_NODES,
-    MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
+    MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_LOOT_TABLES, MAX_DAGGER_PROGRAM_DEPTH,
+    MAX_DAGGER_PROGRAM_NODES, MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
 };
 
 const MIN_TUNING_VALUE: f64 = 0.001;
@@ -158,6 +158,11 @@ pub fn compile_gameplay_package(
         MAX_DAGGER_ENCOUNTERS,
     )?;
     enforce_quota("derived", payload.derived.len(), MAX_DAGGER_DERIVED)?;
+    enforce_quota(
+        "loot tables",
+        payload.loot_tables.len(),
+        MAX_DAGGER_LOOT_TABLES,
+    )?;
 
     let stats = compile_stats(&payload)?;
     let items = compile_items(payload.items, &stats)?;
@@ -168,6 +173,7 @@ pub fn compile_gameplay_package(
     let rules = compile_rules(payload.rules)?;
     let encounters = compile_encounters(payload.encounters)?;
     let derived = compile_derived(payload.derived, &stats)?;
+    let loot_tables = compile_loot_tables(payload.loot_tables)?;
     let mechanics = super::mechanics::compile_mechanics_catalog(&stats, &items, &equipment)?;
     Ok(DaggerGameplayCatalog::new(
         package.fingerprint().as_str().to_string(),
@@ -179,6 +185,7 @@ pub fn compile_gameplay_package(
         encounters,
         derived,
         equipment,
+        loot_tables,
         mechanics,
     ))
 }
@@ -213,6 +220,85 @@ fn validate_item_equipment_references(
         }
     }
     Ok(())
+}
+
+/// Compile the classic loot tables: keys are unique and `-` or a single
+/// uppercase letter, gold bounds satisfy `0 <= min <= max`, and every
+/// category chance is an integer percentage 0..=100.
+fn compile_loot_tables(
+    definitions: Vec<AuthoredLootTable>,
+) -> Result<BTreeMap<String, DaggerLootTable>, DaggerGameplayError> {
+    let mut tables = BTreeMap::new();
+    for (index, table) in definitions.into_iter().enumerate() {
+        let path = format!("payload.lootTables[{index}]");
+        validate_loot_table_key(&format!("{path}.key"), &table.key)?;
+        if table.gold.min.0 < 0 || table.gold.min > table.gold.max {
+            return Err(DaggerGameplayError::InvalidValue {
+                path: format!("{path}.gold"),
+                reason: format!(
+                    "must satisfy 0 <= min <= max, got {}..{}",
+                    table.gold.min.0, table.gold.max.0
+                ),
+            });
+        }
+        let authored = table.categories;
+        let check = |field: &str, value: i64| -> Result<i64, DaggerGameplayError> {
+            if !(0..=100).contains(&value) {
+                return Err(DaggerGameplayError::InvalidValue {
+                    path: format!("{path}.categories.{field}"),
+                    reason: format!("must be an integer percentage 0..=100, got {value}"),
+                });
+            }
+            Ok(value)
+        };
+        let categories = DaggerLootCategories {
+            plant1: check("plant1", authored.plant1.0)?,
+            plant2: check("plant2", authored.plant2.0)?,
+            creature1: check("creature1", authored.creature1.0)?,
+            creature2: check("creature2", authored.creature2.0)?,
+            creature3: check("creature3", authored.creature3.0)?,
+            misc1: check("misc1", authored.misc1.0)?,
+            misc2: check("misc2", authored.misc2.0)?,
+            armor: check("armor", authored.armor.0)?,
+            weapons: check("weapons", authored.weapons.0)?,
+            magic: check("magic", authored.magic.0)?,
+            clothing: check("clothing", authored.clothing.0)?,
+            books: check("books", authored.books.0)?,
+            religious: check("religious", authored.religious.0)?,
+        };
+        let key = table.key;
+        if tables
+            .insert(
+                key.clone(),
+                DaggerLootTable {
+                    key: key.clone(),
+                    gold_min: table.gold.min.0,
+                    gold_max: table.gold.max.0,
+                    categories,
+                },
+            )
+            .is_some()
+        {
+            return Err(DaggerGameplayError::DuplicateId {
+                kind: "loot table",
+                id: key,
+            });
+        }
+    }
+    Ok(tables)
+}
+
+/// Loot table keys are classic letters (uppercase) or the `-` default.
+fn validate_loot_table_key(path: &str, key: &str) -> Result<(), DaggerGameplayError> {
+    let valid = key == "-" || (key.len() == 1 && key.bytes().all(|byte| byte.is_ascii_uppercase()));
+    if valid {
+        Ok(())
+    } else {
+        Err(DaggerGameplayError::InvalidValue {
+            path: path.to_string(),
+            reason: format!("must be \"-\" or a single uppercase letter, got {key:?}"),
+        })
+    }
 }
 
 fn compile_equipment(

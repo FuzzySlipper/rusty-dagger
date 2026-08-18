@@ -37,9 +37,10 @@ pub use runtime::{
     ActorAttributeReadout, ActorGameplayReadout, CombatAttemptRecord, CombatRecord,
     ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
     EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, LabReadout,
-    LiveActorResources, MeleePresentationPhase, MeleePresentationReadout, NamedEncounterReadout,
-    RuntimeError, MELEE_ACTION_ID, MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS,
-    MELEE_RECOVERY_SECONDS, MELEE_REJECTION_SECONDS,
+    LiveActorResources, LootContainerReadout, MeleePresentationPhase, MeleePresentationReadout,
+    NamedEncounterReadout, RuntimeError, LOOT_INTERACT_REACH, MELEE_ACTION_ID,
+    MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS,
+    MELEE_REJECTION_SECONDS,
 };
 
 #[cfg(test)]
@@ -337,16 +338,35 @@ mod tests {
             .expect("install committed live navigation");
         let spawn = runtime.player_position().expect("spawn position");
         let initial = runtime.lab_readout().expect("initial content readout");
-        assert_eq!(initial.content.len(), 43);
+        // 43 enemies + 8 treasure containers (S0000999 archive-199/record-19
+        // random-treasure markers).
+        assert_eq!(initial.content.len(), 43 + 8);
+        assert_eq!(
+            initial
+                .content
+                .iter()
+                .filter(|entity| entity.kind == "enemy")
+                .count(),
+            43
+        );
+        assert_eq!(
+            initial
+                .content
+                .iter()
+                .filter(|entity| entity.kind == "treasure")
+                .count(),
+            8
+        );
         let thief = initial
             .content
             .iter()
             .find(|entity| entity.id == 2001)
             .expect("committed thief identity");
         assert_eq!(thief.name, "enemy-thief-1");
-        assert_eq!(thief.reference.mobile_id, 138);
-        assert_eq!(thief.reference.mobile_name, "Thief");
-        assert_eq!(thief.reference.texture_archive, 484);
+        let thief_reference = thief.reference.as_ref().expect("enemy reference");
+        assert_eq!(thief_reference.mobile_id, 138);
+        assert_eq!(thief_reference.mobile_name, "Thief");
+        assert_eq!(thief_reference.texture_archive, 484);
         // 7056: the Thief is a combatant with an enemy-class actor — live
         // resources are the deterministic spawn roll of its 11-20 range.
         let thief_resources = thief.live.resources.expect("Thief live resources");
@@ -356,10 +376,18 @@ mod tests {
         let rat = initial
             .content
             .iter()
-            .find(|entity| entity.reference.mobile_id == 0)
+            .find(|entity| {
+                entity
+                    .reference
+                    .as_ref()
+                    .is_some_and(|reference| reference.mobile_id == 0)
+            })
             .expect("committed Rat identity");
         let rat_resources = rat.live.resources.expect("Rat live resources");
-        assert_eq!(rat.reference.mobile_name, "Rat");
+        assert_eq!(
+            rat.reference.as_ref().expect("enemy reference").mobile_name,
+            "Rat"
+        );
         // 7045: live resources come from the gameplay package — Rat health is
         // the deterministic spawn roll of the classic 9-16 range.
         assert!((9.0..=16.0).contains(&rat_resources.current_health));
@@ -988,5 +1016,346 @@ mod tests {
             );
             assert_eq!(accepted_steps, 0, "wall contact became a false up-step");
         }
+    }
+
+    /// Swing until the focused enemy dies (deterministic player stream), then
+    /// stop. Used by the corpse-loot tests.
+    fn fight_until_dead(runtime: &mut DaggerRuntime, cap: usize) {
+        for _ in 0..cap {
+            runtime.attack_focused_target().expect("physical swing");
+            runtime
+                .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+                .expect("resolve melee contact");
+            for _ in 0..3 {
+                runtime.tick_play_session(0.25).expect("advance cooldown");
+            }
+            if runtime
+                .lab_readout()
+                .expect("fight readout")
+                .combat
+                .last()
+                .is_some_and(|record| record.died)
+            {
+                return;
+            }
+        }
+        panic!("target did not die within {cap} swings");
+    }
+
+    #[test]
+    fn loot_containers_spawn_with_the_dungeon_key_and_per_enemy_tables() {
+        let runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
+        let readout = runtime.lab_readout().expect("initial readout");
+        // Eight treasure piles from the S0000999 random-treasure markers, all
+        // on the dungeon's loot key (MAPS.BSA type 2 Human Stronghold -> "N").
+        let treasure = readout
+            .loot_containers
+            .iter()
+            .filter(|container| container.kind == "treasure")
+            .collect::<Vec<_>>();
+        assert_eq!(treasure.len(), 8);
+        assert!(treasure.iter().all(|container| container.loot_key == "N"));
+        // The N table's gold range is 1-80 at level 1, so every pile holds at
+        // least gold; contents match the generation receipt.
+        for container in &treasure {
+            assert!(!container.emptied, "{} should hold loot", container.id);
+            assert_eq!(container.generation.key, "N");
+            let stack_total: u64 = container
+                .contents
+                .stacks
+                .iter()
+                .map(|stack| stack.quantity)
+                .sum();
+            let receipt_total: u64 = container
+                .generation
+                .items
+                .iter()
+                .map(|(_, quantity)| quantity)
+                .sum();
+            assert_eq!(
+                stack_total + container.contents.items.len() as u64,
+                receipt_total
+            );
+        }
+        // Loot-keyed enemies spawn with contents in their own inventory (the
+        // donor corpse-loot model): imps (D), orc (A), skeletal warriors (H),
+        // thieves (T).
+        let corpse_keys = readout
+            .loot_containers
+            .iter()
+            .filter(|container| container.kind == "corpse")
+            .map(|container| (container.id.as_str(), container.loot_key.as_str()))
+            .collect::<Vec<_>>();
+        for expected in [
+            ("enemy-2009", "D"),
+            ("enemy-2015", "D"),
+            ("enemy-2018", "D"),
+            ("enemy-2003", "A"),
+            ("enemy-2000", "H"),
+            ("enemy-2012", "H"),
+            ("enemy-2020", "H"),
+            ("enemy-2001", "T"),
+            ("enemy-2021", "T"),
+            ("enemy-2023", "T"),
+        ] {
+            assert!(
+                corpse_keys.contains(&expected),
+                "missing corpse container {expected:?} in {corpse_keys:?}"
+            );
+        }
+        // Rats and giant bats have no loot table, like classic.
+        assert!(readout
+            .loot_containers
+            .iter()
+            .all(|container| container.id != "enemy-2007"));
+        // Unsupported-category coverage rides the receipt: every N pile rolls
+        // the pool-less groups (clothing, books, religious, ...) and records
+        // them with `supported: false`.
+        let pile = readout
+            .loot_containers
+            .iter()
+            .find(|container| container.id == "treasure-3000")
+            .expect("treasure container");
+        assert!(pile
+            .generation
+            .categories
+            .iter()
+            .any(|category| !category.supported));
+    }
+
+    #[test]
+    fn loot_generation_is_deterministic_across_sessions() {
+        let first = DaggerRuntime::from_project_json(PROJECT)
+            .expect("first session")
+            .lab_readout()
+            .expect("first readout");
+        let second = DaggerRuntime::from_project_json(PROJECT)
+            .expect("second session")
+            .lab_readout()
+            .expect("second readout");
+        assert_eq!(
+            first.loot_containers, second.loot_containers,
+            "identical sessions must generate identical loot"
+        );
+    }
+
+    #[test]
+    fn interact_loot_take_all_empties_a_treasure_container() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        runtime
+            .jump_to_content(3000)
+            .expect("jump beside treasure pile");
+        let before = runtime.lab_readout().expect("pre-loot readout");
+        let container = before
+            .loot_containers
+            .iter()
+            .find(|container| container.id == "treasure-3000")
+            .expect("treasure container");
+        let expected_stacks = container.contents.stacks.clone();
+        let expected_items = container.contents.items.len();
+        assert!(!expected_stacks.is_empty() || expected_items > 0);
+        let player_gold_before = before
+            .player_inventory
+            .stacks
+            .iter()
+            .find(|stack| stack.item == "gold-piece")
+            .map_or(0, |stack| stack.quantity);
+
+        let readout = runtime.interact_loot().expect("loot the pile");
+        let loot_records = readout
+            .equipment_log
+            .iter()
+            .filter(|record| record.operation == "loot:treasure-3000")
+            .collect::<Vec<_>>();
+        assert!(!loot_records.is_empty());
+        assert!(
+            loot_records.iter().all(|record| record.accepted),
+            "fresh player must carry the whole pile: {loot_records:?}"
+        );
+        let after = readout
+            .loot_containers
+            .iter()
+            .find(|container| container.id == "treasure-3000")
+            .expect("treasure container");
+        assert!(after.emptied, "take-all empties the container");
+        for stack in &expected_stacks {
+            let player_stack = readout
+                .player_inventory
+                .stacks
+                .iter()
+                .find(|candidate| candidate.item == stack.item)
+                .unwrap_or_else(|| panic!("player holds {}", stack.item));
+            let baseline = if stack.item == "gold-piece" {
+                player_gold_before
+            } else {
+                0
+            };
+            assert_eq!(player_stack.quantity, baseline + stack.quantity);
+        }
+        assert_eq!(
+            readout
+                .player_inventory
+                .items
+                .iter()
+                .filter(|item| item.equip_slot.is_none())
+                .count(),
+            2 + expected_items,
+            "carried unequipped items grow by the looted uniques"
+        );
+        // A second press on the emptied pile logs the donor's note.
+        let readout = runtime.interact_loot().expect("loot again");
+        let note = readout.equipment_log.last().expect("note entry");
+        assert!(!note.accepted);
+        assert_eq!(note.operation, "loot:treasure-3000");
+        assert!(note
+            .reason
+            .as_deref()
+            .expect("note reason")
+            .contains("nothing to take"));
+    }
+
+    #[test]
+    fn interact_loot_on_a_dead_rat_notes_no_treasure_and_melee_still_excludes_the_dead() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        runtime.jump_to_content(2007).expect("jump beside Rat");
+        fight_until_dead(&mut runtime, 40);
+        let dead = runtime.lab_readout().expect("dead rat readout");
+        let rat = dead
+            .content
+            .iter()
+            .find(|entity| entity.id == 2007)
+            .expect("rat");
+        assert_eq!(
+            rat.live.resources.expect("rat resources").current_health,
+            0.0
+        );
+        let combat_count = dead.combat.len();
+
+        // The melee aimed query still excludes the dead: the next swing
+        // resolves as a miss with no new combat record.
+        runtime.attack_focused_target().expect("swing at corpse");
+        runtime
+            .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+            .expect("resolve swing");
+        let after_swing = runtime.lab_readout().expect("post-swing readout");
+        assert_eq!(after_swing.combat.len(), combat_count);
+        assert_eq!(
+            after_swing.combat_attempts.last().expect("attempt").outcome,
+            "miss"
+        );
+
+        // But the aimed interact query sees the corpse: a rat has no loot
+        // table (classic), so the press logs the nothing-to-take note.
+        let readout = runtime.interact_loot().expect("loot the corpse");
+        let note = readout.equipment_log.last().expect("note entry");
+        assert!(!note.accepted);
+        assert_eq!(note.operation, "loot:enemy-2007");
+        assert!(note
+            .reason
+            .as_deref()
+            .expect("note reason")
+            .contains("nothing to take"));
+    }
+
+    #[test]
+    fn interact_loot_transfers_a_dead_orcs_contents() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        runtime.jump_to_content(2003).expect("jump beside Orc");
+        fight_until_dead(&mut runtime, 80);
+        let dead = runtime.lab_readout().expect("dead orc readout");
+        let corpse = dead
+            .loot_containers
+            .iter()
+            .find(|container| container.id == "enemy-2003")
+            .expect("orc corpse container");
+        // A: gold 1-10; this orc's deterministic stream rolls no item
+        // category successes.
+        let expected_gold = corpse
+            .contents
+            .stacks
+            .iter()
+            .find(|stack| stack.item == "gold-piece")
+            .expect("orc gold")
+            .quantity;
+        assert!(expected_gold > 0);
+        let player_gold_before = dead
+            .player_inventory
+            .stacks
+            .iter()
+            .find(|stack| stack.item == "gold-piece")
+            .map_or(0, |stack| stack.quantity);
+
+        let readout = runtime.interact_loot().expect("loot the orc");
+        let loot_records = readout
+            .equipment_log
+            .iter()
+            .filter(|record| record.operation == "loot:enemy-2003")
+            .collect::<Vec<_>>();
+        assert_eq!(loot_records.len(), 1);
+        assert!(loot_records.iter().all(|record| record.accepted));
+        assert_eq!(loot_records[0].quantity, Some(expected_gold));
+        assert!(
+            readout
+                .loot_containers
+                .iter()
+                .find(|container| container.id == "enemy-2003")
+                .expect("corpse")
+                .emptied
+        );
+        assert!(readout
+            .player_inventory
+            .stacks
+            .iter()
+            .any(|stack| stack.item == "gold-piece"
+                && stack.quantity == player_gold_before + expected_gold));
+    }
+
+    #[test]
+    fn loot_take_all_stops_at_the_first_capacity_rejection() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        runtime
+            .jump_to_content(3002)
+            .expect("jump beside the pile with a bow and helm");
+        // Fill the player's weight budget (300 quarter-kg, 70 used by the
+        // loadout) with arrows so the pile's unique items cannot fit.
+        let readout = runtime.grant_item("arrow", 230).expect("fill capacity");
+        assert!(readout.equipment_log.last().expect("grant").accepted);
+        let pile = readout
+            .loot_containers
+            .iter()
+            .find(|container| container.id == "treasure-3002")
+            .expect("treasure container");
+        assert_eq!(pile.contents.items.len(), 2, "bow + helm generated");
+
+        let readout = runtime.interact_loot().expect("loot the pile");
+        let loot_records = readout
+            .equipment_log
+            .iter()
+            .filter(|record| record.operation == "loot:treasure-3002")
+            .collect::<Vec<_>>();
+        // Gold is authored weightless (1/400 kg < unit resolution), so the
+        // stack transfers; the first unique item then exceeds capacity and
+        // the take-all stops there — the rest stays in the pile.
+        let rejected = loot_records
+            .iter()
+            .find(|record| !record.accepted)
+            .expect("capacity rejection");
+        assert!(rejected
+            .reason
+            .as_deref()
+            .expect("rejection reason")
+            .contains("InventoryCapacityExceeded"));
+        assert!(
+            !loot_records.last().expect("last record").accepted,
+            "the rejection is where the transfer stopped"
+        );
+        let pile = readout
+            .loot_containers
+            .iter()
+            .find(|container| container.id == "treasure-3002")
+            .expect("pile");
+        assert!(!pile.emptied, "rejected items remain in the pile");
+        assert!(pile.contents.stacks.is_empty(), "gold was taken");
+        assert_eq!(pile.contents.items.len(), 2);
     }
 }

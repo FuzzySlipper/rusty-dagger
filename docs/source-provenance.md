@@ -144,6 +144,68 @@ draw on the Daggerfall Unity donor at the declared revision:
   authored at 0 (experiment profile; classic naked is 100) so equipment
   effects are observable.
 
+## Classic loot tables
+
+The loot-table grammar and generation authority (Den task 7073, first slice)
+draw on the Daggerfall Unity donor at the declared revision:
+
+- `Game/Items/LootTables.cs` `DefaultLootTables` (:77-110) — adopted: all 22
+  `LootChanceMatrix` entries (`-` and `A`-`U`) transcribed verbatim into
+  `gameplay/src/catalogs/loot.ts`, with the donor's noted FALL.EXE-vs-
+  Chronicles divergences resolved for FALL.EXE.
+- `Game/Items/LootTables.cs` `GenerateRandomLoot` (:176-258) — adopted:
+  gold rolls uniform [MinGold, MaxGold] x player level; per category,
+  successes repeat at geometrically halved chance; `Dice100.SuccessRoll`
+  (`Game/Utility/Dice100.cs`) is a strict `<` of a 0..99 roll against the
+  chance, so chance 0 never succeeds. Adapted: the donor's unbounded halving
+  loop is capped at 3 success slots per category (the evidence contract is
+  statically bounded), and the donor's per-generation RNG reseed
+  (`Random.InitState`) is rejected — determinism comes from the
+  caller-supplied evidence stream. The donor quirk that the first four
+  ingredient categories (C1, C2, P1, P2) roll chance x level while every
+  other category rolls the raw value is preserved.
+- Category item builders (`ItemBuilder.CreateRandomWeapon` etc.) — adapted:
+  the donor picks a random template with material scaling to player level;
+  our catalog is iron-tier only, so picks are uniform over the catalog's
+  weapon pool (armor + shields for armor) sorted by id. Ingredient, magic,
+  clothing, book, and religious categories have no catalog pool yet — their
+  successes are recorded as unsupported in the loot receipt, never silently
+  dropped.
+
+## Loot containers and pickup
+
+The container, placement, and pickup layer (Den task 7073, second slice)
+draws on the Daggerfall Unity donor at the declared revision:
+
+- `Utility/RDBLayout.cs` `AddRandomTreasure` (:391-400 region) — adopted:
+  editor-archive 199 record 19 flats place RandomTreasure containers.
+  `dagger-import` routes them to the scene sidecar; the visible pile icon is
+  TEXTURE.216[0], index 0 of the donor's `randomTreasureIconIndices`
+  (`Internal/DaggerfallLootDataTables.cs` :19, :31-34). The donor randomizes
+  the icon from 20 records and states the icon has no bearing on the
+  generated loot, so one deterministic record is faithful.
+- `Game/Items/LootTables.cs` `GenerateLoot` dungeon-type array (:123-143) —
+  adopted: the MAPS.BSA dungeon-type byte indexes the 19-entry loot-key
+  table, transcribed as `DUNGEON_TREASURE_LOOT_KEYS` in
+  `dagger-import/src/dungeon.rs`. Verified against the real data files:
+  Privateer's Hold's dungeon type is 2 (Human Stronghold) → key "N".
+- `Game/Enemies/EnemyDeath.cs` (:123) — adopted: enemy loot is generated AT
+  SPAWN into the enemy's own inventory (`bind_actor_loot`), and looting
+  transfers out of it; the corpse is the container. Rats/bats carry no loot
+  table, matching classic.
+- The donor loot window (selective take with per-item `CanCarryAmount`
+  checks, "the body has no treasure" for an empty corpse) — adapted: no
+  loot-window UI. The native KeyF verb (`DaggerRuntime::interact_loot`) is an
+  aimed take-all transfer through the upstream `InventoryService::transfer` /
+  `EquipmentService::transfer_unique_item`, respecting capacity per item and
+  stopping at the first rejection (the donor's partial-take spirit); every
+  transfer, the stopping rejection, and the empty-container note land in the
+  equipment log as `loot:<container>` records.
+- Corpse markers for enemies without a classic corpse texture — adapted:
+  DFU only has corpse flats for some mobiles; our corpse-swap falls back to
+  the generic corpse-pile billboard (TEXTURE.206[14]) so every dead enemy
+  stays a visible loot anchor.
+
 ## Collision authority
 
 The collision authority is the dungeon static mesh itself (rusty-engine task

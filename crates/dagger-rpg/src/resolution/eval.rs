@@ -258,7 +258,10 @@ pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, Da
     }
 }
 
-fn evidence_value(evidence: &[DaggerEvidence], id: &str) -> Result<i64, DaggerRejection> {
+pub(crate) fn evidence_value(
+    evidence: &[DaggerEvidence],
+    id: &str,
+) -> Result<i64, DaggerRejection> {
     evidence
         .iter()
         .find(|candidate| candidate.id == id)
@@ -1068,53 +1071,14 @@ fn bind_loadout(
         }
         // Unique items are entities: allocate, attach the ItemComponent, and
         // contain into the owner.
-        let item_entity = state.allocate_entity();
-        let state_revision = state.entities().revision();
-        EntityAuthoringService
-            .admit(
-                state.entities_mut(),
-                state_revision,
-                [EntityDefinition::new(
-                    item_entity,
-                    format!("{instance}:{}", entry.item),
-                )],
-            )
-            .map_err(|error| DaggerGameplayError::InvalidValue {
-                path: path(),
-                reason: format!("item entity admission: {error}"),
-            })?;
-        let item_revision = state
-            .entities()
-            .component_revision::<ItemComponent>(item_entity)
-            .map_err(|error| DaggerGameplayError::InvalidValue {
-                path: path(),
-                reason: format!("item component revision: {error}"),
-            })?;
-        EntityAuthoringService
-            .attach_component(
-                state.entities_mut(),
-                item_revision,
-                item_entity,
-                ItemComponent::new(version.clone(), item_id),
-            )
-            .map_err(|error| DaggerGameplayError::InvalidValue {
-                path: path(),
-                reason: format!("attach item component: {error}"),
-            })?;
-        let state_revision = state.entities().revision();
-        state
-            .entities_mut()
-            .apply_relationship(
-                state_revision,
-                RelationshipCommand::SetContainment {
-                    child: item_entity,
-                    container: owner,
-                },
-            )
-            .map_err(|error| DaggerGameplayError::InvalidValue {
-                path: path(),
-                reason: format!("item containment: {error:?}"),
-            })?;
+        let item_entity = bind_unique_item(
+            state,
+            owner,
+            format!("{instance}:{}", entry.item),
+            item_id,
+            version.clone(),
+            &path(),
+        )?;
         if let Some(slot) = &entry.equip_slot {
             let slot_id = EquipmentSlotId::parse(slot.clone()).map_err(|error| {
                 DaggerGameplayError::InvalidId {
@@ -1143,4 +1107,62 @@ fn bind_loadout(
         }
     }
     Ok(())
+}
+
+/// Allocate one unique-item entity with an ItemComponent and contain it into
+/// the owner — the shared binding step of spawn loadouts and loot
+/// generation. `name` is the entity's authoring name; `path` reports errors.
+pub(crate) fn bind_unique_item(
+    state: &mut DaggerGameplayState,
+    owner: rusty_engine::core_ids::EntityId,
+    name: String,
+    item_id: ItemDefinitionId,
+    version: rusty_engine::gameplay_mechanics::CatalogVersion,
+    path: &str,
+) -> Result<rusty_engine::core_ids::EntityId, DaggerGameplayError> {
+    let item_entity = state.allocate_entity();
+    let state_revision = state.entities().revision();
+    EntityAuthoringService
+        .admit(
+            state.entities_mut(),
+            state_revision,
+            [EntityDefinition::new(item_entity, name)],
+        )
+        .map_err(|error| DaggerGameplayError::InvalidValue {
+            path: path.to_string(),
+            reason: format!("item entity admission: {error}"),
+        })?;
+    let item_revision = state
+        .entities()
+        .component_revision::<ItemComponent>(item_entity)
+        .map_err(|error| DaggerGameplayError::InvalidValue {
+            path: path.to_string(),
+            reason: format!("item component revision: {error}"),
+        })?;
+    EntityAuthoringService
+        .attach_component(
+            state.entities_mut(),
+            item_revision,
+            item_entity,
+            ItemComponent::new(version, item_id),
+        )
+        .map_err(|error| DaggerGameplayError::InvalidValue {
+            path: path.to_string(),
+            reason: format!("attach item component: {error}"),
+        })?;
+    let state_revision = state.entities().revision();
+    state
+        .entities_mut()
+        .apply_relationship(
+            state_revision,
+            RelationshipCommand::SetContainment {
+                child: item_entity,
+                container: owner,
+            },
+        )
+        .map_err(|error| DaggerGameplayError::InvalidValue {
+            path: path.to_string(),
+            reason: format!("item containment: {error:?}"),
+        })?;
+    Ok(item_entity)
 }

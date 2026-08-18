@@ -17,6 +17,7 @@ pub const MAX_DAGGER_RULES: usize = 256;
 pub const MAX_DAGGER_ACTORS: usize = 256;
 pub const MAX_DAGGER_ENCOUNTERS: usize = 64;
 pub const MAX_DAGGER_DERIVED: usize = 256;
+pub const MAX_DAGGER_LOOT_TABLES: usize = 64;
 pub const MAX_DAGGER_ENCOUNTER_MEMBERS: usize = 256;
 pub const MAX_DAGGER_DECLARED_IDS: usize = 128;
 pub const MAX_DAGGER_PROGRAM_NODES: usize = 4_096;
@@ -71,6 +72,10 @@ pub struct AuthoredGameplayPayload {
     pub derived: Vec<AuthoredDerivedRule>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub equipment: Option<AuthoredEquipmentSection>,
+    /// Classic loot tables (additive under payload schema 1); actors
+    /// reference them by `lootTableKey`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub loot_tables: Vec<AuthoredLootTable>,
 }
 
 /// Capacity metrics and equipment slots the package's items bind against.
@@ -410,6 +415,47 @@ pub struct AuthoredEncounterDefinition {
     pub member_entity_ids: Vec<Binary64I64>,
 }
 
+/// One authored classic loot table (donor `LootChanceMatrix` — adopted):
+/// gold bounds plus per-category integer percentage chances.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredLootTable {
+    pub key: String,
+    pub gold: AuthoredLootGoldRange,
+    pub categories: AuthoredLootCategories,
+}
+
+/// Gold roll bounds (donor MinGold/MaxGold); the roll is multiplied by the
+/// player level at generation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredLootGoldRange {
+    pub min: Binary64I64,
+    pub max: Binary64I64,
+}
+
+/// Category chances in integer percent. Field names map to the donor's
+/// `LootChanceMatrix` fields: plant1/plant2 = P1/P2, creature1..3 = C1..C3,
+/// misc1/misc2 = M1/M2 (the seven ingredient groups), armor = AM,
+/// weapons = WP, magic = MI, clothing = CL, books = BK, religious = RL.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AuthoredLootCategories {
+    pub plant1: Binary64I64,
+    pub plant2: Binary64I64,
+    pub creature1: Binary64I64,
+    pub creature2: Binary64I64,
+    pub creature3: Binary64I64,
+    pub misc1: Binary64I64,
+    pub misc2: Binary64I64,
+    pub armor: Binary64I64,
+    pub weapons: Binary64I64,
+    pub magic: Binary64I64,
+    pub clothing: Binary64I64,
+    pub books: Binary64I64,
+    pub religious: Binary64I64,
+}
+
 #[derive(Debug, Clone)]
 pub struct DaggerGameplayCatalog {
     fingerprint: String,
@@ -421,6 +467,7 @@ pub struct DaggerGameplayCatalog {
     encounters: BTreeMap<String, DaggerEncounterDefinition>,
     derived: BTreeMap<String, DaggerDerivedRule>,
     equipment: DaggerEquipmentSection,
+    loot_tables: BTreeMap<String, DaggerLootTable>,
     mechanics: MechanicsCatalog,
 }
 
@@ -462,6 +509,12 @@ impl DaggerGameplayCatalog {
         &self.equipment
     }
 
+    /// The package's classic loot tables, keyed by table key (`-` or a
+    /// single uppercase letter).
+    pub fn loot_tables(&self) -> &BTreeMap<String, DaggerLootTable> {
+        &self.loot_tables
+    }
+
     /// The Engine mechanics catalog admitted from this package's declared
     /// stats and tracks. All durable stat/track state resolves through it.
     pub fn mechanics(&self) -> &MechanicsCatalog {
@@ -479,6 +532,7 @@ impl DaggerGameplayCatalog {
         encounters: BTreeMap<String, DaggerEncounterDefinition>,
         derived: BTreeMap<String, DaggerDerivedRule>,
         equipment: DaggerEquipmentSection,
+        loot_tables: BTreeMap<String, DaggerLootTable>,
         mechanics: MechanicsCatalog,
     ) -> Self {
         Self {
@@ -491,6 +545,7 @@ impl DaggerGameplayCatalog {
             encounters,
             derived,
             equipment,
+            loot_tables,
             mechanics,
         }
     }
@@ -804,13 +859,120 @@ pub struct DaggerEncounterDefinition {
     pub member_entity_ids: Vec<u64>,
 }
 
+/// One compiled classic loot table: gold bounds and category chances,
+/// validated (percentages 0..=100, `0 <= gold_min <= gold_max`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerLootTable {
+    pub key: String,
+    pub gold_min: i64,
+    pub gold_max: i64,
+    pub categories: DaggerLootCategories,
+}
+
+/// Compiled per-category percentage chances (0..=100).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct DaggerLootCategories {
+    pub plant1: i64,
+    pub plant2: i64,
+    pub creature1: i64,
+    pub creature2: i64,
+    pub creature3: i64,
+    pub misc1: i64,
+    pub misc2: i64,
+    pub armor: i64,
+    pub weapons: i64,
+    pub magic: i64,
+    pub clothing: i64,
+    pub books: i64,
+    pub religious: i64,
+}
+
+impl DaggerLootCategories {
+    /// Chance for one category by authored field name.
+    pub fn chance(&self, category: &str) -> Option<i64> {
+        match category {
+            "plant1" => Some(self.plant1),
+            "plant2" => Some(self.plant2),
+            "creature1" => Some(self.creature1),
+            "creature2" => Some(self.creature2),
+            "creature3" => Some(self.creature3),
+            "misc1" => Some(self.misc1),
+            "misc2" => Some(self.misc2),
+            "armor" => Some(self.armor),
+            "weapons" => Some(self.weapons),
+            "magic" => Some(self.magic),
+            "clothing" => Some(self.clothing),
+            "books" => Some(self.books),
+            "religious" => Some(self.religious),
+            _ => None,
+        }
+    }
+}
+
+/// The structured receipt of one loot-table generation: the gold roll (with
+/// the level multiplier applied), every rolled category's outcome, and the
+/// items produced. Successes in categories with no catalog pool (the
+/// ingredient groups, magic, clothing, books, religious) are recorded
+/// against `supported: false` — skipped coverage is visible, never silent.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DaggerLootGeneration {
+    pub key: String,
+    pub level: i64,
+    pub gold: Option<DaggerLootGoldOutcome>,
+    pub categories: Vec<DaggerLootCategoryOutcome>,
+    /// Produced items in deterministic order: gold first as
+    /// `("gold-piece", amount)` when the gold amount is positive, then one
+    /// `(item id, 1)` entry per generated unique item.
+    pub items: Vec<(String, u64)>,
+}
+
+/// The gold outcome of one generation: the bounded roll and the amount
+/// after the donor's player-level multiplier.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DaggerLootGoldOutcome {
+    pub roll: i64,
+    pub level: i64,
+    pub amount: i64,
+}
+
+/// One rolled category's outcome: the table chance, the effective chance
+/// after the donor's level multiplier (C1/C2/P1/P2 only), whether a catalog
+/// item pool backs the category, and the per-slot roll record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DaggerLootCategoryOutcome {
+    pub category: String,
+    pub chance: i64,
+    pub effective_chance: i64,
+    pub supported: bool,
+    pub rolls: Vec<DaggerLootRollOutcome>,
+}
+
+/// One success slot's roll record: the halved chance it rolled against, the
+/// evidence value, and (on success in a supported category) the pick
+/// evidence and the picked item.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DaggerLootRollOutcome {
+    pub slot: u8,
+    pub chance: i64,
+    pub roll: i64,
+    pub success: bool,
+    pub pick: Option<i64>,
+    pub item: Option<String>,
+}
+
 /// Mechanics-backed live gameplay state: an entity-state store holding the
 /// Engine's stat/track and inventory/equipment components, plus Dagger-owned
-/// actor bindings (which catalog definition each actor embodies, conditions).
+/// actor bindings (which catalog definition each actor embodies, conditions)
+/// and loot container bindings (entity, table key, generation receipt).
 #[derive(Debug, Clone)]
 pub struct DaggerGameplayState {
     entities: EntityState,
     actors: BTreeMap<String, DaggerActorState>,
+    containers: BTreeMap<String, DaggerContainerState>,
     next_entity: u64,
 }
 
@@ -823,6 +985,7 @@ impl Default for DaggerGameplayState {
             )
             .expect("gameplay component registry admits an empty state"),
             actors: BTreeMap::new(),
+            containers: BTreeMap::new(),
             next_entity: 1,
         }
     }
@@ -839,6 +1002,20 @@ impl DaggerGameplayState {
 
     pub fn actors(&self) -> &BTreeMap<String, DaggerActorState> {
         &self.actors
+    }
+
+    pub fn insert_container(&mut self, id: impl Into<String>, container: DaggerContainerState) {
+        self.containers.insert(id.into(), container);
+    }
+
+    pub fn container(&self, id: &str) -> Option<&DaggerContainerState> {
+        self.containers.get(id)
+    }
+
+    /// Spawned loot containers by instance id, for enumeration (lab panel,
+    /// diagnostics).
+    pub fn containers(&self) -> &BTreeMap<String, DaggerContainerState> {
+        &self.containers
     }
 
     pub fn entities(&self) -> &EntityState {
@@ -905,6 +1082,38 @@ impl DaggerActorState {
 
     pub fn add_condition(&mut self, condition: impl Into<String>) {
         self.conditions.insert(condition.into());
+    }
+}
+
+/// Live binding of one spawned loot container: its entity (carrying the
+/// upstream InventoryComponent the generated contents bind into), the loot
+/// table key it generated from, and the generation receipt.
+#[derive(Debug, Clone)]
+pub struct DaggerContainerState {
+    entity: EntityId,
+    key: String,
+    generation: DaggerLootGeneration,
+}
+
+impl DaggerContainerState {
+    pub fn new(entity: EntityId, key: impl Into<String>, generation: DaggerLootGeneration) -> Self {
+        Self {
+            entity,
+            key: key.into(),
+            generation,
+        }
+    }
+
+    pub const fn entity(&self) -> EntityId {
+        self.entity
+    }
+
+    pub fn key(&self) -> &str {
+        &self.key
+    }
+
+    pub fn generation(&self) -> &DaggerLootGeneration {
+        &self.generation
     }
 }
 

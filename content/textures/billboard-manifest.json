@@ -1200,6 +1200,25 @@
         0.675,
         1.65
       ]
+    },
+    {
+      "archive": 216,
+      "atlasHeight": 26,
+      "atlasWidth": 39,
+      "byteLength": 571,
+      "height": 26,
+      "path": "billboard-216-0.png",
+      "pivot": [
+        0.5,
+        0.5
+      ],
+      "record": 0,
+      "sha256": "sha256:fff4fa768275d1d1b692bd07896200dad1539087474ce8717b0be5a019f0327c",
+      "width": 39,
+      "worldSize": [
+        0.975,
+        0.65000004
+      ]
     }
   ],
   "schemaVersion": 1

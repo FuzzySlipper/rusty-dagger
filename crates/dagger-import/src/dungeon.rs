@@ -115,6 +115,65 @@ pub struct EnemyScene {
     pub texture_archive: u16,
 }
 
+/// A random-treasure marker (DFU RDBLayout AddRandomTreasure, editor archive
+/// 199 record 19): where a lootable treasure pile container is placed.
+/// `loot_key` is the classic dungeon-treasure loot table key resolved from
+/// the dungeon's MAPS.BSA type through the donor's dungeon-type array
+/// (`dungeon_treasure_loot_key`); `None` when the dungeon type has no key.
+#[derive(Debug, Clone)]
+pub struct TreasureScene {
+    /// glTF world-space position (meters).
+    pub position: [f32; 3],
+    /// Raw RDB flat flags, carried as available provenance.
+    pub flags: u16,
+    pub loot_key: Option<String>,
+}
+
+/// The donor's dungeon-type → dungeon-treasure loot key array (DFU
+/// LootTables.cs GenerateLoot `lootTableKeys`, indexed by the classic
+/// MAPS.BSA dungeon type: 0 Crypt .. 18 Cemetery; DFU RDBLayout passes
+/// `(int)dungeonType` straight through). Privateer's Hold's MAPS.BSA dungeon
+/// type byte is 2 (Human Stronghold) — verified against the real data files —
+/// which maps to "N".
+pub const DUNGEON_TREASURE_LOOT_KEYS: [(&str, &str); 19] = [
+    ("Crypt", "K"),
+    ("Orc Stronghold", "N"),
+    ("Human Stronghold", "N"),
+    ("Prison", "N"),
+    ("Desecrated Temple", "K"),
+    ("Mine", "M"),
+    ("Natural Cave", "M"),
+    ("Coven", "Q"),
+    ("Vampire Haunt", "K"),
+    ("Laboratory", "U"),
+    ("Harpy Nest", "D"),
+    ("Ruined Castle", "N"),
+    ("Spider Nest", "L"),
+    ("Giant Stronghold", "F"),
+    ("Dragon's Den", "S"),
+    ("Barbarian Stronghold", "N"),
+    ("Volcanic Caves", "M"),
+    ("Scorpion Nest", "L"),
+    ("Cemetery", "N"),
+];
+
+/// Resolve the dungeon-treasure loot table key for a classic MAPS.BSA dungeon
+/// type. Out-of-range types (including NoDungeon, 255) have no key.
+pub fn dungeon_treasure_loot_key(dungeon_type: u8) -> Option<&'static str> {
+    DUNGEON_TREASURE_LOOT_KEYS
+        .get(usize::from(dungeon_type))
+        .map(|(_, key)| *key)
+}
+
+/// The treasure pile billboard icon: DFU renders RandomTreasure containers
+/// with one of 20 TEXTURE.216 records (DaggerfallLootDataTables.cs
+/// `randomTreasureArchive` = 216, `randomTreasureIconIndices`). The icon has
+/// no bearing on the generated loot ("Random treasure is generated only when
+/// clicked on and icon has no bearing"), so we publish one deterministic
+/// icon: index 0 of the donor's list = record 0.
+pub const TREASURE_ICON_ARCHIVE: u16 = 216;
+pub const TREASURE_ICON_RECORD: u16 = 0;
+
 #[derive(Debug, Clone)]
 pub struct DungeonScene {
     pub start_marker: Option<[f32; 3]>,
@@ -127,6 +186,9 @@ pub struct DungeonScene {
     pub billboards: Vec<BillboardFlat>,
     /// Classic enemies (directional billboards), from RDB enemy flats.
     pub enemies: Vec<EnemyScene>,
+    /// Random-treasure markers (editor archive 199 record 19), placed as
+    /// lootable container sprites.
+    pub treasure: Vec<TreasureScene>,
     /// Action-door models, carved out of the static mesh into separate nodes.
     pub doors: Vec<DoorScene>,
 }
@@ -330,6 +392,67 @@ impl Importer {
     }
 }
 
+/// Route one RDB flat into the scene lists. DFU precedence for the editor
+/// archive: record 19 is a random-treasure marker (AddRandomTreasure) even if
+/// the flat carries mobile bits, records 15/16 are enemy spawn markers, and
+/// any flat with a non-zero mobile id is a fixed enemy (AddFixedRDBEnemy).
+/// The remaining editor records (start/enter, plus 199/11 quest item and
+/// 199/18 quest marker) are dropped: quest/item markers are out of scope.
+fn route_flat(
+    f: &rdb::RdbFlatObject,
+    origin: [f32; 3],
+    treasure_loot_key: Option<&str>,
+    scene: &mut DungeonScene,
+    stats: &mut BuildStats,
+) {
+    // Shared DFU->glTF placement: (x, -y, z) * GlobalScale + block origin,
+    // then glTF (x, y, -z).
+    let dfu = [
+        f.x as f32 * GLOBAL_SCALE + origin[0],
+        -f.y as f32 * GLOBAL_SCALE + origin[1],
+        f.z as f32 * GLOBAL_SCALE + origin[2],
+    ];
+    let position = [dfu[0], dfu[1], -dfu[2]];
+    if f.is_treasure_marker() {
+        scene.treasure.push(TreasureScene {
+            position,
+            flags: f.flags,
+            loot_key: treasure_loot_key.map(str::to_string),
+        });
+        return;
+    }
+    if f.is_enemy() {
+        // DFU AddFixedRDBEnemy: enemy flats become directional billboard
+        // nodes, not static billboards. Mobile id = faction_or_mobile_id &
+        // 0xFF (0-42 monster, 128-146 humanoid; random markers carry the same
+        // id semantics here).
+        let mobile_id = (f.faction_or_mobile_id & 0xFF) as u8;
+        match mobile_type(mobile_id) {
+            Some(mobile) => scene.enemies.push(EnemyScene {
+                position,
+                mobile_id,
+                name: mobile.name.to_string(),
+                texture_archive: mobile.texture_archive,
+            }),
+            None => stats.texture_failures.push(format!(
+                "enemy flat with unknown mobile id {mobile_id} \
+                 (archive {} record {}), skipped",
+                f.texture_archive, f.texture_record
+            )),
+        }
+        return;
+    }
+    if !f.is_visible_billboard() {
+        return;
+    }
+    // DFU AddFlat: billboard texture from TEXTURE.nnn[record].
+    scene.billboards.push(BillboardFlat {
+        position,
+        texture_archive: f.texture_archive,
+        texture_record: f.texture_record,
+    });
+}
+
 pub fn build_dungeon(
     arena2_dir: &Path,
     region: usize,
@@ -362,8 +485,13 @@ pub fn build_dungeon(
         lights: Vec::new(),
         billboards: Vec::new(),
         enemies: Vec::new(),
+        treasure: Vec::new(),
         doors: Vec::new(),
     };
+    // The dungeon-treasure loot key comes from the MAPS.BSA dungeon type via
+    // the donor's dungeon-type array (LootTables.cs GenerateLoot); every
+    // treasure marker in the dungeon shares it.
+    let treasure_loot_key = dungeon_treasure_loot_key(layout.dungeon_type);
 
     // One primitive per texture key (None = untextured/default material).
     let mut prims: HashMap<Option<(u16, u16)>, PrimitiveBuild> = HashMap::new();
@@ -385,47 +513,7 @@ pub fn build_dungeon(
         scene.light_count += block.lights.len();
         scene.flat_count += block.flats.len();
         for f in &block.flats {
-            if f.is_enemy() {
-                // DFU AddFixedRDBEnemy: enemy flats become directional
-                // billboard nodes, not static billboards. Mobile id =
-                // faction_or_mobile_id & 0xFF (0-42 monster, 128-146 humanoid;
-                // random markers carry the same id semantics here).
-                let dfu = [
-                    f.x as f32 * GLOBAL_SCALE + origin[0],
-                    -f.y as f32 * GLOBAL_SCALE + origin[1],
-                    f.z as f32 * GLOBAL_SCALE + origin[2],
-                ];
-                let mobile_id = (f.faction_or_mobile_id & 0xFF) as u8;
-                match mobile_type(mobile_id) {
-                    Some(mobile) => scene.enemies.push(EnemyScene {
-                        position: [dfu[0], dfu[1], -dfu[2]],
-                        mobile_id,
-                        name: mobile.name.to_string(),
-                        texture_archive: mobile.texture_archive,
-                    }),
-                    None => stats.texture_failures.push(format!(
-                        "enemy flat with unknown mobile id {mobile_id} \
-                         (archive {} record {}), skipped",
-                        f.texture_archive, f.texture_record
-                    )),
-                }
-                continue;
-            }
-            if !f.is_visible_billboard() {
-                continue;
-            }
-            // DFU AddFlat: position (x, -y, z) * 0.025 + block origin, then
-            // glTF (x, y, -z). Billboard texture from TEXTURE.nnn[record].
-            let dfu = [
-                f.x as f32 * GLOBAL_SCALE + origin[0],
-                -f.y as f32 * GLOBAL_SCALE + origin[1],
-                f.z as f32 * GLOBAL_SCALE + origin[2],
-            ];
-            scene.billboards.push(BillboardFlat {
-                position: [dfu[0], dfu[1], -dfu[2]],
-                texture_archive: f.texture_archive,
-                texture_record: f.texture_record,
-            });
+            route_flat(f, origin, treasure_loot_key, &mut scene, &mut stats);
         }
         for l in &block.lights {
             // DFU AddLight: position (x, -y, z) * 0.025 + block origin; range = radius * 0.025 * 3.
@@ -731,6 +819,144 @@ mod tests {
             dungeon_type: 2,
             blocks: Vec::new(),
         }
+    }
+
+    fn rdb_flat(archive: u16, record: u16, faction_or_mobile_id: u16) -> rdb::RdbFlatObject {
+        rdb::RdbFlatObject {
+            x: 100,
+            y: -200,
+            z: 300,
+            texture_archive: archive,
+            texture_record: record,
+            flags: 7,
+            magnitude: 0,
+            sound_index: 0,
+            faction_or_mobile_id,
+            next_object_offset: -1,
+            action: 0,
+        }
+    }
+
+    #[test]
+    fn flat_routing_places_treasure_markers_and_keeps_editor_markers_hidden() {
+        let mut scene = DungeonScene {
+            start_marker: None,
+            enter_marker: None,
+            light_count: 0,
+            flat_count: 0,
+            lights: Vec::new(),
+            billboards: Vec::new(),
+            enemies: Vec::new(),
+            treasure: Vec::new(),
+            doors: Vec::new(),
+        };
+        let mut stats = BuildStats::default();
+        // Natural Cave (MAPS.BSA dungeon type 6) resolves to the donor's "M"
+        // dungeon-treasure key.
+        route_flat(
+            &rdb_flat(199, 19, 0),
+            [0.0; 3],
+            dungeon_treasure_loot_key(6),
+            &mut scene,
+            &mut stats,
+        );
+        // Quest/item markers (199/11, 199/18) stay dropped.
+        route_flat(
+            &rdb_flat(199, 11, 0),
+            [0.0; 3],
+            None,
+            &mut scene,
+            &mut stats,
+        );
+        route_flat(
+            &rdb_flat(199, 18, 0),
+            [0.0; 3],
+            None,
+            &mut scene,
+            &mut stats,
+        );
+        // A real billboard and a fixed enemy keep their existing routes.
+        route_flat(
+            &rdb_flat(210, 16, 0),
+            [0.0; 3],
+            None,
+            &mut scene,
+            &mut stats,
+        );
+        route_flat(
+            &rdb_flat(199, 16, 138),
+            [0.0; 3],
+            None,
+            &mut scene,
+            &mut stats,
+        );
+
+        assert_eq!(scene.treasure.len(), 1);
+        assert_eq!(scene.treasure[0].loot_key.as_deref(), Some("M"));
+        assert_eq!(scene.treasure[0].flags, 7);
+        assert_eq!(scene.billboards.len(), 1);
+        assert_eq!(scene.enemies.len(), 1);
+        // Donor table spot checks (LootTables.cs GenerateLoot lootTableKeys).
+        assert_eq!(dungeon_treasure_loot_key(0), Some("K")); // Crypt
+        assert_eq!(dungeon_treasure_loot_key(6), Some("M")); // Natural Cave
+        assert_eq!(dungeon_treasure_loot_key(18), Some("N")); // Cemetery
+        assert_eq!(dungeon_treasure_loot_key(255), None); // NoDungeon
+    }
+
+    #[test]
+    fn start_block_random_treasure_markers_all_route_to_the_scene() {
+        // Real-data proof: Privateer's Hold's start block S0000999.RDB (from
+        // BLOCKS.BSA) carries 8 random-treasure markers (archive 199 record
+        // 19) plus one 199/11 and one 199/18 quest/item marker; routing must
+        // place exactly the 8 treasure markers and keep the quest/item
+        // markers dropped.
+        let arena2 = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2");
+        let blocks = BsaArchive::load(&arena2.join("BLOCKS.BSA")).expect("BLOCKS.BSA");
+        let block = rdb::parse_rdb(blocks.get("S0000999.RDB").expect("S0000999.RDB"))
+            .expect("parse start block");
+        let treasure_markers = block
+            .flats
+            .iter()
+            .filter(|flat| flat.is_treasure_marker())
+            .count();
+        assert_eq!(treasure_markers, 8);
+        assert_eq!(
+            block
+                .flats
+                .iter()
+                .filter(|flat| flat.texture_archive == 199 && flat.texture_record == 11)
+                .count(),
+            1
+        );
+        assert_eq!(
+            block
+                .flats
+                .iter()
+                .filter(|flat| flat.texture_archive == 199 && flat.texture_record == 18)
+                .count(),
+            1
+        );
+
+        let mut scene = DungeonScene {
+            start_marker: None,
+            enter_marker: None,
+            light_count: 0,
+            flat_count: 0,
+            lights: Vec::new(),
+            billboards: Vec::new(),
+            enemies: Vec::new(),
+            treasure: Vec::new(),
+            doors: Vec::new(),
+        };
+        let mut stats = BuildStats::default();
+        for flat in &block.flats {
+            route_flat(flat, [0.0; 3], Some("N"), &mut scene, &mut stats);
+        }
+        assert_eq!(scene.treasure.len(), 8, "all markers reach the sidecar");
+        assert!(scene
+            .treasure
+            .iter()
+            .all(|t| t.loot_key.as_deref() == Some("N")));
     }
 
     fn constant_pak(value: u8) -> Vec<u8> {

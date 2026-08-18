@@ -46,7 +46,7 @@
     <article class="panel content-browser" *ngIf="readout as live">
       <div class="panel-heading">
         <div><p class="kicker">Committed Privateer's Hold scene</p><h2>Live content browser</h2></div>
-        <span class="schema" data-testid="content-count">{{ live.content.length }} enemies</span>
+        <span class="schema" data-testid="content-count">{{ enemyCount(live) }} enemies</span>
       </div>
       <label class="filter"><span>Find a name or mobile ID</span>
         <input data-testid="content-filter" type="search" placeholder="thief or 138" [(ngModel)]="contentFilter" />
@@ -57,23 +57,23 @@
             [class.selected]="selectedContent()?.id === entity.id"
             [class.active]="live.focusedContentId === entity.id"
             [attr.data-testid]="'content-' + entity.id" (click)="selectContent(entity)">
-            <span>{{ entity.reference.mobileName }}</span>
-            <small>#{{ entity.id }} · mobile {{ entity.reference.mobileId }} · {{ format(entity.live.distanceFromPlayer) }}u</small>
+            <span>{{ entity.reference?.mobileName }}</span>
+            <small>#{{ entity.id }} · mobile {{ entity.reference?.mobileId }} · {{ format(entity.live.distanceFromPlayer) }}u</small>
           </button>
           <p *ngIf="filteredContent().length === 0" class="muted">No imported enemy matches that search.</p>
         </nav>
         <section class="content-detail" *ngIf="selectedContent() as entity" data-testid="content-detail">
           <div class="content-title">
-            <div><p class="kicker">Decoded Arena2 reference</p><h3 data-testid="content-name">{{ entity.reference.mobileName }}</h3></div>
+            <div><p class="kicker">Decoded Arena2 reference</p><h3 data-testid="content-name">{{ entity.reference?.mobileName }}</h3></div>
             <span class="pulse" *ngIf="live.focusedContentId === entity.id">focused</span>
           </div>
           <dl class="reference-grid">
             <div><dt>Scene identity</dt><dd>{{ entity.name }} · #{{ entity.id }}</dd></div>
-            <div><dt>Mobile ID</dt><dd data-testid="content-mobile-id">{{ entity.reference.mobileId }}</dd></div>
-            <div><dt>Texture archive</dt><dd>{{ entity.reference.textureArchive }}</dd></div>
-            <div><dt>Movement type</dt><dd>{{ entity.reference.flying ? 'Flying' : 'Grounded' }}</dd></div>
-            <div><dt>Sprite asset</dt><dd><code>{{ entity.reference.spriteAsset }}</code></dd></div>
-            <div><dt>Authored spawn</dt><dd><code data-testid="content-authored-position">{{ format(entity.reference.authoredPosition[0]) }}, {{ format(entity.reference.authoredPosition[1]) }}, {{ format(entity.reference.authoredPosition[2]) }}</code></dd></div>
+            <div><dt>Mobile ID</dt><dd data-testid="content-mobile-id">{{ entity.reference?.mobileId }}</dd></div>
+            <div><dt>Texture archive</dt><dd>{{ entity.reference?.textureArchive }}</dd></div>
+            <div><dt>Movement type</dt><dd>{{ entity.reference?.flying ? 'Flying' : 'Grounded' }}</dd></div>
+            <div><dt>Sprite asset</dt><dd><code>{{ entity.reference?.spriteAsset }}</code></dd></div>
+            <div><dt>Authored spawn</dt><dd><code data-testid="content-authored-position">{{ format(entity.reference?.authoredPosition?.[0] ?? 0) }}, {{ format(entity.reference?.authoredPosition?.[1] ?? 0) }}, {{ format(entity.reference?.authoredPosition?.[2] ?? 0) }}</code></dd></div>
           </dl>
           <div class="live-content" data-testid="content-live-position">
             <span>Authoritative live patrol position</span>
@@ -178,6 +178,29 @@
           <div class="derived-inputs" *ngIf="record.committedRevision !== null"><small>revision {{ record.committedRevision }}</small></div>
         </article>
         <p class="muted" *ngIf="live.equipmentLog.length === 0">Press E on the gameplay surface to cycle carried equipment, or use the equip actions above.</p>
+      </div>
+    </article>
+
+    <article class="panel loot" *ngIf="readout as live" data-testid="loot-panel">
+      <div class="panel-heading">
+        <div><p class="kicker">Classic loot tables · generated at spawn</p><h2>Loot containers</h2></div>
+        <span class="schema" data-testid="loot-count">{{ live.lootContainers.length }} containers</span>
+      </div>
+      <p class="muted">Treasure piles (RDB random-treasure markers) and loot-bearing enemy corpses, contents sourced from <code>InventoryService::view</code> on the container entity. Pickup is the native <code>F</code> verb on the gameplay surface — the lab never moves items.</p>
+      <div class="derived-grid" data-testid="loot-containers">
+        <article *ngFor="let container of live.lootContainers" [attr.data-testid]="'loot-container-' + container.id">
+          <span>{{ container.id }} · {{ container.kind }} · table {{ container.lootKey }}<span *ngIf="container.contentEntityId"> · #{{ container.contentEntityId }}</span></span>
+          <strong *ngIf="container.emptied" [attr.data-testid]="'loot-empty-' + container.id">EMPTY</strong>
+          <strong *ngIf="!container.emptied">{{ container.contents.stacks.length + container.contents.items.length }} entries left</strong>
+          <div class="derived-inputs">
+            <small *ngFor="let stack of container.contents.stacks" [attr.data-testid]="'loot-stack-' + container.id + '-' + stack.item">{{ stack.item }} × {{ stack.quantity }}</small>
+            <small *ngFor="let item of container.contents.items">{{ item.item }}</small>
+            <small *ngIf="unsupportedLootNotes(container).length > 0" [attr.data-testid]="'loot-unsupported-' + container.id">
+              rolled but no catalog pool yet: {{ unsupportedLootNotes(container).join(', ') }}
+            </small>
+          </div>
+        </article>
+        <p class="muted" *ngIf="live.lootContainers.length === 0">No loot containers in the session.</p>
       </div>
     </article>
 

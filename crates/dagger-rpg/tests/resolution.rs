@@ -1,10 +1,11 @@
 use std::collections::BTreeMap;
 
 use dagger_rpg::{
-    compile_gameplay_package, evaluate_expr, resolve_dagger_action, set_actor_track, spawn_actor,
-    track_maximum, ActorExprValues, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerExpr,
-    DaggerGameplayError, DaggerGameplayState, DaggerIntent, DaggerIntentOrigin, DaggerRejection,
-    DaggerSubject, ExprContext,
+    bind_actor_loot, compile_gameplay_package, evaluate_expr, generate_loot, loot_roll_evidence,
+    resolve_dagger_action, set_actor_track, spawn_actor, spawn_container, track_maximum,
+    ActorExprValues, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerExpr, DaggerGameplayError,
+    DaggerGameplayState, DaggerIntent, DaggerIntentOrigin, DaggerRejection, DaggerSubject,
+    ExprContext,
 };
 use rusty_engine::gameplay_resolution::{
     AttemptStatus, CommitStatus, CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
@@ -1900,5 +1901,405 @@ fn spawn_loadout_over_the_capacity_limit_rejects() {
     assert!(matches!(
         spawn_actor(&mut state, &catalog, "player", "player", &[]),
         Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+}
+
+// --- Classic loot tables (donor LootTables.cs DefaultLootTables) ---
+
+/// Build loot evidence from the declared contract: every roll at its minimum
+/// bound (success rolls 0 always succeed, picks select the pool's first
+/// item), with per-id overrides applied.
+fn loot_evidence(
+    catalog: &dagger_rpg::DaggerGameplayCatalog,
+    key: &str,
+    overrides: &[(&str, i64)],
+) -> Vec<DaggerEvidence> {
+    loot_roll_evidence(catalog, key)
+        .expect("loot roll contract")
+        .into_iter()
+        .map(|(id, min, _)| {
+            let value = overrides
+                .iter()
+                .find(|(override_id, _)| *override_id == id)
+                .map_or(min, |(_, value)| *value);
+            DaggerEvidence { id, value }
+        })
+        .collect()
+}
+
+#[test]
+fn loot_tables_compile_all_22_classic_keys_with_exact_donor_values() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    assert_eq!(catalog.loot_tables().len(), 22);
+    // Exact transcription of `DefaultLootTables` (LootTables.cs:77-110).
+    // Chances in authored field order: plant1, plant2, creature1, creature2,
+    // creature3, misc1, misc2, armor, weapons, magic, clothing, books,
+    // religious.
+    let expected: [(&str, i64, i64, [i64; 13]); 22] = [
+        ("-", 0, 0, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        ("A", 1, 10, [0, 0, 0, 0, 0, 0, 2, 5, 5, 2, 4, 0, 0]),
+        ("B", 0, 0, [10, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+        ("C", 2, 20, [10, 10, 5, 5, 5, 5, 2, 5, 25, 3, 0, 2, 2]),
+        ("D", 1, 4, [6, 6, 6, 6, 6, 6, 0, 0, 0, 0, 0, 0, 4]),
+        ("E", 20, 80, [0, 0, 0, 0, 0, 0, 1, 10, 10, 3, 4, 2, 15]),
+        ("F", 4, 30, [2, 2, 5, 5, 5, 2, 3, 50, 50, 1, 0, 0, 0]),
+        ("G", 3, 15, [0, 0, 0, 0, 0, 0, 3, 50, 50, 1, 5, 0, 0]),
+        ("H", 2, 10, [0, 0, 0, 0, 0, 0, 0, 0, 100, 1, 2, 0, 0]),
+        ("I", 0, 0, [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 5]),
+        ("J", 50, 150, [0, 0, 0, 0, 0, 0, 0, 5, 5, 3, 0, 0, 0]),
+        ("K", 1, 10, [3, 3, 3, 3, 3, 3, 2, 5, 5, 3, 0, 5, 100]),
+        ("L", 1, 20, [0, 0, 3, 3, 3, 3, 5, 50, 50, 1, 75, 0, 3]),
+        ("M", 1, 15, [1, 1, 1, 1, 1, 2, 3, 10, 10, 1, 15, 2, 1]),
+        ("N", 1, 80, [5, 5, 5, 5, 5, 5, 2, 5, 5, 1, 20, 5, 5]),
+        ("O", 5, 20, [1, 1, 1, 1, 1, 1, 0, 10, 15, 2, 0, 0, 0]),
+        ("P", 5, 20, [5, 5, 5, 5, 5, 5, 5, 5, 10, 2, 0, 10, 0]),
+        ("Q", 20, 80, [2, 2, 8, 8, 8, 2, 3, 10, 25, 3, 35, 5, 0]),
+        ("R", 5, 20, [0, 0, 3, 3, 3, 5, 0, 5, 15, 2, 0, 0, 0]),
+        ("S", 50, 125, [5, 5, 5, 5, 5, 15, 5, 10, 10, 3, 0, 5, 0]),
+        ("T", 20, 80, [0, 0, 0, 0, 0, 0, 0, 100, 100, 1, 0, 0, 0]),
+        ("U", 7, 30, [5, 5, 5, 5, 5, 10, 2, 10, 10, 2, 0, 2, 10]),
+    ];
+    for (key, gold_min, gold_max, chances) in expected {
+        let table = catalog
+            .loot_tables()
+            .get(key)
+            .unwrap_or_else(|| panic!("loot table {key}"));
+        assert_eq!(
+            (table.gold_min, table.gold_max),
+            (gold_min, gold_max),
+            "{key}"
+        );
+        let categories = &table.categories;
+        let actual = [
+            categories.plant1,
+            categories.plant2,
+            categories.creature1,
+            categories.creature2,
+            categories.creature3,
+            categories.misc1,
+            categories.misc2,
+            categories.armor,
+            categories.weapons,
+            categories.magic,
+            categories.clothing,
+            categories.books,
+            categories.religious,
+        ];
+        assert_eq!(actual, chances, "{key}");
+    }
+}
+
+#[test]
+fn loot_table_admission_rejects_bad_values() {
+    // Category percentage above 100.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["lootTables"][1]["categories"]["armor"] = serde_json::json!(101);
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Inverted gold range (table A is 1..10).
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["lootTables"][1]["gold"]["min"] = serde_json::json!(11);
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Duplicate key.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["lootTables"][1]["key"] = serde_json::Value::from("-");
+        })),
+        Err(DaggerGameplayError::DuplicateId { .. })
+    ));
+    // Unknown field in the section entries rejects at payload parse
+    // (deny_unknown_fields).
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["lootTables"][0]["surprise"] = serde_json::json!(1);
+        })),
+        Err(DaggerGameplayError::Payload(_))
+    ));
+    // Keys are "-" or a single uppercase letter.
+    for bad_key in ["a", "AB", "1"] {
+        assert!(matches!(
+            compile_gameplay_package(&mutated_package(|package| {
+                package["payload"]["lootTables"][1]["key"] = serde_json::Value::from(bad_key);
+            })),
+            Err(DaggerGameplayError::InvalidValue { .. })
+        ));
+    }
+}
+
+#[test]
+fn loot_roll_evidence_declares_exactly_the_required_rolls() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let weapon_max = catalog
+        .items()
+        .values()
+        .filter(|item| item.weapon.is_some())
+        .count() as i64
+        - 1;
+    let armor_max = catalog
+        .items()
+        .values()
+        .filter(|item| item.armor.is_some() || item.shield.is_some())
+        .count() as i64
+        - 1;
+    let contract = loot_roll_evidence(&catalog, "A").expect("loot roll contract");
+    let mut expected = vec![("loot.A.gold".to_string(), 1, 10)];
+    for slot in 0..3 {
+        expected.push((format!("loot.A.weapons.{slot}"), 0, 99));
+        expected.push((format!("loot.A.weapons.{slot}.pick"), 0, weapon_max));
+    }
+    for slot in 0..3 {
+        expected.push((format!("loot.A.armor.{slot}"), 0, 99));
+        expected.push((format!("loot.A.armor.{slot}.pick"), 0, armor_max));
+    }
+    // Unsupported categories (no catalog pool) roll success dice only.
+    for category in ["misc2", "magic", "clothing"] {
+        for slot in 0..3 {
+            expected.push((format!("loot.A.{category}.{slot}"), 0, 99));
+        }
+    }
+    assert_eq!(contract, expected);
+
+    // The default table rolls nothing at all.
+    assert_eq!(
+        loot_roll_evidence(&catalog, "-").expect("default contract"),
+        Vec::new()
+    );
+    // Unknown keys reject.
+    assert!(matches!(
+        loot_roll_evidence(&catalog, "Z"),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+}
+
+#[test]
+fn loot_generation_is_deterministic_from_evidence() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let evidence = loot_evidence(&catalog, "A", &[]);
+    let first = generate_loot(&catalog, "A", 1, &evidence).expect("generation");
+    let second = generate_loot(&catalog, "A", 1, &evidence).expect("generation");
+    assert_eq!(first, second);
+
+    // A different pick roll yields a different weapon.
+    let different = generate_loot(
+        &catalog,
+        "A",
+        1,
+        &loot_evidence(&catalog, "A", &[("loot.A.weapons.0.pick", 1)]),
+    )
+    .expect("generation");
+    assert_ne!(first.items, different.items);
+    assert_eq!(
+        different.items[1],
+        ("iron-broadsword".to_string(), 1),
+        "pick 1 selects the second weapon by sorted id"
+    );
+}
+
+#[test]
+fn loot_success_rolls_halve_geometrically() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    // Table H has weapons chance 100: slots roll against 100, 50, 25. The
+    // donor's SuccessRoll is a strict `<`, so 49 succeeds at chance 50 and
+    // 99 fails at chance 25.
+    let generation = generate_loot(
+        &catalog,
+        "H",
+        1,
+        &loot_evidence(
+            &catalog,
+            "H",
+            &[("loot.H.weapons.1", 49), ("loot.H.weapons.2", 99)],
+        ),
+    )
+    .expect("generation");
+    let weapons = generation
+        .categories
+        .iter()
+        .find(|category| category.category == "weapons")
+        .expect("weapons category");
+    assert_eq!(
+        weapons
+            .rolls
+            .iter()
+            .map(|roll| (roll.chance, roll.roll, roll.success))
+            .collect::<Vec<_>>(),
+        [(100, 0, true), (50, 49, true), (25, 99, false)]
+    );
+    assert_eq!(
+        generation
+            .items
+            .iter()
+            .filter(|(item, _)| item != "gold-piece")
+            .count(),
+        2
+    );
+}
+
+#[test]
+fn loot_gold_and_ingredient_chances_scale_with_level() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    // Table C: gold 2..20, creature1 chance 5 (level-scaled). Roll 14 fails
+    // at level 1 (chance 5) and succeeds at level 3 (chance 15).
+    let evidence = loot_evidence(
+        &catalog,
+        "C",
+        &[("loot.C.gold", 5), ("loot.C.creature1.0", 14)],
+    );
+    let level1 = generate_loot(&catalog, "C", 1, &evidence).expect("level 1 generation");
+    let level3 = generate_loot(&catalog, "C", 3, &evidence).expect("level 3 generation");
+    assert_eq!(level1.gold.as_ref().expect("gold").amount, 5);
+    assert_eq!(level3.gold.as_ref().expect("gold").amount, 15);
+    let creature1 = |generation: &dagger_rpg::DaggerLootGeneration| {
+        generation
+            .categories
+            .iter()
+            .find(|category| category.category == "creature1")
+            .expect("creature1 category")
+            .clone()
+    };
+    assert!(!creature1(&level1).rolls[0].success);
+    let scaled = creature1(&level3);
+    assert_eq!(scaled.chance, 5);
+    assert_eq!(scaled.effective_chance, 15);
+    assert!(scaled.rolls[0].success);
+    // Level-scaled categories have no catalog pool: success, no item.
+    assert!(!scaled.supported);
+    assert!(scaled.rolls[0].item.is_none());
+
+    // Level 0 rejects; missing evidence rejects honestly.
+    assert!(matches!(
+        generate_loot(&catalog, "A", 0, &evidence),
+        Err(DaggerRejection::InvalidExpression(_))
+    ));
+    assert!(matches!(
+        generate_loot(&catalog, "A", 1, &[]),
+        Err(DaggerRejection::MissingEvidence(_))
+    ));
+}
+
+#[test]
+fn loot_unsupported_category_successes_are_recorded_without_items() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    // Table A, all-minimum evidence: every positive-chance category's slot 0
+    // succeeds. Magic (2) has no catalog pool, so its successes are visible
+    // in the record but produce no items.
+    let generation =
+        generate_loot(&catalog, "A", 1, &loot_evidence(&catalog, "A", &[])).expect("generation");
+    let magic = generation
+        .categories
+        .iter()
+        .find(|category| category.category == "magic")
+        .expect("magic category");
+    assert!(!magic.supported);
+    assert!(magic.rolls[0].success);
+    assert!(magic.rolls[0].item.is_none());
+    assert!(magic.rolls[0].pick.is_none());
+    // Items are gold plus the supported picks only: 1 gold stack, 3 weapons
+    // (chance 5/2/1 all succeed on roll 0), 3 armor pieces.
+    assert_eq!(generation.items.len(), 7);
+    assert_eq!(generation.gold.expect("gold").amount, 1);
+}
+
+#[test]
+fn loot_rejects_out_of_bounds_evidence() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    for (id, value) in [
+        ("loot.A.gold", 11),           // gold bounds are 1..=10
+        ("loot.A.gold", 0),            // below the minimum
+        ("loot.A.weapons.0", 100),     // success dice are 0..=99
+        ("loot.A.weapons.0", -1),      // and non-negative
+        ("loot.A.weapons.0.pick", 99), // picks bound over the weapon pool
+    ] {
+        assert!(
+            matches!(
+                generate_loot(
+                    &catalog,
+                    "A",
+                    1,
+                    &loot_evidence(&catalog, "A", &[(id, value)])
+                ),
+                Err(DaggerRejection::RollOutOfBounds { .. })
+            ),
+            "{id} = {value}"
+        );
+    }
+}
+
+#[test]
+fn spawn_container_binds_generated_contents() {
+    use rusty_engine::gameplay_mechanics::InventoryService;
+
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = DaggerGameplayState::default();
+    let evidence = loot_evidence(&catalog, "A", &[]);
+    spawn_container(&mut state, &catalog, "treasure-1", "A", 1, &evidence)
+        .expect("spawn container");
+    let container = state.container("treasure-1").expect("container tracked");
+    assert_eq!(container.key(), "A");
+    assert_eq!(container.generation().items.len(), 7);
+
+    let view = InventoryService::view(state.entities(), catalog.mechanics(), container.entity())
+        .expect("container inventory view");
+    assert_eq!(
+        view.stacks()
+            .iter()
+            .map(|stack| (stack.definition.as_str(), stack.quantity))
+            .collect::<Vec<_>>(),
+        [("gold-piece", 1)]
+    );
+    // Unique picks are contained item entities: three weapons (pool[0] =
+    // iron-battle-axe) and three armor pieces (pool[0] = buckler).
+    let uniques = view
+        .unique_items()
+        .iter()
+        .map(|item| item.definition.as_str())
+        .collect::<Vec<_>>();
+    assert_eq!(uniques.len(), 6);
+    assert_eq!(
+        uniques
+            .iter()
+            .filter(|id| **id == "iron-battle-axe")
+            .count(),
+        3
+    );
+    assert_eq!(uniques.iter().filter(|id| **id == "buckler").count(), 3);
+}
+
+#[test]
+fn bind_actor_loot_binds_into_a_spawned_actors_inventory() {
+    use rusty_engine::gameplay_mechanics::InventoryService;
+
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state(&catalog);
+    let evidence = loot_evidence(&catalog, "A", &[]);
+    let generation = bind_actor_loot(&mut state, &catalog, "rat-2007", "A", 1, &evidence)
+        .expect("bind actor loot");
+    // Binding shares the plain generation authority.
+    assert_eq!(
+        generation,
+        generate_loot(&catalog, "A", 1, &evidence).expect("generation")
+    );
+
+    let rat = state.actor("rat-2007").expect("rat binding").entity();
+    let view = InventoryService::view(state.entities(), catalog.mechanics(), rat)
+        .expect("rat inventory view");
+    assert_eq!(
+        view.stacks()
+            .iter()
+            .map(|stack| (stack.definition.as_str(), stack.quantity))
+            .collect::<Vec<_>>(),
+        [("gold-piece", 1)]
+    );
+    assert_eq!(view.unique_items().len(), 6);
+
+    // Binding requires a spawned actor.
+    assert!(matches!(
+        bind_actor_loot(&mut state, &catalog, "nobody", "A", 1, &evidence),
+        Err(DaggerGameplayError::InvalidState(_))
     ));
 }

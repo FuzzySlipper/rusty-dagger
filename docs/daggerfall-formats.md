@@ -81,6 +81,18 @@ For untextured geometry only **type-0x01 Model objects** are needed; flats (bill
 action records, doors logic and the unknown linked list can all be skipped. (Optional later: action
 doors are ordinary model objects flagged via `IsActionDoor`; including them as static geometry is fine for a first test.)
 
+**Flat records consumed by the pipeline** (type 0x03, texture bitfield `archive = >>7`,
+`record = &0x7F`): visible billboard flats become sprite entities; editor-archive (199)
+records 15/16 are enemy spawn markers (routed to enemy sprites); editor-archive record 19 is
+the **random-treasure marker** (DFU `RDBLayout.cs` `AddRandomTreasure`) — since task 7073's
+second slice these are consumed as lootable treasure-pile containers: `dagger-import` routes
+them to the scene sidecar's `treasure` list with the dungeon's loot key (the MAPS.BSA dungeon
+type byte indexed through the donor's `LootTables.cs` `GenerateLoot` dungeon-type array —
+Privateer's Hold is type 2, Human Stronghold, mapping to key `N`), and `generate-project.py`
+emits one visible `treasure-<id>` sprite entity (id band 3000+, TEXTURE.216[0] icon) per
+marker. The other editor records dropped alongside in S0000999.RDB (199/11 quest item,
+199/18 quest marker) stay hidden: quest/item markers are out of scope.
+
 ### 1.4 ARCH3D mesh format (Arch3dFile.cs, MeshReader.cs, DFMesh.cs)
 
 ```
