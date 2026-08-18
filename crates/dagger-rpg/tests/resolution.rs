@@ -342,6 +342,45 @@ fn injected_rule_rejects_a_tagged_action_while_condition_without_mutating() {
 }
 
 #[test]
+fn monster_attack_profiles_are_structured_catalog_data() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let attacks_of = |id: &str| {
+        catalog.actors()[id]
+            .attacks
+            .iter()
+            .map(|range| (range.min, range.max))
+            .collect::<Vec<_>>()
+    };
+    // Donor EnemyBasics: Rat 1-4, Imp 2-15, Ancient Lich 70-100 (single),
+    // Spriggan 1-8 / 1-8 / 1-10 (three sub-attacks).
+    assert_eq!(attacks_of("rat"), vec![(1, 4)]);
+    assert_eq!(attacks_of("imp"), vec![(2, 15)]);
+    assert_eq!(attacks_of("ancient-lich"), vec![(70, 100)]);
+    assert_eq!(attacks_of("spriggan"), vec![(1, 8), (1, 8), (1, 10)]);
+    assert_eq!(attacks_of("daedra-lord"), vec![(15, 50)]);
+}
+
+#[test]
+fn career_owned_spell_point_multiplier_is_evidence_not_a_fixed_constant() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let evaluate = |multiplier_milli: i64| {
+        dagger_rpg::evaluate_derived_rule(
+            &catalog,
+            "spell-points",
+            "player",
+            &[DaggerEvidence {
+                id: "spell-point-multiplier-milli".to_string(),
+                value: multiplier_milli,
+            }],
+        )
+        .expect("evaluate spell-points")
+    };
+    assert_eq!(evaluate(1500), 75); // 50 intelligence at 1.5x
+    assert_eq!(evaluate(2000), 100); // non-default career: 2.0x
+    assert_eq!(evaluate(500), 25); // non-default career: 0.5x
+}
+
+#[test]
 fn binary64_behavior_tuning_crosses_admission_at_one_f32_boundary() {
     let package: serde_json::Value =
         serde_json::from_slice(PACKAGE).expect("parse committed package");

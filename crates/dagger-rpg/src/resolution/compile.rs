@@ -7,17 +7,54 @@ use super::{
     AuthoredGameplayPayload, AuthoredInterceptor, AuthoredItemDefinition, AuthoredOperation,
     AuthoredPredicate, AuthoredProgram, AuthoredRuleDefinition, AuthoredSelector, AuthoredSubject,
     DaggerActionDefinition, DaggerActorDefinition, DaggerActorKind, DaggerBehaviorDefinition,
-    DaggerCmpOp, DaggerDerivedRule, DaggerEncounterDefinition, DaggerExpr, DaggerGameplayCatalog,
-    DaggerGameplayError, DaggerInterceptorKind, DaggerItemDefinition, DaggerOperation,
-    DaggerPredicate, DaggerProgram, DaggerRuleDefinition, DaggerSelector, DaggerStatsSection,
-    DaggerSubject, DaggerTrackDefinition, DaggerWeaponDefinition, DAGGER_GAMEPLAY_SCHEMA_VERSION,
-    MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS, MAX_DAGGER_ACTORS, MAX_DAGGER_DECLARED_IDS,
-    MAX_DAGGER_DERIVED, MAX_DAGGER_ENCOUNTERS, MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_EXPR_DEPTH,
-    MAX_DAGGER_EXPR_NODES, MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_PROGRAM_DEPTH,
-    MAX_DAGGER_PROGRAM_NODES, MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
+    DaggerCmpOp, DaggerDamageRange, DaggerDerivedRule, DaggerEncounterDefinition, DaggerExpr,
+    DaggerGameplayCatalog, DaggerGameplayError, DaggerInterceptorKind, DaggerItemDefinition,
+    DaggerOperation, DaggerPredicate, DaggerProgram, DaggerRuleDefinition, DaggerSelector,
+    DaggerStatsSection, DaggerSubject, DaggerTrackDefinition, DaggerWeaponDefinition,
+    DAGGER_GAMEPLAY_SCHEMA_VERSION, MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS, MAX_DAGGER_ACTORS,
+    MAX_DAGGER_DECLARED_IDS, MAX_DAGGER_DERIVED, MAX_DAGGER_ENCOUNTERS,
+    MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_EXPR_DEPTH, MAX_DAGGER_EXPR_NODES,
+    MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_PROGRAM_DEPTH, MAX_DAGGER_PROGRAM_NODES,
+    MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
 };
 
 const MIN_TUNING_VALUE: f64 = 0.001;
+
+/// Classic supports up to 5 sub-attacks per swing; no classic monster uses
+/// more than 3.
+const MAX_ATTACK_RANGES: usize = 5;
+
+fn compile_actor_attacks(
+    path: &str,
+    attacks: Vec<super::AuthoredDamageRange>,
+) -> Result<Vec<DaggerDamageRange>, DaggerGameplayError> {
+    if attacks.len() > MAX_ATTACK_RANGES {
+        return Err(DaggerGameplayError::Quota {
+            field: "actor attack ranges",
+            actual: attacks.len(),
+            maximum: MAX_ATTACK_RANGES,
+        });
+    }
+    attacks
+        .into_iter()
+        .enumerate()
+        .map(|(index, range)| {
+            if range.min.0 < 0 || range.min > range.max {
+                return Err(DaggerGameplayError::InvalidValue {
+                    path: format!("{path}.attacks[{index}]"),
+                    reason: format!(
+                        "must satisfy 0 <= min <= max, got {}..{}",
+                        range.min.0, range.max.0
+                    ),
+                });
+            }
+            Ok(DaggerDamageRange {
+                min: range.min.0,
+                max: range.max.0,
+            })
+        })
+        .collect()
+}
 
 /// The single binary64 -> f32 boundary: every approximate behavior/tuning
 /// value crosses here, with Dagger-owned semantic ranges applied. Rejects
@@ -422,6 +459,7 @@ fn compile_actors(
                     min_metal_to_hit: actor.min_metal_to_hit,
                     team: actor.team,
                     loot_table_key: actor.loot_table_key,
+                    attacks: compile_actor_attacks(&path, actor.attacks)?,
                 },
             )
             .is_some()

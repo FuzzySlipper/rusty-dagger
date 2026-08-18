@@ -98,11 +98,8 @@ fn main() {
                 value("starting-level-up-skills-sum", 32),
             ],
             "hit-points-per-level-up" => vec![value("hp-level-up-roll", 7)],
-            "skill-uses-for-advancement" => vec![
-                value("skill-value", 60),
-                value("skill-advancement-multiplier", 2),
-                value("career-advancement-multiplier", 1),
-            ],
+            // Career-owned multiplier (milli): evaluate the default 1.5x here.
+            "spell-points" => vec![value("spell-point-multiplier-milli", 1500)],
             _ => Vec::new(),
         }
     };

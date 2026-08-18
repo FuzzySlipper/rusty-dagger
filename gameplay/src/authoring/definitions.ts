@@ -14,6 +14,9 @@ export type StatsSection = Readonly<{
   tracks: readonly string[];
 }>;
 
+/** A classic melee damage range (one sub-attack's inclusive bounds). */
+export type DamageRange = Readonly<{ min: number; max: number }>;
+
 /** One actor resource track; `max` is a derived rule evaluated in Rust. */
 export type TrackDefinition = Readonly<{
   id: string;
@@ -59,6 +62,12 @@ export type ActorDefinition = Readonly<{
   team?: string;
   /** Classic errata: loot table key used when generating drops. */
   lootTableKey?: string;
+  /**
+   * Classic melee attack damage ranges (1-3 sub-attacks per swing in the
+   * donor). Structured data for future multi-attack execution; today the
+   * authored attack actions carry their own dice.
+   */
+  attacks?: readonly DamageRange[];
 }>;
 
 /** A named classic formula over one subject's stats, evaluated on demand. */
@@ -153,6 +162,7 @@ export const actor = (
     minMetalToHit?: string;
     team?: string;
     lootTableKey?: string;
+    attacks?: readonly DamageRange[];
   }>,
 ): ActorDefinition => ({ id, ...definition });
 

@@ -60,10 +60,15 @@ export const derived: readonly DerivedRule[] = [
     "max-fatigue",
     mul(add(stat("actor", "strength"), stat("actor", "endurance")), constant(64)),
   ),
-  // FormulaHelper.SpellPoints at the common 1.5x class multiplier
+  // FormulaHelper.SpellPoints: intelligence times the career-owned
+  // multiplier (0.5x-3.0x). The multiplier is caller-supplied evidence in
+  // milli (1500 = 1.5x); careers own the value per class.
   derivedRule(
     "spell-points",
-    divFloor(mul(stat("actor", "intelligence"), constant(3)), constant(2)),
+    divFloor(
+      mul(stat("actor", "intelligence"), evidence("spell-point-multiplier-milli")),
+      constant(1000),
+    ),
   ),
   // FormulaHelper.CalculateHandToHandMinDamage
   derivedRule(
@@ -132,24 +137,8 @@ export const derived: readonly DerivedRule[] = [
     "hit-points-per-level-up",
     maxOf(constant(1), add(evidence("hp-level-up-roll"), enduranceModifier())),
   ),
-  // FormulaHelper.CalculateSkillUsesForAdvancement: uses required to raise a
-  // skill — floor(skillValue * skillMult * careerMult * 2 / 5 + 1), where
-  // the multipliers are career-owned evidence. GRAMMAR GAP: classic also
-  // scales by 1.04^level; the expression grammar has no power node, so the
-  // level factor is not yet expressible.
-  derivedRule(
-    "skill-uses-for-advancement",
-    add(
-      divFloor(
-        mul(
-          evidence("skill-value"),
-          evidence("skill-advancement-multiplier"),
-          evidence("career-advancement-multiplier"),
-          constant(2),
-        ),
-        constant(5),
-      ),
-      constant(1),
-    ),
-  ),
+  // DEFERRED (recorded grammar gap, not a canonical rule): DFU
+  // CalculateSkillUsesForAdvancement scales by 1.04^level; the expression
+  // grammar has no power node. Do not add a rule named
+  // skill-uses-for-advancement until the level factor is expressible.
 ];
