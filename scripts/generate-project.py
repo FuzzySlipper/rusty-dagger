@@ -30,6 +30,21 @@ PROJECT_ID = "privateers-hold"
 SCENE_ID = "scene/privateers-hold"
 MESH_ASSET = "mesh/privateers-hold"
 
+# Treasure pile icon: TEXTURE.216 record 0 — index 0 of the donor's 20
+# randomTreasureIconIndices (DaggerfallLootDataTables.cs). The icon carries no
+# loot semantics in classic, so one deterministic pick is enough.
+TREASURE_ICON = (216, 0)
+# Generic corpse marker for enemies without a classic corpse texture:
+# TEXTURE.206 record 14, published as billboard-corpse-pile.png.
+GENERIC_CORPSE = (206, 14)
+# Fallback when a marker's sidecar entry carries no lootKey (the MAPS.BSA
+# dungeon type had no donor dungeon-treasure key). Privateer's Hold's MAPS.BSA
+# dungeon type byte is 2 (Human Stronghold) -> "N" via the donor's
+# dungeon-type array (LootTables.cs GenerateLoot lootTableKeys);
+# dagger-import resolves and stamps this from data, so the fallback should
+# never fire.
+DEFAULT_DUNGEON_LOOT_KEY = "N"
+
 # Player controller tuning (fall settle + ledge climb assist, opt-in). The
 # collision authority is the dungeon static mesh's trimesh policy (see
 # build_scene); there is no voxel proxy anymore.
@@ -432,6 +447,63 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
                         "visible": False,
                     },
                 })
+            else:
+                # Enemies without a classic corpse texture (Imp, Thief, ...)
+                # still leave a lootable corpse: swap to the generic corpse
+                # marker billboard (TEXTURE.206[14] corpse pile) so the body
+                # remains a visible loot anchor on death.
+                pile = billboard_sizes.get(GENERIC_CORPSE)
+                if pile:
+                    enemy_entities.append({
+                        "id": 100000 + 2000 + index,
+                        "name": f"corpse-for-{2000 + index}",
+                        "translation": [float(v) for v in e["position"]],
+                        "sprite": {
+                            "asset": f"texture/billboard-{GENERIC_CORPSE[0]}-{GENERIC_CORPSE[1]}",
+                            "frame": 0,
+                            "pivot": [0.5, 0.0],
+                            "size": pile.get("worldSize", [1.0, 1.0]),
+                            "billboard": "cylindrical",
+                            "sizeMode": "world",
+                            "shading": "lit",
+                            "depth": "default",
+                            "visible": False,
+                        },
+                    })
+
+    # Treasure container entities (RDB random-treasure markers, archive 199
+    # record 19 — DFU AddRandomTreasure). One sprite entity per marker in the
+    # 3000+ id band, carrying the dungeon-treasure loot key from the sidecar
+    # so the runtime can spawn its contents deterministically.
+    treasure_entities = []
+    if scene_meta and scene_meta.get("treasure"):
+        icon_slug = f"billboard-{TREASURE_ICON[0]}-{TREASURE_ICON[1]}"
+        icon = billboard_sizes.get(TREASURE_ICON, {})
+        for index, t in enumerate(scene_meta["treasure"]):
+            loot_key = t.get("lootKey")
+            if not loot_key:
+                print(
+                    f"warning: treasure marker {index} has no lootKey; "
+                    f"falling back to {DEFAULT_DUNGEON_LOOT_KEY} (Natural Cave)",
+                    file=sys.stderr,
+                )
+                loot_key = DEFAULT_DUNGEON_LOOT_KEY
+            treasure_entities.append({
+                "id": 3000 + index,
+                "name": f"treasure-{3000 + index}",
+                "translation": [float(v) for v in t["position"]],
+                "lootKey": loot_key,
+                "sprite": {
+                    "asset": f"texture/{icon_slug}",
+                    "billboard": "cylindrical",
+                    "pivot": icon.get("pivot", [0.5, 0.5]),
+                    "size": icon.get("worldSize", [1.0, 1.0]),
+                    "sizeMode": "world",
+                    "shading": "lit",
+                    "depth": "default",
+                    "visible": True,
+                },
+            })
 
     player_entity = {
         "id": 1,
@@ -461,7 +533,7 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
     return {
         "id": SCENE_ID,
         "name": "Privateer's Hold",
-        "entities": [player_entity, dungeon_entity] + light_entities + billboard_entities + enemy_entities,
+        "entities": [player_entity, dungeon_entity] + light_entities + billboard_entities + enemy_entities + treasure_entities,
     }
 
 

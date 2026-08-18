@@ -67,12 +67,42 @@ pub struct AdmittedProject {
 pub struct ContentEntity {
     pub id: u64,
     pub name: String,
+    pub sprite_asset: String,
+    pub authored_position: [f32; 3],
+    pub kind: ContentEntityKind,
+}
+
+/// What one admitted content entity is. Enemies carry their decoded mobile
+/// reference and spawn a live actor; treasure containers (RDB
+/// random-treasure markers, project entities with a `lootKey`) carry the
+/// classic dungeon-treasure loot table key the runtime generates from.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContentEntityKind {
+    Enemy(EnemyContentReference),
+    Treasure {
+        /// Classic loot table key (donor LootTables.cs dungeon-type array:
+        /// Privateer's Hold's MAPS.BSA dungeon type is 2, Human Stronghold
+        /// -> "N"). Stamped on the project entity by generate-project.py
+        /// from the import sidecar.
+        loot_key: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EnemyContentReference {
     pub mobile_id: u8,
     pub mobile_name: String,
     pub texture_archive: u16,
     pub flying: bool,
-    pub sprite_asset: String,
-    pub authored_position: [f32; 3],
+}
+
+impl ContentEntity {
+    pub fn enemy(&self) -> Option<&EnemyContentReference> {
+        match &self.kind {
+            ContentEntityKind::Enemy(reference) => Some(reference),
+            ContentEntityKind::Treasure { .. } => None,
+        }
+    }
 }
 
 impl AdmittedProject {
@@ -189,6 +219,25 @@ impl AdmittedProject {
             .iter()
             .filter_map(|entity| {
                 let asset = entity.sprite.as_ref()?.asset.as_str();
+                // Treasure containers carry their loot key on the entity
+                // (`lootKey`, stamped by generate-project.py from the import
+                // sidecar — classic MAPS.BSA dungeon type 2 (Human
+                // Stronghold) -> donor dungeon-type array -> "N"); they are
+                // content with a position but no actor.
+                if let Some(loot_key) = entity.loot_key.as_deref() {
+                    return Some(ContentEntity {
+                        id: entity.id,
+                        name: entity
+                            .name
+                            .clone()
+                            .unwrap_or_else(|| format!("treasure-{}", entity.id)),
+                        sprite_asset: asset.to_string(),
+                        authored_position: entity.translation,
+                        kind: ContentEntityKind::Treasure {
+                            loot_key: loot_key.to_string(),
+                        },
+                    });
+                }
                 let mobile_id = asset
                     .strip_prefix("texture/enemy-")?
                     .strip_suffix("-atlas")?
@@ -201,12 +250,14 @@ impl AdmittedProject {
                         .name
                         .clone()
                         .unwrap_or_else(|| format!("enemy-{mobile_id}-{}", entity.id)),
-                    mobile_id,
-                    mobile_name: mobile.name.to_string(),
-                    texture_archive: mobile.texture_archive,
-                    flying: mobile.flying,
                     sprite_asset: asset.to_string(),
                     authored_position: entity.translation,
+                    kind: ContentEntityKind::Enemy(EnemyContentReference {
+                        mobile_id,
+                        mobile_name: mobile.name.to_string(),
+                        texture_archive: mobile.texture_archive,
+                        flying: mobile.flying,
+                    }),
                 })
             })
             .collect();
@@ -312,6 +363,9 @@ struct EntityDocument {
     translation: [f32; 3],
     player_controller: Option<PlayerControllerDocument>,
     sprite: Option<SpriteDocument>,
+    /// Classic loot table key on treasure container entities (absent on
+    /// every other entity kind).
+    loot_key: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -204,7 +204,7 @@ fn main() {
         }
     }
     let scene_json = format!(
-        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"billboards\": [{}],\n  \"enemies\": [{}],\n  \"doors\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
+        "{{\n  \"schemaVersion\": 1,\n  \"location\": \"{}\",\n  \"startMarker\": {},\n  \"enterMarker\": {},\n  \"lightCount\": {},\n  \"flatCount\": {},\n  \"lights\": [{}],\n  \"billboards\": [{}],\n  \"enemies\": [{}],\n  \"treasure\": [{}],\n  \"doors\": [{}],\n  \"bounds\": {{\"min\": {:?}, \"max\": {:?}}}\n}}\n",
         args.location.replace('"', "'"),
         v3(output.scene.start_marker), v3(output.scene.enter_marker),
         output.scene.light_count, output.scene.flat_count,
@@ -223,6 +223,18 @@ fn main() {
             .map(|e| format!(
                 "{{\"position\": {:?}, \"mobileId\": {}, \"name\": \"{}\", \"textureArchive\": {}}}",
                 e.position, e.mobile_id, e.name, e.texture_archive
+            ))
+            .collect::<Vec<_>>()
+            .join(","),
+        output.scene.treasure.iter()
+            .map(|t| format!(
+                "{{\"position\": {:?}, \"flags\": {}, \"lootKey\": {}}}",
+                t.position,
+                t.flags,
+                t.loot_key
+                    .as_deref()
+                    .map(|key| format!("\"{key}\""))
+                    .unwrap_or_else(|| "null".to_string())
             ))
             .collect::<Vec<_>>()
             .join(","),
@@ -258,10 +270,21 @@ fn main() {
     // from the same bytes.
     if let Some(dir) = &args.texture_dir {
         publish_textures(dir, &output.textures);
+        // The treasure icon (TEXTURE.216[0], one deterministic pick from the
+        // donor's randomTreasureIconIndices) rides the billboard publication
+        // path so generate-project.py stamps it as an ordinary billboard
+        // texture asset; it is NOT added to scene billboards, so no extra
+        // billboard entity appears.
+        let mut billboard_sources = output.scene.billboards.clone();
+        billboard_sources.push(dungeon::BillboardFlat {
+            position: [0.0; 3],
+            texture_archive: dungeon::TREASURE_ICON_ARCHIVE,
+            texture_record: dungeon::TREASURE_ICON_RECORD,
+        });
         publish_billboard_textures(
             dir,
             &args.arena2_dir,
-            &output.scene.billboards,
+            &billboard_sources,
             args.clobber_sprites,
         );
         publish_enemy_atlases(

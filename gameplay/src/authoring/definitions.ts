@@ -174,6 +174,50 @@ export type RuleDefinition = Readonly<{
   condition: string;
 }>;
 
+/** Gold roll bounds of one classic loot table (donor MinGold/MaxGold). */
+export type LootGoldRange = Readonly<{ min: number; max: number }>;
+
+/**
+ * The classic loot category names in donor generation order. The names map
+ * to the donor `LootChanceMatrix` fields: plant1/plant2 = P1/P2,
+ * creature1..3 = C1..C3, misc1/misc2 = M1/M2 (the seven ingredient groups),
+ * armor = AM, weapons = WP, magic = MI, clothing = CL, books = BK,
+ * religious = RL.
+ */
+export const LOOT_CATEGORY_NAMES = [
+  "plant1",
+  "plant2",
+  "creature1",
+  "creature2",
+  "creature3",
+  "misc1",
+  "misc2",
+  "armor",
+  "weapons",
+  "magic",
+  "clothing",
+  "books",
+  "religious",
+] as const;
+
+export type LootCategoryName = (typeof LOOT_CATEGORY_NAMES)[number];
+
+/** Per-category integer percentage chances (0..100); omitted means 0. */
+export type LootTableCategories = Readonly<Record<LootCategoryName, number>>;
+
+/**
+ * One classic loot table (donor `LootChanceMatrix` — adopted): gold bounds
+ * and category chances. The Rust evaluator owns the generation semantics
+ * (gold x player level; C1/C2/P1/P2 chances x level; repeated rolls at
+ * halved chance).
+ */
+export type LootTableDefinition = Readonly<{
+  /** Classic table key: `-` (default) or a single uppercase letter. */
+  key: string;
+  gold: LootGoldRange;
+  categories: LootTableCategories;
+}>;
+
 /** Named encounter grouping; activation/routing stays with the Rust scheduler. */
 export type EncounterDefinition = Readonly<{
   id: string;
@@ -295,6 +339,32 @@ export const rule = (
   condition,
 });
 
+export const lootTable = (
+  key: string,
+  definition: Readonly<{
+    gold: LootGoldRange;
+    categories: Readonly<Partial<Record<LootCategoryName, number>>>;
+  }>,
+): LootTableDefinition => {
+  if (!/^(-|[A-Z])$/.test(key)) {
+    throw new Error(`loot table key must be "-" or a single uppercase letter, got "${key}"`);
+  }
+  const { min, max } = definition.gold;
+  if (!Number.isInteger(min) || !Number.isInteger(max) || min < 0 || min > max) {
+    throw new Error(`loot table ${key} gold must satisfy 0 <= min <= max, got ${min}..${max}`);
+  }
+  const categories: Record<LootCategoryName, number> = {} as Record<LootCategoryName, number>;
+  for (const name of LOOT_CATEGORY_NAMES) {
+    const value = definition.categories[name] ?? 0;
+    if (!Number.isInteger(value) || value < 0 || value > 100) {
+      throw new Error(
+        `loot table ${key} category ${name} must be an integer percentage 0..100, got ${value}`,
+      );
+    }
+    categories[name] = value;
+  }
+  return { key, gold: { min, max }, categories };
+};
 export const encounter = (
   id: string,
   values: Readonly<{

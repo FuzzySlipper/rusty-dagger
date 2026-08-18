@@ -17,8 +17,9 @@ meaning, and is the only evaluator. See `docs/gameplay-resolution.md`.
   `monsters` holds the full classic table-driven monster table; `derived`
   holds the named classic formula catalog; `items` holds the classic iron-tier
   item vocabulary (weapons with damage/handedness/skill, armor valued per
-  material, shields, gold, arrows) and `equipment` the classic slot and
-  capacity-metric vocabulary items bind against.
+  material, shields, gold, arrows), `equipment` the classic slot and
+  capacity-metric vocabulary items bind against, and `loot` the 22 classic
+  letter loot tables (donor `LootTables.cs` `DefaultLootTables`).
 - `src/packages/` — one entry per package composing catalogs into the
   deterministic envelope. Materialization walks this directory.
 
@@ -33,6 +34,16 @@ House rules:
   `EquipmentComponent` state through the Engine's inventory and equipment
   services, with the weight capacity limit derived from `max-encumbrance`
   (kg) in quarter-kg units.
+- Monsters and class enemies may declare `lootTableKey` naming one of the 22
+  classic loot tables. At session spawn Rust generates the table's contents
+  into the actor's own inventory (the donor corpse-loot model), so looting a
+  dead enemy transfers out of its inventory; the treasure containers placed
+  from the dungeon's random-treasure markers (RDB archive 199 record 19)
+  generate from the dungeon's loot key (Privateer's Hold: MAPS.BSA type 2,
+  Human Stronghold → "N") into standalone container entities. Generation is
+  deterministic per entity (the spawn evidence stream); pickups happen in
+  the native host with the F verb, and the lab lists every container and its
+  generation receipt read-only.
 - Adding content (an actor, action, item, rule, encounter) is a one-file
   catalog edit. Extending the grammar itself means editing `authoring/` and
   the Rust compiler in `crates/dagger-rpg/src/resolution/` in the same

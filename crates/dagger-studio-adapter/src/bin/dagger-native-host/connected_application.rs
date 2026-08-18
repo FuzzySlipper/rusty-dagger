@@ -214,6 +214,7 @@ fn apply_product_input(
     let attack_pressed = pressed_edges.contains("Space") || input.button_pressed_edges & 1 != 0;
     let reset_pressed = pressed_edges.contains("KeyR");
     let equip_pressed = pressed_edges.contains("KeyE");
+    let loot_pressed = pressed_edges.contains("KeyF");
     let patrol_debug_pressed = pressed_edges.contains("KeyG");
     let nav_debug_pressed = pressed_edges.contains("KeyN");
     let active = |code| pressed.contains(code) || pressed_edges.contains(code);
@@ -234,6 +235,9 @@ fn apply_product_input(
     }
     if equip_pressed {
         let _ = runtime.equip_cycle()?;
+    }
+    if loot_pressed {
+        let _ = runtime.interact_loot()?;
     }
     for route_code in ["Digit1", "Digit2"] {
         if pressed_edges.contains(route_code) {

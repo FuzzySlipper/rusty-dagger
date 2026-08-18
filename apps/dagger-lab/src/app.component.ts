@@ -8,6 +8,7 @@ import {
   ContentEntityReadout,
   InventoryItemReadout,
   LabReadout,
+  LootContainerReadout,
 } from './lab-contract';
 import { DAGGER_APPLICATION_CONTEXT, loadDaggerProductBootstrap } from './product-runtime';
 import { SpritesPanelComponent } from './sprites-panel.component';
@@ -110,7 +111,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   actorForSelectedContent(): ActorDefinition | undefined {
-    const mobileId = this.selectedContent()?.reference.mobileId;
+    const mobileId = this.selectedContent()?.reference?.mobileId;
     if (mobileId === undefined) return undefined;
     return this.readout?.gameplayPackage.actors.find((actor) => actor.mobileId === mobileId);
   }
@@ -123,18 +124,32 @@ export class AppComponent implements OnInit, OnDestroy {
     return readout.playerInventory.items.filter((item) => item.equipSlot !== null);
   }
 
+  /** Enemy content count for the badge; treasure containers are separate content. */
+  enemyCount(readout: LabReadout): number {
+    return readout.content.filter((entity) => entity.kind === 'enemy').length;
+  }
+
   carriedItems(readout: LabReadout): readonly InventoryItemReadout[] {
     return readout.playerInventory.items.filter((item) => item.equipSlot === null);
   }
 
   filteredContent(): readonly ContentEntityReadout[] {
     const filter = this.contentFilter.trim().toLowerCase();
-    const content = this.readout?.content ?? [];
+    // The content browser lists enemies; treasure containers live in the
+    // loot panel below.
+    const content = (this.readout?.content ?? []).filter((entity) => entity.kind === 'enemy');
     if (filter === '') return content;
     return content.filter((entity) =>
-      [entity.name, entity.reference.mobileName, String(entity.reference.mobileId)]
+      [entity.name, entity.reference?.mobileName ?? '', String(entity.reference?.mobileId ?? '')]
         .some((value) => value.toLowerCase().includes(filter)),
     );
+  }
+
+  /** Unsupported loot categories that still rolled a success (skipped coverage). */
+  unsupportedLootNotes(container: LootContainerReadout): readonly string[] {
+    return container.generation.categories
+      .filter((category) => !category.supported && category.rolls.some((roll) => roll.success))
+      .map((category) => category.category);
   }
 
   selectedContent(): ContentEntityReadout | undefined {

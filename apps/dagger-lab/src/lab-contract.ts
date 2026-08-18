@@ -226,8 +226,9 @@ export interface EncounterDecisionRecord {
 
 export interface ContentEntityReadout {
   readonly id: number;
-  readonly kind: 'enemy';
+  readonly kind: 'enemy' | 'treasure';
   readonly name: string;
+  /** Decoded mobile reference for enemies; null for treasure containers. */
   readonly reference: {
     readonly mobileId: number;
     readonly mobileName: string;
@@ -235,7 +236,9 @@ export interface ContentEntityReadout {
     readonly flying: boolean;
     readonly spriteAsset: string;
     readonly authoredPosition: readonly [number, number, number];
-  };
+  } | null;
+  /** Classic loot table key for treasure containers; null for enemies. */
+  readonly lootKey: string | null;
   readonly live: {
     readonly position: readonly [number, number, number];
     readonly distanceFromPlayer: number;
@@ -274,7 +277,7 @@ export interface PlayerInventoryReadout {
 /** One equipment mutation receipt summary (equip verb history, successes and rejections). */
 export interface EquipmentLogRecord {
   readonly sequence: number;
-  /** equip | unequip | swap | grant */
+  /** equip | unequip | swap | grant | loot:<container> */
   readonly operation: string;
   /** Item definition id the mutation applied to. */
   readonly item: string;
@@ -288,6 +291,49 @@ export interface EquipmentLogRecord {
   readonly reason: string | null;
   /** Committed component revision after the mutation; null on rejection. */
   readonly committedRevision: number | null;
+}
+
+/** One success slot's roll record in a loot generation receipt. */
+export interface LootRollOutcomeReadout {
+  readonly slot: number;
+  readonly chance: number;
+  readonly roll: number;
+  readonly success: boolean;
+  readonly pick: number | null;
+  readonly item: string | null;
+}
+
+/** One rolled loot category's outcome; `supported: false` marks categories with no catalog pool yet. */
+export interface LootCategoryOutcomeReadout {
+  readonly category: string;
+  readonly chance: number;
+  readonly effectiveChance: number;
+  readonly supported: boolean;
+  readonly rolls: readonly LootRollOutcomeReadout[];
+}
+
+/** The spawn-time loot generation receipt (DaggerLootGeneration). */
+export interface LootGenerationReadout {
+  readonly key: string;
+  readonly level: number;
+  readonly gold: { readonly roll: number; readonly level: number; readonly amount: number } | null;
+  readonly categories: readonly LootCategoryOutcomeReadout[];
+  readonly items: readonly (readonly [string, number])[];
+}
+
+/** One live loot container (treasure pile or loot-bearing enemy corpse). */
+export interface LootContainerReadout {
+  /** Container instance id (`treasure-<id>` / `enemy-<id>`). */
+  readonly id: string;
+  readonly kind: 'treasure' | 'corpse';
+  /** The scene content entity this container anchors to. */
+  readonly contentEntityId: number;
+  readonly lootKey: string;
+  /** Current contents from InventoryService::view on the container entity. */
+  readonly contents: PlayerInventoryReadout;
+  /** Spawn-time generation receipt, including unsupported-category coverage. */
+  readonly generation: LootGenerationReadout;
+  readonly emptied: boolean;
 }
 
 export interface LabReadout {
@@ -310,4 +356,6 @@ export interface LabReadout {
   readonly playerInventory: PlayerInventoryReadout;
   /** Ordered equip/unequip/swap receipts from the equip-cycle verb (E). */
   readonly equipmentLog: readonly EquipmentLogRecord[];
+  /** Live loot containers (treasure piles + loot-bearing corpses); pickup is the native KeyF verb. */
+  readonly lootContainers: readonly LootContainerReadout[];
 }

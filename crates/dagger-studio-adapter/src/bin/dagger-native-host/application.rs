@@ -158,9 +158,15 @@ impl NativeApplication {
                 .find(|entity| entity.id == focused_id)
             {
                 if let Some(resources) = entity.live.resources {
+                    let name = entity
+                        .reference
+                        .as_ref()
+                        .map_or(entity.name.as_str(), |reference| {
+                            reference.mobile_name.as_str()
+                        });
                     title.push_str(&format!(
                         " — {} H {:.0} S {:.0} M {:.0}",
-                        entity.reference.mobile_name,
+                        name,
                         resources.current_health,
                         resources.current_stamina,
                         resources.current_magicka
@@ -287,9 +293,12 @@ impl NativeApplication {
         // Keep a control's falling edge ahead of the next diagnostic batch so
         // constrained hosts cannot latch the Rust semantic edge or dispose
         // the renderer before the physical release is observed.
-        self.pressed_codes
-            .iter()
-            .any(|code| matches!(code.as_str(), "KeyG" | "KeyN" | "KeyR" | "Enter" | "Space"))
+        self.pressed_codes.iter().any(|code| {
+            matches!(
+                code.as_str(),
+                "KeyG" | "KeyN" | "KeyR" | "KeyF" | "Enter" | "Space"
+            )
+        })
     }
 
     fn apply_input(&mut self, input: &RendererPhysicalInputReadout) -> Result<()> {
@@ -394,6 +403,26 @@ impl NativeApplication {
             }
             io::stdout().flush()?;
             self.update_window_title()?;
+        }
+        if pressed.contains("KeyF") && !self.pressed_codes.contains("KeyF") {
+            match self.runtime.interact_loot() {
+                Ok(readout) => {
+                    if let Some(record) = readout.equipment_log.last() {
+                        if record.operation.starts_with("loot") {
+                            println!(
+                                "DAGGER_LOOT_{} container={} item={} quantity={:?} reason={}",
+                                if record.accepted { "TAKEN" } else { "NOTE" },
+                                record.operation,
+                                record.item,
+                                record.quantity,
+                                record.reason.as_deref().unwrap_or("-"),
+                            );
+                            io::stdout().flush()?;
+                        }
+                    }
+                }
+                Err(error) => println!("DAGGER_LOOT_NOTE error={error}"),
+            }
         }
         if pressed.contains("Enter") && !self.pressed_codes.contains("Enter") {
             self.runtime

@@ -113,6 +113,10 @@ pub const ENTER_MARKER_RECORD: u16 = 8;
 /// Editor enemy-marker records (DFU disables these — they are spawn markers,
 /// not visible flats). See RDBLayout AddFlat: records 15 and 16 in archive 199.
 pub const ENEMY_MARKER_RECORDS: [u16; 2] = [15, 16];
+/// Editor random-treasure marker record (DFU RDBLayout.cs:391-400 maps
+/// archive 199 record 19 to AddRandomTreasure — a RandomTreasure loot
+/// container, not a visible flat).
+pub const RANDOM_TREASURE_MARKER_RECORD: u16 = 19;
 
 impl RdbFlatObject {
     /// Whether this flat renders as a visible billboard. Per DFU RDBLayout
@@ -129,6 +133,17 @@ impl RdbFlatObject {
             return false;
         }
         true
+    }
+
+    /// Whether this flat is a random-treasure marker (DFU RDBLayout
+    /// AddRandomTreasure): an editor-archive (199) flat with record 19. These
+    /// are not visible billboards — they mark where a lootable treasure pile
+    /// is placed. The other editor records dropped alongside (199/11 quest
+    /// item, 199/18 quest marker) stay hidden: quest/item markers are out of
+    /// scope for this pipeline.
+    pub fn is_treasure_marker(&self) -> bool {
+        self.texture_archive == EDITOR_FLATS_ARCHIVE
+            && self.texture_record == RANDOM_TREASURE_MARKER_RECORD
     }
 }
 
@@ -461,5 +476,21 @@ mod billboard_tests {
         assert!(flat(210, 16).is_visible_billboard());
         assert!(flat(210, 15).is_visible_billboard());
         assert!(flat(213, 16).is_visible_billboard());
+    }
+
+    #[test]
+    fn only_editor_archive_record_19_is_a_treasure_marker() {
+        assert!(flat(EDITOR_FLATS_ARCHIVE, RANDOM_TREASURE_MARKER_RECORD).is_treasure_marker());
+        // Scoped to the editor archive: a 199-looking record in a real
+        // billboard archive stays an ordinary billboard.
+        assert!(!flat(210, RANDOM_TREASURE_MARKER_RECORD).is_treasure_marker());
+        for record in [START_MARKER_RECORD, ENTER_MARKER_RECORD, 15, 16, 11, 18] {
+            assert!(
+                !flat(EDITOR_FLATS_ARCHIVE, record).is_treasure_marker(),
+                "editor archive record {record} is not a treasure marker"
+            );
+        }
+        // Treasure markers are never visible billboards themselves.
+        assert!(!flat(EDITOR_FLATS_ARCHIVE, RANDOM_TREASURE_MARKER_RECORD).is_visible_billboard());
     }
 }

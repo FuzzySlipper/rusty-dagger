@@ -1,7 +1,8 @@
 //! Production-path proof for the authored Dagger gameplay package: admits the
 //! committed package, spawns actors through the mechanics-backed spawn
-//! authority, and resolves the same authored melee action for player and AI
-//! origins with effects committed through the Engine's track service.
+//! authority, resolves the same authored melee action for player and AI
+//! origins with effects committed through the Engine's track service, and
+//! generates classic loot-table contents for the hold's treasure key.
 
 use dagger_rpg::{
     compile_gameplay_package, resolve_dagger_action, spawn_actor, DaggerEvidence,
@@ -228,5 +229,32 @@ fn main() {
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({ "playerInventory": inventory }))
             .expect("serialize player inventory readout")
+    );
+
+    // Classic loot-table proof: spawn a container per table with fixed
+    // evidence (every roll at its minimum bound — success rolls 0 always
+    // succeed, gold rolls its minimum) and print the structured generation
+    // records. "M" is the hold's dungeon treasure key (Natural Cave per
+    // classic MAPS.BSA); "A" exercises the letter tables at level 1.
+    let catalog = compile_gameplay_package(PACKAGE).expect("admit authored gameplay package");
+    let mut state = DaggerGameplayState::default();
+    let mut loot_records = Vec::new();
+    for key in ["M", "A"] {
+        let evidence = dagger_rpg::loot_roll_evidence(&catalog, key)
+            .expect("loot roll contract")
+            .into_iter()
+            .map(|(id, min, _)| DaggerEvidence { id, value: min })
+            .collect::<Vec<_>>();
+        let instance = format!("treasure-{key}");
+        dagger_rpg::spawn_container(&mut state, &catalog, &instance, key, 1, &evidence)
+            .expect("spawn loot container");
+        let container = state.container(&instance).expect("container binding");
+        loot_records
+            .push(serde_json::to_value(container.generation()).expect("serialize loot record"));
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({ "loot": loot_records }))
+            .expect("serialize loot readout")
     );
 }

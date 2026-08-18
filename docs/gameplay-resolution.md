@@ -101,6 +101,26 @@ with the operation, item/slot, and rejection reason; combat records report
 the weapon used (or "unarmed"), the struck body part, and
 material-ineffective outcomes.
 
+Loot follows the donor's corpse-container model. Actor definitions declare an
+optional `lootTableKey` naming one of the 22 classic tables; at session spawn
+the runtime draws the table's bounded roll contract (`loot_roll_evidence`)
+from each entity's deterministic spawn stream and generates contents into the
+actor's own inventory (`bind_actor_loot`) — looting a dead enemy transfers
+out of its inventory, exactly as classic. The dungeon's random-treasure
+markers arrive as treasure content entities (id band 3000+, `lootKey` on the
+project entity) and spawn as standalone container entities
+(`spawn_container`) with the dungeon-type loot key. The runtime's
+interact/pickup verb (`interact_loot`, KeyF in the native host) aims a cone
+query at dead enemies and treasure piles within 2.5 units and performs a
+take-all transfer through `InventoryService::transfer` /
+`EquipmentService::transfer_unique_item`, stopping at the first capacity
+rejection; every transfer, the stopping rejection, and the empty-container
+note are equipment-log records under `loot:<container>`. The lab's loot panel
+lists every container with its live contents (upstream
+`InventoryService::view`), the spawn-time generation receipt (including
+unsupported-category coverage), and emptied state — read-only; pickup stays
+on the native verb.
+
 `dagger-gameplay-check` is the production Rust diagnostic. It admits the
 committed package, resolves the same controlled action for player and AI
 origins, verifies equivalent authoritative state, prints the structured
