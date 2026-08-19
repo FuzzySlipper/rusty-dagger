@@ -64,6 +64,24 @@ House rules:
   becomes an `armor-<part>` stat whose spawn base is the actor's flat
   `armorValue` and which equipped armor/shield items subtract from through
   upstream attributed sources.
+- `stats.ts` also declares the progression stats (`progression`: `xp`,
+  `level`) for the kill-XP experiment profile. They compile to wide-range
+  mechanics stats (0..=1_000_000), and the Rust spawn authority attaches
+  them to player-kind actors only (xp 0, level 1) — never as actor `stats`
+  map keys. Monsters and class enemies declare `xpReward` (initial profile:
+  classic level × 50); the player declares `hitPointsPerLevel`, the
+  career-owned level-up roll bound [hitPointsPerLevel/2, hitPointsPerLevel]
+  (donor `FormulaHelper.CalculateHitPointsPerLevelUp`). When a player kill
+  lands, Rust awards the xp, crosses the authored `xp-level` curve
+  (floor(live xp / 500) thresholds over the spawn base level 1), and per
+  level gained evaluates `hit-points-per-level-up` with a bounded
+  `<killer>.level-up.<level>.hp-roll` evidence roll, applying the result to
+  health max AND current health. Only player kills award. `xp-level` reads
+  live xp, so it evaluates only in live-state contexts (the progression
+  award, the lab readout) — never against definition bases. Classic has no
+  kill XP: the classic skill-use advancement (`player-level` +
+  `skill-uses-for-advancement`) is the documented alternative profile, kept
+  in the derived catalog for reference.
 - Expressions can also read live track currents (`track`), spawn-derived
   track maxima (`trackMax`), and fixed-point powers (`powMilli` — base^exp
   scaled by 1000, floor at each step). Division comes in floor (`divFloor`)

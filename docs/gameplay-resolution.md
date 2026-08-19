@@ -101,6 +101,42 @@ with the operation, item/slot, and rejection reason; combat records report
 the weapon used (or "unarmed"), the struck body part, and
 material-ineffective outcomes.
 
+Progression is the kill-XP experiment profile. The stats section declares a
+`progression` category (`xp`, `level`) that compiles to wide-range mechanics
+stats (0..=1_000_000 — xp accumulates past the classic attribute range);
+`spawn_actor` attaches them to player-kind actors only (xp 0, level 1), never
+from the actor stat maps, and monsters never carry them (their classic
+`level` is unrelated definition data). Monster and class-enemy definitions
+declare `xpReward` (initial profile: classic level × 50, authored in
+`monsters.ts`/`actors.ts`); the player declares `hitPointsPerLevel: 8`, the
+career-owned roll bound. When a player-origin resolution leaves an enemy
+dead, the runtime calls `dagger-rpg`'s progression authority
+(`award_kill_progression`): xp accumulates on the killer's `xp` stat base,
+the derived `xp-level` rule — the experiment pacing curve, floor(live xp /
+500), tunable as catalog authoring — maps the post-award total to thresholds
+crossed, and each level gained evaluates the classic
+`hit-points-per-level-up` rule with a bounded roll crossing as
+`<killer>.level-up.<level>.hp-roll` evidence (rolled from the runtime's
+salt-5 deterministic stream with a per-player level-up sequence) and applies
+the result to the `health-max` stat base AND to current health, clamped to
+the new maximum through the track service. The live level is the spawn base
+(1) plus the thresholds crossed. Only player kills award; AI kills don't.
+The derived rules evaluate against LIVE component stats (policy-style), never
+definition bases — `xp-level` reads live xp and only exists in these
+live-state contexts (award, lab readout). Stat-base mutations go through the
+Engine's `StatService::set_base`, so catalog bounds and track reconciliation
+stay upstream-owned. Every award returns a structured `DaggerProgressionRecord`
+(victim, xp before/after, levels, per-level roll evidence and health-max
+changes) appended to a capped progression history; the lab's read-only
+Character panel renders live xp/level, xp-to-next from the curve's own
+divisor, health, and the award history. Progression persistence is
+session-scoped: the lab jump verb heals but preserves it, and
+`reset_play_session` restores the spawn bases before track restoration.
+Classic has no kill XP — the classic skill-use advancement (`player-level` +
+`skill-uses-for-advancement`, both expressible in the derived catalog) is the
+documented alternative profile, kept for reference, not what the live runtime
+evaluates.
+
 Loot follows the donor's corpse-container model. Actor definitions declare an
 optional `lootTableKey` naming one of the 22 classic tables; at session spawn
 the runtime draws the table's bounded roll contract (`loot_roll_evidence`)

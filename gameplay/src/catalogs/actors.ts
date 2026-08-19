@@ -45,6 +45,11 @@ export const actors: readonly ActorDefinition[] = [
     // player is authored at 0 so equipment effects are observable. Each
     // `armor-<part>` stat starts at this flat value.
     armorValue: 0,
+    // Career-owned hit-points-per-level bound: classic careers roll
+    // [hitPointsPerLevel/2, hitPointsPerLevel] per level gained (donor
+    // FormulaHelper.CalculateHitPointsPerLevelUp), evaluated through the
+    // `hit-points-per-level-up` derived rule.
+    hitPointsPerLevel: 8,
     moveSpeed: 3.5,
     tracks: [
       // baseHealth 25 + endurance * 1.5 (classic HitPointsModifier flavor)
@@ -117,5 +122,8 @@ export const actors: readonly ActorDefinition[] = [
     }),
     team: "criminals",
     lootTableKey: "T",
+    // Kill-XP experiment profile: classic level x 50; the thief's table
+    // values carry the level-1 derivation (see the header note).
+    xpReward: 50,
   }),
 ];

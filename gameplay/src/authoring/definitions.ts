@@ -7,7 +7,7 @@
 import type { Expr } from "./expressions.js";
 import type { Program } from "./programs.js";
 
-/** Declared vocabulary: actor stat, skill, track, and armor-part ids in one place. */
+/** Declared vocabulary: actor stat, skill, track, armor-part, and progression ids in one place. */
 export type StatsSection = Readonly<{
   attributes: readonly string[];
   skills: readonly string[];
@@ -17,6 +17,11 @@ export type StatsSection = Readonly<{
    * feet); each becomes an `armor-<part>` stat in the Rust compiler.
    */
   armorParts: readonly string[];
+  /**
+   * Progression stats (xp, level): wide-range counters the Rust spawn
+   * authority attaches to player-kind actors only. Not actor stat-map keys.
+   */
+  progression: readonly string[];
 }>;
 
 /** A classic melee damage range (one sub-attack's inclusive bounds). */
@@ -77,6 +82,17 @@ export type ActorDefinition = Readonly<{
   team?: string;
   /** Classic errata: loot table key used when generating drops. */
   lootTableKey?: string;
+  /**
+   * Experiment kill-XP profile: xp the player earns for killing this actor
+   * (monsters and class enemies). Classic has no kill XP — see derived.ts.
+   */
+  xpReward?: number;
+  /**
+   * Career-owned hit-points-per-level bound (player): the level-up roll is
+   * [hitPointsPerLevel/2, hitPointsPerLevel] plus the endurance modifier
+   * (donor FormulaHelper.CalculateHitPointsPerLevelUp).
+   */
+  hitPointsPerLevel?: number;
   /**
    * Classic melee attack damage ranges (1-3 sub-attacks per swing in the
    * donor). Structured data for future multi-attack execution; today the
@@ -232,7 +248,8 @@ export const statsSection = (
   skills: readonly string[],
   tracks: readonly string[],
   armorParts: readonly string[],
-): StatsSection => ({ attributes, skills, tracks, armorParts });
+  progression: readonly string[],
+): StatsSection => ({ attributes, skills, tracks, armorParts, progression });
 
 export const track = (id: string, max: Expr): TrackDefinition => ({ id, max });
 
@@ -270,10 +287,22 @@ export const actor = (
     minMetalToHit?: string;
     team?: string;
     lootTableKey?: string;
+    xpReward?: number;
+    hitPointsPerLevel?: number;
     attacks?: readonly DamageRange[];
     inventory?: readonly LoadoutEntry[];
   }>,
-): ActorDefinition => ({ id, ...definition });
+): ActorDefinition => {
+  for (const [field, value] of [
+    ["xpReward", definition.xpReward],
+    ["hitPointsPerLevel", definition.hitPointsPerLevel],
+  ] as const) {
+    if (value !== undefined && (!Number.isInteger(value) || value < 0)) {
+      throw new Error(`actor ${id} ${field} must be a non-negative integer, got ${value}`);
+    }
+  }
+  return { id, ...definition };
+};
 
 export const derivedRule = (id: string, expr: Expr): DerivedRule => ({ id, expr });
 

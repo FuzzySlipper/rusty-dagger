@@ -81,4 +81,14 @@ export const ARMOR_PARTS = [
   "feet",
 ] as const;
 
-export const stats = statsSection(ATTRIBUTES, SKILLS, TRACKS, ARMOR_PARTS);
+/**
+ * Progression stats for the kill-XP experiment profile (see derived.ts):
+ * wide-range counters (bounds 0..=1_000_000 in the mechanics catalog, not
+ * the classic 0..=100 attribute range). The Rust spawn authority attaches
+ * them to player-kind actors only (xp 0, level 1); they are never keys in
+ * an actor's `stats` map, and live evaluation materializes them from the
+ * entity's component, like the `armor-<part>` stats.
+ */
+export const PROGRESSION = ["xp", "level"] as const;
+
+export const stats = statsSection(ATTRIBUTES, SKILLS, TRACKS, ARMOR_PARTS, PROGRESSION);

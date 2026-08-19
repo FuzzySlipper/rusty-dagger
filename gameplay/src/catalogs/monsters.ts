@@ -8,6 +8,10 @@
  * EASIER to hit; table armor x 5). Monster damage ranges live on their
  * attack actions, not here — Privateer's Hold attackers are authored in
  * `actions.ts`; the remaining attack actions are future errata.
+ *
+ * Every monster declares `xpReward` for the kill-XP progression experiment:
+ * the initial profile is classic level x 50, an experiment pacing choice
+ * (classic has no kill XP), tunable here as data.
  */
 
 import {
@@ -40,7 +44,7 @@ export const monsters: readonly ActorDefinition[] = [
       attackRange: 1.25,
       attackCooldownSeconds: 1.5,
     }),
-    level: 1, weight: 2, team: "vermin"
+    level: 1, xpReward: 50, weight: 2, team: "vermin"
   }),
   // Imp (mobile 1) — table: hp 11-18, dmg 2-15, armor 3, level 2.
   actor("imp", {
@@ -55,7 +59,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 2, weight: 40, minMetalToHit: "steel", team: "magic", lootTableKey: "D"
+    level: 2, xpReward: 100, weight: 40, minMetalToHit: "steel", team: "magic", lootTableKey: "D"
   }),
   // Spriggan (mobile 2) — table: hp 12-26, dmg 1-8, armor -4, level 3.
   actor("spriggan", {
@@ -70,7 +74,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 3, weight: 240, team: "spriggans", lootTableKey: "B"
+    level: 3, xpReward: 150, weight: 240, team: "spriggans", lootTableKey: "B"
   }),
   // Giant Bat (mobile 3) — table: hp 12-26, dmg 2-12, armor 6, level 3.
   actor("giant-bat", {
@@ -85,7 +89,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 3, weight: 80, team: "vermin"
+    level: 3, xpReward: 150, weight: 80, team: "vermin"
   }),
   // Grizzly Bear (mobile 4) — table: hp 13-34, dmg 1-8, armor 6, level 4.
   actor("grizzly-bear", {
@@ -100,7 +104,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 4, weight: 1000, team: "bears"
+    level: 4, xpReward: 200, weight: 1000, team: "bears"
   }),
   // Sabertooth Tiger (mobile 5) — table: hp 13-34, dmg 1-10, armor 6, level 4.
   actor("sabertooth-tiger", {
@@ -115,7 +119,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 4, weight: 1000, team: "tigers"
+    level: 4, xpReward: 200, weight: 1000, team: "tigers"
   }),
   // Spider (mobile 6) — table: hp 13-34, dmg 5-15, armor 5, level 4.
   actor("spider", {
@@ -130,7 +134,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 4, weight: 400, team: "spiders"
+    level: 4, xpReward: 200, weight: 400, team: "spiders"
   }),
   // Orc (mobile 7) — table: hp 13-34, dmg 1-6, armor 7, level 5.
   actor("orc", {
@@ -145,7 +149,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 5, weight: 600, team: "orcs", lootTableKey: "A"
+    level: 5, xpReward: 250, weight: 600, team: "orcs", lootTableKey: "A"
   }),
   // Centaur (mobile 8) — table: hp 14-46, dmg 5-15, armor 6, level 5.
   actor("centaur", {
@@ -160,7 +164,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 5, weight: 1200, team: "centaurs", lootTableKey: "C"
+    level: 5, xpReward: 250, weight: 1200, team: "centaurs", lootTableKey: "C"
   }),
   // Werewolf (mobile 9) — table: hp 17-66, dmg 1-10, armor 5, level 6.
   actor("werewolf", {
@@ -175,7 +179,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 6, weight: 480, minMetalToHit: "silver", team: "werecreatures"
+    level: 6, xpReward: 300, weight: 480, minMetalToHit: "silver", team: "werecreatures"
   }),
   // Nymph (mobile 10) — table: hp 15-50, dmg 1-5, armor 0, level 6.
   actor("nymph", {
@@ -190,7 +194,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 6, weight: 200, minMetalToHit: "silver", team: "nymphs", lootTableKey: "C"
+    level: 6, xpReward: 300, weight: 200, minMetalToHit: "silver", team: "nymphs", lootTableKey: "C"
   }),
   // Slaughterfish (mobile 11) — table: hp 15-50, dmg 2-12, armor 6, level 7.
   actor("slaughterfish", {
@@ -205,7 +209,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 7, weight: 400, team: "aquatic"
+    level: 7, xpReward: 350, weight: 400, team: "aquatic"
   }),
   // Orc Sergeant (mobile 12) — table: hp 15-50, dmg 5-15, armor 5, level 7.
   actor("orc-sergeant", {
@@ -220,7 +224,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 7, weight: 600, team: "orcs", lootTableKey: "A"
+    level: 7, xpReward: 350, weight: 600, team: "orcs", lootTableKey: "A"
   }),
   // Harpy (mobile 13) — table: hp 16-85, dmg 5-15, armor 2, level 8.
   actor("harpy", {
@@ -235,7 +239,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 8, weight: 200, minMetalToHit: "dwarven", team: "harpies", lootTableKey: "D"
+    level: 8, xpReward: 400, weight: 200, minMetalToHit: "dwarven", team: "harpies", lootTableKey: "D"
   }),
   // Wereboar (mobile 14) — table: hp 17-66, dmg 2-12, armor 3, level 8.
   actor("wereboar", {
@@ -250,7 +254,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 8, weight: 560, minMetalToHit: "silver", team: "werecreatures"
+    level: 8, xpReward: 400, weight: 560, minMetalToHit: "silver", team: "werecreatures"
   }),
   // Skeletal Warrior (mobile 15) — table: hp 17-66, dmg 5-15, armor 2, level 9.
   actor("skeletal-warrior", {
@@ -272,7 +276,7 @@ export const monsters: readonly ActorDefinition[] = [
       attackRange: 1.5,
       attackCooldownSeconds: 2.0,
     }),
-    level: 9, weight: 80, team: "undead", lootTableKey: "H"
+    level: 9, xpReward: 450, weight: 80, team: "undead", lootTableKey: "H"
   }),
   // Giant (mobile 16) — table: hp 18-74, dmg 10-30, armor 3, level 10.
   actor("giant", {
@@ -287,7 +291,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 10, weight: 3000, team: "giants", lootTableKey: "F"
+    level: 10, xpReward: 500, weight: 3000, team: "giants", lootTableKey: "F"
   }),
   // Zombie (mobile 17) — table: hp 52-66, dmg 15-50, armor 0, level 10.
   actor("zombie", {
@@ -302,7 +306,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 10, weight: 4000, team: "undead", lootTableKey: "G"
+    level: 10, xpReward: 500, weight: 4000, team: "undead", lootTableKey: "G"
   }),
   // Ghost (mobile 18) — table: hp 17-66, dmg 10-35, armor 0, level 11.
   actor("ghost", {
@@ -317,7 +321,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 11, weight: 0, minMetalToHit: "silver", team: "undead", lootTableKey: "I"
+    level: 11, xpReward: 550, weight: 0, minMetalToHit: "silver", team: "undead", lootTableKey: "I"
   }),
   // Mummy (mobile 19) — table: hp 17-66, dmg 5-15, armor 2, level 11.
   actor("mummy", {
@@ -332,7 +336,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 11, weight: 300, minMetalToHit: "silver", team: "undead", lootTableKey: "E"
+    level: 11, xpReward: 550, weight: 300, minMetalToHit: "silver", team: "undead", lootTableKey: "E"
   }),
   // Giant Scorpion (mobile 20) — table: hp 18-74, dmg 15-25, armor 0, level 12.
   actor("giant-scorpion", {
@@ -347,7 +351,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 12, weight: 600, team: "scorpions"
+    level: 12, xpReward: 600, weight: 600, team: "scorpions"
   }),
   // Orc Shaman (mobile 21) — table: hp 18-74, dmg 2-20, armor 7, level 13.
   actor("orc-shaman", {
@@ -362,7 +366,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 13, weight: 400, team: "orcs", lootTableKey: "U"
+    level: 13, xpReward: 650, weight: 400, team: "orcs", lootTableKey: "U"
   }),
   // Gargoyle (mobile 22) — table: hp 19-82, dmg 10-15, armor 0, level 14.
   actor("gargoyle", {
@@ -377,7 +381,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 14, weight: 300, minMetalToHit: "mithril", team: "magic"
+    level: 14, xpReward: 700, weight: 300, minMetalToHit: "mithril", team: "magic"
   }),
   // Wraith (mobile 23) — table: hp 30-90, dmg 20-45, armor 0, level 15.
   actor("wraith", {
@@ -392,7 +396,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 15, weight: 0, minMetalToHit: "silver", team: "undead", lootTableKey: "I"
+    level: 15, xpReward: 750, weight: 0, minMetalToHit: "silver", team: "undead", lootTableKey: "I"
   }),
   // Orc Warlord (mobile 24) — table: hp 20-90, dmg 5-50, armor 0, level 16.
   actor("orc-warlord", {
@@ -407,7 +411,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 700, team: "orcs", lootTableKey: "T"
+    level: 16, xpReward: 800, weight: 700, team: "orcs", lootTableKey: "T"
   }),
   // Frost Daedra (mobile 25) — table: hp 25-130, dmg 50-100, armor -5, level 17.
   actor("frost-daedra", {
@@ -422,7 +426,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 17, weight: 800, minMetalToHit: "mithril", team: "daedra", lootTableKey: "J"
+    level: 17, xpReward: 850, weight: 800, minMetalToHit: "mithril", team: "daedra", lootTableKey: "J"
   }),
   // Fire Daedra (mobile 26) — table: hp 26-138, dmg 15-50, armor 1, level 17.
   actor("fire-daedra", {
@@ -437,7 +441,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 17, weight: 800, minMetalToHit: "mithril", team: "daedra", lootTableKey: "J"
+    level: 17, xpReward: 850, weight: 800, minMetalToHit: "mithril", team: "daedra", lootTableKey: "J"
   }),
   // Daedroth (mobile 27) — table: hp 27-146, dmg 15-50, armor 1, level 18.
   actor("daedroth", {
@@ -452,7 +456,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 18, weight: 400, minMetalToHit: "mithril", team: "daedra", lootTableKey: "E"
+    level: 18, xpReward: 900, weight: 400, minMetalToHit: "mithril", team: "daedra", lootTableKey: "E"
   }),
   // Vampire (mobile 28) — table: hp 28-154, dmg 20-50, armor -2, level 19.
   actor("vampire", {
@@ -467,7 +471,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 19, weight: 400, minMetalToHit: "silver", team: "undead", lootTableKey: "Q"
+    level: 19, xpReward: 950, weight: 400, minMetalToHit: "silver", team: "undead", lootTableKey: "Q"
   }),
   // Daedra Seducer (mobile 29) — table: hp 27-146, dmg 15-50, armor 1, level 19.
   actor("daedra-seducer", {
@@ -482,7 +486,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 19, weight: 200, minMetalToHit: "mithril", team: "daedra", lootTableKey: "Q"
+    level: 19, xpReward: 950, weight: 200, minMetalToHit: "mithril", team: "daedra", lootTableKey: "Q"
   }),
   // Vampire Ancient (mobile 30) — table: hp 30-170, dmg 20-60, armor -5, level 20.
   actor("vampire-ancient", {
@@ -497,7 +501,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 20, weight: 400, minMetalToHit: "mithril", team: "undead", lootTableKey: "Q"
+    level: 20, xpReward: 1000, weight: 400, minMetalToHit: "mithril", team: "undead", lootTableKey: "Q"
   }),
   // Daedra Lord (mobile 31) — table: hp 35-210, dmg 15-50, armor -10, level 20.
   actor("daedra-lord", {
@@ -512,7 +516,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 20, weight: 1000, minMetalToHit: "mithril", team: "daedra", lootTableKey: "S"
+    level: 20, xpReward: 1000, weight: 1000, minMetalToHit: "mithril", team: "daedra", lootTableKey: "S"
   }),
   // Lich (mobile 32) — table: hp 30-170, dmg 70-100, armor -10, level 20.
   actor("lich", {
@@ -527,7 +531,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 20, weight: 300, minMetalToHit: "mithril", team: "undead", lootTableKey: "S"
+    level: 20, xpReward: 1000, weight: 300, minMetalToHit: "mithril", team: "undead", lootTableKey: "S"
   }),
   // Ancient Lich (mobile 33) — table: hp 30-170, dmg 70-100, armor -12, level 21.
   actor("ancient-lich", {
@@ -542,7 +546,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 21, weight: 300, minMetalToHit: "mithril", team: "undead", lootTableKey: "S"
+    level: 21, xpReward: 1050, weight: 300, minMetalToHit: "mithril", team: "undead", lootTableKey: "S"
   }),
   // Dragonling (mobile 34) — table: hp 14-42, dmg 5-15, armor 6, level 16.
   actor("dragonling", {
@@ -557,7 +561,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 10000, team: "dragonlings"
+    level: 16, xpReward: 800, weight: 10000, team: "dragonlings"
   }),
   // Fire Atronach (mobile 35) — table: hp 25-130, dmg 5-15, armor 6, level 16.
   actor("fire-atronach", {
@@ -572,7 +576,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 1000, team: "magic"
+    level: 16, xpReward: 800, weight: 1000, team: "magic"
   }),
   // Iron Atronach (mobile 36) — table: hp 25-130, dmg 5-15, armor 6, level 16.
   actor("iron-atronach", {
@@ -587,7 +591,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 1000, team: "magic"
+    level: 16, xpReward: 800, weight: 1000, team: "magic"
   }),
   // Flesh Atronach (mobile 37) — table: hp 25-130, dmg 5-15, armor 6, level 16.
   actor("flesh-atronach", {
@@ -602,7 +606,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 1000, team: "magic"
+    level: 16, xpReward: 800, weight: 1000, team: "magic"
   }),
   // Ice Atronach (mobile 38) — table: hp 25-130, dmg 5-15, armor 6, level 16.
   actor("ice-atronach", {
@@ -617,7 +621,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 1000, team: "magic"
+    level: 16, xpReward: 800, weight: 1000, team: "magic"
   }),
   // NOTE: mobile 39 (Horse (unused, but can appear in merchant-sold soul traps)) has no table stats in the donor; skipped.
   // Dragonling (mobile 40) — table: hp 14-42, dmg 5-15, armor 6, level 16.
@@ -633,7 +637,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 10000, team: "dragonlings"
+    level: 16, xpReward: 800, weight: 10000, team: "dragonlings"
   }),
   // Dreugh (mobile 41) — table: hp 13-34, dmg 5-15, armor 6, level 16.
   actor("dreugh", {
@@ -648,7 +652,7 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 600, team: "aquatic", lootTableKey: "R"
+    level: 16, xpReward: 800, weight: 600, team: "aquatic", lootTableKey: "R"
   }),
   // Lamia (mobile 42) — table: hp 16-58, dmg 5-15, armor 6, level 16.
   actor("lamia", {
@@ -663,6 +667,6 @@ export const monsters: readonly ActorDefinition[] = [
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
-    level: 16, weight: 200, team: "aquatic", lootTableKey: "R"
+    level: 16, xpReward: 800, weight: 200, team: "aquatic", lootTableKey: "R"
   }),
 ];

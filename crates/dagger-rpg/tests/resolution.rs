@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 
 use dagger_rpg::{
-    bind_actor_loot, compile_gameplay_package, evaluate_expr, generate_loot, loot_roll_evidence,
-    resolve_dagger_action, set_actor_track, spawn_actor, spawn_container, track_maximum,
-    ActorExprValues, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerExpr, DaggerGameplayError,
-    DaggerGameplayState, DaggerIntent, DaggerIntentOrigin, DaggerRejection, DaggerSubject,
-    ExprContext,
+    award_kill_progression, bind_actor_loot, compile_gameplay_package, evaluate_expr,
+    generate_loot, live_stat_base, loot_roll_evidence, resolve_dagger_action, set_actor_track,
+    spawn_actor, spawn_container, track_maximum, ActorExprValues, DaggerEffect, DaggerEvent,
+    DaggerEvidence, DaggerExpr, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
+    DaggerIntentOrigin, DaggerRejection, DaggerSubject, ExprContext,
 };
 use rusty_engine::gameplay_resolution::{
     AttemptStatus, CommitStatus, CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
@@ -2375,5 +2375,289 @@ fn bind_actor_loot_binds_into_a_spawned_actors_inventory() {
     assert!(matches!(
         bind_actor_loot(&mut state, &catalog, "nobody", "A", 1, &evidence),
         Err(DaggerGameplayError::InvalidState(_))
+    ));
+}
+
+// --- Kill-XP progression (the active experiment profile) ---
+
+/// The bounded hp-roll evidence for one gained level (player hitPointsPerLevel
+/// 8, so rolls are in [4, 8]).
+fn hp_roll_evidence(level: i64, value: i64) -> DaggerEvidence {
+    DaggerEvidence {
+        id: format!("player.level-up.{level}.hp-roll"),
+        value,
+    }
+}
+
+#[test]
+fn player_spawn_attaches_progression_bases_but_monsters_have_none() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let state = spawn_state(&catalog);
+    assert_eq!(live_stat_base(&state, "player", "xp"), Ok(0));
+    assert_eq!(live_stat_base(&state, "player", "level"), Ok(1));
+    // Monsters never carry progression stats: their classic `level` is
+    // definition data, unrelated.
+    assert!(live_stat_base(&state, "rat-2007", "xp").is_err());
+    assert!(live_stat_base(&state, "rat-2007", "level").is_err());
+}
+
+#[test]
+fn kill_via_resolution_awards_xp_below_the_threshold_without_leveling() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state(&catalog);
+    // The player kills the rat through authored resolution (1 health left,
+    // weapon roll 8 lands for 8).
+    set_actor_track(&mut state, &catalog, "rat-2007", "health", 1).expect("lower rat health");
+    let (receipt, _) = resolve_dagger_action(
+        &catalog,
+        &mut state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        melee_evidence(25),
+    );
+    assert!(receipt.succeeded());
+    assert_eq!(state.track_value("rat-2007", "health"), Some(0));
+
+    let record = award_kill_progression(&mut state, &catalog, "player", "rat-2007", &[])
+        .expect("award")
+        .expect("the rat carries an xpReward");
+    assert_eq!(record.victim, "rat");
+    assert_eq!(
+        (record.xp_awarded, record.xp_before, record.xp_after),
+        (50, 0, 50)
+    );
+    assert_eq!((record.level_before, record.level_after), (1, 1));
+    assert!(record.level_ups.is_empty());
+    assert_eq!(live_stat_base(&state, "player", "xp"), Ok(50));
+    assert_eq!(live_stat_base(&state, "player", "level"), Ok(1));
+    assert_eq!(
+        track_maximum(&state, &catalog, "player", "health"),
+        Some(85)
+    );
+}
+
+#[test]
+fn cumulative_awards_cross_the_threshold_and_level_up() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state(&catalog);
+    // Nine rat kills: xp 450, still below the 500 threshold.
+    for _ in 0..9 {
+        award_kill_progression(&mut state, &catalog, "player", "rat-2007", &[])
+            .expect("award")
+            .expect("rat awards");
+    }
+    assert_eq!(live_stat_base(&state, "player", "xp"), Ok(450));
+    assert_eq!(live_stat_base(&state, "player", "level"), Ok(1));
+
+    // The tenth kill crosses: one level-up, roll 6 + endurance modifier -1
+    // (endurance 40) = 5 hp applied to health-max AND current health.
+    let record = award_kill_progression(
+        &mut state,
+        &catalog,
+        "player",
+        "rat-2007",
+        &[hp_roll_evidence(2, 6)],
+    )
+    .expect("award")
+    .expect("rat awards");
+    assert_eq!(record.xp_after, 500);
+    assert_eq!((record.level_before, record.level_after), (1, 2));
+    assert_eq!(record.level_ups.len(), 1);
+    let level_up = &record.level_ups[0];
+    assert_eq!(level_up.level, 2);
+    assert_eq!(level_up.roll_evidence, "player.level-up.2.hp-roll");
+    assert_eq!(level_up.roll, 6);
+    assert_eq!(level_up.hit_points, 5);
+    assert_eq!(
+        (level_up.health_max_before, level_up.health_max_after),
+        (85, 90)
+    );
+    assert_eq!(
+        track_maximum(&state, &catalog, "player", "health"),
+        Some(90)
+    );
+    assert_eq!(state.track_value("player", "health"), Some(90));
+    assert_eq!(live_stat_base(&state, "player", "level"), Ok(2));
+
+    // The next threshold is 1000 xp: another rat kill does not level again.
+    let record = award_kill_progression(&mut state, &catalog, "player", "rat-2007", &[])
+        .expect("award")
+        .expect("rat awards");
+    assert_eq!((record.xp_after, record.level_after), (550, 2));
+    assert!(record.level_ups.is_empty());
+}
+
+#[test]
+fn a_large_single_award_applies_one_hp_roll_per_level_gained() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = DaggerGameplayState::default();
+    spawn_actor(&mut state, &catalog, "player", "player", &[]).expect("spawn player");
+    spawn_actor(
+        &mut state,
+        &catalog,
+        "lich",
+        "lich-1",
+        &[DaggerEvidence {
+            id: "lich.health".to_string(),
+            value: 100,
+        }],
+    )
+    .expect("spawn lich");
+
+    // Lich xpReward 1000 crosses two thresholds at once (500 and 1000).
+    let record = award_kill_progression(
+        &mut state,
+        &catalog,
+        "player",
+        "lich-1",
+        &[hp_roll_evidence(2, 4), hp_roll_evidence(3, 8)],
+    )
+    .expect("award")
+    .expect("lich awards");
+    assert_eq!((record.xp_before, record.xp_after), (0, 1000));
+    assert_eq!((record.level_before, record.level_after), (1, 3));
+    assert_eq!(record.level_ups.len(), 2);
+    // Level 2: roll 4 + modifier -1 = 3; level 3: roll 8 + modifier -1 = 7.
+    assert_eq!(
+        record.level_ups[0].roll_evidence,
+        "player.level-up.2.hp-roll"
+    );
+    assert_eq!(record.level_ups[0].hit_points, 3);
+    assert_eq!(
+        (
+            record.level_ups[0].health_max_before,
+            record.level_ups[0].health_max_after
+        ),
+        (85, 88)
+    );
+    assert_eq!(
+        record.level_ups[1].roll_evidence,
+        "player.level-up.3.hp-roll"
+    );
+    assert_eq!(record.level_ups[1].hit_points, 7);
+    assert_eq!(
+        (
+            record.level_ups[1].health_max_before,
+            record.level_ups[1].health_max_after
+        ),
+        (88, 95)
+    );
+    assert_eq!(
+        track_maximum(&state, &catalog, "player", "health"),
+        Some(95)
+    );
+    assert_eq!(state.track_value("player", "health"), Some(95));
+    assert_eq!(live_stat_base(&state, "player", "level"), Ok(3));
+}
+
+#[test]
+fn non_player_kills_and_rewardless_victims_award_nothing() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let mut state = spawn_state(&catalog);
+    spawn_actor(
+        &mut state,
+        &catalog,
+        "lich",
+        "lich-1",
+        &[DaggerEvidence {
+            id: "lich.health".to_string(),
+            value: 100,
+        }],
+    )
+    .expect("spawn lich");
+
+    // The victim definition carries no xpReward (the player has none).
+    assert!(
+        award_kill_progression(&mut state, &catalog, "player", "player", &[])
+            .expect("ok")
+            .is_none()
+    );
+    // A non-player-origin killer (the rat) awards nothing even for a
+    // reward-bearing victim — only player kills award; AI kills don't.
+    assert!(
+        award_kill_progression(&mut state, &catalog, "rat-2007", "lich-1", &[])
+            .expect("ok")
+            .is_none()
+    );
+    assert_eq!(live_stat_base(&state, "player", "xp"), Ok(0));
+    assert_eq!(live_stat_base(&state, "player", "level"), Ok(1));
+    assert_eq!(
+        track_maximum(&state, &catalog, "player", "health"),
+        Some(85)
+    );
+}
+
+#[test]
+fn level_up_hp_rolls_are_deterministic_per_session() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let award = || {
+        let mut state = spawn_state(&catalog);
+        for _ in 0..9 {
+            award_kill_progression(&mut state, &catalog, "player", "rat-2007", &[]).expect("award");
+        }
+        award_kill_progression(
+            &mut state,
+            &catalog,
+            "player",
+            "rat-2007",
+            &[hp_roll_evidence(2, 6)],
+        )
+        .expect("award")
+        .expect("rat awards")
+    };
+    assert_eq!(award(), award());
+}
+
+#[test]
+fn level_up_requires_bounded_roll_evidence() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    // Seed xp to 450 so the next rat kill crosses the threshold and the
+    // level-up hp roll is actually read.
+    let seeded = |evidence: &[DaggerEvidence]| {
+        let mut state = spawn_state(&catalog);
+        for _ in 0..9 {
+            award_kill_progression(&mut state, &catalog, "player", "rat-2007", &[]).expect("award");
+        }
+        award_kill_progression(&mut state, &catalog, "player", "rat-2007", evidence)
+    };
+    // Missing evidence rejects without mutating.
+    assert!(matches!(
+        seeded(&[]),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Rolls outside [hitPointsPerLevel/2, hitPointsPerLevel] = [4, 8] reject.
+    assert!(matches!(
+        seeded(&[hp_roll_evidence(2, 3)]),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    assert!(matches!(
+        seeded(&[hp_roll_evidence(2, 9)]),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+}
+
+#[test]
+fn progression_admission_validates_rewards_and_rejects_unknown_fields() {
+    // Negative xpReward.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["actors"][2]["xpReward"] = serde_json::json!(-1);
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Negative hitPointsPerLevel.
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["actors"][0]["hitPointsPerLevel"] = serde_json::json!(-1);
+        })),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+    // Unknown actor fields reject at payload parse (deny_unknown_fields).
+    assert!(matches!(
+        compile_gameplay_package(&mutated_package(|package| {
+            package["payload"]["actors"][2]["xpBounty"] = serde_json::json!(1);
+        })),
+        Err(DaggerGameplayError::Payload(_))
     ));
 }

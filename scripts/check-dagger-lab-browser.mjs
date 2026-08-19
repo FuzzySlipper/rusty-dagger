@@ -202,6 +202,22 @@ try {
     await page.getByTestId(`definition-encounter-${encounter.id}`).waitFor();
   }
 
+  // Character panel: the live kill-XP progression state renders read-only,
+  // every value sourced from the authoritative readout (never literals).
+  const initialProgression = initialLab.progression;
+  assert.ok(initialProgression, 'progression readout is present');
+  assert.equal(await page.getByTestId('progression-level').innerText(), String(initialProgression.level));
+  assert.equal(await page.getByTestId('progression-xp').innerText(), String(initialProgression.xp));
+  assert.equal(await page.getByTestId('progression-to-next').innerText(), String(initialProgression.xpToNextLevel));
+  assert.equal(
+    await page.getByTestId('progression-health').innerText(),
+    `${fixed(initialProgression.currentHealth)} / ${fixed(initialProgression.maxHealth)}`,
+  );
+  assert.match(
+    await page.getByTestId('progression-award-count').innerText(),
+    new RegExp(`^${initialProgression.history.length} AWARDS$`, 'i'),
+  );
+
   // One physical attack resolves through the authored action. This
   // diagnostic computes nothing itself: the record's own authoritative
   // resolution evidence (the emitted predicate decision, semantic events,

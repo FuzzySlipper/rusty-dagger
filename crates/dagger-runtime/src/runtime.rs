@@ -6,7 +6,7 @@ use dagger_rpg::{
     spawn_container, struck_body_part_name, track_maximum, unarmed_damage_range,
     AuthoredGameplayPayload, DaggerContainerState, DaggerDynamicRoll, DaggerEvent, DaggerEvidence,
     DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
-    DaggerIntentOrigin, DaggerLootGeneration,
+    DaggerIntentOrigin, DaggerLootGeneration, DaggerProgressionRecord,
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
@@ -105,6 +105,12 @@ pub struct DaggerRuntime {
     /// Cursor into the stable carried-equippable ordering: index of the item
     /// the last equip-cycle press applied to (`None` before the first press).
     equip_cycle_cursor: Option<usize>,
+    /// Kill-XP award receipts from the progression authority (capped like
+    /// combat history).
+    progression_history: VecDeque<DaggerProgressionRecord>,
+    /// Per-player level-up sequence feeding the salt-5 hp-roll stream; reset
+    /// with the play session so hp rolls are deterministic per session.
+    player_level_up_sequence: u64,
 }
 
 pub const GAMEPLAY_PACKAGE: &[u8] =
@@ -122,9 +128,10 @@ const MELEE_AIM_MIN_DOT: f32 = 0.64;
 /// is a click on the adjacent container sprite; 2.5 units covers the
 /// jump-to-content standoff (1.5u) with margin for the low corpse piles.
 pub const LOOT_INTERACT_REACH: f32 = 2.5;
-/// Player level used for loot generation until real player levels arrive
-/// with 6688 (the donor multiplies gold and the C1/C2/P1/P2 category chances
-/// by player level).
+/// Player level used for loot generation. Loot generates at spawn, when the
+/// session player is always level 1 (progression persistence is
+/// session-only); if later-generated containers ever appear, the level must
+/// be read from the player's live `level` stat at generation time.
 const LOOT_GENERATION_LEVEL: i64 = 1;
 
 /// Read-only lab readout: catalog definitions, live state, and resolution
@@ -157,6 +164,25 @@ pub struct LabReadout {
     /// Live loot containers: treasure piles and loot-bearing enemy corpses,
     /// with contents and the generation receipt from spawn.
     pub loot_containers: Vec<LootContainerReadout>,
+    /// Kill-XP progression state: the player's live xp/level, pacing to the
+    /// next level, health, and the award history.
+    pub progression: ProgressionReadout,
+}
+
+/// Read-only view of the kill-XP experiment profile state: live progression
+/// stats, pacing against the `xp-level` curve, health, and the award
+/// receipts from the progression authority.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressionReadout {
+    pub xp: i64,
+    pub level: i64,
+    /// xp remaining until the next `xp-level` threshold (the next level).
+    pub xp_to_next_level: i64,
+    pub current_health: f32,
+    pub max_health: f32,
+    /// Ordered kill-XP award receipts (capped like combat history).
+    pub history: Vec<DaggerProgressionRecord>,
 }
 
 /// Capacity usage for one metric in quarter-kg units (`used` / `maximum`).
@@ -638,6 +664,8 @@ impl DaggerRuntime {
             equipment_log: VecDeque::new(),
             equipment_log_sequence: 0,
             equip_cycle_cursor: None,
+            progression_history: VecDeque::new(),
+            player_level_up_sequence: 0,
         })
     }
 
@@ -1111,6 +1139,22 @@ impl DaggerRuntime {
         }
     }
 
+    /// Session-scoped progression reset: spawn xp/level/health-max bases
+    /// through the progression authority, plus the runtime-side history and
+    /// level-up roll sequence. Called by `reset_play_session` BEFORE track
+    /// restoration so health restores to the spawn maximum.
+    fn reset_progression(&mut self) -> Result<(), RuntimeError> {
+        dagger_rpg::reset_actor_progression(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            PLAYER_ACTOR_ID,
+        )
+        .map_err(RuntimeError::Gameplay)?;
+        self.progression_history.clear();
+        self.player_level_up_sequence = 0;
+        Ok(())
+    }
+
     fn restore_live_actors(&mut self) -> Result<(), RuntimeError> {
         restore_actor_tracks(&mut self.gameplay, &self.gameplay_catalog, PLAYER_ACTOR_ID)
             .map_err(RuntimeError::Gameplay)?;
@@ -1168,8 +1212,14 @@ impl DaggerRuntime {
     }
 
     /// Reset the playable run to the committed Privateer's Hold start,
-    /// restoring catalog spawn state.
+    /// restoring catalog spawn state. Progression is session-scoped: the
+    /// reset also restores the player's spawn xp/level/health-max bases
+    /// (before track restoration reads them), clears the award history, and
+    /// restarts the level-up roll sequence so a retried session reproduces
+    /// the same hp rolls. The lab jump verb only heals — it preserves
+    /// progression within a session.
     pub fn reset_play_session(&mut self) -> Result<LabReadout, RuntimeError> {
+        self.reset_progression()?;
         if let Some(active) = self.active_encounter_id.clone() {
             return self.start_named_encounter(&active);
         }
@@ -1427,6 +1477,11 @@ impl DaggerRuntime {
         let health_after = self.enemy_health(id);
         let hit = attempt.damage > 0;
         let died = health_before > 0.0 && health_after <= 0.0;
+        if died {
+            // A player-origin resolution left the enemy dead: award kill-XP
+            // through the progression authority.
+            self.award_kill_progression_for(id)?;
+        }
         if hit {
             if let Some(sequence) = self.enemy_hurt_sequences.get_mut(&id) {
                 *sequence = sequence.saturating_add(1);
@@ -1635,6 +1690,90 @@ impl DaggerRuntime {
                 .iter()
                 .map(|event| format!("{event:?}"))
                 .collect(),
+        })
+    }
+
+    /// Kill-XP hook: the enemy `id` just died to a player-origin resolution.
+    /// The progression authority owns the award's state changes; the runtime
+    /// supplies the per-level hp rolls from its salted stream (salt 5, the
+    /// per-player level-up sequence) so level-ups are deterministic per
+    /// session. Award receipts append to the capped progression history.
+    fn award_kill_progression_for(&mut self, id: u64) -> Result<(), RuntimeError> {
+        let victim = enemy_actor_id(id);
+        let Some((level_before, level_after)) = dagger_rpg::kill_level_gains(
+            &self.gameplay,
+            &self.gameplay_catalog,
+            PLAYER_ACTOR_ID,
+            &victim,
+        )
+        .map_err(RuntimeError::Gameplay)?
+        else {
+            return Ok(());
+        };
+        let mut evidence = Vec::new();
+        if level_after > level_before {
+            let hit_points_per_level = self
+                .gameplay_catalog
+                .actors()
+                .get(PLAYER_ACTOR_ID)
+                .and_then(|player| player.hit_points_per_level)
+                .ok_or_else(|| {
+                    RuntimeError::Gameplay(DaggerGameplayError::InvalidState(
+                        "player levels up without hitPointsPerLevel".to_string(),
+                    ))
+                })?;
+            let player_entity = self.player_actor_entity().raw();
+            for level in (level_before + 1)..=level_after {
+                self.player_level_up_sequence = self.player_level_up_sequence.saturating_add(1);
+                let roll = deterministic_roll(
+                    self.player_level_up_sequence,
+                    player_entity,
+                    5,
+                    hit_points_per_level / 2,
+                    hit_points_per_level,
+                );
+                evidence.push(DaggerEvidence {
+                    id: format!("{PLAYER_ACTOR_ID}.level-up.{level}.hp-roll"),
+                    value: roll,
+                });
+            }
+        }
+        if let Some(record) = dagger_rpg::award_kill_progression(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            PLAYER_ACTOR_ID,
+            &victim,
+            &evidence,
+        )
+        .map_err(RuntimeError::Gameplay)?
+        {
+            self.progression_history.push_back(record);
+            while self.progression_history.len() > COMBAT_HISTORY_LIMIT {
+                self.progression_history.pop_front();
+            }
+        }
+        Ok(())
+    }
+
+    /// The player's kill-XP progression readout: live progression stats,
+    /// xp-to-next from the `xp-level` curve's own divisor (no duplicated
+    /// pacing constant), health, and the award history.
+    fn progression_readout(&self) -> Result<ProgressionReadout, RuntimeError> {
+        let xp =
+            dagger_rpg::live_stat_base(&self.gameplay, PLAYER_ACTOR_ID, dagger_rpg::XP_STAT_ID)
+                .map_err(RuntimeError::Gameplay)?;
+        let level =
+            dagger_rpg::live_stat_base(&self.gameplay, PLAYER_ACTOR_ID, dagger_rpg::LEVEL_STAT_ID)
+                .map_err(RuntimeError::Gameplay)?;
+        let divisor =
+            dagger_rpg::xp_level_divisor(&self.gameplay_catalog).map_err(RuntimeError::Gameplay)?;
+        Ok(ProgressionReadout {
+            xp,
+            level,
+            xp_to_next_level: divisor - xp.rem_euclid(divisor),
+            current_health: self.player_health(),
+            max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
+            history: self.progression_history.iter().cloned().collect(),
         })
     }
 
@@ -2451,6 +2590,7 @@ impl DaggerRuntime {
             player_inventory: self.player_inventory_readout()?,
             equipment_log: self.equipment_log.iter().cloned().collect(),
             loot_containers: self.loot_containers_readout()?,
+            progression: self.progression_readout()?,
         })
     }
 
@@ -2789,7 +2929,8 @@ fn zeroed_career_fact(evidence_id: &str) -> bool {
 /// no time source, so encounters are replayable and diagnostics and browser
 /// gates can assert exact outcomes. Salt 1 is the d100 hit roll; salt 2 is
 /// the damage dice roll (bounded by the actor's live weapon); salt 3 is the
-/// struck-body-part roll (0..=19).
+/// struck-body-part roll (0..=19); salt 5 is the progression level-up hp
+/// roll (loot draws from the per-entity spawn streams instead).
 fn deterministic_roll(sequence: u64, target_id: u64, salt: u64, min: i64, max: i64) -> i64 {
     let mut value = sequence
         .rotate_left(17)
@@ -2826,7 +2967,9 @@ fn treasure_container_id(id: u64) -> String {
 /// - each treasure content entity gets `spawn_container` with the dungeon's
 ///   loot key and the same per-entity stream.
 ///
-/// Level is 1 until real player levels arrive with 6688.
+/// Loot generates at spawn with `LOOT_GENERATION_LEVEL` (see its note):
+/// the session player is level 1 at spawn; progression levels arrive only
+/// later through kill awards.
 fn spawn_live_actors(
     catalog: &DaggerGameplayCatalog,
     content_entities: &[ContentEntity],

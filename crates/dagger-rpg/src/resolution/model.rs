@@ -123,6 +123,11 @@ pub struct AuthoredStatsSection {
     /// additive under payload schema 1.
     #[serde(default)]
     pub armor_parts: Vec<String>,
+    /// Progression stats (xp, level): wide-range counters attached to
+    /// player-kind actors at spawn. Optional and additive under payload
+    /// schema 1.
+    #[serde(default)]
+    pub progression: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -150,6 +155,14 @@ pub struct AuthoredActorDefinition {
     pub team: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub loot_table_key: Option<String>,
+    /// Experiment kill-XP profile: xp the player earns for killing this
+    /// actor (monsters and class enemies).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub xp_reward: Option<Binary64I64>,
+    /// Career-owned hit-points-per-level bound (player): the level-up roll
+    /// is [hitPointsPerLevel/2, hitPointsPerLevel].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_points_per_level: Option<Binary64I64>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attacks: Vec<AuthoredDamageRange>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -558,6 +571,9 @@ pub struct DaggerStatsSection {
     pub tracks: BTreeSet<String>,
     /// Classic body parts; each compiles to an `armor-<part>` stat.
     pub armor_parts: BTreeSet<String>,
+    /// Progression stats (xp, level); each compiles to a wide-range
+    /// mechanics stat attached to player-kind actors at spawn.
+    pub progression: BTreeSet<String>,
 }
 
 pub type DaggerProgram = Program<DaggerPredicate, DaggerOperation>;
@@ -682,6 +698,12 @@ pub struct DaggerActorDefinition {
     pub min_metal_to_hit: Option<String>,
     pub team: Option<String>,
     pub loot_table_key: Option<String>,
+    /// Experiment kill-XP profile: xp the player earns for killing this
+    /// actor (`None` awards nothing).
+    pub xp_reward: Option<i64>,
+    /// Career-owned hit-points-per-level bound (player); required when a
+    /// level-up applies health.
+    pub hit_points_per_level: Option<i64>,
     /// Classic melee attack damage ranges (1-3 sub-attacks per swing).
     pub attacks: Vec<DaggerDamageRange>,
     /// Spawn loadout bound into upstream inventory/equipment components.
@@ -962,6 +984,44 @@ pub struct DaggerLootRollOutcome {
     pub success: bool,
     pub pick: Option<i64>,
     pub item: Option<String>,
+}
+
+/// The structured receipt of one kill-XP award: the reward, the xp and
+/// level before/after, and one outcome per level gained so the explanation
+/// covers reward → threshold → level → state changes. Awarded only for
+/// player kills of actors whose definition declares `xpReward`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DaggerProgressionRecord {
+    /// Victim's actor definition id (the catalog entry that carried the
+    /// `xpReward`).
+    pub victim: String,
+    pub xp_awarded: i64,
+    pub xp_before: i64,
+    pub xp_after: i64,
+    pub level_before: i64,
+    pub level_after: i64,
+    /// One entry per level gained; empty when the award crossed no
+    /// threshold.
+    pub level_ups: Vec<DaggerLevelUpOutcome>,
+}
+
+/// One level-up's outcome: the bounded hp-roll evidence, the
+/// `hit-points-per-level-up` result applied to both `health-max` and current
+/// health, and the health maximum before/after.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DaggerLevelUpOutcome {
+    /// The level gained (2 for the first level-up from the spawn base 1).
+    pub level: i64,
+    /// Evidence id the roll crossed as (`<killer>.level-up.<level>.hp-roll`).
+    pub roll_evidence: String,
+    /// The bounded roll value in [hitPointsPerLevel/2, hitPointsPerLevel].
+    pub roll: i64,
+    /// The rule result applied (roll + endurance modifier, minimum 1).
+    pub hit_points: i64,
+    pub health_max_before: i64,
+    pub health_max_after: i64,
 }
 
 /// Mechanics-backed live gameplay state: an entity-state store holding the
