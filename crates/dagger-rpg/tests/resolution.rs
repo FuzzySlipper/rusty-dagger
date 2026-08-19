@@ -2143,11 +2143,37 @@ fn loot_success_rolls_halve_geometrically() {
 #[test]
 fn loot_category_terminates_at_the_first_failed_roll() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    // Table H weapons chance 100: slot 0 succeeds (0 < 100), slot 1 fails
-    // (99 !< 50). The donor's `while (SuccessRoll(chance))` terminates the
-    // category there, so slot 2 must not be evaluated even though its roll
-    // (0) would succeed at chance 25 — the biased later success the review
-    // flagged.
+    // Fail-first case: table A weapons chance 5 — slot 0 fails (50 !< 5),
+    // so slot 1 must not be evaluated even though its roll (0) would
+    // succeed at the halved chance 2.
+    let generation = generate_loot(
+        &catalog,
+        "A",
+        1,
+        &loot_evidence(&catalog, "A", &[("loot.A.weapons.0", 50)]),
+    )
+    .expect("generation");
+    let weapons = generation
+        .categories
+        .iter()
+        .find(|category| category.category == "weapons")
+        .expect("weapons category");
+    assert_eq!(
+        weapons
+            .rolls
+            .iter()
+            .map(|roll| (roll.chance, roll.roll, roll.success))
+            .collect::<Vec<_>>(),
+        [(5, 50, false)]
+    );
+    assert!(generation
+        .items
+        .iter()
+        .all(|(item, _)| item == "gold-piece"));
+
+    // Success-then-failure case: table H weapons chance 100 — slot 0
+    // succeeds (0 < 100), slot 1 fails (99 !< 50), so slot 2 must not be
+    // evaluated even though its roll (0) would succeed at chance 25.
     let generation = generate_loot(
         &catalog,
         "H",
