@@ -113,6 +113,37 @@ rusty-engine-demo. Work that belongs upstream is filed upstream rather than
 patched locally — the demo doubles as a needs-discovery surface for the
 engine.
 
+## Player-facing game UI (7095 decision)
+
+The product's game UI (HUD, windows, messages) renders through the Engine
+facade as **screen-anchored presentation elements**, extended upstream. The
+Engine's existing presentation mechanism (DOM-realized text, structured
+panels with meters, icons, layout policy) already does everything except
+screen anchoring and interactivity, so two universal seams land upstream in
+rusty-engine rather than any local workaround:
+
+1. A screen/viewport anchor variant for presentation elements (panels,
+   text, icons) — every game needs a HUD.
+2. Interactive screen regions: pointer hit regions whose events the host
+   can read — every game UI needs clicks.
+
+The webview host has no pointer lock today (look is keyboard/polled
+pointer), so input arbitration is a runtime-owned presentation mode, not a
+lock negotiation; the OS cursor stays visible in UI mode, matching the
+classic (which uses the OS cursor). UI actions route to the same runtime
+verbs as keyboard and lab — one authority; UI reads the same authoritative
+readouts. Windows compose exactly like the classic model: extracted
+background art at native 320×200 layout scaled to the viewport, invisible
+rect buttons over the baked art.
+
+Rejected: an Angular DOM overlay for the product (the engine-demo/doom
+pattern). That pattern is the sanctioned architecture for web-shell
+products, but Dagger's product is the native winit host whose webview
+document is engine-private by design; forking the product into a web shell
+buys nothing the two seams don't provide. The Dagger Lab remains the
+Angular surface. Classic .FNT fonts are extracted as glyph atlases +
+metrics; UI text starts on system fonts, classic-font fidelity staged.
+
 ## Companion reuse
 
 Don't rebuild what sibling repos already own. Current inventory (details in
