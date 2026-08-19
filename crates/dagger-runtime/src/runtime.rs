@@ -571,6 +571,16 @@ impl DaggerRuntime {
     }
 
     pub fn from_admitted_project(admitted: AdmittedProject) -> Result<Self, RuntimeError> {
+        Self::from_admitted_project_with_gameplay_package(admitted, GAMEPLAY_PACKAGE)
+    }
+
+    /// Admission with an explicit gameplay package. The committed package is
+    /// the product default; diagnostics and pacing proofs inject a mutated
+    /// package through this one seam rather than forking admission.
+    pub fn from_admitted_project_with_gameplay_package(
+        admitted: AdmittedProject,
+        gameplay_package: &[u8],
+    ) -> Result<Self, RuntimeError> {
         let mut collision_scene = admitted.collision_scene;
         // Register the dungeon trimesh collider so the kinematic motion sweep
         // blocks on the full dungeon geometry (floors, walls, ramps) with no
@@ -595,9 +605,9 @@ impl DaggerRuntime {
         let player_start = admitted.player_start;
         let player_start_look_state = admitted.player_look_state;
         let gameplay_catalog =
-            compile_gameplay_package(GAMEPLAY_PACKAGE).map_err(RuntimeError::Gameplay)?;
+            compile_gameplay_package(gameplay_package).map_err(RuntimeError::Gameplay)?;
         let gameplay_payload: AuthoredGameplayPayload = {
-            let package = rusty_engine::gameplay_rules::decode_rule_package(GAMEPLAY_PACKAGE)
+            let package = rusty_engine::gameplay_rules::decode_rule_package(gameplay_package)
                 .map_err(|error| {
                     RuntimeError::Gameplay(DaggerGameplayError::Package(error.to_string()))
                 })?;
