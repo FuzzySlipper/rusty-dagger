@@ -2166,10 +2166,16 @@ fn loot_category_terminates_at_the_first_failed_roll() {
             .collect::<Vec<_>>(),
         [(5, 50, false)]
     );
-    assert!(generation
-        .items
-        .iter()
-        .all(|(item, _)| item == "gold-piece"));
+    // No weapon rolls happened; the only produced items are gold and the
+    // armor category's three picks (its own independent all-success run).
+    assert_eq!(
+        generation
+            .items
+            .iter()
+            .filter(|(item, _)| item != "gold-piece")
+            .count(),
+        3
+    );
 
     // Success-then-failure case: table H weapons chance 100 — slot 0
     // succeeds (0 < 100), slot 1 fails (99 !< 50), so slot 2 must not be
