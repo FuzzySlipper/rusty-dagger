@@ -265,6 +265,18 @@ pub fn compile_mechanics_catalog(
             maximum: scalar(CLASSIC_STAT_MAXIMUM, "stats.maximum")?,
         });
     }
+    // Progression stats (xp, level) are wide-range counters: xp accumulates
+    // past the classic 0..=100 attribute range.
+    for id in &section.progression {
+        stats.push(StatDefinition {
+            id: StatId::parse(id.clone()).map_err(|error| DaggerGameplayError::InvalidId {
+                path: "stats".to_string(),
+                value: format!("{id}: {error:?}"),
+            })?,
+            minimum: scalar(CLASSIC_STAT_MINIMUM, "stats.minimum")?,
+            maximum: scalar(TRACK_MAX_STAT_MAXIMUM, "stats.maximum")?,
+        });
+    }
     // Each declared armor part is a signed stat (classic sbyte range); the
     // flat actor armor value is its spawn base and equipment sources
     // subtract from it.

@@ -181,6 +181,36 @@
       </div>
     </article>
 
+    <article class="panel progression" *ngIf="readout as live" data-testid="progression-panel">
+      <div class="panel-heading">
+        <div><p class="kicker">Kill-XP experiment · xp-level curve</p><h2>Character</h2></div>
+        <span class="schema" data-testid="progression-award-count">{{ live.progression.history.length }} awards</span>
+      </div>
+      <p class="muted">Live progression stats from the mechanics components; levels cross the authored <code>xp-level</code> curve and each level gained rolls <code>hit-points-per-level-up</code> into health max and current health. Read-only.</p>
+      <div class="metrics" data-testid="progression-summary">
+        <div><span>Level</span><strong data-testid="progression-level">{{ live.progression.level }}</strong></div>
+        <div><span>XP</span><strong data-testid="progression-xp">{{ live.progression.xp }}</strong></div>
+        <div><span>XP to next level</span><strong data-testid="progression-to-next">{{ live.progression.xpToNextLevel }}</strong></div>
+        <div><span>Health</span><strong data-testid="progression-health">{{ format(live.progression.currentHealth) }} / {{ format(live.progression.maxHealth) }}</strong></div>
+      </div>
+      <p class="kicker field-kicker">Award history</p>
+      <div class="derived-grid" data-testid="progression-history">
+        <article *ngFor="let record of live.progression.history"
+          [attr.data-testid]="'progression-award-' + record.victim + '-' + record.xpAfter">
+          <span>{{ record.victim }} · +{{ record.xpAwarded }} xp → {{ record.xpAfter }}</span>
+          <strong *ngIf="record.levelAfter > record.levelBefore">LEVEL {{ record.levelBefore }} → {{ record.levelAfter }}</strong>
+          <strong *ngIf="record.levelAfter === record.levelBefore">level {{ record.levelAfter }}</strong>
+          <div class="derived-inputs" *ngIf="record.levelUps.length > 0">
+            <small *ngFor="let levelUp of record.levelUps"
+              [attr.data-testid]="'progression-level-up-' + levelUp.level">
+              level {{ levelUp.level }} · roll {{ levelUp.roll }} ({{ levelUp.rollEvidence }}) · +{{ levelUp.hitPoints }} hp · max {{ levelUp.healthMaxBefore }} → {{ levelUp.healthMaxAfter }}
+            </small>
+          </div>
+        </article>
+        <p class="muted" *ngIf="live.progression.history.length === 0">Kill a monster on the gameplay surface; only player kills award xp.</p>
+      </div>
+    </article>
+
     <article class="panel loot" *ngIf="readout as live" data-testid="loot-panel">
       <div class="panel-heading">
         <div><p class="kicker">Classic loot tables · generated at spawn</p><h2>Loot containers</h2></div>

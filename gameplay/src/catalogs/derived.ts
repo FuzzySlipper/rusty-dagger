@@ -21,6 +21,14 @@
  *   FormulaHelper.cs:654) and enemy melee-timer cadence
  *   (EnemyAttack.cs:115-131) are encounter/AI-layer formulas: expressible in
  *   this grammar, but not authored here.
+ *
+ * Progression profiles: the kill-XP experiment is the ACTIVE profile —
+ * monsters carry `xpReward` (catalogs/monsters.ts, actors.ts), kills award
+ * xp, and the `xp-level` curve below maps live xp to level-ups. Classic has
+ * no kill XP; the classic skill-use advancement (`player-level` +
+ * `skill-uses-for-advancement`, expressible since 7081) is the documented
+ * alternative profile, kept for reference — not what the live runtime
+ * evaluates.
  */
 
 import {
@@ -177,6 +185,8 @@ export const derived: readonly DerivedRule[] = [
   ),
   // FormulaHelper.CalculatePlayerLevel: the classic skill-sum progression
   // curve (top-2 level-up skills) — floor((current - starting + 28) / 15).
+  // The classic alternative profile (see the header note), kept for
+  // reference; the kill-XP experiment uses `xp-level` instead.
   derivedRule(
     "player-level",
     divFloor(
@@ -190,6 +200,13 @@ export const derived: readonly DerivedRule[] = [
       constant(15),
     ),
   ),
+  // Kill-XP experiment pacing curve: the number of 500-xp thresholds the
+  // live xp total has crossed. The live level is the spawn base (1) plus
+  // this count, so 500 xp per level; tunable here as catalog authoring.
+  // NOTE: this reads the live `xp` progression stat, so it only evaluates
+  // in live-state contexts (progression award, lab readout) — never against
+  // definition bases, where `xp` does not exist.
+  derivedRule("xp-level", divFloor(stat("actor", "xp"), constant(500))),
   // FormulaHelper.CalculateHitPointsPerLevelUp: roll in
   // [hitPointsPerLevel/2, hitPointsPerLevel] (career-owned bounds, supplied
   // as bounded evidence) plus the endurance modifier, minimum 1.

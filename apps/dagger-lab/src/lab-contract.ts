@@ -11,6 +11,7 @@ export interface StatsSection {
   readonly skills: readonly string[];
   readonly tracks: readonly string[];
   readonly armorParts?: readonly string[];
+  readonly progression?: readonly string[];
 }
 
 export interface TrackDefinition {
@@ -48,6 +49,10 @@ export interface ActorDefinition {
   readonly minMetalToHit?: string;
   readonly team?: string;
   readonly lootTableKey?: string;
+  /** Kill-XP experiment profile: xp the player earns for killing this actor. */
+  readonly xpReward?: number;
+  /** Career-owned hit-points-per-level bound (player). */
+  readonly hitPointsPerLevel?: number;
   readonly attacks?: readonly Readonly<{ min: number; max: number }>[];
   readonly inventory?: readonly LoadoutEntry[];
 }
@@ -336,6 +341,43 @@ export interface LootContainerReadout {
   readonly emptied: boolean;
 }
 
+/** One level-up's outcome inside a progression record (DaggerLevelUpOutcome). */
+export interface LevelUpOutcomeReadout {
+  /** The level gained (2 for the first level-up from the spawn base 1). */
+  readonly level: number;
+  /** Evidence id the roll crossed as (`<killer>.level-up.<level>.hp-roll`). */
+  readonly rollEvidence: string;
+  /** The bounded roll value in [hitPointsPerLevel/2, hitPointsPerLevel]. */
+  readonly roll: number;
+  /** The rule result applied to health-max AND current health. */
+  readonly hitPoints: number;
+  readonly healthMaxBefore: number;
+  readonly healthMaxAfter: number;
+}
+
+/** One kill-XP award receipt (DaggerProgressionRecord). */
+export interface ProgressionRecordReadout {
+  /** Victim's actor definition id. */
+  readonly victim: string;
+  readonly xpAwarded: number;
+  readonly xpBefore: number;
+  readonly xpAfter: number;
+  readonly levelBefore: number;
+  readonly levelAfter: number;
+  readonly levelUps: readonly LevelUpOutcomeReadout[];
+}
+
+/** Kill-XP progression state: live stats, pacing to next level, health, history. */
+export interface ProgressionReadout {
+  readonly xp: number;
+  readonly level: number;
+  /** xp remaining until the next `xp-level` threshold (the next level). */
+  readonly xpToNextLevel: number;
+  readonly currentHealth: number;
+  readonly maxHealth: number;
+  readonly history: readonly ProgressionRecordReadout[];
+}
+
 export interface LabReadout {
   readonly gameplayPackage: GameplayPackageReadout;
   readonly moveSpeedUnitsPerSecond: number;
@@ -358,4 +400,6 @@ export interface LabReadout {
   readonly equipmentLog: readonly EquipmentLogRecord[];
   /** Live loot containers (treasure piles + loot-bearing corpses); pickup is the native KeyF verb. */
   readonly lootContainers: readonly LootContainerReadout[];
+  /** Kill-XP progression state: xp, level, pacing, health, and the award history. */
+  readonly progression: ProgressionReadout;
 }

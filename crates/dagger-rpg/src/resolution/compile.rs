@@ -411,6 +411,7 @@ fn compile_stats(
         skills: compile_ids("skills", &payload.stats.skills)?,
         tracks: compile_ids("tracks", &payload.stats.tracks)?,
         armor_parts: compile_ids("armorParts", &payload.stats.armor_parts)?,
+        progression: compile_ids("progression", &payload.stats.progression)?,
     })
 }
 
@@ -765,6 +766,30 @@ fn compile_actors(
             )
             .transpose()?;
         let id = actor.id;
+        let xp_reward = actor
+            .xp_reward
+            .map(|value| {
+                if value.0 < 0 {
+                    return Err(DaggerGameplayError::InvalidValue {
+                        path: format!("{path}.xpReward"),
+                        reason: format!("must be non-negative, got {}", value.0),
+                    });
+                }
+                Ok(value.0)
+            })
+            .transpose()?;
+        let hit_points_per_level = actor
+            .hit_points_per_level
+            .map(|value| {
+                if value.0 < 0 {
+                    return Err(DaggerGameplayError::InvalidValue {
+                        path: format!("{path}.hitPointsPerLevel"),
+                        reason: format!("must be non-negative, got {}", value.0),
+                    });
+                }
+                Ok(value.0)
+            })
+            .transpose()?;
         if actors
             .insert(
                 id.clone(),
@@ -783,6 +808,8 @@ fn compile_actors(
                     min_metal_to_hit: actor.min_metal_to_hit,
                     team: actor.team,
                     loot_table_key: actor.loot_table_key,
+                    xp_reward,
+                    hit_points_per_level,
                     attacks: compile_actor_attacks(&path, actor.attacks)?,
                     inventory: compile_loadout(&path, actor.inventory, items, equipment)?,
                 },
@@ -1080,7 +1107,15 @@ fn compile_expr(
     match expr {
         AuthoredExpr::Const { value } => Ok(DaggerExpr::Const { value: value.0 }),
         AuthoredExpr::Stat { subject, id } => {
-            validate_declared("expression.stat", &id, &stats.attributes)?;
+            // Stat reads span the classic attributes and the progression
+            // stats (xp, level); skills read through the Skill node.
+            validate_id("expression.stat", &id)?;
+            if !stats.attributes.contains(&id) && !stats.progression.contains(&id) {
+                return Err(DaggerGameplayError::InvalidValue {
+                    path: format!("expression.stat.{id}"),
+                    reason: "not declared in the stats section".to_string(),
+                });
+            }
             Ok(DaggerExpr::Stat {
                 subject: compile_subject(subject),
                 id,

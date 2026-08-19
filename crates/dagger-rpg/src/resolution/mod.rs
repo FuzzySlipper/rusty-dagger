@@ -4,6 +4,7 @@ mod loot;
 mod mechanics;
 mod model;
 mod policy;
+mod progression;
 
 pub use compile::compile_gameplay_package;
 pub use eval::{
@@ -16,3 +17,9 @@ pub use loot::{bind_actor_loot, generate_loot, loot_roll_evidence, spawn_contain
 pub use mechanics::{compile_mechanics_catalog, track_max_stat_id};
 pub use model::*;
 pub use policy::{resolve_dagger_action, DaggerResolutionPolicy, DaggerTransaction};
+pub use progression::{
+    award_kill_progression, evaluate_derived_rule_live, kill_level_gains, live_stat_base,
+    reset_actor_progression, set_actor_stat_base, xp_level_divisor, HP_PER_LEVEL_RULE_ID,
+    HP_ROLL_EVIDENCE_ID, LEVEL_STAT_ID, PLAYER_SPAWN_LEVEL, PLAYER_SPAWN_XP, XP_LEVEL_RULE_ID,
+    XP_STAT_ID,
+};

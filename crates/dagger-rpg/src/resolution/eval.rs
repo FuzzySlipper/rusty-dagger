@@ -887,6 +887,23 @@ pub fn spawn_actor(
             scalar(definition.armor_value, "stats.armor")?,
         ));
     }
+    // Player-kind actors carry the progression stat bases (xp 0, level 1).
+    // Monsters do not — their classic `level` is definition data, unrelated
+    // to the progression stats, and actor stat maps are never used for them.
+    if definition.kind == super::DaggerActorKind::Player {
+        for id in &catalog.stats().progression {
+            let base = super::progression::progression_spawn_base(id).ok_or_else(|| {
+                DaggerGameplayError::InvalidValue {
+                    path: "stats.progression".to_string(),
+                    reason: format!("no spawn base for progression stat {id}"),
+                }
+            })?;
+            stat_values.push(StatValue::new(
+                StatId::parse(id.clone()).expect("validated progression stat id"),
+                scalar(base, "stats.progression")?,
+            ));
+        }
+    }
     for (track, maximum) in &track_maxima {
         stat_values.push(StatValue::new(
             StatId::parse(track_max_stat_id(track)).expect("compiled track id"),

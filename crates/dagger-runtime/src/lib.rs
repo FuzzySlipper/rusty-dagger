@@ -38,7 +38,7 @@ pub use runtime::{
     ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
     EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, LabReadout,
     LiveActorResources, LootContainerReadout, MeleePresentationPhase, MeleePresentationReadout,
-    NamedEncounterReadout, RuntimeError, LOOT_INTERACT_REACH, MELEE_ACTION_ID,
+    NamedEncounterReadout, ProgressionReadout, RuntimeError, LOOT_INTERACT_REACH, MELEE_ACTION_ID,
     MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS,
     MELEE_REJECTION_SECONDS,
 };
@@ -1040,6 +1040,45 @@ mod tests {
             }
         }
         panic!("target did not die within {cap} swings");
+    }
+
+    #[test]
+    fn killing_a_monster_awards_kill_xp_into_the_lab_readout() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        let initial = runtime.lab_readout().expect("initial readout");
+        assert_eq!(initial.progression.xp, 0);
+        assert_eq!(initial.progression.level, 1);
+        // 500 xp per level (the authored xp-level divisor): 500 to go.
+        assert_eq!(initial.progression.xp_to_next_level, 500);
+        assert_eq!(initial.progression.max_health, 85.0);
+        assert!(initial.progression.history.is_empty());
+
+        runtime.jump_to_content(2007).expect("jump beside Rat");
+        fight_until_dead(&mut runtime, 40);
+        let readout = runtime.lab_readout().expect("post-kill readout");
+        assert_eq!(readout.progression.history.len(), 1);
+        let award = &readout.progression.history[0];
+        assert_eq!(award.victim, "rat");
+        assert_eq!(
+            (award.xp_awarded, award.xp_before, award.xp_after),
+            (50, 0, 50)
+        );
+        assert_eq!((award.level_before, award.level_after), (1, 1));
+        assert!(award.level_ups.is_empty());
+        assert_eq!(readout.progression.xp, 50);
+        assert_eq!(readout.progression.xp_to_next_level, 450);
+        assert_eq!(readout.progression.level, 1);
+        assert_eq!(readout.progression.current_health, 85.0);
+
+        // The lab jump verb only heals: progression survives it within a
+        // session. The explicit session reset restores spawn progression:
+        // xp 0, level 1, spawn health maximum, empty history.
+        let reset = runtime.reset_play_session().expect("reset");
+        assert_eq!((reset.progression.xp, reset.progression.level), (0, 1));
+        assert_eq!(reset.progression.xp_to_next_level, 500);
+        assert_eq!(reset.progression.max_health, 85.0);
+        assert_eq!(reset.progression.current_health, 85.0);
+        assert!(reset.progression.history.is_empty());
     }
 
     #[test]

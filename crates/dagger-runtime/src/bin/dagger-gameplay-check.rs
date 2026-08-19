@@ -172,6 +172,10 @@ fn main() {
     let derived = catalog
         .derived()
         .keys()
+        // `xp-level` reads the live xp progression stat, so it only
+        // evaluates in live-state contexts — proven in the progression
+        // section below, not against definition bases here.
+        .filter(|id| id.as_str() != "xp-level")
         .map(|id| {
             let value =
                 dagger_rpg::evaluate_derived_rule(&catalog, id, "player", &evidence_for(id))
@@ -256,5 +260,61 @@ fn main() {
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({ "loot": loot_records }))
             .expect("serialize loot readout")
+    );
+
+    // Kill-XP progression proof: spawn the player and a rat, award the rat's
+    // kill through the progression authority with a fixed in-bounds hp-roll
+    // evidence stream, and print the structured award record plus the live
+    // `xp-level` curve evaluation (the live-only derived rule).
+    let catalog = compile_gameplay_package(PACKAGE).expect("admit authored gameplay package");
+    let mut progression_state = {
+        let mut fresh = DaggerGameplayState::default();
+        spawn_actor(&mut fresh, &catalog, "player", "player", &[]).expect("spawn player");
+        spawn_actor(
+            &mut fresh,
+            &catalog,
+            "rat",
+            "rat-2007",
+            &[DaggerEvidence {
+                id: "rat.health".to_string(),
+                value: 12,
+            }],
+        )
+        .expect("spawn rat");
+        fresh
+    };
+    let award = dagger_rpg::award_kill_progression(
+        &mut progression_state,
+        &catalog,
+        "player",
+        "rat-2007",
+        &[],
+    )
+    .expect("rat kill award")
+    .expect("rat carries an xpReward");
+    let xp_level = dagger_rpg::evaluate_derived_rule_live(
+        &progression_state,
+        &catalog,
+        "xp-level",
+        "player",
+        &[],
+        &[],
+    )
+    .expect("live xp-level evaluation");
+    let progression = serde_json::json!({
+        "award": award,
+        "live": {
+            "xp": dagger_rpg::live_stat_base(&progression_state, "player", dagger_rpg::XP_STAT_ID)
+                .expect("live xp base"),
+            "level": dagger_rpg::live_stat_base(&progression_state, "player", dagger_rpg::LEVEL_STAT_ID)
+                .expect("live level base"),
+            "xpLevelThresholds": xp_level,
+            "xpPerLevel": dagger_rpg::xp_level_divisor(&catalog).expect("xp-level divisor"),
+        }
+    });
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&serde_json::json!({ "progression": progression }))
+            .expect("serialize progression readout")
     );
 }

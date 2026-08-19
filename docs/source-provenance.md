@@ -206,6 +206,35 @@ draws on the Daggerfall Unity donor at the declared revision:
   the generic corpse-pile billboard (TEXTURE.206[14]) so every dead enemy
   stays a visible loot anchor.
 
+## Kill-XP progression experiment
+
+The progression profile (Den task 6688) draws on the Daggerfall Unity donor
+at the declared revision:
+
+- `Formulas/FormulaHelper.cs` `CalculateHitPointsPerLevelUp` (:340-354) —
+  adopted: the level-up roll is [hitPointsPerLevel/2, hitPointsPerLevel]
+  (career-owned bound, `hitPointsPerLevel: 8` on the player) plus the
+  endurance modifier, minimum 1 — the existing `hit-points-per-level-up`
+  derived rule. The donor's per-frame RNG reseed (`DFRandom.Seed =
+  Time.renderedFrameCount`) is rejected: the roll crosses as bounded named
+  evidence (`<killer>.level-up.<level>.hp-roll`) from the runtime's
+  deterministic salt-5 stream.
+- `Formulas/FormulaHelper.cs` `CalculatePlayerLevel` (:330-337) and
+  `CalculateSkillUsesForAdvancement` — adopted as reference rules in the
+  derived catalog (`player-level`, `skill-uses-for-advancement`): the classic
+  skill-use advancement is the documented ALTERNATIVE progression profile,
+  not what the live runtime evaluates.
+- Kill XP itself — deviation, not a fidelity claim: classic has no kill XP
+  (levels come from skill use). The kill-XP profile (monster `xpReward` at
+  classic level × 50, the `xp-level` curve floor(xp / 500)) is an experiment
+  pacing choice, tunable as catalog authoring.
+- Level-up health application — adapted: the donor's level-up
+  (`DaggerfallCharacterSheetWindow.cs` `PlayerEntity.MaxHealth =
+  RawMaxHealth + CalculateHitPointsPerLevelUp(...)`, :380) raises only the
+  maximum; the experiment profile applies the roll to current health as well
+  (clamped to the new maximum through the track service), a deliberate
+  experiment choice rather than a classic-fidelity claim.
+
 ## Collision authority
 
 The collision authority is the dungeon static mesh itself (rusty-engine task
