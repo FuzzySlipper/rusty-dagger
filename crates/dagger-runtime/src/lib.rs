@@ -1082,6 +1082,159 @@ mod tests {
     }
 
     #[test]
+    fn a_real_kill_sequence_crosses_a_level_through_the_native_combat_path() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        // A named sequence of real hold enemies through the physical swing
+        // path: the Orc (2003, xpReward 250), then two Giant Bats (2002 and
+        // 2005, 150 each) — the cumulative 550 crosses the authored 500
+        // threshold on the third kill. (The jump verb restores stamina
+        // between fights; every kill lands inside its 90-stamina budget, so
+        // the whole sequence resolves through real melee combat.)
+        runtime.jump_to_content(2003).expect("jump beside Orc");
+        fight_until_dead(&mut runtime, 80);
+        let readout = runtime.lab_readout().expect("post-orc readout");
+        assert_eq!(readout.progression.history.len(), 1);
+        let orc_award = &readout.progression.history[0];
+        assert_eq!(orc_award.victim, "orc");
+        assert_eq!(
+            (
+                orc_award.xp_awarded,
+                orc_award.xp_before,
+                orc_award.xp_after
+            ),
+            (250, 0, 250)
+        );
+        assert_eq!((orc_award.level_before, orc_award.level_after), (1, 1));
+        assert!(orc_award.level_ups.is_empty());
+        assert_eq!(readout.progression.xp, 250);
+        assert_eq!(readout.progression.level, 1);
+        assert_eq!(readout.progression.xp_to_next_level, 250);
+        assert_eq!(readout.progression.max_health, 85.0);
+
+        runtime
+            .jump_to_content(2002)
+            .expect("jump beside Giant Bat");
+        fight_until_dead(&mut runtime, 80);
+        let readout = runtime.lab_readout().expect("post-first-bat readout");
+        assert_eq!(readout.progression.history.len(), 2);
+        let bat_award = &readout.progression.history[1];
+        assert_eq!(bat_award.victim, "giant-bat");
+        assert_eq!(
+            (
+                bat_award.xp_awarded,
+                bat_award.xp_before,
+                bat_award.xp_after
+            ),
+            (150, 250, 400)
+        );
+        assert!(bat_award.level_ups.is_empty());
+        assert_eq!(readout.progression.xp, 400);
+        assert_eq!(readout.progression.level, 1);
+        assert_eq!(readout.progression.xp_to_next_level, 100);
+
+        // The third kill crosses the threshold through the runtime's kill
+        // hook and its salt-5 deterministic hp-roll stream.
+        runtime
+            .jump_to_content(2005)
+            .expect("jump beside Giant Bat");
+        fight_until_dead(&mut runtime, 80);
+        let readout = runtime.lab_readout().expect("post-second-bat readout");
+        assert_eq!(readout.progression.history.len(), 3);
+        let award = &readout.progression.history[2];
+        assert_eq!(award.victim, "giant-bat");
+        assert_eq!(
+            (award.xp_awarded, award.xp_before, award.xp_after),
+            (150, 400, 550)
+        );
+        assert_eq!((award.level_before, award.level_after), (1, 2));
+        assert_eq!(award.level_ups.len(), 1);
+        let level_up = &award.level_ups[0];
+        assert_eq!(level_up.level, 2);
+        assert_eq!(level_up.roll_evidence, "player.level-up.2.hp-roll");
+        assert!((4..=8).contains(&level_up.roll));
+        // Endurance 40 gives modifier -1, so hp = roll - 1 (>= 3); applied
+        // to health-max AND current health.
+        assert_eq!(level_up.hit_points, level_up.roll - 1);
+        assert_eq!(level_up.health_max_before, 85);
+        assert_eq!(level_up.health_max_after, 85 + level_up.hit_points);
+        assert_eq!(readout.progression.xp, 550);
+        assert_eq!(readout.progression.level, 2);
+        assert_eq!(readout.progression.xp_to_next_level, 450);
+        assert_eq!(
+            readout.progression.max_health,
+            85.0 + level_up.hit_points as f32
+        );
+        assert_eq!(
+            readout.progression.current_health,
+            readout.progression.max_health
+        );
+    }
+
+    /// The committed package with the `xp-level` pacing divisor rewritten —
+    /// the same mutation an author would make in `derived.ts`, applied to
+    /// the package bytes the runtime admits.
+    fn package_with_xp_level_divisor(divisor: i64) -> Vec<u8> {
+        let mut package: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../../data/gameplay/dagger-core.package.json"
+        ))
+        .expect("parse committed package");
+        let rule = package["payload"]["derived"]
+            .as_array_mut()
+            .expect("derived rules")
+            .iter_mut()
+            .find(|rule| rule["id"] == "xp-level")
+            .expect("xp-level rule");
+        rule["expr"]["right"]["value"] = serde_json::Value::from(divisor);
+        serde_json::to_vec(&package).expect("encode mutated package")
+    }
+
+    #[test]
+    fn authored_xp_curve_drives_pacing_through_the_same_real_kill() {
+        let kill_one_rat = |package: &[u8]| {
+            let admitted = AdmittedProject::from_json(PROJECT).expect("project admission");
+            let mut runtime =
+                DaggerRuntime::from_admitted_project_with_gameplay_package(admitted, package)
+                    .expect("runtime with package");
+            runtime.jump_to_content(2007).expect("jump beside Rat");
+            fight_until_dead(&mut runtime, 40);
+            runtime.lab_readout().expect("post-kill readout")
+        };
+
+        // Committed pacing (500 xp/level): the rat's 50 xp does not level.
+        let committed = kill_one_rat(include_bytes!(
+            "../../../data/gameplay/dagger-core.package.json"
+        ));
+        assert_eq!(committed.progression.xp, 50);
+        assert_eq!(committed.progression.level, 1);
+        assert!(committed.progression.history[0].level_ups.is_empty());
+        assert_eq!(committed.progression.max_health, 85.0);
+
+        // The SAME kill under an authored curve edit (divisor 500 -> 50):
+        // the rat's 50 xp crosses one threshold immediately — catalog
+        // authoring drives pacing through the product path.
+        let faster = kill_one_rat(&package_with_xp_level_divisor(50));
+        assert_eq!(faster.progression.xp, 50);
+        assert_eq!(faster.progression.level, 2);
+        let award = &faster.progression.history[0];
+        assert_eq!((award.level_before, award.level_after), (1, 2));
+        assert_eq!(award.level_ups.len(), 1);
+        let level_up = &award.level_ups[0];
+        assert_eq!(level_up.roll_evidence, "player.level-up.2.hp-roll");
+        assert!((4..=8).contains(&level_up.roll));
+        assert_eq!(level_up.hit_points, level_up.roll - 1);
+        assert_eq!(
+            faster.progression.max_health,
+            85.0 + level_up.hit_points as f32
+        );
+        assert_eq!(
+            faster.progression.current_health,
+            faster.progression.max_health
+        );
+        // The faster curve also shortens the remaining pace: 50 - 50 % 50.
+        assert_eq!(faster.progression.xp_to_next_level, 50);
+    }
+
+    #[test]
     fn loot_containers_spawn_with_the_dungeon_key_and_per_enemy_tables() {
         let runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
         let readout = runtime.lab_readout().expect("initial readout");
