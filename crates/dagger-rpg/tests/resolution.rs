@@ -2141,6 +2141,48 @@ fn loot_success_rolls_halve_geometrically() {
 }
 
 #[test]
+fn loot_category_terminates_at_the_first_failed_roll() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    // Table H weapons chance 100: slot 0 succeeds (0 < 100), slot 1 fails
+    // (99 !< 50). The donor's `while (SuccessRoll(chance))` terminates the
+    // category there, so slot 2 must not be evaluated even though its roll
+    // (0) would succeed at chance 25 — the biased later success the review
+    // flagged.
+    let generation = generate_loot(
+        &catalog,
+        "H",
+        1,
+        &loot_evidence(
+            &catalog,
+            "H",
+            &[("loot.H.weapons.1", 99), ("loot.H.weapons.2", 0)],
+        ),
+    )
+    .expect("generation");
+    let weapons = generation
+        .categories
+        .iter()
+        .find(|category| category.category == "weapons")
+        .expect("weapons category");
+    assert_eq!(
+        weapons
+            .rolls
+            .iter()
+            .map(|roll| (roll.chance, roll.roll, roll.success))
+            .collect::<Vec<_>>(),
+        [(100, 0, true), (50, 99, false)]
+    );
+    assert_eq!(
+        generation
+            .items
+            .iter()
+            .filter(|(item, _)| item != "gold-piece")
+            .count(),
+        1
+    );
+}
+
+#[test]
 fn loot_gold_and_ingredient_chances_scale_with_level() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
     // Table C: gold 2..20, creature1 chance 5 (level-scaled). Roll 14 fails

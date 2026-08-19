@@ -326,6 +326,12 @@ pub fn generate_loot(
                 pick,
                 item,
             });
+            // Donor `while (SuccessRoll(chance))`: the category terminates at
+            // the first failed roll — later slots are never evaluated, so
+            // the receipt records exactly the rolls that occurred.
+            if !success {
+                break;
+            }
             // Donor geometric halving (`chance *= 0.5`, floored at the
             // roll's integer cast) — integer floor division is identical for
             // integer chances.
