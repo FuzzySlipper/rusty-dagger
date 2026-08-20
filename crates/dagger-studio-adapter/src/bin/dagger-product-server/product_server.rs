@@ -186,7 +186,7 @@ fn run(
                 if let Err(error) =
                     handle_request(&mut stream, &commands, &static_root, &content_root)
                 {
-                    eprintln!("DAGGER_LAB_REQUEST_ERROR {error:#}");
+                    eprintln!("DAGGER_PRODUCT_REQUEST_ERROR {error:#}");
                     let _ = write_response(
                         &mut stream,
                         500,
