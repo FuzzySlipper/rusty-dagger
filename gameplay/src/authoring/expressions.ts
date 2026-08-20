@@ -16,7 +16,7 @@
  * range (unarmed: the derived hand-to-hand range). `struckArmor("target",
  * "melee-attack.struck-body-part")` reads a 0..19 struck-body-part roll and
  * maps it through the classic table to the target's `armor-<part>` stat.
- * Deterministic replay is therefore just "supply the same evidence".
+ * Focused evaluation is repeatable when the caller supplies the same evidence.
  */
 
 export type Subject = "actor" | "target";

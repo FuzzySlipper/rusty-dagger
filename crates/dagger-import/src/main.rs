@@ -328,7 +328,7 @@ fn publish_textures(dir: &std::path::Path, textures: &[glb::TextureInput]) {
     );
 }
 
-/// Hand-edit preservation (Den 6945): a manifest entry carrying
+/// A manifest entry carrying
 /// `"edited": true` keeps its tunable fields when regeneration rewrites the
 /// manifest from classic data; everything else takes the freshly computed
 /// defaults. `--clobber-sprites` ignores all markers. What is preserved is

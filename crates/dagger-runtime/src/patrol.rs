@@ -1,4 +1,4 @@
-//! NPC patrol service (task 6641): deterministic seeded random-walk on the
+//! NPC patrol service: deterministic seeded random-walk on the
 //! nav grid, grounded to real floor support. Each NPC picks waypoints near
 //! its spawn, moves toward them at DFU walk speed, and pauses between
 //! waypoints. All movement stays on walkable cells.
@@ -7,12 +7,10 @@
 //! feed back into the AnimationService so directional sprites track the
 //! NPC's new position (camera-relative orientation still applies).
 //!
-//! Design choice: simple random-walk, not DFU's full EnemyMotor (which is
-//! combat AI with detection, pursuit, and melee). DFU has no standalone
-//! wander behavior — its AI is detection-based. A deterministic seeded
-//! random-walk is sufficient and simpler for this demo.
+//! Patrol is a simple random-walk rather than DFU's full EnemyMotor. Detection,
+//! pursuit, and melee are evaluated separately from wandering.
 //!
-//! AI seam (task 7046): this service is a downstream producer of typed
+//! This service is a downstream producer of typed
 //! intents only. It reads world facts (distances, nav levels) and behavior
 //! tuning, and emits position updates, mode decisions, and attack intents
 //! naming an authored action id. It never carries resolved damage, health

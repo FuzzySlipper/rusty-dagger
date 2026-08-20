@@ -27,7 +27,7 @@ try {
   assert.equal(await page.locator('canvas').count(), 1, 'Engine must own the sole product canvas');
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
-  await assertFixedApplicationShell(page, 1280, 900);
+  await assertApplicationHostBounds(page, 1280, 900);
   const connectedPresentation = await assertConnectedDynamicPresentation(page);
   const semanticLook = await assertSemanticPointerDirections(page);
   const connectedDiagnostics = await assertConnectedDiagnosticKeys(page);
@@ -65,7 +65,7 @@ try {
   await openInterface(page);
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'lab');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), null);
-  await assertFixedApplicationShell(page, 1280, 900, true);
+  await assertApplicationHostBounds(page, 1280, 900, true);
   await assertStalePollFailureFence(page);
 
   // All gameplay expectations below derive from the admitted package and the
@@ -127,8 +127,8 @@ try {
   assert.equal(await page.getByTestId('content-authored-position').innerText(), '11.07, 33.02, -6.88');
   const thiefLivePosition = await page.getByTestId('content-live-position').innerText();
   assert.match(thiefLivePosition, /Authoritative live patrol position/i);
-  // The Thief is a class-career combatant (7056): its actor and live
-  // resources come from the admitted package.
+  // The Thief is a class-career combatant whose actor and live resources come
+  // from the admitted package.
   const thiefEntity = initialLab.content.find((entity) => entity.id === 2001);
   assert.ok(thiefEntity, 'Thief 2001 is present in the live readout');
   const thiefActor = actorForMobile(gameplayPackage, thiefEntity.reference.mobileId);
@@ -249,7 +249,7 @@ try {
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByTestId('definitions-panel').scrollIntoViewIfNeeded();
-  await assertFixedApplicationShell(page, 390, 844, true);
+  await assertApplicationHostBounds(page, 390, 844, true);
   assert.equal(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1),
     true,
@@ -625,7 +625,7 @@ async function openLabFromGameplay(page) {
   await page.waitForFunction(() => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'lab');
 }
 
-async function assertFixedApplicationShell(page, width, height, exerciseLabScroll = false) {
+async function assertApplicationHostBounds(page, width, height, exerciseLabScroll = false) {
   const readBounds = () => page.evaluate(() => {
     const selectors = [
       '#application',
@@ -645,13 +645,13 @@ async function assertFixedApplicationShell(page, width, height, exerciseLabScrol
       },
       elements: Object.fromEntries(selectors.map((selector) => {
         const element = document.querySelector(selector);
-        if (element === null) throw new Error(`fixed shell element missing: ${selector}`);
+        if (element === null) throw new Error(`application-host element missing: ${selector}`);
         const bounds = element.getBoundingClientRect();
         return [selector, { width: bounds.width, height: bounds.height }];
       })),
       renderer: (() => {
         const element = document.querySelector('[data-rusty-application-renderer]');
-        if (element === null) throw new Error('fixed shell renderer is missing');
+        if (element === null) throw new Error('application-host renderer is missing');
         const bounds = element.getBoundingClientRect();
         return { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height };
       })(),
@@ -665,8 +665,8 @@ async function assertFixedApplicationShell(page, width, height, exerciseLabScrol
   assert.equal(before.document.scrollX, 0);
   assert.equal(before.document.scrollY, 0);
   for (const [selector, bounds] of Object.entries(before.elements)) {
-    assert.ok(Math.abs(bounds.width - width) <= 1, `${selector} width escaped fixed application bounds`);
-    assert.ok(Math.abs(bounds.height - height) <= 1, `${selector} height escaped fixed application bounds`);
+    assert.ok(Math.abs(bounds.width - width) <= 1, `${selector} width escaped application-host bounds`);
+    assert.ok(Math.abs(bounds.height - height) <= 1, `${selector} height escaped application-host bounds`);
   }
   const rendererWidth = Math.min(width, height * 1.6);
   const rendererHeight = rendererWidth / 1.6;
@@ -687,7 +687,7 @@ async function assertFixedApplicationShell(page, width, height, exerciseLabScrol
   await scroller.evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await page.waitForTimeout(50);
   const after = await readBounds();
-  assert.deepEqual(after, before, 'Lab scrolling changed fixed application or renderer bounds');
+  assert.deepEqual(after, before, 'Lab scrolling changed application-host or renderer bounds');
   await scroller.evaluate((element) => { element.scrollTop = 0; });
 }
 

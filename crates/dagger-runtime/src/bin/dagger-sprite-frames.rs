@@ -330,8 +330,7 @@ fn serve(meta_path: &str, addr: &str) {
             std::process::exit(1);
         }
 
-        // Ground spawns using navgrid.json's spawn array (task 6639
-        // already computed the correct floor support per spawn).
+        // Ground spawns using navgrid.json's precomputed floor support.
         let nav_spawns = ng
             .get("spawns")
             .and_then(serde_json::Value::as_array)

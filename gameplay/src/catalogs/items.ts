@@ -9,9 +9,9 @@
  *
  * Material tiers above iron modify to-hit by tier x 10 and gate damage
  * against `minMetalToHit` on monsters (errata note; tier to-hit effects are
- * not yet modeled — the material gate is Rust policy, see
- * `docs/gameplay-resolution.md`). `equippedWeaponDice` rolls inside action
- * programs read these ranges through the acting subject's live equipment.
+ * not yet modeled — the material gate is Rust policy). `equippedWeaponDice`
+ * rolls inside action programs read these ranges through the acting subject's
+ * live equipment.
  * This catalog stays at the iron tier plus gold/arrows; other materials are
  * loot-campaign content.
  */

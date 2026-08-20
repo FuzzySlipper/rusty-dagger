@@ -1,13 +1,11 @@
 //! Runtime-derived walk-through route for Privateer's Hold.
 //!
-//! This replaces the retired Python router (scripts/find-route.py), which had
-//! become a second, approximate collision system next to the real one. Here
-//! the runtime IS the only collision authority: every route transition is
+//! The runtime is the only collision authority: every route transition is
 //! decided by driving a real `DaggerRuntime` — admitting the committed
 //! project (trimesh registered, as in production), placing the player at a
 //! reached node, settling to ground, stepping toward a neighbouring column,
 //! and reading back the authoritative landing position, blocked facts, and
-//! fall distance. No geometry is re-derived or re-approximated; the same
+//! fall distance. No geometry is re-derived or approximated; the same
 //! sweep that runs the walkthrough decides what is a floor, a wall, or a step.
 //!
 //! Method (bounded flood fill over a 0.5m column grid):

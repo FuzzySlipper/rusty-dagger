@@ -328,7 +328,7 @@ fn sha256(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
 }
 
-/// Hand-edit preservation for the combat manifest (Den 6945): entries marked
+/// Combat-manifest entries marked
 /// `"edited": true` keep their operator tunables — weapon pivot and per-action
 /// fps/alignment/screenOffset, effect pivot/fps/loop — across regeneration.
 /// `--clobber-sprites` ignores all markers.
