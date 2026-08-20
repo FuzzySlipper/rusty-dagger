@@ -358,6 +358,14 @@ export class AppComponent implements OnInit, OnDestroy {
     return readout.playerInventory.items.filter((item) => item.equipSlot === null);
   }
 
+  trackLootStack(_index: number, stack: InventoryStackReadout): string {
+    return stack.item;
+  }
+
+  trackLootItem(_index: number, item: InventoryItemReadout): number {
+    return item.entity;
+  }
+
   selectInventoryItem(item: InventoryItemReadout): void {
     this.selectedInventoryKey = `item:${item.entity}`;
   }
