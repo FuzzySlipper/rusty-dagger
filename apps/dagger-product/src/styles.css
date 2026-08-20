@@ -37,6 +37,7 @@ button, input { font: inherit; }
 .game-hud .encounter-status { margin: 0; max-width: 360px; }
 .game-hud .encounter-status[data-status="victory"] { border-color: #78b97a; }
 .game-hud .encounter-status[data-status="defeat"] { border-color: #c66b67; }
+.loot-status { background: rgba(50, 27, 24, .92); border: 1px solid #a35a50; bottom: 18px; color: #ffd0c9; left: 18px; max-width: min(420px, calc(100% - 36px)); padding: 8px 10px; pointer-events: none; position: absolute; }
 .inventory-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
 .inventory-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 980px; overflow: auto; padding: 18px; position: relative; width: min(100%, 980px); }
 .inventory-dialog > :not(.inventory-dialog-chrome) { position: relative; z-index: 1; }
@@ -69,6 +70,19 @@ button, input { font: inherit; }
 .inventory-empty { color: #94a29e; font-size: .78rem; margin: 4px 0; }
 .inventory-receipt { background: rgba(35, 29, 18, .86); border: 1px solid #827146; display: grid; gap: 3px; margin-top: 12px; padding: 9px 11px; }
 .inventory-receipt strong { font-size: .8rem; overflow-wrap: anywhere; }
+.loot-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
+.loot-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 680px; overflow: auto; padding: 18px; position: relative; width: min(100%, 680px); }
+.loot-dialog > :not(.loot-dialog-chrome) { position: relative; z-index: 1; }
+.loot-dialog-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: contain; opacity: .16; pointer-events: none; position: absolute; width: 100%; }
+.loot-dialog > .loot-dialog-header { align-items: start; background: #111617; display: flex; gap: 18px; justify-content: space-between; margin: 0; padding: 7px 0 10px; position: sticky; top: 0; z-index: 2; }
+.loot-dialog-header h2 { color: #f0d879; font: 500 1.65rem Georgia, serif; }
+.loot-dialog-header button { padding: 7px 11px; }
+.loot-dialog-summary, .loot-empty { color: #b7c3bd; font-size: .82rem; margin: 8px 0 12px; }
+.loot-dialog-feedback { background: #321b18; border: 1px solid #a35a50; color: #ffd0c9; margin: 8px 0 12px; padding: 8px 10px; }
+.loot-remote-list { display: grid; gap: 7px; max-height: min(48vh, 420px); overflow: auto; padding-right: 3px; }
+.loot-remote-list button { align-items: baseline; display: flex; gap: 10px; justify-content: space-between; text-align: left; width: 100%; }
+.loot-remote-list button span { overflow-wrap: anywhere; }
+.loot-remote-list button strong { color: #f0d879; font-size: .76rem; white-space: nowrap; }
 .character-sheet-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
 .character-sheet-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 780px; overflow: auto; padding: 18px; position: relative; width: min(100%, 780px); }
 .character-sheet-dialog > :not(.character-sheet-dialog-chrome) { position: relative; z-index: 1; }
@@ -308,6 +322,8 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
   .inventory-dialog { padding: 12px; }
   .inventory-dialog-layout { grid-template-columns: 1fr; }
   .inventory-detail { grid-column: auto; }
+  .loot-dialog-layer { align-items: start; padding: 8px; }
+  .loot-dialog { padding: 12px; }
   .character-sheet-dialog-layer { align-items: start; padding: 8px; }
   .character-sheet-dialog { padding: 12px; }
   .character-sheet-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }

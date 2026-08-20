@@ -30,9 +30,11 @@ export class AppComponent implements OnInit, OnDestroy {
   private pollTimer: ReturnType<typeof setInterval> | undefined;
   private loading = false;
   private commandGeneration = 0;
+  private lootOpenCancelled = false;
+  private lootClosing = false;
   private readonly openLabRequest = (): void => this.openLab();
   private readonly openInventoryRequest = (event: Event): void => {
-    if (this.labOpen || this.readout === undefined) return;
+    if (this.labOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     event.preventDefault();
     if (this.inventoryOpen) {
       this.closeInventory();
@@ -41,13 +43,18 @@ export class AppComponent implements OnInit, OnDestroy {
     this.openInventory(false);
   };
   private readonly openCharacterSheetRequest = (event: Event): void => {
-    if (this.labOpen || this.readout === undefined) return;
+    if (this.labOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     event.preventDefault();
     if (this.characterSheetOpen) {
       this.closeCharacterSheet();
       return;
     }
     this.openCharacterSheet(false);
+  };
+  private readonly openLootRequest = (event: Event): void => {
+    if (this.labOpen || this.inventoryOpen || this.characterSheetOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
+    event.preventDefault();
+    void this.openLoot();
   };
   private readonly dismissOverlayRequest = (event: Event): void => {
     if (this.inventoryOpen) {
@@ -58,6 +65,11 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.characterSheetOpen) {
       event.preventDefault();
       this.closeCharacterSheet();
+      return;
+    }
+    if (this.lootOpen || this.lootOpening) {
+      event.preventDefault();
+      void this.closeLoot();
     }
   };
 
@@ -71,6 +83,9 @@ export class AppComponent implements OnInit, OnDestroy {
   labOpen = false;
   inventoryOpen = false;
   characterSheetOpen = false;
+  lootOpen = false;
+  lootOpening = false;
+  lootFeedback = '';
   selectedInventoryKey: string | undefined;
   activeTab: 'explorer' | 'sprites' = 'explorer';
   grantItemId = 'gold-piece';
@@ -84,6 +99,7 @@ export class AppComponent implements OnInit, OnDestroy {
     window.addEventListener('dagger-open-lab', this.openLabRequest);
     window.addEventListener('dagger-open-inventory', this.openInventoryRequest);
     window.addEventListener('dagger-open-character-sheet', this.openCharacterSheetRequest);
+    window.addEventListener('dagger-open-loot', this.openLootRequest);
     window.addEventListener('dagger-dismiss-overlay', this.dismissOverlayRequest);
     void this.refresh();
     this.pollTimer = setInterval(() => void this.refresh(), 250);
@@ -93,11 +109,13 @@ export class AppComponent implements OnInit, OnDestroy {
     window.removeEventListener('dagger-open-lab', this.openLabRequest);
     window.removeEventListener('dagger-open-inventory', this.openInventoryRequest);
     window.removeEventListener('dagger-open-character-sheet', this.openCharacterSheetRequest);
+    window.removeEventListener('dagger-open-loot', this.openLootRequest);
     window.removeEventListener('dagger-dismiss-overlay', this.dismissOverlayRequest);
     if (this.pollTimer !== undefined) clearInterval(this.pollTimer);
   }
 
   openLab(): void {
+    if (this.lootOpen || this.lootOpening) return;
     this.inventoryOpen = false;
     this.characterSheetOpen = false;
     this.labOpen = true;
@@ -115,7 +133,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openInventory(releaseGameplayInput = true): void {
-    if (this.labOpen || this.readout === undefined) return;
+    if (this.labOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     if (releaseGameplayInput) window.dispatchEvent(new Event('dagger-release-gameplay-input'));
     this.characterSheetOpen = false;
     this.inventoryOpen = true;
@@ -135,7 +153,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openCharacterSheet(releaseGameplayInput = true): void {
-    if (this.labOpen || this.readout === undefined) return;
+    if (this.labOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     if (releaseGameplayInput) window.dispatchEvent(new Event('dagger-release-gameplay-input'));
     this.inventoryOpen = false;
     this.characterSheetOpen = true;
@@ -168,6 +186,99 @@ export class AppComponent implements OnInit, OnDestroy {
 
   reflexesLabel(value: number): string {
     return value === 2 ? 'Average' : String(value);
+  }
+
+  openedLootContainer(readout: ProductReadout): LootContainerReadout | undefined {
+    return readout.lootContainers.find((container) => container.id === readout.openLootContainerId);
+  }
+
+  async openLoot(): Promise<void> {
+    if (this.labOpen || this.inventoryOpen || this.characterSheetOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
+    window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.lootOpenCancelled = false;
+    this.lootOpening = true;
+    this.lootFeedback = '';
+    this.application.ui.setInteractionMode('interface');
+    const succeeded = await this.runCommand(() => this.productApi.openAimedLoot());
+    if (this.lootOpenCancelled) {
+      const closed = await this.runCommand(() => this.productApi.closeLoot());
+      this.lootOpening = false;
+      if (!closed && this.readout !== undefined && this.openedLootContainer(this.readout) !== undefined) {
+        this.lootOpen = true;
+        this.lootFeedback = this.commandError || 'Could not close the loot window.';
+        this.changeDetector.detectChanges();
+        requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-testid="loot-exit"]')?.focus());
+        return;
+      }
+      this.application.ui.setInteractionMode('gameplay');
+      this.application.ui.focusGameplay();
+      return;
+    }
+    this.lootOpening = false;
+    const open = succeeded && this.readout !== undefined && this.openedLootContainer(this.readout) !== undefined;
+    if (!open) {
+      this.lootFeedback = this.latestLootFeedback(this.readout) || this.commandError || 'No eligible loot container is in reach.';
+      this.application.ui.setInteractionMode('gameplay');
+      this.application.ui.focusGameplay();
+      return;
+    }
+    this.lootOpen = true;
+    this.changeDetector.detectChanges();
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-testid="loot-exit"]')?.focus());
+  }
+
+  async closeLoot(): Promise<void> {
+    if (!this.lootOpen && !this.lootOpening) return;
+    if (this.lootOpening) {
+      this.lootOpenCancelled = true;
+      return;
+    }
+    if (this.lootClosing) return;
+    this.lootClosing = true;
+    const succeeded = await this.runCommand(() => this.productApi.closeLoot());
+    this.lootClosing = false;
+    if (!succeeded) {
+      this.lootFeedback = this.commandError || 'Could not close the loot window.';
+      this.changeDetector.detectChanges();
+      requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('[data-testid="loot-exit"]')?.focus());
+      return;
+    }
+    this.lootOpen = false;
+    this.lootFeedback = '';
+    this.application.ui.setInteractionMode('gameplay');
+    this.application.ui.focusGameplay();
+  }
+
+  async takeLootStack(container: LootContainerReadout, stack: InventoryStackReadout): Promise<void> {
+    if (!this.lootOpen) return;
+    const succeeded = await this.runCommand(() =>
+      this.productApi.transferLootStack(container.id, container.sourceInventoryRevision, stack.item),
+    );
+    if (succeeded) this.lootFeedback = this.latestLootFeedback(this.readout) ?? '';
+    this.focusLootAction(stack.item);
+  }
+
+  async takeLootItem(container: LootContainerReadout, item: InventoryItemReadout): Promise<void> {
+    if (!this.lootOpen) return;
+    const succeeded = await this.runCommand(() =>
+      this.productApi.transferLootItem(container.id, container.sourceInventoryRevision, item.entity),
+    );
+    if (succeeded) this.lootFeedback = this.latestLootFeedback(this.readout) ?? '';
+    this.focusLootAction(String(item.entity));
+  }
+
+  private latestLootFeedback(readout: ProductReadout | undefined): string | undefined {
+    const receipt = readout?.equipmentLog.at(-1);
+    if (receipt === undefined || !receipt.operation.startsWith('loot')) return undefined;
+    return receipt.reason ?? (receipt.accepted ? `${receipt.operation} accepted` : 'Loot transfer rejected');
+  }
+
+  private focusLootAction(key: string): void {
+    requestAnimationFrame(() => {
+      if (!this.lootOpen) return;
+      document.querySelector<HTMLButtonElement>(`[data-testid="loot-take-${key}"]`)?.focus()
+        ?? document.querySelector<HTMLButtonElement>('[data-testid="loot-exit"]')?.focus();
+    });
   }
 
   async refreshScene(): Promise<void> {
@@ -388,6 +499,13 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private acceptReadout(readout: ProductReadout): void {
     this.readout = readout;
+    if (this.lootOpen && !this.lootClosing && readout.openLootContainerId === null) {
+      this.lootOpen = false;
+      this.lootOpening = false;
+      this.lootFeedback = this.latestLootFeedback(readout) ?? 'Loot window closed because its source changed.';
+      this.application.ui.setInteractionMode('gameplay');
+      this.application.ui.focusGameplay();
+    }
     if (this.selectedContentId === undefined) {
       this.selectedContentId = readout.focusedContentId ?? readout.content.at(0)?.id;
     }

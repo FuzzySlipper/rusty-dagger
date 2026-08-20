@@ -96,6 +96,9 @@ pub struct DaggerRuntime {
     content_entities: Vec<ContentEntity>,
     content_live_positions: BTreeMap<u64, [f32; 3]>,
     focused_content_id: Option<u64>,
+    /// Stable instance id of the remote inventory currently opened by the
+    /// product loot window. This is session state, never an Angular cache.
+    open_loot_container_id: Option<String>,
     patrol: Option<PatrolService>,
     named_encounters: Vec<NamedEncounter>,
     active_encounter_id: Option<String>,
@@ -125,8 +128,8 @@ pub const MELEE_CONTACT_SECONDS: f32 = 0.32;
 pub const MELEE_RECOVERY_SECONDS: f32 = 0.72;
 pub const MELEE_REJECTION_SECONDS: f32 = 0.72;
 const MELEE_AIM_MIN_DOT: f32 = 0.64;
-/// Reach of the interact/pickup verb (KeyF) in world units. Classic looting
-/// is a click on the adjacent container sprite; 2.5 units covers the
+/// Reach of the aimed loot-open query in world units. Classic looting is a
+/// click on the adjacent container sprite; 2.5 units covers the
 /// jump-to-content standoff (1.5u) with margin for the low corpse piles.
 pub const LOOT_INTERACT_REACH: f32 = 2.5;
 /// Player level used for loot generation. Loot generates at spawn, when the
@@ -170,6 +173,8 @@ pub struct ProductReadout {
     pub encounter_decisions: Vec<EncounterDecisionRecord>,
     pub content: Vec<ContentEntityReadout>,
     pub focused_content_id: Option<u64>,
+    /// The product-open remote loot inventory, if any.
+    pub open_loot_container_id: Option<String>,
     pub named_encounters: Vec<NamedEncounterReadout>,
     pub active_encounter: Option<NamedEncounterReadout>,
     /// The player's upstream inventory/equipment view (`InventoryService::view`
@@ -296,6 +301,8 @@ pub struct LootContainerReadout {
     /// The scene content entity this container anchors to.
     pub content_entity_id: u64,
     pub loot_key: String,
+    /// Engine inventory-component revision used to reject stale transfers.
+    pub source_inventory_revision: u64,
     /// Current contents (`InventoryService::view` on the container entity).
     pub contents: PlayerInventoryReadout,
     /// The spawn-time generation receipt, including the per-category
@@ -423,27 +430,27 @@ pub struct CombatRecord {
     pub events: Vec<String>,
 }
 
-/// One equipment mutation receipt summary (equip verb history). Both
-/// successful mutations and upstream rejections append records; a rejection
-/// carries `accepted: false` and the upstream error reason.
+/// One Rust-owned inventory/equipment action receipt. Successful mutations,
+/// non-mutating loot opens, and upstream rejections all append records; a
+/// rejection carries `accepted: false` and the upstream error reason.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EquipmentLogRecord {
     pub sequence: u64,
-    /// equip | unequip | swap | grant
+    /// equip | unequip | swap | grant | loot-open | loot-transfer
     pub operation: String,
-    /// Item definition id the mutation applied to.
+    /// Item definition id, or the opened container id for loot-open.
     pub item: String,
     pub slots: Vec<String>,
     /// For a swap, the item definition id it replaced.
     pub replaced_item: Option<String>,
-    /// Stack size for fungible grants.
+    /// Stack size for fungible grants or loot transfers.
     pub quantity: Option<u64>,
     pub accepted: bool,
     /// Upstream rejection reason when the mutation was refused.
     pub reason: Option<String>,
-    /// Committed component revision after the mutation (equipment revision,
-    /// or the inventory revision for grants); absent on rejection.
+    /// Committed component revision after a mutation (equipment revision or
+    /// inventory revision); absent on rejection and non-mutating loot-open.
     pub committed_revision: Option<u64>,
 }
 
@@ -693,6 +700,7 @@ impl DaggerRuntime {
             content_entities: admitted.content_entities,
             content_live_positions,
             focused_content_id: None,
+            open_loot_container_id: None,
             patrol: None,
             named_encounters: Vec::new(),
             active_encounter_id: None,
@@ -1303,6 +1311,7 @@ impl DaggerRuntime {
     /// the same hp rolls. The lab jump verb only heals — it preserves
     /// progression within a session.
     pub fn reset_play_session(&mut self) -> Result<ProductReadout, RuntimeError> {
+        self.open_loot_container_id = None;
         self.reset_progression()?;
         if let Some(active) = self.active_encounter_id.clone() {
             return self.start_named_encounter(&active);
@@ -1345,6 +1354,7 @@ impl DaggerRuntime {
     /// The collision scene chooses the floor; Angular never supplies a raw
     /// teleport coordinate.
     pub fn jump_to_content(&mut self, id: u64) -> Result<ProductReadout, RuntimeError> {
+        self.open_loot_container_id = None;
         let target = self
             .content_live_positions
             .get(&id)
@@ -2296,33 +2306,25 @@ impl DaggerRuntime {
         self.product_readout()
     }
 
-    /// Interact/pickup verb (KeyF in the gameplay product): an aimed-interact
-    /// query — the `select_aimed_melee_target` cone shape over a different
-    /// candidate set: dead enemies (their actor entities are the corpse
-    /// containers; donor EnemyDeath.cs:123 keeps the loot in the enemy's
-    /// inventory) and treasure container entities (no live actor). Living
-    /// enemies are NOT lootable.
-    ///
-    /// On a hit the verb performs a take-all transfer: fungible stacks
-    /// through `InventoryService::transfer`, unique items through
-    /// `EquipmentService::transfer_unique_item`, respecting the player's
-    /// capacity per item and stopping at the first rejection (the donor loot
-    /// window's partial-take spirit via CanCarryAmount). Deviation from the
-    /// donor: no loot window UI with selective take — take-all with capacity
-    /// legality. Every transfer and the stopping rejection land in the
-    /// equipment log under a `loot:<container>` operation. An empty
-    /// container logs the donor's "nothing to take" note.
-    pub fn interact_loot(&mut self) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            EquipmentService, InventoryService, InventoryTransferRequest, ItemTransferRequest,
-        };
-
+    /// Open the aimed eligible remote inventory without moving an item. Only
+    /// treasure and dead enemies that actually own a generated loot container
+    /// participate; a valid empty container remains a valid open target.
+    pub fn open_aimed_loot(&mut self) -> Result<ProductReadout, RuntimeError> {
+        // A new attempt supersedes any earlier remote selection even when it
+        // finds nothing, so failed aim never preserves stale authority.
+        self.open_loot_container_id = None;
         let player_position = self.player_position()?;
         let lootable = self
             .content_entities
             .iter()
-            .filter(|entity| entity.enemy().is_none() || self.is_enemy_dead(entity.id))
-            .map(|entity| entity.id)
+            .filter_map(|entity| {
+                let instance = match &entity.kind {
+                    ContentEntityKind::Enemy(_) => enemy_actor_id(entity.id),
+                    ContentEntityKind::Treasure { .. } => treasure_container_id(entity.id),
+                };
+                self.loot_container_owner_if_eligible(&instance)
+                    .map(|_| entity.id)
+            })
             .collect::<BTreeSet<_>>();
         let target = select_aimed_loot_target(
             player_position,
@@ -2334,40 +2336,61 @@ impl DaggerRuntime {
         );
         let Some(id) = target else {
             self.log_equipment_rejection(
-                "loot",
+                "loot-open",
                 "—".to_string(),
                 Vec::new(),
                 None,
-                format!("no loot container within {LOOT_INTERACT_REACH} units of the aim"),
+                format!("no eligible loot container within {LOOT_INTERACT_REACH} units of the aim"),
             );
             return self.product_readout();
         };
-        let entity = self
-            .content_entities
-            .iter()
-            .find(|entity| entity.id == id)
-            .expect("aimed target is a content entity");
-        let instance = match &entity.kind {
-            ContentEntityKind::Enemy(_) => enemy_actor_id(id),
-            ContentEntityKind::Treasure { .. } => treasure_container_id(id),
+        let instance = self
+            .loot_container_instance_for_content(id)
+            .expect("aimed content instance");
+        self.open_loot_container_id = Some(instance.clone());
+        self.push_equipment_record(EquipmentLogRecord {
+            sequence: 0,
+            operation: "loot-open".to_string(),
+            item: instance,
+            slots: Vec::new(),
+            replaced_item: None,
+            quantity: None,
+            accepted: true,
+            reason: None,
+            committed_revision: None,
+        });
+        self.product_readout()
+    }
+
+    pub fn close_loot(&mut self) -> Result<ProductReadout, RuntimeError> {
+        self.open_loot_container_id = None;
+        self.product_readout()
+    }
+
+    /// Transfer one requested fungible stack quantity from the currently open
+    /// remote inventory. The expected source revision makes stale UI state an
+    /// ordinary authored rejection rather than an Angular-side mutation.
+    pub fn transfer_loot_stack(
+        &mut self,
+        container_id: &str,
+        expected_inventory_revision: u64,
+        item: &str,
+        quantity: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{
+            InventoryService, InventoryTransferRequest, ItemDefinitionId,
         };
-        let no_treasure_note = |runtime: &mut Self| {
-            // Donor: clicking an empty corpse says "the body has no treasure".
-            runtime.log_equipment_rejection(
-                format!("loot:{instance}"),
-                "—".to_string(),
+
+        let Some(from_owner) = self.open_loot_owner(container_id) else {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
                 Vec::new(),
-                None,
-                "nothing to take (the body has no treasure)".to_string(),
+                Some(quantity),
+                "loot container is no longer open or eligible".to_string(),
             );
-        };
-        let Some(container) = self.gameplay.container(&instance) else {
-            // Dead enemy whose definition carries no loot table (rat, bat):
-            // classic generates no loot for it.
-            no_treasure_note(self);
             return self.product_readout();
         };
-        let from_owner = container.entity();
         let view = InventoryService::view(
             self.gameplay.entities(),
             self.gameplay_catalog.mechanics(),
@@ -2375,100 +2398,194 @@ impl DaggerRuntime {
         )
         .map_err(|error| {
             RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
-                "container inventory view: {error:?}"
+                "loot inventory view: {error:?}"
             )))
         })?;
-        let stacks = view.stacks().to_vec();
-        let items = view.unique_items().to_vec();
-        if stacks.is_empty() && items.is_empty() {
-            no_treasure_note(self);
+        if view.revision().revision() != expected_inventory_revision {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                Some(quantity),
+                "stale loot inventory revision".to_string(),
+            );
             return self.product_readout();
         }
-        let to_owner = self.player_actor_entity();
+        let item_id = match ItemDefinitionId::parse(item.to_string()) {
+            Ok(item_id) => item_id,
+            Err(error) => {
+                self.log_equipment_rejection(
+                    "loot-transfer",
+                    item.to_string(),
+                    Vec::new(),
+                    Some(quantity),
+                    format!("invalid loot item: {error:?}"),
+                );
+                return self.product_readout();
+            }
+        };
         let (operation, source) = equipment_operation();
-        for stack in stacks {
-            let quantity = stack.quantity;
-            let item = stack.definition.as_str().to_string();
-            match InventoryService::transfer(
-                self.gameplay.entities_mut(),
-                self.gameplay_catalog.mechanics(),
-                InventoryTransferRequest {
-                    operation: operation.clone(),
-                    source: source.clone(),
-                    from_owner,
-                    to_owner,
-                    item: stack.definition.clone(),
-                    quantity,
-                    expected_from_revision: None,
-                    expected_to_revision: None,
-                },
-            ) {
-                Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                    sequence: 0,
-                    operation: format!("loot:{instance}"),
-                    item,
-                    slots: Vec::new(),
-                    replaced_item: None,
-                    quantity: Some(receipt.to_after - receipt.to_before),
-                    accepted: true,
-                    reason: None,
-                    committed_revision: Some(receipt.committed_to_revision),
-                }),
-                // Capacity (or any upstream) rejection: log and stop — the
-                // rest of the pile stays in the container.
-                Err(error) => {
-                    self.log_equipment_rejection(
-                        format!("loot:{instance}"),
-                        item,
-                        Vec::new(),
-                        Some(quantity),
-                        format!("{error:?}"),
-                    );
-                    return self.product_readout();
-                }
-            }
-        }
-        for item in items {
-            let item_name = item.definition.as_str().to_string();
-            let relationship_revision = self.gameplay.entities().revision();
-            match EquipmentService::transfer_unique_item(
-                self.gameplay.entities_mut(),
-                self.gameplay_catalog.mechanics(),
-                ItemTransferRequest {
-                    operation: operation.clone(),
-                    source: source.clone(),
-                    item: item.entity,
-                    from_owner,
-                    to_owner,
-                    expected_relationship_revision: relationship_revision,
-                    expected_from_inventory_revision: None,
-                    expected_to_inventory_revision: None,
-                },
-            ) {
-                Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                    sequence: 0,
-                    operation: format!("loot:{instance}"),
-                    item: item_name,
-                    slots: Vec::new(),
-                    replaced_item: None,
-                    quantity: None,
-                    accepted: true,
-                    reason: None,
-                    committed_revision: Some(receipt.revision_after),
-                }),
-                Err(error) => {
-                    self.log_equipment_rejection(
-                        format!("loot:{instance}"),
-                        item_name,
-                        Vec::new(),
-                        None,
-                        format!("{error:?}"),
-                    );
-                    return self.product_readout();
-                }
-            }
+        let to_owner = self.player_actor_entity();
+        match InventoryService::transfer(
+            self.gameplay.entities_mut(),
+            self.gameplay_catalog.mechanics(),
+            InventoryTransferRequest {
+                operation,
+                source,
+                from_owner,
+                to_owner,
+                item: item_id,
+                quantity,
+                expected_from_revision: Some(view.revision().clone()),
+                expected_to_revision: None,
+            },
+        ) {
+            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
+                sequence: 0,
+                operation: "loot-transfer".to_string(),
+                item: item.to_string(),
+                slots: Vec::new(),
+                replaced_item: None,
+                quantity: Some(receipt.to_after - receipt.to_before),
+                accepted: true,
+                reason: None,
+                committed_revision: Some(receipt.committed_to_revision),
+            }),
+            Err(error) => self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                Some(quantity),
+                format!("{error:?}"),
+            ),
         }
         self.product_readout()
+    }
+
+    /// Transfer one unique item from the currently open remote inventory.
+    pub fn transfer_loot_item(
+        &mut self,
+        container_id: &str,
+        expected_inventory_revision: u64,
+        item: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{
+            EquipmentService, InventoryService, ItemTransferRequest,
+        };
+
+        let Some(from_owner) = self.open_loot_owner(container_id) else {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                None,
+                "loot container is no longer open or eligible".to_string(),
+            );
+            return self.product_readout();
+        };
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            from_owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "loot inventory view: {error:?}"
+            )))
+        })?;
+        if view.revision().revision() != expected_inventory_revision {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                None,
+                "stale loot inventory revision".to_string(),
+            );
+            return self.product_readout();
+        }
+        let entity = EntityId::new(item);
+        let item_name = view
+            .unique_items()
+            .iter()
+            .find(|entry| entry.entity == entity)
+            .map(|entry| entry.definition.as_str().to_string())
+            .unwrap_or_else(|| item.to_string());
+        let (operation, source) = equipment_operation();
+        let to_owner = self.player_actor_entity();
+        match EquipmentService::transfer_unique_item(
+            self.gameplay.entities_mut(),
+            self.gameplay_catalog.mechanics(),
+            ItemTransferRequest {
+                operation,
+                source,
+                item: entity,
+                from_owner,
+                to_owner,
+                expected_relationship_revision: view.relationship_revision(),
+                expected_from_inventory_revision: Some(view.revision().clone()),
+                expected_to_inventory_revision: None,
+            },
+        ) {
+            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
+                sequence: 0,
+                operation: "loot-transfer".to_string(),
+                item: item_name,
+                slots: Vec::new(),
+                replaced_item: None,
+                quantity: None,
+                accepted: true,
+                reason: None,
+                committed_revision: Some(receipt.revision_after),
+            }),
+            Err(error) => self.log_equipment_rejection(
+                "loot-transfer",
+                item_name,
+                Vec::new(),
+                None,
+                format!("{error:?}"),
+            ),
+        }
+        self.product_readout()
+    }
+
+    fn loot_container_instance_for_content(&self, id: u64) -> Option<String> {
+        let entity = self
+            .content_entities
+            .iter()
+            .find(|entity| entity.id == id)?;
+        Some(match &entity.kind {
+            ContentEntityKind::Enemy(_) => enemy_actor_id(id),
+            ContentEntityKind::Treasure { .. } => treasure_container_id(id),
+        })
+    }
+
+    fn loot_container_owner_if_eligible(&self, instance: &str) -> Option<EntityId> {
+        let id = instance
+            .strip_prefix("treasure-")
+            .or_else(|| instance.strip_prefix("enemy-"))?
+            .parse::<u64>()
+            .ok()?;
+        let entity = self
+            .content_entities
+            .iter()
+            .find(|entity| entity.id == id)?;
+        if entity.enemy().is_some() && !self.is_enemy_dead(id) {
+            return None;
+        }
+        self.gameplay
+            .container(instance)
+            .map(DaggerContainerState::entity)
+    }
+
+    fn open_loot_owner(&mut self, container_id: &str) -> Option<EntityId> {
+        if self.open_loot_container_id.as_deref() != Some(container_id) {
+            return None;
+        }
+        let owner = self.loot_container_owner_if_eligible(container_id);
+        if owner.is_none() {
+            self.open_loot_container_id = None;
+        }
+        owner
     }
 
     /// Equip-cycle verb (KeyE in the gameplay product): each press equips the next
@@ -2673,6 +2790,11 @@ impl DaggerRuntime {
             encounter_decisions: self.encounter_history.iter().cloned().collect(),
             content,
             focused_content_id: self.focused_content_id,
+            open_loot_container_id: self
+                .open_loot_container_id
+                .as_deref()
+                .filter(|id| self.loot_container_owner_if_eligible(id).is_some())
+                .map(str::to_string),
             named_encounters,
             active_encounter,
             player_inventory: self.player_inventory_readout()?,
@@ -2700,12 +2822,25 @@ impl DaggerRuntime {
                     ("corpse", None)
                 };
                 let view = self.inventory_readout_for(container.entity())?;
+                let source_inventory_revision = self
+                    .gameplay
+                    .entities()
+                    .component_revision::<rusty_engine::gameplay_mechanics::InventoryComponent>(
+                        container.entity(),
+                    )
+                    .map_err(|error| {
+                        RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                            "loot inventory revision: {error:?}"
+                        )))
+                    })?
+                    .revision();
                 let emptied = view.stacks.is_empty() && view.items.is_empty();
                 Ok(LootContainerReadout {
                     id: instance.clone(),
                     kind,
                     content_entity_id: content_entity_id.unwrap_or(0),
                     loot_key: container.key().to_string(),
+                    source_inventory_revision,
                     contents: view,
                     generation: container.generation().clone(),
                     emptied,
