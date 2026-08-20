@@ -184,6 +184,34 @@ fn handle_command(
         ProductCommand::Unequip { slot, reply } => {
             send_runtime_result(reply, runtime.unequip_slot(&slot))
         }
+        ProductCommand::OpenAimedLoot { reply } => {
+            send_runtime_result(reply, runtime.open_aimed_loot())
+        }
+        ProductCommand::TransferLootStack {
+            container_id,
+            expected_inventory_revision,
+            item,
+            quantity,
+            reply,
+        } => send_runtime_result(
+            reply,
+            runtime.transfer_loot_stack(
+                &container_id,
+                expected_inventory_revision,
+                &item,
+                quantity,
+            ),
+        ),
+        ProductCommand::TransferLootItem {
+            container_id,
+            expected_inventory_revision,
+            item,
+            reply,
+        } => send_runtime_result(
+            reply,
+            runtime.transfer_loot_item(&container_id, expected_inventory_revision, item),
+        ),
+        ProductCommand::CloseLoot { reply } => send_runtime_result(reply, runtime.close_loot()),
         ProductCommand::Grant {
             item,
             quantity,
@@ -211,7 +239,6 @@ fn apply_product_input(
     let attack_pressed = pressed_edges.contains("Space") || input.button_pressed_edges & 1 != 0;
     let reset_pressed = pressed_edges.contains("KeyR");
     let equip_pressed = pressed_edges.contains("KeyE");
-    let loot_pressed = pressed_edges.contains("KeyF");
     let patrol_debug_pressed = pressed_edges.contains("KeyG");
     let nav_debug_pressed = pressed_edges.contains("KeyN");
     let active = |code| pressed.contains(code) || pressed_edges.contains(code);
@@ -232,9 +259,6 @@ fn apply_product_input(
     }
     if equip_pressed {
         let _ = runtime.equip_cycle()?;
-    }
-    if loot_pressed {
-        let _ = runtime.interact_loot()?;
     }
     for route_code in ["Digit1", "Digit2"] {
         if pressed_edges.contains(route_code) {

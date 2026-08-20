@@ -352,6 +352,13 @@ export function mountDaggerProductRuntime(
       // accept it yet, so it never becomes a Rust gameplay pressed code.
       return;
     }
+    if (event.code === 'KeyF' && !event.repeat) {
+      const request = new Event('dagger-open-loot', { cancelable: true });
+      if (!window.dispatchEvent(request)) event.preventDefault();
+      // F is product-local whether or not the current UI can accept it; it
+      // never becomes a Rust gameplay pressed code.
+      return;
+    }
     if (event.repeat || !context.ui.allowsGameplayInput(event)) return;
     if (event.code === 'Space') resumeAudioFromGesture();
     if (!pressed.has(event.code)) pressedEdges.add(event.code);

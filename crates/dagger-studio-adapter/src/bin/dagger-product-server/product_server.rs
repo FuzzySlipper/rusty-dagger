@@ -41,6 +41,10 @@ fn api_surface(path: &str) -> Option<ApiSurface> {
             | "/api/dagger-product/session/reset"
             | "/api/dagger-product/equipment/equip"
             | "/api/dagger-product/equipment/unequip"
+            | "/api/dagger-product/loot/open-aimed"
+            | "/api/dagger-product/loot/transfer-stack"
+            | "/api/dagger-product/loot/transfer-item"
+            | "/api/dagger-product/loot/close"
     ) || path.starts_with("/api/dagger-product/ui/assets/")
     {
         Some(ApiSurface::Product)
@@ -85,6 +89,25 @@ pub(crate) enum ProductCommand {
     },
     Unequip {
         slot: String,
+        reply: Sender<ProductReply>,
+    },
+    OpenAimedLoot {
+        reply: Sender<ProductReply>,
+    },
+    TransferLootStack {
+        container_id: String,
+        expected_inventory_revision: u64,
+        item: String,
+        quantity: u64,
+        reply: Sender<ProductReply>,
+    },
+    TransferLootItem {
+        container_id: String,
+        expected_inventory_revision: u64,
+        item: u64,
+        reply: Sender<ProductReply>,
+    },
+    CloseLoot {
         reply: Sender<ProductReply>,
     },
     Grant {
@@ -314,18 +337,59 @@ fn handle_request(
             }
             ("POST", "/api/dagger-product/equipment/unequip") => {
                 let body: UnequipRequest = match serde_json::from_str(&request.body) {
-                    Ok(body) => body,
-                    Err(error) => return write_response(
-                        stream,
-                        400,
-                        &serde_json::json!({ "error": format!("invalid unequip request: {error}") })
-                            .to_string(),
-                    ),
-                };
+                Ok(body) => body,
+                Err(error) => return write_response(
+                    stream,
+                    400,
+                    &serde_json::json!({ "error": format!("invalid unequip request: {error}") })
+                        .to_string(),
+                ),
+            };
                 ProductCommand::Unequip {
                     slot: body.slot,
                     reply: send_reply,
                 }
+            }
+            ("POST", "/api/dagger-product/loot/open-aimed") => {
+                ProductCommand::OpenAimedLoot { reply: send_reply }
+            }
+            ("POST", "/api/dagger-product/loot/transfer-stack") => {
+                let body: LootStackRequest = match serde_json::from_str(&request.body) {
+                Ok(body) => body,
+                Err(error) => return write_response(
+                    stream,
+                    400,
+                    &serde_json::json!({ "error": format!("invalid loot stack request: {error}") })
+                        .to_string(),
+                ),
+            };
+                ProductCommand::TransferLootStack {
+                    container_id: body.container_id,
+                    expected_inventory_revision: body.expected_inventory_revision,
+                    item: body.item,
+                    quantity: body.quantity,
+                    reply: send_reply,
+                }
+            }
+            ("POST", "/api/dagger-product/loot/transfer-item") => {
+                let body: LootItemRequest = match serde_json::from_str(&request.body) {
+                Ok(body) => body,
+                Err(error) => return write_response(
+                    stream,
+                    400,
+                    &serde_json::json!({ "error": format!("invalid loot item request: {error}") })
+                        .to_string(),
+                ),
+            };
+                ProductCommand::TransferLootItem {
+                    container_id: body.container_id,
+                    expected_inventory_revision: body.expected_inventory_revision,
+                    item: body.item,
+                    reply: send_reply,
+                }
+            }
+            ("POST", "/api/dagger-product/loot/close") => {
+                ProductCommand::CloseLoot { reply: send_reply }
             }
             ("POST", "/api/dagger-tools/inventory/grant") => {
                 let body: GrantRequest = match serde_json::from_str(&request.body) {
@@ -378,6 +442,23 @@ struct UnequipRequest {
 struct GrantRequest {
     item: String,
     quantity: u64,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LootStackRequest {
+    container_id: String,
+    expected_inventory_revision: u64,
+    item: String,
+    quantity: u64,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct LootItemRequest {
+    container_id: String,
+    expected_inventory_revision: u64,
+    item: u64,
 }
 
 fn serve_static(stream: &mut TcpStream, root: &Path, request_path: &str) -> Result<()> {
@@ -762,6 +843,10 @@ mod tests {
             "/api/dagger-product/readout",
             "/api/dagger-product/session/reset",
             "/api/dagger-product/equipment/equip",
+            "/api/dagger-product/loot/open-aimed",
+            "/api/dagger-product/loot/transfer-stack",
+            "/api/dagger-product/loot/transfer-item",
+            "/api/dagger-product/loot/close",
             "/api/dagger-product/ui/assets/hud.chrome.main",
         ] {
             assert_eq!(api_surface(path), Some(ApiSurface::Product), "{path}");

@@ -287,22 +287,22 @@ export interface PlayerInventoryReadout {
   readonly items: readonly InventoryItemReadout[];
 }
 
-/** One equipment mutation receipt summary (equip verb history, successes and rejections). */
+/** One Rust-owned inventory/equipment action receipt, including loot-window actions. */
 export interface EquipmentLogRecord {
   readonly sequence: number;
-  /** equip | unequip | swap | grant | loot:<container> */
+  /** equip | unequip | swap | grant | loot-open | loot-transfer */
   readonly operation: string;
-  /** Item definition id the mutation applied to. */
+  /** Item definition id, or the opened container id for loot-open. */
   readonly item: string;
   readonly slots: readonly string[];
   /** For a swap, the item definition id it replaced. */
   readonly replacedItem: string | null;
-  /** Stack size for fungible grants. */
+  /** Stack size for fungible grants or loot transfers. */
   readonly quantity: number | null;
   readonly accepted: boolean;
   /** Upstream rejection reason when the mutation was refused. */
   readonly reason: string | null;
-  /** Committed component revision after the mutation; null on rejection. */
+  /** Committed component revision after a mutation; null on rejection or non-mutating open. */
   readonly committedRevision: number | null;
 }
 
@@ -342,6 +342,8 @@ export interface LootContainerReadout {
   /** The scene content entity this container anchors to. */
   readonly contentEntityId: number;
   readonly lootKey: string;
+  /** Current Engine inventory revision for stale-transfer protection. */
+  readonly sourceInventoryRevision: number;
   /** Current contents from InventoryService::view on the container entity. */
   readonly contents: PlayerInventoryReadout;
   /** Spawn-time generation receipt, including unsupported-category coverage. */
@@ -401,12 +403,13 @@ export interface ProductReadout {
   readonly encounterDecisions: readonly EncounterDecisionRecord[];
   readonly content: readonly ContentEntityReadout[];
   readonly focusedContentId: number | null;
+  readonly openLootContainerId: string | null;
   readonly namedEncounters: readonly NamedEncounterReadout[];
   readonly activeEncounter: NamedEncounterReadout | null;
   readonly playerInventory: PlayerInventoryReadout;
-  /** Ordered equip/unequip/swap receipts from the equip-cycle verb (E). */
+  /** Ordered Rust-owned inventory/equipment action receipts. */
   readonly equipmentLog: readonly EquipmentLogRecord[];
-  /** Live loot containers (treasure piles + loot-bearing corpses); pickup is the KeyF gameplay verb. */
+  /** Live loot containers (treasure piles + loot-bearing corpses). */
   readonly lootContainers: readonly LootContainerReadout[];
   /** Kill-XP progression state: xp, level, pacing, health, and the award history. */
   readonly progression: ProgressionReadout;

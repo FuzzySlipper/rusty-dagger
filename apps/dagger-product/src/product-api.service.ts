@@ -24,4 +24,24 @@ export class ProductApiService {
   unequipSlot(slot: string): Promise<ProductReadout> {
     return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/equipment/unequip`, { slot }));
   }
+
+  openAimedLoot(): Promise<ProductReadout> {
+    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/loot/open-aimed`, null));
+  }
+
+  transferLootStack(containerId: string, expectedInventoryRevision: number, item: string, quantity = 1): Promise<ProductReadout> {
+    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/loot/transfer-stack`, {
+      containerId, expectedInventoryRevision, item, quantity,
+    }));
+  }
+
+  transferLootItem(containerId: string, expectedInventoryRevision: number, item: number): Promise<ProductReadout> {
+    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/loot/transfer-item`, {
+      containerId, expectedInventoryRevision, item,
+    }));
+  }
+
+  closeLoot(): Promise<ProductReadout> {
+    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/loot/close`, null));
+  }
 }

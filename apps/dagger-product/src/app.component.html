@@ -1,6 +1,6 @@
 <main class="product-shell" [attr.data-product-mode]="labOpen ? 'lab' : 'gameplay'">
   <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport"
-    [attr.inert]="inventoryOpen || characterSheetOpen ? '' : null" [attr.aria-hidden]="inventoryOpen || characterSheetOpen ? 'true' : null">
+    [attr.inert]="inventoryOpen || characterSheetOpen || lootOpen || lootOpening ? '' : null" [attr.aria-hidden]="inventoryOpen || characterSheetOpen || lootOpen || lootOpening ? 'true' : null">
     <ng-container *ngIf="readout as live">
       <ng-container *ngIf="hudMeter(live.playerStats.currentHealth, live.playerStats.maxHealth) as health">
         <ng-container *ngIf="hudMeter(live.playerStats.currentStamina, live.playerStats.maxStamina) as stamina">
@@ -46,12 +46,14 @@
       <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">
         <span>{{ encounter.name }} · {{ encounter.status }}</span><strong>{{ encounter.objective }}</strong>
       </div>
-      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD + mouse</span><span>Space / click attack</span><span>I inventory</span><span>C character</span><span>R retry</span></div>
+      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD + mouse</span><span>Space / click attack</span><span>F loot</span><span>I inventory</span><span>C character</span><span>R retry</span></div>
+      <button type="button" data-testid="open-loot" [disabled]="!readout || lootOpening" (click)="openLoot()">Loot (F)</button>
       <button type="button" data-testid="open-inventory" [disabled]="!readout" (click)="openInventory()">Inventory</button>
       <button type="button" data-testid="open-character-sheet" [disabled]="!readout" (click)="openCharacterSheet()">Character</button>
       <button type="button" data-testid="open-lab" (click)="openLab()">Open Dagger Lab</button>
       <button type="button" data-testid="refresh-scene" (click)="refreshScene()">Refresh scene</button>
     </div>
+    <p *ngIf="lootFeedback && !lootOpen" class="loot-status" role="status" aria-live="polite" data-testid="loot-status">{{ lootFeedback }}</p>
   </section>
   <section *ngIf="inventoryOpen && readout as live" class="inventory-dialog-layer" data-testid="inventory-dialog-layer" data-rusty-ui-interactive>
     <section class="inventory-dialog" role="dialog" aria-modal="true" aria-labelledby="inventory-dialog-title"
@@ -127,6 +129,29 @@
       <section class="inventory-receipt" *ngIf="latestEquipmentReceipt(live) as receipt" aria-live="polite" data-testid="inventory-dialog-receipt">
         <span>{{ receipt.accepted ? 'Latest equipment receipt' : 'Equipment rejected' }}</span>
         <strong>{{ receipt.operation }} · {{ receipt.item }}<ng-container *ngIf="receipt.replacedItem"> · replaced {{ receipt.replacedItem }}</ng-container><ng-container *ngIf="receipt.reason"> · {{ receipt.reason }}</ng-container></strong>
+      </section>
+    </section>
+  </section>
+  <section *ngIf="lootOpen && readout as live" class="loot-dialog-layer" data-testid="loot-dialog-layer" data-rusty-ui-interactive>
+    <section *ngIf="openedLootContainer(live) as container" class="loot-dialog" role="dialog" aria-modal="true"
+      aria-labelledby="loot-dialog-title" aria-describedby="loot-dialog-summary" data-testid="loot-dialog">
+      <img class="loot-dialog-chrome" aria-hidden="true" src="/api/dagger-product/ui/assets/window.inventory.chrome" />
+      <header class="loot-dialog-header">
+        <div><p class="kicker">Remote inventory · {{ container.kind }} · {{ container.id }}</p><h2 id="loot-dialog-title">Loot</h2></div>
+        <button type="button" data-testid="loot-exit" (click)="closeLoot()">Exit <span aria-hidden="true">×</span></button>
+      </header>
+      <p class="loot-dialog-summary" id="loot-dialog-summary">Escape or Exit returns to play. Take moves one stack unit or one item when capacity allows.</p>
+      <p *ngIf="lootFeedback || commandError" class="loot-dialog-feedback" aria-live="polite" data-testid="loot-feedback">{{ lootFeedback || commandError }}</p>
+      <section class="loot-remote-list" aria-label="Remote loot contents" data-testid="loot-remote-list">
+        <button *ngFor="let stack of container.contents.stacks" type="button" [disabled]="pending"
+          [attr.data-testid]="'loot-take-' + stack.item" (click)="takeLootStack(container, stack)">
+          <span>{{ stack.item }} × {{ stack.quantity }}</span><strong>Take 1</strong>
+        </button>
+        <button *ngFor="let item of container.contents.items" type="button" [disabled]="pending"
+          [attr.data-testid]="'loot-take-' + item.entity" (click)="takeLootItem(container, item)">
+          <span>{{ item.item }}</span><strong>Take</strong>
+        </button>
+        <p *ngIf="container.emptied" class="loot-empty" data-testid="loot-empty">Empty. This container remains open until Exit.</p>
       </section>
     </section>
   </section>
@@ -337,7 +362,7 @@
         <button type="button" data-testid="grant-submit" [disabled]="pending" (click)="grantItem()">Grant</button>
       </div>
       <p class="muted">Fungible stacks only; over-capacity grants reject and the rejection lands in the log below.</p>
-      <p class="kicker field-kicker">Equipment log</p>
+      <p class="kicker field-kicker">Inventory action log</p>
       <div class="derived-grid" data-testid="equipment-log">
         <article *ngFor="let record of live.equipmentLog" [class.rejected]="!record.accepted"
           [attr.data-testid]="'equipment-log-' + record.sequence">
@@ -385,7 +410,7 @@
         <div><p class="kicker">Classic loot tables · generated at spawn</p><h2>Loot containers</h2></div>
         <span class="schema" data-testid="loot-count">{{ live.lootContainers.length }} containers</span>
       </div>
-      <p class="muted">Treasure piles (RDB random-treasure markers) and loot-bearing enemy corpses, contents sourced from <code>InventoryService::view</code> on the container entity. Pickup is the <code>F</code> gameplay verb — the lab never moves items.</p>
+      <p class="muted">Treasure piles (RDB random-treasure markers) and loot-bearing enemy corpses, contents sourced from <code>InventoryService::view</code> on the container entity. <code>F</code> opens the player loot window — the lab never moves items.</p>
       <div class="derived-grid" data-testid="loot-containers">
         <article *ngFor="let container of live.lootContainers" [attr.data-testid]="'loot-container-' + container.id">
           <span>{{ container.id }} · {{ container.kind }} · table {{ container.lootKey }}<span *ngIf="container.contentEntityId"> · #{{ container.contentEntityId }}</span></span>
