@@ -14,8 +14,8 @@ pub const SUPPORTED_PROJECT_SCHEMA_VERSION: u32 = 24;
 pub const PLAYER_ENTITY_ID: EntityId = EntityId::new(1);
 /// Conservative AABB for Dagger diagnostics around Engine's standing capsule.
 pub const PLAYER_HALF_EXTENTS: Vec3 = Vec3::new(0.25, 0.9, 0.25);
-/// The dungeon static mesh is the collision authority (rusty-engine task
-/// 6516): one trimesh collider over the full dungeon geometry (floors, walls,
+/// The dungeon static mesh is the collision authority: one trimesh collider
+/// over the full dungeon geometry (floors, walls,
 /// ceilings, ramps). Registered under a fixed asset/instance id at identity.
 pub const DUNGEON_COLLIDER_ASSET_ID: StaticMeshAssetId = StaticMeshAssetId(1);
 pub const DUNGEON_COLLIDER_MESH_ASSET: &str = "mesh/privateers-hold";

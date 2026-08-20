@@ -208,8 +208,8 @@ fn main() {
     }
 
     // 2. Reachable-region traversal: from the start room's main floor, walk
-    //    into the descending dungeon. The exit from the spawn ledge is a door
-    //    problem (6525); this proves the collision authority supports real
+    //    into the descending dungeon. The spawn ledge exit is blocked by a
+    //    closed door, so this proves the collision authority supports real
     //    multi-level traversal in the open region.
     let main_floor = [28.25, 33.0, -12.25];
     let mut traversal = DaggerRuntime::from_project_json(&document).expect("admit project");

@@ -26,7 +26,7 @@
  * monsters carry `xpReward` (catalogs/monsters.ts, actors.ts), kills award
  * xp, and the `xp-level` curve below maps live xp to level-ups. Classic has
  * no kill XP; the classic skill-use advancement (`player-level` +
- * `skill-uses-for-advancement`, expressible since 7081) is the documented
+ * `skill-uses-for-advancement`, supported by the current grammar) is the documented
  * alternative profile, kept for reference — not what the live runtime
  * evaluates.
  */

@@ -187,7 +187,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
             },
         })
 
-    # Enemy directional sprite atlases (6595). One texture asset per unique
+    # Enemy directional sprite atlases. One texture asset per unique
     # enemy mobile id; the importer-packed, Engine-bounded PNG holds the
     # orientation/animation frames (mirrored sides baked) and the manifest
     # carries per-frame UV rects, per-frame world sizes (the Engine resizes
@@ -390,7 +390,7 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
                 },
             })
 
-    # Enemy directional sprite entities (6595). One sprite per RDB enemy flat;
+    # Enemy directional sprite entities. One sprite per RDB enemy flat;
     # the runtime driver steps the 8-orientation frame from camera bearing.
     # Import normalizes visible frame pixels to one height and bottom-center
     # pivot per enemy. The quad therefore has one fixed size for every frame.

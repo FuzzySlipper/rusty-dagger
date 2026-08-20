@@ -629,8 +629,8 @@ fn binding_tracks(
 
 /// Spend from one actor's track through the mechanics track service,
 /// clamped to the available amount, returning the value afterwards. This is
-/// the runtime's live mutation path while 7046 moves attempts onto
-/// `resolve_dagger_action`.
+/// the bounded direct track-mutation helper; action attempts use
+/// `resolve_dagger_action` for transactional resolution.
 pub fn spend_actor_track(
     state: &mut DaggerGameplayState,
     catalog: &DaggerGameplayCatalog,

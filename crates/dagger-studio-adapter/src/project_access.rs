@@ -44,7 +44,7 @@ pub(crate) fn sha256(text: &str) -> String {
 ///
 /// Returns `None` to fail closed — the caller emits no texture descriptor or
 /// resource entry for a rejected path, so an escaping or non-regular catalog
-/// identity is never admitted or exposed (R6521-1).
+/// identity is never admitted or exposed.
 pub(crate) fn project_resource_path(root: &Path, source_path: &str) -> Option<PathBuf> {
     if source_path.is_empty() {
         return None;
