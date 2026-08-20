@@ -1,7 +1,45 @@
 <main class="product-shell" [attr.data-product-mode]="labOpen ? 'lab' : 'gameplay'">
   <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport">
-    <img class="classic-hud-chrome" aria-hidden="true"
-      src="/api/dagger-product/ui/assets/hud.chrome.main" />
+    <ng-container *ngIf="readout as live">
+      <ng-container *ngIf="hudMeter(live.playerStats.currentHealth, live.playerStats.maxHealth) as health">
+        <ng-container *ngIf="hudMeter(live.playerStats.currentStamina, live.playerStats.maxStamina) as stamina">
+          <ng-container *ngIf="hudMeter(live.playerStats.currentMagicka, live.playerStats.maxMagicka) as magicka">
+            <section class="classic-hud" data-testid="classic-hud" aria-label="Player status">
+              <div class="classic-hud-frame" data-testid="classic-hud-frame">
+                <img class="classic-hud-background" aria-hidden="true"
+                  src="/api/dagger-product/ui/assets/hud.chrome.main" />
+                <div class="classic-hud-meter classic-hud-health" data-testid="hud-health-meter" role="progressbar"
+                  aria-label="Health" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="health.percent"
+                  [attr.aria-valuetext]="'Health ' + format(health.current) + ' of ' + format(health.maximum)"
+                  [style.--hud-meter-fill]="health.percent + '%'">
+                  <img aria-hidden="true" src="/api/dagger-product/ui/assets/hud.vital.health" />
+                </div>
+                <div class="classic-hud-meter classic-hud-stamina" data-testid="hud-stamina-meter" role="progressbar"
+                  aria-label="Stamina" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="stamina.percent"
+                  [attr.aria-valuetext]="'Stamina ' + format(stamina.current) + ' of ' + format(stamina.maximum)"
+                  [style.--hud-meter-fill]="stamina.percent + '%'">
+                  <img aria-hidden="true" src="/api/dagger-product/ui/assets/hud.vital.fatigue" />
+                </div>
+                <div class="classic-hud-meter classic-hud-magicka" data-testid="hud-magicka-meter" role="progressbar"
+                  aria-label="Magicka" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="magicka.percent"
+                  [attr.aria-valuetext]="'Magicka ' + format(magicka.current) + ' of ' + format(magicka.maximum)"
+                  [style.--hud-meter-fill]="magicka.percent + '%'">
+                  <img aria-hidden="true" src="/api/dagger-product/ui/assets/hud.vital.magicka" />
+                </div>
+              </div>
+              <div class="classic-hud-values" data-testid="hud-values">
+                <div><span>Health</span><strong data-testid="hud-health-value">{{ format(health.current) }} / {{ format(health.maximum) }}</strong></div>
+                <div><span>Stamina</span><strong data-testid="hud-stamina-value">{{ format(stamina.current) }} / {{ format(stamina.maximum) }}</strong></div>
+                <div><span>Magicka</span><strong data-testid="hud-magicka-value">{{ format(magicka.current) }} / {{ format(magicka.maximum) }}</strong></div>
+                <div><span>Level</span><strong data-testid="hud-level-value">{{ live.progression.level }}</strong></div>
+                <div><span>XP</span><strong data-testid="hud-xp-value">{{ live.progression.xp }}</strong></div>
+                <div><span>XP to next</span><strong data-testid="hud-xp-to-next-value">{{ live.progression.xpToNextLevel }}</strong></div>
+              </div>
+            </section>
+          </ng-container>
+        </ng-container>
+      </ng-container>
+    </ng-container>
     <div class="game-hud" data-rusty-ui-interactive>
       <div><span>Privateer's Hold</span><strong>Rust-authoritative connected product</strong></div>
       <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">

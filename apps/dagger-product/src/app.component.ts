@@ -100,6 +100,19 @@ export class AppComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
+  /** Clamp untrusted display values into a safe, normalized native HUD fill. */
+  hudMeter(current: number, maximum: number): { readonly current: number; readonly maximum: number; readonly percent: number } {
+    const safeMaximum = Number.isFinite(maximum) && maximum > 0 ? maximum : 0;
+    const safeCurrent = Number.isFinite(current) && safeMaximum > 0
+      ? Math.min(safeMaximum, Math.max(0, current))
+      : 0;
+    return {
+      current: safeCurrent,
+      maximum: safeMaximum,
+      percent: safeMaximum === 0 ? 0 : (safeCurrent / safeMaximum) * 100,
+    };
+  }
+
   optional(value: number | undefined): string {
     return value === undefined ? '—' : this.format(value);
   }

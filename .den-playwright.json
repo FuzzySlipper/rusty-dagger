@@ -4,7 +4,7 @@
     "command": "./scripts/serve-dagger-product.sh {host} {port}",
     "preferredPort": 0,
     "healthUrl": "/",
-    "readyText": "Dagger Lab",
+    "readyText": "Rusty Dagger",
     "reusePolicy": "broker_owned",
     "startupTimeout": "120s"
   },
