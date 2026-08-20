@@ -17,6 +17,7 @@ use rusty_engine::entity_state::{
     replace_character_motion_state, CharacterMotionComponent, CharacterMotionStateReplacement,
     EntityState, TransformComponent,
 };
+use rusty_engine::gameplay_mechanics::{OperationId, StatId, StatService};
 use rusty_engine::gameplay_resolution::{
     CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
 };
@@ -133,6 +134,20 @@ pub const LOOT_INTERACT_REACH: f32 = 2.5;
 /// session-only); if later-generated containers ever appear, the level must
 /// be read from the player's live `level` stat at generation time.
 const LOOT_GENERATION_LEVEL: i64 = 1;
+/// The classic primary attributes presented by the bounded character sheet.
+/// Reflexes is intentionally separate because its classic representation is
+/// an enum-like setting rather than another 1–100 attribute.
+const CHARACTER_SHEET_ATTRIBUTE_IDS: [&str; 8] = [
+    "strength",
+    "intelligence",
+    "willpower",
+    "agility",
+    "endurance",
+    "personality",
+    "speed",
+    "luck",
+];
+const PLAYER_REFLEXES_STAT_ID: &str = "reflexes";
 
 /// Product-service readout of admitted catalog definitions, live state, and
 /// resolution explanation. Browser surfaces do not evaluate or edit gameplay
@@ -353,7 +368,18 @@ fn spawn_roll(entity_id: u64, evidence_id: &str, min: i64, max: i64) -> i64 {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActorGameplayReadout {
+    /// Compatibility summary for existing product surfaces.
     pub attributes: ActorAttributeReadout,
+    /// The live mechanics evaluation of the eight primary attributes. This is
+    /// deliberately not the admitted definition map: future attributed
+    /// sources must be visible as current character state.
+    pub evaluated_attributes: BTreeMap<String, i64>,
+    /// The separately modeled live reflexes setting (2 is classic Average).
+    pub reflexes: i64,
+    /// The live mechanics evaluation of skills actually modeled for this
+    /// actor. Do not fill this with every globally declared but unmodeled
+    /// skill at zero.
+    pub modeled_skills: BTreeMap<String, i64>,
     pub max_health: f32,
     pub max_stamina: f32,
     pub max_magicka: f32,
@@ -1126,28 +1152,75 @@ impl DaggerRuntime {
         }
     }
 
-    /// Player stats panel: live values from the mechanics binding and
-    /// attribute values from the admitted player definition.
-    fn player_gameplay_readout(&self) -> ActorGameplayReadout {
+    fn live_player_stat(&self, id: &str) -> Result<i64, RuntimeError> {
+        let binding = self
+            .gameplay
+            .actor(PLAYER_ACTOR_ID)
+            .expect("player gameplay binding");
+        let stat = StatId::parse(id.to_string()).map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
+                path: "playerStats".to_string(),
+                value: format!("{id}: {error:?}"),
+            })
+        })?;
+        let operation = OperationId::parse("dagger-product-readout")
+            .expect("fixed product readout operation identity");
+        StatService::evaluate(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            binding.entity(),
+            &stat,
+            &operation,
+            &[],
+        )
+        .map(|evaluation| evaluation.value.get())
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "player stat evaluation {id}: {error:?}"
+            )))
+        })
+    }
+
+    /// Player stats panel: live values from the mechanics binding. The
+    /// admitted definition supplies only the bounded list of modeled skills;
+    /// values themselves always pass through `StatService::evaluate`.
+    fn player_gameplay_readout(&self) -> Result<ActorGameplayReadout, RuntimeError> {
         let definition = self
             .gameplay_catalog
             .actors()
             .get(PLAYER_ACTOR_ID)
             .expect("player actor definition");
-        let stat = |id: &str| definition.stats.get(id).copied().unwrap_or(0) as f32;
-        ActorGameplayReadout {
+        let mut evaluated_attributes = BTreeMap::new();
+        for id in CHARACTER_SHEET_ATTRIBUTE_IDS {
+            evaluated_attributes.insert(id.to_string(), self.live_player_stat(id)?);
+        }
+        let reflexes = self.live_player_stat(PLAYER_REFLEXES_STAT_ID)?;
+        let mut modeled_skills = BTreeMap::new();
+        for id in definition.skills.keys() {
+            modeled_skills.insert(id.clone(), self.live_player_stat(id)?);
+        }
+        Ok(ActorGameplayReadout {
             attributes: ActorAttributeReadout {
-                strength: stat("strength"),
-                endurance: stat("endurance"),
-                intelligence: stat("intelligence"),
+                strength: *evaluated_attributes
+                    .get("strength")
+                    .expect("fixed primary attribute") as f32,
+                endurance: *evaluated_attributes
+                    .get("endurance")
+                    .expect("fixed primary attribute") as f32,
+                intelligence: *evaluated_attributes
+                    .get("intelligence")
+                    .expect("fixed primary attribute") as f32,
             },
+            evaluated_attributes,
+            reflexes,
+            modeled_skills,
             max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
             max_stamina: self.live_track_max(PLAYER_ACTOR_ID, "stamina"),
             max_magicka: self.live_track_max(PLAYER_ACTOR_ID, "magicka"),
             current_health: self.live_track(PLAYER_ACTOR_ID, "health"),
             current_stamina: self.live_track(PLAYER_ACTOR_ID, "stamina"),
             current_magicka: self.live_track(PLAYER_ACTOR_ID, "magicka"),
-        }
+        })
     }
 
     /// Session-scoped progression reset: spawn xp/level/health-max bases
@@ -2590,7 +2663,7 @@ impl DaggerRuntime {
             move_speed_units_per_second: self.player_controller.move_speed_units_per_second,
             max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
             current_health: self.player_health(),
-            player_stats: self.player_gameplay_readout(),
+            player_stats: self.player_gameplay_readout()?,
             player_position: [position.x, position.y, position.z],
             player_yaw_degrees: self.player_state().yaw_degrees,
             combat: self.combat_history.iter().cloned().collect(),

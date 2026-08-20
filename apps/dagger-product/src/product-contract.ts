@@ -139,11 +139,18 @@ export interface GameplayPackageReadout {
 }
 
 export interface ActorGameplayReadout {
+  /** Compatibility summary used by existing product surfaces. */
   readonly attributes: {
     readonly strength: number;
     readonly endurance: number;
     readonly intelligence: number;
   };
+  /** Live mechanics values for the eight primary attributes. */
+  readonly evaluatedAttributes: Readonly<Record<string, number>>;
+  /** Live reflexes setting, represented as Average by the sheet for value 2. */
+  readonly reflexes: number;
+  /** Live values for only the skills actually modeled by this actor. */
+  readonly modeledSkills: Readonly<Record<string, number>>;
   readonly maxHealth: number;
   readonly maxStamina: number;
   readonly maxMagicka: number;

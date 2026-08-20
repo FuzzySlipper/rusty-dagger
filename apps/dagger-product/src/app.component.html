@@ -1,6 +1,6 @@
 <main class="product-shell" [attr.data-product-mode]="labOpen ? 'lab' : 'gameplay'">
   <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport"
-    [attr.inert]="inventoryOpen ? '' : null" [attr.aria-hidden]="inventoryOpen ? 'true' : null">
+    [attr.inert]="inventoryOpen || characterSheetOpen ? '' : null" [attr.aria-hidden]="inventoryOpen || characterSheetOpen ? 'true' : null">
     <ng-container *ngIf="readout as live">
       <ng-container *ngIf="hudMeter(live.playerStats.currentHealth, live.playerStats.maxHealth) as health">
         <ng-container *ngIf="hudMeter(live.playerStats.currentStamina, live.playerStats.maxStamina) as stamina">
@@ -46,8 +46,9 @@
       <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">
         <span>{{ encounter.name }} · {{ encounter.status }}</span><strong>{{ encounter.objective }}</strong>
       </div>
-      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD + mouse</span><span>Space / click attack</span><span>I inventory</span><span>R retry</span></div>
+      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD + mouse</span><span>Space / click attack</span><span>I inventory</span><span>C character</span><span>R retry</span></div>
       <button type="button" data-testid="open-inventory" [disabled]="!readout" (click)="openInventory()">Inventory</button>
+      <button type="button" data-testid="open-character-sheet" [disabled]="!readout" (click)="openCharacterSheet()">Character</button>
       <button type="button" data-testid="open-lab" (click)="openLab()">Open Dagger Lab</button>
       <button type="button" data-testid="refresh-scene" (click)="refreshScene()">Refresh scene</button>
     </div>
@@ -127,6 +128,54 @@
         <span>{{ receipt.accepted ? 'Latest equipment receipt' : 'Equipment rejected' }}</span>
         <strong>{{ receipt.operation }} · {{ receipt.item }}<ng-container *ngIf="receipt.replacedItem"> · replaced {{ receipt.replacedItem }}</ng-container><ng-container *ngIf="receipt.reason"> · {{ receipt.reason }}</ng-container></strong>
       </section>
+    </section>
+  </section>
+  <section *ngIf="characterSheetOpen && readout as live" class="character-sheet-dialog-layer" data-testid="character-sheet-dialog-layer" data-rusty-ui-interactive>
+    <section class="character-sheet-dialog" role="dialog" aria-modal="true" aria-labelledby="character-sheet-dialog-title"
+      aria-describedby="character-sheet-dialog-summary" data-testid="character-sheet-dialog">
+      <img class="character-sheet-dialog-chrome" aria-hidden="true"
+        src="/api/dagger-product/ui/assets/window.character-sheet.chrome" />
+      <header class="character-sheet-dialog-header">
+        <div><p class="kicker">Live Rust-authoritative profile</p><h2 id="character-sheet-dialog-title" data-testid="character-sheet-dialog-title">Character sheet</h2></div>
+        <button type="button" data-testid="character-sheet-exit" (click)="closeCharacterSheet()">Exit <span aria-hidden="true">×</span></button>
+      </header>
+      <p class="character-sheet-dialog-summary" id="character-sheet-dialog-summary">C or Escape returns to the same play session.</p>
+      <section class="character-sheet-overview" aria-label="Player progression">
+        <div><span>Player</span><strong>Player</strong></div>
+        <div><span>Level</span><strong data-testid="character-sheet-level">{{ live.progression.level }}</strong></div>
+        <div><span>Total XP</span><strong data-testid="character-sheet-xp">{{ live.progression.xp }}</strong></div>
+        <div><span>XP to next</span><strong data-testid="character-sheet-xp-to-next">{{ live.progression.xpToNextLevel }}</strong></div>
+      </section>
+      <div class="character-sheet-columns">
+        <section class="character-sheet-section" aria-labelledby="character-sheet-vitals-title">
+          <h3 id="character-sheet-vitals-title">Live condition</h3>
+          <dl class="character-sheet-vitals">
+            <div><dt>Health</dt><dd data-testid="character-sheet-health">{{ format(live.playerStats.currentHealth) }} / {{ format(live.playerStats.maxHealth) }}</dd></div>
+            <div><dt>Stamina</dt><dd data-testid="character-sheet-stamina">{{ format(live.playerStats.currentStamina) }} / {{ format(live.playerStats.maxStamina) }}</dd></div>
+            <div><dt>Magicka</dt><dd data-testid="character-sheet-magicka">{{ format(live.playerStats.currentMagicka) }} / {{ format(live.playerStats.maxMagicka) }}</dd></div>
+          </dl>
+        </section>
+        <section class="character-sheet-section" aria-labelledby="character-sheet-attributes-title">
+          <h3 id="character-sheet-attributes-title">Attributes</h3>
+          <dl class="character-sheet-stat-grid">
+            <div><dt>Strength</dt><dd data-testid="character-sheet-attribute-strength">{{ live.playerStats.evaluatedAttributes['strength'] }}</dd></div>
+            <div><dt>Intelligence</dt><dd>{{ live.playerStats.evaluatedAttributes['intelligence'] }}</dd></div>
+            <div><dt>Willpower</dt><dd>{{ live.playerStats.evaluatedAttributes['willpower'] }}</dd></div>
+            <div><dt>Agility</dt><dd>{{ live.playerStats.evaluatedAttributes['agility'] }}</dd></div>
+            <div><dt>Endurance</dt><dd>{{ live.playerStats.evaluatedAttributes['endurance'] }}</dd></div>
+            <div><dt>Personality</dt><dd>{{ live.playerStats.evaluatedAttributes['personality'] }}</dd></div>
+            <div><dt>Speed</dt><dd>{{ live.playerStats.evaluatedAttributes['speed'] }}</dd></div>
+            <div><dt>Luck</dt><dd>{{ live.playerStats.evaluatedAttributes['luck'] }}</dd></div>
+            <div><dt>Reflexes</dt><dd>{{ reflexesLabel(live.playerStats.reflexes) }}</dd></div>
+          </dl>
+        </section>
+        <section class="character-sheet-section character-sheet-skills" aria-labelledby="character-sheet-skills-title">
+          <h3 id="character-sheet-skills-title">Modeled skills</h3>
+          <dl class="character-sheet-stat-grid">
+            <div *ngFor="let skill of modeledSkillEntries(live)"><dt>{{ skill.label }}</dt><dd [attr.data-testid]="'character-sheet-skill-' + skill.id">{{ skill.value }}</dd></div>
+          </dl>
+        </section>
+      </div>
     </section>
   </section>
   <section class="lab-page" [class.is-open]="labOpen" [attr.aria-hidden]="labOpen ? null : 'true'"

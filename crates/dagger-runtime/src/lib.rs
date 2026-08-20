@@ -305,6 +305,32 @@ mod tests {
         assert_eq!(readout.max_health, 85.0);
         assert_eq!(readout.player_stats.max_stamina, 90.0);
         assert_eq!(readout.player_stats.attributes.strength, 50.0);
+        assert_eq!(
+            readout.player_stats.evaluated_attributes,
+            std::collections::BTreeMap::from([
+                ("agility".to_string(), 50),
+                ("endurance".to_string(), 40),
+                ("intelligence".to_string(), 50),
+                ("luck".to_string(), 50),
+                ("personality".to_string(), 50),
+                ("speed".to_string(), 50),
+                ("strength".to_string(), 50),
+                ("willpower".to_string(), 50),
+            ])
+        );
+        assert_eq!(readout.player_stats.reflexes, 2);
+        assert_eq!(
+            readout.player_stats.modeled_skills,
+            std::collections::BTreeMap::from([
+                ("backstabbing".to_string(), 30),
+                ("hand-to-hand".to_string(), 40),
+                ("long-blade".to_string(), 60),
+                ("medical".to_string(), 30),
+            ])
+        );
+        assert_eq!(readout.player_stats.current_health, 85.0);
+        assert_eq!(readout.player_stats.current_stamina, 90.0);
+        assert_eq!(readout.player_stats.current_magicka, 50.0);
         assert!(!readout.gameplay_package.fingerprint.is_empty());
         assert!(readout
             .gameplay_package
