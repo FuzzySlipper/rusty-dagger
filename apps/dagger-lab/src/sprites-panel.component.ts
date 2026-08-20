@@ -229,7 +229,7 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
     return entry.key;
   }
 
-  // --- Manifest editing (Den 6945) ---------------------------------------
+  // --- Manifest editing --------------------------------------------------
   // Edits mutate the raw manifest document and set the entry's "edited"
   // marker; the exporter preserves marked tunable fields across regeneration
   // (DAGGER_CLOBBER_SPRITES=1 ignores markers). Saving posts the whole

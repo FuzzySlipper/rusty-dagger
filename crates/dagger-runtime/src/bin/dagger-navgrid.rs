@@ -1,4 +1,4 @@
-//! Navigation grid derivation proof for Privateer's Hold (task 6639).
+//! Navigation grid derivation proof for Privateer's Hold.
 //!
 //! Like the walkthrough, this command reads the committed generated project
 //! and proves facts through the real collision authority — never a re-derived
@@ -12,9 +12,9 @@
 //!    unwalkable.
 //! 3. Grounds all 43 authored enemy spawns through the same authority and
 //!    reports where each lands when snapped (most authored spawns float;
-//!    landing data feeds the patrol task 6641).
-//! 4. Writes content/projects/privateers-hold.navgrid.json for the flycam
-//!    grid gizmo (`--check` verifies freshness instead).
+//!    landing data feeds patrol).
+//! 4. Writes content/projects/privateers-hold.navgrid.json for product
+//!    diagnostics (`--check` verifies freshness instead).
 //!
 //! Usage:
 //!   dagger-navgrid [project.json] [--write | --check]

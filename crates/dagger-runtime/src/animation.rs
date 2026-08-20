@@ -1,4 +1,4 @@
-//! Sprite animation service (task 6640): a consolidated per-tick evaluator
+//! Sprite animation service: a consolidated per-tick evaluator
 //! that advances animation frames for all animated sprites in one pass,
 //! producing a batched frame diff for the renderer. Designed so offscreen
 //! sprites can be throttled or frozen later without changing the shape.

@@ -1,7 +1,5 @@
-//! The kill-XP progression authority (the active experiment profile; the
-//! classic skill-use advancement in `player-level` /
-//! `skill-uses-for-advancement` is the documented alternative, not evaluated
-//! here).
+//! The kill-XP progression authority. Classic skill-use formulas remain in
+//! the derived catalog but are not evaluated by this profile.
 //!
 //! Progression stats (`xp`, `level`) are declared in the stats section's
 //! `progression` category and compile to wide-range mechanics stats
@@ -19,7 +17,7 @@
 //! [hitPointsPerLevel/2, hitPointsPerLevel] plus the endurance modifier,
 //! minimum 1) and applies it to the `health-max` stat base AND to current
 //! health (clamped to the new maximum through the track service — the donor
-//! raises only the maximum; adding current health is an experiment-profile
+//! raises only the maximum; adding current health is a current profile
 //! choice). Only player kills award; AI kills don't.
 //!
 //! The derived rules are evaluated against LIVE component stats (policy
@@ -49,8 +47,8 @@ use super::{
 pub const XP_STAT_ID: &str = "xp";
 pub const LEVEL_STAT_ID: &str = "level";
 
-/// The derived rule mapping live xp to thresholds crossed (the experiment
-/// pacing curve). The live level is the spawn base (1) plus that count.
+/// The derived rule mapping live xp to thresholds crossed. The live level is
+/// the spawn base (1) plus that count.
 pub const XP_LEVEL_RULE_ID: &str = "xp-level";
 
 /// The derived rule for one level-up's health gain (donor

@@ -11,9 +11,8 @@
 //!    player walks into the descending multi-level dungeon (the region that
 //!    is open without doors), with support asserted and blocked facts
 //!    observable. The full start-room → border-block route is gated on
-//!    Daggerfall doors (task 6525) because the start room's exit is a door
-//!    baked into the static mesh; that is a door problem, not a collision
-//!    deficiency. See docs/design.md and the 6522 handoff in Den.
+//!    Daggerfall doors because the start room's exit is a door baked into the
+//!    static mesh; that is a door problem, not a collision deficiency.
 //! 3. **Negative probes** — blocking a controller action reports Blocked
 //!    without corrupting the transform; removing/mutating the collision
 //!    authority changes the authoritative outcome (no support outside the

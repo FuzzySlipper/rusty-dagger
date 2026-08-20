@@ -2,14 +2,9 @@
 """Generate a studio-openable project doc for rusty-dagger from the engine
 import artifacts (content/imported/) produced by rusty-asset-import.
 
-Design decision (task 6518): hand-roll a small generator instead of consuming
-@rusty-engine-demo/project-content. That package is TS, demo-flavored (loading-
-bay-specific generators), and its value here would be the schema definitions
-(which we mirror minimally below) plus a write-file step. Our artifacts are
-already fully-formed catalog entries from rusty-asset-import; this script just
-publishes them into the StoredProjectContent (schemaVersion 24) shape studio
-expects, following the demo projects as the reference. If this grows past a
-few asset kinds, re-evaluate consuming an engine-owned generator.
+The imported artifacts are already complete catalog entries, so this script
+publishes them directly into the StoredProjectContent (schemaVersion 24) shape
+expected by Studio.
 
 Usage: python3 scripts/generate-project.py [--write|--check]
   --write (default): write content/projects/privateers-hold.project.json
@@ -307,8 +302,8 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
 def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dict) -> dict:
     """One scene: the dungeon mesh entity + a player-camera entity.
 
-    Collision authority is the dungeon static mesh itself (rusty-engine task
-    6516): the artifact's `collision.kind == "trimesh"` makes the full inline
+    Collision authority is the dungeon static mesh itself: the artifact's
+    `collision.kind == "trimesh"` makes the full inline
     triangle payload — floors, walls, ceilings, ramps — one trimesh collider.
     There is no hidden `gameplayProxy` voxel environment anymore; the legacy
     rasterizer (and its wall/underside limitations) is retired. dagger-runtime

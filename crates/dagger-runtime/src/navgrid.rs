@@ -1,12 +1,10 @@
 //! Walkable navigation grid derived from the dungeon trimesh collision
-//! authority (task 6639).
+//! authority.
 //!
 //! The grid is projection *construction*, not a pathfinder: it samples the
 //! admitted collision scene (the same trimesh authority the walkthrough
 //! drives) and records which columns/levels an agent can stand on. Path
-//! queries over the grid are an upstream svc-pathfinding concern
-//! (rusty-engine tasks 6642/6643); patrol (6641) will consume whichever seam
-//! lands there.
+//! queries over the grid are a separate pathfinding concern.
 //!
 //! Derivation: a bounded sweep over the dungeon AABB casts one downward ray
 //! per 0.5m column, then keeps re-casting below each hit so multi-level rooms

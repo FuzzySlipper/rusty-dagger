@@ -134,9 +134,9 @@ pub const LOOT_INTERACT_REACH: f32 = 2.5;
 /// be read from the player's live `level` stat at generation time.
 const LOOT_GENERATION_LEVEL: i64 = 1;
 
-/// Read-only lab readout: catalog definitions, live state, and resolution
-/// explanation. There is no editable document — the committed gameplay
-/// package is the only source of gameplay truth.
+/// Lab readout of admitted catalog definitions, live state, and resolution
+/// explanation. The browser does not edit gameplay definitions; bounded live
+/// mutations route through Rust-owned semantic commands.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LabReadout {
@@ -169,7 +169,7 @@ pub struct LabReadout {
     pub progression: ProgressionReadout,
 }
 
-/// Read-only view of the kill-XP experiment profile state: live progression
+/// Read-only view of the kill-XP profile state: live progression
 /// stats, pacing against the `xp-level` curve, health, and the award
 /// receipts from the progression authority.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -2936,8 +2936,7 @@ fn zeroed_career_fact(evidence_id: &str) -> bool {
 }
 
 /// Deterministic combat roll: seeded by attempt sequence, target, and salt —
-/// no time source, so encounters are replayable and diagnostics and browser
-/// gates can assert exact outcomes. Salt 1 is the d100 hit roll; salt 2 is
+/// no time source, so focused checks can assert exact outcomes. Salt 1 is the d100 hit roll; salt 2 is
 /// the damage dice roll (bounded by the actor's live weapon); salt 3 is the
 /// struck-body-part roll (0..=19); salt 5 is the progression level-up hp
 /// roll (loot draws from the per-entity spawn streams instead).
@@ -2961,11 +2960,9 @@ fn treasure_container_id(id: u64) -> String {
 
 /// Spawn the live player and one actor instance per admitted content entity
 /// whose mobile has an actor definition in the gameplay catalog. Entities
-/// without a definition (currently the Thief, mobile 138 — an enemy-class
-/// mobile the catalogs don't model yet, see task 7056) get no live gameplay
-/// state, matching the previous experiment model: they patrol but are not
-/// combatants. Spawn rolls are deterministic per entity so resets are
-/// reproducible.
+/// without a definition (currently the Thief, mobile 138) get no live gameplay
+/// state: they patrol but are not combatants. Spawn rolls are deterministic per
+/// entity so resets are reproducible.
 ///
 /// Loot (donor EnemyDeath.cs:123 model — contents are generated AT SPAWN
 /// into the enemy's inventory and transferred out at loot time):

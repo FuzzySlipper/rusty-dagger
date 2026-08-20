@@ -766,8 +766,8 @@ pub fn evaluate_derived_rule(
 }
 
 /// Spawn one actor instance: evaluate the definition's derived track
-/// maximums (roll evidence supplied by the caller, so spawns are
-/// deterministic and replayable), create the entity, attach the mechanics
+/// maximums (roll evidence supplied by the caller, so evaluation is
+/// repeatable for the same inputs), create the entity, attach the mechanics
 /// stat/track components with live values, attach upstream
 /// inventory/equipment components, and bind the authored loadout through
 /// the upstream inventory/equipment services. `instance` is the

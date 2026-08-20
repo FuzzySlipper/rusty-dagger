@@ -1,210 +1,73 @@
 # Rusty Dagger agent guidance
 
-## Repository role
+Rusty Dagger imports Daggerfall/Arena2 content into Rusty Engine and owns the
+Daggerfall-side runtime, gameplay policy, product service, and Studio adapter.
+It is an exploratory game project centered on Privateer's Hold, not a general
+Daggerfall remake or a place for speculative Engine APIs.
 
-Rusty Dagger is the Daggerfall (Arena2) data-file import pipeline for Rusty
-Engine, and a home for extracted content. It currently extracts Privateer's
-Hold from the original game data into engine-consumable mesh assets, and owns
-the Daggerfall-side runtime boundary and Studio adapter for the committed
-project.
+## Begin with Den
 
-It is not a general Daggerfall remake and not the place to generalize
-speculative Engine APIs. Rusty Engine owns reusable host-neutral mechanisms;
-this repository owns Daggerfall format knowledge, extraction, and the
-Daggerfall-owned runtime/adapter surfaces.
+- Project ID: `rusty-dagger`.
+- Resolve `get_agent_guidance` before substantial work. Follow the returned
+  guidance and its referenced Den documents.
+- If Den is unreachable, stop and report the failed tool or command. Do not
+  reconstruct project decisions from old commits or local prose.
+- Active work, acceptance, known gaps, and review evidence live in Den tasks.
+  Board posts are historical records, not standing instructions.
 
-## Den Guidance Bootstrap
+Permanent project concepts:
 
-- Project ID: `rusty-dagger`
-- Resolve live guidance with the Den MCP `get_agent_guidance` tool before
-  substantial work.
-- Treat the resolved Den guidance packet and its referenced Den documents as
-  the source of truth.
-- If Den is unreachable, stop and tell the user which Den tool or command
-  failed and what you were about to do. Do not reconstruct Den state from
-  local files.
+- [Project charter](den://documents/rusty-dagger/project-charter)
+- [Architecture and ownership](den://documents/rusty-dagger/architecture-and-ownership)
+- [Gameplay authoring and runtime](den://documents/rusty-dagger/gameplay-authoring-and-runtime)
+- [Content import and provenance](den://documents/rusty-dagger/content-import-and-provenance)
+- [Verification and certification](den://documents/rusty-dagger/verification-and-certification)
+- [Known limitations](den://documents/rusty-dagger/known-limitations)
 
-## Source-of-truth posture
+These documents own durable intent; production code, schemas, and tests own
+exact implemented behavior. Do not create another repository design note.
 
-- [docs/design.md](docs/design.md) owns durable design intent;
-  [docs/daggerfall-formats.md](docs/daggerfall-formats.md) owns the format
-  reference. Keep them current when behavior or ownership changes.
-- Current task state lives in the Den `rusty-dagger` project; next steps and
-  known gaps are tracked as Den tasks, not in ad hoc local files.
-- [docs/source-provenance.md](docs/source-provenance.md) owns donor and asset
-  provenance. Update it when donor semantics or dependencies change.
-- Daggerfall Unity (MIT) semantics are donor evidence for the parsers; the
-  geometry/texture conventions in the README are authoritative for the
-  extraction math. Verify against the real data files, not against memory of
-  the donor.
+## Working boundaries
 
-## Daggerfall Unity donor consultation
+- Preserve unrelated changes in the shared worktree.
+- Dagger Rust owns Daggerfall/gameplay meaning and product orchestration.
+  TypeScript authors packages and presents the Angular UI; it never evaluates
+  gameplay or mounts an Engine renderer implementation.
+- Consume only the adjacent public `rusty-engine` facade. Do not fetch, pin,
+  reset, update, or enforce freshness for the sibling checkout.
+- The development product is Angular mounted by
+  `@rusty-engine/application-host`, backed by the Dagger Rust product service.
+  Engine owns the sole renderer/canvas. There is no fixed native Dagger shell.
+- Tauri is the eventual publication adapter, not an ordinary feature or CI
+  gate.
+- Unsupported Studio mutations fail closed. Ordinary content drift and quality
+  heuristics warn unless a hard stop prevents concrete loss or boundary
+  violation.
 
-Treat Daggerfall Unity consultation as an early design step whenever work
-touches Daggerfall formats, formulas, gameplay, animation, orientation, AI,
-world assembly, or other classic semantics. Do this before proposing an
-original model, not only after the local approach runs into trouble.
+## Donor consultation
 
-- Use the `consult-donor-code` skill when available.
-- The frozen donor source is `/home/research/daggerfall-unity`; its Codebase
-  Memory project is `daggerfall-unity`. The declared donor revision is recorded
-  in [docs/source-provenance.md](docs/source-provenance.md). The checkout has no
-  `.git` metadata, so do not infer revision identity from the index.
-- Start from [docs/donor-code-map.md](docs/donor-code-map.md), then query the
-  indexed project explicitly. Search using DFU names as well as Rusty terms.
-- Inspect exact source plus meaningful callers/callees. A single search hit or
-  graph summary is not enough to establish the donor model.
-- Classify substantial use as `adopted`, `adapted`, `rejected`, or `not found`,
-  and record donor files/symbols plus deliberate deviations in the Den handoff
-  or review packet.
-- Preserve semantics where they are sound, but adapt them to this repository's
-  Rust authority and Engine boundary. Do not copy Unity ownership, runtime
-  topology, or incidental implementation constraints.
-- If Codebase Memory is unavailable, consult the frozen source directly with
-  `rg` and file reads. If the donor source itself is unavailable, report the
-  missing evidence instead of designing from memory.
+For new Daggerfall formats, formulas, gameplay, animation, orientation, AI, or
+world assembly, consult the frozen Daggerfall Unity source before designing an
+alternative. Use the `consult-donor-code` skill when available and follow
+[Content import and provenance](den://documents/rusty-dagger/content-import-and-provenance).
+Inspect exact source and meaningful callers/callees; classify substantial use
+as adopted, adapted, rejected, or not found in the task/review evidence.
 
-This requirement is proportional: unrelated Engine-facade or build-plumbing
-work does not need donor ceremony. New Daggerfall behavior does.
+This is proportional. Engine-facade and build-plumbing work does not need donor
+ceremony. If the donor index is unavailable, read
+`/home/research/daggerfall-unity` directly. If the source is unavailable,
+report the missing evidence rather than designing from memory.
 
-## Architecture boundaries
-
-- `crates/arena2` is read-only parsing of the classic data files. It must not
-  acquire import policy, engine vocabulary, or write paths.
-- `crates/dagger-import` owns offline extraction and emission (GLB, mesh-json,
-  texture publication). Keep it an offline CLI; no runtime or browser seams.
-- `crates/dagger-runtime` owns the Daggerfall-side runtime boundary (project
-  admission, first-person controller, collision walkthrough).
-- `gameplay/` is the normal home for Dagger gameplay authoring: a standalone
-  TypeScript workspace (`authoring/` grammar, `catalogs/` content,
-  `packages/` envelopes) that materializes the deterministic package in
-  `data/gameplay/`. TypeScript authors but never evaluates; `crates/dagger-rpg`
-  admits the package, owns its meaning, and is the only evaluator. See
-  `gameplay/README.md` and `docs/gameplay-resolution.md`.
-- `crates/dagger-studio-adapter` owns the protocol-14 Studio adapter.
-  Unsupported mutations fail closed until a Dagger authority exists; do not
-  add speculative write paths.
-- Do not copy Engine implementations into this repository. When Dagger work
-  exposes a seam that looks upstream-shaped, route the reusable mechanism to
-  Engine as part of the work rather than growing a downstream copy or leaving
-  an unwired follow-up. Consume the adjacent
-  `../rusty-engine` checkout through the unconditional facade as it stands and
-  fix forward when upstream drift breaks something. Downstream does not fetch,
-  mutate, pin, or enforce freshness for that checkout; operator update policy
-  belongs outside this repository.
-- `content/` is generated output that doubles as a living content tree.
-  Classic regeneration (`scripts/regenerate.sh`) is the default source and
-  overwrites generated files, but hand edits are legitimate and expected:
-  sprite pivots, sizes, fps/loop, and playback sequences are editable in the
-  Dagger Lab sprite tab (writes go through the lab bridge, which pretty-writes
-  the manifest and restamps project docs), and an entry carrying
-  `"edited": true` keeps those tunable fields across regeneration.
-  `DAGGER_CLOBBER_SPRITES=1 scripts/regenerate.sh` rewrites everything from
-  classic defaults; clearing a marker in the UI restores classic values on
-  the next regeneration. Derived pixel layout (frame UVs) always follows the
-  fresh pack. Hash drift between manifests and on-disk bytes is surfaced as a
-  loud warning — generation stamps the actual bytes' identity and runtime
-  serving warns and publishes actual content — never a silent drop or a hard
-  stop.
-
-
-## Code style and language authority
-
-> Dagger Rust owns Daggerfall/gameplay logic, presentation meaning, and product
-> orchestration. Engine owns the sensitive Rust-to-webview renderer boundary
-> behind its public Rust facade. Downstream JS/TS never imports or mounts the
-> renderer implementation.
-
-### Rust is the authority
-
-All Daggerfall semantics live in Rust: format reading (`arena2`), extraction
-and emission (`dagger-import`), runtime authority (`dagger-runtime`), and the
-Studio adapter boundary (`dagger-studio-adapter`). This includes animation
-timing, directional orientation math, nav grid derivation, collision, and
-controller logic.
-
-A Rust service or function that exists only in tests but is not called from
-any production path is a defect. If the browser product, a headless check, or
-another consumer needs a result, it must consume the Rust authority.
-
-### Renderer implementation stays upstream
-
-Downstream Rust depends unconditionally on the `rusty-engine` facade and uses
-namespaced imports such as `rusty_engine::engine_spatial`. The development
-product server submits Dagger-owned retained facts through public Engine
-facade types and serves them to the Angular application mounted by
-`@rusty-engine/application-host`. It must not expose the private webview,
-Three, canvas, or object-URL implementation to Dagger code.
-
-JS/MJS remains acceptable for the bounded Engine Studio HTTP bridge, browser
-integration checks, and other test/build plumbing. It must not import
-`@rusty-engine/render-*` or `@rusty-engine/renderer-*` packages, own gameplay
-or presentation state, or become a second application bootstrap.
-
-### Product shell and certification lanes
-
-The canonical feature-development product is the Angular application mounted
-by `@rusty-engine/application-host`, backed by Dagger's Rust product service
-and its lightweight development server. Engine owns the sole renderer/canvas;
-Angular owns rich DOM UI; Rust owns gameplay/runtime meaning and semantic
-actions. There is no fixed winit/GTK product or second renderer.
-
-Tauri is the eventual publication adapter over the same product-service
-boundary. Ordinary feature work and default CI do not build, package, or test
-Tauri. Add Tauri certification only when changing its adapter/package/lifecycle
-or preparing a product release.
-
-### Content and config stay in TS/JSON
-
-Project documents (`content/projects/*.project.json`), texture manifests, and
-`scripts/generate-project.py` are content configuration — they describe what
-goes into the scene, not how it behaves. Behavioral authority (timing,
-movement, animation) stays in Rust.
-
-## Work and verification
-
-Treat a dirty worktree as shared state. Preserve unrelated changes.
-
-### Proportionality
-
-Fail hard only where a wrong result would lose work, corrupt shared state, or
-violate a boundary: path containment, unsupported Studio protocol mutations,
-the Engine boundary audit, and explicit CI check modes keep their hard stops.
-Everything else — content drift, freshness mismatches, quality heuristics —
-surfaces as a loud warning with operator choice, not a hard stop. When adding
-a new hard failure, state in one sentence what loss it prevents; if you
-can't, make it a warning.
+## Verification
 
 Run the narrowest check first, then the gate that owns the changed surface.
-The automatic gate (`scripts/verify.sh`, run by CI) is deliberately slim,
-deterministic, and Playwright-free:
+`scripts/verify.sh` is the deterministic, Playwright-free aggregate gate.
+`scripts/check-dagger-lab-browser.sh` is a manual product diagnostic for
+browser-visible changes, not a default CI gate. Gameplay semantics belong in
+focused Rust tests; visible interaction and composition may require browser or
+playtest evidence.
 
-```bash
-cargo test                        # arena2 parser tests against the real data files
-scripts/regenerate.sh             # extraction -> engine import -> studio project doc
-cargo run -p dagger-runtime --bin dagger-walkthrough
-cargo run -p dagger-runtime --bin dagger-navgrid -- --check  # nav grid proof + artifact freshness
-cargo run -p dagger-runtime --bin dagger-gameplay-check  # authored package resolution proof
-pnpm gameplay:check               # gameplay package build + drift check
-python3 scripts/check-adapter.py  # local adapter; env override is diagnostic-only
-```
-
-Product-visible extraction claims require visible evidence from the real
-application-host product, not only structural validation. The product must
-admit the committed resources and consume authoritative Dagger effects through
-the supported Engine/application-host boundary. Studio-visible changes
-additionally require the host gates while the Engine-owned Studio host is
-running:
-
-```bash
-python3 scripts/check-adapter.py       # focused adapter protocol check
-```
-
-`scripts/check-dagger-lab-browser.sh` is a manual opt-in Playwright
-diagnostic, not an automatic gate: heavyweight browser choreography proved
-too slow and brittle for CI. Run it by hand when a change touches the
-browser product surface (renderer mounting, input arbitration, Lab UI), and
-say so in the task packet. Gameplay semantics are proven by deterministic
-Rust tests, not by browser choreography.
-
-Report exactly which commands ran and which relevant live checks were skipped.
+Report exactly what ran and which relevant live checks were skipped. Add or
+retain proofs only while they serve a current product feature or risky
+boundary; see
+[Verification and certification](den://documents/rusty-dagger/verification-and-certification).
