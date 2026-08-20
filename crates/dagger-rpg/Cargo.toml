@@ -2,7 +2,7 @@
 name = "dagger-rpg"
 version.workspace = true
 edition.workspace = true
-description = "Host-neutral Rust gameplay semantics, experiment admission, and designer-facing resolution records for the Dagger lab"
+description = "Host-neutral Rust gameplay semantics, package admission, and designer-facing resolution records for Rusty Dagger"
 
 [dependencies]
 rusty-engine.workspace = true

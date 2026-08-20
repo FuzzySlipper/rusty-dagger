@@ -36,9 +36,9 @@ pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
     ActorAttributeReadout, ActorGameplayReadout, CombatAttemptRecord, CombatRecord,
     ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
-    EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, LabReadout,
-    LiveActorResources, LootContainerReadout, MeleePresentationPhase, MeleePresentationReadout,
-    NamedEncounterReadout, ProgressionReadout, RuntimeError, LOOT_INTERACT_REACH, MELEE_ACTION_ID,
+    EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, LiveActorResources,
+    LootContainerReadout, MeleePresentationPhase, MeleePresentationReadout, NamedEncounterReadout,
+    ProductReadout, ProgressionReadout, RuntimeError, LOOT_INTERACT_REACH, MELEE_ACTION_ID,
     MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS,
     MELEE_REJECTION_SECONDS,
 };
@@ -298,7 +298,7 @@ mod tests {
         let mut runtime =
             DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
         let spawn = runtime.player_position().expect("spawn position");
-        let readout = runtime.lab_readout().expect("initial readout");
+        let readout = runtime.product_readout().expect("initial readout");
         // Movement speed, durable stats, and definitions all come from the
         // committed gameplay package — there is no editable document.
         assert_eq!(readout.move_speed_units_per_second, 3.5);
@@ -337,7 +337,7 @@ mod tests {
             .install_encounter_navigation_json(NAVGRID)
             .expect("install committed live navigation");
         let spawn = runtime.player_position().expect("spawn position");
-        let initial = runtime.lab_readout().expect("initial content readout");
+        let initial = runtime.product_readout().expect("initial content readout");
         // 43 enemies + 8 treasure containers (S0000999 archive-199/record-19
         // random-treasure markers).
         assert_eq!(initial.content.len(), 43 + 8);
@@ -408,12 +408,12 @@ mod tests {
         );
         assert_ne!(jumped.player_position, [spawn.x, spawn.y, spawn.z]);
 
-        let before_unknown = runtime.lab_readout().unwrap();
+        let before_unknown = runtime.product_readout().unwrap();
         let error = runtime
             .jump_to_content(999_999)
             .expect_err("unknown content must fail closed");
         assert!(matches!(error, RuntimeError::Content(_)));
-        assert_eq!(runtime.lab_readout().unwrap(), before_unknown);
+        assert_eq!(runtime.product_readout().unwrap(), before_unknown);
 
         let reset = runtime
             .reset_play_session()
@@ -443,7 +443,7 @@ mod tests {
                     .expect("advance authoritative attack cooldown");
             }
         }
-        let attacked = runtime.lab_readout().expect("fight readout");
+        let attacked = runtime.product_readout().expect("fight readout");
         let records = &attacked.combat;
         assert_eq!(records.len(), 10);
         assert!(
@@ -521,15 +521,19 @@ mod tests {
             }
         }
         assert_eq!(
-            runtime.lab_readout().unwrap().player_stats.current_stamina,
+            runtime
+                .product_readout()
+                .unwrap()
+                .player_stats
+                .current_stamina,
             0.0
         );
-        let before = runtime.lab_readout().unwrap();
+        let before = runtime.product_readout().unwrap();
         runtime.attack_focused_target().expect("zero-stamina swing");
         runtime
             .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
             .expect("resolve zero-stamina contact");
-        let rejected = runtime.lab_readout().expect("rejected readout");
+        let rejected = runtime.product_readout().expect("rejected readout");
         let attempt = rejected.combat_attempts.last().expect("rejected attempt");
         assert_eq!(attempt.outcome, "rejected");
         assert_eq!(attempt.stamina_before, 0.0);
@@ -557,11 +561,17 @@ mod tests {
         runtime.jump_to_content(2007).expect("jump beside Rat");
         for _ in 0..400 {
             runtime.tick_play_session(0.1).expect("Rat encounter tick");
-            if runtime.lab_readout().unwrap().player_stats.current_health < 85.0 {
+            if runtime
+                .product_readout()
+                .unwrap()
+                .player_stats
+                .current_health
+                < 85.0
+            {
                 break;
             }
         }
-        let rat = runtime.lab_readout().expect("Rat encounter readout");
+        let rat = runtime.product_readout().expect("Rat encounter readout");
         assert!(rat
             .encounter_decisions
             .iter()
@@ -593,12 +603,18 @@ mod tests {
             runtime
                 .tick_play_session(0.1)
                 .expect("Skeletal Warrior encounter tick");
-            if runtime.lab_readout().unwrap().player_stats.current_health < 85.0 {
+            if runtime
+                .product_readout()
+                .unwrap()
+                .player_stats
+                .current_health
+                < 85.0
+            {
                 break;
             }
         }
         let skeleton = runtime
-            .lab_readout()
+            .product_readout()
             .expect("Skeletal Warrior encounter readout");
         let skeleton_hit = skeleton
             .encounter_decisions
@@ -626,14 +642,14 @@ mod tests {
         runtime
             .install_named_encounters_json(NAMED_ENCOUNTERS)
             .expect("install named encounters");
-        let initial = runtime.lab_readout().expect("initial readout");
+        let initial = runtime.product_readout().expect("initial readout");
         assert_eq!(initial.named_encounters.len(), 2);
         assert!(initial.active_encounter.is_none());
 
         assert!(runtime
             .route_named_encounter("Digit1")
             .expect("route Rat room"));
-        let active = runtime.lab_readout().unwrap().active_encounter.unwrap();
+        let active = runtime.product_readout().unwrap().active_encounter.unwrap();
         assert_eq!(active.id, "rat-introduction");
         assert_eq!(active.status, "active");
         assert!(
@@ -648,7 +664,7 @@ mod tests {
         }
         assert_eq!(
             runtime
-                .lab_readout()
+                .product_readout()
                 .expect("waiting readout")
                 .player_stats
                 .current_health,
@@ -668,7 +684,7 @@ mod tests {
         }
         assert_eq!(
             runtime
-                .lab_readout()
+                .product_readout()
                 .unwrap()
                 .active_encounter
                 .unwrap()
@@ -691,7 +707,7 @@ mod tests {
         for _ in 0..2500 {
             runtime.tick_play_session(0.1).expect("Skeleton room tick");
             if runtime
-                .lab_readout()
+                .product_readout()
                 .unwrap()
                 .active_encounter
                 .as_ref()
@@ -700,7 +716,7 @@ mod tests {
                 break;
             }
         }
-        let defeated = runtime.lab_readout().unwrap();
+        let defeated = runtime.product_readout().unwrap();
         assert_eq!(defeated.active_encounter.unwrap().status, "defeat");
         assert_eq!(defeated.player_stats.current_health, 0.0);
         assert!(defeated.encounter_decisions.iter().any(|record| {
@@ -731,7 +747,7 @@ mod tests {
             "enemy attack animation counters must stop after defeat"
         );
         assert!(
-            runtime.lab_readout().unwrap().encounter_decisions.len() <= history_len + 1,
+            runtime.product_readout().unwrap().encounter_decisions.len() <= history_len + 1,
             "post-defeat ticks may record one state transition, not repeated attacks"
         );
     }
@@ -760,7 +776,7 @@ mod tests {
     #[test]
     fn equip_cycle_swaps_gear_and_logs_receipts() {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
-        let initial = runtime.lab_readout().expect("initial readout");
+        let initial = runtime.product_readout().expect("initial readout");
         assert_eq!(
             initial
                 .player_inventory
@@ -1030,7 +1046,7 @@ mod tests {
                 runtime.tick_play_session(0.25).expect("advance cooldown");
             }
             if runtime
-                .lab_readout()
+                .product_readout()
                 .expect("fight readout")
                 .combat
                 .last()
@@ -1043,9 +1059,9 @@ mod tests {
     }
 
     #[test]
-    fn killing_a_monster_awards_kill_xp_into_the_lab_readout() {
+    fn killing_a_monster_awards_kill_xp_into_the_product_readout() {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
-        let initial = runtime.lab_readout().expect("initial readout");
+        let initial = runtime.product_readout().expect("initial readout");
         assert_eq!(initial.progression.xp, 0);
         assert_eq!(initial.progression.level, 1);
         // 500 xp per level (the authored xp-level divisor): 500 to go.
@@ -1055,7 +1071,7 @@ mod tests {
 
         runtime.jump_to_content(2007).expect("jump beside Rat");
         fight_until_dead(&mut runtime, 40);
-        let readout = runtime.lab_readout().expect("post-kill readout");
+        let readout = runtime.product_readout().expect("post-kill readout");
         assert_eq!(readout.progression.history.len(), 1);
         let award = &readout.progression.history[0];
         assert_eq!(award.victim, "rat");
@@ -1092,7 +1108,7 @@ mod tests {
         // the whole sequence resolves through real melee combat.)
         runtime.jump_to_content(2003).expect("jump beside Orc");
         fight_until_dead(&mut runtime, 80);
-        let readout = runtime.lab_readout().expect("post-orc readout");
+        let readout = runtime.product_readout().expect("post-orc readout");
         assert_eq!(readout.progression.history.len(), 1);
         let orc_award = &readout.progression.history[0];
         assert_eq!(orc_award.victim, "orc");
@@ -1115,7 +1131,7 @@ mod tests {
             .jump_to_content(2002)
             .expect("jump beside Giant Bat");
         fight_until_dead(&mut runtime, 80);
-        let readout = runtime.lab_readout().expect("post-first-bat readout");
+        let readout = runtime.product_readout().expect("post-first-bat readout");
         assert_eq!(readout.progression.history.len(), 2);
         let bat_award = &readout.progression.history[1];
         assert_eq!(bat_award.victim, "giant-bat");
@@ -1138,7 +1154,7 @@ mod tests {
             .jump_to_content(2005)
             .expect("jump beside Giant Bat");
         fight_until_dead(&mut runtime, 80);
-        let readout = runtime.lab_readout().expect("post-second-bat readout");
+        let readout = runtime.product_readout().expect("post-second-bat readout");
         assert_eq!(readout.progression.history.len(), 3);
         let award = &readout.progression.history[2];
         assert_eq!(award.victim, "giant-bat");
@@ -1197,7 +1213,7 @@ mod tests {
                     .expect("runtime with package");
             runtime.jump_to_content(2007).expect("jump beside Rat");
             fight_until_dead(&mut runtime, 40);
-            runtime.lab_readout().expect("post-kill readout")
+            runtime.product_readout().expect("post-kill readout")
         };
 
         // Committed pacing (500 xp/level): the rat's 50 xp does not level.
@@ -1237,7 +1253,7 @@ mod tests {
     #[test]
     fn loot_containers_spawn_with_the_dungeon_key_and_per_enemy_tables() {
         let runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project admission");
-        let readout = runtime.lab_readout().expect("initial readout");
+        let readout = runtime.product_readout().expect("initial readout");
         // Eight treasure piles from the S0000999 random-treasure markers, all
         // on the dungeon's loot key (MAPS.BSA type 2 Human Stronghold -> "N").
         let treasure = readout
@@ -1319,11 +1335,11 @@ mod tests {
     fn loot_generation_is_deterministic_across_sessions() {
         let first = DaggerRuntime::from_project_json(PROJECT)
             .expect("first session")
-            .lab_readout()
+            .product_readout()
             .expect("first readout");
         let second = DaggerRuntime::from_project_json(PROJECT)
             .expect("second session")
-            .lab_readout()
+            .product_readout()
             .expect("second readout");
         assert_eq!(
             first.loot_containers, second.loot_containers,
@@ -1337,7 +1353,7 @@ mod tests {
         runtime
             .jump_to_content(3000)
             .expect("jump beside treasure pile");
-        let before = runtime.lab_readout().expect("pre-loot readout");
+        let before = runtime.product_readout().expect("pre-loot readout");
         let container = before
             .loot_containers
             .iter()
@@ -1411,7 +1427,7 @@ mod tests {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
         runtime.jump_to_content(2007).expect("jump beside Rat");
         fight_until_dead(&mut runtime, 40);
-        let dead = runtime.lab_readout().expect("dead rat readout");
+        let dead = runtime.product_readout().expect("dead rat readout");
         let rat = dead
             .content
             .iter()
@@ -1429,7 +1445,7 @@ mod tests {
         runtime
             .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
             .expect("resolve swing");
-        let after_swing = runtime.lab_readout().expect("post-swing readout");
+        let after_swing = runtime.product_readout().expect("post-swing readout");
         assert_eq!(after_swing.combat.len(), combat_count);
         assert_eq!(
             after_swing.combat_attempts.last().expect("attempt").outcome,
@@ -1454,7 +1470,7 @@ mod tests {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
         runtime.jump_to_content(2003).expect("jump beside Orc");
         fight_until_dead(&mut runtime, 80);
-        let dead = runtime.lab_readout().expect("dead orc readout");
+        let dead = runtime.product_readout().expect("dead orc readout");
         let corpse = dead
             .loot_containers
             .iter()

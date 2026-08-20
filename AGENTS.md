@@ -62,7 +62,7 @@ report the missing evidence rather than designing from memory.
 
 Run the narrowest check first, then the gate that owns the changed surface.
 `scripts/verify.sh` is the deterministic, Playwright-free aggregate gate.
-`scripts/check-dagger-lab-browser.sh` is a manual product diagnostic for
+`scripts/check-dagger-product-browser.sh` is a manual product diagnostic for
 browser-visible changes, not a default CI gate. Gameplay semantics belong in
 focused Rust tests; visible interaction and composition may require browser or
 playtest evidence.

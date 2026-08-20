@@ -2,14 +2,15 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LabApiService } from './lab-api.service';
+import { ProductApiService } from './product-api.service';
+import { LabToolsApiService } from './lab-tools-api.service';
 import {
   ActorDefinition,
   ContentEntityReadout,
   InventoryItemReadout,
-  LabReadout,
+  ProductReadout,
   LootContainerReadout,
-} from './lab-contract';
+} from './product-contract';
 import { DAGGER_APPLICATION_CONTEXT, loadDaggerProductBootstrap } from './product-runtime';
 import { SpritesPanelComponent } from './sprites-panel.component';
 
@@ -20,14 +21,15 @@ import { SpritesPanelComponent } from './sprites-panel.component';
 })
 export class AppComponent implements OnInit, OnDestroy {
   private readonly application = inject(DAGGER_APPLICATION_CONTEXT);
-  private readonly api = inject(LabApiService);
+  private readonly productApi = inject(ProductApiService);
+  private readonly labTools = inject(LabToolsApiService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private pollTimer: ReturnType<typeof setInterval> | undefined;
   private loading = false;
   private commandGeneration = 0;
   private readonly openLabRequest = (): void => this.openLab();
 
-  readout: LabReadout | undefined;
+  readout: ProductReadout | undefined;
   connectionError = '';
   sceneError = '';
   commandError = '';
@@ -87,11 +89,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async reset(): Promise<void> {
-    await this.runCommand(() => this.api.reset());
+    await this.runCommand(() => this.productApi.reset());
   }
 
   async resetAndPlay(): Promise<void> {
-    if (await this.runCommand(() => this.api.play())) this.returnToPlay();
+    if (await this.runCommand(() => this.productApi.reset())) this.returnToPlay();
   }
 
   format(value: number): string {
@@ -120,16 +122,16 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.readout?.gameplayPackage.actors.find((actor) => actor.kind === 'player');
   }
 
-  equippedItems(readout: LabReadout): readonly InventoryItemReadout[] {
+  equippedItems(readout: ProductReadout): readonly InventoryItemReadout[] {
     return readout.playerInventory.items.filter((item) => item.equipSlot !== null);
   }
 
   /** Enemy content count for the badge; treasure containers are separate content. */
-  enemyCount(readout: LabReadout): number {
+  enemyCount(readout: ProductReadout): number {
     return readout.content.filter((entity) => entity.kind === 'enemy').length;
   }
 
-  carriedItems(readout: LabReadout): readonly InventoryItemReadout[] {
+  carriedItems(readout: ProductReadout): readonly InventoryItemReadout[] {
     return readout.playerInventory.items.filter((item) => item.equipSlot === null);
   }
 
@@ -169,7 +171,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async jumpToSelectedContent(): Promise<void> {
     const selected = this.selectedContent();
     if (selected === undefined) return;
-    const succeeded = await this.runCommand(() => this.api.jumpToContent(selected.id));
+    const succeeded = await this.runCommand(() => this.labTools.jumpToContent(selected.id));
     if (succeeded) {
       this.selectedContentId = selected.id;
       this.returnToPlay();
@@ -177,16 +179,18 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async equipItem(item: InventoryItemReadout): Promise<void> {
-    await this.runCommand(() => this.api.equipItem(item.entity));
+    await this.runCommand(() => this.productApi.equipItem(item.entity));
   }
 
   async unequipItem(item: InventoryItemReadout): Promise<void> {
     if (item.equipSlot === null) return;
-    await this.runCommand(() => this.api.unequipSlot(item.equipSlot!));
+    await this.runCommand(() => this.productApi.unequipSlot(item.equipSlot!));
   }
 
   async grantItem(): Promise<void> {
-    await this.runCommand(() => this.api.grantItem(this.grantItemId, Math.trunc(this.grantQuantity)));
+    await this.runCommand(() =>
+      this.labTools.grantItem(this.grantItemId, Math.trunc(this.grantQuantity)),
+    );
   }
 
   /** Fungible (stackable) item definitions from the committed package. */
@@ -201,7 +205,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.loading = true;
     const commandGeneration = this.commandGeneration;
     try {
-      const readout = await this.api.read();
+      const readout = await this.productApi.read();
       if (commandGeneration !== this.commandGeneration) return;
       this.acceptReadout(readout);
       this.connectionError = '';
@@ -214,7 +218,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async runCommand(command: () => Promise<LabReadout>): Promise<boolean> {
+  private async runCommand(command: () => Promise<ProductReadout>): Promise<boolean> {
     this.commandGeneration += 1;
     this.pending = true;
     this.commandError = '';
@@ -230,7 +234,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  private acceptReadout(readout: LabReadout): void {
+  private acceptReadout(readout: ProductReadout): void {
     this.readout = readout;
     if (this.selectedContentId === undefined) {
       this.selectedContentId = readout.focusedContentId ?? readout.content.at(0)?.id;

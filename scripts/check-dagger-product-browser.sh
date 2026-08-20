@@ -27,7 +27,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-pnpm lab:build
+pnpm product:build
 
 # pnpm does not content-track file: dependencies, so a vendored
 # @rusty-engine/application-host can silently go stale when the adjacent
@@ -44,10 +44,10 @@ if [[ -f "$upstream_host" ]]; then
 fi
 cargo build -p dagger-studio-adapter --bin dagger-product-server --locked
 
-./target/debug/dagger-product-server --lab-port=4274 >"$host_log" 2>&1 &
+./target/debug/dagger-product-server --port=4274 >"$host_log" 2>&1 &
 host_pid=$!
 for _ in $(seq 1 600); do
-  if curl --silent --fail http://127.0.0.1:4274/api/dagger-lab >/dev/null \
+  if curl --silent --fail http://127.0.0.1:4274/api/dagger-product/readout >/dev/null \
     && curl --silent --fail http://127.0.0.1:4274/ >/dev/null; then
     break
   fi
@@ -56,10 +56,10 @@ for _ in $(seq 1 600); do
   fi
   sleep 0.1
 done
-curl --silent --fail http://127.0.0.1:4274/api/dagger-lab >/dev/null
+curl --silent --fail http://127.0.0.1:4274/api/dagger-product/readout >/dev/null
 curl --silent --fail http://127.0.0.1:4274/ >/dev/null
 grep -F 'DAGGER_PRODUCT_READY product=privateers-hold api=http://127.0.0.1:4274/api/dagger-product/bootstrap' "$host_log"
-DAGGER_PRODUCT_HOST_LOG="$host_log" node scripts/check-dagger-lab-browser.mjs
+DAGGER_PRODUCT_HOST_LOG="$host_log" node scripts/check-dagger-product-browser.mjs
 
 trap - EXIT
 cleanup

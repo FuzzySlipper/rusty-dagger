@@ -1,5 +1,5 @@
 // Sprite review contract: structural types over the derived content manifests
-// served by the lab bridge (`/api/dagger-lab/sprites/index`). The manifests
+// served by the tooling API (`/api/dagger-tools/sprites/index`). The manifests
 // differ in shape (enemy atlases, billboards, combat weapon/effects, plain
 // textures), so normalization is duck-typed: anything with an image path plus
 // optional frame rects and animation timings becomes a reviewable entry.
