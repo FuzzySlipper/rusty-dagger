@@ -87,7 +87,7 @@ impl RdbFlatObject {
     /// Whether this flat is a fixed enemy marker (DFU AddFixedRDBEnemy): an
     /// editor-archive (199) flat whose record is 15 (random) or 16 (fixed), or
     /// any flat carrying a non-zero mobile id. These become directional enemy
-    /// sprites (6595), not static billboards.
+    /// sprites, not static billboards.
     pub fn is_enemy(&self) -> bool {
         if self.texture_archive == EDITOR_FLATS_ARCHIVE
             && (self.texture_record == 15 || self.texture_record == 16)
@@ -469,8 +469,8 @@ mod billboard_tests {
 
     #[test]
     fn non_editor_record_16_is_a_real_billboard() {
-        // R6523-1 regression: the marker-record exclusion is scoped to archive
-        // 199. Archive 210 record 16 is a normal torch/light flat (DFU
+        // The marker-record exclusion is scoped to archive 199. Archive 210
+        // record 16 is a normal torch/light flat (DFU
         // IsTorchFlat includes record 16) and must render as a billboard, not
         // be hidden as an enemy marker. Same for record 15 in other archives.
         assert!(flat(210, 16).is_visible_billboard());

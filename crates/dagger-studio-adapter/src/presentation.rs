@@ -24,7 +24,7 @@ pub(crate) fn texture_descriptor(root: &Path, asset: &Value, texture: &Value) ->
     // Byte length comes from the on-disk resource the host will serve; reading
     // it here keeps the descriptor consistent with the exact bytes whose hash
     // was stamped at generation time. The shared containment rule admits only
-    // normalized project-root-relative regular files (R6521-1).
+    // normalized project-root-relative regular files.
     let bytes = fs::read(project_resource_path(root, source_path)?).ok()?;
     let expected = format!("sha256:{hash_hex}");
     let actual = format!("sha256:{:x}", Sha256::digest(&bytes));
@@ -291,8 +291,8 @@ pub(crate) fn projection(root: &Path, project: &Map<String, Value>, entities: &[
             .unwrap_or_else(|| json!([0.5, 0.0]));
         // SpriteInstanceDescriptor: cylindrical (Y-facing) billboard with the
         // flat's transparent texture, at the flat's world position. The
-        // renderer honors billboard modes (rusty-engine 6630); directional
-        // frame selection stays consumer-side via updateSprite.
+        // renderer honors billboard modes; directional frame selection stays
+        // consumer-side via updateSprite.
         ops.push(json!({
             "op": "createSprite",
             "handle": id,

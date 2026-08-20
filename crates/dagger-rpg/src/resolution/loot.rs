@@ -219,8 +219,7 @@ pub fn loot_roll_evidence(
 
 /// Generate one table's loot from caller-supplied evidence. `level` is the
 /// player level the donor multiplies gold (and the C1/C2/P1/P2 chances) by;
-/// it must be >= 1 (callers pass 1 until real player levels arrive with
-/// 6688).
+/// it must be >= 1.
 pub fn generate_loot(
     catalog: &DaggerGameplayCatalog,
     key: &str,

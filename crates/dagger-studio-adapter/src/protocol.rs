@@ -357,8 +357,8 @@ mod tests {
             .collect()
     }
 
-    /// R6521-1 regression: a catalog entry that names anything other than a
-    /// normalized project-root-relative regular file — even with a hash that
+    /// A catalog entry that names anything other than a normalized
+    /// project-root-relative regular file — even with a hash that
     /// matches real bytes on disk — must produce no defineTexture op and no
     /// textureResources entry on either adapter code path.
     #[cfg(unix)]

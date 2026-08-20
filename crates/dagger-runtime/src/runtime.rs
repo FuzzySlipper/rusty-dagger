@@ -1648,7 +1648,7 @@ impl DaggerRuntime {
             &mut self.gameplay,
             ResolutionIdentity::root(
                 ResolutionId::new(sequence).expect("non-zero resolution id"),
-                CorrelationId::new(7046).expect("non-zero correlation id"),
+                CorrelationId::new(sequence).expect("non-zero correlation id"),
             ),
             ResolutionMode::Apply,
             DaggerIntent {

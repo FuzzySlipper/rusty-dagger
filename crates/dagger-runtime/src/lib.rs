@@ -367,8 +367,8 @@ mod tests {
         assert_eq!(thief_reference.mobile_id, 138);
         assert_eq!(thief_reference.mobile_name, "Thief");
         assert_eq!(thief_reference.texture_archive, 484);
-        // 7056: the Thief is a combatant with an enemy-class actor — live
-        // resources are the deterministic spawn roll of its 11-20 range.
+        // The Thief is a combatant with an enemy-class actor; live resources
+        // are the deterministic spawn roll of its 11-20 range.
         let thief_resources = thief.live.resources.expect("Thief live resources");
         assert!((11.0..=20.0).contains(&thief_resources.current_health));
         assert_eq!(thief_resources.current_stamina, 0.0);
@@ -388,8 +388,8 @@ mod tests {
             rat.reference.as_ref().expect("enemy reference").mobile_name,
             "Rat"
         );
-        // 7045: live resources come from the gameplay package — Rat health is
-        // the deterministic spawn roll of the classic 9-16 range.
+        // Live resources come from the gameplay package; Rat health is the
+        // deterministic spawn roll of the classic 9-16 range.
         assert!((9.0..=16.0).contains(&rat_resources.current_health));
         assert_eq!(rat_resources.current_stamina, 0.0);
 

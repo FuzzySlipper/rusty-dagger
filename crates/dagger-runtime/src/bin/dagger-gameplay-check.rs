@@ -36,7 +36,7 @@ fn resolve(origin: DaggerIntentOrigin, resolution: u64) -> (DaggerGameplayState,
     let mut state = state(&catalog);
     let identity = ResolutionIdentity::root(
         ResolutionId::new(resolution).expect("non-zero resolution id"),
-        CorrelationId::new(7045).expect("non-zero correlation id"),
+        CorrelationId::new(resolution).expect("non-zero correlation id"),
     );
     let (receipt, readout) = resolve_dagger_action(
         &catalog,
