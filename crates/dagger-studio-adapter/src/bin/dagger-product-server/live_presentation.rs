@@ -27,9 +27,6 @@ pub(crate) struct LiveSprite {
 
 pub(crate) struct LivePresentationFrame {
     pub(crate) frame: RenderFrameDiff,
-    pub(crate) animation_advanced: bool,
-    pub(crate) patrol_moved: bool,
-    pub(crate) animation_updates: usize,
 }
 
 /// Rust-owned dynamic presentation for the admitted Dagger project.
@@ -44,8 +41,6 @@ pub(crate) struct LivePresentation {
     current_frames: BTreeMap<u32, u32>,
     current_visibility: BTreeMap<u32, bool>,
     corpse_handles: BTreeMap<u32, u32>,
-    animation_advanced: bool,
-    patrol_moved: bool,
 }
 
 impl LivePresentation {
@@ -144,8 +139,6 @@ impl LivePresentation {
             current_frames: BTreeMap::new(),
             current_visibility: BTreeMap::new(),
             corpse_handles,
-            animation_advanced: false,
-            patrol_moved: false,
         })
     }
 
@@ -177,16 +170,6 @@ impl LivePresentation {
                 live.translation = update.translation;
                 live.heading = update.heading;
             }
-            if let Some(authored) = self
-                .sprite_descriptors
-                .iter()
-                .find(|sprite| sprite.handle == update.handle)
-                .map(|sprite| sprite.authored)
-            {
-                self.patrol_moved |= (update.translation[0] - authored[0])
-                    .hypot(update.translation[2] - authored[2])
-                    > 0.01;
-            }
         }
         self.animation.update_enemies(encounter_positions);
         self.animation.update_enemy_actions(
@@ -210,9 +193,7 @@ impl LivePresentation {
         }
         let mut sprite_changes = BTreeMap::<u32, (Option<u32>, Option<bool>)>::new();
         for update in &animation_updates {
-            if let Some(previous) = self.current_frames.insert(update.handle, update.frame) {
-                self.animation_advanced |= previous != update.frame;
-            }
+            self.current_frames.insert(update.handle, update.frame);
             sprite_changes.entry(update.handle).or_default().0 = Some(update.frame);
         }
         for &handle in self.live_sprites.keys() {
@@ -248,9 +229,6 @@ impl LivePresentation {
         }
         Ok(LivePresentationFrame {
             frame: frame_from_ops(ops)?,
-            animation_advanced: self.animation_advanced,
-            patrol_moved: self.patrol_moved,
-            animation_updates: animation_updates.len(),
         })
     }
 

@@ -4,8 +4,7 @@ use anyhow::{bail, Context, Result};
 use dagger_runtime::{MeleePresentationReadout, PositionUpdate};
 use rusty_engine::{
     render_model::{
-        Geometry, Material, RenderFrameDiff, RenderHandle, RenderLayer, RenderMetadata, RenderNode,
-        Transform,
+        Geometry, Material, RenderFrameDiff, RenderLayer, RenderMetadata, RenderNode, Transform,
     },
     render_presentation::PresentationFrameDiff,
     render_projection::{RenderHandleNamespace, RetainedNodeProjector},
@@ -24,22 +23,9 @@ const NAV_VERTICAL_WINDOW: f32 = 6.0;
 const NAV_CELL_LIMIT: usize = 512;
 const NAV_REBUILD_DISTANCE_SQUARED: f32 = 9.0;
 
-#[derive(Debug, Clone, Copy, Default)]
-pub(crate) struct DiagnosticFrameReadout {
-    pub(crate) animation_advanced: bool,
-    pub(crate) patrol_moved: bool,
-    pub(crate) overlays_enabled: bool,
-    pub(crate) overlays_disabled: bool,
-    pub(crate) stale_handle_replaced: bool,
-    pub(crate) viewmodel_present: bool,
-    pub(crate) animation_updates: usize,
-    pub(crate) retained_overlays: usize,
-}
-
 pub(crate) struct DiagnosticFrame {
     pub(crate) frame: RenderFrameDiff,
     pub(crate) presentation: PresentationFrameDiff,
-    pub(crate) readout: DiagnosticFrameReadout,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -57,7 +43,7 @@ struct NavOverlayCell {
     position: [f32; 3],
 }
 
-pub(crate) struct NativeDiagnostics {
+pub(crate) struct ProductDiagnostics {
     live: LivePresentation,
     melee: MeleePresentation,
     nav_cell_size: f32,
@@ -65,18 +51,11 @@ pub(crate) struct NativeDiagnostics {
     projector: RetainedNodeProjector<OverlayKey>,
     sprite_overlay_enabled: bool,
     nav_overlay_enabled: bool,
-    sprite_enabled_seen: bool,
-    sprite_disabled_seen: bool,
-    nav_enabled_seen: bool,
-    nav_disabled_seen: bool,
     visible_nav_cells: Vec<NavOverlayCell>,
     nav_built_at: Option<[f32; 3]>,
-    retired_sample_handle: Option<RenderHandle>,
-    stale_handle_replaced: bool,
-    disposed: bool,
 }
 
-impl NativeDiagnostics {
+impl ProductDiagnostics {
     pub(crate) fn from_documents(project_text: &str, navgrid_text: &str) -> Result<Self> {
         let navgrid: NavGridDocument =
             serde_json::from_str(navgrid_text).context("decode committed navgrid")?;
@@ -94,36 +73,19 @@ impl NativeDiagnostics {
             projector: RetainedNodeProjector::new(RenderHandleNamespace::DEBUG),
             sprite_overlay_enabled: false,
             nav_overlay_enabled: false,
-            sprite_enabled_seen: false,
-            sprite_disabled_seen: false,
-            nav_enabled_seen: false,
-            nav_disabled_seen: false,
             visible_nav_cells: Vec::new(),
             nav_built_at: None,
-            retired_sample_handle: None,
-            stale_handle_replaced: false,
-            disposed: false,
         })
     }
 
     pub(crate) fn toggle_sprite_overlay(&mut self) -> bool {
         self.sprite_overlay_enabled = !self.sprite_overlay_enabled;
-        if self.sprite_overlay_enabled {
-            self.sprite_enabled_seen = true;
-        } else if self.sprite_enabled_seen {
-            self.sprite_disabled_seen = true;
-        }
         self.sprite_overlay_enabled
     }
 
     pub(crate) fn toggle_nav_overlay(&mut self) -> bool {
         self.nav_overlay_enabled = !self.nav_overlay_enabled;
         self.nav_built_at = None;
-        if self.nav_overlay_enabled {
-            self.nav_enabled_seen = true;
-        } else if self.nav_enabled_seen {
-            self.nav_disabled_seen = true;
-        }
         self.nav_overlay_enabled
     }
 
@@ -153,11 +115,8 @@ impl NativeDiagnostics {
         melee_action: Option<&MeleePresentationReadout>,
         stamina: (f32, f32),
     ) -> Result<DiagnosticFrame> {
-        if self.disposed {
-            bail!("native diagnostics were disposed");
-        }
         if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
-            bail!("diagnostic tick must be finite and bounded to 0.25 seconds");
+            bail!("product tick must be finite and bounded to 0.25 seconds");
         }
 
         let live = self.live.tick(
@@ -185,60 +144,19 @@ impl NativeDiagnostics {
                 .ops,
         );
 
-        let sample_key = self
-            .live
-            .sprite_descriptors()
-            .first()
-            .map(|sprite| OverlayKey::LiveAnchor(sprite.handle));
-        let sample_before = sample_key.and_then(|key| self.projector.handle_of(&key));
-        if !self.sprite_overlay_enabled && sample_before.is_some() {
-            self.retired_sample_handle = sample_before;
-        }
         let overlay_nodes = self.overlay_nodes(camera);
         let overlay_frame = self
             .projector
             .project(overlay_nodes)
-            .map_err(|error| anyhow::anyhow!("project retained diagnostics: {error:?}"))?;
-        let sample_after = sample_key.and_then(|key| self.projector.handle_of(&key));
-        if self.sprite_overlay_enabled {
-            if let (Some(retired), Some(replacement)) = (self.retired_sample_handle, sample_after) {
-                self.stale_handle_replaced |= retired != replacement;
-            }
-        }
+            .map_err(|error| anyhow::anyhow!("project retained product overlays: {error:?}"))?;
         ops.extend(overlay_frame.ops);
         let frame = RenderFrameDiff::try_from_ops(ops)
-            .map_err(|error| anyhow::anyhow!("build diagnostic retained frame: {error:?}"))?;
+            .map_err(|error| anyhow::anyhow!("build product retained frame: {error:?}"))?;
         let presentation = self.melee.audio_tick(melee_action)?;
         Ok(DiagnosticFrame {
             frame,
             presentation,
-            readout: DiagnosticFrameReadout {
-                animation_advanced: live.animation_advanced,
-                patrol_moved: live.patrol_moved,
-                overlays_enabled: self.sprite_enabled_seen && self.nav_enabled_seen,
-                overlays_disabled: self.sprite_disabled_seen && self.nav_disabled_seen,
-                stale_handle_replaced: self.stale_handle_replaced,
-                viewmodel_present: self.melee.retained_len() >= 2,
-                animation_updates: live.animation_updates,
-                retained_overlays: self.projector.retained_len(),
-            },
         })
-    }
-
-    pub(crate) fn dispose(&mut self) -> Result<RenderFrameDiff> {
-        if self.disposed {
-            return Ok(RenderFrameDiff::new());
-        }
-        self.sprite_overlay_enabled = false;
-        self.nav_overlay_enabled = false;
-        self.visible_nav_cells.clear();
-        let overlay_frame = self
-            .projector
-            .project(BTreeMap::new())
-            .map_err(|error| anyhow::anyhow!("dispose retained diagnostics: {error:?}"))?;
-        let frame = combine_frames([overlay_frame, self.melee.dispose()?])?;
-        self.disposed = true;
-        Ok(frame)
     }
 
     fn overlay_nodes(&mut self, camera: [f32; 3]) -> BTreeMap<OverlayKey, RenderNode> {
@@ -399,8 +317,6 @@ struct NavGridDocument {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use dagger_runtime::DaggerRuntime;
-    use rusty_engine::render_model::RenderDiff;
 
     const PROJECT: &str =
         include_str!("../../../../../content/projects/privateers-hold.project.json");
@@ -408,122 +324,9 @@ mod tests {
         include_str!("../../../../../content/projects/privateers-hold.navgrid.json");
 
     #[test]
-    fn real_diagnostics_batch_authorities_and_replace_retired_overlay_handles() {
+    fn product_tick_rejects_unbounded_time_steps_without_mutation() {
         let mut diagnostics =
-            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
-        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
-        runtime
-            .install_encounter_navigation_json(NAVGRID)
-            .expect("install encounter navigation");
-        assert!(diagnostics.toggle_sprite_overlay());
-        assert!(diagnostics.toggle_nav_overlay());
-        let first = diagnostics
-            .tick(
-                0.0,
-                [25.6, 2.35, -25.6],
-                &runtime.encounter_positions(),
-                &[],
-                &BTreeSet::new(),
-                &runtime.enemy_presentation(),
-                runtime.melee_presentation().as_ref(),
-                runtime.player_stamina(),
-            )
-            .expect("first diagnostic frame");
-        assert!(first.readout.retained_overlays > 40);
-        assert!(first.readout.animation_updates > 40);
-        assert!(first
-            .frame
-            .ops
-            .iter()
-            .any(|op| matches!(op, RenderDiff::Create { .. })));
-
-        assert!(!diagnostics.toggle_sprite_overlay());
-        assert!(!diagnostics.toggle_nav_overlay());
-        let disabled = diagnostics
-            .tick(
-                0.1,
-                [25.6, 2.35, -25.6],
-                &runtime.encounter_positions(),
-                &[],
-                &BTreeSet::new(),
-                &runtime.enemy_presentation(),
-                runtime.melee_presentation().as_ref(),
-                runtime.player_stamina(),
-            )
-            .expect("disabled frame");
-        assert!(disabled.readout.overlays_disabled);
-        assert!(disabled
-            .frame
-            .ops
-            .iter()
-            .any(|op| matches!(op, RenderDiff::Destroy { .. })));
-
-        assert!(diagnostics.toggle_sprite_overlay());
-        assert!(diagnostics.toggle_nav_overlay());
-        let replaced = diagnostics
-            .tick(
-                0.1,
-                [25.6, 2.35, -25.6],
-                &runtime.encounter_positions(),
-                &[],
-                &BTreeSet::new(),
-                &runtime.enemy_presentation(),
-                runtime.melee_presentation().as_ref(),
-                runtime.player_stamina(),
-            )
-            .expect("replacement frame");
-        assert!(replaced.readout.overlays_enabled);
-        assert!(replaced.readout.stale_handle_replaced);
-
-        let mut movement = false;
-        let mut animation = false;
-        for _ in 0..40 {
-            let updates = runtime.tick_play_session(0.1).expect("encounter tick");
-            let frame = diagnostics
-                .tick(
-                    0.1,
-                    [25.6, 2.35, -25.6],
-                    &runtime.encounter_positions(),
-                    &updates,
-                    &runtime.dead_encounter_ids(),
-                    &runtime.enemy_presentation(),
-                    runtime.melee_presentation().as_ref(),
-                    runtime.player_stamina(),
-                )
-                .expect("live diagnostic frame");
-            movement |= frame.readout.patrol_moved;
-            animation |= frame.readout.animation_advanced;
-            if movement && animation {
-                break;
-            }
-        }
-        assert!(movement, "real patrol authority never moved");
-        assert!(animation, "real animation authority never advanced");
-
-        let disposed = diagnostics.dispose().expect("dispose diagnostics");
-        assert!(!disposed.ops.is_empty());
-        assert!(disposed
-            .ops
-            .iter()
-            .all(|op| matches!(op, RenderDiff::Destroy { .. })));
-        assert!(diagnostics
-            .tick(
-                0.1,
-                [0.0; 3],
-                &[],
-                &[],
-                &BTreeSet::new(),
-                &[],
-                None,
-                (90.0, 90.0),
-            )
-            .is_err());
-    }
-
-    #[test]
-    fn tick_rejects_unbounded_time_steps_without_mutation() {
-        let mut diagnostics =
-            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+            ProductDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
         assert!(diagnostics
             .tick(
                 0.251,

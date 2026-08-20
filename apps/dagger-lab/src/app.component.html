@@ -216,7 +216,7 @@
         <div><p class="kicker">Classic loot tables · generated at spawn</p><h2>Loot containers</h2></div>
         <span class="schema" data-testid="loot-count">{{ live.lootContainers.length }} containers</span>
       </div>
-      <p class="muted">Treasure piles (RDB random-treasure markers) and loot-bearing enemy corpses, contents sourced from <code>InventoryService::view</code> on the container entity. Pickup is the native <code>F</code> verb on the gameplay surface — the lab never moves items.</p>
+      <p class="muted">Treasure piles (RDB random-treasure markers) and loot-bearing enemy corpses, contents sourced from <code>InventoryService::view</code> on the container entity. Pickup is the <code>F</code> gameplay verb — the lab never moves items.</p>
       <div class="derived-grid" data-testid="loot-containers">
         <article *ngFor="let container of live.lootContainers" [attr.data-testid]="'loot-container-' + container.id">
           <span>{{ container.id }} · {{ container.kind }} · table {{ container.lootKey }}<span *ngIf="container.contentEntityId"> · #{{ container.contentEntityId }}</span></span>

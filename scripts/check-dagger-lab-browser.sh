@@ -42,9 +42,9 @@ if [[ -f "$upstream_host" ]]; then
     exit 1
   fi
 fi
-cargo build -p dagger-studio-adapter --bin dagger-native-host --locked
+cargo build -p dagger-studio-adapter --bin dagger-product-server --locked
 
-./target/debug/dagger-native-host --browser-product --lab-port=4274 >"$host_log" 2>&1 &
+./target/debug/dagger-product-server --lab-port=4274 >"$host_log" 2>&1 &
 host_pid=$!
 for _ in $(seq 1 600); do
   if curl --silent --fail http://127.0.0.1:4274/api/dagger-lab >/dev/null \

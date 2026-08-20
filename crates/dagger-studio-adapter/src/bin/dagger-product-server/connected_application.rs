@@ -22,9 +22,9 @@ use rusty_engine::render_presentation::{
 use serde::Serialize;
 
 use crate::{
-    diagnostics::NativeDiagnostics,
+    diagnostics::ProductDiagnostics,
     lab_server::{LabCommand, LabReply, LabServer, ProductInput},
-    proof::Options,
+    Options,
 };
 
 const PROJECT: &str = include_str!("../../../../../content/projects/privateers-hold.project.json");
@@ -39,12 +39,7 @@ const ENCOUNTER_GALLERY_ENCOUNTERS: &str =
     include_str!("../../../../../data/encounters/encounter-gallery.json");
 
 pub(crate) fn run(options: Options) -> Result<()> {
-    if options.proof || options.corrupt_resource {
-        bail!("native renderer proof flags cannot be combined with --browser-product");
-    }
-    let port = options
-        .lab_port
-        .context("--browser-product requires the product HTTP service")?;
+    let port = options.lab_port;
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
@@ -72,7 +67,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
     runtime
         .install_named_encounters_json(encounters)
         .context("install committed named encounters")?;
-    let mut presentation = NativeDiagnostics::from_documents(project, navgrid)?;
+    let mut presentation = ProductDiagnostics::from_documents(project, navgrid)?;
     let mut pending_presentation = PendingPresentation::default();
     let mut pending_audio = PendingAudioPresentation::default();
     let initial = tick_presentation(&mut runtime, &mut presentation, 0.0)?;
@@ -136,7 +131,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
 fn handle_command(
     command: LabCommand,
     runtime: &mut DaggerRuntime,
-    presentation: &mut NativeDiagnostics,
+    presentation: &mut ProductDiagnostics,
     pending_presentation: &mut PendingPresentation,
     pending_audio: &mut PendingAudioPresentation,
     bundle: &DaggerRenderBundle,
@@ -197,7 +192,7 @@ fn handle_command(
 
 fn apply_product_input(
     runtime: &mut DaggerRuntime,
-    presentation: &mut NativeDiagnostics,
+    presentation: &mut ProductDiagnostics,
     accepted_sequence: &mut u64,
     input: ProductInput,
 ) -> Result<()> {
@@ -333,7 +328,7 @@ struct ProductInputState {
 
 fn product_state(
     runtime: &DaggerRuntime,
-    presentation: &NativeDiagnostics,
+    presentation: &ProductDiagnostics,
     frame: RenderFrameDiff,
     audio: PresentationFrameDiff,
     input_sequence: u64,
@@ -365,7 +360,7 @@ fn product_state(
 
 fn product_input_state(
     runtime: &DaggerRuntime,
-    presentation: &NativeDiagnostics,
+    presentation: &ProductDiagnostics,
     input_sequence: u64,
 ) -> Result<ProductInputState, dagger_runtime::RuntimeError> {
     let position = runtime.player_position()?;
@@ -385,7 +380,7 @@ fn product_input_state(
 
 fn tick_presentation(
     runtime: &mut DaggerRuntime,
-    presentation: &mut NativeDiagnostics,
+    presentation: &mut ProductDiagnostics,
     dt: f32,
 ) -> Result<crate::diagnostics::DiagnosticFrame> {
     let encounter_updates = runtime.tick_play_session(dt)?;
@@ -650,9 +645,11 @@ mod tests {
         runtime
             .install_encounter_navigation_json(ENCOUNTER_GALLERY_NAVGRID)
             .expect("gallery navgrid");
-        let mut diagnostics =
-            NativeDiagnostics::from_documents(ENCOUNTER_GALLERY_PROJECT, ENCOUNTER_GALLERY_NAVGRID)
-                .expect("gallery diagnostics");
+        let mut diagnostics = ProductDiagnostics::from_documents(
+            ENCOUNTER_GALLERY_PROJECT,
+            ENCOUNTER_GALLERY_NAVGRID,
+        )
+        .expect("gallery diagnostics");
         assert_eq!(
             runtime.player_position().expect("gallery spawn").y,
             0.35,
@@ -661,7 +658,7 @@ mod tests {
         let mut sequence = 0;
         runtime
             .set_player_position(rusty_engine::core_math::Vec3::new(-5.0, 0.35, -5.75))
-            .expect("place player in ordinary melee range for input proof");
+            .expect("place player in ordinary melee range for input coverage");
         apply_product_input(
             &mut runtime,
             &mut diagnostics,
@@ -708,13 +705,13 @@ mod tests {
     }
 
     #[test]
-    fn connected_product_ports_native_debug_keys() {
+    fn connected_product_ports_debug_keys() {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
         runtime
             .install_encounter_navigation_json(NAVGRID)
             .expect("real navgrid");
         let mut diagnostics =
-            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+            ProductDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
         let mut sequence = 0;
 
         apply_product_input(
@@ -749,7 +746,7 @@ mod tests {
             .install_named_encounters_json(PRIVATEERS_HOLD_ENCOUNTERS)
             .expect("named encounters");
         let mut diagnostics =
-            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+            ProductDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
         let mut sequence = 0;
 
         apply_product_input(
@@ -783,7 +780,7 @@ mod tests {
     fn product_input_rejects_stale_sequences_and_bounds_large_pointer_bursts() {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
         let mut diagnostics =
-            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+            ProductDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
         let mut sequence = 0;
         apply_product_input(
             &mut runtime,
@@ -813,7 +810,7 @@ mod tests {
         runtime.jump_to_content(2007).expect("jump beside Rat");
         let before = runtime.player_position().expect("player pose");
         let mut diagnostics =
-            NativeDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+            ProductDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
         let mut sequence = 0;
         apply_product_input(
             &mut runtime,

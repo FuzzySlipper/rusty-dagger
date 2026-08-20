@@ -700,8 +700,8 @@ impl DaggerRuntime {
     }
 
     /// Install the committed navigation artifact as the live enemy movement
-    /// authority. The runtime owns the resulting service; native diagnostics
-    /// only project its positions.
+    /// authority. The runtime owns the resulting service; product presentation
+    /// only projects its positions.
     pub fn install_encounter_navigation_json(
         &mut self,
         navgrid_document: &str,
@@ -2218,7 +2218,7 @@ impl DaggerRuntime {
         self.lab_readout()
     }
 
-    /// Interact/pickup verb (KeyF in the native host): an aimed-interact
+    /// Interact/pickup verb (KeyF in the gameplay product): an aimed-interact
     /// query — the `select_aimed_melee_target` cone shape over a different
     /// candidate set: dead enemies (their actor entities are the corpse
     /// containers; donor EnemyDeath.cs:123 keeps the loot in the enemy's
@@ -2393,7 +2393,7 @@ impl DaggerRuntime {
         self.lab_readout()
     }
 
-    /// Equip-cycle verb (KeyE in the native host): each press equips the next
+    /// Equip-cycle verb (KeyE in the gameplay product): each press equips the next
     /// carried equippable item in the stable entity ordering, skipping
     /// already-equipped items and swapping when the item's legal slot is
     /// occupied. When every carried equippable is already equipped, the press

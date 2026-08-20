@@ -77,9 +77,9 @@ fn load_enemy_positions(scene_path: &str) -> Vec<[f32; 3]> {
         .collect()
 }
 
-/// Convert a patrol heading (0 = +X, +PI/2 = +Z) to the Y-rotation quaternion
-/// expected by renderer-three (three.js). Three.js positive Y rotates +X toward -Z,
-/// so the sign is negated to align +heading with +Z.
+/// Convert a patrol heading (0 = +X, +PI/2 = +Z) to the Engine presentation
+/// quaternion. Positive Y rotation turns +X toward -Z, so the sign is negated
+/// to align +heading with +Z.
 pub fn heading_to_rotation(heading: f32) -> [f32; 4] {
     let half = heading * 0.5;
     let (sy, cy) = half.sin_cos();
@@ -284,18 +284,15 @@ fn serve(meta_path: &str, addr: &str) {
     let meta = load_sprite_metadata(meta_path);
     let mut svc = build_service(&meta);
 
-    // Resolve the navgrid path relative to the enemies.json file's location,
-    // not the process cwd. The enemies.json lives at
-    // <repo>/engine-render-check/generated/enemies.json, so the repo root is
-    // 3 parents up. This ensures the serve endpoint works regardless of the
-    // process working directory (R6641-1: launching from /tmp must not
-    // silently disable patrol).
-    let meta_dir = std::path::Path::new(meta_path)
-        .parent() // generated/
-        .and_then(|p| p.parent()) // engine-render-check/
-        .and_then(|p| p.parent()) // repo root
-        .unwrap_or(std::path::Path::new("."));
-    let navgrid_path = meta_dir.join("content/projects/privateers-hold.navgrid.json");
+    // Resolve the committed navgrid from an ancestor of the metadata file,
+    // not from the process cwd. The sprite tool is independent diagnostic
+    // tooling and must not rely on a particular product-shell directory.
+    let navgrid_relative = std::path::Path::new("content/projects/privateers-hold.navgrid.json");
+    let navgrid_path = std::path::Path::new(meta_path)
+        .ancestors()
+        .map(|ancestor| ancestor.join(navgrid_relative))
+        .find(|candidate| candidate.is_file())
+        .unwrap_or_else(|| navgrid_relative.to_path_buf());
 
     let mut patrol = {
         let nav_text = std::fs::read_to_string(&navgrid_path).unwrap_or_else(|e| {

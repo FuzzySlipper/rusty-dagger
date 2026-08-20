@@ -2,7 +2,7 @@
 name = "dagger-studio-adapter"
 version.workspace = true
 edition.workspace = true
-description = "Rusty Dagger protocol-14 Studio adapter and renderer projection"
+description = "Rusty Dagger protocol-14 Studio adapter and product-service projection"
 
 [dependencies]
 anyhow.workspace = true
@@ -12,10 +12,6 @@ rusty-engine.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
-winit.workspace = true
-
-[target.'cfg(target_os = "linux")'.dependencies]
-gtk.workspace = true
 
 [lib]
 name = "dagger_studio_adapter"
@@ -26,5 +22,5 @@ name = "dagger-studio-adapter"
 path = "src/bin/dagger-studio-adapter.rs"
 
 [[bin]]
-name = "dagger-native-host"
-path = "src/bin/dagger-native-host/main.rs"
+name = "dagger-product-server"
+path = "src/bin/dagger-product-server/main.rs"
