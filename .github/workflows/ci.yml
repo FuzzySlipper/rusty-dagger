@@ -35,5 +35,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+      - name: Build adjacent Engine gameplay-rules packages
+        run: |
+          pnpm --dir ../rusty-engine/rules install --frozen-lockfile
+          pnpm --dir ../rusty-engine/rules run build
       - name: Verify Rust provider, Engine boundary, and web product
         run: ./scripts/verify.sh
