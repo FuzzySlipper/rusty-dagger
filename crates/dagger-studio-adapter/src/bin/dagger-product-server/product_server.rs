@@ -41,7 +41,8 @@ fn api_surface(path: &str) -> Option<ApiSurface> {
             | "/api/dagger-product/session/reset"
             | "/api/dagger-product/equipment/equip"
             | "/api/dagger-product/equipment/unequip"
-    ) {
+    ) || path.starts_with("/api/dagger-product/ui/assets/")
+    {
         Some(ApiSurface::Product)
     } else if matches!(
         path,
@@ -214,6 +215,17 @@ fn handle_request(
     }
     if request.method == "GET" && request.path == "/healthz" {
         return write_response(stream, 200, r#"{"status":"ok","project":"rusty-dagger"}"#);
+    }
+    if request.method == "GET" {
+        if let Some(id) = request
+            .path
+            .split('?')
+            .next()
+            .unwrap_or(&request.path)
+            .strip_prefix("/api/dagger-product/ui/assets/")
+        {
+            return serve_ui_asset(stream, content_root, id);
+        }
     }
     // Sprite review reads derived content straight from disk: no runtime
     // authority is involved, so these never enter the command channel.
@@ -479,6 +491,66 @@ fn serve_sprite_asset(stream: &mut TcpStream, content_root: &Path, name: &str) -
     write_bytes_response(stream, 200, content_type, &bytes)
 }
 
+fn serve_ui_asset(stream: &mut TcpStream, content_root: &Path, id: &str) -> Result<()> {
+    if id.contains("..") || id.contains('/') || id.contains('\\') {
+        return write_response(
+            stream,
+            404,
+            r#"{"error":"unknown Dagger product UI asset"}"#,
+        );
+    }
+    let manifest_path = content_root.join("ui").join("ui-manifest.json");
+    let manifest_bytes = std::fs::read(&manifest_path)
+        .with_context(|| format!("read {}", manifest_path.display()))?;
+    let manifest: serde_json::Value =
+        serde_json::from_slice(&manifest_bytes).context("decode generated UI manifest")?;
+    let Some(file) = ui_asset_file(&manifest, id) else {
+        return write_response(
+            stream,
+            404,
+            r#"{"error":"unknown Dagger product UI asset"}"#,
+        );
+    };
+    let path = content_root.join("ui").join(file);
+    let bytes = match std::fs::read(&path) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return write_response(
+                stream,
+                404,
+                r#"{"error":"Dagger product UI asset is not generated"}"#,
+            )
+        }
+        Err(error) => return Err(error).with_context(|| format!("read {}", path.display())),
+    };
+    write_bytes_response(stream, 200, "image/png", &bytes)
+}
+
+/// Resolve a generated UI filename only through its manifest identity. The
+/// filename is additionally constrained to one flat PNG basename before it is
+/// joined to the generated `content/ui` root.
+fn ui_asset_file(manifest: &serde_json::Value, id: &str) -> Option<String> {
+    let candidates = manifest
+        .get("assets")
+        .and_then(serde_json::Value::as_array)
+        .into_iter()
+        .flatten()
+        .chain(manifest.get("font"));
+    candidates
+        .filter(|entry| entry.get("id").and_then(serde_json::Value::as_str) == Some(id))
+        .find_map(|entry| entry.get("file").and_then(serde_json::Value::as_str))
+        .filter(|file| is_safe_ui_filename(file))
+        .map(str::to_owned)
+}
+
+fn is_safe_ui_filename(file: &str) -> bool {
+    !file.is_empty()
+        && file.ends_with(".png")
+        && !file.contains("..")
+        && !file.contains('/')
+        && !file.contains('\\')
+}
+
 /// The manifest documents the lab may overwrite, with the top-level
 /// collections each must carry. This table is the single place a manifest
 /// opts into lab edits — anything not listed is not a write target.
@@ -690,6 +762,7 @@ mod tests {
             "/api/dagger-product/readout",
             "/api/dagger-product/session/reset",
             "/api/dagger-product/equipment/equip",
+            "/api/dagger-product/ui/assets/hud.chrome.main",
         ] {
             assert_eq!(api_surface(path), Some(ApiSurface::Product), "{path}");
         }
@@ -710,5 +783,28 @@ mod tests {
         ] {
             assert_eq!(api_surface(retired), None, "{retired}");
         }
+    }
+
+    #[test]
+    fn ui_asset_ids_are_a_closed_semantic_set() {
+        let manifest = serde_json::json!({
+            "assets": [{"id": "hud.chrome.main", "file": "hud-chrome-main.png"}],
+            "font": {"id": "font.classic.0003", "file": "font-classic-0003-atlas.png"},
+        });
+        assert_eq!(
+            ui_asset_file(&manifest, "hud.chrome.main"),
+            Some("hud-chrome-main.png".to_string())
+        );
+        assert_eq!(
+            ui_asset_file(&manifest, "font.classic.0003"),
+            Some("font-classic-0003-atlas.png".to_string())
+        );
+        assert_eq!(
+            ui_asset_file(&manifest, "../content/ui-manifest.json"),
+            None
+        );
+        let unsafe_manifest =
+            serde_json::json!({"assets": [{"id": "bad", "file": "../secret.png"}]});
+        assert_eq!(ui_asset_file(&unsafe_manifest, "bad"), None);
     }
 }

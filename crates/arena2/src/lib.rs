@@ -16,6 +16,8 @@ pub mod arch3d;
 pub mod bsa;
 pub mod cif;
 pub mod dfrandom;
+pub mod fnt;
+pub mod img;
 pub mod maps;
 pub mod mobile;
 pub mod pak;

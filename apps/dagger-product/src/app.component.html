@@ -1,5 +1,7 @@
 <main class="product-shell" [attr.data-product-mode]="labOpen ? 'lab' : 'gameplay'">
   <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport">
+    <img class="classic-hud-chrome" aria-hidden="true"
+      src="/api/dagger-product/ui/assets/hud.chrome.main" />
     <div class="game-hud" data-rusty-ui-interactive>
       <div><span>Privateer's Hold</span><strong>Rust-authoritative connected product</strong></div>
       <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">
@@ -122,6 +124,8 @@
     </article>
 
     <article class="panel inventory" *ngIf="readout as live" data-testid="inventory-panel">
+      <img class="inventory-classic-chrome" aria-hidden="true"
+        src="/api/dagger-product/ui/assets/window.inventory.chrome" />
       <div class="panel-heading">
         <div><p class="kicker">Upstream inventory &amp; equipment services</p><h2>Player inventory</h2></div>
         <span class="pulse">live</span>
