@@ -245,7 +245,7 @@ fn normalize(v: [f32; 3]) -> [f32; 3] {
 
 fn average_rgb(rgba: &[u8]) -> [f32; 3] {
     let (mut r, mut g, mut b, mut n) = (0u64, 0u64, 0u64, 0u64);
-    for px in rgba.chunks_exact(4) {
+    for px in rgba.as_chunks::<4>().0 {
         r += px[0] as u64;
         g += px[1] as u64;
         b += px[2] as u64;
