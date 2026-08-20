@@ -143,11 +143,11 @@
       <p class="loot-dialog-summary" id="loot-dialog-summary">Escape or Exit returns to play. Take moves one stack unit or one item when capacity allows.</p>
       <p *ngIf="lootFeedback || commandError" class="loot-dialog-feedback" aria-live="polite" data-testid="loot-feedback">{{ lootFeedback || commandError }}</p>
       <section class="loot-remote-list" aria-label="Remote loot contents" data-testid="loot-remote-list">
-        <button *ngFor="let stack of container.contents.stacks" type="button" [disabled]="pending"
+        <button *ngFor="let stack of container.contents.stacks; trackBy: trackLootStack" type="button" [disabled]="pending"
           [attr.data-testid]="'loot-take-' + stack.item" (click)="takeLootStack(container, stack)">
           <span>{{ stack.item }} × {{ stack.quantity }}</span><strong>Take 1</strong>
         </button>
-        <button *ngFor="let item of container.contents.items" type="button" [disabled]="pending"
+        <button *ngFor="let item of container.contents.items; trackBy: trackLootItem" type="button" [disabled]="pending"
           [attr.data-testid]="'loot-take-' + item.entity" (click)="takeLootItem(container, item)">
           <span>{{ item.item }}</span><strong>Take</strong>
         </button>
