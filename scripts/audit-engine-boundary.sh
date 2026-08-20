@@ -196,16 +196,25 @@ if git grep -n -E \
   exit 1
 fi
 
-grep -F 'use rusty_engine::{' \
-  'crates/dagger-studio-adapter/src/bin/dagger-native-host/application.rs' >/dev/null
-grep -F 'renderer_webview_host::{' \
-  'crates/dagger-studio-adapter/src/bin/dagger-native-host/application.rs' >/dev/null
-native_main='crates/dagger-studio-adapter/src/bin/dagger-native-host/main.rs'
-if (($(wc -l <"$native_main") > 30)); then
-  echo "$native_main: product/diagnostic dispatch grew beyond bounded wiring" >&2
+retired_product_dir='crates/dagger-studio-adapter/src/bin/dagger-native-host'
+if [[ -e "$retired_product_dir" ]]; then
+  echo "$retired_product_dir: retired fixed application still exists" >&2
   exit 1
 fi
-grep -F 'let options = proof::Options::parse()?;' "$native_main" >/dev/null
-grep -F 'return connected_application::run(options);' "$native_main" >/dev/null
-grep -F 'application::run(options)' "$native_main" >/dev/null
+
+if git grep -n -E \
+  'dagger-native-host|verify-native-host|RendererWebviewAdapter|winit::|gtk::' \
+  -- ':!Cargo.lock' ':!scripts/audit-engine-boundary.sh'; then
+  echo 'retired fixed application reference remains' >&2
+  exit 1
+fi
+
+product_main='crates/dagger-studio-adapter/src/bin/dagger-product-server/main.rs'
+if (($(wc -l <"$product_main") > 120)); then
+  echo "$product_main: product-server wiring grew beyond its bounded role" >&2
+  exit 1
+fi
+grep -F 'mod connected_application;' "$product_main" >/dev/null
+grep -F 'connected_application::run(Options::parse()?)' "$product_main" >/dev/null
+grep -F 'name = "dagger-product-server"' crates/dagger-studio-adapter/Cargo.toml >/dev/null
 echo 'Engine boundary audit passed'

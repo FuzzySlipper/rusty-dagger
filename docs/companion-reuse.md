@@ -95,9 +95,8 @@ markers), `theme`. These are dependency-clean (presentational, input-only).
 **Avoid**: feature-* compositions that assume an RPG domain (character-status,
 equipment, inventory, main-menu) until the successor project has those
 concepts; `domain`, `protocol`, `store`, `transport` (their game loopback).
-**Integration**: pnpm workspace deps `@rusty-engine/ui-*` when a rusty-dagger
-browser app exists; until then, nothing to wire (engine-render-check covers
-visuals).
+**Integration**: historical proposal only; the current product uses
+`@rusty-engine/application-host` with Dagger-owned Angular UI.
 
 ### rusty-d20
 
@@ -119,10 +118,9 @@ and d20 is not a drop-in for it.
 
 ### rusty-engine (provider, not a companion — recorded for clarity)
 
-Already consumed: `rusty-asset-import` CLI (content pipeline),
-render-model/asset-catalog semantics via artifacts, studio adapter protocol,
-renderer-three (via engine-render-check). Upstream needs tracked as engine
-tasks 6515/6516 with local consume tasks 6521/6522.
+Already consumed at the time of this historical survey: `rusty-asset-import`
+CLI (content pipeline), render-model/asset-catalog semantics via artifacts,
+and the Studio adapter protocol.
 
 ### Decisions (for task 6563 implementation)
 
@@ -229,7 +227,7 @@ generic execution trace as the product explanation.
 
 ### Guardrails
 
-- Every gameplay task ends in a named native Privateer's Hold interaction.
+- Every gameplay task ends in a named Privateer's Hold product interaction.
 - Headless examples and validation support play; they do not become the main
   deliverable.
 - Add vocabulary and editor surface only for a current experiment.
@@ -465,9 +463,8 @@ the source of truth that later tasks (6684..6690) follow.
    for the RPG half.
 3. **Project/content machinery:** still hand-rolled `scripts/generate-project.py`; its
    scene generation stays out of `dagger-rpg` (visual vs RPG separation).
-4. **UI:** no change for now — `engine-render-check` remains the only render
-   verification path. When HUD (6689) needs presentational widgets, copy
-   `ui-compass`/`ui-minimap` view-model patterns, not feature compositions.
+4. **UI:** superseded. The current Angular product mounts through Engine's
+   public application-host contract.
 5. **Copy rule:** tightened — every copied snippet must carry a `// Adapted from`
    provenance line with donor path + rev, and no sibling `path` dep may be added to
    `Cargo.toml`/`pnpm-workspace.yaml` without a `docs/companion-reuse.md` entry.

@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Provision adjacent Rusty Engine checkout
         run: git clone --depth 1 https://github.com/FuzzySlipper/rusty-engine.git ../rusty-engine
-      - name: Install native renderer prerequisites
+      - name: Install Engine facade build prerequisites
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
@@ -23,9 +23,7 @@ jobs:
             libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
             libxkbcommon-x11-0 \
-            libxtst6 \
-            ripgrep \
-            xvfb
+            ripgrep
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy,rustfmt
@@ -37,5 +35,5 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      - name: Verify Rust provider, Engine boundary, and native host
+      - name: Verify Rust provider, Engine boundary, and web product
         run: ./scripts/verify.sh

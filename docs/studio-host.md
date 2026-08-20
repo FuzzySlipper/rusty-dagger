@@ -54,14 +54,13 @@ python3 scripts/check-adapter.py
 regeneration builds and checks the local adapter. Engine owns service and
 real-browser Studio certification.
 
-The connected Dagger product and the fixed native renderer diagnostic are
-separate from Studio:
+The connected Dagger product is separate from Studio:
 
 ```sh
 ./scripts/check-dagger-lab-browser.sh  # manual opt-in, not an automatic gate
-./scripts/verify-native-host.sh        # automatic gate
 ```
 
-The native-host proof is part of the automatic suite; the Playwright browser
-diagnostic is run by hand when the browser product surface changes. Neither
-makes Dagger a Studio or renderer implementation owner.
+The Playwright product check is run by hand when the browser product surface
+changes. Tauri is reserved for final publication certification rather than the
+ordinary Studio or feature gate. Neither product lane makes Dagger a Studio or
+renderer implementation owner.

@@ -16,7 +16,6 @@ python3 ./scripts/check-adapter.py
 cargo run -p dagger-runtime --bin dagger-gameplay-check --locked
 cargo run -p dagger-runtime --bin dagger-walkthrough --locked
 cargo run -p dagger-runtime --bin dagger-navgrid --locked -- --check
-./scripts/verify-native-host.sh
 # The Playwright browser gate (check-dagger-lab-browser.sh) is a manual
 # opt-in diagnostic and deliberately not part of the automatic gate: the
 # automatic suite stays slim, fast, and deterministic.

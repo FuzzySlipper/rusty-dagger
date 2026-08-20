@@ -1,4 +1,4 @@
-//! Dagger-owned Studio and native presentation boundaries.
+//! Dagger-owned Studio and product-service presentation boundaries.
 
 #![forbid(unsafe_code)]
 

@@ -31,7 +31,7 @@ a named experiment in the connected Privateer's Hold product.
 This changes how work is sliced. Crate and authority boundaries remain strict,
 but tasks are vertical: authored values, Rust authority, live state,
 presentation, Angular tooling, and a real interaction land together in the
-smallest useful experiment. Headless examples and native/browser checks support
+smallest useful experiment. Headless examples and product/browser checks support
 the experiment; they never substitute for playing it.
 
 The classic rules and content are useful defaults, not a fidelity campaign.
@@ -113,37 +113,6 @@ rusty-engine-demo. Work that belongs upstream is filed upstream rather than
 patched locally — the demo doubles as a needs-discovery surface for the
 engine.
 
-## Player-facing game UI (7095 decision)
-
-The product's game UI (HUD, windows, messages) renders through the Engine
-facade as **screen-anchored presentation elements**, extended upstream. The
-Engine's existing presentation mechanism (DOM-realized text, structured
-panels with meters, icons, layout policy) already does everything except
-screen anchoring and interactivity, so two universal seams land upstream in
-rusty-engine rather than any local workaround:
-
-1. A screen/viewport anchor variant for presentation elements (panels,
-   text, icons) — every game needs a HUD.
-2. Interactive screen regions: pointer hit regions whose events the host
-   can read — every game UI needs clicks.
-
-The webview host has no pointer lock today (look is keyboard/polled
-pointer), so input arbitration is a runtime-owned presentation mode, not a
-lock negotiation; the OS cursor stays visible in UI mode, matching the
-classic (which uses the OS cursor). UI actions route to the same runtime
-verbs as keyboard and lab — one authority; UI reads the same authoritative
-readouts. Windows compose exactly like the classic model: extracted
-background art at native 320×200 layout scaled to the viewport, invisible
-rect buttons over the baked art.
-
-Rejected: an Angular DOM overlay for the product (the engine-demo/doom
-pattern). That pattern is the sanctioned architecture for web-shell
-products, but Dagger's product is the native winit host whose webview
-document is engine-private by design; forking the product into a web shell
-buys nothing the two seams don't provide. The Dagger Lab remains the
-Angular surface. Classic .FNT fonts are extracted as glyph atlases +
-metrics; UI text starts on system fonts, classic-font fidelity staged.
-
 ## Companion reuse
 
 Don't rebuild what sibling repos already own. Current inventory (details in
@@ -179,9 +148,9 @@ Engine. TypeScript adapts transport and mounts Angular into the supplied UI
 root; it may classify original host events through the application interaction
 port before forwarding semantic input to Rust.
 
-The application host must admit the same content-addressed resource-backed
-frame used by the native diagnostic. An empty, untextured, inline-only, or
-proof-specific browser frame is not a substitute for the playable product.
+The application host must admit the real content-addressed resource-backed
+frame. An empty, untextured, inline-only, or proof-specific frame is not a
+substitute for the playable product.
 Engine Studio remains a separate Engine-hosted tool and reaches this repository
 only through `.rusty-studio.json` and the Rust adapter.
 

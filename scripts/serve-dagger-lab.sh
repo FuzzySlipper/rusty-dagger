@@ -14,5 +14,5 @@ gallery_args=()
 if [[ "${DAGGER_ENCOUNTER_GALLERY:-0}" == "1" ]]; then
   gallery_args+=(--encounter-gallery)
 fi
-exec cargo run -p dagger-studio-adapter --bin dagger-native-host -- \
-  --browser-product "${gallery_args[@]}" "--lab-host=$1" "--lab-port=$2"
+exec cargo run -p dagger-studio-adapter --bin dagger-product-server -- \
+  "${gallery_args[@]}" "--lab-host=$1" "--lab-port=$2"

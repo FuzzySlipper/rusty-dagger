@@ -398,7 +398,7 @@ export interface LabReadout {
   readonly playerInventory: PlayerInventoryReadout;
   /** Ordered equip/unequip/swap receipts from the equip-cycle verb (E). */
   readonly equipmentLog: readonly EquipmentLogRecord[];
-  /** Live loot containers (treasure piles + loot-bearing corpses); pickup is the native KeyF verb. */
+  /** Live loot containers (treasure piles + loot-bearing corpses); pickup is the KeyF gameplay verb. */
   readonly lootContainers: readonly LootContainerReadout[];
   /** Kill-XP progression state: xp, level, pacing, health, and the award history. */
   readonly progression: ProgressionReadout;

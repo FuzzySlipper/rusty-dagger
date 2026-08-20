@@ -1,9 +1,8 @@
 //! Directional sprite evaluation (task 6595): the Daggerfall-side authority
 //! mapping a camera pose to each enemy's orientation frame. The semantics
 //! live in `arena2::mobile` (DFU port); this module owns the runtime-space
-//! conversion so consumers (the engine-render-check live driver today, a
-//! `dagger-world` game loop later) apply frames and never re-implement the
-//! math. Camera-facing itself is the renderer's job (billboard modes,
+//! conversion so product presentation applies frames without re-implementing
+//! the math. Camera-facing itself is the renderer's job (billboard modes,
 //! rusty-engine 6630).
 
 /// Evaluate one enemy against a camera position, returning the 8-sector

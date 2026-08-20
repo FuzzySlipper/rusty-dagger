@@ -32,43 +32,36 @@ try {
   const semanticLook = await assertSemanticPointerDirections(page);
   const connectedDiagnostics = await assertConnectedDiagnosticKeys(page);
   assert.ok(await renderedPixelVariety(page), 'real Rust resource-backed scene did not render visible pixels');
-  if (process.env.DAGGER_SKIP_BROWSER_REMOUNT === '1') {
-    // verify-native-host separately certifies stale_handle_replaced=true. Keep
-    // this explicit opt-out for diagnostic/manual runs that isolate visible
-    // product behavior from the browser remount proof.
-    console.error('DAGGER_BROWSER_REMOUNT_SKIPPED reason=explicit_diagnostic_opt_out native_replacement_proof=required');
-  } else {
-    const initialCanvas = await page.locator('canvas').elementHandle();
-    assert.ok(initialCanvas);
-    // A gameplay canvas with pointer lock can retarget Playwright's button
-    // click to the canvas. Release it through the public host UI port without
-    // opening the Lab overlay, then wait for the readout before clicking.
-    await page.evaluate(() => {
-      const host = window.__daggerApplicationHost;
-      if (host === undefined) throw new Error('application host missing');
-      host.ui.setInteractionMode('interface');
-    });
-    await page.waitForFunction(
-      () => {
-        const readout = window.__daggerApplicationHost?.readout();
-        return readout?.interactionMode === 'interface' && readout.pointerLocked === false;
-      },
-      undefined,
-      { timeout: 30_000 },
-    );
-    await page.getByTestId('refresh-scene').click();
-    await page.waitForFunction(
-      () => window.__daggerApplicationHost?.readout().contentRevision === 2,
-      undefined,
-      { timeout: 120_000 },
-    );
-    assert.equal(
-      await initialCanvas.evaluate((canvas) => canvas.isConnected),
-      false,
-      'atomic replacement did not retire the old canvas',
-    );
-    assert.equal(await page.locator('canvas').count(), 1, 'replacement created split renderer authority');
-  }
+  const initialCanvas = await page.locator('canvas').elementHandle();
+  assert.ok(initialCanvas);
+  // A gameplay canvas with pointer lock can retarget Playwright's button
+  // click to the canvas. Release it through the public host UI port without
+  // opening the Lab overlay, then wait for the readout before clicking.
+  await page.evaluate(() => {
+    const host = window.__daggerApplicationHost;
+    if (host === undefined) throw new Error('application host missing');
+    host.ui.setInteractionMode('interface');
+  });
+  await page.waitForFunction(
+    () => {
+      const readout = window.__daggerApplicationHost?.readout();
+      return readout?.interactionMode === 'interface' && readout.pointerLocked === false;
+    },
+    undefined,
+    { timeout: 30_000 },
+  );
+  await page.getByTestId('refresh-scene').click();
+  await page.waitForFunction(
+    () => window.__daggerApplicationHost?.readout().contentRevision === 2,
+    undefined,
+    { timeout: 120_000 },
+  );
+  assert.equal(
+    await initialCanvas.evaluate((canvas) => canvas.isConnected),
+    false,
+    'atomic replacement did not retire the old canvas',
+  );
+  assert.equal(await page.locator('canvas').count(), 1, 'replacement created split renderer authority');
   await openInterface(page);
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'lab');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), null);

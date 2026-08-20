@@ -241,36 +241,6 @@ impl MeleePresentation {
             .map_err(|error| anyhow::anyhow!("snapshot classic melee presentation: {error:?}"))
     }
 
-    pub(crate) fn retained_len(&self) -> usize {
-        usize::from(self.sprite_created)
-            + usize::from(self.impact_created)
-            + self.projector.retained_len()
-    }
-
-    pub(crate) fn dispose(&mut self) -> Result<RenderFrameDiff> {
-        let mut ops = Vec::new();
-        if self.sprite_created {
-            ops.push(RenderDiff::Destroy {
-                handle: WEAPON_SPRITE_HANDLE,
-            });
-            self.sprite_created = false;
-        }
-        if self.impact_created {
-            ops.push(RenderDiff::Destroy {
-                handle: IMPACT_SPRITE_HANDLE,
-            });
-            self.impact_created = false;
-        }
-        ops.extend(
-            self.projector
-                .project(BTreeMap::new())
-                .map_err(|error| anyhow::anyhow!("dispose melee viewmodel root: {error:?}"))?
-                .ops,
-        );
-        RenderFrameDiff::try_from_ops(ops)
-            .map_err(|error| anyhow::anyhow!("dispose classic melee presentation: {error:?}"))
-    }
-
     fn project_impact(
         &mut self,
         ops: &mut Vec<RenderDiff>,

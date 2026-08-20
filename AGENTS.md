@@ -85,9 +85,9 @@ work does not need donor ceremony. New Daggerfall behavior does.
   Unsupported mutations fail closed until a Dagger authority exists; do not
   add speculative write paths.
 - Do not copy Engine implementations into this repository. When Dagger work
-  exposes a seam that looks upstream-shaped, promote it through the two-beat
-  process in "Upstream promotion (two-beat)" below, not as a deferred
-  follow-up. Consume the adjacent
+  exposes a seam that looks upstream-shaped, route the reusable mechanism to
+  Engine as part of the work rather than growing a downstream copy or leaving
+  an unwired follow-up. Consume the adjacent
   `../rusty-engine` checkout through the unconditional facade as it stands and
   fix forward when upstream drift breaks something. Downstream does not fetch,
   mutate, pin, or enforce freshness for that checkout; operator update policy
@@ -107,28 +107,6 @@ work does not need donor ceremony. New Daggerfall behavior does.
   serving warns and publishes actual content — never a silent drop or a hard
   stop.
 
-## Upstream promotion (two-beat)
-
-"Promote a seam upstream when reuse is proven" has repeatedly failed because
-promotion is not an observable outcome of a downstream task and never gets a
-forcing function. Replace it with a two-beat effort whenever Dagger work exposes
-something that looks like it belongs in rusty-engine:
-
-- **Beat 1 — co-develop.** One effort owns both the candidate rusty-engine seam
-  (crate or API) and its first Dagger consumer. Write the upstream/downstream
-  line before work starts — what is generic mechanism vs. what is Dagger meaning
-  — and hold it while iterating. Moving the line is a recorded decision with a
-  reason, never a slow drift.
-- **Beat 2 — de-overfit.** Immediately port the candidate to a second,
-  mechanically different consumer: not a second game of the same shape, but a
-  different resolution shape (for a combat/RPG-flavored seam, the doom demo in
-  `../rusty-engine-demo` is the right kind of test). Write an overfitting report
-  listing what moved across the line because the second consumer needed it. The
-  report is the completion evidence; a second consumer that forces changes is
-  the success case, not a failure.
-
-Do not promote the candidate to the stable `../rusty-engine` checkout until
-beat 2's report exists. The two beats are one unit of work, not two backlogs.
 
 ## Code style and language authority
 
@@ -146,29 +124,35 @@ timing, directional orientation math, nav grid derivation, collision, and
 controller logic.
 
 A Rust service or function that exists only in tests but is not called from
-any production path is a defect. If the native diagnostic, a headless check,
-or another consumer needs a result, it must consume the Rust authority.
+any production path is a defect. If the browser product, a headless check, or
+another consumer needs a result, it must consume the Rust authority.
 
 ### Renderer implementation stays upstream
 
 Downstream Rust depends unconditionally on the `rusty-engine` facade and uses
-namespaced imports such as `rusty_engine::engine_spatial`. The runnable product
-diagnostic is `dagger-native-host`; it submits Dagger-owned retained facts to
-`rusty_engine::renderer_webview_host`. It must not expose the private webview,
-TypeScript, Three, HTML, canvas, or object-URL implementation to Dagger code.
+namespaced imports such as `rusty_engine::engine_spatial`. The development
+product server submits Dagger-owned retained facts through public Engine
+facade types and serves them to the Angular application mounted by
+`@rusty-engine/application-host`. It must not expose the private webview,
+Three, canvas, or object-URL implementation to Dagger code.
 
 JS/MJS remains acceptable for the bounded Engine Studio HTTP bridge, browser
 integration checks, and other test/build plumbing. It must not import
 `@rusty-engine/render-*` or `@rusty-engine/renderer-*` packages, own gameplay
 or presentation state, or become a second application bootstrap.
 
-### Native diagnostics are first-class
+### Product shell and certification lanes
 
-`dagger-native-host` is durable diagnostic infrastructure, not a synthetic
-renderer smoke. It must use committed project resources, real Dagger runtime
-authority, physical input/readback, meaningful pick routes, and explicit
-mount/failure/disposal proof. `engine-render-check/` is only a migration
-pointer and must not acquire application code again.
+The canonical feature-development product is the Angular application mounted
+by `@rusty-engine/application-host`, backed by Dagger's Rust product service
+and its lightweight development server. Engine owns the sole renderer/canvas;
+Angular owns rich DOM UI; Rust owns gameplay/runtime meaning and semantic
+actions. There is no fixed winit/GTK product or second renderer.
+
+Tauri is the eventual publication adapter over the same product-service
+boundary. Ordinary feature work and default CI do not build, package, or test
+Tauri. Add Tauri certification only when changing its adapter/package/lifecycle
+or preparing a product release.
 
 ### Content and config stay in TS/JSON
 
@@ -202,15 +186,15 @@ cargo run -p dagger-runtime --bin dagger-walkthrough
 cargo run -p dagger-runtime --bin dagger-navgrid -- --check  # nav grid proof + artifact freshness
 cargo run -p dagger-runtime --bin dagger-gameplay-check  # authored package resolution proof
 pnpm gameplay:check               # gameplay package build + drift check
-scripts/verify-native-host.sh     # Engine facade/native renderer/input/pick/lifecycle proof
 python3 scripts/check-adapter.py  # local adapter; env override is diagnostic-only
 ```
 
-Extraction claims require a real native render proof, not only structural
-validation. The proof must reach Engine presentation only through the public
-Rust facade and certify exact checked resources plus authoritative Dagger
-effects. Studio-visible changes additionally require the host gates
-while the Engine-owned Studio host is running:
+Product-visible extraction claims require visible evidence from the real
+application-host product, not only structural validation. The product must
+admit the committed resources and consume authoritative Dagger effects through
+the supported Engine/application-host boundary. Studio-visible changes
+additionally require the host gates while the Engine-owned Studio host is
+running:
 
 ```bash
 python3 scripts/check-adapter.py       # focused adapter protocol check

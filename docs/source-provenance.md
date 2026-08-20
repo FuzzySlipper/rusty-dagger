@@ -8,11 +8,11 @@ it stands and never fetches, pulls, resets, pins, or otherwise manages it.
 Interface drift is fixed forward; exact commits are review evidence rather
 than a source-dependency protocol.
 
-The Engine renderer implementation, TypeScript packages, Three backend,
-webview bridge, bootstrap document, and generated private artifact remain
-upstream-owned. Rusty Dagger neither imports nor copies them. Its native
-diagnostic calls Engine's Rust host adapter through the facade; Engine owns
-the sensitive Rust-to-renderer relationship privately.
+The Engine renderer implementation, Three backend, webview bridge, and
+generated private artifacts remain upstream-owned. Rusty Dagger neither
+imports nor copies them. The Angular product consumes Engine's public
+application-host package while Rust supplies Dagger-owned facts through the
+facade; Engine owns the sensitive renderer relationship privately.
 
 The Privateer's Hold mesh, material catalog, and project document are
 generated from the local Daggerfall/Arena2 source described in
@@ -195,7 +195,7 @@ draws on the Daggerfall Unity donor at the declared revision:
   table, matching classic.
 - The donor loot window (selective take with per-item `CanCarryAmount`
   checks, "the body has no treasure" for an empty corpse) — adapted: no
-  loot-window UI. The native KeyF verb (`DaggerRuntime::interact_loot`) is an
+  loot-window UI. The gameplay KeyF verb (`DaggerRuntime::interact_loot`) is an
   aimed take-all transfer through the upstream `InventoryService::transfer` /
   `EquipmentService::transfer_unique_item`, respecting capacity per item and
   stopping at the first rejection (the donor's partial-take spirit); every

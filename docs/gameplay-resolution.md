@@ -89,7 +89,7 @@ materialIneffective) clamps a Damage plan to 0 with a `MaterialIneffective`
 trace detail when the target's `minMetalToHit` outranks the attacker weapon's
 material (iron < steel < silver < … < daedric); unarmed attacks are always
 effective because classic has no bare-hand material. And the runtime owns the
-player's equipment verbs: the equip-cycle (KeyE in the native host) rotates
+player's equipment verbs: the equip-cycle (KeyE in the gameplay product) rotates
 carried equippable items through their legal slots via `EquipmentService`
 swap semantics, while the lab panel drives explicit `equip_item`,
 `unequip_slot`, and `grant_item` verbs through the lab server
@@ -146,7 +146,7 @@ out of its inventory, exactly as classic. The dungeon's random-treasure
 markers arrive as treasure content entities (id band 3000+, `lootKey` on the
 project entity) and spawn as standalone container entities
 (`spawn_container`) with the dungeon-type loot key. The runtime's
-interact/pickup verb (`interact_loot`, KeyF in the native host) aims a cone
+interact/pickup verb (`interact_loot`, KeyF in the gameplay product) aims a cone
 query at dead enemies and treasure piles within 2.5 units and performs a
 take-all transfer through `InventoryService::transfer` /
 `EquipmentService::transfer_unique_item`, stopping at the first capacity
@@ -155,7 +155,7 @@ note are equipment-log records under `loot:<container>`. The lab's loot panel
 lists every container with its live contents (upstream
 `InventoryService::view`), the spawn-time generation receipt (including
 unsupported-category coverage), and emptied state — read-only; pickup stays
-on the native verb.
+on the gameplay verb.
 
 `dagger-gameplay-check` is the production Rust diagnostic. It admits the
 committed package, resolves the same controlled action for player and AI

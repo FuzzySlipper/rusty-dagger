@@ -1082,7 +1082,7 @@ mod tests {
     }
 
     #[test]
-    fn a_real_kill_sequence_crosses_a_level_through_the_native_combat_path() {
+    fn a_real_kill_sequence_crosses_a_level_through_the_product_combat_path() {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
         // A named sequence of real hold enemies through the physical swing
         // path: the Orc (2003, xpReward 250), then two Giant Bats (2002 and

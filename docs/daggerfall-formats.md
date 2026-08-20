@@ -203,8 +203,8 @@ Goal: one untextured static mesh asset `mesh/privateers-hold` renderable/validat
    with a flat material, extend/duplicate the `render-presentation` contract test pattern, assert
    golden snapshot (bounds/handles) — no GPU needed.
 4. **Optional visual check**: load the same asset through Engine Studio or
-   Dagger's Rust-native host. Downstream code does not import the private
-   renderer backend.
+   Dagger's application-host product. Downstream code does not import the
+   private renderer backend.
 
 Why GLB handoff instead of a native OBJ/RDB path: the engine's importer, validation, sidecar/metadata,
 and packing already speak glTF; the Daggerfall parser stays a clean offline converter and no engine
@@ -238,8 +238,8 @@ import-format surface area is added.
 The plan in §3 was executed in `/home/dev/rusty-dagger`:
 - `crates/arena2` — Rust parsers for BSA/MAPS/RDB/ARCH3D/TEXTURE/PAL/PAK (unit-tested against the real data).
 - `crates/dagger-import` — CLI producing (a) a **textured GLB** (combined dungeon node + one named node per door, embedded PNGs) and (b) the engine-native **untextured** `privateers-hold.mesh.json`.
-- The real checked project is verified through `dagger-native-host`, which
-  reaches Engine presentation only through the public Rust facade. The former
-  downstream browser renderer harness was removed.
+- The real checked project is exercised through the application-host product,
+  with Dagger authority supplied by Rust and no downstream renderer
+  implementation.
 - mesh.json admitted by the engine's `rusty-asset-import` with zero diagnostics as `mesh/privateers-hold` (artifacts in `content/imported/`).
 - TEXTURE.nnn decode (incl. RecordRle), PAL.PAL palette, dungeon texture table + climate door remap (74→374 for Privateer's Hold Woodlands climate), and TEXTURE.000/.001 solid-colour virtual archives are all implemented — details in the rusty-dagger README.

@@ -51,7 +51,7 @@ current task state in the Den `rusty-dagger` project.
   the app has no gameplay evaluator and depends only on the bundled
   `@rusty-engine/application-host`, never renderer implementation packages.
 - `crates/dagger-studio-adapter` — Dagger-owned presentation boundary shared
-  by the read-only protocol-14 Studio adapter and `dagger-native-host`. It
+  by the read-only protocol-14 Studio adapter and `dagger-product-server`. It
   strictly decodes Dagger projection into Engine's public retained-frame
   types; unsupported Studio mutations fail closed until Dagger owns them.
 - `.rusty-studio.json` — trusted root-local registration that lets the
@@ -59,9 +59,6 @@ current task state in the Den `rusty-dagger` project.
   [docs/studio-host.md](docs/studio-host.md).
 - `content/` — generated assets (privateers-hold.glb, privateers-hold.mesh.json,
   imported/ engine artifacts)
-- `engine-render-check/` — migration pointer only. Dagger no longer owns
-  renderer TypeScript, HTML, canvas bootstrap, or renderer package imports;
-  Engine privately owns that boundary behind the Rust facade.
 
 ## Usage
 
@@ -76,11 +73,10 @@ scripts/regenerate.sh
 
 cargo test --workspace --locked
 cargo run -p dagger-runtime --bin dagger-walkthrough
-./scripts/verify-native-host.sh # real Engine host, X11 input, pick, resources, lifecycle
 pnpm install
 pnpm lab:build
-cargo run -p dagger-studio-adapter --bin dagger-native-host -- --browser-product
-# Open http://127.0.0.1:4274. The fixed application window starts in gameplay;
+cargo run -p dagger-studio-adapter --bin dagger-product-server
+# Open http://127.0.0.1:4274. The application starts in gameplay;
 # Open Dagger Lab or Escape switches to the internally scrolling Lab page
 # without resizing the Engine-owned canvas. Rust owns the connected runtime,
 # content bundle, input meaning, and authoritative readback. Return to play
@@ -93,16 +89,24 @@ curl http://127.0.0.1:4310/health
 # only .rusty-studio.json, project data, and dagger-studio-adapter.
 ```
 
-## Verification status (2026-08-08)
+## Current product path
+
+The canonical feature-development product is Angular mounted by
+`@rusty-engine/application-host`, backed by the Dagger Rust product service and
+the lightweight `dagger-product-server` transport. Engine owns the single
+renderer/canvas, Angular owns HUDs/windows/forms/accessibility, and Rust owns
+gameplay/runtime meaning and semantic actions. Tauri is the eventual
+publication adapter over the same service boundary; it is not part of ordinary
+feature certification or default CI.
+
+Current evidence includes:
 
 - Extraction: 5 RDB blocks (S0000999 start + 4 border), 365 model instances,
   17,651 verts / 8,683 tris, 81 unique textures — matches the checked importer
   proof-of-concept exactly (bounds X[-51.2,102.4] Y[0,51.1] Z[-102.4,51.2] m,
   glTF right-handed space).
 - GLB: structurally validated (JSON/accessor/bufferView/PNG decoding) and
-  rendered headless; the original three.js GLTFLoader harness
-  (`render-check/`) has since been removed in favor of the real
-  rusty-engine renderer proof below.
+  rendered headless.
 - Engine-native: `content/privateers-hold.mesh.json` is admitted by the
   engine's `rusty-asset-import` CLI with zero diagnostics as
   `mesh/privateers-hold`; `content/imported/` holds the published catalog
@@ -111,19 +115,7 @@ curl http://127.0.0.1:4310/health
   adapter projects the textured frame (defineTexture + textured materials +
   textureResources manifest); host serves exact content-addressed PNG bytes
   with hash verification.
-- Native render proof: `dagger-native-host` mounts Engine's private webview
-  adapter through `rusty_engine`, submits the real retained Privateer's Hold
-  frame and 121 exact texture resources, configures views/camera/resize,
-  reads state and renders, routes physical input and picks into authoritative
-  Dagger player state, proves a miss is a no-op, rejects corrupt resources
-  transactionally, and disposes. Engine Studio retains its separate browser
-  integration proof; neither path exposes renderer implementation packages to
-  Dagger source.
-- Native advanced diagnostics: Rust batches directional/environment animation,
-  authoritative patrol transforms, and bounded retained overlays. `G` toggles
-  authored/live sprite and heading facts; `N` toggles nearby committed navgrid
-  cells. The X11 proof covers on/off replacement and disposal.
-- Connected browser product: `dagger-native-host --browser-product` serves the
+- Connected browser product: `dagger-product-server` serves the
   Angular application and one 121-resource, 21,483,557-byte Rust-authored
   Privateer's Hold content bundle to Engine's public application host. Engine
   owns the sole canvas, renderer cadence, exact resource admission, atomic
@@ -135,8 +127,7 @@ curl http://127.0.0.1:4310/health
   Engine renderer facade. The browser proof samples
   the real resource-backed pixels, replaces the whole content aggregate,
   proves physical W input changes Rust authority while interface-mode W is a
-  no-op, and reopens against the same Rust session. No X11 display is involved;
-  the X11 native host remains the separate fixed-surface diagnostic above.
+  no-op, and reopens against the same Rust session.
 - Gameplay lab: the Angular surface is a read-only explorer over the
   committed gameplay package (`data/gameplay/dagger-core.package.json`,
   authored in `gameplay/src/`). It renders admitted actor/action/item/

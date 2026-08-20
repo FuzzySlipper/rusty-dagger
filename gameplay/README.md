@@ -42,7 +42,7 @@ House rules:
   generate from the dungeon's loot key (Privateer's Hold: MAPS.BSA type 2,
   Human Stronghold → "N") into standalone container entities. Generation is
   deterministic per entity (the spawn evidence stream); pickups happen in
-  the native host with the F verb, and the lab lists every container and its
+  the gameplay product with the F verb, and the lab lists every container and its
   generation receipt read-only.
 - Adding content (an actor, action, item, rule, encounter) is a one-file
   catalog edit. Extending the grammar itself means editing `authoring/` and
