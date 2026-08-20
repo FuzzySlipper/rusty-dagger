@@ -309,12 +309,16 @@ fn dungeon_collider_asset(
     }
     let positions = source
         .positions
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|vertex| [vertex[0] as f64, vertex[1] as f64, vertex[2] as f64])
         .collect::<Vec<_>>();
     let triangles = source
         .indices
-        .chunks_exact(3)
+        .as_chunks::<3>()
+        .0
+        .iter()
         .map(|triangle| [triangle[0], triangle[1], triangle[2]])
         .collect::<Vec<_>>();
     let mut min = [f64::INFINITY; 3];
