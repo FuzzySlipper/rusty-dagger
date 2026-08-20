@@ -6,7 +6,7 @@ cd "$repo_root"
 
 ./scripts/audit-engine-boundary.sh
 pnpm install --frozen-lockfile
-pnpm lab:check
+pnpm product:check
 pnpm gameplay:check
 cargo fmt --all --check
 cargo test --workspace --locked
@@ -16,6 +16,6 @@ python3 ./scripts/check-adapter.py
 cargo run -p dagger-runtime --bin dagger-gameplay-check --locked
 cargo run -p dagger-runtime --bin dagger-walkthrough --locked
 cargo run -p dagger-runtime --bin dagger-navgrid --locked -- --check
-# The Playwright browser gate (check-dagger-lab-browser.sh) is a manual
+# The Playwright browser gate (check-dagger-product-browser.sh) is a manual
 # opt-in diagnostic and deliberately not part of the automatic gate: the
 # automatic suite stays slim, fast, and deterministic.

@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { LabApiService } from './lab-api.service';
+import { LabToolsApiService } from './lab-tools-api.service';
 import {
   SpriteAnimation,
   SpriteEntry,
@@ -26,7 +26,7 @@ const THUMB_SIZE = 56;
   templateUrl: './sprites-panel.component.html',
 })
 export class SpritesPanelComponent implements OnInit, OnDestroy {
-  private readonly api = inject(LabApiService);
+  private readonly api = inject(LabToolsApiService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private timer: ReturnType<typeof setInterval> | undefined;
   /** Decoded atlas pixel sizes, keyed by entry. Manifests are not consistent
@@ -218,7 +218,7 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
   }
 
   assetUrl(entry: SpriteEntry): string {
-    return `/api/dagger-lab/sprites/asset/${entry.imagePath}`;
+    return `/api/dagger-tools/sprites/asset/${entry.imagePath}`;
   }
 
   entryTestId(entry: SpriteEntry): string {
@@ -233,7 +233,7 @@ export class SpritesPanelComponent implements OnInit, OnDestroy {
   // Edits mutate the raw manifest document and set the entry's "edited"
   // marker; the exporter preserves marked tunable fields across regeneration
   // (DAGGER_CLOBBER_SPRITES=1 ignores markers). Saving posts the whole
-  // manifest; the lab bridge then restamps the project documents.
+  // manifest; the tooling service then restamps the project documents.
 
   /** The raw manifest entry object behind a normalized sprite entry. */
   rawEntry(entry: SpriteEntry): Record<string, unknown> | undefined {

@@ -23,7 +23,7 @@ use serde::Serialize;
 
 use crate::{
     diagnostics::ProductDiagnostics,
-    lab_server::{LabCommand, LabReply, LabServer, ProductInput},
+    product_server::{ProductCommand, ProductInput, ProductReply, ProductServer},
     Options,
 };
 
@@ -39,7 +39,7 @@ const ENCOUNTER_GALLERY_ENCOUNTERS: &str =
     include_str!("../../../../../data/encounters/encounter-gallery.json");
 
 pub(crate) fn run(options: Options) -> Result<()> {
-    let port = options.lab_port;
+    let port = options.port;
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .and_then(Path::parent)
@@ -74,10 +74,10 @@ pub(crate) fn run(options: Options) -> Result<()> {
     pending_presentation.merge(initial.frame)?;
     pending_audio.merge(initial.presentation);
     let bundle = build_render_bundle(root, project).map_err(anyhow::Error::msg)?;
-    let server = LabServer::start(
-        options.lab_host,
+    let server = ProductServer::start(
+        options.host,
         port,
-        root.join("dist/apps/dagger-lab/browser"),
+        root.join("dist/apps/dagger-product/browser"),
         root.join("content"),
     )?;
     println!(
@@ -129,7 +129,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
 
 #[allow(clippy::too_many_arguments)]
 fn handle_command(
-    command: LabCommand,
+    command: ProductCommand,
     runtime: &mut DaggerRuntime,
     presentation: &mut ProductDiagnostics,
     pending_presentation: &mut PendingPresentation,
@@ -138,7 +138,7 @@ fn handle_command(
     accepted_input_sequence: &mut u64,
 ) -> Result<()> {
     match command {
-        LabCommand::ProductBootstrap { reply } => {
+        ProductCommand::ProductBootstrap { reply } => {
             pending_presentation.replace(presentation.snapshot()?)?;
             let _ = pending_audio.take()?;
             send_json(
@@ -147,7 +147,7 @@ fn handle_command(
                 &ProductBootstrap::new(runtime, bundle, *accepted_input_sequence)?,
             )
         }
-        LabCommand::ProductState { reply } => send_json(
+        ProductCommand::ProductState { reply } => send_json(
             reply,
             200,
             &product_state(
@@ -158,7 +158,7 @@ fn handle_command(
                 *accepted_input_sequence,
             )?,
         ),
-        LabCommand::ProductInput { input, reply } => {
+        ProductCommand::ProductInput { input, reply } => {
             let result = apply_product_input(runtime, presentation, accepted_input_sequence, input)
                 .and_then(|()| {
                     product_input_state(runtime, presentation, *accepted_input_sequence)
@@ -173,16 +173,18 @@ fn handle_command(
                 ),
             }
         }
-        LabCommand::Read { reply } => send_runtime_result(reply, runtime.lab_readout()),
-        LabCommand::Reset { reply } | LabCommand::Play { reply } => {
-            send_runtime_result(reply, runtime.reset_play_session())
+        ProductCommand::Readout { reply } => send_runtime_result(reply, runtime.product_readout()),
+        ProductCommand::Reset { reply } => send_runtime_result(reply, runtime.reset_play_session()),
+        ProductCommand::Jump { id, reply } => {
+            send_runtime_result(reply, runtime.jump_to_content(id))
         }
-        LabCommand::Jump { id, reply } => send_runtime_result(reply, runtime.jump_to_content(id)),
-        LabCommand::Equip { item, reply } => send_runtime_result(reply, runtime.equip_item(item)),
-        LabCommand::Unequip { slot, reply } => {
+        ProductCommand::Equip { item, reply } => {
+            send_runtime_result(reply, runtime.equip_item(item))
+        }
+        ProductCommand::Unequip { slot, reply } => {
             send_runtime_result(reply, runtime.unequip_slot(&slot))
         }
-        LabCommand::Grant {
+        ProductCommand::Grant {
             item,
             quantity,
             reply,
@@ -514,7 +516,7 @@ fn camera_pose(
 }
 
 fn send_runtime_result<T: Serialize>(
-    reply: Sender<LabReply>,
+    reply: Sender<ProductReply>,
     result: Result<T, dagger_runtime::RuntimeError>,
 ) -> Result<()> {
     match result {
@@ -527,8 +529,8 @@ fn send_runtime_result<T: Serialize>(
     }
 }
 
-fn send_json(reply: Sender<LabReply>, status: u16, value: &impl Serialize) -> Result<()> {
-    let response = LabReply {
+fn send_json(reply: Sender<ProductReply>, status: u16, value: &impl Serialize) -> Result<()> {
+    let response = ProductReply {
         status,
         body: serde_json::to_string(value).context("serialize connected Dagger response")?,
     };
@@ -668,7 +670,7 @@ mod tests {
         .expect("ordinary gallery attack without Lab focus");
         assert_eq!(
             runtime
-                .lab_readout()
+                .product_readout()
                 .expect("gallery readout")
                 .combat_attempts
                 .len(),
@@ -756,7 +758,7 @@ mod tests {
             input(1, &[], &["Digit1"], [0.0, 0.0]),
         )
         .expect("Rat route");
-        let rat = runtime.lab_readout().expect("Rat readout");
+        let rat = runtime.product_readout().expect("Rat readout");
         assert_eq!(
             rat.active_encounter.expect("active Rat").id,
             "rat-introduction"
@@ -769,7 +771,7 @@ mod tests {
             input(2, &[], &["Digit2"], [0.0, 0.0]),
         )
         .expect("Skeleton route");
-        let skeleton = runtime.lab_readout().expect("Skeleton readout");
+        let skeleton = runtime.product_readout().expect("Skeleton readout");
         assert_eq!(
             skeleton.active_encounter.expect("active Skeleton").id,
             "skeletal-guardroom"
@@ -825,7 +827,7 @@ mod tests {
         );
         assert_eq!(
             runtime
-                .lab_readout()
+                .product_readout()
                 .expect("readout")
                 .combat_attempts
                 .len(),

@@ -9,10 +9,10 @@ fi
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
-NG_CLI_ANALYTICS=false pnpm lab:build
+NG_CLI_ANALYTICS=false pnpm product:build
 gallery_args=()
 if [[ "${DAGGER_ENCOUNTER_GALLERY:-0}" == "1" ]]; then
   gallery_args+=(--encounter-gallery)
 fi
 exec cargo run -p dagger-studio-adapter --bin dagger-product-server -- \
-  "${gallery_args[@]}" "--lab-host=$1" "--lab-port=$2"
+  "${gallery_args[@]}" "--host=$1" "--port=$2"

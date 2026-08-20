@@ -1,7 +1,8 @@
 /**
- * Read-only lab contract: mirrors the Rust `LabReadout` — the committed
+ * Product-service contract: mirrors the Rust `ProductReadout` — the admitted
  * gameplay package's definitions plus live state and resolution explanation.
- * There is no editable document here; `gameplay/src` owns gameplay truth.
+ * Browser surfaces do not evaluate gameplay; `gameplay/src` authors inert
+ * definitions and Rust owns their meaning.
  */
 
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
@@ -378,7 +379,7 @@ export interface ProgressionReadout {
   readonly history: readonly ProgressionRecordReadout[];
 }
 
-export interface LabReadout {
+export interface ProductReadout {
   readonly gameplayPackage: GameplayPackageReadout;
   readonly moveSpeedUnitsPerSecond: number;
   readonly maxHealth: number;

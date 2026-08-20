@@ -4,11 +4,11 @@ import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { chromium } from '@playwright/test';
 
-const output = resolve(process.env.DAGGER_LAB_BROWSER_OUT ?? 'artifacts/dagger-lab');
+const output = resolve(process.env.DAGGER_PRODUCT_BROWSER_OUT ?? 'artifacts/dagger-product');
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
   headless: true,
-  executablePath: process.env.DAGGER_LAB_CHROMIUM ?? '/usr/bin/chromium',
+  executablePath: process.env.DAGGER_PRODUCT_CHROMIUM ?? '/usr/bin/chromium',
   args: ['--no-sandbox'],
 });
 
@@ -70,16 +70,16 @@ try {
 
   // All gameplay expectations below derive from the admitted package and the
   // live readout — never from literals duplicated in this script.
-  const initialLab = await labReadout(page);
-  const gameplayPackage = initialLab.gameplayPackage;
-  assert.equal(await page.getByTestId('max-health').innerText(), fixed(initialLab.maxHealth));
+  const initialProduct = await productReadout(page);
+  const gameplayPackage = initialProduct.gameplayPackage;
+  assert.equal(await page.getByTestId('max-health').innerText(), fixed(initialProduct.maxHealth));
   assert.equal(
     await page.getByTestId('player-stamina').innerText(),
-    `${fixed(initialLab.playerStats.currentStamina)} / ${fixed(initialLab.playerStats.maxStamina)}`,
+    `${fixed(initialProduct.playerStats.currentStamina)} / ${fixed(initialProduct.playerStats.maxStamina)}`,
   );
   assert.equal(
     await page.getByTestId('player-magicka').innerText(),
-    `${fixed(initialLab.playerStats.currentMagicka)} / ${fixed(initialLab.playerStats.maxMagicka)}`,
+    `${fixed(initialProduct.playerStats.currentMagicka)} / ${fixed(initialProduct.playerStats.maxMagicka)}`,
   );
   await page.getByTestId('definitions-panel').waitFor();
   const spawnPosition = await page.getByTestId('player-position').innerText();
@@ -129,7 +129,7 @@ try {
   assert.match(thiefLivePosition, /Authoritative live patrol position/i);
   // The Thief is a class-career combatant whose actor and live resources come
   // from the admitted package.
-  const thiefEntity = initialLab.content.find((entity) => entity.id === 2001);
+  const thiefEntity = initialProduct.content.find((entity) => entity.id === 2001);
   assert.ok(thiefEntity, 'Thief 2001 is present in the live readout');
   const thiefActor = actorForMobile(gameplayPackage, thiefEntity.reference.mobileId);
   assert.ok(thiefActor?.behavior, 'Thief mobile has an authored actor with behavior');
@@ -162,7 +162,7 @@ try {
   await page.getByTestId('content-filter').fill('rat');
   await page.getByTestId('content-2007').click();
   await page.getByTestId('content-name').filter({ hasText: 'Rat' }).waitFor();
-  const ratEntity = initialLab.content.find((entity) => entity.id === 2007);
+  const ratEntity = initialProduct.content.find((entity) => entity.id === 2007);
   assert.ok(ratEntity, 'Rat 2007 is present in the live readout');
   const ratActor = actorForMobile(gameplayPackage, ratEntity.reference.mobileId);
   assert.ok(ratActor?.behavior, 'Rat mobile has an authored actor with behavior');
@@ -197,7 +197,7 @@ try {
 
   // Character panel: the live kill-XP progression state renders read-only,
   // every value sourced from the authoritative readout (never literals).
-  const initialProgression = initialLab.progression;
+  const initialProgression = initialProduct.progression;
   assert.ok(initialProgression, 'progression readout is present');
   assert.equal(await page.getByTestId('progression-level').innerText(), String(initialProgression.level));
   assert.equal(await page.getByTestId('progression-xp').innerText(), String(initialProgression.xp));
@@ -222,7 +222,7 @@ try {
     2007,
     spawnPosition,
     ratLive,
-    initialLab.playerStats,
+    initialProduct.playerStats,
     packageActionIds,
   );
 
@@ -241,7 +241,7 @@ try {
   await page.getByTestId('content-2007').click();
   await page.screenshot({ path: `${output}/explorer-desktop.png`, fullPage: true });
 
-  // Sprite review tab: derived manifests publish through the lab bridge, the
+  // Sprite review tab: derived manifests publish through the tooling API, the
   // Rat atlas renders through the asset route, its attack animation advances
   // real frames at authored timing, and directional review reaches the back
   // orientation. The tab must not add a canvas (Engine owns the sole one).
@@ -331,7 +331,7 @@ async function assertSpriteReviewTab(page, output) {
   await page.getByTestId('sprite-save').click();
   await page.getByTestId('sprite-save-final').filter({ hasText: 'restamped' }).waitFor({ timeout: 60_000 });
   let manifestIndex = await page.evaluate(async () =>
-    (await fetch('/api/dagger-lab/sprites/index')).json(),
+    (await fetch('/api/dagger-tools/sprites/index')).json(),
   );
   let rat = manifestIndex.manifests['enemy-manifest.json'].enemies.find((e) => e.mobileId === 0);
   assert.equal(rat.states.attack.fps, 12, 'edited attack fps did not persist to the manifest');
@@ -342,7 +342,7 @@ async function assertSpriteReviewTab(page, output) {
   await page.getByTestId('sprite-save').click();
   await page.getByTestId('sprite-save-final').filter({ hasText: 'restamped' }).waitFor({ timeout: 60_000 });
   manifestIndex = await page.evaluate(async () =>
-    (await fetch('/api/dagger-lab/sprites/index')).json(),
+    (await fetch('/api/dagger-tools/sprites/index')).json(),
   );
   rat = manifestIndex.manifests['enemy-manifest.json'].enemies.find((e) => e.mobileId === 0);
   assert.equal(rat.states.attack.fps, Number(classicFps), 'classic fps was not restored');
@@ -352,7 +352,7 @@ async function assertSpriteReviewTab(page, output) {
   await page.getByTestId('sprite-save').click();
   await page.getByTestId('sprite-save-final').filter({ hasText: 'restamped' }).waitFor({ timeout: 60_000 });
   manifestIndex = await page.evaluate(async () =>
-    (await fetch('/api/dagger-lab/sprites/index')).json(),
+    (await fetch('/api/dagger-tools/sprites/index')).json(),
   );
   rat = manifestIndex.manifests['enemy-manifest.json'].enemies.find((e) => e.mobileId === 0);
   assert.equal(rat.edited, undefined, 'edit marker was not cleared from the manifest');
@@ -569,7 +569,7 @@ async function assertStalePollFailureFence(page) {
     }
     await route.continue();
   };
-  await page.route('**/api/dagger-lab', staleHandler);
+  await page.route('**/api/dagger-product/readout', staleHandler);
   await stalePollIntercepted;
   await page.getByTestId('reset').click();
   await page.getByTestId('connection').filter({ hasText: 'Connected' }).waitFor();
@@ -580,7 +580,7 @@ async function assertStalePollFailureFence(page) {
     0,
     'stale poll rejection overwrote a newer successful command',
   );
-  await page.unroute('**/api/dagger-lab', staleHandler);
+  await page.unroute('**/api/dagger-product/readout', staleHandler);
 
   let currentPollObserved = false;
   let currentPollStarted;
@@ -596,11 +596,11 @@ async function assertStalePollFailureFence(page) {
     }
     await route.continue();
   };
-  await page.route('**/api/dagger-lab', currentHandler);
+  await page.route('**/api/dagger-product/readout', currentHandler);
   await currentPollIntercepted;
   await page.getByTestId('connection').filter({ hasText: 'Waiting for product host' }).waitFor();
   assert.ok(await page.locator('[role="alert"]').count() > 0, 'current poll failure was hidden');
-  await page.unroute('**/api/dagger-lab', currentHandler);
+  await page.unroute('**/api/dagger-product/readout', currentHandler);
   await page.getByTestId('connection').filter({ hasText: 'Connected' }).waitFor();
 }
 
@@ -711,10 +711,10 @@ function fixed(value) {
   return value.toFixed(2);
 }
 
-async function labReadout(page) {
+async function productReadout(page) {
   return page.evaluate(async () => {
-    const response = await fetch('/api/dagger-lab', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`lab readout failed: ${response.status}`);
+    const response = await fetch('/api/dagger-product/readout', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`product readout failed: ${response.status}`);
     return response.json();
   });
 }

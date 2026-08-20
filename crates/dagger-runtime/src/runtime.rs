@@ -134,12 +134,13 @@ pub const LOOT_INTERACT_REACH: f32 = 2.5;
 /// be read from the player's live `level` stat at generation time.
 const LOOT_GENERATION_LEVEL: i64 = 1;
 
-/// Lab readout of admitted catalog definitions, live state, and resolution
-/// explanation. The browser does not edit gameplay definitions; bounded live
-/// mutations route through Rust-owned semantic commands.
+/// Product-service readout of admitted catalog definitions, live state, and
+/// resolution explanation. Browser surfaces do not evaluate or edit gameplay
+/// definitions; bounded live mutations route through Rust-owned semantic
+/// commands.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct LabReadout {
+pub struct ProductReadout {
     pub gameplay_package: GameplayPackageReadout,
     pub move_speed_units_per_second: f32,
     pub max_health: f32,
@@ -221,7 +222,7 @@ pub struct PlayerInventoryReadout {
 }
 
 /// The committed gameplay package's definitions plus its admission
-/// fingerprint, served read-only for the lab's definition panels.
+/// fingerprint, served read-only for product and explorer definition panels.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GameplayPackageReadout {
@@ -717,7 +718,7 @@ impl DaggerRuntime {
             })?;
         // Only enemies patrol; treasure containers are static anchors. Their
         // authored positions are re-merged below so the aimed queries and the
-        // lab keep seeing them.
+        // product readout and attached tools keep seeing them.
         let spawns = self
             .content_entities
             .iter()
@@ -806,7 +807,7 @@ impl DaggerRuntime {
         Ok(())
     }
 
-    pub fn start_named_encounter(&mut self, id: &str) -> Result<LabReadout, RuntimeError> {
+    pub fn start_named_encounter(&mut self, id: &str) -> Result<ProductReadout, RuntimeError> {
         let encounter = self
             .named_encounters
             .iter()
@@ -817,7 +818,7 @@ impl DaggerRuntime {
         self.active_encounter_id = Some(encounter.id);
         self.active_encounter_outcome = NamedEncounterOutcome::Active;
         self.active_encounter_engaged = false;
-        self.lab_readout()
+        self.product_readout()
     }
 
     pub fn route_named_encounter(&mut self, route_code: &str) -> Result<bool, RuntimeError> {
@@ -1228,7 +1229,7 @@ impl DaggerRuntime {
     /// restarts the level-up roll sequence so a retried session reproduces
     /// the same hp rolls. The lab jump verb only heals — it preserves
     /// progression within a session.
-    pub fn reset_play_session(&mut self) -> Result<LabReadout, RuntimeError> {
+    pub fn reset_play_session(&mut self) -> Result<ProductReadout, RuntimeError> {
         self.reset_progression()?;
         if let Some(active) = self.active_encounter_id.clone() {
             return self.start_named_encounter(&active);
@@ -1264,13 +1265,13 @@ impl DaggerRuntime {
                 .collect();
         }
         self.focused_content_id = None;
-        self.lab_readout()
+        self.product_readout()
     }
 
     /// Reset the player beside one admitted live content entity and face it.
     /// The collision scene chooses the floor; Angular never supplies a raw
     /// teleport coordinate.
-    pub fn jump_to_content(&mut self, id: u64) -> Result<LabReadout, RuntimeError> {
+    pub fn jump_to_content(&mut self, id: u64) -> Result<ProductReadout, RuntimeError> {
         let target = self
             .content_live_positions
             .get(&id)
@@ -1341,7 +1342,7 @@ impl DaggerRuntime {
                 self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
                 self.active_encounter_engaged = false;
                 self.focused_content_id = Some(id);
-                return self.lab_readout();
+                return self.product_readout();
             }
         }
         self.set_player_position(original_position)?;
@@ -1353,7 +1354,7 @@ impl DaggerRuntime {
     /// Start a first-person attack from a physical input edge. A target is not
     /// required to begin the swing; Dagger resolves the aimed contact only
     /// when the Rust-owned action reaches its contact frame.
-    pub fn attack_focused_target(&mut self) -> Result<LabReadout, RuntimeError> {
+    pub fn attack_focused_target(&mut self) -> Result<ProductReadout, RuntimeError> {
         if self.active_encounter_id.is_some() {
             self.active_encounter_engaged = true;
         }
@@ -1373,7 +1374,7 @@ impl DaggerRuntime {
                 stamina_cost: 0.0,
                 stamina_after: stamina_before,
             });
-            return self.lab_readout();
+            return self.product_readout();
         }
         // The authored melee action owns its stamina cost and spends it
         // during resolution; scheduling here only gates the swing cooldown.
@@ -1407,7 +1408,7 @@ impl DaggerRuntime {
             died: false,
             contact_resolved: false,
         });
-        self.lab_readout()
+        self.product_readout()
     }
 
     fn resolve_melee_contact(&mut self) -> Result<(), RuntimeError> {
@@ -1961,8 +1962,8 @@ impl DaggerRuntime {
 
     /// Equip verb: equip one carried item entity into its preferred slot,
     /// swapping out the occupant when the slot is taken. An upstream
-    /// rejection is logged (not thrown) so the lab can show the reason.
-    pub fn equip_item(&mut self, item: u64) -> Result<LabReadout, RuntimeError> {
+    /// rejection is logged (not thrown) so product surfaces can show the reason.
+    pub fn equip_item(&mut self, item: u64) -> Result<ProductReadout, RuntimeError> {
         use rusty_engine::gameplay_mechanics::{
             EquipmentEquipRequest, EquipmentService, EquipmentSlotId, EquipmentSwapRequest,
         };
@@ -1977,7 +1978,7 @@ impl DaggerRuntime {
                 None,
                 "not a carried equippable item".to_string(),
             );
-            return self.lab_readout();
+            return self.product_readout();
         };
         let item_id = item_id.clone();
         let Some(slot) = self.preferred_equip_slot(&item_id) else {
@@ -1988,7 +1989,7 @@ impl DaggerRuntime {
                 None,
                 "no legal equipment slot".to_string(),
             );
-            return self.lab_readout();
+            return self.product_readout();
         };
         let slot_id = EquipmentSlotId::parse(slot.clone()).map_err(|error| {
             RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
@@ -2067,12 +2068,12 @@ impl DaggerRuntime {
                 );
             }
         }
-        self.lab_readout()
+        self.product_readout()
     }
 
     /// Unequip verb: strip whatever occupies one equipment slot. An empty or
     /// unknown slot is logged as a rejection, not thrown.
-    pub fn unequip_slot(&mut self, slot: &str) -> Result<LabReadout, RuntimeError> {
+    pub fn unequip_slot(&mut self, slot: &str) -> Result<ProductReadout, RuntimeError> {
         use rusty_engine::gameplay_mechanics::{
             EquipmentService, EquipmentSlotId, EquipmentUnequipRequest,
         };
@@ -2092,7 +2093,7 @@ impl DaggerRuntime {
                 None,
                 "slot is empty".to_string(),
             );
-            return self.lab_readout();
+            return self.product_readout();
         };
         let item_entity = assignment.item;
         let item_name = self
@@ -2141,7 +2142,7 @@ impl DaggerRuntime {
                 format!("{error:?}"),
             ),
         }
-        self.lab_readout()
+        self.product_readout()
     }
 
     /// Experiment-lab grant verb: grant a fungible item stack through
@@ -2149,7 +2150,11 @@ impl DaggerRuntime {
     /// — they would need entity allocation and containment, which the spawn
     /// loadout already owns. Over-capacity grants reject upstream and the
     /// rejection lands in the equipment log with the reason.
-    pub fn grant_item(&mut self, item: &str, quantity: u64) -> Result<LabReadout, RuntimeError> {
+    pub fn grant_item(
+        &mut self,
+        item: &str,
+        quantity: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
         use rusty_engine::gameplay_mechanics::{
             InventoryMutationRequest, InventoryService, ItemDefinitionId,
         };
@@ -2171,16 +2176,16 @@ impl DaggerRuntime {
                     self,
                     "not a fungible item (unique items equip, not stack)".to_string(),
                 );
-                return self.lab_readout();
+                return self.product_readout();
             }
             None => {
                 reject(self, "unknown item".to_string());
-                return self.lab_readout();
+                return self.product_readout();
             }
         };
         if quantity == 0 {
             reject(self, "quantity must be positive".to_string());
-            return self.lab_readout();
+            return self.product_readout();
         }
         let item_id = ItemDefinitionId::parse(definition.id.clone()).map_err(|error| {
             RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
@@ -2215,7 +2220,7 @@ impl DaggerRuntime {
             }),
             Err(error) => reject(self, format!("{error:?}")),
         }
-        self.lab_readout()
+        self.product_readout()
     }
 
     /// Interact/pickup verb (KeyF in the gameplay product): an aimed-interact
@@ -2234,7 +2239,7 @@ impl DaggerRuntime {
     /// legality. Every transfer and the stopping rejection land in the
     /// equipment log under a `loot:<container>` operation. An empty
     /// container logs the donor's "nothing to take" note.
-    pub fn interact_loot(&mut self) -> Result<LabReadout, RuntimeError> {
+    pub fn interact_loot(&mut self) -> Result<ProductReadout, RuntimeError> {
         use rusty_engine::gameplay_mechanics::{
             EquipmentService, InventoryService, InventoryTransferRequest, ItemTransferRequest,
         };
@@ -2262,7 +2267,7 @@ impl DaggerRuntime {
                 None,
                 format!("no loot container within {LOOT_INTERACT_REACH} units of the aim"),
             );
-            return self.lab_readout();
+            return self.product_readout();
         };
         let entity = self
             .content_entities
@@ -2287,7 +2292,7 @@ impl DaggerRuntime {
             // Dead enemy whose definition carries no loot table (rat, bat):
             // classic generates no loot for it.
             no_treasure_note(self);
-            return self.lab_readout();
+            return self.product_readout();
         };
         let from_owner = container.entity();
         let view = InventoryService::view(
@@ -2304,7 +2309,7 @@ impl DaggerRuntime {
         let items = view.unique_items().to_vec();
         if stacks.is_empty() && items.is_empty() {
             no_treasure_note(self);
-            return self.lab_readout();
+            return self.product_readout();
         }
         let to_owner = self.player_actor_entity();
         let (operation, source) = equipment_operation();
@@ -2346,7 +2351,7 @@ impl DaggerRuntime {
                         Some(quantity),
                         format!("{error:?}"),
                     );
-                    return self.lab_readout();
+                    return self.product_readout();
                 }
             }
         }
@@ -2386,11 +2391,11 @@ impl DaggerRuntime {
                         None,
                         format!("{error:?}"),
                     );
-                    return self.lab_readout();
+                    return self.product_readout();
                 }
             }
         }
-        self.lab_readout()
+        self.product_readout()
     }
 
     /// Equip-cycle verb (KeyE in the gameplay product): each press equips the next
@@ -2400,10 +2405,10 @@ impl DaggerRuntime {
     /// unequips the next item after the cursor instead, so the verb can also
     /// strip gear. Every attempt lands in the equipment log, rejections
     /// included.
-    pub fn equip_cycle(&mut self) -> Result<LabReadout, RuntimeError> {
+    pub fn equip_cycle(&mut self) -> Result<ProductReadout, RuntimeError> {
         let carried = self.carried_equippables()?;
         if carried.is_empty() {
-            return self.lab_readout();
+            return self.product_readout();
         }
         let equipment = self.player_equipment_component()?;
         let equipped = |entity: EntityId| {
@@ -2502,7 +2507,7 @@ impl DaggerRuntime {
         });
     }
 
-    pub fn lab_readout(&self) -> Result<LabReadout, RuntimeError> {
+    pub fn product_readout(&self) -> Result<ProductReadout, RuntimeError> {
         let position = self.player_position()?;
         let encounter_states = self
             .patrol
@@ -2577,7 +2582,7 @@ impl DaggerRuntime {
                     .find(|encounter| encounter.id == id)
             })
             .map(|encounter| self.named_encounter_readout(encounter));
-        Ok(LabReadout {
+        Ok(ProductReadout {
             gameplay_package: GameplayPackageReadout {
                 fingerprint: self.gameplay_catalog.fingerprint().to_string(),
                 payload: self.gameplay_payload.clone(),
@@ -2903,7 +2908,7 @@ struct MeleeContactResult {
     died: bool,
 }
 
-/// Fixed operation/source identity for the lab equipment verbs.
+/// Fixed operation/source identity for product equipment verbs.
 fn equipment_operation() -> (
     rusty_engine::gameplay_mechanics::OperationId,
     rusty_engine::gameplay_mechanics::SourceInstanceIdentity,
@@ -3041,7 +3046,7 @@ fn spawn_live_actors(
                         &evidence,
                     )
                     .map_err(RuntimeError::Gameplay)?;
-                    // Track the corpse container so the lab can enumerate it:
+                    // Track the corpse container so product readout can enumerate it:
                     // the contents live in the actor's own inventory.
                     let container_entity =
                         state.actor(&instance).expect("just-spawned actor").entity();

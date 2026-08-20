@@ -15,7 +15,7 @@ use anyhow::{Context, Result};
 
 const MAX_REQUEST_BYTES: usize = 64 * 1024;
 // Manifest write bodies carry the whole document (enemy-manifest.json is
-// ~140KB of frame rects); the lab bridge is a LAN operator tool, so allow
+// ~140KB of frame rects); the tooling API is a LAN operator surface, so allow
 // generous bodies.
 const MAX_MANIFEST_WRITE_BYTES: usize = 8 * 1024 * 1024;
 const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(2);
@@ -25,42 +25,71 @@ const REQUEST_READ_TIMEOUT: Duration = Duration::from_secs(2);
 const RESPONSE_WRITE_TIMEOUT: Duration = Duration::from_secs(60);
 const RUNTIME_REPLY_TIMEOUT: Duration = Duration::from_secs(30);
 
-pub(crate) enum LabCommand {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ApiSurface {
+    Product,
+    Tools,
+}
+
+fn api_surface(path: &str) -> Option<ApiSurface> {
+    if matches!(
+        path,
+        "/api/dagger-product/bootstrap"
+            | "/api/dagger-product/state"
+            | "/api/dagger-product/input"
+            | "/api/dagger-product/readout"
+            | "/api/dagger-product/session/reset"
+            | "/api/dagger-product/equipment/equip"
+            | "/api/dagger-product/equipment/unequip"
+    ) {
+        Some(ApiSurface::Product)
+    } else if matches!(
+        path,
+        "/api/dagger-tools/content/jump"
+            | "/api/dagger-tools/inventory/grant"
+            | "/api/dagger-tools/sprites/index"
+    ) || path.starts_with("/api/dagger-tools/sprites/asset/")
+        || path.starts_with("/api/dagger-tools/sprites/manifest/")
+    {
+        Some(ApiSurface::Tools)
+    } else {
+        None
+    }
+}
+
+pub(crate) enum ProductCommand {
     ProductBootstrap {
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
     ProductState {
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
     ProductInput {
         input: ProductInput,
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
-    Read {
-        reply: Sender<LabReply>,
+    Readout {
+        reply: Sender<ProductReply>,
     },
     Reset {
-        reply: Sender<LabReply>,
-    },
-    Play {
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
     Jump {
         id: u64,
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
     Equip {
         item: u64,
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
     Unequip {
         slot: String,
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
     Grant {
         item: String,
         quantity: u64,
-        reply: Sender<LabReply>,
+        reply: Sender<ProductReply>,
     },
 }
 
@@ -76,19 +105,19 @@ pub(crate) struct ProductInput {
     pub(crate) button_pressed_edges: u16,
 }
 
-pub(crate) struct LabReply {
+pub(crate) struct ProductReply {
     pub(crate) status: u16,
     pub(crate) body: String,
 }
 
-pub(crate) struct LabServer {
-    commands: Receiver<LabCommand>,
+pub(crate) struct ProductServer {
+    commands: Receiver<ProductCommand>,
     shutdown: Arc<AtomicBool>,
     worker: Option<JoinHandle<()>>,
     port: u16,
 }
 
-impl LabServer {
+impl ProductServer {
     pub(crate) fn start(
         host: IpAddr,
         port: u16,
@@ -96,16 +125,16 @@ impl LabServer {
         content_root: PathBuf,
     ) -> Result<Self> {
         let listener = TcpListener::bind((host, port))
-            .with_context(|| format!("bind Dagger Lab bridge on {host}:{port}"))?;
+            .with_context(|| format!("bind Dagger product service on {host}:{port}"))?;
         listener
             .set_nonblocking(true)
-            .context("make Dagger Lab bridge nonblocking")?;
+            .context("make Dagger product service nonblocking")?;
         let port = listener.local_addr()?.port();
         let (send_command, commands) = mpsc::channel();
         let shutdown = Arc::new(AtomicBool::new(false));
         let worker_shutdown = Arc::clone(&shutdown);
         let worker = thread::Builder::new()
-            .name("dagger-lab-http".to_string())
+            .name("dagger-product-http".to_string())
             .spawn(move || {
                 run(
                     listener,
@@ -115,7 +144,7 @@ impl LabServer {
                     content_root,
                 )
             })
-            .context("start Dagger Lab bridge thread")?;
+            .context("start Dagger product service thread")?;
         Ok(Self {
             commands,
             shutdown,
@@ -128,12 +157,12 @@ impl LabServer {
         self.port
     }
 
-    pub(crate) fn try_recv(&self) -> Result<LabCommand, mpsc::TryRecvError> {
+    pub(crate) fn try_recv(&self) -> Result<ProductCommand, mpsc::TryRecvError> {
         self.commands.try_recv()
     }
 }
 
-impl Drop for LabServer {
+impl Drop for ProductServer {
     fn drop(&mut self) {
         self.shutdown.store(true, Ordering::Release);
         if let Some(worker) = self.worker.take() {
@@ -144,7 +173,7 @@ impl Drop for LabServer {
 
 fn run(
     listener: TcpListener,
-    commands: Sender<LabCommand>,
+    commands: Sender<ProductCommand>,
     shutdown: Arc<AtomicBool>,
     static_root: PathBuf,
     content_root: PathBuf,
@@ -161,7 +190,7 @@ fn run(
                     let _ = write_response(
                         &mut stream,
                         500,
-                        &format!(r#"{{"error":"Dagger Lab bridge failed: {error}"}}"#),
+                        &format!(r#"{{"error":"Dagger product service failed: {error}"}}"#),
                     );
                 }
             }
@@ -175,7 +204,7 @@ fn run(
 
 fn handle_request(
     stream: &mut TcpStream,
-    commands: &Sender<LabCommand>,
+    commands: &Sender<ProductCommand>,
     static_root: &Path,
     content_root: &Path,
 ) -> Result<()> {
@@ -188,18 +217,21 @@ fn handle_request(
     }
     // Sprite review reads derived content straight from disk: no runtime
     // authority is involved, so these never enter the command channel.
-    if request.method == "GET" && request.path == "/api/dagger-lab/sprites/index" {
+    if request.method == "GET" && request.path == "/api/dagger-tools/sprites/index" {
         return serve_sprite_index(stream, content_root);
     }
     if request.method == "GET" {
-        if let Some(name) = request.path.strip_prefix("/api/dagger-lab/sprites/asset/") {
+        if let Some(name) = request
+            .path
+            .strip_prefix("/api/dagger-tools/sprites/asset/")
+        {
             return serve_sprite_asset(stream, content_root, name);
         }
     }
     if request.method == "POST" {
         if let Some(name) = request
             .path
-            .strip_prefix("/api/dagger-lab/sprites/manifest/")
+            .strip_prefix("/api/dagger-tools/sprites/manifest/")
         {
             return write_sprite_manifest(stream, content_root, name, &request.body);
         }
@@ -207,13 +239,18 @@ fn handle_request(
     if request.method == "GET" && !request.path.starts_with("/api/") {
         return serve_static(stream, static_root, &request.path);
     }
+    if request.path.starts_with("/api/") && api_surface(&request.path).is_none() {
+        return write_response(stream, 404, r#"{"error":"unknown Dagger product route"}"#);
+    }
     let (send_reply, receive_reply) = mpsc::channel();
     let command =
         match (request.method.as_str(), request.path.as_str()) {
             ("GET", "/api/dagger-product/bootstrap") => {
-                LabCommand::ProductBootstrap { reply: send_reply }
+                ProductCommand::ProductBootstrap { reply: send_reply }
             }
-            ("GET", "/api/dagger-product/state") => LabCommand::ProductState { reply: send_reply },
+            ("GET", "/api/dagger-product/state") => {
+                ProductCommand::ProductState { reply: send_reply }
+            }
             ("POST", "/api/dagger-product/input") => {
                 let input = match serde_json::from_str(&request.body) {
                     Ok(input) => input,
@@ -224,15 +261,16 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                LabCommand::ProductInput {
+                ProductCommand::ProductInput {
                     input,
                     reply: send_reply,
                 }
             }
-            ("GET", "/api/dagger-lab") => LabCommand::Read { reply: send_reply },
-            ("POST", "/api/dagger-lab/reset") => LabCommand::Reset { reply: send_reply },
-            ("POST", "/api/dagger-lab/play") => LabCommand::Play { reply: send_reply },
-            ("POST", "/api/dagger-lab/content/jump") => {
+            ("GET", "/api/dagger-product/readout") => ProductCommand::Readout { reply: send_reply },
+            ("POST", "/api/dagger-product/session/reset") => {
+                ProductCommand::Reset { reply: send_reply }
+            }
+            ("POST", "/api/dagger-tools/content/jump") => {
                 let body: JumpRequest = match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
@@ -242,12 +280,12 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                LabCommand::Jump {
+                ProductCommand::Jump {
                     id: body.id,
                     reply: send_reply,
                 }
             }
-            ("POST", "/api/dagger-lab/equipment/equip") => {
+            ("POST", "/api/dagger-product/equipment/equip") => {
                 let body: EquipRequest = match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
@@ -257,12 +295,12 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                LabCommand::Equip {
+                ProductCommand::Equip {
                     item: body.item,
                     reply: send_reply,
                 }
             }
-            ("POST", "/api/dagger-lab/equipment/unequip") => {
+            ("POST", "/api/dagger-product/equipment/unequip") => {
                 let body: UnequipRequest = match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
@@ -272,12 +310,12 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                LabCommand::Unequip {
+                ProductCommand::Unequip {
                     slot: body.slot,
                     reply: send_reply,
                 }
             }
-            ("POST", "/api/dagger-lab/inventory/grant") => {
+            ("POST", "/api/dagger-tools/inventory/grant") => {
                 let body: GrantRequest = match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
@@ -287,14 +325,14 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                LabCommand::Grant {
+                ProductCommand::Grant {
                     item: body.item,
                     quantity: body.quantity,
                     reply: send_reply,
                 }
             }
             _ => {
-                return write_response(stream, 404, r#"{"error":"unknown Dagger Lab route"}"#);
+                return write_response(stream, 404, r#"{"error":"unknown Dagger product route"}"#);
             }
         };
     commands
@@ -333,7 +371,7 @@ struct GrantRequest {
 fn serve_static(stream: &mut TcpStream, root: &Path, request_path: &str) -> Result<()> {
     let request_path = request_path.split('?').next().unwrap_or(request_path);
     if request_path.contains("..") {
-        return write_response(stream, 404, r#"{"error":"unknown Dagger Lab asset"}"#);
+        return write_response(stream, 404, r#"{"error":"unknown Dagger product asset"}"#);
     }
     let relative = if request_path == "/" {
         "index.html"
@@ -344,7 +382,7 @@ fn serve_static(stream: &mut TcpStream, root: &Path, request_path: &str) -> Resu
     let bytes = match std::fs::read(&path) {
         Ok(bytes) => bytes,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return write_response(stream, 404, r#"{"error":"unknown Dagger Lab asset"}"#)
+            return write_response(stream, 404, r#"{"error":"unknown Dagger product asset"}"#)
         }
         Err(error) => return Err(error).with_context(|| format!("read {}", path.display())),
     };
@@ -589,7 +627,7 @@ fn read_request(stream: &mut TcpStream) -> Result<HttpRequest> {
         .transpose()
         .context("parse Content-Length")?
         .unwrap_or(0);
-    let body_cap = if path.starts_with("/api/dagger-lab/sprites/manifest/") {
+    let body_cap = if path.starts_with("/api/dagger-tools/sprites/manifest/") {
         MAX_MANIFEST_WRITE_BYTES
     } else {
         MAX_REQUEST_BYTES
@@ -639,4 +677,38 @@ fn write_bytes_response(
     .context("write HTTP response")?;
     stream.write_all(body).context("write HTTP response body")?;
     stream.flush().context("flush HTTP response")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn product_and_tool_routes_have_distinct_neutral_surfaces() {
+        for path in [
+            "/api/dagger-product/bootstrap",
+            "/api/dagger-product/readout",
+            "/api/dagger-product/session/reset",
+            "/api/dagger-product/equipment/equip",
+        ] {
+            assert_eq!(api_surface(path), Some(ApiSurface::Product), "{path}");
+        }
+        for path in [
+            "/api/dagger-tools/content/jump",
+            "/api/dagger-tools/inventory/grant",
+            "/api/dagger-tools/sprites/index",
+            "/api/dagger-tools/sprites/asset/enemies/rat.png",
+            "/api/dagger-tools/sprites/manifest/enemy-manifest.json",
+        ] {
+            assert_eq!(api_surface(path), Some(ApiSurface::Tools), "{path}");
+        }
+        for retired in [
+            "/api/dagger-lab",
+            "/api/dagger-lab/reset",
+            "/api/dagger-lab/equipment/equip",
+            "/api/dagger-lab/sprites/index",
+        ] {
+            assert_eq!(api_surface(retired), None, "{retired}");
+        }
+    }
 }

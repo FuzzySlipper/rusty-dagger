@@ -28,7 +28,7 @@ proposals and investigations are Board records, not current instructions.
   and `dagger-product-server`.
 - `gameplay/src` — TypeScript gameplay authoring; materializes into
   `data/gameplay`.
-- `apps/dagger-lab` — Angular product UI mounted through Engine's public
+- `apps/dagger-product` — Angular product UI mounted through Engine's public
   application host.
 - `content` — committed generated product assets and project documents.
 
@@ -50,7 +50,7 @@ scripts/regenerate.sh
 # Build authored gameplay and the Angular product
 pnpm install
 pnpm gameplay:build
-pnpm lab:build
+pnpm product:build
 
 # Run the connected product, then open http://127.0.0.1:4274
 cargo run -p dagger-studio-adapter --bin dagger-product-server
@@ -59,7 +59,7 @@ cargo run -p dagger-studio-adapter --bin dagger-product-server
 scripts/verify.sh
 
 # Manual browser diagnostic for browser-visible product changes
-scripts/check-dagger-lab-browser.sh
+scripts/check-dagger-product-browser.sh
 ```
 
 Run the importer directly when working on extraction:
@@ -91,5 +91,5 @@ file/record provenance while runtime code consumes semantic asset IDs. See
 [Content import, formats, and provenance](den://documents/rusty-dagger/content-import-and-provenance)
 for the consultation and conversion contract.
 
-Angular production builds emit `dist/apps/dagger-lab/3rdpartylicenses.txt`;
+Angular production builds emit `dist/apps/dagger-product/3rdpartylicenses.txt`;
 publication packaging must retain the applicable generated dependency notices.

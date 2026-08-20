@@ -8,10 +8,10 @@
     "gameplay:typecheck": "tsc -p gameplay/tsconfig.json --noEmit",
     "gameplay:build": "tsc -p gameplay/tsconfig.json && node gameplay/scripts/materialize.mjs",
     "gameplay:check": "pnpm gameplay:build && git diff --exit-code -- data/gameplay/",
-    "lab:build": "ng build dagger-lab",
-    "lab:serve": "ng serve dagger-lab --host 127.0.0.1 --port 4200 --proxy-config apps/dagger-lab/proxy.conf.json",
-    "lab:typecheck": "tsc -p apps/dagger-lab/tsconfig.app.json --noEmit",
-    "lab:check": "pnpm lab:typecheck && pnpm lab:build"
+    "product:build": "ng build dagger-product",
+    "product:serve": "ng serve dagger-product --host 127.0.0.1 --port 4200 --proxy-config apps/dagger-product/proxy.conf.json",
+    "product:typecheck": "tsc -p apps/dagger-product/tsconfig.app.json --noEmit",
+    "product:check": "pnpm product:typecheck && pnpm product:build"
   },
   "dependencies": {
     "@rusty-engine/application-host": "file:../rusty-engine/render/artifacts/application-host",

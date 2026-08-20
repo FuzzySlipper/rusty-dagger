@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/out-tsc/dagger-lab",
+    "outDir": "../../dist/out-tsc/dagger-product",
     "types": []
   },
   "files": ["src/main.ts"],
