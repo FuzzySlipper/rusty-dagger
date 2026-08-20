@@ -369,7 +369,7 @@ async function waitForConnection(page) {
   try {
     await page.getByTestId('connection').filter({ hasText: 'Connected' }).waitFor({ timeout: 30_000 });
   } catch (error) {
-    console.error(`DAGGER_LAB_BROWSER_STATE ${await page.locator('body').innerText()}`);
+    console.error(`DAGGER_PRODUCT_BROWSER_STATE ${await page.locator('body').innerText()}`);
     throw error;
   }
 }
