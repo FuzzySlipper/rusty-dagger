@@ -911,7 +911,15 @@ mod tests {
         // place exactly the 8 treasure markers and keep the quest/item
         // markers dropped.
         let arena2 = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../local/arena2");
-        let blocks = BsaArchive::load(&arena2.join("BLOCKS.BSA")).expect("BLOCKS.BSA");
+        let blocks_path = arena2.join("BLOCKS.BSA");
+        if !blocks_path.exists() {
+            eprintln!(
+                "skipping real Arena2 treasure-marker check: {} is absent",
+                blocks_path.display()
+            );
+            return;
+        }
+        let blocks = BsaArchive::load(&blocks_path).expect("BLOCKS.BSA");
         let block = rdb::parse_rdb(blocks.get("S0000999.RDB").expect("S0000999.RDB"))
             .expect("parse start block");
         let treasure_markers = block
