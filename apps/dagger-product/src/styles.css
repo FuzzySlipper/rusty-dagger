@@ -16,6 +16,7 @@ dagger-root { display: block; height: 100%; min-height: 0; overflow: hidden; }
 button, input { font: inherit; }
 .product-shell { height: 100%; min-height: 0; overflow: hidden; position: relative; width: 100%; }
 .game-stage { inset: 0; pointer-events: none; position: absolute; }
+.classic-hud-chrome { bottom: 12px; image-rendering: pixelated; left: 50%; max-height: min(23vh, 115px); max-width: min(92vw, 800px); object-fit: contain; position: absolute; transform: translateX(-50%); width: min(92vw, 640px); }
 .game-hud { align-items: center; display: flex; gap: 10px; justify-content: flex-end; left: 18px; pointer-events: auto; position: absolute; right: 18px; top: 18px; }
 .game-hud div { display: grid; gap: 3px; margin-right: auto; padding: 10px 13px; border: 1px solid rgba(199,169,106,.55); border-radius: 9px; background: rgba(9,13,15,.82); }
 .game-hud span { color: #c7a96a; font-size: .68rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
@@ -25,6 +26,9 @@ button, input { font: inherit; }
 .game-hud .encounter-status { margin: 0; max-width: 360px; }
 .game-hud .encounter-status[data-status="victory"] { border-color: #78b97a; }
 .game-hud .encounter-status[data-status="defeat"] { border-color: #c66b67; }
+.inventory { isolation: isolate; overflow: hidden; position: relative; }
+.inventory > :not(.inventory-classic-chrome) { position: relative; z-index: 1; }
+.inventory-classic-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: cover; opacity: .22; pointer-events: none; position: absolute; width: 100%; z-index: 0; }
 .lab-page { background: #090d0f; display: grid; grid-template-rows: auto auto minmax(0, 1fr); inset: 0; opacity: 0; pointer-events: none; position: absolute; z-index: 2; }
 .lab-page.is-open { opacity: 1; pointer-events: auto; }
 .lab-toolbar { align-items: center; background: #101719; border-bottom: 1px solid #2b393b; display: flex; gap: 18px; justify-content: space-between; min-height: 64px; padding: 10px 18px; }

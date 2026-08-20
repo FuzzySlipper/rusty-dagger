@@ -6,6 +6,7 @@ mod dungeon;
 mod glb;
 mod meshjson;
 mod png;
+mod ui_assets;
 
 use std::path::PathBuf;
 
@@ -295,6 +296,11 @@ fn main() {
         );
         combat_assets::publish(dir, &args.arena2_dir, args.clobber_sprites)
             .expect("publish classic combat assets");
+        let ui_dir = dir
+            .parent()
+            .expect("texture output must have a content parent")
+            .join("ui");
+        ui_assets::publish(&ui_dir, &args.arena2_dir).expect("publish classic UI assets");
     }
 }
 
