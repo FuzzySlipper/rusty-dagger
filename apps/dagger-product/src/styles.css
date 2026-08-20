@@ -77,7 +77,7 @@ button, input { font: inherit; }
 .character-sheet-dialog-header h2 { color: #f0d879; font: 500 1.65rem Georgia, serif; }
 .character-sheet-dialog-header button { padding: 7px 11px; }
 .character-sheet-dialog-summary { color: #b7c3bd; font-size: .82rem; margin: 8px 0 12px; }
-.character-sheet-overview { background: #334142; border: 1px solid #334142; display: grid; gap: 1px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.character-sheet-overview { background: #334142; border: 1px solid #334142; display: grid; gap: 1px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .character-sheet-overview div { background: rgba(13, 19, 20, .86); display: grid; gap: 3px; min-width: 0; padding: 9px; }
 .character-sheet-overview span, .character-sheet-vitals dt, .character-sheet-stat-grid dt { color: #c7a96a; font-size: .64rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .character-sheet-overview strong, .character-sheet-vitals dd, .character-sheet-stat-grid dd { font: 600 .8rem ui-monospace, monospace; overflow-wrap: anywhere; }
