@@ -40,10 +40,25 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     this.openInventory(false);
   };
-  private readonly dismissOverlayRequest = (event: Event): void => {
-    if (!this.inventoryOpen) return;
+  private readonly openCharacterSheetRequest = (event: Event): void => {
+    if (this.labOpen || this.readout === undefined) return;
     event.preventDefault();
-    this.closeInventory();
+    if (this.characterSheetOpen) {
+      this.closeCharacterSheet();
+      return;
+    }
+    this.openCharacterSheet(false);
+  };
+  private readonly dismissOverlayRequest = (event: Event): void => {
+    if (this.inventoryOpen) {
+      event.preventDefault();
+      this.closeInventory();
+      return;
+    }
+    if (this.characterSheetOpen) {
+      event.preventDefault();
+      this.closeCharacterSheet();
+    }
   };
 
   readout: ProductReadout | undefined;
@@ -55,6 +70,7 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedContentId: number | undefined;
   labOpen = false;
   inventoryOpen = false;
+  characterSheetOpen = false;
   selectedInventoryKey: string | undefined;
   activeTab: 'explorer' | 'sprites' = 'explorer';
   grantItemId = 'gold-piece';
@@ -67,6 +83,7 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     window.addEventListener('dagger-open-lab', this.openLabRequest);
     window.addEventListener('dagger-open-inventory', this.openInventoryRequest);
+    window.addEventListener('dagger-open-character-sheet', this.openCharacterSheetRequest);
     window.addEventListener('dagger-dismiss-overlay', this.dismissOverlayRequest);
     void this.refresh();
     this.pollTimer = setInterval(() => void this.refresh(), 250);
@@ -75,12 +92,14 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     window.removeEventListener('dagger-open-lab', this.openLabRequest);
     window.removeEventListener('dagger-open-inventory', this.openInventoryRequest);
+    window.removeEventListener('dagger-open-character-sheet', this.openCharacterSheetRequest);
     window.removeEventListener('dagger-dismiss-overlay', this.dismissOverlayRequest);
     if (this.pollTimer !== undefined) clearInterval(this.pollTimer);
   }
 
   openLab(): void {
     this.inventoryOpen = false;
+    this.characterSheetOpen = false;
     this.labOpen = true;
     this.application.ui.setInteractionMode('interface');
     requestAnimationFrame(() => {
@@ -98,6 +117,7 @@ export class AppComponent implements OnInit, OnDestroy {
   openInventory(releaseGameplayInput = true): void {
     if (this.labOpen || this.readout === undefined) return;
     if (releaseGameplayInput) window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.characterSheetOpen = false;
     this.inventoryOpen = true;
     this.application.ui.setInteractionMode('interface');
     this.changeDetector.detectChanges();
@@ -112,6 +132,42 @@ export class AppComponent implements OnInit, OnDestroy {
     this.inventoryOpen = false;
     this.application.ui.setInteractionMode('gameplay');
     this.application.ui.focusGameplay();
+  }
+
+  openCharacterSheet(releaseGameplayInput = true): void {
+    if (this.labOpen || this.readout === undefined) return;
+    if (releaseGameplayInput) window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.inventoryOpen = false;
+    this.characterSheetOpen = true;
+    this.application.ui.setInteractionMode('interface');
+    this.changeDetector.detectChanges();
+    requestAnimationFrame(() => {
+      if (!this.characterSheetOpen) return;
+      document.querySelector<HTMLButtonElement>('[data-testid="character-sheet-exit"]')?.focus();
+    });
+  }
+
+  closeCharacterSheet(): void {
+    if (!this.characterSheetOpen) return;
+    this.characterSheetOpen = false;
+    this.application.ui.setInteractionMode('gameplay');
+    this.application.ui.focusGameplay();
+  }
+
+  modeledSkillEntries(readout: ProductReadout): readonly { readonly id: string; readonly label: string; readonly value: number }[] {
+    return Object.entries(readout.playerStats.modeledSkills).map(([id, value]) => ({
+      id,
+      label: this.displayStatLabel(id),
+      value,
+    }));
+  }
+
+  displayStatLabel(id: string): string {
+    return id.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+  }
+
+  reflexesLabel(value: number): string {
+    return value === 2 ? 'Average' : String(value);
   }
 
   async refreshScene(): Promise<void> {

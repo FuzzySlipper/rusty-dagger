@@ -69,6 +69,24 @@ button, input { font: inherit; }
 .inventory-empty { color: #94a29e; font-size: .78rem; margin: 4px 0; }
 .inventory-receipt { background: rgba(35, 29, 18, .86); border: 1px solid #827146; display: grid; gap: 3px; margin-top: 12px; padding: 9px 11px; }
 .inventory-receipt strong { font-size: .8rem; overflow-wrap: anywhere; }
+.character-sheet-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
+.character-sheet-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 780px; overflow: auto; padding: 18px; position: relative; width: min(100%, 780px); }
+.character-sheet-dialog > :not(.character-sheet-dialog-chrome) { position: relative; z-index: 1; }
+.character-sheet-dialog-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: contain; opacity: .16; pointer-events: none; position: absolute; width: 100%; }
+.character-sheet-dialog > .character-sheet-dialog-header { align-items: start; background: #111617; display: flex; gap: 18px; justify-content: space-between; margin: 0; padding: 7px 0 10px; position: sticky; top: 0; z-index: 2; }
+.character-sheet-dialog-header h2 { color: #f0d879; font: 500 1.65rem Georgia, serif; }
+.character-sheet-dialog-header button { padding: 7px 11px; }
+.character-sheet-dialog-summary { color: #b7c3bd; font-size: .82rem; margin: 8px 0 12px; }
+.character-sheet-overview { background: #334142; border: 1px solid #334142; display: grid; gap: 1px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.character-sheet-overview div { background: rgba(13, 19, 20, .86); display: grid; gap: 3px; min-width: 0; padding: 9px; }
+.character-sheet-overview span, .character-sheet-vitals dt, .character-sheet-stat-grid dt { color: #c7a96a; font-size: .64rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.character-sheet-overview strong, .character-sheet-vitals dd, .character-sheet-stat-grid dd { font: 600 .8rem ui-monospace, monospace; overflow-wrap: anywhere; }
+.character-sheet-columns { display: grid; gap: 12px; grid-template-columns: minmax(150px, .8fr) minmax(0, 1.2fr) minmax(0, 1fr); margin-top: 14px; }
+.character-sheet-section { background: rgba(9, 13, 14, .78); border: 1px solid #334142; min-width: 0; padding: 10px; }
+.character-sheet-section h3 { color: #eddfb7; font-size: .86rem; margin-bottom: 7px; }
+.character-sheet-vitals, .character-sheet-stat-grid { display: grid; gap: 6px; margin: 0; }
+.character-sheet-vitals div, .character-sheet-stat-grid div { align-items: baseline; border-bottom: 1px solid #273536; display: flex; gap: 9px; justify-content: space-between; min-width: 0; padding-bottom: 5px; }
+.character-sheet-vitals dd, .character-sheet-stat-grid dd { margin: 0; text-align: right; }
 .inventory { isolation: isolate; overflow: hidden; position: relative; }
 .inventory > :not(.inventory-classic-chrome) { position: relative; z-index: 1; }
 .inventory-classic-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: cover; opacity: .22; pointer-events: none; position: absolute; width: 100%; z-index: 0; }
@@ -274,6 +292,8 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
   .sprites-layout { grid-template-columns: 1fr; }
   .inventory-dialog-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .inventory-detail { grid-column: 1 / -1; }
+  .character-sheet-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .character-sheet-skills { grid-column: 1 / -1; }
 }
 
 @media (max-width: 520px) {
@@ -288,6 +308,11 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
   .inventory-dialog { padding: 12px; }
   .inventory-dialog-layout { grid-template-columns: 1fr; }
   .inventory-detail { grid-column: auto; }
+  .character-sheet-dialog-layer { align-items: start; padding: 8px; }
+  .character-sheet-dialog { padding: 12px; }
+  .character-sheet-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .character-sheet-columns { grid-template-columns: 1fr; }
+  .character-sheet-skills { grid-column: auto; }
   .inventory-capacity div { flex: 1 1 130px; }
   .panel { padding: 18px; }
   .field-grid, .worksheet-grid, .metrics { grid-template-columns: 1fr; }

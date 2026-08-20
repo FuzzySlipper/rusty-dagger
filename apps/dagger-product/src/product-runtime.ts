@@ -342,6 +342,16 @@ export function mountDaggerProductRuntime(
       }
       return;
     }
+    if (event.code === 'KeyC' && !event.repeat) {
+      const request = new Event('dagger-open-character-sheet', { cancelable: true });
+      if (!window.dispatchEvent(request)) {
+        event.preventDefault();
+        releaseGameplayInput();
+      }
+      // Character-sheet input is product-local even when no overlay can
+      // accept it yet, so it never becomes a Rust gameplay pressed code.
+      return;
+    }
     if (event.repeat || !context.ui.allowsGameplayInput(event)) return;
     if (event.code === 'Space') resumeAudioFromGesture();
     if (!pressed.has(event.code)) pressedEdges.add(event.code);
