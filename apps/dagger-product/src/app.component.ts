@@ -7,7 +7,10 @@ import { LabToolsApiService } from './lab-tools-api.service';
 import {
   ActorDefinition,
   ContentEntityReadout,
+  EquipmentLogRecord,
+  InventoryStackReadout,
   InventoryItemReadout,
+  ItemDefinition,
   ProductReadout,
   LootContainerReadout,
 } from './product-contract';
@@ -28,6 +31,20 @@ export class AppComponent implements OnInit, OnDestroy {
   private loading = false;
   private commandGeneration = 0;
   private readonly openLabRequest = (): void => this.openLab();
+  private readonly openInventoryRequest = (event: Event): void => {
+    if (this.labOpen || this.readout === undefined) return;
+    event.preventDefault();
+    if (this.inventoryOpen) {
+      this.closeInventory();
+      return;
+    }
+    this.openInventory(false);
+  };
+  private readonly dismissOverlayRequest = (event: Event): void => {
+    if (!this.inventoryOpen) return;
+    event.preventDefault();
+    this.closeInventory();
+  };
 
   readout: ProductReadout | undefined;
   connectionError = '';
@@ -37,6 +54,8 @@ export class AppComponent implements OnInit, OnDestroy {
   contentFilter = '';
   selectedContentId: number | undefined;
   labOpen = false;
+  inventoryOpen = false;
+  selectedInventoryKey: string | undefined;
   activeTab: 'explorer' | 'sprites' = 'explorer';
   grantItemId = 'gold-piece';
   grantQuantity = 25;
@@ -47,16 +66,21 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     window.addEventListener('dagger-open-lab', this.openLabRequest);
+    window.addEventListener('dagger-open-inventory', this.openInventoryRequest);
+    window.addEventListener('dagger-dismiss-overlay', this.dismissOverlayRequest);
     void this.refresh();
     this.pollTimer = setInterval(() => void this.refresh(), 250);
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('dagger-open-lab', this.openLabRequest);
+    window.removeEventListener('dagger-open-inventory', this.openInventoryRequest);
+    window.removeEventListener('dagger-dismiss-overlay', this.dismissOverlayRequest);
     if (this.pollTimer !== undefined) clearInterval(this.pollTimer);
   }
 
   openLab(): void {
+    this.inventoryOpen = false;
     this.labOpen = true;
     this.application.ui.setInteractionMode('interface');
     requestAnimationFrame(() => {
@@ -67,6 +91,25 @@ export class AppComponent implements OnInit, OnDestroy {
 
   returnToPlay(): void {
     this.labOpen = false;
+    this.application.ui.setInteractionMode('gameplay');
+    this.application.ui.focusGameplay();
+  }
+
+  openInventory(releaseGameplayInput = true): void {
+    if (this.labOpen || this.readout === undefined) return;
+    if (releaseGameplayInput) window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.inventoryOpen = true;
+    this.application.ui.setInteractionMode('interface');
+    this.changeDetector.detectChanges();
+    requestAnimationFrame(() => {
+      if (!this.inventoryOpen) return;
+      document.querySelector<HTMLButtonElement>('[data-testid="inventory-exit"]')?.focus();
+    });
+  }
+
+  closeInventory(): void {
+    if (!this.inventoryOpen) return;
+    this.inventoryOpen = false;
     this.application.ui.setInteractionMode('gameplay');
     this.application.ui.focusGameplay();
   }
@@ -146,6 +189,46 @@ export class AppComponent implements OnInit, OnDestroy {
 
   carriedItems(readout: ProductReadout): readonly InventoryItemReadout[] {
     return readout.playerInventory.items.filter((item) => item.equipSlot === null);
+  }
+
+  selectInventoryItem(item: InventoryItemReadout): void {
+    this.selectedInventoryKey = `item:${item.entity}`;
+  }
+
+  selectInventoryStack(stack: InventoryStackReadout): void {
+    this.selectedInventoryKey = `stack:${stack.item}`;
+  }
+
+  selectedInventoryItem(readout: ProductReadout): InventoryItemReadout | undefined {
+    const entity = this.selectedInventoryKey?.startsWith('item:')
+      ? Number(this.selectedInventoryKey.slice('item:'.length))
+      : undefined;
+    return readout.playerInventory.items.find((item) => item.entity === entity);
+  }
+
+  selectedInventoryStack(readout: ProductReadout): InventoryStackReadout | undefined {
+    const itemId = this.selectedInventoryKey?.startsWith('stack:')
+      ? this.selectedInventoryKey.slice('stack:'.length)
+      : undefined;
+    return readout.playerInventory.stacks.find((stack) => stack.item === itemId);
+  }
+
+  selectedInventoryDefinition(readout: ProductReadout): ItemDefinition | undefined {
+    const itemId = this.selectedInventoryItem(readout)?.item ?? this.selectedInventoryStack(readout)?.item;
+    return readout.gameplayPackage.items.find((item) => item.id === itemId);
+  }
+
+  selectedInventoryQuantity(readout: ProductReadout): number {
+    return this.selectedInventoryStack(readout)?.quantity ?? 1;
+  }
+
+  isInventoryEquippable(readout: ProductReadout, item: InventoryItemReadout): boolean {
+    const definition = readout.gameplayPackage.items.find((candidate) => candidate.id === item.item);
+    return definition?.weapon !== undefined || definition?.armor !== undefined || definition?.shield !== undefined;
+  }
+
+  latestEquipmentReceipt(readout: ProductReadout): EquipmentLogRecord | undefined {
+    return readout.equipmentLog.at(-1);
   }
 
   filteredContent(): readonly ContentEntityReadout[] {
@@ -251,6 +334,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this.readout = readout;
     if (this.selectedContentId === undefined) {
       this.selectedContentId = readout.focusedContentId ?? readout.content.at(0)?.id;
+    }
+    const selectionStillExists = this.selectedInventoryKey?.startsWith('item:')
+      ? this.selectedInventoryItem(readout) !== undefined
+      : this.selectedInventoryKey?.startsWith('stack:')
+        ? this.selectedInventoryStack(readout) !== undefined
+        : false;
+    if (!selectionStillExists) {
+      const item = readout.playerInventory.items.at(0);
+      const stack = readout.playerInventory.stacks.at(0);
+      this.selectedInventoryKey = item === undefined ? stack && `stack:${stack.item}` : `item:${item.entity}`;
     }
   }
 }

@@ -312,15 +312,34 @@ export function mountDaggerProductRuntime(
       sampledButtonPressedEdges,
     );
   };
+  const releaseGameplayInput = (): void => {
+    pressed.clear();
+    pressedEdges.clear();
+    pointerDelta = [0, 0];
+    buttons = 0;
+    buttonPressedEdges = 0;
+    inputChanged = true;
+    flushInput();
+  };
+  const onReleaseGameplayInput = (): void => releaseGameplayInput();
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.code === 'Escape') {
-      pressed.clear();
-      pressedEdges.clear();
-      buttons = 0;
-      inputChanged = true;
+      releaseGameplayInput();
+      const dismiss = new Event('dagger-dismiss-overlay', { cancelable: true });
+      if (!window.dispatchEvent(dismiss)) {
+        return;
+      }
       context.ui.setInteractionMode('interface');
       window.dispatchEvent(new Event('dagger-open-lab'));
       flushInput();
+      return;
+    }
+    if (event.code === 'KeyI' && !event.repeat) {
+      const request = new Event('dagger-open-inventory', { cancelable: true });
+      if (!window.dispatchEvent(request)) {
+        event.preventDefault();
+        releaseGameplayInput();
+      }
       return;
     }
     if (event.repeat || !context.ui.allowsGameplayInput(event)) return;
@@ -362,6 +381,7 @@ export function mountDaggerProductRuntime(
     flushInput();
   };
   window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('dagger-release-gameplay-input', onReleaseGameplayInput);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('mousemove', onMouseMove);
   window.addEventListener('mousedown', onMouseDown);
@@ -393,6 +413,7 @@ export function mountDaggerProductRuntime(
       window.clearInterval(inputTick);
       window.clearInterval(poll);
       window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('dagger-release-gameplay-input', onReleaseGameplayInput);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mousedown', onMouseDown);

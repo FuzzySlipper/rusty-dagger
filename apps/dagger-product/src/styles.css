@@ -37,6 +37,38 @@ button, input { font: inherit; }
 .game-hud .encounter-status { margin: 0; max-width: 360px; }
 .game-hud .encounter-status[data-status="victory"] { border-color: #78b97a; }
 .game-hud .encounter-status[data-status="defeat"] { border-color: #c66b67; }
+.inventory-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
+.inventory-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 980px; overflow: auto; padding: 18px; position: relative; width: min(100%, 980px); }
+.inventory-dialog > :not(.inventory-dialog-chrome) { position: relative; z-index: 1; }
+.inventory-dialog-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: contain; opacity: .16; pointer-events: none; position: absolute; width: 100%; }
+.inventory-dialog > .inventory-dialog-header { align-items: start; background: #111617; display: flex; gap: 18px; justify-content: space-between; margin: 0; padding: 7px 0 10px; position: sticky; top: 0; z-index: 2; }
+.inventory-dialog-header h2 { color: #f0d879; font: 500 1.65rem Georgia, serif; }
+.inventory-dialog-header button { padding: 7px 11px; }
+.inventory-dialog-summary { color: #b7c3bd; font-size: .82rem; margin: 8px 0 12px; }
+.inventory-dialog-error { background: #321b18; border: 1px solid #a35a50; color: #ffd0c9; margin: 8px 0 12px; padding: 8px 10px; }
+.inventory-capacity { display: flex; flex-wrap: wrap; gap: 7px; }
+.inventory-capacity div { background: rgba(13, 19, 20, .78); border: 1px solid #334142; display: grid; gap: 2px; min-width: 132px; padding: 7px 9px; }
+.inventory-capacity span, .inventory-receipt span { color: #c7a96a; font-size: .64rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.inventory-capacity strong { font: 600 .78rem ui-monospace, monospace; }
+.inventory-dialog-layout { display: grid; gap: 12px; grid-template-columns: minmax(165px, .8fr) minmax(190px, 1fr) minmax(220px, 1.1fr); margin-top: 14px; }
+.inventory-dialog h3 { color: #eddfb7; font-size: .86rem; margin-bottom: 7px; }
+.inventory-equipment, .inventory-carried, .inventory-detail { background: rgba(9, 13, 14, .78); border: 1px solid #334142; min-width: 0; padding: 10px; }
+.inventory-equipment ul { display: grid; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.inventory-equipment li { align-items: stretch; display: grid; gap: 4px; }
+.inventory-equipment li > button:first-child, .inventory-list button { align-items: baseline; display: flex; gap: 8px; justify-content: space-between; text-align: left; width: 100%; }
+.inventory-equipment li > button:first-child span, .inventory-list button small { color: #9baaa4; font: .65rem ui-monospace, monospace; }
+.inventory-equipment li > button:first-child strong, .inventory-list button span { overflow-wrap: anywhere; }
+.inventory-list { display: grid; gap: 6px; max-height: 300px; overflow: auto; padding-right: 3px; }
+.inventory-list button.selected, .inventory-equipment button.selected { background: #2d2c22; border-color: #c7a96a; color: #f6e8c3; }
+.inventory-action { font-size: .69rem; padding: 5px 8px; }
+.inventory-detail dl { display: grid; gap: 7px; margin: 12px 0; }
+.inventory-detail dl div { border-bottom: 1px solid #273536; display: grid; gap: 2px; padding-bottom: 6px; }
+.inventory-detail dt { color: #92a39d; font-size: .66rem; text-transform: uppercase; }
+.inventory-detail dd { margin: 0; overflow-wrap: anywhere; }
+.inventory-primary { margin-right: 6px; }
+.inventory-empty { color: #94a29e; font-size: .78rem; margin: 4px 0; }
+.inventory-receipt { background: rgba(35, 29, 18, .86); border: 1px solid #827146; display: grid; gap: 3px; margin-top: 12px; padding: 9px 11px; }
+.inventory-receipt strong { font-size: .8rem; overflow-wrap: anywhere; }
 .inventory { isolation: isolate; overflow: hidden; position: relative; }
 .inventory > :not(.inventory-classic-chrome) { position: relative; z-index: 1; }
 .inventory-classic-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: cover; opacity: .22; pointer-events: none; position: absolute; width: 100%; z-index: 0; }
@@ -240,6 +272,8 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
   .history, .profiles, .content-browser { grid-column: auto; }
   .history-layout, .profile-layout, .content-layout { grid-template-columns: 1fr; }
   .sprites-layout { grid-template-columns: 1fr; }
+  .inventory-dialog-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .inventory-detail { grid-column: 1 / -1; }
 }
 
 @media (max-width: 520px) {
@@ -250,6 +284,11 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
   .lab-content { padding-top: 24px; width: min(100% - 20px, 1220px); }
   .game-hud { align-items: flex-end; flex-direction: column; }
   .game-hud div { margin-right: 0; }
+  .inventory-dialog-layer { align-items: start; padding: 8px; }
+  .inventory-dialog { padding: 12px; }
+  .inventory-dialog-layout { grid-template-columns: 1fr; }
+  .inventory-detail { grid-column: auto; }
+  .inventory-capacity div { flex: 1 1 130px; }
   .panel { padding: 18px; }
   .field-grid, .worksheet-grid, .metrics { grid-template-columns: 1fr; }
   .actions button { width: 100%; }
