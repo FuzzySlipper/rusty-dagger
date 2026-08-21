@@ -279,9 +279,12 @@ export interface InventoryItemReadout {
   readonly item: string;
   readonly entity: number;
   readonly equipSlot: string | null;
+  /** Rust-derived concrete equipment targets; empty means non-equippable. */
+  readonly compatibleSlots: readonly string[];
 }
 
 export interface PlayerInventoryReadout {
+  readonly equipmentRevision: number;
   readonly capacity: readonly InventoryCapacityReadout[];
   readonly stacks: readonly InventoryStackReadout[];
   readonly items: readonly InventoryItemReadout[];

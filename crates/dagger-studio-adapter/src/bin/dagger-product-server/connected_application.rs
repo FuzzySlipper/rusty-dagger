@@ -178,12 +178,24 @@ fn handle_command(
         ProductCommand::Jump { id, reply } => {
             send_runtime_result(reply, runtime.jump_to_content(id))
         }
-        ProductCommand::Equip { item, reply } => {
-            send_runtime_result(reply, runtime.equip_item(item))
-        }
-        ProductCommand::Unequip { slot, reply } => {
-            send_runtime_result(reply, runtime.unequip_slot(&slot))
-        }
+        ProductCommand::Equip {
+            item,
+            slot,
+            expected_equipment_revision,
+            reply,
+        } => send_runtime_result(
+            reply,
+            runtime.equip_item_in_slot(item, &slot, expected_equipment_revision),
+        ),
+        ProductCommand::Unequip {
+            slot,
+            expected_item,
+            expected_equipment_revision,
+            reply,
+        } => send_runtime_result(
+            reply,
+            runtime.unequip_item_from_slot(&slot, expected_item, expected_equipment_revision),
+        ),
         ProductCommand::OpenAimedLoot { reply } => {
             send_runtime_result(reply, runtime.open_aimed_loot())
         }

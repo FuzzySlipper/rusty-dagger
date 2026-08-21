@@ -155,6 +155,25 @@ const CHARACTER_SHEET_ATTRIBUTE_IDS: [&str; 8] = [
 ];
 const PLAYER_REFLEXES_STAT_ID: &str = "reflexes";
 
+/// The product's deliberately small subset of Daggerfall slot vocabulary.
+/// Accessory and clothing placeholders with unrestricted classifications are
+/// not equipment targets until Rusty Dagger models their semantics.
+const PRODUCT_EQUIPMENT_SLOTS: [&str; 9] = [
+    "head",
+    "right-arm",
+    "chest-armor",
+    "left-arm",
+    "right-hand",
+    "gloves",
+    "left-hand",
+    "legs-armor",
+    "feet",
+];
+
+fn product_equipment_slot(slot: &str) -> bool {
+    PRODUCT_EQUIPMENT_SLOTS.contains(&slot)
+}
+
 /// Product-service readout of admitted catalog definitions, live state, and
 /// resolution explanation. Browser surfaces do not evaluate or edit gameplay
 /// definitions; bounded live mutations route through Rust-owned semantic
@@ -256,12 +275,18 @@ pub struct InventoryItemReadout {
     pub item: String,
     pub entity: u64,
     pub equip_slot: Option<String>,
+    /// Concrete equipment slots compiled from this item's classifications.
+    /// Empty-classification accessory/clothing placeholders are intentionally
+    /// not exposed as product equipment affordances.
+    pub compatible_slots: Vec<String>,
 }
 
 /// Read-only view of the player's upstream inventory and equipment state.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerInventoryReadout {
+    /// Current optimistic-concurrency revision of the player's equipment.
+    pub equipment_revision: u64,
     pub capacity: Vec<InventoryCapacityReadout>,
     pub stacks: Vec<InventoryStackReadout>,
     pub items: Vec<InventoryItemReadout>,
@@ -1995,7 +2020,18 @@ impl DaggerRuntime {
                     .map(|assignment| assignment.slot.as_str().to_string())
             })
         };
+        let equipment_revision = self
+            .gameplay
+            .entities()
+            .component_revision::<EquipmentComponent>(owner)
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment revision: {error}"
+                )))
+            })?
+            .revision();
         Ok(PlayerInventoryReadout {
+            equipment_revision,
             capacity: view
                 .capacity()
                 .iter()
@@ -2020,6 +2056,7 @@ impl DaggerRuntime {
                     item: item.definition.as_str().to_string(),
                     entity: item.entity.raw(),
                     equip_slot: slot_of(item.entity),
+                    compatible_slots: self.compatible_equip_slots(item.definition.as_str()),
                 })
                 .collect(),
         })
@@ -2085,17 +2122,35 @@ impl DaggerRuntime {
             })
     }
 
+    fn player_equipment_revision(
+        &self,
+    ) -> Result<rusty_engine::entity_state::ComponentRevision, RuntimeError> {
+        self.gameplay
+            .entities()
+            .component_revision::<rusty_engine::gameplay_mechanics::EquipmentComponent>(
+                self.player_actor_entity(),
+            )
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment revision: {error}"
+                )))
+            })
+    }
+
+    fn item_id_for_entity(&self, entity: EntityId) -> Option<String> {
+        self.gameplay
+            .entities()
+            .component::<rusty_engine::gameplay_mechanics::ItemComponent>(entity)
+            .ok()
+            .flatten()
+            .map(|item| item.definition().as_str().to_string())
+    }
+
     /// Equip verb: equip one carried item entity into its preferred slot,
     /// swapping out the occupant when the slot is taken. An upstream
     /// rejection is logged (not thrown) so product surfaces can show the reason.
     pub fn equip_item(&mut self, item: u64) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            EquipmentEquipRequest, EquipmentService, EquipmentSlotId, EquipmentSwapRequest,
-        };
-
-        let carried = self.carried_equippables()?;
-        let entity = EntityId::new(item);
-        let Some((_, item_id)) = carried.iter().find(|(candidate, _)| *candidate == entity) else {
+        let Some(item_id) = self.item_id_for_entity(EntityId::new(item)) else {
             self.log_equipment_rejection(
                 "equip",
                 format!("entity-{item}"),
@@ -2105,7 +2160,6 @@ impl DaggerRuntime {
             );
             return self.product_readout();
         };
-        let item_id = item_id.clone();
         let Some(slot) = self.preferred_equip_slot(&item_id) else {
             self.log_equipment_rejection(
                 "equip",
@@ -2116,19 +2170,109 @@ impl DaggerRuntime {
             );
             return self.product_readout();
         };
-        let slot_id = EquipmentSlotId::parse(slot.clone()).map_err(|error| {
+        let revision = self.player_equipment_revision()?.revision();
+        self.equip_item_in_slot(item, &slot, revision)
+    }
+
+    /// Product verb: equip exactly this carried unique item in exactly this
+    /// concrete slot, guarded by the rendered equipment revision.
+    pub fn equip_item_in_slot(
+        &mut self,
+        item: u64,
+        slot: &str,
+        expected_equipment_revision: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{
+            EquipmentEquipRequest, EquipmentService, EquipmentSlotId, EquipmentSwapRequest,
+        };
+
+        let entity = EntityId::new(item);
+        let Some(item_id) = self.item_id_for_entity(entity) else {
+            self.log_equipment_rejection(
+                "equip",
+                format!("entity-{item}"),
+                vec![slot.to_string()],
+                None,
+                "unknown or non-carried item".to_string(),
+            );
+            return self.product_readout();
+        };
+        let inventory = self.player_inventory_readout()?;
+        let Some(readout_item) = inventory
+            .items
+            .iter()
+            .find(|candidate| candidate.entity == item)
+        else {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "unknown or non-carried item".to_string(),
+            );
+            return self.product_readout();
+        };
+        if readout_item.equip_slot.is_some() {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "duplicate: item is already equipped".to_string(),
+            );
+            return self.product_readout();
+        }
+        if !product_equipment_slot(slot) {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "unknown or unsupported equipment slot".to_string(),
+            );
+            return self.product_readout();
+        }
+        if !readout_item
+            .compatible_slots
+            .iter()
+            .any(|candidate| candidate == slot)
+        {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "item is incompatible with target slot".to_string(),
+            );
+            return self.product_readout();
+        }
+        let equipment_revision = self.player_equipment_revision()?;
+        if equipment_revision.revision() != expected_equipment_revision {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                format!(
+                    "stale equipment revision: expected {expected_equipment_revision}, current {}",
+                    equipment_revision.revision()
+                ),
+            );
+            return self.product_readout();
+        }
+        let slot_id = EquipmentSlotId::parse(slot.to_string()).map_err(|error| {
             RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
                 path: "equip.slot".to_string(),
                 value: format!("{slot}: {error:?}"),
             })
         })?;
         let equipment = self.player_equipment_component()?;
-        let owner = self.player_actor_entity();
-        let (operation, source) = equipment_operation();
-        let expected_state_revision = self.gameplay.entities().revision();
         let occupant = equipment
             .assignment(&slot_id)
             .map(|assignment| assignment.item);
+        let (operation, source) = equipment_operation();
+        let owner = self.player_actor_entity();
+        let expected_state_revision = self.gameplay.entities().revision();
         let result = match occupant {
             Some(outgoing) => EquipmentService::swap(
                 self.gameplay.entities_mut(),
@@ -2140,7 +2284,7 @@ impl DaggerRuntime {
                     outgoing_item: outgoing,
                     incoming_item: entity,
                     incoming_slots: vec![slot_id],
-                    expected_equipment_revision: None,
+                    expected_equipment_revision: Some(equipment_revision),
                     expected_state_revision,
                 },
             ),
@@ -2153,45 +2297,41 @@ impl DaggerRuntime {
                     owner,
                     item: entity,
                     slots: vec![slot_id],
-                    expected_equipment_revision: None,
+                    expected_equipment_revision: Some(equipment_revision),
                     expected_state_revision,
                 },
             ),
         };
         match result {
-            Ok(receipt) => {
-                let item_name = |entity: EntityId| {
-                    carried
-                        .iter()
-                        .find(|(candidate, _)| *candidate == entity)
-                        .map(|(_, id)| id.clone())
-                        .unwrap_or_else(|| format!("entity-{}", entity.raw()))
-                };
-                self.push_equipment_record(EquipmentLogRecord {
-                    sequence: 0,
-                    operation: format!("{:?}", receipt.kind).to_lowercase(),
-                    item: item_name(receipt.item),
-                    slots: receipt
-                        .changes
-                        .iter()
-                        .map(|change| change.slot.as_str().to_string())
-                        .collect(),
-                    replaced_item: receipt.replaced_item.map(&item_name),
-                    quantity: None,
-                    accepted: true,
-                    reason: None,
-                    committed_revision: Some(receipt.committed_equipment_revision),
-                });
-            }
-            Err(error) => {
-                self.log_equipment_rejection(
-                    if occupant.is_some() { "swap" } else { "equip" },
-                    item_id,
-                    vec![slot],
-                    None,
-                    format!("{error:?}"),
-                );
-            }
+            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
+                sequence: 0,
+                operation: format!("{:?}", receipt.kind).to_lowercase(),
+                item: item_id,
+                slots: receipt
+                    .changes
+                    .iter()
+                    .map(|change| change.slot.as_str().to_string())
+                    .collect(),
+                replaced_item: receipt
+                    .replaced_item
+                    .and_then(|replaced| self.item_id_for_entity(replaced))
+                    .or_else(|| {
+                        receipt
+                            .replaced_item
+                            .map(|replaced| format!("entity-{}", replaced.raw()))
+                    }),
+                quantity: None,
+                accepted: true,
+                reason: None,
+                committed_revision: Some(receipt.committed_equipment_revision),
+            }),
+            Err(error) => self.log_equipment_rejection(
+                if occupant.is_some() { "swap" } else { "equip" },
+                item_id,
+                vec![slot.to_string()],
+                None,
+                format!("{error:?}"),
+            ),
         }
         self.product_readout()
     }
@@ -2203,13 +2343,20 @@ impl DaggerRuntime {
             EquipmentService, EquipmentSlotId, EquipmentUnequipRequest,
         };
 
-        let slot_id = EquipmentSlotId::parse(slot).map_err(|error| {
-            RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
-                path: "unequip.slot".to_string(),
-                value: format!("{slot}: {error:?}"),
-            })
-        })?;
         let equipment = self.player_equipment_component()?;
+        let slot_id = match EquipmentSlotId::parse(slot) {
+            Ok(slot_id) => slot_id,
+            Err(_) => {
+                self.log_equipment_rejection(
+                    "unequip",
+                    "—".to_string(),
+                    vec![slot.to_string()],
+                    None,
+                    "unknown equipment slot".to_string(),
+                );
+                return self.product_readout();
+            }
+        };
         let Some(assignment) = equipment.assignment(&slot_id) else {
             self.log_equipment_rejection(
                 "unequip",
@@ -2220,15 +2367,9 @@ impl DaggerRuntime {
             );
             return self.product_readout();
         };
-        let item_entity = assignment.item;
         let item_name = self
-            .gameplay
-            .entities()
-            .component::<rusty_engine::gameplay_mechanics::ItemComponent>(item_entity)
-            .ok()
-            .flatten()
-            .map(|item| item.definition().as_str().to_string())
-            .unwrap_or_else(|| format!("entity-{}", item_entity.raw()));
+            .item_id_for_entity(assignment.item)
+            .unwrap_or_else(|| format!("entity-{}", assignment.item.raw()));
         let owner = self.player_actor_entity();
         let (operation, source) = equipment_operation();
         let expected_state_revision = self.gameplay.entities().revision();
@@ -2239,8 +2380,117 @@ impl DaggerRuntime {
                 operation,
                 source,
                 owner,
-                item: item_entity,
+                item: assignment.item,
                 expected_equipment_revision: None,
+                expected_state_revision,
+            },
+        ) {
+            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
+                sequence: 0,
+                operation: "unequip".to_string(),
+                item: item_name,
+                slots: receipt
+                    .changes
+                    .iter()
+                    .map(|change| change.slot.as_str().to_string())
+                    .collect(),
+                replaced_item: None,
+                quantity: None,
+                accepted: true,
+                reason: None,
+                committed_revision: Some(receipt.committed_equipment_revision),
+            }),
+            Err(error) => self.log_equipment_rejection(
+                "unequip",
+                item_name,
+                vec![slot.to_string()],
+                None,
+                format!("{error:?}"),
+            ),
+        }
+        self.product_readout()
+    }
+
+    /// Product verb: unequip only when the supplied item still occupies the
+    /// requested concrete slot at the rendered equipment revision.
+    pub fn unequip_item_from_slot(
+        &mut self,
+        slot: &str,
+        expected_item: u64,
+        expected_equipment_revision: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{
+            EquipmentService, EquipmentSlotId, EquipmentUnequipRequest,
+        };
+        if !product_equipment_slot(slot) {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                "unknown or unsupported equipment slot".to_string(),
+            );
+            return self.product_readout();
+        }
+        let equipment_revision = self.player_equipment_revision()?;
+        if equipment_revision.revision() != expected_equipment_revision {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                format!(
+                    "stale equipment revision: expected {expected_equipment_revision}, current {}",
+                    equipment_revision.revision()
+                ),
+            );
+            return self.product_readout();
+        }
+        let slot_id = EquipmentSlotId::parse(slot).map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
+                path: "unequip.slot".to_string(),
+                value: format!("{slot}: {error:?}"),
+            })
+        })?;
+        let equipment = self.player_equipment_component()?;
+        let Some(assignment) = equipment.assignment(&slot_id) else {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                "slot is empty".to_string(),
+            );
+            return self.product_readout();
+        };
+        if assignment.item.raw() != expected_item {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                format!(
+                    "stale occupant: slot holds entity-{}",
+                    assignment.item.raw()
+                ),
+            );
+            return self.product_readout();
+        }
+        let item_name = self
+            .item_id_for_entity(assignment.item)
+            .unwrap_or_else(|| format!("entity-{expected_item}"));
+        let owner = self.player_actor_entity();
+        let (operation, source) = equipment_operation();
+        let expected_state_revision = self.gameplay.entities().revision();
+        match EquipmentService::unequip(
+            self.gameplay.entities_mut(),
+            self.gameplay_catalog.mechanics(),
+            EquipmentUnequipRequest {
+                operation,
+                source,
+                owner,
+                item: assignment.item,
+                expected_equipment_revision: Some(equipment_revision),
                 expected_state_revision,
             },
         ) {
@@ -2754,13 +3004,52 @@ impl DaggerRuntime {
         if item.shield.is_some() {
             return Some("left-hand".to_string());
         }
-        let classification = item.classifications.first()?;
-        self.gameplay_catalog
+        self.compatible_equip_slots(item_id).into_iter().next()
+    }
+
+    /// Product-visible target slots derived from compiled classifications.
+    /// The engine catalog has broader placeholder slots, but only these nine
+    /// concrete nonempty-classification slots are modeled by the Dagger UI.
+    fn compatible_equip_slots(&self, item_id: &str) -> Vec<String> {
+        let Some(item) = self.gameplay_catalog.items().get(item_id) else {
+            return Vec::new();
+        };
+        let classified_slots = self
+            .gameplay_catalog
             .equipment()
             .slots
             .iter()
-            .find(|slot| slot.allowed_classifications.contains(classification))
+            .filter(|slot| {
+                product_equipment_slot(&slot.id)
+                    && !slot.allowed_classifications.is_empty()
+                    && slot
+                        .allowed_classifications
+                        .iter()
+                        .any(|classification| item.classifications.contains(classification))
+            })
             .map(|slot| slot.id.clone())
+            .collect::<Vec<_>>();
+        if let Some(weapon) = &item.weapon {
+            let permitted = match weapon.hands {
+                dagger_rpg::DaggerWeaponHands::LeftOnly => ["left-hand"].as_slice(),
+                dagger_rpg::DaggerWeaponHands::Either => ["right-hand", "left-hand"].as_slice(),
+                dagger_rpg::DaggerWeaponHands::Both => ["right-hand"].as_slice(),
+            };
+            return classified_slots
+                .into_iter()
+                .filter(|slot| permitted.contains(&slot.as_str()))
+                .collect();
+        }
+        if item.shield.is_some() {
+            return classified_slots
+                .into_iter()
+                .filter(|slot| slot == "left-hand")
+                .collect();
+        }
+        if item.armor.is_some() {
+            return classified_slots;
+        }
+        Vec::new()
     }
 
     fn push_equipment_record(&mut self, mut record: EquipmentLogRecord) {
@@ -2993,7 +3282,14 @@ impl DaggerRuntime {
                 "inventory view: {error:?}"
             )))
         })?;
+        let equipment_revision = self
+            .gameplay
+            .entities()
+            .component_revision::<rusty_engine::gameplay_mechanics::EquipmentComponent>(owner)
+            .map(|revision| revision.revision())
+            .unwrap_or(0);
         Ok(PlayerInventoryReadout {
+            equipment_revision,
             capacity: view
                 .capacity()
                 .iter()
@@ -3018,6 +3314,7 @@ impl DaggerRuntime {
                     item: item.definition.as_str().to_string(),
                     entity: item.entity.raw(),
                     equip_slot: None,
+                    compatible_slots: Vec::new(),
                 })
                 .collect(),
         })

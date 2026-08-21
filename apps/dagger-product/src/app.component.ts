@@ -97,6 +97,10 @@ export class AppComponent implements OnInit, OnDestroy {
   lootOpening = false;
   lootFeedback = '';
   selectedInventoryKey: string | undefined;
+  draggedInventory:
+    | { readonly kind: 'carried'; readonly item: InventoryItemReadout; readonly equipmentRevision: number }
+    | { readonly kind: 'equipped'; readonly item: InventoryItemReadout; readonly slot: string; readonly equipmentRevision: number }
+    | undefined;
   activeTab: 'explorer' | 'sprites' = 'explorer';
   grantItemId = 'gold-piece';
   grantQuantity = 25;
@@ -374,11 +378,28 @@ export class AppComponent implements OnInit, OnDestroy {
     return readout.playerInventory.items.filter((item) => item.equipSlot === null);
   }
 
+  equipmentSlots(readout: ProductReadout): readonly { readonly id: string; readonly item: InventoryItemReadout | undefined }[] {
+    const ids = ['head', 'right-arm', 'chest-armor', 'left-arm', 'right-hand', 'gloves', 'left-hand', 'legs-armor', 'feet'];
+    return ids.map((id) => ({ id, item: readout.playerInventory.items.find((item) => item.equipSlot === id) }));
+  }
+
+  trackEquipmentSlot(_index: number, slot: { readonly id: string }): string {
+    return slot.id;
+  }
+
   trackLootStack(_index: number, stack: InventoryStackReadout): string {
     return stack.item;
   }
 
   trackLootItem(_index: number, item: InventoryItemReadout): number {
+    return item.entity;
+  }
+
+  trackInventoryStack(_index: number, stack: InventoryStackReadout): string {
+    return stack.item;
+  }
+
+  trackInventoryItem(_index: number, item: InventoryItemReadout): number {
     return item.entity;
   }
 
@@ -414,12 +435,67 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   isInventoryEquippable(readout: ProductReadout, item: InventoryItemReadout): boolean {
-    const definition = readout.gameplayPackage.items.find((candidate) => candidate.id === item.item);
-    return definition?.weapon !== undefined || definition?.armor !== undefined || definition?.shield !== undefined;
+    return item.compatibleSlots.length > 0;
+  }
+
+  selectedCarriedItem(readout: ProductReadout): InventoryItemReadout | undefined {
+    const selected = this.selectedInventoryItem(readout);
+    return selected?.equipSlot === null ? selected : undefined;
+  }
+
+  canEquipInSlot(readout: ProductReadout, item: InventoryItemReadout | undefined, slot: string): boolean {
+    return item !== undefined && item.equipSlot === null && item.compatibleSlots.includes(slot);
+  }
+
+  startCarriedDrag(event: DragEvent, item: InventoryItemReadout, readout: ProductReadout): void {
+    this.draggedInventory = { kind: 'carried', item, equipmentRevision: readout.playerInventory.equipmentRevision };
+    event.dataTransfer?.setData('text/plain', `carried:${item.entity}`);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+
+  startEquippedDrag(event: DragEvent, item: InventoryItemReadout, readout: ProductReadout): void {
+    if (item.equipSlot === null) return;
+    this.draggedInventory = { kind: 'equipped', item, slot: item.equipSlot, equipmentRevision: readout.playerInventory.equipmentRevision };
+    event.dataTransfer?.setData('text/plain', `equipped:${item.entity}`);
+    if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+  }
+
+  endInventoryDrag(): void {
+    this.draggedInventory = undefined;
+  }
+
+  allowEquipDrop(event: DragEvent, slot: string): void {
+    if (this.draggedInventory?.kind === 'carried' && this.draggedInventory.item.compatibleSlots.includes(slot) && !this.pending) {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  dropOnEquipmentSlot(event: DragEvent, slot: string): void {
+    event.preventDefault();
+    const dragged = this.draggedInventory;
+    this.endInventoryDrag();
+    if (dragged?.kind === 'carried') void this.equipIntoSlot(dragged.item, slot, dragged.equipmentRevision);
+  }
+
+  allowUnequipDrop(event: DragEvent): void {
+    if (this.draggedInventory?.kind === 'equipped' && !this.pending) {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  dropIntoCarried(event: DragEvent): void {
+    event.preventDefault();
+    const dragged = this.draggedInventory;
+    this.endInventoryDrag();
+    if (dragged?.kind === 'equipped') void this.unequipFromSlot(dragged.item, dragged.slot, dragged.equipmentRevision);
   }
 
   latestEquipmentReceipt(readout: ProductReadout): EquipmentLogRecord | undefined {
-    return readout.equipmentLog.at(-1);
+    return [...readout.equipmentLog].reverse().find((receipt) =>
+      receipt.operation === 'equip' || receipt.operation === 'swap' || receipt.operation === 'unequip',
+    );
   }
 
   filteredContent(): readonly ContentEntityReadout[] {
@@ -466,12 +542,22 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async equipItem(item: InventoryItemReadout): Promise<void> {
-    await this.runCommand(() => this.productApi.equipItem(item.entity));
+    const slot = item.compatibleSlots.at(0);
+    if (slot !== undefined && this.readout !== undefined) await this.equipIntoSlot(item, slot, this.readout.playerInventory.equipmentRevision);
   }
 
   async unequipItem(item: InventoryItemReadout): Promise<void> {
-    if (item.equipSlot === null) return;
-    await this.runCommand(() => this.productApi.unequipSlot(item.equipSlot!));
+    if (item.equipSlot !== null && this.readout !== undefined) await this.unequipFromSlot(item, item.equipSlot, this.readout.playerInventory.equipmentRevision);
+  }
+
+  async equipIntoSlot(item: InventoryItemReadout, slot: string, expectedEquipmentRevision: number): Promise<void> {
+    if (this.pending || !item.compatibleSlots.includes(slot)) return;
+    await this.runCommand(() => this.productApi.equipItem(item.entity, slot, expectedEquipmentRevision));
+  }
+
+  async unequipFromSlot(item: InventoryItemReadout, slot: string, expectedEquipmentRevision: number): Promise<void> {
+    if (this.pending) return;
+    await this.runCommand(() => this.productApi.unequipSlot(slot, item.entity, expectedEquipmentRevision));
   }
 
   async grantItem(): Promise<void> {
@@ -540,7 +626,7 @@ export class AppComponent implements OnInit, OnDestroy {
         ? this.selectedInventoryStack(readout) !== undefined
         : false;
     if (!selectionStillExists) {
-      const item = readout.playerInventory.items.at(0);
+      const item = this.carriedItems(readout).at(0) ?? this.equippedItems(readout).at(0);
       const stack = readout.playerInventory.stacks.at(0);
       this.selectedInventoryKey = item === undefined ? stack && `stack:${stack.item}` : `item:${item.entity}`;
     }

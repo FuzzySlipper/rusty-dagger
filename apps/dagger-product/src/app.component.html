@@ -79,30 +79,41 @@
       </div>
       <div class="inventory-dialog-layout">
         <section class="inventory-equipment" aria-labelledby="inventory-equipped-title">
-          <h3 id="inventory-equipped-title">Equipped</h3>
-          <ul data-testid="inventory-dialog-equipped">
-            <li *ngFor="let item of equippedItems(live)">
-              <button type="button" [class.selected]="selectedInventoryKey === 'item:' + item.entity"
+          <p class="kicker">Equipment</p><h3 id="inventory-equipped-title">Paper-doll slots</h3>
+          <p class="inventory-slot-help">Drop a compatible carried item here. Equipped gear can return to the grid.</p>
+          <div class="equipment-slots" data-testid="inventory-dialog-equipped">
+            <article *ngFor="let slot of equipmentSlots(live); trackBy: trackEquipmentSlot" class="equipment-slot"
+              [class.drop-ready]="draggedInventory?.kind === 'carried' && draggedInventory?.item?.compatibleSlots?.includes(slot.id)"
+              (dragover)="allowEquipDrop($event, slot.id)" (drop)="dropOnEquipmentSlot($event, slot.id)">
+              <p>{{ slot.id }}</p>
+              <button *ngIf="slot.item as item; else emptySlot" type="button" draggable="true"
+                [class.selected]="selectedInventoryKey === 'item:' + item.entity"
                 [attr.aria-pressed]="selectedInventoryKey === 'item:' + item.entity"
-                [attr.data-testid]="'inventory-dialog-equipped-' + item.equipSlot" (click)="selectInventoryItem(item)">
-                <span>{{ item.equipSlot }}</span><strong>{{ item.item }}</strong>
+                [attr.aria-label]="item.item + ' equipped in ' + slot.id"
+                [attr.data-testid]="'inventory-dialog-equipped-' + slot.id" (click)="selectInventoryItem(item)"
+                (dragstart)="startEquippedDrag($event, item, live)" (dragend)="endInventoryDrag()">
+                <strong>{{ item.item }}</strong><small>Equipped</small>
               </button>
-              <button type="button" class="inventory-action" [disabled]="pending" [attr.data-testid]="'inventory-dialog-unequip-' + item.equipSlot"
-                (click)="unequipItem(item)">Unequip</button>
-            </li>
-            <li *ngIf="equippedItems(live).length === 0" class="inventory-empty">Nothing equipped.</li>
-          </ul>
+              <ng-template #emptySlot><span class="equipment-slot-empty">Empty</span></ng-template>
+              <button *ngIf="slot.item as item" type="button" class="inventory-action" [disabled]="pending"
+                [attr.data-testid]="'inventory-dialog-unequip-' + slot.id" (click)="unequipFromSlot(item, slot.id, live.playerInventory.equipmentRevision)">Unequip</button>
+              <button *ngIf="canEquipInSlot(live, selectedCarriedItem(live), slot.id)" type="button" class="inventory-action" [disabled]="pending"
+                [attr.aria-label]="(slot.item ? 'Replace ' + slot.item.item + ' with selected item in ' : 'Equip selected item in ') + slot.id"
+                (click)="equipIntoSlot(selectedCarriedItem(live)!, slot.id, live.playerInventory.equipmentRevision)">{{ slot.item ? 'Replace with selected' : 'Equip selected' }}</button>
+            </article>
+          </div>
         </section>
         <section class="inventory-carried" aria-labelledby="inventory-carried-title">
-          <h3 id="inventory-carried-title">Carried</h3>
-          <div class="inventory-list" role="listbox" aria-label="Carried inventory" data-testid="inventory-dialog-carried">
-            <button *ngFor="let item of carriedItems(live)" type="button" role="option"
+          <p class="kicker">Carried</p><h3 id="inventory-carried-title">Item grid</h3>
+          <div class="inventory-list" role="listbox" aria-label="Carried inventory" data-testid="inventory-dialog-carried"
+            (dragover)="allowUnequipDrop($event)" (drop)="dropIntoCarried($event)">
+            <button *ngFor="let item of carriedItems(live); trackBy: trackInventoryItem" type="button" role="option" draggable="true"
               [attr.aria-selected]="selectedInventoryKey === 'item:' + item.entity"
               [class.selected]="selectedInventoryKey === 'item:' + item.entity" [attr.data-testid]="'inventory-dialog-item-' + item.entity"
-              (click)="selectInventoryItem(item)">
+              (click)="selectInventoryItem(item)" (dragstart)="startCarriedDrag($event, item, live)" (dragend)="endInventoryDrag()">
               <span>{{ item.item }}</span><small>{{ item.equipSlot === null ? 'carried' : 'equipped · ' + item.equipSlot }}</small>
             </button>
-            <button *ngFor="let stack of live.playerInventory.stacks" type="button" role="option"
+            <button *ngFor="let stack of live.playerInventory.stacks; trackBy: trackInventoryStack" type="button" role="option"
               [attr.aria-selected]="selectedInventoryKey === 'stack:' + stack.item"
               [class.selected]="selectedInventoryKey === 'stack:' + stack.item" [attr.data-testid]="'inventory-dialog-stack-' + stack.item"
               (click)="selectInventoryStack(stack)">
@@ -123,8 +134,6 @@
               <div *ngIf="definition.shield"><dt>Shield</dt><dd>value {{ definition.shield.value }}</dd></div>
               <div *ngIf="selectedInventoryItem(live) as selected"><dt>Status</dt><dd>{{ selected.equipSlot === null ? 'Carried' : 'Equipped in ' + selected.equipSlot }}</dd></div>
             </dl>
-            <button *ngIf="selectedInventoryItem(live) as selected" type="button" class="inventory-primary" [disabled]="pending || !isInventoryEquippable(live, selected) || selected.equipSlot !== null"
-              data-testid="inventory-dialog-equip" (click)="equipItem(selected)">Equip</button>
             <button *ngIf="selectedInventoryItem(live) as selected" type="button" class="inventory-primary" [disabled]="pending || selected.equipSlot === null"
               data-testid="inventory-dialog-unequip" (click)="unequipItem(selected)">Unequip</button>
           </ng-container>
