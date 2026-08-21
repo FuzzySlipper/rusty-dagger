@@ -55,6 +55,11 @@
     </div>
     <p *ngIf="lootFeedback && !lootOpen" class="loot-status" role="status" aria-live="polite" data-testid="loot-status">{{ lootFeedback }}</p>
   </section>
+  <section *ngIf="!labOpen && visibleNotices.length > 0" class="product-notices" aria-live="polite"
+    aria-atomic="false" aria-relevant="additions" role="status" data-testid="product-notices">
+    <p *ngFor="let notice of visibleNotices; trackBy: trackNotice" [attr.data-testid]="'product-notice-' + notice.sequence"
+      [attr.data-notice-kind]="notice.kind">{{ notice.message }}</p>
+  </section>
   <section *ngIf="inventoryOpen && readout as live" class="inventory-dialog-layer" data-testid="inventory-dialog-layer" data-rusty-ui-interactive>
     <section class="inventory-dialog" role="dialog" aria-modal="true" aria-labelledby="inventory-dialog-title"
       aria-describedby="inventory-dialog-summary" data-testid="inventory-dialog">

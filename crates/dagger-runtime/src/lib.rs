@@ -38,16 +38,16 @@ pub use runtime::{
     ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
     EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, LiveActorResources,
     LootContainerReadout, MeleePresentationPhase, MeleePresentationReadout, NamedEncounterReadout,
-    ProductReadout, ProgressionReadout, RuntimeError, LOOT_INTERACT_REACH, MELEE_ACTION_ID,
-    MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS,
-    MELEE_REJECTION_SECONDS,
+    ProductNoticeKind, ProductNoticeRecord, ProductReadout, ProgressionReadout, RuntimeError,
+    LOOT_INTERACT_REACH, MELEE_ACTION_ID, MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS,
+    MELEE_RECOVERY_SECONDS, MELEE_REJECTION_SECONDS, PRODUCT_NOTICE_HISTORY_LIMIT,
 };
 
 #[cfg(test)]
 mod tests {
     use super::{
-        AdmittedProject, DaggerRuntime, PlayerControlFact, ProjectAdmissionError,
-        ResolvedPlayerAction, ResolvedPlayerFrame, RuntimeError,
+        AdmittedProject, DaggerRuntime, PlayerControlFact, ProductNoticeKind,
+        ProjectAdmissionError, ResolvedPlayerAction, ResolvedPlayerFrame, RuntimeError,
     };
     use rusty_engine::core_math::Vec3;
 
@@ -946,6 +946,19 @@ mod tests {
             .as_deref()
             .expect("rejection reason")
             .contains("InventoryCapacityExceeded"));
+        assert_eq!(
+            readout.notices,
+            vec![super::ProductNoticeRecord {
+                sequence: 1,
+                kind: ProductNoticeKind::CapacityRejected,
+                message: "You cannot carry any more.".to_string(),
+            }]
+        );
+        assert_eq!(
+            runtime.product_readout().expect("repeat readout").notices,
+            readout.notices,
+            "readout polling must not create duplicate notices"
+        );
         assert!(readout
             .player_inventory
             .stacks
@@ -963,6 +976,11 @@ mod tests {
         let record = readout.equipment_log.last().expect("log entry");
         assert!(!record.accepted);
         assert_eq!(record.reason.as_deref(), Some("unknown item"));
+        assert_eq!(
+            readout.notices.len(),
+            1,
+            "non-capacity rejections stay silent"
+        );
     }
 
     #[test]
@@ -1209,6 +1227,14 @@ mod tests {
         assert_eq!(
             readout.progression.current_health,
             readout.progression.max_health
+        );
+        assert_eq!(
+            readout.notices,
+            vec![super::ProductNoticeRecord {
+                sequence: 1,
+                kind: ProductNoticeKind::LevelUp,
+                message: "You have advanced to level 2.".to_string(),
+            }]
         );
     }
 
@@ -1539,6 +1565,11 @@ mod tests {
                 .expect("corpse")
                 .emptied
         );
+        assert_eq!(
+            emptied.notices.last().map(|notice| notice.kind),
+            Some(ProductNoticeKind::EmptyContainer),
+            "only the successful final transfer emits the empty-container notice"
+        );
     }
 
     #[test]
@@ -1570,6 +1601,7 @@ mod tests {
                 .expect("invalid receipt")
                 .accepted
         );
+        assert!(wrong_container.notices.is_empty());
         let stale = runtime
             .transfer_loot_item(
                 "treasure-3002",
@@ -1578,6 +1610,7 @@ mod tests {
             )
             .expect("stale is a receipt");
         assert!(!stale.equipment_log.last().expect("stale receipt").accepted);
+        assert!(stale.notices.is_empty());
         assert!(stale
             .loot_containers
             .iter()
@@ -1608,6 +1641,10 @@ mod tests {
                 .expect("capacity receipt")
                 .accepted
         );
+        assert_eq!(
+            rejected.notices.last().map(|notice| notice.kind),
+            Some(ProductNoticeKind::CapacityRejected)
+        );
         assert!(rejected
             .loot_containers
             .iter()
@@ -1617,6 +1654,92 @@ mod tests {
             .items
             .iter()
             .any(|item| item.entity == unique.entity));
+        assert!(
+            !rejected
+                .notices
+                .iter()
+                .any(|notice| notice.kind == ProductNoticeKind::EmptyContainer),
+            "failed transfers must not claim the source was emptied"
+        );
+    }
+
+    #[test]
+    fn material_ineffective_contacts_emit_one_semantic_notice() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        // The committed player starts with iron, while this Imp requires
+        // steel. Drive real contact frames until the deterministic
+        // hit resolves through the material gate.
+        runtime.jump_to_content(2015).expect("jump beside Imp");
+        for _ in 0..20 {
+            runtime.attack_focused_target().expect("physical swing");
+            runtime
+                .tick_play_session(super::MELEE_ANTICIPATION_SECONDS)
+                .expect("advance anticipation");
+            runtime.tick_play_session(0.25).expect("resolve contact");
+            if runtime
+                .product_readout()
+                .expect("contact readout")
+                .notices
+                .iter()
+                .any(|notice| notice.kind == ProductNoticeKind::MaterialIneffective)
+            {
+                break;
+            }
+            for _ in 0..2 {
+                runtime.tick_play_session(0.25).expect("advance cooldown");
+            }
+        }
+        let readout = runtime.product_readout().expect("ineffective readout");
+        assert_eq!(
+            readout
+                .notices
+                .iter()
+                .filter(|notice| notice.kind == ProductNoticeKind::MaterialIneffective)
+                .count(),
+            1,
+            "combat outcomes: {:?}",
+            readout
+                .combat
+                .iter()
+                .map(|record| (
+                    &record.status,
+                    record.material_ineffective,
+                    record.weapon.as_str()
+                ))
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            readout.notices.last().map(|notice| notice.message.as_str()),
+            Some("Your weapon has no effect.")
+        );
+    }
+
+    #[test]
+    fn notice_tail_is_bounded_and_sequence_survives_session_transitions() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        for _ in 0..(super::PRODUCT_NOTICE_HISTORY_LIMIT + 1) {
+            runtime
+                .grant_item("arrow", 400)
+                .expect("capacity rejection");
+        }
+        let tail = runtime.product_readout().expect("bounded tail");
+        assert_eq!(tail.notices.len(), super::PRODUCT_NOTICE_HISTORY_LIMIT);
+        assert_eq!(tail.notices.first().map(|notice| notice.sequence), Some(2));
+        assert_eq!(tail.notices.last().map(|notice| notice.sequence), Some(33));
+
+        let reset = runtime.reset_play_session().expect("reset");
+        assert!(reset.notices.is_empty());
+        let after_reset = runtime
+            .grant_item("arrow", 400)
+            .expect("capacity rejection");
+        assert_eq!(after_reset.notices[0].sequence, 34);
+
+        let jumped = runtime.jump_to_content(3000).expect("jump");
+        assert!(jumped.notices.is_empty());
+        let after_jump = runtime
+            .grant_item("arrow", 400)
+            .expect("capacity rejection");
+        assert_eq!(after_jump.notices[0].sequence, 35);
     }
 
     #[test]

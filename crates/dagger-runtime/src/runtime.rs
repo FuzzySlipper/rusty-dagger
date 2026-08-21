@@ -115,6 +115,8 @@ pub struct DaggerRuntime {
     /// Per-player level-up sequence feeding the salt-5 hp-roll stream; reset
     /// with the play session so hp rolls are deterministic per session.
     player_level_up_sequence: u64,
+    notices: VecDeque<ProductNoticeRecord>,
+    notice_sequence: u64,
 }
 
 pub const GAMEPLAY_PACKAGE: &[u8] =
@@ -123,6 +125,7 @@ pub const PLAYER_ACTOR_ID: &str = "player";
 pub const MELEE_ACTION_ID: &str = "melee-attack";
 pub const COMBAT_HISTORY_LIMIT: usize = 32;
 pub const ENCOUNTER_HISTORY_LIMIT: usize = 32;
+pub const PRODUCT_NOTICE_HISTORY_LIMIT: usize = 32;
 pub const MELEE_ANTICIPATION_SECONDS: f32 = 0.22;
 pub const MELEE_CONTACT_SECONDS: f32 = 0.32;
 pub const MELEE_RECOVERY_SECONDS: f32 = 0.72;
@@ -188,6 +191,29 @@ pub struct ProductReadout {
     /// Kill-XP progression state: the player's live xp/level, pacing to the
     /// next level, health, and the award history.
     pub progression: ProgressionReadout,
+    /// Bounded, session-local semantic notices for transient product feedback.
+    /// Readout creation is pure: notices are appended only by mutation hooks.
+    pub notices: Vec<ProductNoticeRecord>,
+}
+
+/// Rust-authored semantic category for a transient product notice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProductNoticeKind {
+    MaterialIneffective,
+    EmptyContainer,
+    CapacityRejected,
+    LevelUp,
+}
+
+/// One monotonic, bounded product-feedback record. The message is final
+/// Rust-authored text; browser clients only queue and display it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProductNoticeRecord {
+    pub sequence: u64,
+    pub kind: ProductNoticeKind,
+    pub message: String,
 }
 
 /// Read-only view of the kill-XP profile state: live progression
@@ -711,6 +737,8 @@ impl DaggerRuntime {
             equip_cycle_cursor: None,
             progression_history: VecDeque::new(),
             player_level_up_sequence: 0,
+            notices: VecDeque::new(),
+            notice_sequence: 0,
         })
     }
 
@@ -1312,6 +1340,7 @@ impl DaggerRuntime {
     /// progression within a session.
     pub fn reset_play_session(&mut self) -> Result<ProductReadout, RuntimeError> {
         self.open_loot_container_id = None;
+        self.notices.clear();
         self.reset_progression()?;
         if let Some(active) = self.active_encounter_id.clone() {
             return self.start_named_encounter(&active);
@@ -1360,6 +1389,7 @@ impl DaggerRuntime {
             .get(&id)
             .copied()
             .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
+        self.notices.clear();
         let original_position = self.player_position()?;
         let original_look_state = self.player_look_state;
         let original_focus = self.focused_content_id;
@@ -1592,6 +1622,12 @@ impl DaggerRuntime {
         } else {
             "miss"
         };
+        if attempt.succeeded && attempt.material_ineffective {
+            self.push_notice(
+                ProductNoticeKind::MaterialIneffective,
+                "Your weapon has no effect.".to_string(),
+            );
+        }
         self.focused_content_id = Some(id);
         // Combat records sequence contiguously within the history; the
         // shared combat_sequence also advances on enemy resolutions and is
@@ -1841,6 +1877,12 @@ impl DaggerRuntime {
         )
         .map_err(RuntimeError::Gameplay)?
         {
+            for level_up in &record.level_ups {
+                self.push_notice(
+                    ProductNoticeKind::LevelUp,
+                    format!("You have advanced to level {}.", level_up.level),
+                );
+            }
             self.progression_history.push_back(record);
             while self.progression_history.len() > COMBAT_HISTORY_LIMIT {
                 self.progression_history.pop_front();
@@ -2301,7 +2343,10 @@ impl DaggerRuntime {
                 reason: None,
                 committed_revision: Some(receipt.committed_inventory_revision),
             }),
-            Err(error) => reject(self, format!("{error:?}")),
+            Err(error) => {
+                self.push_capacity_notice_if_player(&error, owner);
+                reject(self, format!("{error:?}"));
+            }
         }
         self.product_readout()
     }
@@ -2351,7 +2396,7 @@ impl DaggerRuntime {
         self.push_equipment_record(EquipmentLogRecord {
             sequence: 0,
             operation: "loot-open".to_string(),
-            item: instance,
+            item: instance.clone(),
             slots: Vec::new(),
             replaced_item: None,
             quantity: None,
@@ -2359,6 +2404,12 @@ impl DaggerRuntime {
             reason: None,
             committed_revision: None,
         });
+        if matches!(self.loot_container_is_empty(&instance), Ok(true)) {
+            self.push_notice(
+                ProductNoticeKind::EmptyContainer,
+                "This container is empty.".to_string(),
+            );
+        }
         self.product_readout()
     }
 
@@ -2440,24 +2491,35 @@ impl DaggerRuntime {
                 expected_to_revision: None,
             },
         ) {
-            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                sequence: 0,
-                operation: "loot-transfer".to_string(),
-                item: item.to_string(),
-                slots: Vec::new(),
-                replaced_item: None,
-                quantity: Some(receipt.to_after - receipt.to_before),
-                accepted: true,
-                reason: None,
-                committed_revision: Some(receipt.committed_to_revision),
-            }),
-            Err(error) => self.log_equipment_rejection(
-                "loot-transfer",
-                item.to_string(),
-                Vec::new(),
-                Some(quantity),
-                format!("{error:?}"),
-            ),
+            Ok(receipt) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "loot-transfer".to_string(),
+                    item: item.to_string(),
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: Some(receipt.to_after - receipt.to_before),
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_to_revision),
+                });
+                if matches!(self.loot_container_is_empty(container_id), Ok(true)) {
+                    self.push_notice(
+                        ProductNoticeKind::EmptyContainer,
+                        "This container is empty.".to_string(),
+                    );
+                }
+            }
+            Err(error) => {
+                self.push_capacity_notice_if_player(&error, to_owner);
+                self.log_equipment_rejection(
+                    "loot-transfer",
+                    item.to_string(),
+                    Vec::new(),
+                    Some(quantity),
+                    format!("{error:?}"),
+                );
+            }
         }
         self.product_readout()
     }
@@ -2526,24 +2588,35 @@ impl DaggerRuntime {
                 expected_to_inventory_revision: None,
             },
         ) {
-            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                sequence: 0,
-                operation: "loot-transfer".to_string(),
-                item: item_name,
-                slots: Vec::new(),
-                replaced_item: None,
-                quantity: None,
-                accepted: true,
-                reason: None,
-                committed_revision: Some(receipt.revision_after),
-            }),
-            Err(error) => self.log_equipment_rejection(
-                "loot-transfer",
-                item_name,
-                Vec::new(),
-                None,
-                format!("{error:?}"),
-            ),
+            Ok(receipt) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "loot-transfer".to_string(),
+                    item: item_name,
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.revision_after),
+                });
+                if matches!(self.loot_container_is_empty(container_id), Ok(true)) {
+                    self.push_notice(
+                        ProductNoticeKind::EmptyContainer,
+                        "This container is empty.".to_string(),
+                    );
+                }
+            }
+            Err(error) => {
+                self.push_capacity_notice_if_player(&error, to_owner);
+                self.log_equipment_rejection(
+                    "loot-transfer",
+                    item_name,
+                    Vec::new(),
+                    None,
+                    format!("{error:?}"),
+                );
+            }
         }
         self.product_readout()
     }
@@ -2586,6 +2659,29 @@ impl DaggerRuntime {
             self.open_loot_container_id = None;
         }
         owner
+    }
+
+    fn loot_container_is_empty(&self, container_id: &str) -> Result<bool, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::InventoryService;
+
+        let owner = self
+            .loot_container_owner_if_eligible(container_id)
+            .ok_or_else(|| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "loot container {container_id} is no longer eligible"
+                )))
+            })?;
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "loot inventory view: {error:?}"
+            )))
+        })?;
+        Ok(view.stacks().is_empty() && view.unique_items().is_empty())
     }
 
     /// Equip-cycle verb (KeyE in the gameplay product): each press equips the next
@@ -2673,6 +2769,35 @@ impl DaggerRuntime {
         self.equipment_log.push_back(record);
         while self.equipment_log.len() > COMBAT_HISTORY_LIMIT {
             self.equipment_log.pop_front();
+        }
+    }
+
+    fn push_notice(&mut self, kind: ProductNoticeKind, message: String) {
+        self.notice_sequence = self.notice_sequence.saturating_add(1);
+        self.notices.push_back(ProductNoticeRecord {
+            sequence: self.notice_sequence,
+            kind,
+            message,
+        });
+        while self.notices.len() > PRODUCT_NOTICE_HISTORY_LIMIT {
+            self.notices.pop_front();
+        }
+    }
+
+    fn push_capacity_notice_if_player(
+        &mut self,
+        error: &rusty_engine::gameplay_mechanics::MechanicsError,
+        player: EntityId,
+    ) {
+        if matches!(
+            error,
+            rusty_engine::gameplay_mechanics::MechanicsError::InventoryCapacityExceeded { owner, .. }
+                if *owner == player
+        ) {
+            self.push_notice(
+                ProductNoticeKind::CapacityRejected,
+                "You cannot carry any more.".to_string(),
+            );
         }
     }
 
@@ -2801,6 +2926,7 @@ impl DaggerRuntime {
             equipment_log: self.equipment_log.iter().cloned().collect(),
             loot_containers: self.loot_containers_readout()?,
             progression: self.progression_readout()?,
+            notices: self.notices.iter().cloned().collect(),
         })
     }
 

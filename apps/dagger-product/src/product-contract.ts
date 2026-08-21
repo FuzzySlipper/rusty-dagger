@@ -388,6 +388,14 @@ export interface ProgressionReadout {
   readonly history: readonly ProgressionRecordReadout[];
 }
 
+/** One Rust-authored, transient semantic notice for passive product display. */
+export interface ProductNoticeRecord {
+  readonly sequence: number;
+  readonly kind: 'material-ineffective' | 'empty-container' | 'capacity-rejected' | 'level-up';
+  /** Final Rust-authored wording; the browser must not reinterpret it. */
+  readonly message: string;
+}
+
 export interface ProductReadout {
   readonly gameplayPackage: GameplayPackageReadout;
   readonly moveSpeedUnitsPerSecond: number;
@@ -413,4 +421,6 @@ export interface ProductReadout {
   readonly lootContainers: readonly LootContainerReadout[];
   /** Kill-XP progression state: xp, level, pacing, health, and the award history. */
   readonly progression: ProgressionReadout;
+  /** Bounded semantic feedback tail; emitted only by Rust mutation hooks. */
+  readonly notices: readonly ProductNoticeRecord[];
 }
