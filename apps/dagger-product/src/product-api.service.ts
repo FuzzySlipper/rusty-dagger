@@ -17,12 +17,16 @@ export class ProductApiService {
     return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/session/reset`, null));
   }
 
-  equipItem(item: number): Promise<ProductReadout> {
-    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/equipment/equip`, { item }));
+  equipItem(item: number, slot: string, expectedEquipmentRevision: number): Promise<ProductReadout> {
+    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/equipment/equip`, {
+      item, slot, expectedEquipmentRevision,
+    }));
   }
 
-  unequipSlot(slot: string): Promise<ProductReadout> {
-    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/equipment/unequip`, { slot }));
+  unequipSlot(slot: string, expectedItem: number, expectedEquipmentRevision: number): Promise<ProductReadout> {
+    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/equipment/unequip`, {
+      slot, expectedItem, expectedEquipmentRevision,
+    }));
   }
 
   openAimedLoot(): Promise<ProductReadout> {

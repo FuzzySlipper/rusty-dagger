@@ -85,10 +85,14 @@ pub(crate) enum ProductCommand {
     },
     Equip {
         item: u64,
+        slot: String,
+        expected_equipment_revision: u64,
         reply: Sender<ProductReply>,
     },
     Unequip {
         slot: String,
+        expected_item: u64,
+        expected_equipment_revision: u64,
         reply: Sender<ProductReply>,
     },
     OpenAimedLoot {
@@ -332,6 +336,8 @@ fn handle_request(
                 };
                 ProductCommand::Equip {
                     item: body.item,
+                    slot: body.slot,
+                    expected_equipment_revision: body.expected_equipment_revision,
                     reply: send_reply,
                 }
             }
@@ -347,6 +353,8 @@ fn handle_request(
             };
                 ProductCommand::Unequip {
                     slot: body.slot,
+                    expected_item: body.expected_item,
+                    expected_equipment_revision: body.expected_equipment_revision,
                     reply: send_reply,
                 }
             }
@@ -429,12 +437,16 @@ struct JumpRequest {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct EquipRequest {
     item: u64,
+    slot: String,
+    expected_equipment_revision: u64,
 }
 
 #[derive(serde::Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct UnequipRequest {
     slot: String,
+    expected_item: u64,
+    expected_equipment_revision: u64,
 }
 
 #[derive(serde::Deserialize)]
@@ -868,6 +880,29 @@ mod tests {
         ] {
             assert_eq!(api_surface(retired), None, "{retired}");
         }
+    }
+
+    #[test]
+    fn equipment_requests_require_explicit_target_and_concurrency_guards() {
+        let equip: EquipRequest = serde_json::from_str(
+            r#"{"item":41,"slot":"right-hand","expectedEquipmentRevision":7}"#,
+        )
+        .expect("targeted equip request");
+        assert_eq!(equip.item, 41);
+        assert_eq!(equip.slot, "right-hand");
+        assert_eq!(equip.expected_equipment_revision, 7);
+        assert!(serde_json::from_str::<EquipRequest>(r#"{"item":41}"#).is_err());
+
+        let unequip: UnequipRequest = serde_json::from_str(
+            r#"{"slot":"right-hand","expectedItem":41,"expectedEquipmentRevision":8}"#,
+        )
+        .expect("targeted unequip request");
+        assert_eq!(unequip.expected_item, 41);
+        assert_eq!(unequip.expected_equipment_revision, 8);
+        assert!(serde_json::from_str::<UnequipRequest>(
+            r#"{"slot":"right-hand","expectedItem":41,"expectedEquipmentRevision":8,"extra":true}"#,
+        )
+        .is_err());
     }
 
     #[test]

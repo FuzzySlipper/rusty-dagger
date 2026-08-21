@@ -916,6 +916,101 @@ mod tests {
     }
 
     #[test]
+    fn targeted_equipment_actions_guard_slots_revisions_and_occupants() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        let initial = runtime.product_readout().expect("initial readout");
+        let dagger = initial
+            .player_inventory
+            .items
+            .iter()
+            .find(|item| item.item == "iron-dagger")
+            .expect("carried dagger");
+        assert!(dagger.compatible_slots.contains(&"right-hand".to_string()));
+        assert!(!dagger.compatible_slots.contains(&"amulet-0".to_string()));
+        let initial_revision = initial.player_inventory.equipment_revision;
+
+        // A target outside the item's Rust-derived slots has no side effect.
+        let rejected = runtime
+            .equip_item_in_slot(dagger.entity, "chest-armor", initial_revision)
+            .expect("incompatible readout");
+        assert!(!rejected.equipment_log.last().expect("rejection").accepted);
+        assert_eq!(
+            rejected.player_inventory.equipment_revision,
+            initial_revision
+        );
+
+        // An occupied legal target atomically replaces the outgoing item.
+        let equipped = runtime
+            .equip_item_in_slot(dagger.entity, "right-hand", initial_revision)
+            .expect("targeted swap");
+        let swap = equipped.equipment_log.last().expect("swap receipt");
+        assert!(swap.accepted);
+        assert_eq!(swap.operation, "swap");
+        assert_eq!(swap.replaced_item.as_deref(), Some("iron-longsword"));
+        assert_eq!(
+            equipped
+                .player_inventory
+                .items
+                .iter()
+                .find(|item| item.entity == dagger.entity)
+                .and_then(|item| item.equip_slot.as_deref()),
+            Some("right-hand")
+        );
+
+        let current_revision = equipped.player_inventory.equipment_revision;
+        let longsword = equipped
+            .player_inventory
+            .items
+            .iter()
+            .find(|item| item.item == "iron-longsword")
+            .expect("carried replacement");
+        let stale = runtime
+            .equip_item_in_slot(longsword.entity, "right-hand", initial_revision)
+            .expect("stale readout");
+        assert!(
+            !stale
+                .equipment_log
+                .last()
+                .expect("stale rejection")
+                .accepted
+        );
+        assert_eq!(stale.player_inventory.equipment_revision, current_revision);
+
+        // A stale UI must not strip the replacement occupant from its slot.
+        let stale_occupant = runtime
+            .unequip_item_from_slot("right-hand", longsword.entity, current_revision)
+            .expect("stale occupant readout");
+        assert!(
+            !stale_occupant
+                .equipment_log
+                .last()
+                .expect("stale occupant rejection")
+                .accepted
+        );
+        assert_eq!(
+            stale_occupant.player_inventory.equipment_revision,
+            current_revision
+        );
+
+        // Stack entries have no entity target and unknown/non-carried entities
+        // are semantically rejected without touching equipment.
+        let non_carried = runtime
+            .equip_item_in_slot(99_999, "right-hand", current_revision)
+            .expect("non-carried readout");
+        assert!(
+            !non_carried
+                .equipment_log
+                .last()
+                .expect("non-carried rejection")
+                .accepted
+        );
+        assert_eq!(
+            non_carried.player_inventory.equipment_revision,
+            current_revision
+        );
+    }
+
+    #[test]
     fn grant_item_logs_grants_and_capacity_rejections() {
         let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
 
