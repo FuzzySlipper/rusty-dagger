@@ -552,6 +552,10 @@ export class AppComponent implements OnInit, OnDestroy {
       this.noticeHighWater = notices.reduce((highWater, notice) => Math.max(highWater, notice.sequence), 0);
       return;
     }
+    if (notices.length === 0) {
+      this.clearNoticePresentation();
+      return;
+    }
     for (const notice of notices) {
       if (notice.sequence <= this.noticeHighWater) continue;
       this.noticeHighWater = notice.sequence;
@@ -577,6 +581,15 @@ export class AppComponent implements OnInit, OnDestroy {
         this.showQueuedNotices();
         this.changeDetector.markForCheck();
       }, this.noticeQueue.length > 0 ? PRODUCT_NOTICE_BACKLOG_HOLD_MS : PRODUCT_NOTICE_HOLD_MS);
+    }
+  }
+
+  private clearNoticePresentation(): void {
+    this.noticeQueue.length = 0;
+    this.visibleNotices = [];
+    if (this.noticeTimer !== undefined) {
+      clearTimeout(this.noticeTimer);
+      this.noticeTimer = undefined;
     }
   }
 }
