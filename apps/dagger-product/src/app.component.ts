@@ -11,11 +11,17 @@ import {
   InventoryStackReadout,
   InventoryItemReadout,
   ItemDefinition,
+  ProductNoticeRecord,
   ProductReadout,
   LootContainerReadout,
 } from './product-contract';
 import { DAGGER_APPLICATION_CONTEXT, loadDaggerProductBootstrap } from './product-runtime';
 import { SpritesPanelComponent } from './sprites-panel.component';
+
+const PRODUCT_NOTICE_RETENTION_LIMIT = 32;
+const PRODUCT_NOTICE_VISIBLE_LIMIT = 7;
+const PRODUCT_NOTICE_HOLD_MS = 2_000;
+const PRODUCT_NOTICE_BACKLOG_HOLD_MS = 1_000;
 
 @Component({
   selector: 'dagger-root',
@@ -28,6 +34,10 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly labTools = inject(LabToolsApiService);
   private readonly changeDetector = inject(ChangeDetectorRef);
   private pollTimer: ReturnType<typeof setInterval> | undefined;
+  private noticeTimer: ReturnType<typeof setTimeout> | undefined;
+  private noticesHydrated = false;
+  private noticeHighWater = 0;
+  private readonly noticeQueue: ProductNoticeRecord[] = [];
   private loading = false;
   private commandGeneration = 0;
   private lootOpenCancelled = false;
@@ -90,9 +100,14 @@ export class AppComponent implements OnInit, OnDestroy {
   activeTab: 'explorer' | 'sprites' = 'explorer';
   grantItemId = 'gold-piece';
   grantQuantity = 25;
+  visibleNotices: readonly ProductNoticeRecord[] = [];
 
   trackContent(_index: number, entity: ContentEntityReadout): number {
     return entity.id;
+  }
+
+  trackNotice(_index: number, notice: ProductNoticeRecord): number {
+    return notice.sequence;
   }
 
   ngOnInit(): void {
@@ -112,6 +127,7 @@ export class AppComponent implements OnInit, OnDestroy {
     window.removeEventListener('dagger-open-loot', this.openLootRequest);
     window.removeEventListener('dagger-dismiss-overlay', this.dismissOverlayRequest);
     if (this.pollTimer !== undefined) clearInterval(this.pollTimer);
+    if (this.noticeTimer !== undefined) clearTimeout(this.noticeTimer);
   }
 
   openLab(): void {
@@ -507,6 +523,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private acceptReadout(readout: ProductReadout): void {
     this.readout = readout;
+    this.acceptNotices(readout.notices);
     if (this.lootOpen && !this.lootClosing && readout.openLootContainerId === null) {
       this.lootOpen = false;
       this.lootOpening = false;
@@ -526,6 +543,40 @@ export class AppComponent implements OnInit, OnDestroy {
       const item = readout.playerInventory.items.at(0);
       const stack = readout.playerInventory.stacks.at(0);
       this.selectedInventoryKey = item === undefined ? stack && `stack:${stack.item}` : `item:${item.entity}`;
+    }
+  }
+
+  private acceptNotices(notices: readonly ProductNoticeRecord[]): void {
+    if (!this.noticesHydrated) {
+      this.noticesHydrated = true;
+      this.noticeHighWater = notices.reduce((highWater, notice) => Math.max(highWater, notice.sequence), 0);
+      return;
+    }
+    for (const notice of notices) {
+      if (notice.sequence <= this.noticeHighWater) continue;
+      this.noticeHighWater = notice.sequence;
+      this.noticeQueue.push(notice);
+    }
+    while (this.noticeQueue.length + this.visibleNotices.length > PRODUCT_NOTICE_RETENTION_LIMIT) {
+      this.noticeQueue.shift();
+    }
+    this.showQueuedNotices();
+  }
+
+  private showQueuedNotices(): void {
+    const visible = [...this.visibleNotices];
+    while (visible.length < PRODUCT_NOTICE_VISIBLE_LIMIT && this.noticeQueue.length > 0) {
+      const notice = this.noticeQueue.shift();
+      if (notice !== undefined) visible.push(notice);
+    }
+    this.visibleNotices = visible;
+    if (this.noticeTimer === undefined && this.visibleNotices.length > 0) {
+      this.noticeTimer = setTimeout(() => {
+        this.noticeTimer = undefined;
+        this.visibleNotices = this.visibleNotices.slice(1);
+        this.showQueuedNotices();
+        this.changeDetector.markForCheck();
+      }, this.noticeQueue.length > 0 ? PRODUCT_NOTICE_BACKLOG_HOLD_MS : PRODUCT_NOTICE_HOLD_MS);
     }
   }
 }

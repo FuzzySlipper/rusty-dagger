@@ -38,6 +38,10 @@ button, input { font: inherit; }
 .game-hud .encounter-status[data-status="victory"] { border-color: #78b97a; }
 .game-hud .encounter-status[data-status="defeat"] { border-color: #c66b67; }
 .loot-status { background: rgba(50, 27, 24, .92); border: 1px solid #a35a50; bottom: 18px; color: #ffd0c9; left: 18px; max-width: min(420px, calc(100% - 36px)); padding: 8px 10px; pointer-events: none; position: absolute; }
+.product-notices { display: grid; gap: 6px; left: 50%; max-width: min(620px, calc(100% - 32px)); pointer-events: none; position: absolute; text-align: center; top: 22%; transform: translateX(-50%); width: max-content; z-index: 4; }
+.product-notices p { background: rgba(8, 12, 13, .88); border: 1px solid rgba(240, 216, 121, .8); box-shadow: 0 5px 18px rgba(0, 0, 0, .45); color: #fff1b8; font: 700 clamp(.82rem, 2vw, 1rem) Georgia, serif; margin: 0; overflow-wrap: anywhere; padding: 7px 15px; text-shadow: 0 1px 2px #000; }
+.product-notices p[data-notice-kind="capacity-rejected"] { border-color: #d57b68; color: #ffd0c9; }
+.product-notices p[data-notice-kind="level-up"] { border-color: #92cc8f; color: #d7f0bf; }
 .inventory-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
 .inventory-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 980px; overflow: auto; padding: 18px; position: relative; width: min(100%, 980px); }
 .inventory-dialog > :not(.inventory-dialog-chrome) { position: relative; z-index: 1; }
