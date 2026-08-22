@@ -13,6 +13,8 @@ use std::{
 
 use anyhow::{Context, Result};
 
+use crate::developer_commands::DaggerDeveloperRequest;
+
 const MAX_REQUEST_BYTES: usize = 64 * 1024;
 // Manifest write bodies carry the whole document (enemy-manifest.json is
 // ~140KB of frame rects); the tooling API is a LAN operator surface, so allow
@@ -45,6 +47,8 @@ fn api_surface(path: &str) -> Option<ApiSurface> {
             | "/api/dagger-product/loot/transfer-stack"
             | "/api/dagger-product/loot/transfer-item"
             | "/api/dagger-product/loot/close"
+            | "/api/dagger-product/developer-commands"
+            | "/api/dagger-product/developer-commands/execute"
     ) || path.starts_with("/api/dagger-product/ui/assets/")
     {
         Some(ApiSurface::Product)
@@ -117,6 +121,13 @@ pub(crate) enum ProductCommand {
     Grant {
         item: String,
         quantity: u64,
+        reply: Sender<ProductReply>,
+    },
+    DeveloperDiscover {
+        reply: Sender<ProductReply>,
+    },
+    DeveloperExecute {
+        request: DaggerDeveloperRequest,
         reply: Sender<ProductReply>,
     },
 }
@@ -412,6 +423,24 @@ fn handle_request(
                 ProductCommand::Grant {
                     item: body.item,
                     quantity: body.quantity,
+                    reply: send_reply,
+                }
+            }
+            ("GET", "/api/dagger-product/developer-commands") => {
+                ProductCommand::DeveloperDiscover { reply: send_reply }
+            }
+            ("POST", "/api/dagger-product/developer-commands/execute") => {
+                let request: DaggerDeveloperRequest = match serde_json::from_str(&request.body) {
+                Ok(request) => request,
+                Err(error) => return write_response(
+                    stream,
+                    400,
+                    &serde_json::json!({ "error": format!("invalid developer command: {error}") })
+                        .to_string(),
+                ),
+            };
+                ProductCommand::DeveloperExecute {
+                    request,
                     reply: send_reply,
                 }
             }
@@ -859,6 +888,8 @@ mod tests {
             "/api/dagger-product/loot/transfer-stack",
             "/api/dagger-product/loot/transfer-item",
             "/api/dagger-product/loot/close",
+            "/api/dagger-product/developer-commands",
+            "/api/dagger-product/developer-commands/execute",
             "/api/dagger-product/ui/assets/hud.chrome.main",
         ] {
             assert_eq!(api_surface(path), Some(ApiSurface::Product), "{path}");

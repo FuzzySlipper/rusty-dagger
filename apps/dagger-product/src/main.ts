@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { mountRustyApplication, type RustyApplicationHost } from '@rusty-engine/application-host';
 import { AppComponent } from './app.component';
+import { createDaggerDeveloperCommandClient } from './developer-command';
 import {
   DAGGER_APPLICATION_CONTEXT,
   loadDaggerProductBootstrap,
@@ -17,9 +18,11 @@ declare global {
 const root = document.querySelector<HTMLElement>('#application');
 if (root === null) throw new Error('Dagger application root is missing');
 const bootstrap = await loadDaggerProductBootstrap();
+const developerCommands = createDaggerDeveloperCommandClient();
 const application = await mountRustyApplication({
   root,
   initialInteractionMode: 'gameplay',
+  developerCommands: { client: developerCommands, label: 'Dagger developer commands' },
   renderer: { initialContent: bootstrap.content, clearColor: 0x080a0d },
   mountUi: async (uiRoot, context) => {
     const angularRoot = document.createElement('dagger-root');

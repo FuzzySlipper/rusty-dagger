@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use dagger_rpg::{
     action_dynamic_roll_evidence, action_roll_evidence, bind_actor_loot, compile_gameplay_package,
     definition_base_stats, equipped_weapon, loot_roll_evidence, restore_actor_tracks,
-    spawn_container, struck_body_part_name, track_maximum, unarmed_damage_range,
+    set_actor_track, spawn_container, struck_body_part_name, track_maximum, unarmed_damage_range,
     AuthoredGameplayPayload, DaggerContainerState, DaggerDynamicRoll, DaggerEvent, DaggerEvidence,
     DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
     DaggerIntentOrigin, DaggerLootGeneration, DaggerProgressionRecord,
@@ -1181,6 +1181,146 @@ impl DaggerRuntime {
         )
     }
 
+    /// Read one live entity through the Engine's standard inspection owner.
+    ///
+    /// The developer-command product adapter borrows this runtime only at its
+    /// selected safe point.  This stays a read-only projection; Dagger does
+    /// not retain an inspector or manufacture a parallel inspection format.
+    pub fn developer_inspect_entity(
+        &self,
+        entity: EntityId,
+    ) -> Option<rusty_engine::engine_inspector::EntityInspection> {
+        rusty_engine::developer_command_standard::inspect_entity(self.gameplay.entities(), entity)
+    }
+
+    /// Read mechanics structure through the Engine's standard inspection
+    /// owner without evaluating or changing Dagger gameplay state.
+    pub fn developer_inspect_mechanics(
+        &self,
+        entity: EntityId,
+    ) -> Result<
+        rusty_engine::engine_inspector::MechanicsStructuralEntityInspection,
+        rusty_engine::gameplay_mechanics::MechanicsError,
+    > {
+        rusty_engine::developer_command_standard::inspect_mechanics(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            entity,
+        )
+    }
+
+    /// Reacquire the authoritative Dagger component revision for the standard
+    /// host admin DTO at the product safe point.  The host carries no opaque
+    /// component guard and the runtime never trusts a client-supplied guard.
+    pub fn developer_map_track_set(
+        &self,
+        request: rusty_engine::developer_command_standard::HostTrackSetRequest,
+    ) -> Result<
+        rusty_engine::gameplay_mechanics::TrackSetRequest,
+        rusty_engine::developer_command_standard::HostWireError,
+    > {
+        request.map_live(self.gameplay.entities())
+    }
+
+    /// Apply one explicit Engine standard admin track request against Dagger's
+    /// already-admitted mechanics state.  This is a visibly privileged
+    /// diagnostic path; ordinary attacks and restoration keep using Dagger's
+    /// production action and progression paths.
+    pub fn developer_set_track(
+        &mut self,
+        request: rusty_engine::gameplay_mechanics::TrackSetRequest,
+    ) -> Result<
+        rusty_engine::gameplay_mechanics::TrackSetReceipt,
+        rusty_engine::gameplay_mechanics::MechanicsError,
+    > {
+        rusty_engine::developer_command_standard::admin_set_track(
+            self.gameplay.entities_mut(),
+            self.gameplay_catalog.mechanics(),
+            request,
+        )
+    }
+
+    /// Run bounded physical swings through the same first-person action,
+    /// contact timing, and cooldown path that normal input uses.
+    pub fn run_developer_melee_scenario(
+        &mut self,
+        swings: u8,
+    ) -> Result<ProductReadout, RuntimeError> {
+        let target = self.focused_content_id.ok_or_else(|| {
+            RuntimeError::Encounter(
+                "developer melee scenario requires a prepared content target".to_string(),
+            )
+        })?;
+        for _ in 0..swings {
+            // Patrol owns the live enemy transform. Keep the player's bounded
+            // scenario setup near that live transform before issuing the same
+            // physical action edge ordinary play uses; do not freeze or
+            // overwrite patrol, damage, or progression state.
+            self.place_player_near_live_content(target)?;
+            self.attack_focused_target()?;
+            self.tick_play_session(MELEE_ANTICIPATION_SECONDS)?;
+            for _ in 0..3 {
+                self.tick_play_session(0.25)?;
+            }
+        }
+        self.product_readout()
+    }
+
+    /// Advance a bounded developer play demonstration while following its
+    /// already-selected, patrol-owned target. The ticks remain ordinary
+    /// production ticks: this helper supplies only the explicit scenario
+    /// positioning that a human player would otherwise perform.
+    pub fn run_developer_advance_scenario(
+        &mut self,
+        ticks: u8,
+    ) -> Result<ProductReadout, RuntimeError> {
+        let target = self.focused_content_id.ok_or_else(|| {
+            RuntimeError::Encounter(
+                "developer advance scenario requires a prepared content target".to_string(),
+            )
+        })?;
+        self.place_player_near_live_content(target)?;
+        for _ in 0..ticks {
+            self.tick_play_session(0.25)?;
+            if self.player_health() <= 0.0 {
+                break;
+            }
+        }
+        self.product_readout()
+    }
+
+    /// Run the bounded, committed kill-XP demonstration via physical melee
+    /// contacts.  Setup is intentionally product-admin-only; XP awards and
+    /// level transition still flow through the normal combat hook.
+    pub fn run_developer_progression_scenario(&mut self) -> Result<ProductReadout, RuntimeError> {
+        self.reset_play_session()?;
+        for (id, cap) in [(2003_u64, 80_usize), (2002, 80), (2005, 80)] {
+            self.jump_to_content(id)?;
+            for _ in 0..cap {
+                self.run_developer_melee_scenario(1)?;
+                if self
+                    .product_readout()?
+                    .combat
+                    .last()
+                    .is_some_and(|record| record.died)
+                {
+                    break;
+                }
+            }
+            if !self
+                .product_readout()?
+                .combat
+                .last()
+                .is_some_and(|record| record.died)
+            {
+                return Err(RuntimeError::Encounter(format!(
+                    "developer progression scenario did not defeat content entity {id}"
+                )));
+            }
+        }
+        self.product_readout()
+    }
+
     fn live_track(&self, actor: &str, track: &str) -> f32 {
         self.gameplay.track_value(actor, track).unwrap_or(0) as f32
     }
@@ -1285,9 +1425,8 @@ impl DaggerRuntime {
     }
 
     /// Session-scoped progression reset: spawn xp/level/health-max bases
-    /// through the progression authority, plus the runtime-side history and
-    /// level-up roll sequence. Called by `reset_play_session` BEFORE track
-    /// restoration so health restores to the spawn maximum.
+    /// through the progression authority. The caller restores tracks after
+    /// the candidate's health current has first been lowered safely.
     fn reset_progression(&mut self) -> Result<(), RuntimeError> {
         dagger_rpg::reset_actor_progression(
             &mut self.gameplay,
@@ -1295,8 +1434,6 @@ impl DaggerRuntime {
             PLAYER_ACTOR_ID,
         )
         .map_err(RuntimeError::Gameplay)?;
-        self.progression_history.clear();
-        self.player_level_up_sequence = 0;
         Ok(())
     }
 
@@ -1364,10 +1501,34 @@ impl DaggerRuntime {
     /// the same hp rolls. The lab jump verb only heals — it preserves
     /// progression within a session.
     pub fn reset_play_session(&mut self) -> Result<ProductReadout, RuntimeError> {
+        let active_encounter = self.active_encounter_id.clone();
+        // Lowering health-max after a level-up must not transiently leave the
+        // old higher current outside the candidate's new bounds. Prepare the
+        // private gameplay candidate at a safe current, reset its progression
+        // bases, then restore all tracks. Publish it only after every step
+        // succeeds, keeping reset failure atomic to live mechanics state.
+        let previous_gameplay = self.gameplay.clone();
+        let reset_result = (|| {
+            set_actor_track(
+                &mut self.gameplay,
+                &self.gameplay_catalog,
+                PLAYER_ACTOR_ID,
+                "health",
+                0,
+            )
+            .map_err(RuntimeError::Gameplay)?;
+            self.reset_progression()?;
+            self.restore_live_actors()
+        })();
+        if let Err(error) = reset_result {
+            self.gameplay = previous_gameplay;
+            return Err(error);
+        }
+        self.progression_history.clear();
+        self.player_level_up_sequence = 0;
         self.open_loot_container_id = None;
         self.notices.clear();
-        self.reset_progression()?;
-        if let Some(active) = self.active_encounter_id.clone() {
+        if let Some(active) = active_encounter {
             return self.start_named_encounter(&active);
         }
         self.set_player_position(self.player_start)?;
@@ -1409,15 +1570,38 @@ impl DaggerRuntime {
     /// teleport coordinate.
     pub fn jump_to_content(&mut self, id: u64) -> Result<ProductReadout, RuntimeError> {
         self.open_loot_container_id = None;
+        self.notices.clear();
+        self.place_player_near_live_content(id)?;
+        self.restore_live_actors()?;
+        self.combat_sequence = 0;
+        self.player_action_sequence = 0;
+        self.combat_history.clear();
+        self.combat_attempt_sequence = 0;
+        self.combat_attempt_history.clear();
+        self.player_attack_cooldown_remaining = 0.0;
+        self.melee_presentation = None;
+        self.encounter_sequence = 0;
+        self.encounter_history.clear();
+        self.reset_enemy_presentation_sequences();
+        self.active_encounter_id = None;
+        self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
+        self.active_encounter_engaged = false;
+        self.focused_content_id = Some(id);
+        self.product_readout()
+    }
+
+    /// Place the player beside a content entity's current authoritative
+    /// position and face it. This is deliberately narrower than
+    /// `jump_to_content`: it does not restore actors, reset patrol, clear
+    /// histories, or reset combat/progression state.
+    fn place_player_near_live_content(&mut self, id: u64) -> Result<(), RuntimeError> {
         let target = self
             .content_live_positions
             .get(&id)
             .copied()
             .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
-        self.notices.clear();
         let original_position = self.player_position()?;
         let original_look_state = self.player_look_state;
-        let original_focus = self.focused_content_id;
         for [offset_x, offset_z] in [[0.0, 1.5], [1.5, 0.0], [0.0, -1.5], [-1.5, 0.0]] {
             let approach_probe = [target[0] + offset_x, target[1] + 2.0, target[2] + offset_z];
             let Some(grounding) =
@@ -1465,27 +1649,11 @@ impl DaggerRuntime {
             if navigable && self.enemy_line_of_sight_clear(id, position) {
                 self.set_player_position(position)?;
                 self.player_look_state = facing_state;
-                self.restore_live_actors()?;
-                self.combat_sequence = 0;
-                self.player_action_sequence = 0;
-                self.combat_history.clear();
-                self.combat_attempt_sequence = 0;
-                self.combat_attempt_history.clear();
-                self.player_attack_cooldown_remaining = 0.0;
-                self.melee_presentation = None;
-                self.encounter_sequence = 0;
-                self.encounter_history.clear();
-                self.reset_enemy_presentation_sequences();
-                self.active_encounter_id = None;
-                self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
-                self.active_encounter_engaged = false;
-                self.focused_content_id = Some(id);
-                return self.product_readout();
+                return Ok(());
             }
         }
         self.set_player_position(original_position)?;
         self.player_look_state = original_look_state;
-        self.focused_content_id = original_focus;
         Err(RuntimeError::Content(ContentError::NoGroundedApproach(id)))
     }
 

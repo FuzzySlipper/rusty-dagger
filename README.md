@@ -62,6 +62,29 @@ scripts/verify.sh
 scripts/check-dagger-product-browser.sh
 ```
 
+## Developer command console
+
+The connected application-host product includes the Engine-owned **Dagger
+developer commands** pull-down. It uses the public Engine host envelope,
+generated client, standard command schemas, and shell; the product service
+only queues requests to its existing runtime safe point.
+
+- `standard.inspect.entity` and `standard.inspect.mechanics` are read-only
+  Engine standard inspections. The player entity is `1` in the committed
+  Privateer's Hold session.
+- `standard.admin.track.set` is the visibly privileged Engine track-owner
+  adapter. It is distinct from normal combat and restoration.
+- `dagger.scenario.prepare`, `.melee`, and `.advance` respectively set up a
+  committed target, run production first-person melee, and advance bounded
+  production ticks.
+- `dagger.scenario.progression` is an admin-only demonstration: it resets and
+  executes the committed Orc/Giant-Bat kill sequence through real melee,
+  exposing the resulting XP, level transition, receipts, events, and
+  projections in the returned Dagger readout.
+
+The console is diagnostic tooling, not a player surface or a persistence and
+replay authority.
+
 Run the importer directly when working on extraction:
 
 ```bash
