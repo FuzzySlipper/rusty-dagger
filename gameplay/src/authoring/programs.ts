@@ -4,7 +4,7 @@
  * into the Engine's program grammar and is the only executor.
  */
 
-import type { Expr } from "./expressions.js";
+import { embedDaggerExpr, type EmbeddedExpr, type Expr } from "./expressions.js";
 
 export type CmpOp = "lt" | "lte" | "eq" | "gte" | "gt";
 
@@ -12,8 +12,8 @@ export type CmpOp = "lt" | "lte" | "eq" | "gte" | "gt";
 export type Predicate = Readonly<{
   kind: "cmp";
   op: CmpOp;
-  left: Expr;
-  right: Expr;
+  left: EmbeddedExpr;
+  right: EmbeddedExpr;
 }>;
 
 export type Selector = Readonly<{
@@ -21,8 +21,8 @@ export type Selector = Readonly<{
 }>;
 
 export type Operation =
-  | Readonly<{ kind: "spendTrack"; track: string; amount: Expr }>
-  | Readonly<{ kind: "damage"; target: Selector; amount: Expr }>;
+  | Readonly<{ kind: "spendTrack"; track: string; amount: EmbeddedExpr }>
+  | Readonly<{ kind: "damage"; target: Selector; amount: EmbeddedExpr }>;
 
 export type Program =
   | Readonly<{ kind: "sequence"; steps: readonly Program[] }>
@@ -37,8 +37,8 @@ export type Program =
 export const cmp = (op: CmpOp, left: Expr, right: Expr): Predicate => ({
   kind: "cmp",
   op,
-  left,
-  right,
+  left: embedDaggerExpr(left),
+  right: embedDaggerExpr(right),
 });
 
 export const intentTarget = (): Selector => ({ kind: "intentTarget" });
@@ -46,13 +46,13 @@ export const intentTarget = (): Selector => ({ kind: "intentTarget" });
 export const spendTrack = (track: string, amount: Expr): Operation => ({
   kind: "spendTrack",
   track,
-  amount,
+  amount: embedDaggerExpr(amount),
 });
 
 export const damage = (amount: Expr, target: Selector = intentTarget()): Operation => ({
   kind: "damage",
   target,
-  amount,
+  amount: embedDaggerExpr(amount),
 });
 
 export const sequence = (...steps: readonly Program[]): Program => ({

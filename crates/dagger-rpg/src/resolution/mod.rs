@@ -1,4 +1,5 @@
 mod compile;
+mod composed;
 mod eval;
 mod loot;
 mod mechanics;

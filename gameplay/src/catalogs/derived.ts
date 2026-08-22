@@ -237,7 +237,7 @@ export const derived: readonly DerivedRule[] = [
           evidence("skill-value"),
           evidence("skill-advancement-multiplier"),
           evidence("career-advancement-multiplier-centi"),
-          powMilli(constant(1040), evidence("level")),
+          powMilli(1040, "level"),
           constant(2),
         ),
         constant(500000),

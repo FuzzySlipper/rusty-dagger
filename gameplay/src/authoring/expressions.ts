@@ -19,11 +19,15 @@
  * Focused evaluation is repeatable when the caller supplies the same evidence.
  */
 
-import { declareComposedExactProductCodec } from "@rusty-engine/gameplay-standard-authoring";
+import {
+  composeEmbeddedComposedExactDefinition,
+  declareComposedExactProductCodec,
+} from "@rusty-engine/gameplay-standard-authoring";
 import {
   assertComposedExactPayload,
   decodeComposedExactPayload,
   type ComposedExactTree,
+  type ComposedExactDefinitionPayload,
   type JsonValue,
 } from "@rusty-engine/gameplay-standard-contracts";
 
@@ -38,7 +42,10 @@ export type DaggerExprLeaf =
   | Readonly<{ kind: "dice"; payload: Readonly<{ id: string; min: number; max: number }> }>
   | Readonly<{ kind: "equipped-weapon-dice"; payload: Readonly<{ subject: Subject; id: string }> }>
   | Readonly<{ kind: "struck-armor"; payload: Readonly<{ subject: Subject; id: string }> }>
-  | Readonly<{ kind: "pow-milli"; payload: Readonly<{ base: Expr; exponent: Expr }> }>;
+  | Readonly<{
+      kind: "pow-milli";
+      payload: Readonly<{ base: number; exponentRoll: string }>;
+    }>;
 
 /**
  * The strict codec receives only a product payload, not its enclosing tree
@@ -50,9 +57,14 @@ export type DaggerExprPayload =
   | Readonly<{ kind: "dice"; value: Readonly<{ id: string; min: number; max: number }> }>
   | Readonly<{ kind: "equipped-weapon-dice"; value: Readonly<{ subject: Subject; id: string }> }>
   | Readonly<{ kind: "struck-armor"; value: Readonly<{ subject: Subject; id: string }> }>
-  | Readonly<{ kind: "pow-milli"; value: Readonly<{ base: Expr; exponent: Expr }> }>;
+  | Readonly<{
+      kind: "pow-milli";
+      value: Readonly<{ base: number; exponentRoll: string }>;
+    }>;
 
 export type Expr = ComposedExactTree<DaggerExprPayload>;
+/** A generated composedExact definition embedded in Dagger's schema-2 aggregate. */
+export type EmbeddedExpr = ComposedExactDefinitionPayload<DaggerExprPayload>;
 
 const role = (subject: Subject): Subject => subject;
 const record = (value: unknown): Record<string, unknown> => {
@@ -80,7 +92,7 @@ const id = (value: unknown): string => {
   if (
     typeof value !== "string"
     || new TextEncoder().encode(value).byteLength > 96
-    || !/^[a-z0-9._-]+$/.test(value)
+    || !/^[a-z][a-z0-9._-]*$/.test(value)
   ) {
     throw new Error("Dagger product expression payload id must use the Dagger lowercase id grammar");
   }
@@ -135,12 +147,12 @@ const decodeDaggerExprPayload = (payload: unknown): DaggerExprPayload => {
       exactFields(value, ["id", "subject"]);
       return { kind, value: { subject: subject(value.subject), id: id(value.id) } };
     case "pow-milli":
-      exactFields(value, ["base", "exponent"]);
+      exactFields(value, ["base", "exponentRoll"]);
       return {
         kind,
         value: {
-          base: decodeNestedExpr(value.base),
-          exponent: decodeNestedExpr(value.exponent),
+          base: integer(value.base),
+          exponentRoll: id(value.exponentRoll),
         },
       };
     default:
@@ -163,10 +175,6 @@ function assertDaggerProductKinds(tree: Expr): void {
       }
       if (tree.kind !== tree.payload.kind) {
         throw new Error("Dagger product payload kind must match the enclosing product kind");
-      }
-      if (tree.payload.kind === "pow-milli") {
-        assertDaggerProductKinds(tree.payload.value.base);
-        assertDaggerProductKinds(tree.payload.value.exponent);
       }
       return;
     case "add":
@@ -217,6 +225,29 @@ const product = <T extends DaggerExprLeaf>(leaf: T): Expr => checked({
   subject: "dagger",
   source: "dagger",
 });
+
+/**
+ * Embeds one generated tree in Dagger's already-admitted schema-2 aggregate.
+ * The Engine helper is the only generic grammar validation/composition path.
+ */
+export const embedDaggerExpr = (tree: Expr): EmbeddedExpr =>
+  composeEmbeddedComposedExactDefinition({
+    codec: daggerComposedExactCodec,
+    definition: {
+      family: "composedExact",
+      semanticsVersion: 1,
+      subject: "dagger",
+      source: "dagger",
+      extension: daggerComposedExactCodec.schema,
+      roles: [
+        { role: "actor", capabilities: [] },
+        { role: "target", capabilities: [] },
+      ],
+      tree,
+    },
+    parentSchemaVersion: 2,
+    provenance: [{ subject: "dagger", source: "dagger" }],
+  });
 
 export const constant = (value: number): Expr => checked({ op: "literal", value });
 
@@ -274,11 +305,11 @@ export const trackMax = (subject: Subject, id: string): Expr => checked({
 /**
  * Fixed-point power: `base^exponent` scaled by 1000 (milli), computed
  * iteratively with floor division at each step — the deterministic integer
- * approximation of the donor's f64 pow (e.g. 1.04^level is
- * `powMilli(constant(1040), evidence("level"))`).
+ * approximation of the donor's f64 pow. The exponent roll is the one explicit
+ * product input, so the runtime never invents an input id.
  */
-export const powMilli = (base: Expr, exponent: Expr): Expr =>
-  product({ kind: "pow-milli", payload: { base, exponent } });
+export const powMilli = (base: number, exponentRoll: string): Expr =>
+  product({ kind: "pow-milli", payload: { base, exponentRoll } });
 
 export const add = (...terms: readonly Expr[]): Expr =>
   terms.reduce<Expr>((left, right) => checked({ op: "add", left, right }), constant(0));

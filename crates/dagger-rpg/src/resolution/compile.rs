@@ -1,30 +1,29 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use rusty_engine::{
-    gameplay_mechanics::{MechanicsScalar, StatId, TrackId},
     gameplay_resolution::Program,
-    gameplay_rules::decode_rule_package,
-    gameplay_standard::{
-        CapabilityRoleId, ComposedExactComparison, ComposedExactExpr, ComposedExactLeafKindId,
-        ComposedExactProductLeaf, ExactInputReference, StandardExactFactReference,
+    gameplay_rules::{
+        decode_rule_package, select_rule_payload_subtree, AdmittedRulePackage, RulePayloadPath,
+        RulePayloadPathSegment,
     },
+    gameplay_standard::{compile_composed_exact_embedded, ComposedExactComparison},
 };
 
 use super::{
-    AuthoredActorDefinition, AuthoredCmpOp, AuthoredEncounterDefinition, AuthoredExactInput,
-    AuthoredExpr, AuthoredGameplayPayload, AuthoredItemDefinition, AuthoredLootTable,
-    AuthoredOperation, AuthoredPredicate, AuthoredProgram, AuthoredRuleDefinition,
-    AuthoredSelector, DaggerActionDefinition, DaggerActorDefinition, DaggerActorKind,
-    DaggerArmorDefinition, DaggerBehaviorDefinition, DaggerDamageRange, DaggerDerivedRule,
-    DaggerEncounterDefinition, DaggerEquipmentSection, DaggerEquipmentSlotDefinition,
-    DaggerExactLeaf, DaggerExpr, DaggerGameplayCatalog, DaggerGameplayError, DaggerItemDefinition,
-    DaggerItemEquipment, DaggerLoadoutEntry, DaggerLootCategories, DaggerLootTable,
-    DaggerOperation, DaggerPredicate, DaggerProgram, DaggerRuleDefinition, DaggerSelector,
-    DaggerShieldDefinition, DaggerStatsSection, DaggerSubject, DaggerTrackDefinition,
-    DaggerWeaponDefinition, DaggerWeaponHands, DAGGER_GAMEPLAY_SCHEMA_VERSION, MAX_BEHAVIOR_VALUE,
-    MAX_DAGGER_ACTIONS, MAX_DAGGER_ACTORS, MAX_DAGGER_DECLARED_IDS, MAX_DAGGER_DERIVED,
-    MAX_DAGGER_ENCOUNTERS, MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_EXPR_DEPTH,
-    MAX_DAGGER_EXPR_NODES, MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_LOOT_TABLES,
+    composed::DaggerExactLeafCodec, AuthoredActorDefinition, AuthoredCmpOp,
+    AuthoredEncounterDefinition, AuthoredGameplayPayload, AuthoredItemDefinition,
+    AuthoredLootTable, AuthoredOperation, AuthoredPredicate, AuthoredProgram,
+    AuthoredRuleDefinition, AuthoredSelector, DaggerActionDefinition, DaggerActorDefinition,
+    DaggerActorKind, DaggerArmorDefinition, DaggerBehaviorDefinition, DaggerDamageRange,
+    DaggerDerivedRule, DaggerEmbeddedExpressionEvidence, DaggerEncounterDefinition,
+    DaggerEquipmentSection, DaggerEquipmentSlotDefinition, DaggerExpr, DaggerGameplayCatalog,
+    DaggerGameplayError, DaggerItemDefinition, DaggerItemEquipment, DaggerLoadoutEntry,
+    DaggerLootCategories, DaggerLootTable, DaggerOperation, DaggerPredicate, DaggerProgram,
+    DaggerRuleDefinition, DaggerSelector, DaggerShieldDefinition, DaggerStatsSection,
+    DaggerTrackDefinition, DaggerWeaponDefinition, DaggerWeaponHands,
+    DAGGER_GAMEPLAY_SCHEMA_VERSION, MAX_BEHAVIOR_VALUE, MAX_DAGGER_ACTIONS, MAX_DAGGER_ACTORS,
+    MAX_DAGGER_DECLARED_IDS, MAX_DAGGER_DERIVED, MAX_DAGGER_ENCOUNTERS,
+    MAX_DAGGER_ENCOUNTER_MEMBERS, MAX_DAGGER_ID_BYTES, MAX_DAGGER_ITEMS, MAX_DAGGER_LOOT_TABLES,
     MAX_DAGGER_PROGRAM_DEPTH, MAX_DAGGER_PROGRAM_NODES, MAX_DAGGER_RULES, MAX_DAGGER_TEXT_BYTES,
 };
 
@@ -176,15 +175,35 @@ pub fn compile_gameplay_package(
     let items = compile_items(payload.items, &stats)?;
     let equipment = compile_equipment(payload.equipment)?;
     validate_item_equipment_references(&items, &equipment)?;
-    let actions = compile_actions(payload.actions, &stats)?;
-    let actors = compile_actors(payload.actors, &stats, &actions, &items, &equipment)?;
+    let mut embedded_expression_evidence = Vec::new();
+    let actions = compile_actions(
+        &package,
+        payload.actions,
+        &stats,
+        &mut embedded_expression_evidence,
+    )?;
+    let actors = compile_actors(
+        &package,
+        payload.actors,
+        &stats,
+        &actions,
+        &items,
+        &equipment,
+        &mut embedded_expression_evidence,
+    )?;
     let rules = compile_rules(payload.rules)?;
     let encounters = compile_encounters(payload.encounters)?;
-    let derived = compile_derived(payload.derived, &stats)?;
+    let derived = compile_derived(
+        &package,
+        payload.derived,
+        &stats,
+        &mut embedded_expression_evidence,
+    )?;
     let loot_tables = compile_loot_tables(payload.loot_tables)?;
     let mechanics = super::mechanics::compile_mechanics_catalog(&stats, &items, &equipment)?;
     Ok(DaggerGameplayCatalog::new(
         package.fingerprint().as_str().to_string(),
+        embedded_expression_evidence,
         stats,
         actors,
         actions,
@@ -369,14 +388,20 @@ fn compile_equipment(
 }
 
 fn compile_derived(
+    package: &AdmittedRulePackage,
     definitions: Vec<super::AuthoredDerivedRule>,
     stats: &DaggerStatsSection,
+    evidence: &mut Vec<DaggerEmbeddedExpressionEvidence>,
 ) -> Result<BTreeMap<String, DaggerDerivedRule>, DaggerGameplayError> {
     let mut derived = BTreeMap::new();
     for (index, rule) in definitions.into_iter().enumerate() {
         validate_id(&format!("payload.derived[{index}].id"), &rule.id)?;
-        let mut nodes = 0_usize;
-        let expr = compile_expr(rule.expr, &mut nodes, 0, stats)?;
+        let expr = compile_expr(
+            package,
+            payload_path(&[field("derived")?, at_index(index)?, field("expr")?])?,
+            stats,
+            evidence,
+        )?;
         if derived
             .insert(
                 rule.id.clone(),
@@ -584,8 +609,10 @@ fn validate_material(path: &str, material: &str) -> Result<(), DaggerGameplayErr
 }
 
 fn compile_actions(
+    package: &AdmittedRulePackage,
     definitions: Vec<super::AuthoredActionDefinition>,
     stats: &DaggerStatsSection,
+    evidence: &mut Vec<DaggerEmbeddedExpressionEvidence>,
 ) -> Result<BTreeMap<String, DaggerActionDefinition>, DaggerGameplayError> {
     let mut actions = BTreeMap::new();
     for (index, action) in definitions.into_iter().enumerate() {
@@ -602,7 +629,15 @@ fn compile_actions(
             }
         }
         let mut nodes = 0_usize;
-        let program = compile_program(action.program, &mut nodes, 0, stats)?;
+        let program = compile_program(
+            package,
+            action.program,
+            payload_path(&[field("actions")?, at_index(index)?, field("program")?])?,
+            &mut nodes,
+            0,
+            stats,
+            evidence,
+        )?;
         let reach = action
             .reach
             .map(|value| {
@@ -646,11 +681,13 @@ fn compile_actions(
 }
 
 fn compile_actors(
+    package: &AdmittedRulePackage,
     definitions: Vec<AuthoredActorDefinition>,
     stats: &DaggerStatsSection,
     actions: &BTreeMap<String, DaggerActionDefinition>,
     items: &BTreeMap<String, DaggerItemDefinition>,
     equipment: &DaggerEquipmentSection,
+    evidence: &mut Vec<DaggerEmbeddedExpressionEvidence>,
 ) -> Result<BTreeMap<String, DaggerActorDefinition>, DaggerGameplayError> {
     let mut actors = BTreeMap::new();
     let mut mobile_ids = BTreeSet::new();
@@ -720,10 +757,20 @@ fn compile_actors(
                     id: track.id,
                 });
             }
-            let mut nodes = 0_usize;
             tracks.push(DaggerTrackDefinition {
                 id: track.id,
-                max: compile_expr(track.max, &mut nodes, 0, stats)?,
+                max: compile_expr(
+                    package,
+                    payload_path(&[
+                        field("actors")?,
+                        at_index(index)?,
+                        field("tracks")?,
+                        at_index(track_index)?,
+                        field("max")?,
+                    ])?,
+                    stats,
+                    evidence,
+                )?,
             });
         }
         let behavior = actor
@@ -975,10 +1022,13 @@ fn compile_encounters(
 }
 
 fn compile_program(
+    package: &AdmittedRulePackage,
     program: AuthoredProgram,
+    location: RulePayloadPath,
     nodes: &mut usize,
     depth: u16,
     stats: &DaggerStatsSection,
+    evidence: &mut Vec<DaggerEmbeddedExpressionEvidence>,
 ) -> Result<DaggerProgram, DaggerGameplayError> {
     *nodes = nodes.checked_add(1).ok_or(DaggerGameplayError::Quota {
         field: "program nodes",
@@ -1002,7 +1052,18 @@ fn compile_program(
         AuthoredProgram::Sequence { steps } => Ok(Program::Sequence {
             steps: steps
                 .into_iter()
-                .map(|step| compile_program(step, nodes, next_depth, stats))
+                .enumerate()
+                .map(|(index, step)| {
+                    compile_program(
+                        package,
+                        step,
+                        child(&child(&location, field("steps")?)?, at_index(index)?)?,
+                        nodes,
+                        next_depth,
+                        stats,
+                        evidence,
+                    )
+                })
                 .collect::<Result<_, _>>()?,
         }),
         AuthoredProgram::When {
@@ -1010,27 +1071,58 @@ fn compile_program(
             then_program,
             otherwise_program,
         } => Ok(Program::When {
-            predicate: compile_predicate(predicate, stats)?,
-            then_program: Box::new(compile_program(*then_program, nodes, next_depth, stats)?),
+            predicate: compile_predicate(
+                package,
+                predicate,
+                child(&location, field("predicate")?)?,
+                stats,
+                evidence,
+            )?,
+            then_program: Box::new(compile_program(
+                package,
+                *then_program,
+                child(&location, field("thenProgram")?)?,
+                nodes,
+                next_depth,
+                stats,
+                evidence,
+            )?),
             otherwise_program: otherwise_program
-                .map(|value| compile_program(*value, nodes, next_depth, stats).map(Box::new))
+                .map(|value| {
+                    compile_program(
+                        package,
+                        *value,
+                        child(&location, field("otherwiseProgram")?)?,
+                        nodes,
+                        next_depth,
+                        stats,
+                        evidence,
+                    )
+                    .map(Box::new)
+                })
                 .transpose()?,
         }),
-        AuthoredProgram::Operation { operation } => {
-            Ok(Program::Operation(compile_operation(operation, stats)?))
-        }
+        AuthoredProgram::Operation { operation } => Ok(Program::Operation(compile_operation(
+            package,
+            operation,
+            child(&location, field("operation")?)?,
+            stats,
+            evidence,
+        )?)),
     }
 }
 
 fn compile_predicate(
+    package: &AdmittedRulePackage,
     value: AuthoredPredicate,
+    location: RulePayloadPath,
     stats: &DaggerStatsSection,
+    evidence: &mut Vec<DaggerEmbeddedExpressionEvidence>,
 ) -> Result<DaggerPredicate, DaggerGameplayError> {
     match value {
-        AuthoredPredicate::Cmp { op, left, right } => {
-            let mut nodes = 0_usize;
-            let left = compile_expr(left, &mut nodes, 0, stats)?;
-            let right = compile_expr(right, &mut nodes, 0, stats)?;
+        AuthoredPredicate::Cmp { op, .. } => {
+            let left = compile_expr(package, child(&location, field("left")?)?, stats, evidence)?;
+            let right = compile_expr(package, child(&location, field("right")?)?, stats, evidence)?;
             Ok(match op {
                 AuthoredCmpOp::Lt => ComposedExactComparison::LessThan(left, right),
                 AuthoredCmpOp::Lte => ComposedExactComparison::LessOrEqual(left, right),
@@ -1049,435 +1141,191 @@ fn compile_selector(value: AuthoredSelector) -> DaggerSelector {
 }
 
 fn compile_operation(
+    package: &AdmittedRulePackage,
     value: AuthoredOperation,
+    location: RulePayloadPath,
     stats: &DaggerStatsSection,
+    evidence: &mut Vec<DaggerEmbeddedExpressionEvidence>,
 ) -> Result<DaggerOperation, DaggerGameplayError> {
     match value {
-        AuthoredOperation::SpendTrack { track, amount } => {
+        AuthoredOperation::SpendTrack { track, .. } => {
             validate_declared(
                 "payload.actions[].program.operation.track",
                 &track,
                 &stats.tracks,
             )?;
-            let mut nodes = 0_usize;
             Ok(DaggerOperation::SpendTrack {
                 track,
-                amount: compile_expr(amount, &mut nodes, 0, stats)?,
+                amount: compile_expr(
+                    package,
+                    child(&location, field("amount")?)?,
+                    stats,
+                    evidence,
+                )?,
             })
         }
-        AuthoredOperation::Damage { target, amount } => {
-            let mut nodes = 0_usize;
-            Ok(DaggerOperation::Damage {
-                target: compile_selector(target),
-                amount: compile_expr(amount, &mut nodes, 0, stats)?,
-            })
-        }
+        AuthoredOperation::Damage { target, .. } => Ok(DaggerOperation::Damage {
+            target: compile_selector(target),
+            amount: compile_expr(
+                package,
+                child(&location, field("amount")?)?,
+                stats,
+                evidence,
+            )?,
+        }),
     }
 }
 
 fn compile_expr(
-    expr: AuthoredExpr,
-    nodes: &mut usize,
-    depth: u16,
+    package: &AdmittedRulePackage,
+    location: RulePayloadPath,
     stats: &DaggerStatsSection,
+    evidence: &mut Vec<DaggerEmbeddedExpressionEvidence>,
 ) -> Result<DaggerExpr, DaggerGameplayError> {
-    *nodes = nodes.checked_add(1).ok_or(DaggerGameplayError::Quota {
-        field: "expression nodes",
-        actual: usize::MAX,
-        maximum: MAX_DAGGER_EXPR_NODES,
-    })?;
-    enforce_quota("expression nodes", *nodes, MAX_DAGGER_EXPR_NODES)?;
-    if depth > MAX_DAGGER_EXPR_DEPTH {
-        return Err(DaggerGameplayError::Quota {
-            field: "expression depth",
-            actual: usize::from(depth),
-            maximum: usize::from(MAX_DAGGER_EXPR_DEPTH),
-        });
-    }
-    let next_depth = depth.checked_add(1).ok_or(DaggerGameplayError::Quota {
-        field: "expression depth",
-        actual: usize::MAX,
-        maximum: usize::from(MAX_DAGGER_EXPR_DEPTH),
-    })?;
-    match expr {
-        AuthoredExpr::Literal { value } => MechanicsScalar::new(value.0)
-            .map(ComposedExactExpr::Literal)
-            .map_err(|error| DaggerGameplayError::InvalidValue {
-                path: "expression.literal".to_string(),
-                reason: format!("mechanics scalar rejected: {error:?}"),
-            }),
-        AuthoredExpr::Input { input } => {
-            compile_exact_input(input, stats).map(ComposedExactExpr::Input)
-        }
-        AuthoredExpr::Add { left, right } => Ok(ComposedExactExpr::Add(
-            Box::new(compile_expr(*left, nodes, next_depth, stats)?),
-            Box::new(compile_expr(*right, nodes, next_depth, stats)?),
-        )),
-        AuthoredExpr::Subtract { left, right } => Ok(ComposedExactExpr::Subtract(
-            Box::new(compile_expr(*left, nodes, next_depth, stats)?),
-            Box::new(compile_expr(*right, nodes, next_depth, stats)?),
-        )),
-        AuthoredExpr::Multiply { left, right } => Ok(ComposedExactExpr::Multiply(
-            Box::new(compile_expr(*left, nodes, next_depth, stats)?),
-            Box::new(compile_expr(*right, nodes, next_depth, stats)?),
-        )),
-        AuthoredExpr::FloorDivide { left, right } => Ok(ComposedExactExpr::FloorDivide(
-            Box::new(compile_expr(*left, nodes, next_depth, stats)?),
-            Box::new(compile_expr(*right, nodes, next_depth, stats)?),
-        )),
-        AuthoredExpr::TruncatingDivide { left, right } => Ok(ComposedExactExpr::TruncatingDivide(
-            Box::new(compile_expr(*left, nodes, next_depth, stats)?),
-            Box::new(compile_expr(*right, nodes, next_depth, stats)?),
-        )),
-        AuthoredExpr::Min { values } => Ok(ComposedExactExpr::Min(compile_expr_terms(
-            values, nodes, next_depth, stats,
-        )?)),
-        AuthoredExpr::Max { values } => Ok(ComposedExactExpr::Max(compile_expr_terms(
-            values, nodes, next_depth, stats,
-        )?)),
-        AuthoredExpr::Product {
-            kind,
-            payload,
-            subject,
-            source,
-        } => compile_product_leaf(&kind, payload, &subject, &source, nodes, next_depth, stats),
-    }
-}
-
-fn dagger_role(value: &str) -> Result<CapabilityRoleId, DaggerGameplayError> {
-    if value != "actor" && value != "target" {
-        return Err(DaggerGameplayError::InvalidValue {
-            path: "expression.input.role".to_string(),
-            reason: "Dagger exposes only the documented actor and target roles".to_string(),
-        });
-    }
-    CapabilityRoleId::parse(value).map_err(|error| DaggerGameplayError::InvalidValue {
-        path: "expression.input.role".to_string(),
-        reason: format!("standard role rejected: {error:?}"),
-    })
-}
-
-fn input_id(
-    value: String,
-    path: &str,
-) -> Result<rusty_engine::gameplay_standard::InputId, DaggerGameplayError> {
-    validate_id(path, &value)?;
-    rusty_engine::gameplay_standard::InputId::parse(value).map_err(|error| {
-        DaggerGameplayError::InvalidValue {
-            path: path.to_string(),
-            reason: format!("standard input rejected: {error:?}"),
-        }
-    })
-}
-
-fn compile_exact_input(
-    input: AuthoredExactInput,
-    stats: &DaggerStatsSection,
-) -> Result<ExactInputReference, DaggerGameplayError> {
-    match input {
-        AuthoredExactInput::Roll { role, id } => Ok(ExactInputReference::Roll {
-            role: dagger_role(&role)?,
-            id: input_id(id, "expression.roll")?,
-        }),
-        AuthoredExactInput::StandardStat { role, stat } => {
-            validate_id("expression.standardStat", &stat)?;
-            if !stats.attributes.contains(&stat)
-                && !stats.skills.contains(&stat)
-                && !stats.progression.contains(&stat)
-            {
-                return Err(DaggerGameplayError::InvalidValue {
-                    path: format!("expression.standardStat.{stat}"),
-                    reason: "not declared in the stats section".to_string(),
-                });
+    let selected = select_rule_payload_subtree(package, package.fingerprint(), location.clone())
+        .map_err(|error| DaggerGameplayError::EmbeddedExpression {
+            path: location.display().to_owned(),
+            reason: error.to_string(),
+        })?;
+    let admitted =
+        compile_composed_exact_embedded::<DaggerExactLeafCodec>(&selected).map_err(|error| {
+            DaggerGameplayError::EmbeddedExpression {
+                path: error.context().path().to_owned(),
+                reason: error.to_string(),
             }
-            Ok(ExactInputReference::StandardFact(
-                StandardExactFactReference::Stat {
-                    role: dagger_role(&role)?,
-                    stat: StatId::parse(stat).map_err(|error| {
-                        DaggerGameplayError::InvalidValue {
-                            path: "expression.standardStat".to_string(),
-                            reason: format!("stat rejected: {error:?}"),
-                        }
-                    })?,
-                },
-            ))
+        })?;
+    let expression = admitted.definition().expression().clone();
+    validate_expr_inputs(&expression, stats, location.display())?;
+    evidence.push(DaggerEmbeddedExpressionEvidence {
+        parent_identity: selected.parent_identity().to_string(),
+        parent_fingerprint: selected.parent_fingerprint().as_str().to_string(),
+        path: selected.path().display().to_string(),
+        canonical_bytes: selected.canonical_bytes().to_vec(),
+    });
+    Ok(expression)
+}
+
+fn validate_expr_inputs(
+    expression: &DaggerExpr,
+    stats: &DaggerStatsSection,
+    path: &str,
+) -> Result<(), DaggerGameplayError> {
+    use rusty_engine::gameplay_standard::{
+        ComposedExactExpr, ExactInputReference, StandardExactFactReference,
+    };
+    match expression {
+        ComposedExactExpr::Literal(_) => Ok(()),
+        ComposedExactExpr::Input(ExactInputReference::Roll { role, id }) => {
+            validate_dagger_role(role.as_str(), path)?;
+            validate_id(path, id.as_str())
         }
-        AuthoredExactInput::StandardTrackCurrent { role, track } => {
-            validate_declared("expression.standardTrackCurrent", &track, &stats.tracks)?;
-            Ok(ExactInputReference::StandardFact(
-                StandardExactFactReference::TrackCurrent {
-                    role: dagger_role(&role)?,
-                    track: TrackId::parse(track.clone()).map_err(|error| {
-                        DaggerGameplayError::InvalidValue {
-                            path: format!("expression.standardTrackCurrent.{track}"),
-                            reason: format!("track rejected: {error:?}"),
-                        }
-                    })?,
-                },
-            ))
+        ComposedExactExpr::Input(ExactInputReference::StandardFact(
+            StandardExactFactReference::Stat { role, stat },
+        )) => {
+            validate_dagger_role(role.as_str(), path)?;
+            if stats.attributes.contains(stat.as_str())
+                || stats.skills.contains(stat.as_str())
+                || stats.progression.contains(stat.as_str())
+            {
+                Ok(())
+            } else {
+                Err(DaggerGameplayError::InvalidValue {
+                    path: path.to_owned(),
+                    reason: format!("standard stat {} is not declared", stat.as_str()),
+                })
+            }
         }
-        AuthoredExactInput::StandardTrackMaximum { role, track } => {
-            validate_declared("expression.standardTrackMaximum", &track, &stats.tracks)?;
-            Ok(ExactInputReference::StandardFact(
-                StandardExactFactReference::TrackMaximum {
-                    role: dagger_role(&role)?,
-                    track: TrackId::parse(track.clone()).map_err(|error| {
-                        DaggerGameplayError::InvalidValue {
-                            path: format!("expression.standardTrackMaximum.{track}"),
-                            reason: format!("track rejected: {error:?}"),
-                        }
-                    })?,
-                },
-            ))
+        ComposedExactExpr::Input(ExactInputReference::StandardFact(
+            StandardExactFactReference::TrackCurrent { role, track },
+        ))
+        | ComposedExactExpr::Input(ExactInputReference::StandardFact(
+            StandardExactFactReference::TrackMaximum { role, track },
+        )) => {
+            validate_dagger_role(role.as_str(), path)?;
+            validate_declared(path, track.as_str(), &stats.tracks)
         }
-        AuthoredExactInput::Parameter { .. }
-        | AuthoredExactInput::Fact { .. }
-        | AuthoredExactInput::Choice { .. } => Err(DaggerGameplayError::InvalidValue {
-            path: "expression.input".to_string(),
+        ComposedExactExpr::Input(_) => Err(DaggerGameplayError::InvalidValue {
+            path: path.to_owned(),
             reason: "Dagger has no declared adapter for free-form standard inputs".to_string(),
         }),
-    }
-}
-
-fn compile_product_leaf(
-    kind: &str,
-    payload: serde_json::Value,
-    subject: &str,
-    source: &str,
-    nodes: &mut usize,
-    depth: u16,
-    stats: &DaggerStatsSection,
-) -> Result<DaggerExpr, DaggerGameplayError> {
-    if subject != "dagger" || source != "dagger" {
-        return Err(DaggerGameplayError::InvalidValue {
-            path: "expression.product".to_string(),
-            reason: "Dagger product leaves require the documented dagger subject and source"
-                .to_string(),
-        });
-    }
-    let wrapper = payload
-        .as_object()
-        .ok_or_else(|| DaggerGameplayError::InvalidValue {
-            path: format!("expression.product.{kind}"),
-            reason: "payload must be an object".to_string(),
-        })?;
-    let wrapper_fields = wrapper.keys().map(String::as_str).collect::<BTreeSet<_>>();
-    if wrapper_fields != BTreeSet::from(["kind", "value"]) {
-        return Err(DaggerGameplayError::InvalidValue {
-            path: format!("expression.product.{kind}"),
-            reason: "payload must contain exactly kind and value".to_string(),
-        });
-    }
-    if wrapper.get("kind").and_then(serde_json::Value::as_str) != Some(kind) {
-        return Err(DaggerGameplayError::InvalidValue {
-            path: format!("expression.product.{kind}.kind"),
-            reason: "must match the enclosing product kind".to_string(),
-        });
-    }
-    let object = wrapper
-        .get("value")
-        .and_then(serde_json::Value::as_object)
-        .ok_or_else(|| DaggerGameplayError::InvalidValue {
-            path: format!("expression.product.{kind}.value"),
-            reason: "must be an object".to_string(),
-        })?;
-    let decode_subject = |field: &str| -> Result<DaggerSubject, DaggerGameplayError> {
-        match object.get(field).and_then(serde_json::Value::as_str) {
-            Some("actor") => Ok(DaggerSubject::Actor),
-            Some("target") => Ok(DaggerSubject::Target),
-            _ => Err(DaggerGameplayError::InvalidValue {
-                path: format!("expression.product.{kind}.{field}"),
-                reason: "must be actor or target".to_string(),
-            }),
+        ComposedExactExpr::Add(left, right)
+        | ComposedExactExpr::Subtract(left, right)
+        | ComposedExactExpr::Multiply(left, right)
+        | ComposedExactExpr::FloorDivide(left, right)
+        | ComposedExactExpr::TruncatingDivide(left, right) => {
+            validate_expr_inputs(left, stats, path)?;
+            validate_expr_inputs(right, stats, path)
         }
-    };
-    let require_fields = |fields: &[&str]| -> Result<(), DaggerGameplayError> {
-        let actual = object.keys().map(String::as_str).collect::<BTreeSet<_>>();
-        let expected = fields.iter().copied().collect::<BTreeSet<_>>();
-        if actual == expected {
+        ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
+            for value in values {
+                validate_expr_inputs(value, stats, path)?;
+            }
             Ok(())
-        } else {
-            Err(DaggerGameplayError::InvalidValue {
-                path: format!("expression.product.{kind}"),
-                reason: format!(
-                    "must contain exactly [{}], got [{}]",
-                    fields.join(", "),
-                    actual.into_iter().collect::<Vec<_>>().join(", ")
-                ),
-            })
         }
-    };
-    let leaf = match kind {
-        "equipped-weapon-skill" => {
-            require_fields(&["subject"])?;
-            DaggerExactLeaf::EquippedWeaponSkill {
-                subject: decode_subject("subject")?,
-            }
-        }
-        "dice" => {
-            require_fields(&["id", "min", "max"])?;
-            let id = object
-                .get("id")
-                .and_then(serde_json::Value::as_str)
-                .ok_or_else(|| DaggerGameplayError::InvalidValue {
-                    path: "expression.product.dice.id".to_string(),
-                    reason: "must be a string".to_string(),
-                })?
-                .to_string();
-            validate_id("expression.product.dice", &id)?;
-            let min = json_i64(object.get("min"), "expression.product.dice.min")?;
-            let max = json_i64(object.get("max"), "expression.product.dice.max")?;
-            if min > max {
+        ComposedExactExpr::Product(leaf) => {
+            if leaf.subject().as_str() != "dagger" || leaf.source().as_str() != "dagger" {
                 return Err(DaggerGameplayError::InvalidValue {
-                    path: format!("expression.product.dice.{id}"),
-                    reason: format!("must satisfy min <= max, got {min}..{max}"),
+                    path: path.to_owned(),
+                    reason: "Dagger product leaves require documented dagger provenance"
+                        .to_string(),
                 });
             }
-            DaggerExactLeaf::Dice { id, min, max }
-        }
-        "equipped-weapon-dice" => {
-            require_fields(&["subject", "id"])?;
-            let id = object
-                .get("id")
-                .and_then(serde_json::Value::as_str)
-                .ok_or_else(|| DaggerGameplayError::InvalidValue {
-                    path: "expression.product.equippedWeaponDice.id".to_string(),
-                    reason: "must be a string".to_string(),
-                })?
-                .to_string();
-            validate_id("expression.product.equippedWeaponDice", &id)?;
-            DaggerExactLeaf::EquippedWeaponDice {
-                subject: decode_subject("subject")?,
-                id,
-            }
-        }
-        "struck-armor" => {
-            require_fields(&["subject", "id"])?;
-            if stats.armor_parts.is_empty() {
+            if matches!(leaf.value(), super::DaggerExactLeaf::StruckArmor { .. })
+                && stats.armor_parts.is_empty()
+            {
                 return Err(DaggerGameplayError::InvalidValue {
-                    path: "expression.product.struckArmor".to_string(),
-                    reason: "requires declared stats.armorParts".to_string(),
+                    path: path.to_owned(),
+                    reason: "struck armor requires declared stats.armorParts".to_string(),
                 });
             }
-            let id = object
-                .get("id")
-                .and_then(serde_json::Value::as_str)
-                .ok_or_else(|| DaggerGameplayError::InvalidValue {
-                    path: "expression.product.struckArmor.id".to_string(),
-                    reason: "must be a string".to_string(),
-                })?
-                .to_string();
-            validate_id("expression.product.struckArmor", &id)?;
-            DaggerExactLeaf::StruckArmor {
-                subject: decode_subject("subject")?,
-                id,
-            }
+            Ok(())
         }
-        "pow-milli" => {
-            require_fields(&["base", "exponent"])?;
-            let base = serde_json::from_value(object.get("base").cloned().ok_or_else(|| {
-                DaggerGameplayError::InvalidValue {
-                    path: "expression.product.powMilli.base".to_string(),
-                    reason: "missing".to_string(),
-                }
-            })?)
-            .map_err(|error| DaggerGameplayError::InvalidValue {
-                path: "expression.product.powMilli.base".to_string(),
-                reason: error.to_string(),
-            })?;
-            let exponent =
-                serde_json::from_value(object.get("exponent").cloned().ok_or_else(|| {
-                    DaggerGameplayError::InvalidValue {
-                        path: "expression.product.powMilli.exponent".to_string(),
-                        reason: "missing".to_string(),
-                    }
-                })?)
-                .map_err(|error| DaggerGameplayError::InvalidValue {
-                    path: "expression.product.powMilli.exponent".to_string(),
-                    reason: error.to_string(),
-                })?;
-            DaggerExactLeaf::PowMilli {
-                base: Box::new(compile_expr(base, nodes, depth, stats)?),
-                exponent: Box::new(compile_expr(exponent, nodes, depth, stats)?),
-            }
-        }
-        _ => {
-            return Err(DaggerGameplayError::InvalidValue {
-                path: "expression.product.kind".to_string(),
-                reason: format!("unsupported Dagger product leaf {kind}"),
-            })
-        }
-    };
-    let kind = ComposedExactLeafKindId::parse(kind).map_err(|error| {
-        DaggerGameplayError::InvalidValue {
-            path: "expression.product.kind".to_string(),
-            reason: format!("kind rejected: {error:?}"),
-        }
-    })?;
-    let subject = rusty_engine::gameplay_rules::RuleSubjectId::parse(subject).map_err(|error| {
-        DaggerGameplayError::InvalidValue {
-            path: "expression.product.subject".to_string(),
-            reason: format!("subject rejected: {error:?}"),
-        }
-    })?;
-    let source = rusty_engine::gameplay_rules::RuleSourceId::parse(source).map_err(|error| {
-        DaggerGameplayError::InvalidValue {
-            path: "expression.product.source".to_string(),
-            reason: format!("source rejected: {error:?}"),
-        }
-    })?;
-    Ok(ComposedExactExpr::Product(ComposedExactProductLeaf::new(
-        kind, subject, source, leaf,
-    )))
+    }
 }
 
-fn json_i64(value: Option<&serde_json::Value>, path: &str) -> Result<i64, DaggerGameplayError> {
-    let value = value.ok_or_else(|| DaggerGameplayError::InvalidValue {
-        path: path.to_string(),
-        reason: "missing integer".to_string(),
-    })?;
-    if let Some(integer) = value.as_i64() {
-        return Ok(integer);
-    }
-    let number = value
-        .as_f64()
-        .ok_or_else(|| DaggerGameplayError::InvalidValue {
-            path: path.to_string(),
-            reason: "must be an integer".to_string(),
-        })?;
-    // `i64::MAX as f64` rounds up to 2^63, which a Rust float-to-int cast
-    // would saturate. The half-open upper bound admits only binary64 values
-    // with one exact i64 representation.
-    if number.is_finite()
-        && number.fract() == 0.0
-        && number >= i64::MIN as f64
-        && number < (i64::MAX as f64)
-    {
-        Ok(number as i64)
+fn validate_dagger_role(role: &str, path: &str) -> Result<(), DaggerGameplayError> {
+    if role == "actor" || role == "target" {
+        Ok(())
     } else {
         Err(DaggerGameplayError::InvalidValue {
-            path: path.to_string(),
-            reason: "must be an integral binary64".to_string(),
+            path: path.to_owned(),
+            reason: "Dagger exposes only actor and target roles".to_string(),
         })
     }
 }
 
-fn compile_expr_terms(
-    terms: Vec<AuthoredExpr>,
-    nodes: &mut usize,
-    depth: u16,
-    stats: &DaggerStatsSection,
-) -> Result<Vec<DaggerExpr>, DaggerGameplayError> {
-    if terms.is_empty() {
-        return Err(DaggerGameplayError::InvalidValue {
-            path: "expression.terms".to_string(),
-            reason: "must contain at least one term".to_string(),
-        });
-    }
-    terms
-        .into_iter()
-        .map(|term| compile_expr(term, nodes, depth, stats))
-        .collect()
+fn field(value: &str) -> Result<RulePayloadPathSegment, DaggerGameplayError> {
+    RulePayloadPathSegment::field(value).map_err(|error| DaggerGameplayError::EmbeddedExpression {
+        path: value.to_owned(),
+        reason: error.to_string(),
+    })
+}
+
+fn at_index(value: usize) -> Result<RulePayloadPathSegment, DaggerGameplayError> {
+    RulePayloadPathSegment::index(value).map_err(|error| DaggerGameplayError::EmbeddedExpression {
+        path: value.to_string(),
+        reason: error.to_string(),
+    })
+}
+
+fn payload_path(
+    segments: &[RulePayloadPathSegment],
+) -> Result<RulePayloadPath, DaggerGameplayError> {
+    RulePayloadPath::new(segments.to_vec()).map_err(|error| {
+        DaggerGameplayError::EmbeddedExpression {
+            path: "payload".to_string(),
+            reason: error.to_string(),
+        }
+    })
+}
+
+fn child(
+    parent: &RulePayloadPath,
+    segment: RulePayloadPathSegment,
+) -> Result<RulePayloadPath, DaggerGameplayError> {
+    let mut segments = parent.segments().to_vec();
+    segments.push(segment);
+    payload_path(&segments)
 }
 
 fn validate_id(path: &str, value: &str) -> Result<(), DaggerGameplayError> {
