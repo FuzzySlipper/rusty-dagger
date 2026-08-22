@@ -1235,6 +1235,135 @@ fn action_roll_evidence_surfaces_the_player_career_dice() {
     );
 }
 
+#[test]
+fn policy_accepts_declared_arbitrary_unbounded_evidence_but_rejects_unknown_bounded_extra() {
+    let package = mutated_package(|package| {
+        package["payload"]["actions"][0]["program"]["steps"][1]["predicate"]["left"]["tree"]
+            ["input"]["id"] = serde_json::Value::String("melee-attack.future-roll".to_string());
+    });
+    let catalog = compile_gameplay_package(&package).expect("compile mutated action package");
+    assert_eq!(
+        dagger_rpg::action_unbounded_roll_evidence(&catalog, "melee-attack")
+            .expect("collect action unbounded evidence"),
+        vec!["melee-attack.future-roll".to_string()]
+    );
+
+    let mut evidence = melee_evidence(25);
+    evidence
+        .iter_mut()
+        .find(|entry| entry.id == "melee-attack.d100")
+        .expect("career hit roll")
+        .id = "melee-attack.future-roll".to_string();
+    let mut accepted_state = spawn_state(&catalog);
+    let (accepted, _) = resolve_dagger_action(
+        &catalog,
+        &mut accepted_state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence.clone(),
+    );
+    assert!(accepted.succeeded(), "{accepted:?}");
+
+    let mut evidence_with_unknown_bounded = evidence;
+    evidence_with_unknown_bounded.push(DaggerEvidence {
+        id: "melee-attack.undeclared-bounded".to_string(),
+        value: 0,
+    });
+    let mut rejected_state = spawn_state(&catalog);
+    let (rejected, _) = resolve_dagger_action(
+        &catalog,
+        &mut rejected_state,
+        identity(2),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence_with_unknown_bounded,
+    );
+    assert!(matches!(
+        rejected.attempt().status(),
+        AttemptStatus::Rejected(DaggerRejection::InvalidExpression(message))
+            if message.contains("UnknownSample")
+    ));
+}
+
+#[test]
+fn empty_action_plan_accepts_declared_unbounded_samples_but_rejects_unknown_samples() {
+    fn remove_bounded_and_product_inputs(value: &mut serde_json::Value) {
+        let is_product = value
+            .as_object()
+            .and_then(|object| object.get("op"))
+            .and_then(serde_json::Value::as_str)
+            == Some("product");
+        if is_product {
+            *value = serde_json::json!({"op": "literal", "value": 0});
+            return;
+        }
+        if let Some(object) = value.as_object_mut() {
+            let is_bounded_roll =
+                object.get("kind").and_then(serde_json::Value::as_str) == Some("boundedRoll");
+            if is_bounded_roll {
+                object.insert("kind".to_string(), serde_json::Value::from("roll"));
+                object.remove("minimum");
+                object.remove("maximum");
+            }
+            for child in object.values_mut() {
+                remove_bounded_and_product_inputs(child);
+            }
+        } else if let Some(array) = value.as_array_mut() {
+            for child in array {
+                remove_bounded_and_product_inputs(child);
+            }
+        }
+    }
+
+    let package = mutated_package(|package| {
+        remove_bounded_and_product_inputs(&mut package["payload"]["actions"][0]["program"]);
+    });
+    let catalog = compile_gameplay_package(&package).expect("compile unbounded-only action");
+    let mut values = BTreeMap::new();
+    for id in dagger_rpg::action_unbounded_roll_evidence(&catalog, "melee-attack")
+        .expect("collect unbounded action evidence")
+    {
+        values
+            .entry(id.clone())
+            .or_insert(if id.ends_with(".d100") { 25 } else { 0 });
+    }
+    let evidence = values
+        .into_iter()
+        .map(|(id, value)| DaggerEvidence { id, value })
+        .collect::<Vec<_>>();
+    let mut accepted_state = spawn_state(&catalog);
+    let (accepted, _) = resolve_dagger_action(
+        &catalog,
+        &mut accepted_state,
+        identity(1),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence.clone(),
+    );
+    assert!(accepted.succeeded(), "{accepted:?}");
+
+    let mut evidence_with_unknown = evidence;
+    evidence_with_unknown.push(DaggerEvidence {
+        id: "melee-attack.undeclared".to_string(),
+        value: 0,
+    });
+    let mut rejected_state = spawn_state(&catalog);
+    let (rejected, _) = resolve_dagger_action(
+        &catalog,
+        &mut rejected_state,
+        identity(2),
+        ResolutionMode::Apply,
+        player_melee_intent(DaggerIntentOrigin::Player),
+        evidence_with_unknown,
+    );
+    assert!(matches!(
+        rejected.attempt().status(),
+        AttemptStatus::Rejected(DaggerRejection::InvalidExpression(message))
+            if message.contains("UnknownSample") && message.contains("melee-attack.undeclared")
+    ));
+}
+
 fn mutated_package(patch: impl FnOnce(&mut serde_json::Value)) -> Vec<u8> {
     let mut package: serde_json::Value =
         serde_json::from_slice(PACKAGE).expect("parse committed package");
@@ -2291,6 +2420,31 @@ fn loot_generation_is_deterministic_from_evidence() {
         ("iron-broadsword".to_string(), 1),
         "pick 1 selects the second weapon by sorted id"
     );
+}
+
+#[test]
+fn empty_loot_plan_accepts_no_samples_but_rejects_unknown_samples() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    assert!(loot_roll_evidence(&catalog, "-")
+        .expect("default loot contract")
+        .is_empty());
+    generate_loot(&catalog, "-", 1, &[]).expect("empty loot plan accepts no samples");
+
+    let rejection = generate_loot(
+        &catalog,
+        "-",
+        1,
+        &[DaggerEvidence {
+            id: "loot.-.undeclared".to_string(),
+            value: 0,
+        }],
+    )
+    .expect_err("empty loot plan rejects an undeclared sample");
+    assert!(matches!(
+        rejection,
+        DaggerRejection::InvalidExpression(message)
+            if message.contains("UnknownSample") && message.contains("loot.-.undeclared")
+    ));
 }
 
 #[test]

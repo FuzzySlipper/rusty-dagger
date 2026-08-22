@@ -29,7 +29,8 @@ use rusty_engine::gameplay_mechanics::{
 use rusty_engine::gameplay_standard::StandardOperation;
 
 use super::eval::{
-    apply_standard_mechanics_operation, bind_unique_item, evidence_value, mechanics_role,
+    apply_standard_mechanics_operation, bind_unique_item, bounded_sample_receipt,
+    bounded_sample_value, mechanics_role, reject_unexpected_bounded_evidence,
 };
 use super::mechanics::mechanics_catalog_version;
 use super::{
@@ -237,20 +238,31 @@ pub fn generate_loot(
             "loot level must be >= 1, got {level}"
         )));
     }
+    let requirements = loot_roll_evidence(catalog, key).map_err(|error| {
+        DaggerRejection::InvalidExpression(format!("loot evidence requirements: {error:?}"))
+    })?;
+    let receipt = if requirements.is_empty() {
+        reject_unexpected_bounded_evidence(evidence)?;
+        None
+    } else {
+        Some(bounded_sample_receipt(
+            "dagger.loot",
+            &requirements,
+            evidence,
+            true,
+        )?)
+    };
     let mut items: Vec<(String, u64)> = Vec::new();
     let gold = if table.gold_min == 0 && table.gold_max == 0 {
         None
     } else {
         let id = gold_roll_id(key);
-        let roll = evidence_value(evidence, &id)?;
-        if roll < table.gold_min || roll > table.gold_max {
-            return Err(DaggerRejection::RollOutOfBounds {
-                id,
-                value: roll,
-                min: table.gold_min,
-                max: table.gold_max,
-            });
-        }
+        let roll = bounded_sample_value(
+            receipt
+                .as_ref()
+                .expect("gold has a bounded evidence requirement"),
+            &id,
+        )?;
         let amount = roll.checked_mul(level).ok_or_else(|| {
             DaggerRejection::InvalidExpression("gold amount overflow".to_string())
         })?;
@@ -288,15 +300,12 @@ pub fn generate_loot(
         let mut rolls = Vec::with_capacity(usize::from(LOOT_CATEGORY_SLOTS));
         for slot in 0..LOOT_CATEGORY_SLOTS {
             let id = success_roll_id(key, spec.name, slot);
-            let roll = evidence_value(evidence, &id)?;
-            if !(0..=99).contains(&roll) {
-                return Err(DaggerRejection::RollOutOfBounds {
-                    id,
-                    value: roll,
-                    min: 0,
-                    max: 99,
-                });
-            }
+            let roll = bounded_sample_value(
+                receipt
+                    .as_ref()
+                    .expect("category success has a bounded evidence requirement"),
+                &id,
+            )?;
             // Donor `Dice100.SuccessRoll`: a 0..99 roll strictly below the
             // chance succeeds; chance 0 never succeeds.
             let success = roll < slot_chance;
@@ -304,16 +313,12 @@ pub fn generate_loot(
             let mut item = None;
             if success && supported {
                 let pick_id = pick_roll_id(key, spec.name, slot);
-                let value = evidence_value(evidence, &pick_id)?;
-                let max = i64::try_from(pool.len()).expect("pool length fits i64") - 1;
-                if !(0..=max).contains(&value) {
-                    return Err(DaggerRejection::RollOutOfBounds {
-                        id: pick_id,
-                        value,
-                        min: 0,
-                        max,
-                    });
-                }
+                let value = bounded_sample_value(
+                    receipt
+                        .as_ref()
+                        .expect("supported pick has a bounded evidence requirement"),
+                    &pick_id,
+                )?;
                 pick = Some(value);
                 let picked = pool[usize::try_from(value).expect("bounded pick")].clone();
                 items.push((picked.clone(), 1));

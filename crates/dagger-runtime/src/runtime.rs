@@ -28,6 +28,7 @@ use rusty_engine::gameplay_standard::{
 use rusty_engine::svc_collision::{
     StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
 };
+use rusty_engine::svc_rng::{KeyedRngV1, RngSeed};
 use serde::{Deserialize, Serialize};
 
 use crate::patrol::{EnemyAiMode, PatrolService, PositionUpdate};
@@ -412,19 +413,6 @@ pub struct LiveActorResources {
 /// Scenario id of one enemy instance in the live gameplay state.
 fn enemy_actor_id(id: u64) -> String {
     format!("enemy-{id}")
-}
-
-/// Deterministic spawn roll for one entity's bounded roll evidence: stable
-/// across resets so spawned actors are reproducible.
-fn spawn_roll(entity_id: u64, evidence_id: &str, min: i64, max: i64) -> i64 {
-    let mut value = entity_id
-        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
-        .wrapping_add(u64::from(u32::from_ne_bytes(
-            evidence_id.as_bytes()[..4].try_into().unwrap_or([0; 4]),
-        )));
-    value ^= value >> 29;
-    let span = (max - min + 1) as u64;
-    min + (value % span) as i64
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -1888,7 +1876,14 @@ impl DaggerRuntime {
     ) -> Result<ActionAttemptOutcome, RuntimeError> {
         self.combat_sequence = self.combat_sequence.saturating_add(1);
         let sequence = self.combat_sequence;
-        let roll = deterministic_roll(roll_sequence, target_entity, 1, 1, 100);
+        let combat_scope = match origin {
+            DaggerIntentOrigin::Player => "dagger.combat.v1",
+            // Keep the AI decision domain separate from player actions so a
+            // product demonstration can retain its authored encounter proof
+            // without coupling enemy outcomes to player swing scheduling.
+            DaggerIntentOrigin::Ai => "dagger.combat.ai.v1",
+        };
+        let roll = draw_combat_evidence(combat_scope, roll_sequence, target_entity, 1, 1, 100)?;
         let mut evidence = vec![DaggerEvidence {
             id: format!("{action}.d100"),
             value: roll,
@@ -1902,7 +1897,7 @@ impl DaggerRuntime {
             let value = if zeroed_career_fact(&id) {
                 0
             } else {
-                deterministic_roll(roll_sequence, target_entity, 2, min, max)
+                draw_combat_evidence(combat_scope, roll_sequence, target_entity, 2, min, max)?
             };
             evidence.push(DaggerEvidence { value, id });
         }
@@ -1922,7 +1917,8 @@ impl DaggerRuntime {
         {
             let value = match kind {
                 DaggerDynamicRoll::StruckBodyPart => {
-                    let value = deterministic_roll(roll_sequence, target_entity, 3, 0, 19);
+                    let value =
+                        draw_combat_evidence(combat_scope, roll_sequence, target_entity, 3, 0, 19)?;
                     struck_part = struck_body_part_name(value).map(str::to_string);
                     value
                 }
@@ -1955,7 +1951,7 @@ impl DaggerRuntime {
                             .map_err(RuntimeError::Gameplay)?
                         }
                     };
-                    deterministic_roll(roll_sequence, target_entity, 2, min, max)
+                    draw_combat_evidence(combat_scope, roll_sequence, target_entity, 2, min, max)?
                 }
             };
             evidence.push(DaggerEvidence { value, id });
@@ -2052,13 +2048,14 @@ impl DaggerRuntime {
             let player_entity = self.player_actor_entity().raw();
             for level in (level_before + 1)..=level_after {
                 self.player_level_up_sequence = self.player_level_up_sequence.saturating_add(1);
-                let roll = deterministic_roll(
+                let roll = draw_combat_evidence(
+                    "dagger.combat.v1",
                     self.player_level_up_sequence,
                     player_entity,
                     5,
                     hit_points_per_level / 2,
                     hit_points_per_level,
-                );
+                )?;
                 evidence.push(DaggerEvidence {
                     id: format!("{PLAYER_ACTOR_ID}.level-up.{level}.hp-roll"),
                     value: roll,
@@ -3780,21 +3777,49 @@ fn zeroed_career_fact(evidence_id: &str) -> bool {
     SUFFIXES.iter().any(|suffix| evidence_id.ends_with(suffix))
 }
 
-/// Deterministic combat roll: seeded by attempt sequence, target, and salt —
-/// no time source, so focused checks can assert exact outcomes. Salt 1 is the d100 hit roll; salt 2 is
-/// the damage dice roll (bounded by the actor's live weapon); salt 3 is the
-/// struck-body-part roll (0..=19); salt 5 is the progression level-up hp
-/// roll (loot draws from the per-entity spawn streams instead).
-fn deterministic_roll(sequence: u64, target_id: u64, salt: u64, min: i64, max: i64) -> i64 {
-    let mut value = sequence
-        .rotate_left(17)
-        .wrapping_add(target_id.rotate_left(31))
-        .wrapping_add(salt.wrapping_mul(0x9E37_79B9_7F4A_7C15));
-    value ^= value >> 29;
-    value = value.wrapping_mul(0x2545_F491_4F6C_DD1D);
-    value ^= value >> 27;
-    let span = (max - min + 1) as u64;
-    min + (value % span) as i64
+/// Fixed session seed for the product's deterministic evidence streams. The
+/// product retains all scheduling/key material in the explicit key below;
+/// Engine owns the versioned hash and unbiased inclusive-range mapping.
+const DAGGER_EVIDENCE_SEED: RngSeed = RngSeed::new(0);
+
+fn keyed_evidence_roll(scope: &str, key: &[u8], min: i64, max: i64) -> Result<i64, RuntimeError> {
+    KeyedRngV1::draw_i64_inclusive(DAGGER_EVIDENCE_SEED, scope, key, min, max).map_err(|error| {
+        RuntimeError::Encounter(format!(
+            "Dagger keyed evidence roll rejected ({scope}, {min}..={max}): {error:?}"
+        ))
+    })
+}
+
+/// Product-owned spawn scheduling supplies the entity and complete evidence
+/// identity; Engine owns the versioned keyed mapping and inclusive bounds.
+fn draw_spawn_evidence(
+    entity_id: u64,
+    evidence_id: &str,
+    min: i64,
+    max: i64,
+) -> Result<i64, RuntimeError> {
+    let mut key = entity_id.to_le_bytes().to_vec();
+    key.extend_from_slice(evidence_id.as_bytes());
+    keyed_evidence_roll("dagger.spawn.v1", &key, min, max)
+}
+
+/// Product-owned combat scheduling supplies attempt, target, and semantic
+/// salt; Engine owns the versioned keyed mapping and inclusive bounds. Salt 1
+/// is the d100 hit roll; salt 2 is damage; salt 3 is struck body part; salt 5
+/// is progression HP.
+fn draw_combat_evidence(
+    scope: &str,
+    sequence: u64,
+    target_id: u64,
+    salt: u64,
+    min: i64,
+    max: i64,
+) -> Result<i64, RuntimeError> {
+    let mut key = Vec::with_capacity(24);
+    key.extend_from_slice(&sequence.to_le_bytes());
+    key.extend_from_slice(&target_id.to_le_bytes());
+    key.extend_from_slice(&salt.to_le_bytes());
+    keyed_evidence_roll(scope, &key, min, max)
 }
 
 /// Instance id of the loot container anchored to one treasure content
@@ -3814,7 +3839,7 @@ fn treasure_container_id(id: u64) -> String {
 /// - enemies whose definition declares `loot_table_key` get
 ///   `bind_actor_loot` with evidence drawn from that enemy's spawn stream
 ///   (the plain `loot.<key>...` contract ids evaluated through
-///   `spawn_roll(entity_id, ...)`); rats/bats have no key and carry no loot,
+///   `draw_spawn_evidence(entity_id, ...)`); rats/bats have no key and carry no loot,
 ///   exactly as classic.
 /// - each treasure content entity gets `spawn_container` with the dungeon's
 ///   loot key and the same per-entity stream.
@@ -3837,7 +3862,7 @@ fn spawn_live_actors(
             .into_iter()
             .map(|(id, min, max)| {
                 Ok(DaggerEvidence {
-                    value: spawn_roll(entity_id, &id, min, max),
+                    value: draw_spawn_evidence(entity_id, &id, min, max)?,
                     id,
                 })
             })
@@ -3861,11 +3886,13 @@ fn spawn_live_actors(
                     .map_err(RuntimeError::Gameplay)?;
                 let evidence = rolls
                     .into_iter()
-                    .map(|(id, min, max)| DaggerEvidence {
-                        value: spawn_roll(entity.id, &id, min, max),
-                        id,
+                    .map(|(id, min, max)| {
+                        Ok(DaggerEvidence {
+                            value: draw_spawn_evidence(entity.id, &id, min, max)?,
+                            id,
+                        })
                     })
-                    .collect::<Vec<_>>();
+                    .collect::<Result<Vec<_>, RuntimeError>>()?;
                 let instance = enemy_actor_id(entity.id);
                 dagger_rpg::spawn_actor(
                     &mut state,
@@ -4022,5 +4049,27 @@ mod aimed_melee_tests {
             select_aimed_melee_target(Vec3::ZERO, 0.0, 2.0, &entities, &positions, &resources,),
             None,
         );
+    }
+}
+
+#[cfg(test)]
+mod keyed_evidence_tests {
+    use super::*;
+
+    #[test]
+    fn keyed_evidence_is_stable_and_uses_complete_keys() {
+        let first = draw_combat_evidence("dagger.combat.v1", 1, 2007, 1, 1, 100).unwrap();
+        assert_eq!(first, 66);
+        assert_eq!(
+            draw_combat_evidence("dagger.combat.v1", 1, 2007, 1, 1, 100).unwrap(),
+            first,
+            "repeating a keyed tuple must not advance hidden state"
+        );
+        assert_ne!(
+            draw_spawn_evidence(3002, "loot.A.gold", 1, 10).unwrap(),
+            draw_spawn_evidence(3002, "loot.A.gold.tail", 1, 10).unwrap(),
+            "the complete evidence key must affect the result"
+        );
+        assert!((1..=10).contains(&draw_spawn_evidence(3002, "loot.A.gold", 1, 10).unwrap()));
     }
 }

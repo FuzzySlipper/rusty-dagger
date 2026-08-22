@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use rusty_engine::gameplay_mechanics::{
     DamageKindId, MechanicsScalar, OperationId, SourceInstanceId, SourceInstanceIdentity, StatId,
@@ -10,31 +10,34 @@ use rusty_engine::gameplay_resolution::{
     StandardResolver,
 };
 use rusty_engine::gameplay_standard::{
-    CapabilityRequirementId, CapabilityRoleBinding, CapabilityRoleBindings, CapabilityRoleId,
-    ComposedExactComparison, ExactComparison, ExactEvaluator, ExactExpr, ExactExprLimits,
-    ExactInputBundle, StandardExactOperand, StandardOperation, StandardOperationContext,
-    StandardOperationPlan, STANDARD_DAMAGE_CAPABILITY, STANDARD_EFFECT_CAPABILITY,
-    STANDARD_TRACK_CAPABILITY,
+    BoundedSampleReceipt, CapabilityRequirementId, CapabilityRoleBinding, CapabilityRoleBindings,
+    CapabilityRoleId, ComposedExactComparison, ExactComparison, ExactEvaluator, ExactExpr,
+    ExactExprLimits, ExactInputBundle, StandardExactOperand, StandardOperation,
+    StandardOperationContext, StandardOperationPlan, STANDARD_DAMAGE_CAPABILITY,
+    STANDARD_EFFECT_CAPABILITY, STANDARD_TRACK_CAPABILITY,
 };
 
 use super::eval::{
-    equipped_weapon, evaluate_expr, unarmed_damage_range, ActorEquipment, ActorExprValues,
+    action_dynamic_roll_evidence, action_roll_evidence, action_unbounded_roll_evidence,
+    bounded_sample_receipt, equipped_weapon, evaluate_expr_with_receipt,
+    reject_unexpected_bounded_evidence, unarmed_damage_range, ActorEquipment, ActorExprValues,
     ExprContext,
 };
 use super::mechanics::track_max_stat_id;
 use super::{
     armor_part_stat_id, weapon_material_rank, DaggerActorDefinition, DaggerActorFacts,
-    DaggerActorState, DaggerAdmittedIntent, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerFacts,
-    DaggerFault, DaggerGameplayCatalog, DaggerGameplayState, DaggerIntent, DaggerOperation,
-    DaggerPlannedEffect, DaggerPredicate, DaggerRejection, DaggerResolutionReadout,
-    DaggerResolutionReceipt, DaggerRuleDefinition, DaggerSelector, DaggerSuspension,
-    DaggerTraceDetail, DaggerTransactionError,
+    DaggerActorState, DaggerAdmittedIntent, DaggerDynamicRoll, DaggerEffect, DaggerEvent,
+    DaggerEvidence, DaggerFacts, DaggerFault, DaggerGameplayCatalog, DaggerGameplayState,
+    DaggerIntent, DaggerOperation, DaggerPlannedEffect, DaggerPredicate, DaggerRejection,
+    DaggerResolutionReadout, DaggerResolutionReceipt, DaggerRuleDefinition, DaggerSelector,
+    DaggerSuspension, DaggerTraceDetail, DaggerTransactionError,
 };
 
 pub struct DaggerResolutionPolicy<'a> {
     catalog: &'a DaggerGameplayCatalog,
     snapshot: DaggerGameplayState,
     operation: OperationId,
+    bounded_evidence: Option<BoundedSampleReceipt>,
 }
 
 impl<'a> DaggerResolutionPolicy<'a> {
@@ -47,6 +50,7 @@ impl<'a> DaggerResolutionPolicy<'a> {
             catalog,
             snapshot,
             operation,
+            bounded_evidence: None,
         }
     }
 
@@ -213,6 +217,14 @@ impl<'a> DaggerResolutionPolicy<'a> {
         })
     }
 
+    fn evaluate_expr<'b>(
+        &self,
+        expr: &super::DaggerExpr,
+        context: &ExprContext<'b>,
+    ) -> Result<i64, DaggerRejection> {
+        evaluate_expr_with_receipt(expr, context, self.bounded_evidence.as_ref())
+    }
+
     /// Builds the Engine-owned mechanics mutation plan before Dagger wraps it
     /// in its product receipt/event envelope. The plan is intentionally not a
     /// second transaction authority: Dagger's aggregate transaction remains
@@ -329,7 +341,7 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
     fn admit(
         &mut self,
         intent: &DaggerIntent,
-        _evidence: &[DaggerEvidence],
+        evidence: &[DaggerEvidence],
         trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
     ) -> PolicyResult<DaggerAdmittedIntent, DaggerRejection, DaggerFault, DaggerSuspension> {
         let action = self
@@ -350,6 +362,55 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                 intent.target.clone(),
             )));
         }
+        let actor_stats = self.live_stats(&intent.actor)?;
+        let actor_equipment = self.actor_equipment(&intent.actor, &actor_stats)?;
+        let mut requirements =
+            action_roll_evidence(self.catalog, &intent.action).map_err(|error| {
+                PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                    "action bounded evidence requirements: {error}"
+                )))
+            })?;
+        for (id, kind) in
+            action_dynamic_roll_evidence(self.catalog, &intent.action).map_err(|error| {
+                PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                    "action dynamic evidence requirements: {error}"
+                )))
+            })?
+        {
+            let (minimum, maximum) = match kind {
+                DaggerDynamicRoll::StruckBodyPart => (0, 19),
+                DaggerDynamicRoll::EquippedWeaponDamage => actor_equipment
+                    .weapon
+                    .and_then(|item| item.weapon.as_ref())
+                    .map_or(actor_equipment.unarmed_damage, |weapon| {
+                        (weapon.damage_min, weapon.damage_max)
+                    }),
+            };
+            requirements.push((id, minimum, maximum));
+        }
+        let unbounded_evidence_ids = action_unbounded_roll_evidence(self.catalog, &intent.action)
+            .map_err(|error| {
+                PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                    "action unbounded evidence requirements: {error}"
+                )))
+            })?
+            .into_iter()
+            .collect::<BTreeSet<_>>();
+        let bounded_evidence = evidence
+            .iter()
+            .filter(|sample| !unbounded_evidence_ids.contains(&sample.id))
+            .cloned()
+            .collect::<Vec<_>>();
+        self.bounded_evidence = if requirements.is_empty() {
+            reject_unexpected_bounded_evidence(&bounded_evidence)
+                .map_err(PolicyFailure::Rejected)?;
+            None
+        } else {
+            Some(
+                bounded_sample_receipt("dagger.action", &requirements, &bounded_evidence, true)
+                    .map_err(PolicyFailure::Rejected)?,
+            )
+        };
         trace.record(DaggerTraceDetail::Definition {
             id: action.id.clone(),
         });
@@ -442,9 +503,12 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                     &target_tracks,
                     evidence,
                 )?;
-                let left_value = evaluate_expr(left, &context).map_err(PolicyFailure::Rejected)?;
-                let right_value =
-                    evaluate_expr(right, &context).map_err(PolicyFailure::Rejected)?;
+                let left_value = self
+                    .evaluate_expr(left, &context)
+                    .map_err(PolicyFailure::Rejected)?;
+                let right_value = self
+                    .evaluate_expr(right, &context)
+                    .map_err(PolicyFailure::Rejected)?;
                 let left =
                     ExactExpr::Literal(MechanicsScalar::new(left_value).map_err(|error| {
                         PolicyFailure::Rejected(DaggerRejection::InvalidExpression(format!(
@@ -521,7 +585,9 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         )?;
         match operation {
             DaggerOperation::SpendTrack { track, amount } => {
-                let amount = evaluate_expr(amount, &context).map_err(PolicyFailure::Rejected)?;
+                let amount = self
+                    .evaluate_expr(amount, &context)
+                    .map_err(PolicyFailure::Rejected)?;
                 let available = facts.actor.track(track).unwrap_or(0);
                 if available < amount {
                     return Err(PolicyFailure::Rejected(
@@ -573,7 +639,9 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                 let target = match target {
                     DaggerSelector::IntentTarget => &intent.target,
                 };
-                let amount = evaluate_expr(amount, &context).map_err(PolicyFailure::Rejected)?;
+                let amount = self
+                    .evaluate_expr(amount, &context)
+                    .map_err(PolicyFailure::Rejected)?;
                 // Health floors at zero: damage beyond the target's current
                 // health is wasted, so the plan clamps to what can apply.
                 let target_health = facts.target.track("health").unwrap_or(0);
