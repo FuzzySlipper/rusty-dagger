@@ -113,7 +113,10 @@ pub struct AuthoredLoadoutEntry {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoredDerivedRule {
     pub id: String,
-    pub expr: AuthoredExpr,
+    /// Engine-generated composedExact definition selected from the admitted
+    /// aggregate by the compiler; Dagger deliberately does not deserialize
+    /// a second generic expression DTO.
+    pub expr: serde_json::Value,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -186,7 +189,7 @@ pub enum AuthoredActorKind {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AuthoredTrackDefinition {
     pub id: String,
-    pub max: AuthoredExpr,
+    pub max: serde_json::Value,
 }
 
 /// Behavior tuning values are schema-2 binary64 numbers; the compiled
@@ -202,64 +205,6 @@ pub struct AuthoredBehaviorDefinition {
     pub action: String,
 }
 
-/// The Engine's generated composedExact transport grammar. Dagger's aggregate
-/// payload remains product-owned, but every generic node is admitted through
-/// the provider grammar rather than a parallel local dialect.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "op", rename_all = "camelCase", deny_unknown_fields)]
-pub enum AuthoredExpr {
-    Literal {
-        value: Binary64I64,
-    },
-    Input {
-        input: AuthoredExactInput,
-    },
-    Add {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    Subtract {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    Multiply {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    FloorDivide {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    TruncatingDivide {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    Min {
-        values: Vec<Self>,
-    },
-    Max {
-        values: Vec<Self>,
-    },
-    Product {
-        kind: String,
-        payload: serde_json::Value,
-        subject: String,
-        source: String,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
-pub enum AuthoredExactInput {
-    Roll { role: String, id: String },
-    StandardStat { role: String, stat: String },
-    StandardTrackCurrent { role: String, track: String },
-    StandardTrackMaximum { role: String, track: String },
-    Parameter { role: String, id: String },
-    Fact { role: String, id: String },
-    Choice { role: String, id: String },
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AuthoredSubject {
@@ -272,8 +217,8 @@ pub enum AuthoredSubject {
 pub enum AuthoredPredicate {
     Cmp {
         op: AuthoredCmpOp,
-        left: AuthoredExpr,
-        right: AuthoredExpr,
+        left: serde_json::Value,
+        right: serde_json::Value,
     },
 }
 
@@ -302,11 +247,11 @@ pub enum AuthoredSelector {
 pub enum AuthoredOperation {
     SpendTrack {
         track: String,
-        amount: AuthoredExpr,
+        amount: serde_json::Value,
     },
     Damage {
         target: AuthoredSelector,
-        amount: AuthoredExpr,
+        amount: serde_json::Value,
     },
 }
 
@@ -462,6 +407,7 @@ pub struct AuthoredLootCategories {
 #[derive(Debug, Clone)]
 pub struct DaggerGameplayCatalog {
     fingerprint: String,
+    embedded_expression_evidence: Vec<DaggerEmbeddedExpressionEvidence>,
     stats: DaggerStatsSection,
     actors: BTreeMap<String, DaggerActorDefinition>,
     actions: BTreeMap<String, DaggerActionDefinition>,
@@ -477,6 +423,14 @@ pub struct DaggerGameplayCatalog {
 impl DaggerGameplayCatalog {
     pub fn fingerprint(&self) -> &str {
         &self.fingerprint
+    }
+
+    /// Readout of every composed expression selected from the admitted parent
+    /// package while this catalog was compiled.  The evidence deliberately
+    /// retains the package identity, fingerprint, and strict payload path so
+    /// callers can explain which aggregate value supplied a rule.
+    pub fn embedded_expression_evidence(&self) -> &[DaggerEmbeddedExpressionEvidence] {
+        &self.embedded_expression_evidence
     }
 
     pub fn stats(&self) -> &DaggerStatsSection {
@@ -527,6 +481,7 @@ impl DaggerGameplayCatalog {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         fingerprint: String,
+        embedded_expression_evidence: Vec<DaggerEmbeddedExpressionEvidence>,
         stats: DaggerStatsSection,
         actors: BTreeMap<String, DaggerActorDefinition>,
         actions: BTreeMap<String, DaggerActionDefinition>,
@@ -540,6 +495,7 @@ impl DaggerGameplayCatalog {
     ) -> Self {
         Self {
             fingerprint,
+            embedded_expression_evidence,
             stats,
             actors,
             actions,
@@ -552,6 +508,18 @@ impl DaggerGameplayCatalog {
             mechanics,
         }
     }
+}
+
+/// Immutable parent and path evidence retained for one Engine-admitted
+/// composed expression embedded in the Dagger aggregate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DaggerEmbeddedExpressionEvidence {
+    pub parent_identity: String,
+    pub parent_fingerprint: String,
+    pub path: String,
+    /// Canonical schema-2 bytes selected at `path`, retained with the parent
+    /// proof rather than reconstructed from a decoded expression later.
+    pub canonical_bytes: Vec<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -573,26 +541,11 @@ pub type DaggerProgram = Program<DaggerPredicate, DaggerOperation>;
 /// gameplay-standard's composedExact/ExactEvaluator path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DaggerExactLeaf {
-    EquippedWeaponSkill {
-        subject: DaggerSubject,
-    },
-    Dice {
-        id: String,
-        min: i64,
-        max: i64,
-    },
-    EquippedWeaponDice {
-        subject: DaggerSubject,
-        id: String,
-    },
-    StruckArmor {
-        subject: DaggerSubject,
-        id: String,
-    },
-    PowMilli {
-        base: Box<DaggerExpr>,
-        exponent: Box<DaggerExpr>,
-    },
+    EquippedWeaponSkill { subject: DaggerSubject },
+    Dice { id: String, min: i64, max: i64 },
+    EquippedWeaponDice { subject: DaggerSubject, id: String },
+    StruckArmor { subject: DaggerSubject, id: String },
+    PowMilli { base: i64, exponent_roll: String },
 }
 
 pub type DaggerExpr = ComposedExactExpr<DaggerExactLeaf>;
@@ -1329,6 +1282,10 @@ pub enum DaggerGameplayError {
         package: String,
     },
     Payload(String),
+    EmbeddedExpression {
+        path: String,
+        reason: String,
+    },
     UnsupportedSchema {
         actual: u32,
         expected: u32,

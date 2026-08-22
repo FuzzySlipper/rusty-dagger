@@ -12,7 +12,10 @@ use rusty_engine::gameplay_resolution::{
 };
 use rusty_engine::{
     gameplay_mechanics::{MechanicsScalar, StatId, TrackId},
-    gameplay_rules::{RuleSourceId, RuleSubjectId},
+    gameplay_rules::{
+        canonical_rule_json_value_bytes, RulePackageSchemaVersion, RuleSourceId, RuleSubjectId,
+        MAX_ENCODED_RULE_PACKAGE_BYTES,
+    },
     gameplay_standard::{
         CapabilityRoleId, ComposedExactExpr, ComposedExactLeafKindId, ComposedExactProductLeaf,
         ExactInputReference, StandardExactFactReference, StandardMechanicsEffect,
@@ -164,6 +167,44 @@ fn typescript_package_compiles_the_real_catalogs() {
         catalog.actors()["rat"].behavior.as_ref().unwrap().action,
         "rat-bite"
     );
+}
+
+#[test]
+fn embedded_composed_expressions_retain_admitted_parent_and_strict_paths() {
+    let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+    let evidence = catalog.embedded_expression_evidence();
+
+    assert!(
+        evidence.len() > 20,
+        "real package has many embedded formulas"
+    );
+    assert!(evidence
+        .iter()
+        .all(|entry| entry.parent_identity == "dagger/core@1"));
+    assert!(evidence
+        .iter()
+        .all(|entry| entry.parent_fingerprint == catalog.fingerprint()));
+    assert!(evidence
+        .iter()
+        .any(|entry| entry.path.starts_with("payload.actions[0].program")));
+    assert!(evidence
+        .iter()
+        .any(|entry| entry.path.starts_with("payload.actors[0].tracks[")));
+    assert!(evidence
+        .iter()
+        .any(|entry| entry.path == "payload.derived[19].expr"));
+    let package: serde_json::Value = serde_json::from_slice(PACKAGE).expect("parse package");
+    let selected = evidence
+        .iter()
+        .find(|entry| entry.path == "payload.derived[19].expr")
+        .expect("derived selection evidence");
+    let expected_bytes = canonical_rule_json_value_bytes(
+        &package["payload"]["derived"][19]["expr"],
+        RulePackageSchemaVersion::Binary64V2,
+        MAX_ENCODED_RULE_PACKAGE_BYTES,
+    )
+    .expect("canonical selected bytes");
+    assert_eq!(selected.canonical_bytes, expected_bytes);
 }
 
 #[test]
@@ -616,32 +657,59 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
 
     // Dice with min > max.
     let mut mutated = package.clone();
-    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+    mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
         "op": "product", "kind": "dice", "subject": "dagger", "source": "dagger",
         "payload": { "kind": "dice", "value": { "id": "rat.health", "min": 16, "max": 9 } }
     });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
-        Err(DaggerGameplayError::InvalidValue { .. })
+        Err(DaggerGameplayError::EmbeddedExpression { .. })
     ));
 
     // Rust admission does not trust the TypeScript codec: extra product
     // fields and malformed evidence ids fail before a product leaf exists.
     let mut mutated = package.clone();
-    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+    mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
         "op": "product", "kind": "equipped-weapon-dice", "subject": "dagger", "source": "dagger",
         "payload": { "kind": "equipped-weapon-dice", "value": { "subject": "actor", "id": "bad id", "extra": true } }
     });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
-        Err(DaggerGameplayError::InvalidValue { .. })
+        Err(DaggerGameplayError::EmbeddedExpression { .. })
+    ));
+
+    // The schema-2 aggregate rejects unsafe binary64 integers before an
+    // embedded leaf could observe or cast one. `2^63` is representable as
+    // binary64 but not safely transportable as an exact authored integer.
+    let mut mutated = package.clone();
+    mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
+        "op": "product", "kind": "pow-milli", "subject": "dagger", "source": "dagger",
+        "payload": { "kind": "pow-milli", "value": {
+            "base": 9_223_372_036_854_775_808_u64, "exponentRoll": "level"
+        } }
+    });
+    assert!(matches!(
+        compile_gameplay_package(&encode(mutated)),
+        Err(DaggerGameplayError::Package(_))
+    ));
+
+    let mut mutated = package.clone();
+    mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
+        "op": "product", "kind": "pow-milli", "subject": "dagger", "source": "dagger",
+        "payload": { "kind": "dice", "value": {
+            "base": 1040, "exponentRoll": "level"
+        } }
+    });
+    assert!(matches!(
+        compile_gameplay_package(&encode(mutated)),
+        Err(DaggerGameplayError::EmbeddedExpression { .. })
     ));
 
     // Standard track inputs are not an escape hatch from Dagger's declared
     // vocabulary, for either current or maximum reads.
     for kind in ["standardTrackCurrent", "standardTrackMaximum"] {
         let mut mutated = package.clone();
-        mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+        mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
             "op": "input", "input": { "kind": kind, "role": "actor", "track": "undeclared-track" }
         });
         assert!(matches!(
@@ -653,20 +721,20 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
     // The retired armor/weaponDice expression kinds are now unknown fields at
     // payload admission.
     let mut mutated = package.clone();
-    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+    mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
         "kind": "armor", "subject": "target"
     });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
-        Err(DaggerGameplayError::Payload(_))
+        Err(DaggerGameplayError::EmbeddedExpression { .. })
     ));
     let mut mutated = package.clone();
-    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+    mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
         "kind": "weaponDice", "item": "iron-longsword"
     });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
-        Err(DaggerGameplayError::Payload(_))
+        Err(DaggerGameplayError::EmbeddedExpression { .. })
     ));
 
     // Duplicate actor id.
@@ -687,36 +755,41 @@ fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
     let definition = &catalog.actors()["player"];
     let stats = BTreeMap::new();
-    let context = ExprContext {
-        catalog: &catalog,
-        actor: ActorExprValues {
-            definition,
-            stats: &stats,
-            tracks: None,
-            equipment: None,
-        },
-        target: None,
-        evidence: &[],
-    };
     let pow = |base: i64, exponent: i64| {
-        dagger_leaf(
+        let evidence = [DaggerEvidence {
+            id: "pow-milli-exponent".to_string(),
+            value: exponent,
+        }];
+        let context = ExprContext {
+            catalog: &catalog,
+            actor: ActorExprValues {
+                definition,
+                stats: &stats,
+                tracks: None,
+                equipment: None,
+            },
+            target: None,
+            evidence: &evidence,
+        };
+        let expr = dagger_leaf(
             "pow-milli",
             dagger_rpg::DaggerExactLeaf::PowMilli {
-                base: Box::new(literal(base)),
-                exponent: Box::new(literal(exponent)),
+                base,
+                exponent_roll: "pow-milli-exponent".to_string(),
             },
-        )
+        );
+        evaluate_expr(&expr, &context)
     };
-    assert_eq!(evaluate_expr(&pow(1040, 0), &context), Ok(1000));
-    assert_eq!(evaluate_expr(&pow(1040, 1), &context), Ok(1040));
+    assert_eq!(pow(1040, 0), Ok(1000));
+    assert_eq!(pow(1040, 1), Ok(1040));
     // 1040 * 1040 / 1000 floors to 1081.
-    assert_eq!(evaluate_expr(&pow(1040, 2), &context), Ok(1081));
+    assert_eq!(pow(1040, 2), Ok(1081));
     assert!(matches!(
-        evaluate_expr(&pow(1040, 65), &context),
+        pow(1040, 65),
         Err(DaggerRejection::InvalidExpression(_))
     ));
     assert!(matches!(
-        evaluate_expr(&pow(-1, 2), &context),
+        pow(-1, 2),
         Err(DaggerRejection::InvalidExpression(_))
     ));
 }
@@ -952,7 +1025,7 @@ fn track_reads_reject_where_live_values_do_not_exist() {
     let package: serde_json::Value =
         serde_json::from_slice(PACKAGE).expect("parse committed package");
     let mut mutated = package.clone();
-    mutated["payload"]["actors"][0]["tracks"][0]["max"] = serde_json::json!({
+    mutated["payload"]["actors"][0]["tracks"][0]["max"]["tree"] = serde_json::json!({
         "op": "input", "input": { "kind": "standardTrackCurrent", "role": "actor", "track": "health" }
     });
     let catalog =

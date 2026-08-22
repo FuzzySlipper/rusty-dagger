@@ -243,9 +243,13 @@ fn evaluate_product_leaf(
                 DaggerRejection::MissingValue(format!("stat.{stat_id}@{}", values.definition.id))
             })
         }
-        DaggerExactLeaf::PowMilli { base, exponent } => {
-            let base = evaluate_expr(base, context)?;
-            let exponent = evaluate_expr(exponent, context)?;
+        DaggerExactLeaf::PowMilli {
+            base,
+            exponent_roll,
+            ..
+        } => {
+            let base = *base;
+            let exponent = evidence_value(context.evidence, exponent_roll)?;
             if base < 0 || !(0..=64).contains(&exponent) {
                 return Err(DaggerRejection::InvalidExpression(format!("powMilli requires non-negative base and exponent 0..=64, got {base}^{exponent}")));
             }
@@ -435,10 +439,6 @@ fn collect_dynamic_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, DaggerDynam
             DaggerExactLeaf::StruckArmor { id, .. } => {
                 rolls.push((id.clone(), DaggerDynamicRoll::StruckBodyPart))
             }
-            DaggerExactLeaf::PowMilli { base, exponent } => {
-                collect_dynamic_rolls(base, rolls);
-                collect_dynamic_rolls(exponent, rolls);
-            }
             _ => {}
         },
         ComposedExactExpr::Add(left, right)
@@ -499,14 +499,11 @@ fn collect_comparison_dice(predicate: &DaggerPredicate, rolls: &mut Vec<(String,
 
 fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
     match expr {
-        ComposedExactExpr::Product(leaf) => match leaf.value() {
-            DaggerExactLeaf::Dice { id, min, max } => rolls.push((id.clone(), *min, *max)),
-            DaggerExactLeaf::PowMilli { base, exponent } => {
-                collect_dice(base, rolls);
-                collect_dice(exponent, rolls);
+        ComposedExactExpr::Product(leaf) => {
+            if let DaggerExactLeaf::Dice { id, min, max } = leaf.value() {
+                rolls.push((id.clone(), *min, *max));
             }
-            _ => {}
-        },
+        }
         ComposedExactExpr::Add(left, right)
         | ComposedExactExpr::Subtract(left, right)
         | ComposedExactExpr::Multiply(left, right)

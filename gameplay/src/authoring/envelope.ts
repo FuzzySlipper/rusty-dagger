@@ -10,6 +10,7 @@
  */
 
 import { authorBinary64RulePackage } from "@rusty-engine/gameplay-rules-authoring";
+import type { JsonValue } from "@rusty-engine/gameplay-rules-contracts";
 
 import type {
   ActionDefinition,
@@ -60,6 +61,10 @@ export const composePackage = (input: PackageInput) => {
     }
   };
   record("stats", ["stats"]);
+  // Generated composedExact subtrees use Dagger's typed leaf codec.  This
+  // product-owned source record makes their provenance explicit in the one
+  // aggregate package rather than fabricating side-package identities.
+  record("dagger", ["dagger"]);
   record(
     "actors",
     payload.actors.map((entry) => `actor.${entry.id}`),
@@ -103,6 +108,8 @@ export const composePackage = (input: PackageInput) => {
     dependencies: [],
     sources,
     provenance,
-    payload,
+    // Product tables are readonly structural data. The Engine authoring API
+    // owns the runtime JSON validation and canonicalization.
+    payload: payload as unknown as JsonValue,
   });
 };

@@ -1347,8 +1347,28 @@ mod tests {
             .iter_mut()
             .find(|rule| rule["id"] == "xp-level")
             .expect("xp-level rule");
-        rule["expr"]["right"]["value"] = serde_json::Value::from(divisor);
+        rule["expr"]["tree"]["right"]["value"] = serde_json::Value::from(divisor);
         serde_json::to_vec(&package).expect("encode mutated package")
+    }
+
+    #[test]
+    fn malformed_embedded_xp_curve_fails_gameplay_admission() {
+        let mut package: serde_json::Value = serde_json::from_slice(include_bytes!(
+            "../../../data/gameplay/dagger-core.package.json"
+        ))
+        .expect("parse committed package");
+        let rule = package["payload"]["derived"]
+            .as_array_mut()
+            .expect("derived rules")
+            .iter_mut()
+            .find(|rule| rule["id"] == "xp-level")
+            .expect("xp-level rule");
+        rule["expr"]["tree"]["right"]["extra"] = serde_json::Value::Bool(true);
+        let package = serde_json::to_vec(&package).expect("encode malformed package");
+        let admitted = AdmittedProject::from_json(PROJECT).expect("project admission");
+        assert!(
+            DaggerRuntime::from_admitted_project_with_gameplay_package(admitted, &package).is_err()
+        );
     }
 
     #[test]

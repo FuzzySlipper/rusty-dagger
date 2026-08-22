@@ -30,6 +30,7 @@ export const gameplayPackage = composePackage({
     derived: "gameplay/src/catalogs/derived.ts",
     equipment: "gameplay/src/catalogs/equipment.ts",
     lootTables: "gameplay/src/catalogs/loot.ts",
+    dagger: "gameplay/src/authoring/expressions.ts",
   },
   payload: {
     schemaVersion: 1,

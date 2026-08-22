@@ -4,7 +4,7 @@
  * compiler in `crates/dagger-rpg`.
  */
 
-import type { Expr } from "./expressions.js";
+import { embedDaggerExpr, type EmbeddedExpr, type Expr } from "./expressions.js";
 import type { Program } from "./programs.js";
 
 /** Declared vocabulary: actor stat, skill, track, armor-part, and progression ids in one place. */
@@ -30,7 +30,7 @@ export type DamageRange = Readonly<{ min: number; max: number }>;
 /** One actor resource track; `max` is a derived rule evaluated in Rust. */
 export type TrackDefinition = Readonly<{
   id: string;
-  max: Expr;
+  max: EmbeddedExpr;
 }>;
 
 /**
@@ -106,7 +106,7 @@ export type ActorDefinition = Readonly<{
 /** A named classic formula over one subject's stats, evaluated on demand. */
 export type DerivedRule = Readonly<{
   id: string;
-  expr: Expr;
+  expr: EmbeddedExpr;
 }>;
 
 export type ActionDefinition = Readonly<{
@@ -251,7 +251,10 @@ export const statsSection = (
   progression: readonly string[],
 ): StatsSection => ({ attributes, skills, tracks, armorParts, progression });
 
-export const track = (id: string, max: Expr): TrackDefinition => ({ id, max });
+export const track = (id: string, max: Expr): TrackDefinition => ({
+  id,
+  max: embedDaggerExpr(max),
+});
 
 export const behavior = (
   action: string,
@@ -304,7 +307,10 @@ export const actor = (
   return { id, ...definition };
 };
 
-export const derivedRule = (id: string, expr: Expr): DerivedRule => ({ id, expr });
+export const derivedRule = (id: string, expr: Expr): DerivedRule => ({
+  id,
+  expr: embedDaggerExpr(expr),
+});
 
 export const action = (
   id: string,
