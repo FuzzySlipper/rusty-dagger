@@ -1,13 +1,20 @@
 use std::collections::BTreeMap;
 
 use rusty_engine::gameplay_mechanics::{
-    MechanicsScalar, OperationId, SourceInstanceId, SourceInstanceIdentity, StatId, StatService,
-    TrackAdjustmentKind, TrackId, TrackMutationRequest, TrackService, TracksComponent,
+    DamageKindId, MechanicsScalar, OperationId, SourceInstanceId, SourceInstanceIdentity, StatId,
+    StatService, TrackId, TracksComponent,
 };
 use rusty_engine::gameplay_resolution::{
     PolicyFailure, PolicyResult, ResolutionIdentity, ResolutionMode, ResolutionPlan,
     ResolutionPolicy, ResolutionRequest, ResolutionTraceSink, ResolutionTransaction,
     StandardResolver,
+};
+use rusty_engine::gameplay_standard::{
+    CapabilityRequirementId, CapabilityRoleBinding, CapabilityRoleBindings, CapabilityRoleId,
+    ComposedExactComparison, ExactComparison, ExactEvaluator, ExactExpr, ExactExprLimits,
+    ExactInputBundle, StandardExactOperand, StandardOperation, StandardOperationContext,
+    StandardOperationPlan, STANDARD_DAMAGE_CAPABILITY, STANDARD_EFFECT_CAPABILITY,
+    STANDARD_TRACK_CAPABILITY,
 };
 
 use super::eval::{
@@ -19,19 +26,28 @@ use super::{
     armor_part_stat_id, weapon_material_rank, DaggerActorDefinition, DaggerActorFacts,
     DaggerActorState, DaggerAdmittedIntent, DaggerEffect, DaggerEvent, DaggerEvidence, DaggerFacts,
     DaggerFault, DaggerGameplayCatalog, DaggerGameplayState, DaggerIntent, DaggerOperation,
-    DaggerPredicate, DaggerRejection, DaggerResolutionReadout, DaggerResolutionReceipt,
-    DaggerRuleDefinition, DaggerSelector, DaggerSuspension, DaggerTraceDetail,
-    DaggerTransactionError,
+    DaggerPlannedEffect, DaggerPredicate, DaggerRejection, DaggerResolutionReadout,
+    DaggerResolutionReceipt, DaggerRuleDefinition, DaggerSelector, DaggerSuspension,
+    DaggerTraceDetail, DaggerTransactionError,
 };
 
 pub struct DaggerResolutionPolicy<'a> {
     catalog: &'a DaggerGameplayCatalog,
     snapshot: DaggerGameplayState,
+    operation: OperationId,
 }
 
 impl<'a> DaggerResolutionPolicy<'a> {
-    pub fn new(catalog: &'a DaggerGameplayCatalog, snapshot: DaggerGameplayState) -> Self {
-        Self { catalog, snapshot }
+    pub fn new(
+        catalog: &'a DaggerGameplayCatalog,
+        snapshot: DaggerGameplayState,
+        operation: OperationId,
+    ) -> Self {
+        Self {
+            catalog,
+            snapshot,
+            operation,
+        }
     }
 
     fn binding(
@@ -196,6 +212,74 @@ impl<'a> DaggerResolutionPolicy<'a> {
             evidence,
         })
     }
+
+    /// Builds the Engine-owned mechanics mutation plan before Dagger wraps it
+    /// in its product receipt/event envelope. The plan is intentionally not a
+    /// second transaction authority: Dagger's aggregate transaction remains
+    /// responsible for one product publication, while Engine validates the
+    /// exact operand, role capability bindings, source snapshot, and mechanics
+    /// mutation shape.
+    fn standard_plan(
+        &self,
+        operation: StandardOperation,
+        actor: &str,
+        target: &str,
+    ) -> PolicyResult<StandardOperationPlan, DaggerRejection, DaggerFault, DaggerSuspension> {
+        let actor_entity = self.binding(actor)?.entity();
+        let target_entity = self.binding(target)?.entity();
+        let capability = |value| {
+            CapabilityRequirementId::parse(value).expect("fixed standard capability identity")
+        };
+        let all_capabilities = vec![
+            capability(STANDARD_TRACK_CAPABILITY),
+            capability(STANDARD_DAMAGE_CAPABILITY),
+            capability(STANDARD_EFFECT_CAPABILITY),
+        ];
+        let bindings = CapabilityRoleBindings::admit(
+            &operation.requirements(),
+            vec![
+                CapabilityRoleBinding::new(
+                    CapabilityRoleId::parse("actor").expect("fixed role"),
+                    actor_entity,
+                    all_capabilities.clone(),
+                )
+                .expect("fixed role capabilities fit"),
+                CapabilityRoleBinding::new(
+                    CapabilityRoleId::parse("target").expect("fixed role"),
+                    target_entity,
+                    all_capabilities,
+                )
+                .expect("fixed role capabilities fit"),
+            ],
+        )
+        .map_err(|error| {
+            PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                "standard role bindings: {error:?}"
+            )))
+        })?;
+        let context = StandardOperationContext::new(
+            self.operation.clone(),
+            SourceInstanceIdentity::Request {
+                operation: self.operation.clone(),
+                instance: SourceInstanceId::parse("dagger-standard-plan")
+                    .expect("fixed source identity"),
+            },
+        )
+        .expect("matching fixed standard operation/source");
+        operation
+            .plan(
+                &bindings,
+                &ExactInputBundle::new(vec![]),
+                self.snapshot.entities(),
+                self.catalog.mechanics(),
+                &context,
+            )
+            .map_err(|error| {
+                PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                    "standard operation plan: {error:?}"
+                )))
+            })
+    }
 }
 
 fn eval_operation_id() -> OperationId {
@@ -230,7 +314,7 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
     type Facts = DaggerFacts;
     type Predicate = DaggerPredicate;
     type Operation = DaggerOperation;
-    type Effect = DaggerEffect;
+    type Effect = DaggerPlannedEffect;
     type Event = DaggerEvent;
     type Evidence = DaggerEvidence;
     // Item-borne interception is gone with the dead items-set path; equipped
@@ -340,7 +424,11 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
     ) -> PolicyResult<bool, DaggerRejection, DaggerFault, DaggerSuspension> {
         match predicate {
-            DaggerPredicate::Cmp { op, left, right } => {
+            ComposedExactComparison::Equal(left, right)
+            | ComposedExactComparison::LessThan(left, right)
+            | ComposedExactComparison::LessOrEqual(left, right)
+            | ComposedExactComparison::GreaterThan(left, right)
+            | ComposedExactComparison::GreaterOrEqual(left, right) => {
                 let actor_stats = self.live_stats(&intent.actor)?;
                 let target_stats = self.live_stats(&intent.target)?;
                 let actor_tracks = self.live_tracks(&intent.actor)?;
@@ -357,9 +445,47 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                 let left_value = evaluate_expr(left, &context).map_err(PolicyFailure::Rejected)?;
                 let right_value =
                     evaluate_expr(right, &context).map_err(PolicyFailure::Rejected)?;
-                let result = op.compare(left_value, right_value);
+                let left =
+                    ExactExpr::Literal(MechanicsScalar::new(left_value).map_err(|error| {
+                        PolicyFailure::Rejected(DaggerRejection::InvalidExpression(format!(
+                            "comparison left: {error:?}"
+                        )))
+                    })?);
+                let right =
+                    ExactExpr::Literal(MechanicsScalar::new(right_value).map_err(|error| {
+                        PolicyFailure::Rejected(DaggerRejection::InvalidExpression(format!(
+                            "comparison right: {error:?}"
+                        )))
+                    })?);
+                let (comparison, operator) = match predicate {
+                    ComposedExactComparison::Equal(_, _) => {
+                        (ExactComparison::Equal(left, right), "Eq")
+                    }
+                    ComposedExactComparison::LessThan(_, _) => {
+                        (ExactComparison::LessThan(left, right), "Lt")
+                    }
+                    ComposedExactComparison::LessOrEqual(_, _) => {
+                        (ExactComparison::LessOrEqual(left, right), "Lte")
+                    }
+                    ComposedExactComparison::GreaterThan(_, _) => {
+                        (ExactComparison::GreaterThan(left, right), "Gt")
+                    }
+                    ComposedExactComparison::GreaterOrEqual(_, _) => {
+                        (ExactComparison::GreaterOrEqual(left, right), "Gte")
+                    }
+                };
+                let result = ExactEvaluator::evaluate_predicate(
+                    &comparison,
+                    &ExactInputBundle::new(vec![]),
+                    ExactExprLimits::default(),
+                )
+                .map_err(|error| {
+                    PolicyFailure::Rejected(DaggerRejection::InvalidExpression(format!(
+                        "comparison evaluation: {error:?}"
+                    )))
+                })?;
                 trace.record(DaggerTraceDetail::Decision {
-                    reason: format!("{left_value} {op:?} {right_value} = {result}"),
+                    reason: format!("{left_value} {operator} {right_value} = {result}"),
                 });
                 Ok(result)
             }
@@ -374,7 +500,7 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
         evidence: &[DaggerEvidence],
         trace: &mut dyn ResolutionTraceSink<DaggerTraceDetail>,
     ) -> PolicyResult<
-        ResolutionPlan<DaggerEffect, DaggerEvent, DaggerIntent, DaggerEvidence>,
+        ResolutionPlan<DaggerPlannedEffect, DaggerEvent, DaggerIntent, DaggerEvidence>,
         DaggerRejection,
         DaggerFault,
         DaggerSuspension,
@@ -406,18 +532,41 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                         },
                     ));
                 }
-                plan.push_effect(DaggerEffect::SpendTrack {
-                    actor: intent.actor.clone(),
-                    track: track.clone(),
-                    amount,
-                });
+                let standard = StandardOperation::SpendTrack {
+                    role: CapabilityRoleId::parse("actor").expect("fixed role"),
+                    track: TrackId::parse(track.clone()).map_err(|error| {
+                        PolicyFailure::Fault(DaggerFault::InvalidProgram(format!(
+                            "standard track {track}: {error:?}"
+                        )))
+                    })?,
+                    amount: StandardExactOperand::from(ExactExpr::Literal(
+                        MechanicsScalar::new(amount).map_err(|error| {
+                            PolicyFailure::Rejected(DaggerRejection::InvalidExpression(format!(
+                                "standard spend amount {amount}: {error:?}"
+                            )))
+                        })?,
+                    )),
+                };
+                let standard_plan = self.standard_plan(standard, &intent.actor, &intent.target)?;
+                let observed_components = standard_plan.observed_revisions().len();
+                plan.push_effect(DaggerPlannedEffect::new(
+                    DaggerEffect::SpendTrack {
+                        actor: intent.actor.clone(),
+                        track: track.clone(),
+                        amount,
+                    },
+                    standard_plan,
+                ));
                 plan.push_event(DaggerEvent::TrackSpent {
                     actor: intent.actor.clone(),
                     track: track.clone(),
                     amount,
                 });
                 trace.record(DaggerTraceDetail::Decision {
-                    reason: format!("spend {amount} {track} of {available}"),
+                    reason: format!(
+                        "spend {amount} {track} of {available} (standard plan observed {} components)",
+                        observed_components
+                    ),
                 });
             }
             DaggerOperation::Damage { target, amount } => {
@@ -465,16 +614,40 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                         }
                     }
                 }
-                plan.push_effect(DaggerEffect::Damage {
-                    target: target.clone(),
-                    amount: applied,
-                });
+                let standard = StandardOperation::SubmitDamage {
+                    actor: Some(CapabilityRoleId::parse("actor").expect("fixed role")),
+                    target: CapabilityRoleId::parse("target").expect("fixed role"),
+                    target_track: TrackId::parse("health").expect("fixed health track"),
+                    parts: vec![(
+                        StandardExactOperand::from(ExactExpr::Literal(
+                            MechanicsScalar::new(applied).map_err(|error| {
+                                PolicyFailure::Rejected(DaggerRejection::InvalidExpression(
+                                    format!("standard damage amount {applied}: {error:?}"),
+                                ))
+                            })?,
+                        )),
+                        DamageKindId::parse("impact").expect("fixed damage kind"),
+                    )],
+                    request_sources: vec![],
+                };
+                let standard_plan = self.standard_plan(standard, &intent.actor, target)?;
+                let observed_components = standard_plan.observed_revisions().len();
+                plan.push_effect(DaggerPlannedEffect::new(
+                    DaggerEffect::Damage {
+                        target: target.clone(),
+                        amount: applied,
+                    },
+                    standard_plan,
+                ));
                 plan.push_event(DaggerEvent::DamageApplied {
                     target: target.clone(),
                     amount: applied,
                 });
                 trace.record(DaggerTraceDetail::Decision {
-                    reason: format!("damage {applied} to {target} (rolled {amount})"),
+                    reason: format!(
+                        "damage {applied} to {target} (rolled {amount}; standard plan observed {} components)",
+                        observed_components
+                    ),
                 });
             }
         }
@@ -485,76 +658,53 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
 pub struct DaggerTransaction<'a> {
     state: &'a mut DaggerGameplayState,
     mechanics: &'a rusty_engine::gameplay_mechanics::MechanicsCatalog,
-    operation: OperationId,
-    staged: Vec<DaggerEffect>,
+    staged: Vec<DaggerPlannedEffect>,
 }
 
 impl<'a> DaggerTransaction<'a> {
     pub fn new(
         state: &'a mut DaggerGameplayState,
         mechanics: &'a rusty_engine::gameplay_mechanics::MechanicsCatalog,
-        operation: OperationId,
     ) -> Self {
         Self {
             state,
             mechanics,
-            operation,
             staged: Vec::new(),
         }
     }
 }
 
 impl ResolutionTransaction for DaggerTransaction<'_> {
-    type Effect = DaggerEffect;
+    type Effect = DaggerPlannedEffect;
     type Error = DaggerTransactionError;
 
-    fn stage(&mut self, effect: &DaggerEffect) -> Result<(), DaggerTransactionError> {
+    fn stage(&mut self, effect: &DaggerPlannedEffect) -> Result<(), DaggerTransactionError> {
         self.staged.push(effect.clone());
         Ok(())
     }
 
     fn commit(&mut self) -> Result<(), DaggerTransactionError> {
+        for effect in &self.staged {
+            effect
+                .standard()
+                .validate_source_state(self.state.entities(), self.mechanics)
+                .map_err(|error| {
+                    DaggerTransactionError::Mechanics(format!(
+                        "standard plan source validation: {error:?}"
+                    ))
+                })?;
+        }
         let mut candidate = self.state.clone();
         for effect in &self.staged {
-            let (actor, track, amount) = match effect {
-                DaggerEffect::SpendTrack {
-                    actor,
-                    track,
-                    amount,
-                } => (actor, track.clone(), *amount),
-                DaggerEffect::Damage { target, amount } => (target, "health".to_string(), *amount),
-            };
-            let binding = candidate
-                .actors()
-                .get(actor)
-                .ok_or_else(|| DaggerTransactionError::UnknownActor(actor.clone()))?
-                .entity();
-            let source = SourceInstanceIdentity::Request {
-                operation: self.operation.clone(),
-                instance: SourceInstanceId::parse("dagger-policy").expect("fixed source identity"),
-            };
-            TrackService::spend(
-                candidate.entities_mut(),
-                self.mechanics,
-                TrackMutationRequest {
-                    operation: self.operation.clone(),
-                    source,
-                    entity: binding,
-                    track: TrackId::parse(track.clone()).map_err(|error| {
-                        DaggerTransactionError::Mechanics(format!("track id {track}: {error:?}"))
-                    })?,
-                    amount: MechanicsScalar::new(amount).map_err(|error| {
-                        DaggerTransactionError::Mechanics(format!("amount {amount}: {error:?}"))
-                    })?,
-                    kind: TrackAdjustmentKind::Spend,
-                    expected_revision: None,
-                },
-            )
-            .map_err(|error| {
-                DaggerTransactionError::Mechanics(format!(
-                    "track spend {amount} {track} for {actor}: {error:?}"
-                ))
-            })?;
+            effect
+                .standard()
+                .effect()
+                .apply_to_candidate(candidate.entities_mut(), self.mechanics)
+                .map_err(|error| {
+                    DaggerTransactionError::Mechanics(format!(
+                        "standard plan candidate application: {error:?}"
+                    ))
+                })?;
         }
         *self.state = candidate;
         self.staged.clear();
@@ -575,14 +725,14 @@ pub fn resolve_dagger_action(
     evidence: Vec<DaggerEvidence>,
 ) -> (DaggerResolutionReceipt, DaggerResolutionReadout) {
     let snapshot = state.clone();
-    let mut policy = DaggerResolutionPolicy::new(catalog, snapshot);
     let operation = OperationId::parse(format!(
         "resolution-{}-{}",
         identity.correlation().get(),
         identity.resolution().get()
     ))
     .expect("resolution operation identity fits identity limits");
-    let mut transaction = DaggerTransaction::new(state, catalog.mechanics(), operation);
+    let mut policy = DaggerResolutionPolicy::new(catalog, snapshot, operation);
+    let mut transaction = DaggerTransaction::new(state, catalog.mechanics());
     let receipt = StandardResolver::default().resolve(
         &mut policy,
         &mut transaction,
@@ -590,4 +740,71 @@ pub fn resolve_dagger_action(
     );
     let readout = DaggerResolutionReadout::from_receipt(catalog.fingerprint(), &receipt);
     (receipt, readout)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{compile_gameplay_package, set_actor_track, spawn_actor};
+
+    use rusty_engine::gameplay_resolution::ResolutionTransaction;
+
+    const PACKAGE: &[u8] = include_bytes!("../../../../data/gameplay/dagger-core.package.json");
+
+    #[test]
+    fn stale_standard_plan_rejects_before_candidate_publication() {
+        let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
+        let mut state = DaggerGameplayState::default();
+        spawn_actor(&mut state, &catalog, "player", "player", &[]).expect("spawn player");
+        spawn_actor(
+            &mut state,
+            &catalog,
+            "rat",
+            "rat",
+            &[DaggerEvidence {
+                id: "rat.health".to_string(),
+                value: 12,
+            }],
+        )
+        .expect("spawn rat");
+
+        let operation = OperationId::parse("resolution-stale-standard-plan").expect("fixed id");
+        let policy = DaggerResolutionPolicy::new(&catalog, state.clone(), operation);
+        let plan = policy
+            .standard_plan(
+                StandardOperation::SpendTrack {
+                    role: CapabilityRoleId::parse("actor").expect("fixed role"),
+                    track: TrackId::parse("stamina").expect("fixed track"),
+                    amount: StandardExactOperand::from(ExactExpr::Literal(
+                        MechanicsScalar::new(5).expect("fixed amount"),
+                    )),
+                },
+                "player",
+                "rat",
+            )
+            .expect("plan standard spend");
+        let effect = DaggerPlannedEffect::new(
+            DaggerEffect::SpendTrack {
+                actor: "player".to_string(),
+                track: "stamina".to_string(),
+                amount: 5,
+            },
+            plan,
+        );
+
+        let mut transaction = DaggerTransaction::new(&mut state, catalog.mechanics());
+        transaction.stage(&effect).expect("stage plan");
+        set_actor_track(transaction.state, &catalog, "player", "stamina", 89)
+            .expect("mutate source after planning");
+
+        let error = transaction.commit().expect_err("stale plan must reject");
+        assert!(matches!(
+            error,
+            DaggerTransactionError::Mechanics(message)
+                if message.contains("standard plan source validation")
+        ));
+        // The transaction never cloned/applied the staged spend, so the
+        // externally changed 89 remains rather than a second 84 mutation.
+        assert_eq!(transaction.state.track_value("player", "stamina"), Some(89));
+    }
 }

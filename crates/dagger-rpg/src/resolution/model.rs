@@ -8,6 +8,9 @@ use rusty_engine::gameplay_mechanics::{
 use rusty_engine::gameplay_resolution::{
     AttemptStatus, CommitStatus, Program, ResolutionMode, ResolutionReceipt,
 };
+use rusty_engine::gameplay_standard::{
+    ComposedExactComparison, ComposedExactExpr, StandardOperationPlan,
+};
 use serde::{Deserialize, Serialize};
 
 pub const DAGGER_GAMEPLAY_SCHEMA_VERSION: u32 = 1;
@@ -199,75 +202,62 @@ pub struct AuthoredBehaviorDefinition {
     pub action: String,
 }
 
+/// The Engine's generated composedExact transport grammar. Dagger's aggregate
+/// payload remains product-owned, but every generic node is admitted through
+/// the provider grammar rather than a parallel local dialect.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+#[serde(tag = "op", rename_all = "camelCase", deny_unknown_fields)]
 pub enum AuthoredExpr {
-    Const {
+    Literal {
         value: Binary64I64,
     },
-    Stat {
-        subject: AuthoredSubject,
-        id: String,
-    },
-    Skill {
-        subject: AuthoredSubject,
-        id: String,
-    },
-    EquippedWeaponSkill {
-        subject: AuthoredSubject,
-    },
-    Evidence {
-        id: String,
-    },
-    Dice {
-        id: String,
-        min: Binary64I64,
-        max: Binary64I64,
-    },
-    EquippedWeaponDice {
-        subject: AuthoredSubject,
-        id: String,
-    },
-    StruckArmor {
-        subject: AuthoredSubject,
-        id: String,
-    },
-    Track {
-        subject: AuthoredSubject,
-        id: String,
-    },
-    TrackMax {
-        subject: AuthoredSubject,
-        id: String,
-    },
-    PowMilli {
-        base: Box<Self>,
-        exponent: Box<Self>,
+    Input {
+        input: AuthoredExactInput,
     },
     Add {
-        terms: Vec<Self>,
-    },
-    Sub {
         left: Box<Self>,
         right: Box<Self>,
     },
-    Mul {
-        terms: Vec<Self>,
-    },
-    DivFloor {
+    Subtract {
         left: Box<Self>,
         right: Box<Self>,
     },
-    DivTrunc {
+    Multiply {
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+    FloorDivide {
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+    TruncatingDivide {
         left: Box<Self>,
         right: Box<Self>,
     },
     Min {
-        terms: Vec<Self>,
+        values: Vec<Self>,
     },
     Max {
-        terms: Vec<Self>,
+        values: Vec<Self>,
     },
+    Product {
+        kind: String,
+        payload: serde_json::Value,
+        subject: String,
+        source: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+pub enum AuthoredExactInput {
+    Roll { role: String, id: String },
+    StandardStat { role: String, stat: String },
+    StandardTrackCurrent { role: String, track: String },
+    StandardTrackMaximum { role: String, track: String },
+    Parameter { role: String, id: String },
+    Fact { role: String, id: String },
+    Choice { role: String, id: String },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -578,24 +568,13 @@ pub struct DaggerStatsSection {
 
 pub type DaggerProgram = Program<DaggerPredicate, DaggerOperation>;
 
+/// The closed typed extension leaf set. It deliberately excludes constants,
+/// input references, arithmetic, aggregates, and comparisons: those belong to
+/// gameplay-standard's composedExact/ExactEvaluator path.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DaggerExpr {
-    Const {
-        value: i64,
-    },
-    Stat {
-        subject: DaggerSubject,
-        id: String,
-    },
-    Skill {
-        subject: DaggerSubject,
-        id: String,
-    },
+pub enum DaggerExactLeaf {
     EquippedWeaponSkill {
         subject: DaggerSubject,
-    },
-    Evidence {
-        id: String,
     },
     Dice {
         id: String,
@@ -610,69 +589,18 @@ pub enum DaggerExpr {
         subject: DaggerSubject,
         id: String,
     },
-    Track {
-        subject: DaggerSubject,
-        id: String,
-    },
-    TrackMax {
-        subject: DaggerSubject,
-        id: String,
-    },
     PowMilli {
-        base: Box<Self>,
-        exponent: Box<Self>,
-    },
-    Add {
-        terms: Vec<Self>,
-    },
-    Sub {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    Mul {
-        terms: Vec<Self>,
-    },
-    DivFloor {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    DivTrunc {
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-    Min {
-        terms: Vec<Self>,
-    },
-    Max {
-        terms: Vec<Self>,
+        base: Box<DaggerExpr>,
+        exponent: Box<DaggerExpr>,
     },
 }
+
+pub type DaggerExpr = ComposedExactExpr<DaggerExactLeaf>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DaggerSubject {
     Actor,
     Target,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DaggerCmpOp {
-    Lt,
-    Lte,
-    Eq,
-    Gte,
-    Gt,
-}
-
-impl DaggerCmpOp {
-    pub fn compare(self, left: i64, right: i64) -> bool {
-        match self {
-            Self::Lt => left < right,
-            Self::Lte => left <= right,
-            Self::Eq => left == right,
-            Self::Gte => left >= right,
-            Self::Gt => left > right,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -747,14 +675,7 @@ pub struct DaggerActionDefinition {
     pub cooldown_seconds: Option<f32>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DaggerPredicate {
-    Cmp {
-        op: DaggerCmpOp,
-        left: DaggerExpr,
-        right: DaggerExpr,
-    },
-}
+pub type DaggerPredicate = ComposedExactComparison<DaggerExactLeaf>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DaggerSelector {
@@ -1242,6 +1163,30 @@ pub enum DaggerEffect {
     },
 }
 
+/// Product-owned receipt metadata paired with the one Engine mechanics plan
+/// that is allowed to mutate the private transaction candidate. The opaque
+/// plan deliberately stays out of Dagger's serialized readout; its stable
+/// product projection is the accompanying `DaggerEffect`.
+#[derive(Debug, Clone)]
+pub struct DaggerPlannedEffect {
+    product: DaggerEffect,
+    standard: StandardOperationPlan,
+}
+
+impl DaggerPlannedEffect {
+    pub fn new(product: DaggerEffect, standard: StandardOperationPlan) -> Self {
+        Self { product, standard }
+    }
+
+    pub const fn product(&self) -> &DaggerEffect {
+        &self.product
+    }
+
+    pub const fn standard(&self) -> &StandardOperationPlan {
+        &self.standard
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DaggerEvent {
@@ -1421,7 +1366,7 @@ pub type DaggerResolutionReceipt = ResolutionReceipt<
     DaggerAdmittedIntent,
     DaggerFacts,
     DaggerEvidence,
-    DaggerEffect,
+    DaggerPlannedEffect,
     DaggerEvent,
     DaggerRejection,
     DaggerFault,
@@ -1466,7 +1411,11 @@ impl DaggerResolutionReadout {
             .to_string(),
             status: format_attempt_status(receipt.attempt().status()),
             commit: format_commit_status(receipt.commit()),
-            effects: receipt.effects().to_vec(),
+            effects: receipt
+                .effects()
+                .iter()
+                .map(|effect| effect.product().clone())
+                .collect(),
             events: receipt.events().to_vec(),
             trace: receipt
                 .attempt()

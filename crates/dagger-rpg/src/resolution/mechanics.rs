@@ -22,12 +22,12 @@
 use std::collections::BTreeMap;
 
 use rusty_engine::gameplay_mechanics::{
-    CapacityMetricDefinition, CapacityMetricId, CatalogVersion, EquipmentExclusivityId,
-    EquipmentSlotDefinition, EquipmentSlotId, ItemCapacityCost, ItemClassificationId,
-    ItemDefinition, ItemDefinitionId, ItemEquipmentPolicy, ItemKind, MechanicsCatalog,
-    MechanicsCatalogDefinition, MechanicsScalar, SourceDefinition, SourceDefinitionId,
-    StackingGroupId, StackingPolicy, StatContribution, StatContributionDefinition, StatDefinition,
-    StatId, TrackDefinition, TrackId, TrackMaximum,
+    CapacityMetricDefinition, CapacityMetricId, CatalogVersion, DamageKindDefinition, DamageKindId,
+    EquipmentExclusivityId, EquipmentSlotDefinition, EquipmentSlotId, ItemCapacityCost,
+    ItemClassificationId, ItemDefinition, ItemDefinitionId, ItemEquipmentPolicy, ItemKind,
+    MechanicsCatalog, MechanicsCatalogDefinition, MechanicsScalar, SourceDefinition,
+    SourceDefinitionId, StackingGroupId, StackingPolicy, StatContribution,
+    StatContributionDefinition, StatDefinition, StatId, TrackDefinition, TrackId, TrackMaximum,
 };
 
 use super::compile::WEIGHT_CAPACITY_METRIC;
@@ -354,11 +354,13 @@ pub fn compile_mechanics_catalog(
         version: mechanics_catalog_version(),
         stats,
         tracks,
-        // Equipment-borne armor/shield contributions are attributed sources
-        // on the items. Damage kinds/responses arrive with resistances;
-        // effects arrive with spell effects.
+        // Dagger combat currently has one product-owned physical damage
+        // classification. Responses remain future Dagger rules, but the
+        // standard operation plan must carry a catalog-admitted kind.
         sources,
-        damage_kinds: Vec::new(),
+        damage_kinds: vec![DamageKindDefinition {
+            id: DamageKindId::parse("impact").expect("fixed Dagger damage kind"),
+        }],
         effects: Vec::new(),
         capacity_metrics,
         items: item_definitions,

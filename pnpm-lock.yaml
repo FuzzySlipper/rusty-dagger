@@ -32,6 +32,12 @@ importers:
       '@rusty-engine/gameplay-rules-contracts':
         specifier: file:../rusty-engine/rules/packages/gameplay-rules-contracts
         version: file:../rusty-engine/rules/packages/gameplay-rules-contracts
+      '@rusty-engine/gameplay-standard-authoring':
+        specifier: file:../rusty-engine/rules/packages/gameplay-standard-authoring
+        version: file:../rusty-engine/rules/packages/gameplay-standard-authoring(@rusty-engine/gameplay-rules-authoring@file:../rusty-engine/rules/packages/gameplay-rules-authoring(@rusty-engine/gameplay-rules-contracts@file:../rusty-engine/rules/packages/gameplay-rules-contracts))(@rusty-engine/gameplay-rules-contracts@file:../rusty-engine/rules/packages/gameplay-rules-contracts)(@rusty-engine/gameplay-standard-contracts@file:../rusty-engine/rules/packages/gameplay-standard-contracts)
+      '@rusty-engine/gameplay-standard-contracts':
+        specifier: file:../rusty-engine/rules/packages/gameplay-standard-contracts
+        version: file:../rusty-engine/rules/packages/gameplay-standard-contracts
       rxjs:
         specifier: ~7.8.0
         version: 7.8.2
@@ -1220,6 +1226,16 @@ packages:
 
   '@rusty-engine/gameplay-rules-contracts@file:../rusty-engine/rules/packages/gameplay-rules-contracts':
     resolution: {directory: ../rusty-engine/rules/packages/gameplay-rules-contracts, type: directory}
+
+  '@rusty-engine/gameplay-standard-authoring@file:../rusty-engine/rules/packages/gameplay-standard-authoring':
+    resolution: {directory: ../rusty-engine/rules/packages/gameplay-standard-authoring, type: directory}
+    peerDependencies:
+      '@rusty-engine/gameplay-rules-authoring': 0.1.0
+      '@rusty-engine/gameplay-rules-contracts': 0.1.0
+      '@rusty-engine/gameplay-standard-contracts': 0.1.0
+
+  '@rusty-engine/gameplay-standard-contracts@file:../rusty-engine/rules/packages/gameplay-standard-contracts':
+    resolution: {directory: ../rusty-engine/rules/packages/gameplay-standard-contracts, type: directory}
 
   '@schematics/angular@21.2.20':
     resolution: {integrity: sha512-D0MFRofD144Gn+LMPgrRQKazv3sNxfB11kbdU19yN8JyXyRqmB3C8/k3lLA/+LyXVeyLwzIKs7Cw/PSzPUaAxA==}
@@ -3423,6 +3439,14 @@ snapshots:
       '@rusty-engine/gameplay-rules-contracts': file:../rusty-engine/rules/packages/gameplay-rules-contracts
 
   '@rusty-engine/gameplay-rules-contracts@file:../rusty-engine/rules/packages/gameplay-rules-contracts': {}
+
+  '@rusty-engine/gameplay-standard-authoring@file:../rusty-engine/rules/packages/gameplay-standard-authoring(@rusty-engine/gameplay-rules-authoring@file:../rusty-engine/rules/packages/gameplay-rules-authoring(@rusty-engine/gameplay-rules-contracts@file:../rusty-engine/rules/packages/gameplay-rules-contracts))(@rusty-engine/gameplay-rules-contracts@file:../rusty-engine/rules/packages/gameplay-rules-contracts)(@rusty-engine/gameplay-standard-contracts@file:../rusty-engine/rules/packages/gameplay-standard-contracts)':
+    dependencies:
+      '@rusty-engine/gameplay-rules-authoring': file:../rusty-engine/rules/packages/gameplay-rules-authoring(@rusty-engine/gameplay-rules-contracts@file:../rusty-engine/rules/packages/gameplay-rules-contracts)
+      '@rusty-engine/gameplay-rules-contracts': file:../rusty-engine/rules/packages/gameplay-rules-contracts
+      '@rusty-engine/gameplay-standard-contracts': file:../rusty-engine/rules/packages/gameplay-standard-contracts
+
+  '@rusty-engine/gameplay-standard-contracts@file:../rusty-engine/rules/packages/gameplay-standard-contracts': {}
 
   '@schematics/angular@21.2.20(chokidar@5.0.0)':
     dependencies:
