@@ -15,8 +15,8 @@ import {
   actor,
   add,
   behavior,
+  boundedRoll,
   constant,
-  dice,
   divFloor,
   mul,
   stat,
@@ -109,7 +109,7 @@ export const actors: readonly ActorDefinition[] = [
     // No armor: class enemies armor from equipment, not yet modeled.
     armorValue: 0,
     tracks: [
-      track("health", dice("thief.health", 11, 20)),
+      track("health", boundedRoll("thief.health", 11, 20)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],

@@ -17,8 +17,8 @@
 import {
   actor,
   behavior,
+  boundedRoll,
   constant,
-  dice,
   track,
   type ActorDefinition,
 } from "../authoring/mod.js";
@@ -33,7 +33,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 1, max: 4 }],
     tracks: [
-      track("health", dice("rat.health", 9, 16)),
+      track("health", boundedRoll("rat.health", 9, 16)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -55,7 +55,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 15,
     attacks: [{ min: 2, max: 15 }],
     tracks: [
-      track("health", dice("imp.health", 11, 18)),
+      track("health", boundedRoll("imp.health", 11, 18)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -70,7 +70,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: -20,
     attacks: [{ min: 1, max: 8 }, { min: 1, max: 8 }, { min: 1, max: 10 }],
     tracks: [
-      track("health", dice("spriggan.health", 12, 26)),
+      track("health", boundedRoll("spriggan.health", 12, 26)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -85,7 +85,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 2, max: 12 }],
     tracks: [
-      track("health", dice("giant-bat.health", 12, 26)),
+      track("health", boundedRoll("giant-bat.health", 12, 26)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -100,7 +100,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 1, max: 8 }, { min: 1, max: 8 }, { min: 1, max: 10 }],
     tracks: [
-      track("health", dice("grizzly-bear.health", 13, 34)),
+      track("health", boundedRoll("grizzly-bear.health", 13, 34)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -115,7 +115,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 1, max: 10 }, { min: 1, max: 10 }, { min: 3, max: 15 }],
     tracks: [
-      track("health", dice("sabertooth-tiger.health", 13, 34)),
+      track("health", boundedRoll("sabertooth-tiger.health", 13, 34)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -130,7 +130,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 25,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("spider.health", 13, 34)),
+      track("health", boundedRoll("spider.health", 13, 34)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -145,7 +145,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 35,
     attacks: [{ min: 1, max: 6 }],
     tracks: [
-      track("health", dice("orc.health", 13, 34)),
+      track("health", boundedRoll("orc.health", 13, 34)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -160,7 +160,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("centaur.health", 14, 46)),
+      track("health", boundedRoll("centaur.health", 14, 46)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -175,7 +175,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 25,
     attacks: [{ min: 1, max: 10 }, { min: 1, max: 10 }, { min: 2, max: 12 }],
     tracks: [
-      track("health", dice("werewolf.health", 17, 66)),
+      track("health", boundedRoll("werewolf.health", 17, 66)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -190,7 +190,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 0,
     attacks: [{ min: 1, max: 5 }],
     tracks: [
-      track("health", dice("nymph.health", 15, 50)),
+      track("health", boundedRoll("nymph.health", 15, 50)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -205,7 +205,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 2, max: 12 }],
     tracks: [
-      track("health", dice("slaughterfish.health", 15, 50)),
+      track("health", boundedRoll("slaughterfish.health", 15, 50)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -220,7 +220,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 25,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("orc-sergeant.health", 15, 50)),
+      track("health", boundedRoll("orc-sergeant.health", 15, 50)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -235,7 +235,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 10,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("harpy.health", 16, 85)),
+      track("health", boundedRoll("harpy.health", 16, 85)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -250,7 +250,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 15,
     attacks: [{ min: 2, max: 12 }, { min: 2, max: 12 }, { min: 5, max: 15 }],
     tracks: [
-      track("health", dice("wereboar.health", 17, 66)),
+      track("health", boundedRoll("wereboar.health", 17, 66)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -265,7 +265,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 10,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("skeletal-warrior.health", 17, 66)),
+      track("health", boundedRoll("skeletal-warrior.health", 17, 66)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -287,7 +287,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 15,
     attacks: [{ min: 10, max: 30 }],
     tracks: [
-      track("health", dice("giant.health", 18, 74)),
+      track("health", boundedRoll("giant.health", 18, 74)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -302,7 +302,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 0,
     attacks: [{ min: 15, max: 50 }],
     tracks: [
-      track("health", dice("zombie.health", 52, 66)),
+      track("health", boundedRoll("zombie.health", 52, 66)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -317,7 +317,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 0,
     attacks: [{ min: 10, max: 35 }],
     tracks: [
-      track("health", dice("ghost.health", 17, 66)),
+      track("health", boundedRoll("ghost.health", 17, 66)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -332,7 +332,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 10,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("mummy.health", 17, 66)),
+      track("health", boundedRoll("mummy.health", 17, 66)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -347,7 +347,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 0,
     attacks: [{ min: 15, max: 25 }],
     tracks: [
-      track("health", dice("giant-scorpion.health", 18, 74)),
+      track("health", boundedRoll("giant-scorpion.health", 18, 74)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -362,7 +362,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 35,
     attacks: [{ min: 2, max: 20 }],
     tracks: [
-      track("health", dice("orc-shaman.health", 18, 74)),
+      track("health", boundedRoll("orc-shaman.health", 18, 74)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -377,7 +377,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 0,
     attacks: [{ min: 10, max: 15 }],
     tracks: [
-      track("health", dice("gargoyle.health", 19, 82)),
+      track("health", boundedRoll("gargoyle.health", 19, 82)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -392,7 +392,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 0,
     attacks: [{ min: 20, max: 45 }],
     tracks: [
-      track("health", dice("wraith.health", 30, 90)),
+      track("health", boundedRoll("wraith.health", 30, 90)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -407,7 +407,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 0,
     attacks: [{ min: 5, max: 50 }],
     tracks: [
-      track("health", dice("orc-warlord.health", 20, 90)),
+      track("health", boundedRoll("orc-warlord.health", 20, 90)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -422,7 +422,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: -25,
     attacks: [{ min: 50, max: 100 }],
     tracks: [
-      track("health", dice("frost-daedra.health", 25, 130)),
+      track("health", boundedRoll("frost-daedra.health", 25, 130)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -437,7 +437,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 5,
     attacks: [{ min: 15, max: 50 }],
     tracks: [
-      track("health", dice("fire-daedra.health", 26, 138)),
+      track("health", boundedRoll("fire-daedra.health", 26, 138)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -452,7 +452,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 5,
     attacks: [{ min: 15, max: 50 }],
     tracks: [
-      track("health", dice("daedroth.health", 27, 146)),
+      track("health", boundedRoll("daedroth.health", 27, 146)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -467,7 +467,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: -10,
     attacks: [{ min: 20, max: 50 }],
     tracks: [
-      track("health", dice("vampire.health", 28, 154)),
+      track("health", boundedRoll("vampire.health", 28, 154)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -482,7 +482,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 5,
     attacks: [{ min: 15, max: 50 }],
     tracks: [
-      track("health", dice("daedra-seducer.health", 27, 146)),
+      track("health", boundedRoll("daedra-seducer.health", 27, 146)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -497,7 +497,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: -25,
     attacks: [{ min: 20, max: 60 }],
     tracks: [
-      track("health", dice("vampire-ancient.health", 30, 170)),
+      track("health", boundedRoll("vampire-ancient.health", 30, 170)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -512,7 +512,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: -50,
     attacks: [{ min: 15, max: 50 }],
     tracks: [
-      track("health", dice("daedra-lord.health", 35, 210)),
+      track("health", boundedRoll("daedra-lord.health", 35, 210)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -527,7 +527,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: -50,
     attacks: [{ min: 70, max: 100 }],
     tracks: [
-      track("health", dice("lich.health", 30, 170)),
+      track("health", boundedRoll("lich.health", 30, 170)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -542,7 +542,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: -60,
     attacks: [{ min: 70, max: 100 }],
     tracks: [
-      track("health", dice("ancient-lich.health", 30, 170)),
+      track("health", boundedRoll("ancient-lich.health", 30, 170)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -557,7 +557,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("dragonling.health", 14, 42)),
+      track("health", boundedRoll("dragonling.health", 14, 42)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -572,7 +572,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("fire-atronach.health", 25, 130)),
+      track("health", boundedRoll("fire-atronach.health", 25, 130)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -587,7 +587,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("iron-atronach.health", 25, 130)),
+      track("health", boundedRoll("iron-atronach.health", 25, 130)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -602,7 +602,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("flesh-atronach.health", 25, 130)),
+      track("health", boundedRoll("flesh-atronach.health", 25, 130)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -617,7 +617,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("ice-atronach.health", 25, 130)),
+      track("health", boundedRoll("ice-atronach.health", 25, 130)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -633,7 +633,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("dragonling-40.health", 14, 42)),
+      track("health", boundedRoll("dragonling-40.health", 14, 42)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -648,7 +648,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("dreugh.health", 13, 34)),
+      track("health", boundedRoll("dreugh.health", 13, 34)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],
@@ -663,7 +663,7 @@ export const monsters: readonly ActorDefinition[] = [
     armorValue: 30,
     attacks: [{ min: 5, max: 15 }],
     tracks: [
-      track("health", dice("lamia.health", 16, 58)),
+      track("health", boundedRoll("lamia.health", 16, 58)),
       track("stamina", constant(0)),
       track("magicka", constant(0)),
     ],

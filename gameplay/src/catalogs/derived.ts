@@ -33,13 +33,14 @@
 
 import {
   add,
+  boundedRoll,
   constant,
   derivedRule,
   divFloor,
   evidence,
   maxOf,
   mul,
-  powMilli,
+  fixedPower,
   skill,
   stat,
   statModifier,
@@ -226,7 +227,7 @@ export const derived: readonly DerivedRule[] = [
   // FormulaHelper.CalculateSkillUsesForAdvancement:
   // floor(skillValue * skillMult * careerMult * 1.04^level * 2 / 5 + 1).
   // Integer form: the career multiplier crosses in centi (2-decimal) and the
-  // 1.04^level factor in milli via powMilli, so the combined denominator is
+  // 1.04^level factor in milli through the shared fixedPower node, so the combined denominator is
   // 5 * 100 * 1000 = 500000. Golden: skill 30, mult 2, career 130, level 1
   // yields 33.
   derivedRule(
@@ -237,7 +238,7 @@ export const derived: readonly DerivedRule[] = [
           evidence("skill-value"),
           evidence("skill-advancement-multiplier"),
           evidence("career-advancement-multiplier-centi"),
-          powMilli(1040, "level"),
+          fixedPower(constant(1040), boundedRoll("level", 0, 64), 1000),
           constant(2),
         ),
         constant(500000),
