@@ -9,14 +9,15 @@ use std::collections::BTreeMap;
 use rusty_engine::entity_state::{EntityAuthoringService, EntityDefinition, RelationshipCommand};
 use rusty_engine::gameplay_mechanics::{
     CapacityMetricId, EquipmentComponent, EquipmentEquipRequest, EquipmentService, EquipmentSlotId,
-    InventoryCapacityLimit, InventoryComponent, InventoryMutationRequest, InventoryService,
-    ItemComponent, ItemDefinitionId, MechanicsScalar, OperationId, SourceInstanceId,
-    SourceInstanceIdentity, StatId, StatValue, StatsComponent, TrackId, TrackValue,
-    TracksComponent,
+    InventoryCapacityLimit, InventoryComponent, InventoryService, ItemComponent, ItemDefinitionId,
+    MechanicsScalar, OperationId, SourceInstanceId, SourceInstanceIdentity, StatId, StatValue,
+    StatsComponent, TrackId, TrackValue, TracksComponent,
 };
 use rusty_engine::gameplay_standard::{
+    CapabilityRequirementId, CapabilityRoleBinding, CapabilityRoleBindings, CapabilityRoleId,
     ComposedExactComparison, ComposedExactExpr, ExactEvaluator, ExactExpr, ExactExprLimits,
-    ExactInputBundle, ExactInputReference, StandardExactFactReference,
+    ExactInputBundle, ExactInputReference, StandardExactFactReference, StandardMechanicsReceipt,
+    StandardOperation, StandardOperationContext, STANDARD_INVENTORY_CAPABILITY,
 };
 
 use super::compile::{LEFT_HAND_SLOT, RIGHT_HAND_SLOT, WEIGHT_CAPACITY_METRIC};
@@ -1124,21 +1125,21 @@ fn bind_loadout(
             }
         })?;
         if definition_ref.fungible {
-            InventoryService::grant(
-                state.entities_mut(),
-                catalog.mechanics(),
-                InventoryMutationRequest {
-                    operation: operation.clone(),
-                    source: source.clone(),
-                    owner,
+            apply_standard_inventory_operation(
+                state,
+                catalog,
+                StandardOperation::GrantStack {
+                    role: inventory_role("loadout-owner"),
                     item: item_id,
                     quantity: entry.quantity,
-                    expected_revision: None,
                 },
+                vec![(inventory_role("loadout-owner"), owner)],
+                operation.clone(),
+                source.clone(),
             )
             .map_err(|error| DaggerGameplayError::InvalidValue {
                 path: path(),
-                reason: format!("loadout grant rejected: {error:?}"),
+                reason: format!("standard loadout grant rejected: {error:?}"),
             })?;
             continue;
         }
@@ -1180,6 +1181,102 @@ fn bind_loadout(
         }
     }
     Ok(())
+}
+
+/// Plans and applies one explicitly selected fungible inventory leaf through
+/// the standard Engine surface. Dagger supplies the named roles, correlation,
+/// and source identity after it has made the product-specific selection; this
+/// helper owns no item, loot, or transaction policy.
+///
+/// The Engine effect may only run against a private product candidate. Source
+/// validation, candidate application, and the one state publication therefore
+/// stay together here, so a rejected standard leaf cannot partially mutate a
+/// spawned actor or generated loot container.
+pub fn apply_standard_inventory_operation(
+    state: &mut DaggerGameplayState,
+    catalog: &DaggerGameplayCatalog,
+    operation: StandardOperation,
+    roles: Vec<(CapabilityRoleId, rusty_engine::core_ids::EntityId)>,
+    correlation: OperationId,
+    source: SourceInstanceIdentity,
+) -> Result<StandardMechanicsReceipt, DaggerStandardInventoryError> {
+    let inventory_capability = CapabilityRequirementId::parse(STANDARD_INVENTORY_CAPABILITY)
+        .expect("fixed standard inventory capability identity");
+    let bindings = CapabilityRoleBindings::admit(
+        &operation.requirements(),
+        roles
+            .into_iter()
+            .map(|(role, entity)| {
+                CapabilityRoleBinding::new(role, entity, vec![inventory_capability.clone()])
+                    .expect("one fixed inventory capability fits")
+            })
+            .collect(),
+    )
+    .map_err(|error| {
+        DaggerStandardInventoryError::Planning(format!(
+            "standard inventory role bindings: {error:?}"
+        ))
+    })?;
+    let context = StandardOperationContext::new(correlation, source).map_err(|error| {
+        DaggerStandardInventoryError::Planning(format!("standard inventory context: {error:?}"))
+    })?;
+    let plan = operation
+        .plan(
+            &bindings,
+            &ExactInputBundle::new(vec![]),
+            state.entities(),
+            catalog.mechanics(),
+            &context,
+        )
+        .map_err(|error| {
+            DaggerStandardInventoryError::Planning(format!("standard inventory plan: {error:?}"))
+        })?;
+    plan.validate_source_state(state.entities(), catalog.mechanics())
+        .map_err(|error| {
+            DaggerStandardInventoryError::Planning(format!(
+                "standard inventory source validation: {error:?}"
+            ))
+        })?;
+    let mut candidate = state.clone();
+    let receipt = plan
+        .effect()
+        .apply_to_candidate(candidate.entities_mut(), catalog.mechanics())
+        .map_err(DaggerStandardInventoryError::Mechanics)?;
+    *state = candidate;
+    Ok(receipt)
+}
+
+/// One Dagger product-boundary failure while applying an Engine standard
+/// inventory leaf. Candidate mechanics errors retain their upstream identity
+/// so the runtime can still distinguish a capacity rejection in its own UI.
+#[derive(Debug)]
+pub enum DaggerStandardInventoryError {
+    Planning(String),
+    Mechanics(rusty_engine::gameplay_mechanics::MechanicsError),
+}
+
+impl DaggerStandardInventoryError {
+    pub fn mechanics_error(&self) -> Option<&rusty_engine::gameplay_mechanics::MechanicsError> {
+        match self {
+            Self::Planning(_) => None,
+            Self::Mechanics(error) => Some(error),
+        }
+    }
+}
+
+impl std::fmt::Display for DaggerStandardInventoryError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Planning(reason) => formatter.write_str(reason),
+            Self::Mechanics(error) => write!(formatter, "standard inventory mechanics: {error:?}"),
+        }
+    }
+}
+
+impl std::error::Error for DaggerStandardInventoryError {}
+
+pub(crate) fn inventory_role(value: &str) -> CapabilityRoleId {
+    CapabilityRoleId::parse(value.to_string()).expect("fixed inventory role identity")
 }
 
 /// Allocate one unique-item entity with an ItemComponent and contain it into

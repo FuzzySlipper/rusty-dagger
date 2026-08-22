@@ -1,12 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
-    action_dynamic_roll_evidence, action_roll_evidence, bind_actor_loot, compile_gameplay_package,
-    definition_base_stats, equipped_weapon, loot_roll_evidence, restore_actor_tracks,
-    set_actor_track, spawn_container, struck_body_part_name, track_maximum, unarmed_damage_range,
-    AuthoredGameplayPayload, DaggerContainerState, DaggerDynamicRoll, DaggerEvent, DaggerEvidence,
-    DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerIntent,
-    DaggerIntentOrigin, DaggerLootGeneration, DaggerProgressionRecord,
+    action_dynamic_roll_evidence, action_roll_evidence, apply_standard_inventory_operation,
+    bind_actor_loot, compile_gameplay_package, definition_base_stats, equipped_weapon,
+    loot_roll_evidence, restore_actor_tracks, set_actor_track, spawn_container,
+    struck_body_part_name, track_maximum, unarmed_damage_range, AuthoredGameplayPayload,
+    DaggerContainerState, DaggerDynamicRoll, DaggerEvent, DaggerEvidence, DaggerGameplayCatalog,
+    DaggerGameplayError, DaggerGameplayState, DaggerIntent, DaggerIntentOrigin,
+    DaggerLootGeneration, DaggerProgressionRecord,
 };
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::core_math::Vec3;
@@ -20,6 +21,9 @@ use rusty_engine::entity_state::{
 use rusty_engine::gameplay_mechanics::{OperationId, StatId, StatService};
 use rusty_engine::gameplay_resolution::{
     CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
+};
+use rusty_engine::gameplay_standard::{
+    CapabilityRoleId, StandardMechanicsReceipt, StandardOperation,
 };
 use rusty_engine::svc_collision::{
     StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
@@ -2688,8 +2692,8 @@ impl DaggerRuntime {
         self.product_readout()
     }
 
-    /// Experiment-lab grant verb: grant a fungible item stack through
-    /// `InventoryService::grant`. Unique (equippable) items are out of scope
+    /// Experiment-lab grant verb: grant a fungible item stack through the
+    /// Engine standard operation. Unique (equippable) items are out of scope
     /// — they would need entity allocation and containment, which the spawn
     /// loadout already owns. Over-capacity grants reject upstream and the
     /// rejection lands in the equipment log with the reason.
@@ -2698,9 +2702,7 @@ impl DaggerRuntime {
         item: &str,
         quantity: u64,
     ) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            InventoryMutationRequest, InventoryService, ItemDefinitionId,
-        };
+        use rusty_engine::gameplay_mechanics::ItemDefinitionId;
 
         let reject = |runtime: &mut Self, reason: String| {
             runtime.log_equipment_rejection(
@@ -2738,31 +2740,41 @@ impl DaggerRuntime {
         })?;
         let owner = self.player_actor_entity();
         let (operation, source) = equipment_operation();
-        match InventoryService::grant(
-            self.gameplay.entities_mut(),
-            self.gameplay_catalog.mechanics(),
-            InventoryMutationRequest {
-                operation,
-                source,
-                owner,
+        match apply_standard_inventory_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::GrantStack {
+                role: inventory_role("player-inventory"),
                 item: item_id,
                 quantity,
-                expected_revision: None,
             },
+            vec![(inventory_role("player-inventory"), owner)],
+            operation,
+            source,
         ) {
-            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                sequence: 0,
-                operation: "grant".to_string(),
-                item: receipt.item.as_str().to_string(),
-                slots: Vec::new(),
-                replaced_item: None,
-                quantity: Some(receipt.after_quantity - receipt.before_quantity),
-                accepted: true,
-                reason: None,
-                committed_revision: Some(receipt.committed_inventory_revision),
-            }),
+            Ok(StandardMechanicsReceipt::Inventory(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "grant".to_string(),
+                    item: receipt.item.as_str().to_string(),
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: Some(receipt.after_quantity - receipt.before_quantity),
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_inventory_revision),
+                })
+            }
+            Ok(receipt) => {
+                reject(
+                    self,
+                    format!("unexpected standard grant receipt: {receipt:?}"),
+                );
+            }
             Err(error) => {
-                self.push_capacity_notice_if_player(&error, owner);
+                if let Some(mechanics) = error.mechanics_error() {
+                    self.push_capacity_notice_if_player(mechanics, owner);
+                }
                 reject(self, format!("{error:?}"));
             }
         }
@@ -2846,9 +2858,7 @@ impl DaggerRuntime {
         item: &str,
         quantity: u64,
     ) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            InventoryService, InventoryTransferRequest, ItemDefinitionId,
-        };
+        use rusty_engine::gameplay_mechanics::{InventoryService, ItemDefinitionId};
 
         let Some(from_owner) = self.open_loot_owner(container_id) else {
             self.log_equipment_rejection(
@@ -2895,21 +2905,23 @@ impl DaggerRuntime {
         };
         let (operation, source) = equipment_operation();
         let to_owner = self.player_actor_entity();
-        match InventoryService::transfer(
-            self.gameplay.entities_mut(),
-            self.gameplay_catalog.mechanics(),
-            InventoryTransferRequest {
-                operation,
-                source,
-                from_owner,
-                to_owner,
+        match apply_standard_inventory_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::TransferStack {
+                from: inventory_role("loot-source"),
+                to: inventory_role("player-inventory"),
                 item: item_id,
                 quantity,
-                expected_from_revision: Some(view.revision().clone()),
-                expected_to_revision: None,
             },
+            vec![
+                (inventory_role("loot-source"), from_owner),
+                (inventory_role("player-inventory"), to_owner),
+            ],
+            operation,
+            source,
         ) {
-            Ok(receipt) => {
+            Ok(StandardMechanicsReceipt::InventoryTransfer(receipt)) => {
                 self.push_equipment_record(EquipmentLogRecord {
                     sequence: 0,
                     operation: "loot-transfer".to_string(),
@@ -2928,8 +2940,17 @@ impl DaggerRuntime {
                     );
                 }
             }
+            Ok(receipt) => self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                Some(quantity),
+                format!("unexpected standard loot receipt: {receipt:?}"),
+            ),
             Err(error) => {
-                self.push_capacity_notice_if_player(&error, to_owner);
+                if let Some(mechanics) = error.mechanics_error() {
+                    self.push_capacity_notice_if_player(mechanics, to_owner);
+                }
                 self.log_equipment_rejection(
                     "loot-transfer",
                     item.to_string(),
@@ -3720,6 +3741,10 @@ fn equipment_operation() -> (
         instance: SourceInstanceId::parse("dagger-equipment").expect("fixed source identity"),
     };
     (operation, source)
+}
+
+fn inventory_role(value: &str) -> CapabilityRoleId {
+    CapabilityRoleId::parse(value.to_string()).expect("fixed inventory role identity")
 }
 
 /// Career/swing evidence ids (authored in `gameplay/src/catalogs/actions.ts`)
