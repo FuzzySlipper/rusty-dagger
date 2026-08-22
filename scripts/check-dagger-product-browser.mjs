@@ -370,7 +370,7 @@ async function assertDeveloperCommandConsole(page) {
   await shell.getByRole('button', { name: 'Dagger developer commands' }).click();
   const command = shell.locator('select[aria-label="Developer command"]');
   await command.waitFor();
-  await command.locator('option').first().waitFor();
+  await command.locator('option').first().waitFor({ state: 'attached' });
   const commandIds = await command.locator('option').evaluateAll((options) =>
     options.map((option) => option.value),
   );
@@ -395,8 +395,13 @@ async function assertDeveloperCommandConsole(page) {
     const label = await command.locator(`option[value="${id}"]`).innerText();
     assert.match(label, new RegExp(`\\(${lane}\\)`), `${id} lost its visible ${lane} identity`);
   }
+  assert.equal(
+    await command.locator('option[value="standard.inspect.mechanics"]').isDisabled(),
+    true,
+    'the shell must not dispatch a standard command without an exact host wire codec',
+  );
 
-  await runDeveloperCommand(page, shell, 'standard.inspect.mechanics', { entity: '1' });
+  await runDeveloperCommand(page, shell, 'standard.inspect.entity', { entity: '1' });
 
   // Setup is visibly admin-only. From here, ordinary `advance` lets the
   // admitted rat use its normal combat timing against the player; neither
@@ -425,6 +430,14 @@ async function assertDeveloperCommandConsole(page) {
     value: Math.trunc(beforeDamage.currentHealth),
     policy: 'clampToBounds',
   });
+  const adminReceipt = (await developerCommandHistory(
+    shell.locator('[data-developer-command-history]'),
+  )).at(-1)?.outcome?.value;
+  assert.equal(adminReceipt?.operation, 'dagger-browser-health-restore');
+  assert.equal(adminReceipt?.entity, '1');
+  assert.equal(adminReceipt?.track, 'health');
+  assert.ok(Array.isArray(adminReceipt?.observedRevisions));
+  assert.ok(typeof adminReceipt?.catalogVersion === 'string');
   const afterRestore = await productReadout(page);
   assert.equal(
     afterRestore.currentHealth,
@@ -461,7 +474,7 @@ async function assertDeveloperCommandConsole(page) {
 
   const history = JSON.parse(await shell.locator('[data-developer-command-history]').innerText());
   const expectedHistory = [
-    ['standard.inspect.mechanics', 'inspect'],
+    ['standard.inspect.entity', 'inspect'],
     ['dagger.scenario.prepare', 'admin'],
     ['dagger.scenario.advance', 'play'],
     ['standard.admin.track.set', 'admin'],
