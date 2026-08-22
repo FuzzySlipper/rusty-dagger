@@ -1,8 +1,9 @@
 import {
   createRustyDeveloperCommandClient,
-  RUSTY_STANDARD_ADMIN_WIRE_SCHEMAS,
+  RUSTY_STANDARD_HOST_WIRE_SCHEMAS,
   type RustyDeveloperCommandAdapter,
   type RustyDeveloperCommandClient,
+  type RustyDeveloperCommandExtension,
   type RustyDeveloperCommandValueSchema,
   type RustyDeveloperCommandWireSchema,
 } from '@rusty-engine/application-host';
@@ -13,15 +14,6 @@ const opaque: RustyDeveloperCommandValueSchema = {
   kind: 'opaqueJson',
   maximumBytes: 65_536,
   maximumNodes: 2_048,
-};
-
-const inspectSchema: RustyDeveloperCommandWireSchema = {
-  request: {
-    kind: 'object',
-    fields: { entity: { required: true, value: { kind: 'decimalU64' } } },
-  },
-  result: opaque,
-  error: opaque,
 };
 
 const scenarioInteger: RustyDeveloperCommandValueSchema = {
@@ -95,36 +87,52 @@ const emptyScenarioSchema: RustyDeveloperCommandWireSchema = {
   error: opaque,
 };
 
-// Dagger's server is the discovery authority for its namespaced bindings.
-// Supplying a second descriptor extension would falsely duplicate that public
-// inventory; this product contributes only exact codecs for the discovered
-// Dagger commands.
-const daggerScenarioSchemas: Readonly<Record<string, RustyDeveloperCommandWireSchema>> = {
-  'dagger.scenario.prepare': {
-    request: {
-      kind: 'object',
-      fields: {
-        target: {
-          required: true,
-          value: {
-            kind: 'enum',
-            values: ['rat', 'orc', 'bat-east', 'bat-west'],
+// Dagger's server remains the executable discovery authority. This extension
+// only attaches strict codecs to the already-discovered Dagger command IDs,
+// lanes, and profile; it never creates a second descriptor catalog.
+const daggerScenarioSchemaExtension: RustyDeveloperCommandExtension = {
+  namespace: 'dagger',
+  schemas: [
+    {
+      command: 'dagger.scenario.prepare',
+      lane: 'admin',
+      profile: 'dagger.developer',
+      schema: {
+        request: {
+          kind: 'object',
+          fields: {
+            target: {
+              required: true,
+              value: {
+                kind: 'enum',
+                values: ['rat', 'orc', 'bat-east', 'bat-west'],
+              },
+            },
           },
         },
+        result: scenarioResultSchema,
+        error: opaque,
       },
     },
-    result: scenarioResultSchema,
-    error: opaque,
-  },
-  'dagger.scenario.melee': boundedIntegerScenario('swings', 1, 8),
-  'dagger.scenario.advance': boundedIntegerScenario('ticks', 1, 32),
-  'dagger.scenario.progression': emptyScenarioSchema,
-};
-
-const standardSchemas: Readonly<Record<string, RustyDeveloperCommandWireSchema>> = {
-  ...RUSTY_STANDARD_ADMIN_WIRE_SCHEMAS,
-  'standard.inspect.entity': inspectSchema,
-  'standard.inspect.mechanics': inspectSchema,
+    {
+      command: 'dagger.scenario.melee',
+      lane: 'play',
+      profile: 'dagger.developer',
+      schema: boundedIntegerScenario('swings', 1, 8),
+    },
+    {
+      command: 'dagger.scenario.advance',
+      lane: 'play',
+      profile: 'dagger.developer',
+      schema: boundedIntegerScenario('ticks', 1, 32),
+    },
+    {
+      command: 'dagger.scenario.progression',
+      lane: 'admin',
+      profile: 'dagger.developer',
+      schema: emptyScenarioSchema,
+    },
+  ],
 };
 
 const browserAdapter: RustyDeveloperCommandAdapter = {
@@ -144,7 +152,8 @@ const browserAdapter: RustyDeveloperCommandAdapter = {
 export function createDaggerDeveloperCommandClient(): RustyDeveloperCommandClient {
   return createRustyDeveloperCommandClient({
     adapter: browserAdapter,
-    schemas: { ...standardSchemas, ...daggerScenarioSchemas },
+    schemas: RUSTY_STANDARD_HOST_WIRE_SCHEMAS,
+    extensions: [daggerScenarioSchemaExtension],
   });
 }
 
