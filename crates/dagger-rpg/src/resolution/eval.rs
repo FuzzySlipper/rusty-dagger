@@ -6,12 +6,13 @@
 
 use std::collections::BTreeMap;
 
-use rusty_engine::entity_state::{EntityAuthoringService, EntityDefinition, RelationshipCommand};
+use rusty_engine::entity_state::{EntityAuthoringService, EntityDefinition};
 use rusty_engine::gameplay_mechanics::{
     CapacityMetricId, EquipmentComponent, EquipmentSlotId, InventoryCapacityLimit,
-    InventoryComponent, InventoryService, ItemComponent, ItemDefinitionId, MechanicsScalar,
-    OperationId, SourceInstanceId, SourceInstanceIdentity, StatId, StatValue, StatsComponent,
-    TrackId, TrackValue, TracksComponent,
+    InventoryComponent, InventoryService, ItemComponent, ItemDefinitionId, ItemService,
+    MechanicsScalar, OperationId, SourceInstanceId, SourceInstanceIdentity, StatId, StatValue,
+    StatsComponent, TrackId, TrackValue, TracksComponent, UniqueItemMaterializationReceipt,
+    UniqueItemMaterializationRequest,
 };
 use rusty_engine::gameplay_standard::{
     CapabilityRoleBinding, CapabilityRoleBindings, CapabilityRoleId, ComposedExactComparison,
@@ -82,9 +83,14 @@ impl ExprContext<'_> {
 pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, DaggerRejection> {
     let mut inputs = Vec::new();
     let expression = materialize_exact(expr, context, &mut inputs)?;
+    let inputs = ExactInputBundle::new(inputs).map_err(|error| {
+        DaggerRejection::InvalidExpression(format!(
+            "standard exact input evidence: {error:?}"
+        ))
+    })?;
     ExactEvaluator::evaluate(
         &expression,
-        &ExactInputBundle::new(inputs),
+        &inputs,
         ExactExprLimits::default(),
     )
     .map(|value| value.get())
@@ -127,6 +133,15 @@ fn materialize_exact(
         ComposedExactExpr::TruncatingDivide(left, right) => Ok(ExactExpr::TruncatingDivide(
             Box::new(materialize_exact(left, context, inputs)?),
             Box::new(materialize_exact(right, context, inputs)?),
+        )),
+        ComposedExactExpr::FixedPower {
+            base,
+            exponent,
+            scale,
+        } => Ok(ExactExpr::fixed_power(
+            materialize_exact(base, context, inputs)?,
+            materialize_exact(exponent, context, inputs)?,
+            **scale,
         )),
         ComposedExactExpr::Min(values) => values
             .iter()
@@ -450,6 +465,10 @@ fn collect_dynamic_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, DaggerDynam
             collect_dynamic_rolls(left, rolls);
             collect_dynamic_rolls(right, rolls);
         }
+        ComposedExactExpr::FixedPower { base, exponent, .. } => {
+            collect_dynamic_rolls(base, rolls);
+            collect_dynamic_rolls(exponent, rolls);
+        }
         ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
             for value in values {
                 collect_dynamic_rolls(value, rolls);
@@ -512,6 +531,10 @@ fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
         | ComposedExactExpr::TruncatingDivide(left, right) => {
             collect_dice(left, rolls);
             collect_dice(right, rolls);
+        }
+        ComposedExactExpr::FixedPower { base, exponent, .. } => {
+            collect_dice(base, rolls);
+            collect_dice(exponent, rolls);
         }
         ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
             for value in values {
@@ -1049,15 +1072,7 @@ pub fn spawn_actor(
         )
         .map_err(|error| DaggerGameplayError::InvalidState(format!("attach equipment: {error}")))?;
 
-    bind_loadout(
-        state,
-        catalog,
-        definition_id,
-        definition,
-        entity,
-        instance,
-        version,
-    )?;
+    bind_loadout(state, catalog, definition_id, definition, entity, instance)?;
 
     // Capacity is spawn law: a loadout over the actor's capacity limits
     // rejects (the containment path binds unique items, so the check runs
@@ -1101,7 +1116,6 @@ fn bind_loadout(
     definition: &DaggerActorDefinition,
     owner: rusty_engine::core_ids::EntityId,
     instance: &str,
-    version: rusty_engine::gameplay_mechanics::CatalogVersion,
 ) -> Result<(), DaggerGameplayError> {
     let operation = OperationId::parse("dagger-spawn-loadout").expect("fixed operation identity");
     let source = SourceInstanceIdentity::Request {
@@ -1143,16 +1157,17 @@ fn bind_loadout(
             })?;
             continue;
         }
-        // Unique items are entities: allocate, attach the ItemComponent, and
-        // contain into the owner.
-        let item_entity = bind_unique_item(
+        // Unique items are entities. Dagger allocates/names them, while the
+        // Engine atomically admits, attaches, and contains them.
+        let materialized = bind_unique_item(
             state,
+            catalog,
             owner,
             format!("{instance}:{}", entry.item),
             item_id,
-            version.clone(),
             &path(),
         )?;
+        let item_entity = materialized.entity;
         if let Some(slot) = &entry.equip_slot {
             let slot_id = EquipmentSlotId::parse(slot.clone()).map_err(|error| {
                 DaggerGameplayError::InvalidId {
@@ -1225,7 +1240,7 @@ pub fn apply_standard_mechanics_operation(
     let plan = operation
         .plan(
             &bindings,
-            &ExactInputBundle::new(vec![]),
+            &ExactInputBundle::empty(),
             state.entities(),
             catalog.mechanics(),
             &context,
@@ -1281,60 +1296,129 @@ pub(crate) fn mechanics_role(value: &str) -> CapabilityRoleId {
     CapabilityRoleId::parse(value.to_string()).expect("fixed mechanics role identity")
 }
 
-/// Allocate one unique-item entity with an ItemComponent and contain it into
-/// the owner — the shared binding step of spawn loadouts and loot
-/// generation. `name` is the entity's authoring name; `path` reports errors.
+/// Allocate and name one Dagger unique-item entity, then ask the Engine to
+/// atomically admit, attach, and contain it. This is the shared binding step
+/// for spawn loadouts and loot generation. Dagger retains the allocator,
+/// authored name, container choice, and error presentation; the receipt
+/// retains exact catalog provenance and containment evidence.
 pub(crate) fn bind_unique_item(
     state: &mut DaggerGameplayState,
+    catalog: &DaggerGameplayCatalog,
     owner: rusty_engine::core_ids::EntityId,
     name: String,
     item_id: ItemDefinitionId,
-    version: rusty_engine::gameplay_mechanics::CatalogVersion,
     path: &str,
-) -> Result<rusty_engine::core_ids::EntityId, DaggerGameplayError> {
+) -> Result<UniqueItemMaterializationReceipt, DaggerGameplayError> {
     let item_entity = state.allocate_entity();
-    let state_revision = state.entities().revision();
-    EntityAuthoringService
-        .admit(
-            state.entities_mut(),
-            state_revision,
-            [EntityDefinition::new(item_entity, name)],
+    let expected_state_revision = state.entities().revision();
+    ItemService::materialize_unique(
+        state.entities_mut(),
+        catalog.mechanics(),
+        UniqueItemMaterializationRequest {
+            entity: EntityDefinition::new(item_entity, name),
+            item: item_id,
+            container: owner,
+            expected_state_revision,
+        },
+    )
+    .map_err(|error| DaggerGameplayError::InvalidValue {
+        path: path.to_string(),
+        reason: format!("atomic unique-item materialization: {error:?}"),
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const PACKAGE: &[u8] = include_bytes!("../../../../data/gameplay/dagger-core.package.json");
+
+    #[test]
+    fn unique_item_binding_retains_catalog_and_containment_receipt_without_equipping() {
+        let catalog = super::super::compile::compile_gameplay_package(PACKAGE)
+            .expect("compile Dagger gameplay package");
+        let mut state = DaggerGameplayState::default();
+        let owner = state.allocate_entity();
+        let owner_revision = state.entities().revision();
+        EntityAuthoringService
+            .admit(
+                state.entities_mut(),
+                owner_revision,
+                [EntityDefinition::new(owner, "test-owner")],
+            )
+            .expect("admit explicit item container");
+        let equipment_revision = state
+            .entities()
+            .component_revision::<EquipmentComponent>(owner)
+            .expect("equipment component revision");
+        EntityAuthoringService
+            .attach_component(
+                state.entities_mut(),
+                equipment_revision,
+                owner,
+                EquipmentComponent::new(catalog.mechanics().version().clone(), Vec::new())
+                    .expect("empty equipment component"),
+            )
+            .expect("attach explicit equipment component");
+
+        let receipt = bind_unique_item(
+            &mut state,
+            &catalog,
+            owner,
+            "test-owner:iron-longsword".to_string(),
+            ItemDefinitionId::parse("iron-longsword").expect("known item identity"),
+            "test.unique-item",
         )
-        .map_err(|error| DaggerGameplayError::InvalidValue {
-            path: path.to_string(),
-            reason: format!("item entity admission: {error}"),
-        })?;
-    let item_revision = state
-        .entities()
-        .component_revision::<ItemComponent>(item_entity)
-        .map_err(|error| DaggerGameplayError::InvalidValue {
-            path: path.to_string(),
-            reason: format!("item component revision: {error}"),
-        })?;
-    EntityAuthoringService
-        .attach_component(
-            state.entities_mut(),
-            item_revision,
-            item_entity,
-            ItemComponent::new(version, item_id),
-        )
-        .map_err(|error| DaggerGameplayError::InvalidValue {
-            path: path.to_string(),
-            reason: format!("attach item component: {error}"),
-        })?;
-    let state_revision = state.entities().revision();
-    state
-        .entities_mut()
-        .apply_relationship(
-            state_revision,
-            RelationshipCommand::SetContainment {
-                child: item_entity,
-                container: owner,
-            },
-        )
-        .map_err(|error| DaggerGameplayError::InvalidValue {
-            path: path.to_string(),
-            reason: format!("item containment: {error:?}"),
-        })?;
-    Ok(item_entity)
+        .expect("materialize unique item");
+
+        assert_eq!(receipt.catalog_version, *catalog.mechanics().version());
+        assert_eq!(
+            receipt.catalog_fingerprint,
+            catalog.mechanics().fingerprint()
+        );
+        assert_eq!(receipt.containment_before, None);
+        assert_eq!(receipt.containment_after, Some(owner));
+        assert!(state.entities().contains(receipt.entity));
+        assert_eq!(state.entities().contained_in(receipt.entity), Some(owner));
+        let item = state
+            .entities()
+            .component::<ItemComponent>(receipt.entity)
+            .expect("item component read")
+            .expect("materialized item component");
+        assert_eq!(item.catalog_version(), catalog.mechanics().version());
+        assert_eq!(item.definition(), &receipt.item);
+        assert!(state
+            .entities()
+            .component::<EquipmentComponent>(owner)
+            .expect("equipment component read")
+            .expect("equipment component")
+            .assignments()
+            .is_empty());
+    }
+
+    #[test]
+    fn failed_unique_item_binding_does_not_publish_admission_or_attachment() {
+        let catalog = super::super::compile::compile_gameplay_package(PACKAGE)
+            .expect("compile Dagger gameplay package");
+        let mut state = DaggerGameplayState::default();
+        let before_revision = state.entities().revision();
+
+        assert!(matches!(
+            bind_unique_item(
+                &mut state,
+                &catalog,
+                rusty_engine::core_ids::EntityId::new(99_999),
+                "missing-owner:iron-longsword".to_string(),
+                ItemDefinitionId::parse("iron-longsword").expect("known item identity"),
+                "test.missing-owner",
+            ),
+            Err(DaggerGameplayError::InvalidValue { .. })
+        ));
+
+        assert_eq!(state.entities().revision(), before_revision);
+        assert_eq!(state.entities().total_count(), 0);
+        assert!(!state
+            .entities()
+            .contains(rusty_engine::core_ids::EntityId::new(1)));
+    }
 }
