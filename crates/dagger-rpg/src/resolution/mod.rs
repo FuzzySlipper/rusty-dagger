@@ -9,11 +9,11 @@ mod progression;
 
 pub use compile::compile_gameplay_package;
 pub use eval::{
-    action_dynamic_roll_evidence, action_roll_evidence, apply_standard_inventory_operation,
+    action_dynamic_roll_evidence, action_roll_evidence, apply_standard_mechanics_operation,
     definition_base_stats, equipped_weapon, evaluate_derived_rule, evaluate_expr,
     required_roll_evidence, restore_actor_tracks, set_actor_track, spawn_actor, spend_actor_track,
     track_maximum, unarmed_damage_range, ActorEquipment, ActorExprValues, DaggerDynamicRoll,
-    DaggerStandardInventoryError, ExprContext,
+    DaggerStandardMechanicsError, ExprContext,
 };
 pub use loot::{bind_actor_loot, generate_loot, loot_roll_evidence, spawn_container};
 pub use mechanics::{compile_mechanics_catalog, track_max_stat_id};

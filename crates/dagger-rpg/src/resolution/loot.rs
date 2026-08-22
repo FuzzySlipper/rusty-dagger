@@ -29,7 +29,7 @@ use rusty_engine::gameplay_mechanics::{
 use rusty_engine::gameplay_standard::StandardOperation;
 
 use super::eval::{
-    apply_standard_inventory_operation, bind_unique_item, evidence_value, inventory_role,
+    apply_standard_mechanics_operation, bind_unique_item, evidence_value, mechanics_role,
 };
 use super::mechanics::mechanics_catalog_version;
 use super::{
@@ -389,15 +389,15 @@ fn bind_loot_items(
             }
         })?;
         if definition.fungible {
-            apply_standard_inventory_operation(
+            apply_standard_mechanics_operation(
                 state,
                 catalog,
                 StandardOperation::GrantStack {
-                    role: inventory_role("loot-owner"),
+                    role: mechanics_role("loot-owner"),
                     item: item_id,
                     quantity: *quantity,
                 },
-                vec![(inventory_role("loot-owner"), owner)],
+                vec![(mechanics_role("loot-owner"), owner)],
                 operation.clone(),
                 source.clone(),
             )

@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use dagger_rpg::{
-    action_dynamic_roll_evidence, action_roll_evidence, apply_standard_inventory_operation,
+    action_dynamic_roll_evidence, action_roll_evidence, apply_standard_mechanics_operation,
     bind_actor_loot, compile_gameplay_package, definition_base_stats, equipped_weapon,
     loot_roll_evidence, restore_actor_tracks, set_actor_track, spawn_container,
     struck_body_part_name, track_maximum, unarmed_damage_range, AuthoredGameplayPayload,
@@ -2354,9 +2354,7 @@ impl DaggerRuntime {
         slot: &str,
         expected_equipment_revision: u64,
     ) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            EquipmentEquipRequest, EquipmentService, EquipmentSlotId, EquipmentSwapRequest,
-        };
+        use rusty_engine::gameplay_mechanics::EquipmentSlotId;
 
         let entity = EntityId::new(item);
         let Some(item_id) = self.item_id_for_entity(entity) else {
@@ -2442,61 +2440,61 @@ impl DaggerRuntime {
         let occupant = equipment
             .assignment(&slot_id)
             .map(|assignment| assignment.item);
-        let (operation, source) = equipment_operation();
+        let (correlation, source) = equipment_operation();
         let owner = self.player_actor_entity();
-        let expected_state_revision = self.gameplay.entities().revision();
-        let result = match occupant {
-            Some(outgoing) => EquipmentService::swap(
-                self.gameplay.entities_mut(),
-                self.gameplay_catalog.mechanics(),
-                EquipmentSwapRequest {
-                    operation,
-                    source,
-                    owner,
-                    outgoing_item: outgoing,
-                    incoming_item: entity,
-                    incoming_slots: vec![slot_id],
-                    expected_equipment_revision: Some(equipment_revision),
-                    expected_state_revision,
-                },
-            ),
-            None => EquipmentService::equip(
-                self.gameplay.entities_mut(),
-                self.gameplay_catalog.mechanics(),
-                EquipmentEquipRequest {
-                    operation,
-                    source,
-                    owner,
-                    item: entity,
-                    slots: vec![slot_id],
-                    expected_equipment_revision: Some(equipment_revision),
-                    expected_state_revision,
-                },
-            ),
+        let operation = match occupant {
+            Some(outgoing) => StandardOperation::SwapUniqueItem {
+                role: mechanics_role("player-equipment"),
+                outgoing_item: outgoing,
+                incoming_item: entity,
+                incoming_slots: vec![slot_id],
+            },
+            None => StandardOperation::EquipUniqueItem {
+                role: mechanics_role("player-equipment"),
+                item: entity,
+                slots: vec![slot_id],
+            },
         };
+        let result = apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            operation,
+            vec![(mechanics_role("player-equipment"), owner)],
+            correlation,
+            source,
+        );
         match result {
-            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                sequence: 0,
-                operation: format!("{:?}", receipt.kind).to_lowercase(),
-                item: item_id,
-                slots: receipt
-                    .changes
-                    .iter()
-                    .map(|change| change.slot.as_str().to_string())
-                    .collect(),
-                replaced_item: receipt
-                    .replaced_item
-                    .and_then(|replaced| self.item_id_for_entity(replaced))
-                    .or_else(|| {
-                        receipt
-                            .replaced_item
-                            .map(|replaced| format!("entity-{}", replaced.raw()))
-                    }),
-                quantity: None,
-                accepted: true,
-                reason: None,
-                committed_revision: Some(receipt.committed_equipment_revision),
-            }),
+            Ok(StandardMechanicsReceipt::Equipment(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: format!("{:?}", receipt.kind).to_lowercase(),
+                    item: item_id,
+                    slots: receipt
+                        .changes
+                        .iter()
+                        .map(|change| change.slot.as_str().to_string())
+                        .collect(),
+                    replaced_item: receipt
+                        .replaced_item
+                        .and_then(|replaced| self.item_id_for_entity(replaced))
+                        .or_else(|| {
+                            receipt
+                                .replaced_item
+                                .map(|replaced| format!("entity-{}", replaced.raw()))
+                        }),
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_equipment_revision),
+                })
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                if occupant.is_some() { "swap" } else { "equip" },
+                item_id,
+                vec![slot.to_string()],
+                None,
+                format!("unexpected standard equipment receipt: {receipt:?}"),
+            ),
             Err(error) => self.log_equipment_rejection(
                 if occupant.is_some() { "swap" } else { "equip" },
                 item_id,
@@ -2511,9 +2509,7 @@ impl DaggerRuntime {
     /// Unequip verb: strip whatever occupies one equipment slot. An empty or
     /// unknown slot is logged as a rejection, not thrown.
     pub fn unequip_slot(&mut self, slot: &str) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            EquipmentService, EquipmentSlotId, EquipmentUnequipRequest,
-        };
+        use rusty_engine::gameplay_mechanics::EquipmentSlotId;
 
         let equipment = self.player_equipment_component()?;
         let slot_id = match EquipmentSlotId::parse(slot) {
@@ -2543,35 +2539,42 @@ impl DaggerRuntime {
             .item_id_for_entity(assignment.item)
             .unwrap_or_else(|| format!("entity-{}", assignment.item.raw()));
         let owner = self.player_actor_entity();
-        let (operation, source) = equipment_operation();
-        let expected_state_revision = self.gameplay.entities().revision();
-        match EquipmentService::unequip(
-            self.gameplay.entities_mut(),
-            self.gameplay_catalog.mechanics(),
-            EquipmentUnequipRequest {
-                operation,
-                source,
-                owner,
+        let (correlation, source) = equipment_operation();
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::UnequipUniqueItem {
+                role: mechanics_role("player-equipment"),
                 item: assignment.item,
-                expected_equipment_revision: None,
-                expected_state_revision,
             },
+            vec![(mechanics_role("player-equipment"), owner)],
+            correlation,
+            source,
         ) {
-            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                sequence: 0,
-                operation: "unequip".to_string(),
-                item: item_name,
-                slots: receipt
-                    .changes
-                    .iter()
-                    .map(|change| change.slot.as_str().to_string())
-                    .collect(),
-                replaced_item: None,
-                quantity: None,
-                accepted: true,
-                reason: None,
-                committed_revision: Some(receipt.committed_equipment_revision),
-            }),
+            Ok(StandardMechanicsReceipt::Equipment(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "unequip".to_string(),
+                    item: item_name,
+                    slots: receipt
+                        .changes
+                        .iter()
+                        .map(|change| change.slot.as_str().to_string())
+                        .collect(),
+                    replaced_item: None,
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_equipment_revision),
+                })
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                "unequip",
+                item_name,
+                vec![slot.to_string()],
+                None,
+                format!("unexpected standard equipment receipt: {receipt:?}"),
+            ),
             Err(error) => self.log_equipment_rejection(
                 "unequip",
                 item_name,
@@ -2591,9 +2594,7 @@ impl DaggerRuntime {
         expected_item: u64,
         expected_equipment_revision: u64,
     ) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            EquipmentService, EquipmentSlotId, EquipmentUnequipRequest,
-        };
+        use rusty_engine::gameplay_mechanics::EquipmentSlotId;
         if !product_equipment_slot(slot) {
             self.log_equipment_rejection(
                 "unequip",
@@ -2652,35 +2653,42 @@ impl DaggerRuntime {
             .item_id_for_entity(assignment.item)
             .unwrap_or_else(|| format!("entity-{expected_item}"));
         let owner = self.player_actor_entity();
-        let (operation, source) = equipment_operation();
-        let expected_state_revision = self.gameplay.entities().revision();
-        match EquipmentService::unequip(
-            self.gameplay.entities_mut(),
-            self.gameplay_catalog.mechanics(),
-            EquipmentUnequipRequest {
-                operation,
-                source,
-                owner,
+        let (correlation, source) = equipment_operation();
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::UnequipUniqueItem {
+                role: mechanics_role("player-equipment"),
                 item: assignment.item,
-                expected_equipment_revision: Some(equipment_revision),
-                expected_state_revision,
             },
+            vec![(mechanics_role("player-equipment"), owner)],
+            correlation,
+            source,
         ) {
-            Ok(receipt) => self.push_equipment_record(EquipmentLogRecord {
-                sequence: 0,
-                operation: "unequip".to_string(),
-                item: item_name,
-                slots: receipt
-                    .changes
-                    .iter()
-                    .map(|change| change.slot.as_str().to_string())
-                    .collect(),
-                replaced_item: None,
-                quantity: None,
-                accepted: true,
-                reason: None,
-                committed_revision: Some(receipt.committed_equipment_revision),
-            }),
+            Ok(StandardMechanicsReceipt::Equipment(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "unequip".to_string(),
+                    item: item_name,
+                    slots: receipt
+                        .changes
+                        .iter()
+                        .map(|change| change.slot.as_str().to_string())
+                        .collect(),
+                    replaced_item: None,
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_equipment_revision),
+                })
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                "unequip",
+                item_name,
+                vec![slot.to_string()],
+                None,
+                format!("unexpected standard equipment receipt: {receipt:?}"),
+            ),
             Err(error) => self.log_equipment_rejection(
                 "unequip",
                 item_name,
@@ -2740,15 +2748,15 @@ impl DaggerRuntime {
         })?;
         let owner = self.player_actor_entity();
         let (operation, source) = equipment_operation();
-        match apply_standard_inventory_operation(
+        match apply_standard_mechanics_operation(
             &mut self.gameplay,
             &self.gameplay_catalog,
             StandardOperation::GrantStack {
-                role: inventory_role("player-inventory"),
+                role: mechanics_role("player-inventory"),
                 item: item_id,
                 quantity,
             },
-            vec![(inventory_role("player-inventory"), owner)],
+            vec![(mechanics_role("player-inventory"), owner)],
             operation,
             source,
         ) {
@@ -2905,18 +2913,18 @@ impl DaggerRuntime {
         };
         let (operation, source) = equipment_operation();
         let to_owner = self.player_actor_entity();
-        match apply_standard_inventory_operation(
+        match apply_standard_mechanics_operation(
             &mut self.gameplay,
             &self.gameplay_catalog,
             StandardOperation::TransferStack {
-                from: inventory_role("loot-source"),
-                to: inventory_role("player-inventory"),
+                from: mechanics_role("loot-source"),
+                to: mechanics_role("player-inventory"),
                 item: item_id,
                 quantity,
             },
             vec![
-                (inventory_role("loot-source"), from_owner),
-                (inventory_role("player-inventory"), to_owner),
+                (mechanics_role("loot-source"), from_owner),
+                (mechanics_role("player-inventory"), to_owner),
             ],
             operation,
             source,
@@ -2970,9 +2978,7 @@ impl DaggerRuntime {
         expected_inventory_revision: u64,
         item: u64,
     ) -> Result<ProductReadout, RuntimeError> {
-        use rusty_engine::gameplay_mechanics::{
-            EquipmentService, InventoryService, ItemTransferRequest,
-        };
+        use rusty_engine::gameplay_mechanics::InventoryService;
 
         let Some(from_owner) = self.open_loot_owner(container_id) else {
             self.log_equipment_rejection(
@@ -3011,23 +3017,24 @@ impl DaggerRuntime {
             .find(|entry| entry.entity == entity)
             .map(|entry| entry.definition.as_str().to_string())
             .unwrap_or_else(|| item.to_string());
-        let (operation, source) = equipment_operation();
+        let (correlation, source) = equipment_operation();
         let to_owner = self.player_actor_entity();
-        match EquipmentService::transfer_unique_item(
-            self.gameplay.entities_mut(),
-            self.gameplay_catalog.mechanics(),
-            ItemTransferRequest {
-                operation,
-                source,
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::TransferUniqueItem {
+                from: mechanics_role("loot-source"),
+                to: mechanics_role("player-inventory"),
                 item: entity,
-                from_owner,
-                to_owner,
-                expected_relationship_revision: view.relationship_revision(),
-                expected_from_inventory_revision: Some(view.revision().clone()),
-                expected_to_inventory_revision: None,
             },
+            vec![
+                (mechanics_role("loot-source"), from_owner),
+                (mechanics_role("player-inventory"), to_owner),
+            ],
+            correlation,
+            source,
         ) {
-            Ok(receipt) => {
+            Ok(StandardMechanicsReceipt::UniqueItemTransfer(receipt)) => {
                 self.push_equipment_record(EquipmentLogRecord {
                     sequence: 0,
                     operation: "loot-transfer".to_string(),
@@ -3046,8 +3053,17 @@ impl DaggerRuntime {
                     );
                 }
             }
+            Ok(receipt) => self.log_equipment_rejection(
+                "loot-transfer",
+                item_name,
+                Vec::new(),
+                None,
+                format!("unexpected standard unique-item receipt: {receipt:?}"),
+            ),
             Err(error) => {
-                self.push_capacity_notice_if_player(&error, to_owner);
+                if let Some(mechanics) = error.mechanics_error() {
+                    self.push_capacity_notice_if_player(mechanics, to_owner);
+                }
                 self.log_equipment_rejection(
                     "loot-transfer",
                     item_name,
@@ -3743,8 +3759,8 @@ fn equipment_operation() -> (
     (operation, source)
 }
 
-fn inventory_role(value: &str) -> CapabilityRoleId {
-    CapabilityRoleId::parse(value.to_string()).expect("fixed inventory role identity")
+fn mechanics_role(value: &str) -> CapabilityRoleId {
+    CapabilityRoleId::parse(value.to_string()).expect("fixed mechanics role identity")
 }
 
 /// Career/swing evidence ids (authored in `gameplay/src/catalogs/actions.ts`)
