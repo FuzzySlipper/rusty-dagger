@@ -269,7 +269,7 @@ impl<'a> DaggerResolutionPolicy<'a> {
         operation
             .plan(
                 &bindings,
-                &ExactInputBundle::new(vec![]),
+                &ExactInputBundle::empty(),
                 self.snapshot.entities(),
                 self.catalog.mechanics(),
                 &context,
@@ -476,7 +476,7 @@ impl ResolutionPolicy for DaggerResolutionPolicy<'_> {
                 };
                 let result = ExactEvaluator::evaluate_predicate(
                     &comparison,
-                    &ExactInputBundle::new(vec![]),
+                    &ExactInputBundle::empty(),
                     ExactExprLimits::default(),
                 )
                 .map_err(|error| {

@@ -1256,6 +1256,10 @@ fn validate_expr_inputs(
             validate_expr_inputs(left, stats, path)?;
             validate_expr_inputs(right, stats, path)
         }
+        ComposedExactExpr::FixedPower { base, exponent, .. } => {
+            validate_expr_inputs(base, stats, path)?;
+            validate_expr_inputs(exponent, stats, path)
+        }
         ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
             for value in values {
                 validate_expr_inputs(value, stats, path)?;

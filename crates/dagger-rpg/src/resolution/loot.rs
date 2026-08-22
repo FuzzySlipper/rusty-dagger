@@ -357,8 +357,8 @@ pub fn generate_loot(
 
 /// Bind one generation's items into an owner's upstream inventory: fungible
 /// entries (gold) grant stacks through the inventory service; unique entries
-/// allocate an item entity with an ItemComponent contained into the owner —
-/// the same binding pattern spawn loadouts use.
+/// retain Dagger allocation/naming while the Engine atomically admits,
+/// attaches, and contains them — the same binding pattern spawn loadouts use.
 fn bind_loot_items(
     state: &mut DaggerGameplayState,
     catalog: &DaggerGameplayCatalog,
@@ -371,7 +371,6 @@ fn bind_loot_items(
         operation: operation.clone(),
         instance: SourceInstanceId::parse("dagger-loot").expect("fixed source identity"),
     };
-    let version = mechanics_catalog_version();
     for (index, (item, quantity)) in generation.items.iter().enumerate() {
         let path = format!("loot[{}].items[{index}].{item}", generation.key);
         let definition =
@@ -410,10 +409,10 @@ fn bind_loot_items(
         for unit in 0..*quantity {
             bind_unique_item(
                 state,
+                catalog,
                 owner,
                 format!("{instance}:{item}:{index}.{unit}"),
                 item_id.clone(),
-                version.clone(),
                 &path,
             )?;
         }
