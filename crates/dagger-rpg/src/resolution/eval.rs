@@ -82,9 +82,14 @@ impl ExprContext<'_> {
 pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, DaggerRejection> {
     let mut inputs = Vec::new();
     let expression = materialize_exact(expr, context, &mut inputs)?;
+    let inputs = ExactInputBundle::new(inputs).map_err(|error| {
+        DaggerRejection::InvalidExpression(format!(
+            "standard exact input evidence: {error:?}"
+        ))
+    })?;
     ExactEvaluator::evaluate(
         &expression,
-        &ExactInputBundle::new(inputs),
+        &inputs,
         ExactExprLimits::default(),
     )
     .map(|value| value.get())
@@ -127,6 +132,15 @@ fn materialize_exact(
         ComposedExactExpr::TruncatingDivide(left, right) => Ok(ExactExpr::TruncatingDivide(
             Box::new(materialize_exact(left, context, inputs)?),
             Box::new(materialize_exact(right, context, inputs)?),
+        )),
+        ComposedExactExpr::FixedPower {
+            base,
+            exponent,
+            scale,
+        } => Ok(ExactExpr::fixed_power(
+            materialize_exact(base, context, inputs)?,
+            materialize_exact(exponent, context, inputs)?,
+            **scale,
         )),
         ComposedExactExpr::Min(values) => values
             .iter()
@@ -450,6 +464,10 @@ fn collect_dynamic_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, DaggerDynam
             collect_dynamic_rolls(left, rolls);
             collect_dynamic_rolls(right, rolls);
         }
+        ComposedExactExpr::FixedPower { base, exponent, .. } => {
+            collect_dynamic_rolls(base, rolls);
+            collect_dynamic_rolls(exponent, rolls);
+        }
         ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
             for value in values {
                 collect_dynamic_rolls(value, rolls);
@@ -512,6 +530,10 @@ fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
         | ComposedExactExpr::TruncatingDivide(left, right) => {
             collect_dice(left, rolls);
             collect_dice(right, rolls);
+        }
+        ComposedExactExpr::FixedPower { base, exponent, .. } => {
+            collect_dice(base, rolls);
+            collect_dice(exponent, rolls);
         }
         ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
             for value in values {
@@ -1225,7 +1247,7 @@ pub fn apply_standard_mechanics_operation(
     let plan = operation
         .plan(
             &bindings,
-            &ExactInputBundle::new(vec![]),
+            &ExactInputBundle::empty(),
             state.entities(),
             catalog.mechanics(),
             &context,
