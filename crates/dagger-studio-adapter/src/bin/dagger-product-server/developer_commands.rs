@@ -18,7 +18,8 @@ use rusty_engine::{
         TypeDescriptor,
     },
     developer_command_standard::{
-        AdminSetTrack, HostTrackSetRequest, InspectEntity, InspectMechanics,
+        AdminSetTrack, HostEntityRequest, HostTrackSetReceipt, HostTrackSetRequest, InspectEntity,
+        InspectMechanics,
     },
     gameplay_mechanics::MechanicsError,
 };
@@ -297,12 +298,6 @@ impl DaggerDeveloperCommands {
             );
         erase_mapped(response, context, HostReceiptRefs::empty(), dagger_error)
     }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct HostEntityRequest {
-    entity: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -602,10 +597,8 @@ fn decode_entity(request: CommandRequest<Value>) -> Result<CommandRequest<Entity
     let request = decode_payload::<HostEntityRequest>(request)?;
     let entity = request
         .payload
-        .entity
-        .parse::<u64>()
-        .map(EntityId::new)
-        .map_err(|_| "entity must be a decimal u64".to_owned())?;
+        .into_entity()
+        .map_err(|error| error.to_string())?;
     Ok(CommandRequest {
         protocol_version: request.protocol_version,
         command: request.command,
@@ -637,16 +630,6 @@ fn map_track_request(
     })
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct HostTrackSetReceipt {
-    entity: String,
-    track: String,
-    before: i64,
-    after: i64,
-    committed_tracks_revision: String,
-}
-
 fn project_track_response(
     response: CommandResponse<rusty_engine::gameplay_mechanics::TrackSetReceipt, MechanicsError>,
 ) -> CommandResponse<HostTrackSetReceipt, MechanicsError> {
@@ -655,13 +638,9 @@ fn project_track_response(
         provenance: response.provenance,
         facts: response.facts,
         result: match response.result {
-            HandlerResult::Success(receipt) => HandlerResult::Success(HostTrackSetReceipt {
-                entity: receipt.entity.raw().to_string(),
-                track: receipt.track.as_str().to_owned(),
-                before: receipt.before.get(),
-                after: receipt.after.get(),
-                committed_tracks_revision: receipt.committed_tracks_revision.to_string(),
-            }),
+            HandlerResult::Success(receipt) => {
+                HandlerResult::Success(HostTrackSetReceipt::from_owner(receipt))
+            }
             HandlerResult::Rejected(error) => HandlerResult::Rejected(error),
         },
     }
@@ -849,6 +828,13 @@ mod tests {
             ),
         );
         assert!(matches!(admin.outcome, HostCommandOutcome::Success { .. }));
+        let admin_value = success_value(&admin);
+        assert_eq!(admin_value["entity"], "1");
+        assert_eq!(admin_value["track"], "health");
+        assert_eq!(admin_value["operation"], "dagger-admin-health");
+        assert_eq!(admin_value["decision"], "applied");
+        assert!(admin_value["catalogVersion"].is_string());
+        assert!(admin_value["observedRevisions"].is_array());
         assert_eq!(
             runtime
                 .product_readout()
@@ -926,6 +912,53 @@ mod tests {
     }
 
     #[test]
+    fn standard_host_wire_rejects_noncanonical_stale_and_absent_tracks_without_mutation() {
+        let mut runtime =
+            DaggerRuntime::from_project_json(PROJECT).expect("admit committed project");
+        let mut commands = DaggerDeveloperCommands::new().expect("bindings");
+        let before = runtime
+            .product_readout()
+            .expect("readout before invalid standard admin requests")
+            .current_health;
+
+        for (correlation, entity, track, expected_revision) in [
+            ("noncanonical", "01", "health", None),
+            ("stale", "1", "health", Some("999999")),
+            ("absent-track", "1", "missing-track", None),
+        ] {
+            let rejected = commands.execute(
+                &mut runtime,
+                request(
+                    "standard.admin.track.set",
+                    serde_json::json!({
+                        "operation": "dagger-invalid-admin",
+                        "source": {
+                            "kind": "request",
+                            "operation": "dagger-invalid-admin",
+                            "instance": "dagger-invalid-admin"
+                        },
+                        "entity": entity,
+                        "track": track,
+                        "value": 1,
+                        "policy": "clampToBounds",
+                        "expectedRevision": expected_revision,
+                    }),
+                    correlation,
+                ),
+            );
+            assert!(matches!(rejected.outcome, HostCommandOutcome::Error { .. }));
+            assert_eq!(
+                runtime
+                    .product_readout()
+                    .expect("readout after rejected standard admin request")
+                    .current_health,
+                before,
+                "{correlation} standard host request mutated Dagger runtime"
+            );
+        }
+    }
+
+    #[test]
     fn queued_progression_scenario_uses_the_production_kill_hook() {
         let mut runtime =
             DaggerRuntime::from_project_json(PROJECT).expect("admit committed project");
@@ -977,10 +1010,14 @@ mod tests {
     }
 
     fn scenario_value(response: &DaggerDeveloperResponse) -> &Value {
+        success_value(response)
+    }
+
+    fn success_value(response: &DaggerDeveloperResponse) -> &Value {
         match &response.outcome {
             HostCommandOutcome::Success { value, .. } => value,
             HostCommandOutcome::Error { code, message, .. } => {
-                panic!("scenario rejected unexpectedly: {code:?}: {message:?}")
+                panic!("developer command rejected unexpectedly: {code:?}: {message:?}")
             }
         }
     }
