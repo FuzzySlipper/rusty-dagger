@@ -22,6 +22,7 @@ use rusty_engine::render_presentation::{
 use serde::Serialize;
 
 use crate::{
+    developer_commands::DaggerDeveloperCommands,
     diagnostics::ProductDiagnostics,
     product_server::{ProductCommand, ProductInput, ProductReply, ProductServer},
     Options,
@@ -80,6 +81,8 @@ pub(crate) fn run(options: Options) -> Result<()> {
         root.join("dist/apps/dagger-product/browser"),
         root.join("content"),
     )?;
+    let mut developer_commands = DaggerDeveloperCommands::new()
+        .map_err(|error| anyhow::anyhow!("create Dagger developer command bindings: {error}"))?;
     println!(
         "DAGGER_PRODUCT_READY product={} api=http://127.0.0.1:{}/api/dagger-product/bootstrap ui=http://127.0.0.1:{} resources={} source_entities={}",
         product_name,
@@ -109,6 +112,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
                 &mut pending_audio,
                 &bundle,
                 &mut accepted_input_sequence,
+                &mut developer_commands,
             )?;
         }
         let now = Instant::now();
@@ -136,6 +140,7 @@ fn handle_command(
     pending_audio: &mut PendingAudioPresentation,
     bundle: &DaggerRenderBundle,
     accepted_input_sequence: &mut u64,
+    developer_commands: &mut DaggerDeveloperCommands,
 ) -> Result<()> {
     match command {
         ProductCommand::ProductBootstrap { reply } => {
@@ -229,6 +234,12 @@ fn handle_command(
             quantity,
             reply,
         } => send_runtime_result(reply, runtime.grant_item(&item, quantity)),
+        ProductCommand::DeveloperDiscover { reply } => {
+            send_json(reply, 200, &developer_commands.discover())
+        }
+        ProductCommand::DeveloperExecute { request, reply } => {
+            send_json(reply, 200, &developer_commands.execute(runtime, request))
+        }
     }
 }
 

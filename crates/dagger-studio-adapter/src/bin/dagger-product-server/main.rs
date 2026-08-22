@@ -1,4 +1,5 @@
 mod connected_application;
+mod developer_commands;
 mod diagnostics;
 mod live_presentation;
 mod melee_presentation;

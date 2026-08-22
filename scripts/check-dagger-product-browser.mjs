@@ -28,6 +28,7 @@ try {
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
   await assertApplicationHostBounds(page, 1280, 900);
+  await assertDeveloperCommandConsole(page);
   const connectedPresentation = await assertConnectedDynamicPresentation(page);
   const semanticLook = await assertSemanticPointerDirections(page);
   const connectedDiagnostics = await assertConnectedDiagnosticKeys(page);
@@ -362,6 +363,157 @@ async function assertSpriteReviewTab(page, output) {
   await page.getByTestId('tab-explorer').click();
   await page.getByTestId('definitions-panel').waitFor();
   return { entries: count, ratAttackFrames: `${firstFrame}->${playedFrame}`, manifestEdit: 'fps/pivot persisted+restored' };
+}
+
+async function assertDeveloperCommandConsole(page) {
+  const shell = page.locator('[data-rusty-developer-command-shell="v1"]');
+  await shell.getByRole('button', { name: 'Dagger developer commands' }).click();
+  const command = shell.locator('select[aria-label="Developer command"]');
+  await command.waitFor();
+  await command.locator('option').first().waitFor();
+  const commandIds = await command.locator('option').evaluateAll((options) =>
+    options.map((option) => option.value),
+  );
+  for (const id of [
+    'standard.inspect.entity',
+    'standard.inspect.mechanics',
+    'standard.admin.track.set',
+    'dagger.scenario.prepare',
+    'dagger.scenario.melee',
+    'dagger.scenario.advance',
+    'dagger.scenario.progression',
+  ]) {
+    assert.ok(commandIds.includes(id), `developer command discovery omitted ${id}`);
+  }
+  for (const [id, lane] of [
+    ['standard.admin.track.set', 'admin'],
+    ['dagger.scenario.prepare', 'admin'],
+    ['dagger.scenario.melee', 'play'],
+    ['dagger.scenario.advance', 'play'],
+    ['dagger.scenario.progression', 'admin'],
+  ]) {
+    const label = await command.locator(`option[value="${id}"]`).innerText();
+    assert.match(label, new RegExp(`\\(${lane}\\)`), `${id} lost its visible ${lane} identity`);
+  }
+
+  await runDeveloperCommand(page, shell, 'standard.inspect.mechanics', { entity: '1' });
+
+  // Setup is visibly admin-only. From here, ordinary `advance` lets the
+  // admitted rat use its normal combat timing against the player; neither
+  // this test nor the browser writes a health value directly.
+  await runDeveloperCommand(page, shell, 'dagger.scenario.prepare', { target: 'rat' });
+  const beforeDamage = await productReadout(page);
+  await runDeveloperCommand(page, shell, 'dagger.scenario.advance', { ticks: 32 });
+  const afterDamage = await productReadout(page);
+  assert.ok(
+    afterDamage.currentHealth < beforeDamage.currentHealth,
+    'bounded production advance did not record player health loss in the Rust readout',
+  );
+
+  // Restoration is deliberately a visibly privileged standard command, not
+  // a substitute for ordinary combat. Its target value comes from the prior
+  // Rust readout and the next readout proves the Engine track mutation.
+  await runDeveloperCommand(page, shell, 'standard.admin.track.set', {
+    operation: 'dagger-browser-health-restore',
+    source: {
+      kind: 'request',
+      operation: 'dagger-browser-health-restore',
+      instance: 'dagger-browser-health-restore',
+    },
+    entity: '1',
+    track: 'health',
+    value: Math.trunc(beforeDamage.currentHealth),
+    policy: 'clampToBounds',
+  });
+  const afterRestore = await productReadout(page);
+  assert.equal(
+    afterRestore.currentHealth,
+    beforeDamage.currentHealth,
+    'standard admin restoration did not restore the prior Rust-owned health value',
+  );
+
+  const staminaBeforeMelee = afterRestore.playerStats.currentStamina;
+  await runDeveloperCommand(page, shell, 'dagger.scenario.melee', { swings: 1 });
+  const afterMelee = await productReadout(page);
+  assert.ok(
+    afterMelee.playerStats.currentStamina < staminaBeforeMelee,
+    'production melee did not deplete stamina in the Rust readout',
+  );
+
+  // This admin demonstration resets and defeats the committed sequence via
+  // real melee contacts. The resulting Dagger history is the authoritative
+  // kill-XP/level proof, not a DOM-derived counter.
+  const levelBeforeProgression = afterMelee.progression.level;
+  await runDeveloperCommand(page, shell, 'dagger.scenario.progression', {});
+  const afterProgression = await productReadout(page);
+  assert.ok(
+    afterProgression.progression.level > levelBeforeProgression,
+    'production progression scenario did not cross a level in the Rust readout',
+  );
+  assert.ok(
+    afterProgression.progression.history.length >= 3,
+    'production progression scenario did not retain its committed kill-XP history',
+  );
+  assert.ok(
+    afterProgression.notices.some((notice) => notice.kind === 'level-up'),
+    'production level transition did not emit its Rust-owned notice',
+  );
+
+  const history = JSON.parse(await shell.locator('[data-developer-command-history]').innerText());
+  const expectedHistory = [
+    ['standard.inspect.mechanics', 'inspect'],
+    ['dagger.scenario.prepare', 'admin'],
+    ['dagger.scenario.advance', 'play'],
+    ['standard.admin.track.set', 'admin'],
+    ['dagger.scenario.melee', 'play'],
+    ['dagger.scenario.progression', 'admin'],
+  ];
+  assert.deepEqual(
+    history.slice(-expectedHistory.length).map((entry) => [entry.request.command, entry.lane, entry.outcome.kind]),
+    expectedHistory.map(([id, lane]) => [id, lane, 'success']),
+    'the public Engine command history did not retain the intended admin/play sequence',
+  );
+  await shell.getByRole('button', { name: 'Dagger developer commands' }).click();
+}
+
+async function runDeveloperCommand(page, shell, id, payload) {
+  const command = shell.locator('select[aria-label="Developer command"]');
+  const history = shell.locator('[data-developer-command-history]');
+  const previous = await developerCommandHistory(history);
+  const previousCorrelation = previous.at(-1)?.request?.correlation ?? null;
+  await command.selectOption(id);
+  if (id === 'standard.admin.track.set') {
+    await shell.getByLabel('Developer command parameters').fill(JSON.stringify(payload));
+  } else {
+    for (const [name, value] of Object.entries(payload)) {
+      const field = shell.locator(`[data-command-field="${name}"]`);
+      if (await field.evaluate((element) => element instanceof HTMLSelectElement)) {
+        await field.selectOption(String(value));
+      } else if (typeof value === 'string') await field.fill(value);
+      else await field.fill(String(value));
+    }
+  }
+  await shell.getByRole('button', { name: 'Run' }).click();
+  await page.waitForFunction(
+    ({ length, commandId, priorCorrelation }) => {
+      const text = document.querySelector('[data-developer-command-history]')?.textContent;
+      if (text === undefined || text === '') return false;
+      const entries = JSON.parse(text);
+      const entry = entries.at(-1);
+      return entries.length > length
+        && entry?.request?.command === commandId
+        && entry?.request?.correlation !== priorCorrelation
+        && entry?.outcome?.kind === 'success';
+    },
+    { length: previous.length, commandId: id, priorCorrelation: previousCorrelation },
+    { timeout: 30_000 },
+  );
+  await shell.locator('[data-developer-command-status]').filter({ hasText: 'Success' }).waitFor();
+}
+
+async function developerCommandHistory(history) {
+  const text = await history.innerText();
+  return text === '' ? [] : JSON.parse(text);
 }
 
 async function waitForConnection(page) {
