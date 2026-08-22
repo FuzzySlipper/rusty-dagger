@@ -542,10 +542,8 @@ pub type DaggerProgram = Program<DaggerPredicate, DaggerOperation>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DaggerExactLeaf {
     EquippedWeaponSkill { subject: DaggerSubject },
-    Dice { id: String, min: i64, max: i64 },
     EquippedWeaponDice { subject: DaggerSubject, id: String },
     StruckArmor { subject: DaggerSubject, id: String },
-    PowMilli { base: i64, exponent_roll: String },
 }
 
 pub type DaggerExpr = ComposedExactExpr<DaggerExactLeaf>;

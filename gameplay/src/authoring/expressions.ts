@@ -6,10 +6,10 @@
  * only evaluator. There is no arithmetic in this file beyond literal
  * construction.
  *
- * Rolls: `dice`, `equippedWeaponDice`, and `struckArmor` are bounded named
+ * Rolls: Engine `boundedRoll`, `equippedWeaponDice`, and `struckArmor` are bounded named
  * rolls. The evaluator never generates randomness; the caller (runtime,
  * diagnostic) supplies roll evidence and admission declares the bounds.
- * `dice("rat-bite.damage", 1, 4)` reads evidence id "rat-bite.damage" and
+ * `boundedRoll("rat-bite.damage", 1, 4)` reads evidence id "rat-bite.damage" and
  * rejects values outside [1, 4]. `equippedWeaponDice("actor",
  * "melee-attack.equipped-weapon-damage")` reads that explicit evidence id,
  * bounded at evaluation by the subject's CURRENTLY equipped weapon's damage
@@ -39,13 +39,8 @@ export type Subject = "actor" | "target";
  */
 export type DaggerExprLeaf =
   | Readonly<{ kind: "equipped-weapon-skill"; payload: Readonly<{ subject: Subject }> }>
-  | Readonly<{ kind: "dice"; payload: Readonly<{ id: string; min: number; max: number }> }>
   | Readonly<{ kind: "equipped-weapon-dice"; payload: Readonly<{ subject: Subject; id: string }> }>
-  | Readonly<{ kind: "struck-armor"; payload: Readonly<{ subject: Subject; id: string }> }>
-  | Readonly<{
-      kind: "pow-milli";
-      payload: Readonly<{ base: number; exponentRoll: string }>;
-    }>;
+  | Readonly<{ kind: "struck-armor"; payload: Readonly<{ subject: Subject; id: string }> }>;
 
 /**
  * The strict codec receives only a product payload, not its enclosing tree
@@ -54,13 +49,8 @@ export type DaggerExprLeaf =
  */
 export type DaggerExprPayload =
   | Readonly<{ kind: "equipped-weapon-skill"; value: Readonly<{ subject: Subject }> }>
-  | Readonly<{ kind: "dice"; value: Readonly<{ id: string; min: number; max: number }> }>
   | Readonly<{ kind: "equipped-weapon-dice"; value: Readonly<{ subject: Subject; id: string }> }>
-  | Readonly<{ kind: "struck-armor"; value: Readonly<{ subject: Subject; id: string }> }>
-  | Readonly<{
-      kind: "pow-milli";
-      value: Readonly<{ base: number; exponentRoll: string }>;
-    }>;
+  | Readonly<{ kind: "struck-armor"; value: Readonly<{ subject: Subject; id: string }> }>;
 
 export type Expr = ComposedExactTree<DaggerExprPayload>;
 /** A generated composedExact definition embedded in Dagger's schema-2 aggregate. */
@@ -99,13 +89,6 @@ const id = (value: unknown): string => {
   return value;
 };
 
-const integer = (value: unknown): number => {
-  if (typeof value !== "number" || !Number.isSafeInteger(value)) {
-    throw new Error("Dagger product expression payload bound must be a safe integer");
-  }
-  return value;
-};
-
 const decodeNestedExpr = (value: unknown): Expr => {
   const tree = decodeComposedExactPayload(
     {
@@ -135,26 +118,10 @@ const decodeDaggerExprPayload = (payload: unknown): DaggerExprPayload => {
     case "equipped-weapon-skill":
       exactFields(value, ["subject"]);
       return { kind, value: { subject: subject(value.subject) } };
-    case "dice": {
-      exactFields(value, ["id", "max", "min"]);
-      const min = integer(value.min);
-      const max = integer(value.max);
-      if (min > max) throw new Error("Dagger dice payload minimum exceeds maximum");
-      return { kind, value: { id: id(value.id), min, max } };
-    }
     case "equipped-weapon-dice":
     case "struck-armor":
       exactFields(value, ["id", "subject"]);
       return { kind, value: { subject: subject(value.subject), id: id(value.id) } };
-    case "pow-milli":
-      exactFields(value, ["base", "exponentRoll"]);
-      return {
-        kind,
-        value: {
-          base: integer(value.base),
-          exponentRoll: id(value.exponentRoll),
-        },
-      };
     default:
       throw new Error("Dagger product expression payload kind is unsupported");
   }
@@ -184,6 +151,10 @@ function assertDaggerProductKinds(tree: Expr): void {
     case "truncatingDivide":
       assertDaggerProductKinds(tree.left);
       assertDaggerProductKinds(tree.right);
+      return;
+    case "fixedPower":
+      assertDaggerProductKinds(tree.base);
+      assertDaggerProductKinds(tree.exponent);
       return;
     case "min":
     case "max":
@@ -271,9 +242,9 @@ export const evidence = (id: string): Expr => checked({
   op: "input", input: { kind: "roll", role: "actor", id },
 });
 
-/** Bounded named roll; the caller supplies the value as evidence. */
-export const dice = (id: string, min: number, max: number): Expr =>
-  product({ kind: "dice", payload: { id, min, max } });
+/** Engine-owned bounded named input; the caller supplies the value as evidence. */
+export const boundedRoll = (id: string, minimum: number, maximum: number): Expr =>
+  checked({ op: "input", input: { kind: "boundedRoll", role: "actor", id, minimum, maximum } });
 
 /**
  * Bounded named roll over the subject's equipped weapon's damage range. The
@@ -303,13 +274,11 @@ export const trackMax = (subject: Subject, id: string): Expr => checked({
 });
 
 /**
- * Fixed-point power: `base^exponent` scaled by 1000 (milli), computed
- * iteratively with floor division at each step — the deterministic integer
- * approximation of the donor's f64 pow. The exponent roll is the one explicit
- * product input, so the runtime never invents an input id.
+ * Engine-owned fixed-point power. Dagger authors the formula and its bounded
+ * exponent input; the shared exact evaluator owns arithmetic and validation.
  */
-export const powMilli = (base: number, exponentRoll: string): Expr =>
-  product({ kind: "pow-milli", payload: { base, exponentRoll } });
+export const fixedPower = (base: Expr, exponent: Expr, scale: number): Expr =>
+  checked({ op: "fixedPower", base, exponent, scale });
 
 export const add = (...terms: readonly Expr[]): Expr =>
   terms.reduce<Expr>((left, right) => checked({ op: "add", left, right }), constant(0));

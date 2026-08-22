@@ -1219,6 +1219,10 @@ fn validate_expr_inputs(
             validate_dagger_role(role.as_str(), path)?;
             validate_id(path, id.as_str())
         }
+        ComposedExactExpr::Input(ExactInputReference::BoundedRoll { descriptor }) => {
+            validate_dagger_role(descriptor.role().as_str(), path)?;
+            validate_id(path, descriptor.id().as_str())
+        }
         ComposedExactExpr::Input(ExactInputReference::StandardFact(
             StandardExactFactReference::Stat { role, stat },
         )) => {

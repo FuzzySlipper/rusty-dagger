@@ -16,9 +16,9 @@ use rusty_engine::gameplay_mechanics::{
 };
 use rusty_engine::gameplay_standard::{
     CapabilityRoleBinding, CapabilityRoleBindings, CapabilityRoleId, ComposedExactComparison,
-    ComposedExactExpr, ExactEvaluator, ExactExpr, ExactExprLimits, ExactInputBundle,
-    ExactInputReference, StandardExactFactReference, StandardMechanicsReceipt, StandardOperation,
-    StandardOperationContext,
+    ComposedExactExpr, ExactEvaluationError, ExactEvaluator, ExactExpr, ExactExprLimits,
+    ExactInputBundle, ExactInputReference, StandardExactFactReference, StandardMechanicsReceipt,
+    StandardOperation, StandardOperationContext,
 };
 
 use super::compile::{LEFT_HAND_SLOT, RIGHT_HAND_SLOT, WEIGHT_CAPACITY_METRIC};
@@ -84,19 +84,29 @@ pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, Da
     let mut inputs = Vec::new();
     let expression = materialize_exact(expr, context, &mut inputs)?;
     let inputs = ExactInputBundle::new(inputs).map_err(|error| {
-        DaggerRejection::InvalidExpression(format!(
-            "standard exact input evidence: {error:?}"
-        ))
+        DaggerRejection::InvalidExpression(format!("standard exact input evidence: {error:?}"))
     })?;
-    ExactEvaluator::evaluate(
-        &expression,
-        &inputs,
-        ExactExprLimits::default(),
-    )
-    .map(|value| value.get())
-    .map_err(|error| {
-        DaggerRejection::InvalidExpression(format!("standard exact evaluator: {error:?}"))
-    })
+    ExactEvaluator::evaluate(&expression, &inputs, ExactExprLimits::default())
+        .map(|value| value.get())
+        .map_err(standard_exact_rejection)
+}
+
+fn standard_exact_rejection(error: ExactEvaluationError) -> DaggerRejection {
+    match error {
+        ExactEvaluationError::BoundedRollOutOfRange {
+            input: ExactInputReference::BoundedRoll { descriptor },
+            value,
+        } => DaggerRejection::RollOutOfBounds {
+            id: descriptor.id().as_str().to_owned(),
+            value: value.get(),
+            min: descriptor.minimum().get(),
+            max: descriptor.maximum().get(),
+        },
+        ExactEvaluationError::MissingBoundedRoll {
+            input: ExactInputReference::BoundedRoll { descriptor },
+        } => DaggerRejection::MissingEvidence(descriptor.id().as_str().to_owned()),
+        error => DaggerRejection::InvalidExpression(format!("standard exact evaluator: {error:?}")),
+    }
 }
 
 /// Lowers Dagger's closed product leaves to values, retaining the provider's
@@ -164,6 +174,9 @@ fn materialize_input(
     context: &ExprContext,
 ) -> Result<i64, DaggerRejection> {
     match input {
+        ExactInputReference::BoundedRoll { descriptor } => {
+            evidence_value(context.evidence, descriptor.id().as_str())
+        }
         ExactInputReference::Roll { id, .. } => evidence_value(context.evidence, id.as_str()),
         ExactInputReference::StandardFact(StandardExactFactReference::Stat { role, stat }) => {
             let values = context.subject_values(role_subject(role.as_str())?)?;
@@ -236,7 +249,6 @@ fn evaluate_product_leaf(
                 DaggerRejection::MissingValue(format!("skill.{skill_id}@{}", values.definition.id))
             })
         }
-        DaggerExactLeaf::Dice { id, min, max } => bounded_roll(context.evidence, id, *min, *max),
         DaggerExactLeaf::EquippedWeaponDice { subject, id } => {
             let values = context.subject_values(*subject)?;
             let equipment = values.equipment.ok_or_else(|| {
@@ -258,27 +270,6 @@ fn evaluate_product_leaf(
             values.stats.get(&stat_id).copied().ok_or_else(|| {
                 DaggerRejection::MissingValue(format!("stat.{stat_id}@{}", values.definition.id))
             })
-        }
-        DaggerExactLeaf::PowMilli {
-            base,
-            exponent_roll,
-            ..
-        } => {
-            let base = *base;
-            let exponent = evidence_value(context.evidence, exponent_roll)?;
-            if base < 0 || !(0..=64).contains(&exponent) {
-                return Err(DaggerRejection::InvalidExpression(format!("powMilli requires non-negative base and exponent 0..=64, got {base}^{exponent}")));
-            }
-            let mut result = 1_000_i64;
-            for _ in 0..exponent {
-                result = result
-                    .checked_mul(base)
-                    .ok_or_else(|| {
-                        DaggerRejection::InvalidExpression("powMilli overflow".to_string())
-                    })?
-                    .div_euclid(1_000);
-            }
-            Ok(result)
         }
     }
 }
@@ -326,7 +317,7 @@ fn scalar(value: i64, path: &str) -> Result<MechanicsScalar, DaggerGameplayError
     })
 }
 
-/// Roll evidence a definition's derived track rules require: every dice
+/// Roll evidence a definition's derived track rules require: every boundedRoll
 /// node as (evidence id, min, max). Callers supply values (deterministic or
 /// random) and pass them to `spawn_actor`.
 pub fn required_roll_evidence(
@@ -343,12 +334,12 @@ pub fn required_roll_evidence(
             })?;
     let mut rolls = Vec::new();
     for track in &definition.tracks {
-        collect_dice(&track.max, &mut rolls);
+        collect_bounded_rolls(&track.max, &mut rolls);
     }
     Ok(rolls)
 }
 
-/// Roll evidence an action's program requires: every `dice` node as
+/// Roll evidence an action's program requires: every `boundedRoll` input as
 /// (evidence id, min, max). Callers supply values and pass them to
 /// `resolve_dagger_action` alongside the action's hit-roll evidence
 /// (convention: `{action}.d100`, an unbounded d100 read). Equipment-driven
@@ -366,7 +357,7 @@ pub fn action_roll_evidence(
                 reason: "unknown action definition".to_string(),
             })?;
     let mut rolls = Vec::new();
-    collect_program_dice(&action.program, &mut rolls);
+    collect_program_bounded_rolls(&action.program, &mut rolls);
     Ok(rolls)
 }
 
@@ -478,12 +469,12 @@ fn collect_dynamic_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, DaggerDynam
     }
 }
 
-fn collect_program_dice(program: &DaggerProgram, rolls: &mut Vec<(String, i64, i64)>) {
+fn collect_program_bounded_rolls(program: &DaggerProgram, rolls: &mut Vec<(String, i64, i64)>) {
     use rusty_engine::gameplay_resolution::Program;
     match program {
         Program::Sequence { steps } => {
             for step in steps {
-                collect_program_dice(step, rolls);
+                collect_program_bounded_rolls(step, rolls);
             }
         }
         Program::When {
@@ -491,57 +482,64 @@ fn collect_program_dice(program: &DaggerProgram, rolls: &mut Vec<(String, i64, i
             then_program,
             otherwise_program,
         } => {
-            collect_comparison_dice(predicate, rolls);
-            collect_program_dice(then_program, rolls);
+            collect_comparison_bounded_rolls(predicate, rolls);
+            collect_program_bounded_rolls(then_program, rolls);
             if let Some(otherwise) = otherwise_program {
-                collect_program_dice(otherwise, rolls);
+                collect_program_bounded_rolls(otherwise, rolls);
             }
         }
         Program::Operation(operation) => match operation {
-            DaggerOperation::SpendTrack { amount, .. } => collect_dice(amount, rolls),
-            DaggerOperation::Damage { amount, .. } => collect_dice(amount, rolls),
+            DaggerOperation::SpendTrack { amount, .. } => collect_bounded_rolls(amount, rolls),
+            DaggerOperation::Damage { amount, .. } => collect_bounded_rolls(amount, rolls),
         },
     }
 }
 
-fn collect_comparison_dice(predicate: &DaggerPredicate, rolls: &mut Vec<(String, i64, i64)>) {
+fn collect_comparison_bounded_rolls(
+    predicate: &DaggerPredicate,
+    rolls: &mut Vec<(String, i64, i64)>,
+) {
     match predicate {
         ComposedExactComparison::Equal(left, right)
         | ComposedExactComparison::LessThan(left, right)
         | ComposedExactComparison::LessOrEqual(left, right)
         | ComposedExactComparison::GreaterThan(left, right)
         | ComposedExactComparison::GreaterOrEqual(left, right) => {
-            collect_dice(left, rolls);
-            collect_dice(right, rolls);
+            collect_bounded_rolls(left, rolls);
+            collect_bounded_rolls(right, rolls);
         }
     }
 }
 
-fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
+fn collect_bounded_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
     match expr {
-        ComposedExactExpr::Product(leaf) => {
-            if let DaggerExactLeaf::Dice { id, min, max } = leaf.value() {
-                rolls.push((id.clone(), *min, *max));
-            }
+        ComposedExactExpr::Input(ExactInputReference::BoundedRoll { descriptor }) => {
+            rolls.push((
+                descriptor.id().as_str().to_owned(),
+                descriptor.minimum().get(),
+                descriptor.maximum().get(),
+            ));
         }
         ComposedExactExpr::Add(left, right)
         | ComposedExactExpr::Subtract(left, right)
         | ComposedExactExpr::Multiply(left, right)
         | ComposedExactExpr::FloorDivide(left, right)
         | ComposedExactExpr::TruncatingDivide(left, right) => {
-            collect_dice(left, rolls);
-            collect_dice(right, rolls);
+            collect_bounded_rolls(left, rolls);
+            collect_bounded_rolls(right, rolls);
         }
         ComposedExactExpr::FixedPower { base, exponent, .. } => {
-            collect_dice(base, rolls);
-            collect_dice(exponent, rolls);
+            collect_bounded_rolls(base, rolls);
+            collect_bounded_rolls(exponent, rolls);
         }
         ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
             for value in values {
-                collect_dice(value, rolls);
+                collect_bounded_rolls(value, rolls);
             }
         }
-        ComposedExactExpr::Literal(_) | ComposedExactExpr::Input(_) => {}
+        ComposedExactExpr::Literal(_)
+        | ComposedExactExpr::Input(_)
+        | ComposedExactExpr::Product(_) => {}
     }
 }
 

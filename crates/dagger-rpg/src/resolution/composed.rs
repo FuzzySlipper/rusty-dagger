@@ -1,18 +1,15 @@
 //! Dagger's closed product-leaf codec for Engine's generated composedExact grammar.
 //!
 //! Generic expression nodes are decoded and quota-checked by gameplay-standard.
-//! This module owns only Dagger's five leaf meanings and the explicitly named
+//! This module owns only Dagger's three dynamic leaf meanings and the explicitly named
 //! input each leaf contributes at evaluation time.
 
 use std::collections::BTreeSet;
 
-use rusty_engine::{
-    gameplay_rules::MAX_SAFE_JSON_INTEGER,
-    gameplay_standard::{
-        CapabilityRequirementId, CapabilityRoleId, CompiledComposedExactLeaf,
-        ComposedExactLeafCodec, ComposedExactLeafKindId, ExactExpr, ExactExprRequirements,
-        ExactInputReference, InputId, StandardExtensionSchema,
-    },
+use rusty_engine::gameplay_standard::{
+    CapabilityRequirementId, CapabilityRoleId, CompiledComposedExactLeaf, ComposedExactLeafCodec,
+    ComposedExactLeafKindId, ExactExpr, ExactExprRequirements, ExactInputReference, InputId,
+    StandardExtensionSchema,
 };
 use serde_json::{json, Map, Value};
 
@@ -53,25 +50,6 @@ impl ComposedExactLeafCodec for DaggerExactLeafCodec {
                     subject: subject(required_string(value, "subject", "payload.value")?)?,
                 })
             }
-            "dice" => {
-                exact_fields(value, &["id", "max", "min"], "payload.value")?;
-                let id = input_id(
-                    required_string(value, "id", "payload.value")?,
-                    "payload.value.id",
-                )?;
-                let min = i64_value(
-                    required(value, "min", "payload.value")?,
-                    "payload.value.min",
-                )?;
-                let max = i64_value(
-                    required(value, "max", "payload.value")?,
-                    "payload.value.max",
-                )?;
-                if min > max {
-                    return Err(reject("payload.value", "dice minimum exceeds maximum"));
-                }
-                Ok(DaggerExactLeaf::Dice { id, min, max })
-            }
             "equipped-weapon-dice" => {
                 exact_fields(value, &["id", "subject"], "payload.value")?;
                 Ok(DaggerExactLeaf::EquippedWeaponDice {
@@ -92,19 +70,6 @@ impl ComposedExactLeafCodec for DaggerExactLeafCodec {
                     )?,
                 })
             }
-            "pow-milli" => {
-                exact_fields(value, &["base", "exponentRoll"], "payload.value")?;
-                Ok(DaggerExactLeaf::PowMilli {
-                    base: i64_value(
-                        required(value, "base", "payload.value")?,
-                        "payload.value.base",
-                    )?,
-                    exponent_roll: input_id(
-                        required_string(value, "exponentRoll", "payload.value")?,
-                        "payload.value.exponentRoll",
-                    )?,
-                })
-            }
             _ => Err(reject("payload.kind", "unsupported Dagger product leaf")),
         }
     }
@@ -117,23 +82,11 @@ impl ComposedExactLeafCodec for DaggerExactLeafCodec {
             ("equipped-weapon-skill", DaggerExactLeaf::EquippedWeaponSkill { subject }) => {
                 json!({"subject": subject_name(*subject)})
             }
-            ("dice", DaggerExactLeaf::Dice { id, min, max }) => {
-                json!({"id": id, "min": min, "max": max})
-            }
             ("equipped-weapon-dice", DaggerExactLeaf::EquippedWeaponDice { subject, id }) => {
                 json!({"subject": subject_name(*subject), "id": id})
             }
             ("struck-armor", DaggerExactLeaf::StruckArmor { subject, id }) => {
                 json!({"subject": subject_name(*subject), "id": id})
-            }
-            (
-                "pow-milli",
-                DaggerExactLeaf::PowMilli {
-                    base,
-                    exponent_roll,
-                },
-            ) => {
-                json!({"base": base, "exponentRoll": exponent_roll})
             }
             _ => {
                 return Err(reject(
@@ -161,24 +114,15 @@ impl ComposedExactLeafCodec for DaggerExactLeafCodec {
 pub(super) fn leaf_input(
     leaf: &DaggerExactLeaf,
 ) -> Result<ExactInputReference, DaggerGameplayError> {
-    let actor = role("actor")?;
     match leaf {
         DaggerExactLeaf::EquippedWeaponSkill { subject } => Ok(ExactInputReference::Fact {
             role: role(subject_name(*subject))?,
             id: input("equipped-weapon-skill")?,
         }),
-        DaggerExactLeaf::Dice { id, .. } => Ok(ExactInputReference::Roll {
-            role: actor,
-            id: input(id)?,
-        }),
         DaggerExactLeaf::EquippedWeaponDice { subject, id }
         | DaggerExactLeaf::StruckArmor { subject, id } => Ok(ExactInputReference::Roll {
             role: role(subject_name(*subject))?,
             id: input(id)?,
-        }),
-        DaggerExactLeaf::PowMilli { exponent_roll, .. } => Ok(ExactInputReference::Roll {
-            role: actor,
-            id: input(exponent_roll)?,
         }),
     }
 }
@@ -212,21 +156,6 @@ fn input_id(value: &str, path: &str) -> Result<String, DaggerGameplayError> {
     input(value)
         .map(|_| value.to_owned())
         .map_err(|_| reject(path, "must use the documented Dagger id grammar"))
-}
-
-fn i64_value(value: &Value, path: &str) -> Result<i64, DaggerGameplayError> {
-    let number = value
-        .as_f64()
-        .ok_or_else(|| reject(path, "must be a binary64 number"))?;
-    let maximum = MAX_SAFE_JSON_INTEGER as f64;
-    if number.is_finite() && number.fract() == 0.0 && (-maximum..=maximum).contains(&number) {
-        Ok(number as i64)
-    } else {
-        Err(reject(
-            path,
-            "must be an integral binary64 within the cross-language safe integer range",
-        ))
-    }
 }
 
 fn object<'a>(value: &'a Value, path: &str) -> Result<&'a Map<String, Value>, DaggerGameplayError> {
@@ -278,20 +207,9 @@ fn reject(path: &str, reason: &str) -> DaggerGameplayError {
 
 #[cfg(test)]
 mod tests {
-    use super::{i64_value, leaf_input};
+    use super::leaf_input;
     use crate::resolution::{DaggerExactLeaf, DaggerSubject};
     use rusty_engine::gameplay_standard::ExactInputReference;
-    use serde_json::json;
-
-    #[test]
-    fn product_integers_match_the_cross_language_safe_integer_policy() {
-        assert_eq!(
-            i64_value(&json!(9_007_199_254_740_991_u64), "base"),
-            Ok(9_007_199_254_740_991)
-        );
-        assert!(i64_value(&json!(9_007_199_254_740_992_u64), "base").is_err());
-        assert!(i64_value(&json!(9_223_372_036_854_775_808_u64), "base").is_err());
-    }
 
     #[test]
     fn leaf_requirements_name_the_runtime_subject_and_evidence_input() {
@@ -315,17 +233,6 @@ mod tests {
             target_armor_roll,
             ExactInputReference::Roll { ref role, ref id }
                 if role.as_str() == "target" && id.as_str() == "struck-body-part"
-        ));
-
-        let exponent_roll = leaf_input(&DaggerExactLeaf::PowMilli {
-            base: 1040,
-            exponent_roll: "level".to_string(),
-        })
-        .expect("pow requirement");
-        assert!(matches!(
-            exponent_roll,
-            ExactInputReference::Roll { ref role, ref id }
-                if role.as_str() == "actor" && id.as_str() == "level"
         ));
     }
 }

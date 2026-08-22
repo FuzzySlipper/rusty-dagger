@@ -18,11 +18,11 @@
 import {
   action,
   add,
+  boundedRoll,
   clampedChance,
   cmp,
   constant,
   damage,
-  dice,
   divFloor,
   divTrunc,
   equippedWeaponDice,
@@ -110,17 +110,17 @@ const lowHealth = (subject: "actor" | "target"): Expr =>
  * improved +8 magnitude is not modeled (recorded deviation).
  */
 const playerToHitTerms = (actionId: string): readonly Expr[] => [
-  dice(`${actionId}.swing-to-hit`, -10, 10),
-  dice(`${actionId}.proficiency-to-hit`, 0, 30),
-  dice(`${actionId}.racial-to-hit`, 0, 30),
+  boundedRoll(`${actionId}.swing-to-hit`, -10, 10),
+  boundedRoll(`${actionId}.proficiency-to-hit`, 0, 30),
+  boundedRoll(`${actionId}.racial-to-hit`, 0, 30),
   mul(
     constant(5),
-    dice(`${actionId}.adrenaline-rush`, 0, 1),
+    boundedRoll(`${actionId}.adrenaline-rush`, 0, 1),
     lowHealth("actor"),
   ),
   mul(
     constant(-5),
-    dice(`${actionId}.target-adrenaline-rush`, 0, 1),
+    boundedRoll(`${actionId}.target-adrenaline-rush`, 0, 1),
     lowHealth("target"),
   ),
 ];
@@ -131,8 +131,8 @@ const playerToHitTerms = (actionId: string): readonly Expr[] => [
  * evidence, 0 until careers exist.
  */
 const playerDamageTerms = (actionId: string): readonly Expr[] => [
-  dice(`${actionId}.proficiency-damage`, 0, 30),
-  dice(`${actionId}.racial-damage`, 0, 30),
+  boundedRoll(`${actionId}.proficiency-damage`, 0, 30),
+  boundedRoll(`${actionId}.racial-damage`, 0, 30),
 ];
 
 export const actions: readonly ActionDefinition[] = [
@@ -167,7 +167,7 @@ export const actions: readonly ActionDefinition[] = [
     ["attack", "melee"],
     when(
       meleeHit("rat-bite.d100", "rat-bite", skill("actor", "hand-to-hand")),
-      operation(damage(dice("rat-bite.damage", 1, 4))),
+      operation(damage(boundedRoll("rat-bite.damage", 1, 4))),
     ),
   ),
 
@@ -176,7 +176,7 @@ export const actions: readonly ActionDefinition[] = [
     ["attack", "melee"],
     when(
       meleeHit("skeleton-strike.d100", "skeleton-strike", skill("actor", "long-blade")),
-      operation(damage(dice("skeleton-strike.damage", 5, 15))),
+      operation(damage(boundedRoll("skeleton-strike.damage", 5, 15))),
     ),
   ),
 
@@ -187,7 +187,7 @@ export const actions: readonly ActionDefinition[] = [
     ["attack", "melee"],
     when(
       meleeHit("thief-strike.d100", "thief-strike", skill("actor", "short-blade")),
-      operation(damage(dice("thief-strike.damage", 2, 8))),
+      operation(damage(boundedRoll("thief-strike.damage", 2, 8))),
     ),
   ),
 

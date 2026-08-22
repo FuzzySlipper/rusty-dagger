@@ -18,7 +18,7 @@ use rusty_engine::{
     },
     gameplay_standard::{
         CapabilityRoleId, ComposedExactExpr, ComposedExactLeafKindId, ComposedExactProductLeaf,
-        ExactInputReference, StandardExactFactReference, StandardMechanicsEffect,
+        ExactInputReference, InputId, StandardExactFactReference, StandardMechanicsEffect,
     },
 };
 
@@ -655,11 +655,29 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
         Err(DaggerGameplayError::InvalidValue { .. })
     ));
 
-    // Dice with min > max.
+    // Engine boundedRoll input with min > max.
     let mut mutated = package.clone();
     mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
-        "op": "product", "kind": "dice", "subject": "dagger", "source": "dagger",
-        "payload": { "kind": "dice", "value": { "id": "rat.health", "min": 16, "max": 9 } }
+        "op": "input", "input": {
+            "kind": "boundedRoll", "role": "actor", "id": "rat.health", "minimum": 16, "maximum": 9
+        }
+    });
+    assert!(matches!(
+        compile_gameplay_package(&encode(mutated)),
+        Err(DaggerGameplayError::EmbeddedExpression { .. })
+    ));
+
+    // A bounded evidence identity is kind + role + id, so conflicting
+    // authored bounds fail admission rather than selecting one descriptor.
+    let mut mutated = package.clone();
+    mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
+        "op": "add",
+        "left": { "op": "input", "input": {
+            "kind": "boundedRoll", "role": "actor", "id": "rat.health", "minimum": 9, "maximum": 16
+        } },
+        "right": { "op": "input", "input": {
+            "kind": "boundedRoll", "role": "actor", "id": "rat.health", "minimum": 10, "maximum": 16
+        } }
     });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
@@ -679,14 +697,13 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
     ));
 
     // The schema-2 aggregate rejects unsafe binary64 integers before an
-    // embedded leaf could observe or cast one. `2^63` is representable as
-    // binary64 but not safely transportable as an exact authored integer.
+    // Engine fixedPower node can observe or cast one. `2^63` is representable
+    // as binary64 but not safely transportable as an exact authored integer.
     let mut mutated = package.clone();
     mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
-        "op": "product", "kind": "pow-milli", "subject": "dagger", "source": "dagger",
-        "payload": { "kind": "pow-milli", "value": {
-            "base": 9_223_372_036_854_775_808_u64, "exponentRoll": "level"
-        } }
+        "op": "fixedPower", "scale": 1000,
+        "base": { "op": "literal", "value": 9_223_372_036_854_775_808_u64 },
+        "exponent": { "op": "literal", "value": 1 }
     });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
@@ -695,9 +712,9 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
 
     let mut mutated = package.clone();
     mutated["payload"]["actors"][2]["tracks"][0]["max"]["tree"] = serde_json::json!({
-        "op": "product", "kind": "pow-milli", "subject": "dagger", "source": "dagger",
-        "payload": { "kind": "dice", "value": {
-            "base": 1040, "exponentRoll": "level"
+        "op": "product", "kind": "equipped-weapon-dice", "subject": "dagger", "source": "dagger",
+        "payload": { "kind": "struck-armor", "value": {
+            "subject": "actor", "id": "level"
         } }
     });
     assert!(matches!(
@@ -751,7 +768,7 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
 }
 
 #[test]
-fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
+fn standard_fixed_power_is_iterative_fixed_point_with_floor_at_each_step() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
     let definition = &catalog.actors()["player"];
     let stats = BTreeMap::new();
@@ -771,12 +788,15 @@ fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
             target: None,
             evidence: &evidence,
         };
-        let expr = dagger_leaf(
-            "pow-milli",
-            dagger_rpg::DaggerExactLeaf::PowMilli {
-                base,
-                exponent_roll: "pow-milli-exponent".to_string(),
-            },
+        let expr = ComposedExactExpr::fixed_power(
+            literal(base),
+            ComposedExactExpr::Input(ExactInputReference::bounded_roll(
+                role(DaggerSubject::Actor),
+                InputId::parse("pow-milli-exponent").expect("valid input id"),
+                MechanicsScalar::new(0).expect("valid minimum"),
+                MechanicsScalar::new(64).expect("valid maximum"),
+            )),
+            MechanicsScalar::new(1000).expect("valid scale"),
         );
         evaluate_expr(&expr, &context)
     };
@@ -784,9 +804,10 @@ fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
     assert_eq!(pow(1040, 1), Ok(1040));
     // 1040 * 1040 / 1000 floors to 1081.
     assert_eq!(pow(1040, 2), Ok(1081));
+    assert_eq!(pow(1040, 64), Ok(12153));
     assert!(matches!(
         pow(1040, 65),
-        Err(DaggerRejection::InvalidExpression(_))
+        Err(DaggerRejection::RollOutOfBounds { .. })
     ));
     assert!(matches!(
         pow(-1, 2),
@@ -1036,9 +1057,9 @@ fn track_reads_reject_where_live_values_do_not_exist() {
 }
 
 #[test]
-fn negative_bounded_dice_admits_and_evaluates() {
+fn negative_bounded_roll_admits_and_evaluates() {
     let catalog = compile_gameplay_package(PACKAGE).expect("compile authored Dagger package");
-    // The authored melee-attack carries dice("melee-attack.swing-to-hit",
+    // The authored melee-attack carries boundedRoll("melee-attack.swing-to-hit",
     // -10, 10); admission succeeding proves negative bounds compile. A
     // negative in-bounds swing value evaluates (chance 37 - 5 = 32, roll 25
     // still hits).
