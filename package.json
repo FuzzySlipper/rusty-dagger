@@ -7,6 +7,7 @@
   "scripts": {
     "gameplay:typecheck": "tsc -p gameplay/tsconfig.json --noEmit",
     "gameplay:build": "tsc -p gameplay/tsconfig.json && node gameplay/scripts/materialize.mjs",
+    "gameplay:verify": "pnpm gameplay:build && node gameplay/scripts/verify-expressions.mjs",
     "gameplay:check": "pnpm gameplay:build && git diff --exit-code -- data/gameplay/",
     "product:build": "ng build dagger-product",
     "product:serve": "ng serve dagger-product --host 127.0.0.1 --port 4200 --proxy-config apps/dagger-product/proxy.conf.json",
@@ -17,6 +18,8 @@
     "@rusty-engine/application-host": "file:../rusty-engine/render/artifacts/application-host",
     "@rusty-engine/gameplay-rules-authoring": "file:../rusty-engine/rules/packages/gameplay-rules-authoring",
     "@rusty-engine/gameplay-rules-contracts": "file:../rusty-engine/rules/packages/gameplay-rules-contracts",
+    "@rusty-engine/gameplay-standard-authoring": "file:../rusty-engine/rules/packages/gameplay-standard-authoring",
+    "@rusty-engine/gameplay-standard-contracts": "file:../rusty-engine/rules/packages/gameplay-standard-contracts",
     "@angular/common": "~21.2.0",
     "@angular/compiler": "~21.2.0",
     "@angular/core": "~21.2.0",

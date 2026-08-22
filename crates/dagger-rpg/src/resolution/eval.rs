@@ -14,14 +14,18 @@ use rusty_engine::gameplay_mechanics::{
     SourceInstanceIdentity, StatId, StatValue, StatsComponent, TrackId, TrackValue,
     TracksComponent,
 };
+use rusty_engine::gameplay_standard::{
+    ComposedExactComparison, ComposedExactExpr, ExactEvaluator, ExactExpr, ExactExprLimits,
+    ExactInputBundle, ExactInputReference, StandardExactFactReference,
+};
 
 use super::compile::{LEFT_HAND_SLOT, RIGHT_HAND_SLOT, WEIGHT_CAPACITY_METRIC};
 use super::mechanics::{mechanics_catalog_version, track_max_stat_id};
 use super::{
     armor_part_stat_id, struck_body_part_name, DaggerActorDefinition, DaggerActorState,
-    DaggerEvidence, DaggerExpr, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState,
-    DaggerItemDefinition, DaggerOperation, DaggerPredicate, DaggerProgram, DaggerRejection,
-    DaggerSubject,
+    DaggerEvidence, DaggerExactLeaf, DaggerExpr, DaggerGameplayCatalog, DaggerGameplayError,
+    DaggerGameplayState, DaggerItemDefinition, DaggerOperation, DaggerPredicate, DaggerProgram,
+    DaggerRejection, DaggerSubject,
 };
 
 /// Materialized stat values (attributes and skills) for one subject. The
@@ -75,27 +79,139 @@ impl ExprContext<'_> {
 }
 
 pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, DaggerRejection> {
+    let mut inputs = Vec::new();
+    let expression = materialize_exact(expr, context, &mut inputs)?;
+    ExactEvaluator::evaluate(
+        &expression,
+        &ExactInputBundle::new(inputs),
+        ExactExprLimits::default(),
+    )
+    .map(|value| value.get())
+    .map_err(|error| {
+        DaggerRejection::InvalidExpression(format!("standard exact evaluator: {error:?}"))
+    })
+}
+
+/// Lowers Dagger's closed product leaves to values, retaining the provider's
+/// exact tree and typed input references unchanged. This adapter never owns
+/// arithmetic, comparison, quotas, or overflow behavior.
+fn materialize_exact(
+    expr: &DaggerExpr,
+    context: &ExprContext,
+    inputs: &mut Vec<(ExactInputReference, MechanicsScalar)>,
+) -> Result<ExactExpr, DaggerRejection> {
     match expr {
-        DaggerExpr::Const { value } => Ok(*value),
-        DaggerExpr::Stat { subject, id } => {
-            let values = context.subject_values(*subject)?;
-            values.stats.get(id).copied().ok_or_else(|| {
-                DaggerRejection::MissingValue(format!("stat.{id}@{}", values.definition.id))
+        ComposedExactExpr::Literal(value) => Ok(ExactExpr::Literal(*value)),
+        ComposedExactExpr::Input(input) => {
+            let value = materialize_input(input, context)?;
+            inputs.push((input.clone(), scalar_rejection(value)?));
+            Ok(ExactExpr::Input(input.clone()))
+        }
+        ComposedExactExpr::Add(left, right) => Ok(ExactExpr::Add(
+            Box::new(materialize_exact(left, context, inputs)?),
+            Box::new(materialize_exact(right, context, inputs)?),
+        )),
+        ComposedExactExpr::Subtract(left, right) => Ok(ExactExpr::Subtract(
+            Box::new(materialize_exact(left, context, inputs)?),
+            Box::new(materialize_exact(right, context, inputs)?),
+        )),
+        ComposedExactExpr::Multiply(left, right) => Ok(ExactExpr::Multiply(
+            Box::new(materialize_exact(left, context, inputs)?),
+            Box::new(materialize_exact(right, context, inputs)?),
+        )),
+        ComposedExactExpr::FloorDivide(left, right) => Ok(ExactExpr::FloorDivide(
+            Box::new(materialize_exact(left, context, inputs)?),
+            Box::new(materialize_exact(right, context, inputs)?),
+        )),
+        ComposedExactExpr::TruncatingDivide(left, right) => Ok(ExactExpr::TruncatingDivide(
+            Box::new(materialize_exact(left, context, inputs)?),
+            Box::new(materialize_exact(right, context, inputs)?),
+        )),
+        ComposedExactExpr::Min(values) => values
+            .iter()
+            .map(|value| materialize_exact(value, context, inputs))
+            .collect::<Result<Vec<_>, _>>()
+            .map(ExactExpr::Min),
+        ComposedExactExpr::Max(values) => values
+            .iter()
+            .map(|value| materialize_exact(value, context, inputs))
+            .collect::<Result<Vec<_>, _>>()
+            .map(ExactExpr::Max),
+        ComposedExactExpr::Product(leaf) => Ok(ExactExpr::Literal(scalar_rejection(
+            evaluate_product_leaf(leaf.value(), context)?,
+        )?)),
+    }
+}
+
+fn materialize_input(
+    input: &ExactInputReference,
+    context: &ExprContext,
+) -> Result<i64, DaggerRejection> {
+    match input {
+        ExactInputReference::Roll { id, .. } => evidence_value(context.evidence, id.as_str()),
+        ExactInputReference::StandardFact(StandardExactFactReference::Stat { role, stat }) => {
+            let values = context.subject_values(role_subject(role.as_str())?)?;
+            values.stats.get(stat.as_str()).copied().ok_or_else(|| {
+                DaggerRejection::MissingValue(format!(
+                    "stat.{}@{}",
+                    stat.as_str(),
+                    values.definition.id
+                ))
             })
         }
-        DaggerExpr::Skill { subject, id } => {
-            let values = context.subject_values(*subject)?;
-            values.stats.get(id).copied().ok_or_else(|| {
-                DaggerRejection::MissingValue(format!("skill.{id}@{}", values.definition.id))
+        ExactInputReference::StandardFact(StandardExactFactReference::TrackCurrent {
+            role,
+            track,
+        }) => {
+            let values = context.subject_values(role_subject(role.as_str())?)?;
+            values
+                .tracks
+                .and_then(|tracks| tracks.get(track.as_str()))
+                .copied()
+                .ok_or_else(|| {
+                    DaggerRejection::MissingValue(format!(
+                        "track.{}@{}",
+                        track.as_str(),
+                        values.definition.id
+                    ))
+                })
+        }
+        ExactInputReference::StandardFact(StandardExactFactReference::TrackMaximum {
+            role,
+            track,
+        }) => {
+            let values = context.subject_values(role_subject(role.as_str())?)?;
+            let stat_id = track_max_stat_id(track.as_str());
+            values.stats.get(&stat_id).copied().ok_or_else(|| {
+                DaggerRejection::MissingValue(format!("stat.{stat_id}@{}", values.definition.id))
             })
         }
-        DaggerExpr::EquippedWeaponSkill { subject } => {
+        _ => Err(DaggerRejection::InvalidExpression(
+            "unsupported non-Dagger exact input".to_string(),
+        )),
+    }
+}
+
+fn role_subject(role: &str) -> Result<DaggerSubject, DaggerRejection> {
+    match role {
+        "actor" => Ok(DaggerSubject::Actor),
+        "target" => Ok(DaggerSubject::Target),
+        _ => Err(DaggerRejection::InvalidExpression(format!(
+            "unsupported Dagger role {role}"
+        ))),
+    }
+}
+
+fn evaluate_product_leaf(
+    leaf: &DaggerExactLeaf,
+    context: &ExprContext,
+) -> Result<i64, DaggerRejection> {
+    match leaf {
+        DaggerExactLeaf::EquippedWeaponSkill { subject } => {
             let values = context.subject_values(*subject)?;
             let equipment = values.equipment.ok_or_else(|| {
                 DaggerRejection::MissingValue(format!("equipment@{}", values.definition.id))
             })?;
-            // Unarmed combat reads the hand-to-hand skill (donor
-            // CalculateAttackDamage: `skillID = HandToHand` when no weapon).
             let skill_id = equipment
                 .weapon
                 .and_then(|item| item.weapon.as_ref())
@@ -104,158 +220,72 @@ pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, Da
                 DaggerRejection::MissingValue(format!("skill.{skill_id}@{}", values.definition.id))
             })
         }
-        DaggerExpr::Evidence { id } => evidence_value(context.evidence, id),
-        DaggerExpr::Dice { id, min, max } => {
-            let value = evidence_value(context.evidence, id)?;
-            if value < *min || value > *max {
-                return Err(DaggerRejection::RollOutOfBounds {
-                    id: id.clone(),
-                    value,
-                    min: *min,
-                    max: *max,
-                });
-            }
-            Ok(value)
-        }
-        DaggerExpr::EquippedWeaponDice { subject, id } => {
+        DaggerExactLeaf::Dice { id, min, max } => bounded_roll(context.evidence, id, *min, *max),
+        DaggerExactLeaf::EquippedWeaponDice { subject, id } => {
             let values = context.subject_values(*subject)?;
             let equipment = values.equipment.ok_or_else(|| {
                 DaggerRejection::MissingValue(format!("equipment@{}", values.definition.id))
             })?;
-            // Bounds come from the live equipment: the equipped weapon's
-            // declared damage range, or the unarmed range the caller
-            // materialized from the derived hand-to-hand rules.
             let (min, max) = equipment
                 .weapon
                 .and_then(|item| item.weapon.as_ref())
                 .map_or(equipment.unarmed_damage, |weapon| {
                     (weapon.damage_min, weapon.damage_max)
                 });
-            let value = evidence_value(context.evidence, id)?;
-            if value < min || value > max {
-                return Err(DaggerRejection::RollOutOfBounds {
-                    id: id.clone(),
-                    value,
-                    min,
-                    max,
-                });
-            }
-            Ok(value)
+            bounded_roll(context.evidence, id, min, max)
         }
-        DaggerExpr::StruckArmor { subject, id } => {
+        DaggerExactLeaf::StruckArmor { subject, id } => {
             let values = context.subject_values(*subject)?;
-            let roll = evidence_value(context.evidence, id)?;
-            let part =
-                struck_body_part_name(roll).ok_or_else(|| DaggerRejection::RollOutOfBounds {
-                    id: id.clone(),
-                    value: roll,
-                    min: 0,
-                    max: 19,
-                })?;
+            let part = struck_body_part_name(bounded_roll(context.evidence, id, 0, 19)?)
+                .expect("bounded body-part roll maps");
             let stat_id = armor_part_stat_id(part);
             values.stats.get(&stat_id).copied().ok_or_else(|| {
                 DaggerRejection::MissingValue(format!("stat.{stat_id}@{}", values.definition.id))
             })
         }
-        DaggerExpr::Track { subject, id } => {
-            let values = context.subject_values(*subject)?;
-            values
-                .tracks
-                .and_then(|tracks| tracks.get(id))
-                .copied()
-                .ok_or_else(|| {
-                    DaggerRejection::MissingValue(format!("track.{id}@{}", values.definition.id))
-                })
-        }
-        DaggerExpr::TrackMax { subject, id } => {
-            let values = context.subject_values(*subject)?;
-            let stat_id = track_max_stat_id(id);
-            values.stats.get(&stat_id).copied().ok_or_else(|| {
-                DaggerRejection::MissingValue(format!("stat.{stat_id}@{}", values.definition.id))
-            })
-        }
-        DaggerExpr::PowMilli { base, exponent } => {
+        DaggerExactLeaf::PowMilli { base, exponent } => {
             let base = evaluate_expr(base, context)?;
             let exponent = evaluate_expr(exponent, context)?;
-            if base < 0 {
-                return Err(DaggerRejection::InvalidExpression(format!(
-                    "powMilli base must be non-negative, got {base}"
-                )));
+            if base < 0 || !(0..=64).contains(&exponent) {
+                return Err(DaggerRejection::InvalidExpression(format!("powMilli requires non-negative base and exponent 0..=64, got {base}^{exponent}")));
             }
-            if !(0..=64).contains(&exponent) {
-                return Err(DaggerRejection::InvalidExpression(format!(
-                    "powMilli exponent must be 0..=64, got {exponent}"
-                )));
-            }
-            // Fixed-point power scaled by 1000: floor division at each step
-            // is the documented integer approximation of the donor's f64 pow.
-            let mut accumulator = 1_000_i64;
+            let mut result = 1_000_i64;
             for _ in 0..exponent {
-                accumulator = accumulator
+                result = result
                     .checked_mul(base)
                     .ok_or_else(|| {
                         DaggerRejection::InvalidExpression("powMilli overflow".to_string())
                     })?
                     .div_euclid(1_000);
             }
-            Ok(accumulator)
+            Ok(result)
         }
-        DaggerExpr::Add { terms } => terms.iter().try_fold(0_i64, |total, term| {
-            let value = evaluate_expr(term, context)?;
-            total
-                .checked_add(value)
-                .ok_or_else(|| DaggerRejection::InvalidExpression("add overflow".to_string()))
-        }),
-        DaggerExpr::Sub { left, right } => {
-            let left = evaluate_expr(left, context)?;
-            let right = evaluate_expr(right, context)?;
-            left.checked_sub(right)
-                .ok_or_else(|| DaggerRejection::InvalidExpression("sub overflow".to_string()))
-        }
-        DaggerExpr::Mul { terms } => terms.iter().try_fold(1_i64, |total, term| {
-            let value = evaluate_expr(term, context)?;
-            total
-                .checked_mul(value)
-                .ok_or_else(|| DaggerRejection::InvalidExpression("mul overflow".to_string()))
-        }),
-        DaggerExpr::DivFloor { left, right } => {
-            let left = evaluate_expr(left, context)?;
-            let right = evaluate_expr(right, context)?;
-            if right == 0 {
-                return Err(DaggerRejection::InvalidExpression(
-                    "division by zero".to_string(),
-                ));
-            }
-            Ok(left.div_euclid(right))
-        }
-        DaggerExpr::DivTrunc { left, right } => {
-            // The donor's C# integer division: truncation toward zero, which
-            // matters for signed differentials ((attacker - target) / 10).
-            let left = evaluate_expr(left, context)?;
-            let right = evaluate_expr(right, context)?;
-            if right == 0 {
-                return Err(DaggerRejection::InvalidExpression(
-                    "division by zero".to_string(),
-                ));
-            }
-            left.checked_div(right)
-                .ok_or_else(|| DaggerRejection::InvalidExpression("div overflow".to_string()))
-        }
-        DaggerExpr::Min { terms } => terms
-            .iter()
-            .map(|term| evaluate_expr(term, context))
-            .try_fold(None::<i64>, |best, value| {
-                value.map(|value| Some(best.map_or(value, |best: i64| best.min(value))))
-            })?
-            .ok_or_else(|| DaggerRejection::InvalidExpression("min of no terms".to_string())),
-        DaggerExpr::Max { terms } => terms
-            .iter()
-            .map(|term| evaluate_expr(term, context))
-            .try_fold(None::<i64>, |best, value| {
-                value.map(|value| Some(best.map_or(value, |best: i64| best.max(value))))
-            })?
-            .ok_or_else(|| DaggerRejection::InvalidExpression("max of no terms".to_string())),
     }
+}
+
+fn bounded_roll(
+    evidence: &[DaggerEvidence],
+    id: &str,
+    min: i64,
+    max: i64,
+) -> Result<i64, DaggerRejection> {
+    let value = evidence_value(evidence, id)?;
+    if (min..=max).contains(&value) {
+        Ok(value)
+    } else {
+        Err(DaggerRejection::RollOutOfBounds {
+            id: id.to_string(),
+            value,
+            min,
+            max,
+        })
+    }
+}
+
+fn scalar_rejection(value: i64) -> Result<MechanicsScalar, DaggerRejection> {
+    MechanicsScalar::new(value).map_err(|error| {
+        DaggerRejection::InvalidExpression(format!("standard scalar rejected {value}: {error:?}"))
+    })
 }
 
 pub(crate) fn evidence_value(
@@ -367,9 +397,7 @@ fn collect_program_dynamic_rolls(
             then_program,
             otherwise_program,
         } => {
-            let DaggerPredicate::Cmp { left, right, .. } = predicate;
-            collect_dynamic_rolls(left, rolls);
-            collect_dynamic_rolls(right, rolls);
+            collect_comparison_dynamic_rolls(predicate, rolls);
             collect_program_dynamic_rolls(then_program, rolls);
             if let Some(otherwise) = otherwise_program {
                 collect_program_dynamic_rolls(otherwise, rolls);
@@ -382,33 +410,51 @@ fn collect_program_dynamic_rolls(
     }
 }
 
-fn collect_dynamic_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, DaggerDynamicRoll)>) {
-    match expr {
-        DaggerExpr::EquippedWeaponDice { id, .. } => {
-            rolls.push((id.clone(), DaggerDynamicRoll::EquippedWeaponDamage));
-        }
-        DaggerExpr::StruckArmor { id, .. } => {
-            rolls.push((id.clone(), DaggerDynamicRoll::StruckBodyPart));
-        }
-        DaggerExpr::Add { terms }
-        | DaggerExpr::Mul { terms }
-        | DaggerExpr::Min { terms }
-        | DaggerExpr::Max { terms } => {
-            for term in terms {
-                collect_dynamic_rolls(term, rolls);
-            }
-        }
-        DaggerExpr::Sub { left, right }
-        | DaggerExpr::DivFloor { left, right }
-        | DaggerExpr::DivTrunc { left, right } => {
+fn collect_comparison_dynamic_rolls(
+    predicate: &DaggerPredicate,
+    rolls: &mut Vec<(String, DaggerDynamicRoll)>,
+) {
+    match predicate {
+        ComposedExactComparison::Equal(left, right)
+        | ComposedExactComparison::LessThan(left, right)
+        | ComposedExactComparison::LessOrEqual(left, right)
+        | ComposedExactComparison::GreaterThan(left, right)
+        | ComposedExactComparison::GreaterOrEqual(left, right) => {
             collect_dynamic_rolls(left, rolls);
             collect_dynamic_rolls(right, rolls);
         }
-        DaggerExpr::PowMilli { base, exponent } => {
-            collect_dynamic_rolls(base, rolls);
-            collect_dynamic_rolls(exponent, rolls);
+    }
+}
+
+fn collect_dynamic_rolls(expr: &DaggerExpr, rolls: &mut Vec<(String, DaggerDynamicRoll)>) {
+    match expr {
+        ComposedExactExpr::Product(leaf) => match leaf.value() {
+            DaggerExactLeaf::EquippedWeaponDice { id, .. } => {
+                rolls.push((id.clone(), DaggerDynamicRoll::EquippedWeaponDamage))
+            }
+            DaggerExactLeaf::StruckArmor { id, .. } => {
+                rolls.push((id.clone(), DaggerDynamicRoll::StruckBodyPart))
+            }
+            DaggerExactLeaf::PowMilli { base, exponent } => {
+                collect_dynamic_rolls(base, rolls);
+                collect_dynamic_rolls(exponent, rolls);
+            }
+            _ => {}
+        },
+        ComposedExactExpr::Add(left, right)
+        | ComposedExactExpr::Subtract(left, right)
+        | ComposedExactExpr::Multiply(left, right)
+        | ComposedExactExpr::FloorDivide(left, right)
+        | ComposedExactExpr::TruncatingDivide(left, right) => {
+            collect_dynamic_rolls(left, rolls);
+            collect_dynamic_rolls(right, rolls);
         }
-        _ => {}
+        ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
+            for value in values {
+                collect_dynamic_rolls(value, rolls);
+            }
+        }
+        ComposedExactExpr::Literal(_) | ComposedExactExpr::Input(_) => {}
     }
 }
 
@@ -425,9 +471,7 @@ fn collect_program_dice(program: &DaggerProgram, rolls: &mut Vec<(String, i64, i
             then_program,
             otherwise_program,
         } => {
-            let DaggerPredicate::Cmp { left, right, .. } = predicate;
-            collect_dice(left, rolls);
-            collect_dice(right, rolls);
+            collect_comparison_dice(predicate, rolls);
             collect_program_dice(then_program, rolls);
             if let Some(otherwise) = otherwise_program {
                 collect_program_dice(otherwise, rolls);
@@ -440,28 +484,43 @@ fn collect_program_dice(program: &DaggerProgram, rolls: &mut Vec<(String, i64, i
     }
 }
 
-fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
-    match expr {
-        DaggerExpr::Dice { id, min, max } => rolls.push((id.clone(), *min, *max)),
-        DaggerExpr::Add { terms }
-        | DaggerExpr::Mul { terms }
-        | DaggerExpr::Min { terms }
-        | DaggerExpr::Max { terms } => {
-            for term in terms {
-                collect_dice(term, rolls);
-            }
-        }
-        DaggerExpr::Sub { left, right }
-        | DaggerExpr::DivFloor { left, right }
-        | DaggerExpr::DivTrunc { left, right } => {
+fn collect_comparison_dice(predicate: &DaggerPredicate, rolls: &mut Vec<(String, i64, i64)>) {
+    match predicate {
+        ComposedExactComparison::Equal(left, right)
+        | ComposedExactComparison::LessThan(left, right)
+        | ComposedExactComparison::LessOrEqual(left, right)
+        | ComposedExactComparison::GreaterThan(left, right)
+        | ComposedExactComparison::GreaterOrEqual(left, right) => {
             collect_dice(left, rolls);
             collect_dice(right, rolls);
         }
-        DaggerExpr::PowMilli { base, exponent } => {
-            collect_dice(base, rolls);
-            collect_dice(exponent, rolls);
+    }
+}
+
+fn collect_dice(expr: &DaggerExpr, rolls: &mut Vec<(String, i64, i64)>) {
+    match expr {
+        ComposedExactExpr::Product(leaf) => match leaf.value() {
+            DaggerExactLeaf::Dice { id, min, max } => rolls.push((id.clone(), *min, *max)),
+            DaggerExactLeaf::PowMilli { base, exponent } => {
+                collect_dice(base, rolls);
+                collect_dice(exponent, rolls);
+            }
+            _ => {}
+        },
+        ComposedExactExpr::Add(left, right)
+        | ComposedExactExpr::Subtract(left, right)
+        | ComposedExactExpr::Multiply(left, right)
+        | ComposedExactExpr::FloorDivide(left, right)
+        | ComposedExactExpr::TruncatingDivide(left, right) => {
+            collect_dice(left, rolls);
+            collect_dice(right, rolls);
         }
-        _ => {}
+        ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
+            for value in values {
+                collect_dice(value, rolls);
+            }
+        }
+        ComposedExactExpr::Literal(_) | ComposedExactExpr::Input(_) => {}
     }
 }
 

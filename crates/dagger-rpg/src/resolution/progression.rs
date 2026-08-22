@@ -36,9 +36,9 @@ use rusty_engine::gameplay_mechanics::{
 use super::eval::{evaluate_expr, set_actor_track, ActorExprValues, ExprContext};
 use super::mechanics::track_max_stat_id;
 use super::{
-    armor_part_stat_id, DaggerActorDefinition, DaggerActorKind, DaggerEvidence, DaggerExpr,
+    armor_part_stat_id, DaggerActorDefinition, DaggerActorKind, DaggerEvidence,
     DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState, DaggerLevelUpOutcome,
-    DaggerProgressionRecord, DaggerSubject,
+    DaggerProgressionRecord,
 };
 
 /// The progression stat ids the spawn authority and this module understand.
@@ -477,17 +477,24 @@ pub fn xp_level_divisor(catalog: &DaggerGameplayCatalog) -> Result<i64, DaggerGa
         reason: "xp-level must be divFloor(stat(\"actor\", \"xp\"), constant(d)) with d > 0"
             .to_string(),
     };
-    let DaggerExpr::DivFloor { left, right } = &rule.expr else {
+    let rusty_engine::gameplay_standard::ComposedExactExpr::FloorDivide(left, right) = &rule.expr
+    else {
         return Err(unsupported());
     };
     match (left.as_ref(), right.as_ref()) {
         (
-            DaggerExpr::Stat {
-                subject: DaggerSubject::Actor,
-                id,
-            },
-            DaggerExpr::Const { value },
-        ) if id == XP_STAT_ID && *value > 0 => Ok(*value),
+            rusty_engine::gameplay_standard::ComposedExactExpr::Input(
+                rusty_engine::gameplay_standard::ExactInputReference::StandardFact(
+                    rusty_engine::gameplay_standard::StandardExactFactReference::Stat {
+                        role,
+                        stat,
+                    },
+                ),
+            ),
+            rusty_engine::gameplay_standard::ComposedExactExpr::Literal(value),
+        ) if role.as_str() == "actor" && stat.as_str() == XP_STAT_ID && value.get() > 0 => {
+            Ok(value.get())
+        }
         _ => Err(unsupported()),
     }
 }

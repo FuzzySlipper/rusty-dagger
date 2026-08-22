@@ -10,6 +10,14 @@ use dagger_rpg::{
 use rusty_engine::gameplay_resolution::{
     AttemptStatus, CommitStatus, CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
 };
+use rusty_engine::{
+    gameplay_mechanics::{MechanicsScalar, StatId, TrackId},
+    gameplay_rules::{RuleSourceId, RuleSubjectId},
+    gameplay_standard::{
+        CapabilityRoleId, ComposedExactExpr, ComposedExactLeafKindId, ComposedExactProductLeaf,
+        ExactInputReference, StandardExactFactReference, StandardMechanicsEffect,
+    },
+};
 
 const PACKAGE: &[u8] = include_bytes!("../../../data/gameplay/dagger-core.package.json");
 
@@ -18,6 +26,54 @@ fn identity(value: u64) -> ResolutionIdentity {
         ResolutionId::new(value).unwrap(),
         CorrelationId::new(700).unwrap(),
     )
+}
+
+fn literal(value: i64) -> DaggerExpr {
+    ComposedExactExpr::Literal(MechanicsScalar::new(value).unwrap())
+}
+
+fn role(subject: DaggerSubject) -> CapabilityRoleId {
+    CapabilityRoleId::parse(match subject {
+        DaggerSubject::Actor => "actor",
+        DaggerSubject::Target => "target",
+    })
+    .unwrap()
+}
+
+fn stat(subject: DaggerSubject, id: &str) -> DaggerExpr {
+    ComposedExactExpr::Input(ExactInputReference::StandardFact(
+        StandardExactFactReference::Stat {
+            role: role(subject),
+            stat: StatId::parse(id).unwrap(),
+        },
+    ))
+}
+
+fn track_current(subject: DaggerSubject, id: &str) -> DaggerExpr {
+    ComposedExactExpr::Input(ExactInputReference::StandardFact(
+        StandardExactFactReference::TrackCurrent {
+            role: role(subject),
+            track: TrackId::parse(id).unwrap(),
+        },
+    ))
+}
+
+fn exact_track_maximum(subject: DaggerSubject, id: &str) -> DaggerExpr {
+    ComposedExactExpr::Input(ExactInputReference::StandardFact(
+        StandardExactFactReference::TrackMaximum {
+            role: role(subject),
+            track: TrackId::parse(id).unwrap(),
+        },
+    ))
+}
+
+fn dagger_leaf(kind: &str, leaf: dagger_rpg::DaggerExactLeaf) -> DaggerExpr {
+    ComposedExactExpr::Product(ComposedExactProductLeaf::new(
+        ComposedExactLeafKindId::parse(kind).unwrap(),
+        RuleSubjectId::parse("dagger").unwrap(),
+        RuleSourceId::parse("dagger").unwrap(),
+        leaf,
+    ))
 }
 
 /// Fixed spawn and combat rolls: rat health rolls 12 of 9..16, the player
@@ -162,15 +218,25 @@ fn player_melee_hit_spends_stamina_and_applies_weapon_damage() {
     assert!(receipt.succeeded());
     assert_eq!(receipt.commit(), &CommitStatus::Applied);
     // Weapon roll 8 + strength modifier floor((50-50)/5) = 8 damage.
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 8,
-    }));
-    assert!(receipt.effects().contains(&DaggerEffect::SpendTrack {
-        actor: "player".to_string(),
-        track: "stamina".to_string(),
-        amount: 5,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 8,
+        }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::SpendTrack {
+            actor: "player".to_string(),
+            track: "stamina".to_string(),
+            amount: 5,
+        }));
+    assert!(matches!(
+        receipt.effects()[0].standard().effect(),
+        StandardMechanicsEffect::SpendTrack(_)
+    ));
+    assert!(matches!(
+        receipt.effects()[1].standard().effect(),
+        StandardMechanicsEffect::SubmitDamage(_)
+    ));
     assert_eq!(state.track_value("rat-2007", "health"), Some(4));
     assert_eq!(state.track_value("player", "stamina"), Some(85));
     assert!(receipt.events().contains(&DaggerEvent::TrackSpent {
@@ -201,7 +267,7 @@ fn player_melee_miss_still_spends_stamina_but_applies_no_damage() {
     assert!(!receipt
         .effects()
         .iter()
-        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+        .any(|effect| matches!(effect.product(), DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("rat-2007", "health"), Some(12));
     assert_eq!(state.track_value("player", "stamina"), Some(85));
 }
@@ -324,15 +390,17 @@ fn power_attack_hits_harder_and_costs_more_stamina() {
 
     assert!(receipt.succeeded());
     // Weapon roll 8 + strength modifier 0 + power bonus 4 = 12 damage.
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 12,
-    }));
-    assert!(receipt.effects().contains(&DaggerEffect::SpendTrack {
-        actor: "player".to_string(),
-        track: "stamina".to_string(),
-        amount: 25,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 12,
+        }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::SpendTrack {
+            actor: "player".to_string(),
+            track: "stamina".to_string(),
+            amount: 25,
+        }));
     assert_eq!(state.track_value("rat-2007", "health"), Some(0));
     assert_eq!(state.track_value("player", "stamina"), Some(65));
 }
@@ -549,12 +617,38 @@ fn admission_rejects_undeclared_vocabulary_and_dangling_references() {
     // Dice with min > max.
     let mut mutated = package.clone();
     mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
-        "kind": "dice", "id": "rat.health", "min": 16, "max": 9
+        "op": "product", "kind": "dice", "subject": "dagger", "source": "dagger",
+        "payload": { "kind": "dice", "value": { "id": "rat.health", "min": 16, "max": 9 } }
     });
     assert!(matches!(
         compile_gameplay_package(&encode(mutated)),
         Err(DaggerGameplayError::InvalidValue { .. })
     ));
+
+    // Rust admission does not trust the TypeScript codec: extra product
+    // fields and malformed evidence ids fail before a product leaf exists.
+    let mut mutated = package.clone();
+    mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+        "op": "product", "kind": "equipped-weapon-dice", "subject": "dagger", "source": "dagger",
+        "payload": { "kind": "equipped-weapon-dice", "value": { "subject": "actor", "id": "bad id", "extra": true } }
+    });
+    assert!(matches!(
+        compile_gameplay_package(&encode(mutated)),
+        Err(DaggerGameplayError::InvalidValue { .. })
+    ));
+
+    // Standard track inputs are not an escape hatch from Dagger's declared
+    // vocabulary, for either current or maximum reads.
+    for kind in ["standardTrackCurrent", "standardTrackMaximum"] {
+        let mut mutated = package.clone();
+        mutated["payload"]["actors"][2]["tracks"][0]["max"] = serde_json::json!({
+            "op": "input", "input": { "kind": kind, "role": "actor", "track": "undeclared-track" }
+        });
+        assert!(matches!(
+            compile_gameplay_package(&encode(mutated)),
+            Err(DaggerGameplayError::InvalidValue { .. })
+        ));
+    }
 
     // The retired armor/weaponDice expression kinds are now unknown fields at
     // payload admission.
@@ -604,9 +698,14 @@ fn pow_milli_is_iterative_fixed_point_with_floor_at_each_step() {
         target: None,
         evidence: &[],
     };
-    let pow = |base: i64, exponent: i64| DaggerExpr::PowMilli {
-        base: Box::new(DaggerExpr::Const { value: base }),
-        exponent: Box::new(DaggerExpr::Const { value: exponent }),
+    let pow = |base: i64, exponent: i64| {
+        dagger_leaf(
+            "pow-milli",
+            dagger_rpg::DaggerExactLeaf::PowMilli {
+                base: Box::new(literal(base)),
+                exponent: Box::new(literal(exponent)),
+            },
+        )
     };
     assert_eq!(evaluate_expr(&pow(1040, 0), &context), Ok(1000));
     assert_eq!(evaluate_expr(&pow(1040, 1), &context), Ok(1040));
@@ -641,7 +740,7 @@ fn adrenaline_rush_requires_the_career_flag() {
     assert!(!receipt
         .effects()
         .iter()
-        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+        .any(|effect| matches!(effect.product(), DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("rat-2007", "health"), Some(12));
 
     // Low health (5 < 85/8 = 10) WITHOUT the career flag: no bonus (the
@@ -661,7 +760,7 @@ fn adrenaline_rush_requires_the_career_flag() {
     assert!(!receipt
         .effects()
         .iter()
-        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+        .any(|effect| matches!(effect.product(), DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("rat-2007", "health"), Some(12));
 
     // Low health WITH the career flag: +5, so the chance is 42 and the same
@@ -683,10 +782,11 @@ fn adrenaline_rush_requires_the_career_flag() {
         evidence,
     );
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 8,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 8,
+        }));
 }
 
 #[test]
@@ -725,10 +825,11 @@ fn target_adrenaline_rush_penalizes_a_flagged_low_health_target() {
         melee_evidence(33),
     );
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 1,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 1,
+        }));
 
     // With the target's career flag the chance drops to 32: the same roll
     // misses.
@@ -751,7 +852,7 @@ fn target_adrenaline_rush_penalizes_a_flagged_low_health_target() {
     assert!(!receipt
         .effects()
         .iter()
-        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+        .any(|effect| matches!(effect.product(), DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("rat-2007", "health"), Some(1));
 }
 
@@ -761,18 +862,14 @@ fn signed_differentials_truncate_toward_zero() {
     let player = &catalog.actors()["player"];
     let rat = &catalog.actors()["rat"];
     // The CalculateStatsToHit term shape: (attacker luck - target luck) / 10.
-    let differential = || DaggerExpr::DivTrunc {
-        left: Box::new(DaggerExpr::Sub {
-            left: Box::new(DaggerExpr::Stat {
-                subject: DaggerSubject::Actor,
-                id: "luck".to_string(),
-            }),
-            right: Box::new(DaggerExpr::Stat {
-                subject: DaggerSubject::Target,
-                id: "luck".to_string(),
-            }),
-        }),
-        right: Box::new(DaggerExpr::Const { value: 10 }),
+    let differential = || {
+        ComposedExactExpr::TruncatingDivide(
+            Box::new(ComposedExactExpr::Subtract(
+                Box::new(stat(DaggerSubject::Actor, "luck")),
+                Box::new(stat(DaggerSubject::Target, "luck")),
+            )),
+            Box::new(literal(10)),
+        )
     };
     let evaluate = |actor_luck: i64, target_luck: i64| {
         let actor_stats = BTreeMap::from([("luck".to_string(), actor_luck)]);
@@ -801,10 +898,7 @@ fn signed_differentials_truncate_toward_zero() {
     assert_eq!(evaluate(50, 61), -1); // -11 truncates to -1 (floor would be -2)
 
     // Division by zero still rejects.
-    let zero = DaggerExpr::DivTrunc {
-        left: Box::new(DaggerExpr::Const { value: 1 }),
-        right: Box::new(DaggerExpr::Const { value: 0 }),
-    };
+    let zero = ComposedExactExpr::TruncatingDivide(Box::new(literal(1)), Box::new(literal(0)));
     let stats = BTreeMap::new();
     let context = ExprContext {
         catalog: &catalog,
@@ -839,20 +933,14 @@ fn track_reads_reject_where_live_values_do_not_exist() {
         target: None,
         evidence: &[],
     };
-    let track = DaggerExpr::Track {
-        subject: DaggerSubject::Actor,
-        id: "health".to_string(),
-    };
+    let track = track_current(DaggerSubject::Actor, "health");
     assert!(matches!(
         evaluate_expr(&track, &context),
         Err(DaggerRejection::MissingValue(_))
     ));
     // TrackMax reads the `{track}-max` stat; definition-base maps (derived
     // rules, spawn) do not carry it, so the read rejects honestly.
-    let track_max = DaggerExpr::TrackMax {
-        subject: DaggerSubject::Actor,
-        id: "health".to_string(),
-    };
+    let track_max = exact_track_maximum(DaggerSubject::Actor, "health");
     assert!(matches!(
         evaluate_expr(&track_max, &context),
         Err(DaggerRejection::MissingValue(_))
@@ -865,7 +953,7 @@ fn track_reads_reject_where_live_values_do_not_exist() {
         serde_json::from_slice(PACKAGE).expect("parse committed package");
     let mut mutated = package.clone();
     mutated["payload"]["actors"][0]["tracks"][0]["max"] = serde_json::json!({
-        "kind": "track", "subject": "actor", "id": "health"
+        "op": "input", "input": { "kind": "standardTrackCurrent", "role": "actor", "track": "health" }
     });
     let catalog =
         compile_gameplay_package(&serde_json::to_vec(&mutated).expect("encode mutated package"))
@@ -897,10 +985,11 @@ fn negative_bounded_dice_admits_and_evaluates() {
         evidence,
     );
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 8,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 8,
+        }));
 
     // Out of the negative bound still rejects.
     let mut state = spawn_state(&catalog);
@@ -1581,7 +1670,7 @@ fn equipped_weapon_drives_damage_bounds_and_hit_skill() {
     assert!(!receipt
         .effects()
         .iter()
-        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+        .any(|effect| matches!(effect.product(), DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("rat-2007", "health"), Some(12));
 
     // Swap the longsword back: long-blade 60 hits for the rolled damage.
@@ -1594,10 +1683,11 @@ fn equipped_weapon_drives_damage_bounds_and_hit_skill() {
     );
     let receipt = resolve_melee(&catalog, &mut state, 3, melee_evidence(25));
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 8,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 8,
+        }));
     assert_eq!(state.track_value("rat-2007", "health"), Some(4));
 }
 
@@ -1625,10 +1715,11 @@ fn unarmed_falls_back_to_hand_to_hand_skill_and_derived_damage() {
         with_weapon_damage(melee_evidence(17), 5),
     );
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 5,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 5,
+        }));
     assert_eq!(state.track_value("rat-2007", "health"), Some(7));
 
     // Above the derived unarmed range rejects out of bounds.
@@ -1725,10 +1816,11 @@ fn equipped_cuirass_lowers_the_chest_armor_stat_and_hit_chance() {
     spawn_skeleton(&mut state);
     let receipt = strike(&mut state, 1);
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "player".to_string(),
-        amount: 7,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "player".to_string(),
+            amount: 7,
+        }));
     assert_eq!(state.track_value("player", "health"), Some(78));
 
     let mut state = spawn_state(&catalog);
@@ -1739,7 +1831,7 @@ fn equipped_cuirass_lowers_the_chest_armor_stat_and_hit_chance() {
     assert!(!receipt
         .effects()
         .iter()
-        .any(|effect| matches!(effect, DaggerEffect::Damage { .. })));
+        .any(|effect| matches!(effect.product(), DaggerEffect::Damage { .. })));
     assert_eq!(state.track_value("player", "health"), Some(85));
 }
 
@@ -1780,9 +1872,14 @@ fn struck_armor_maps_the_donor_body_part_table() {
         ("armor-head".to_string(), 11),
         ("armor-feet".to_string(), 66),
     ]);
-    let struck = || DaggerExpr::StruckArmor {
-        subject: DaggerSubject::Target,
-        id: "test.struck-body-part".to_string(),
+    let struck = || {
+        dagger_leaf(
+            "struck-armor",
+            dagger_rpg::DaggerExactLeaf::StruckArmor {
+                subject: DaggerSubject::Target,
+                id: "test.struck-body-part".to_string(),
+            },
+        )
     };
     let evaluate = |roll: i64| {
         let target = &catalog.actors()["rat"];
@@ -1849,10 +1946,11 @@ fn min_metal_to_hit_gates_weapon_damage() {
         melee_evidence(10),
     );
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "imp-1".to_string(),
-        amount: 0,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "imp-1".to_string(),
+            amount: 0,
+        }));
     assert!(readout.trace.iter().any(|record| matches!(
         record.detail,
         Some(dagger_rpg::DaggerTraceDetail::MaterialIneffective { .. })
@@ -1869,10 +1967,11 @@ fn min_metal_to_hit_gates_weapon_damage() {
         melee_evidence(10),
     );
     assert!(receipt.succeeded());
-    assert!(receipt.effects().contains(&DaggerEffect::Damage {
-        target: "rat-2007".to_string(),
-        amount: 8,
-    }));
+    assert!(receipt.effects().iter().any(|planned| planned.product()
+        == &DaggerEffect::Damage {
+            target: "rat-2007".to_string(),
+            amount: 8,
+        }));
     assert!(!readout.trace.iter().any(|record| matches!(
         record.detail,
         Some(dagger_rpg::DaggerTraceDetail::MaterialIneffective { .. })
