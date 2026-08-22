@@ -15,10 +15,12 @@ use rusty_engine::gameplay_mechanics::{
     UniqueItemMaterializationRequest,
 };
 use rusty_engine::gameplay_standard::{
-    CapabilityRoleBinding, CapabilityRoleBindings, CapabilityRoleId, ComposedExactComparison,
-    ComposedExactExpr, ExactEvaluationError, ExactEvaluator, ExactExpr, ExactExprLimits,
-    ExactInputBundle, ExactInputReference, StandardExactFactReference, StandardMechanicsReceipt,
-    StandardOperation, StandardOperationContext,
+    BoundedSample, BoundedSampleKey, BoundedSamplePlan, BoundedSamplePlanError,
+    BoundedSamplePlanIdentity, BoundedSamplePlanVersion, BoundedSampleReceipt,
+    BoundedSampleRequirement, CapabilityRoleBinding, CapabilityRoleBindings, CapabilityRoleId,
+    ComposedExactComparison, ComposedExactExpr, ExactEvaluationError, ExactEvaluator, ExactExpr,
+    ExactExprLimits, ExactInputBundle, ExactInputReference, StandardExactFactReference,
+    StandardMechanicsReceipt, StandardOperation, StandardOperationContext,
 };
 
 use super::compile::{LEFT_HAND_SLOT, RIGHT_HAND_SLOT, WEIGHT_CAPACITY_METRIC};
@@ -81,8 +83,33 @@ impl ExprContext<'_> {
 }
 
 pub fn evaluate_expr(expr: &DaggerExpr, context: &ExprContext) -> Result<i64, DaggerRejection> {
+    let requirements = expression_bounded_requirements(expr, context)?;
+    let receipt = if requirements.is_empty() {
+        None
+    } else {
+        Some(bounded_sample_receipt(
+            "dagger.expression",
+            &requirements,
+            context.evidence,
+            false,
+        )?)
+    };
+    evaluate_expr_with_receipt(expr, context, receipt.as_ref())
+}
+
+/// Evaluate an expression against an already validated action evidence set.
+///
+/// Standard resolution evaluates several subexpressions from one action
+/// program. The caller validates that complete program's bounded evidence once
+/// and passes the resulting Engine receipt through each subexpression so an
+/// unrelated branch's evidence is not mistaken for an unknown sample.
+pub(crate) fn evaluate_expr_with_receipt(
+    expr: &DaggerExpr,
+    context: &ExprContext,
+    receipt: Option<&BoundedSampleReceipt>,
+) -> Result<i64, DaggerRejection> {
     let mut inputs = Vec::new();
-    let expression = materialize_exact(expr, context, &mut inputs)?;
+    let expression = materialize_exact(expr, context, receipt, &mut inputs)?;
     let inputs = ExactInputBundle::new(inputs).map_err(|error| {
         DaggerRejection::InvalidExpression(format!("standard exact input evidence: {error:?}"))
     })?;
@@ -115,56 +142,57 @@ fn standard_exact_rejection(error: ExactEvaluationError) -> DaggerRejection {
 fn materialize_exact(
     expr: &DaggerExpr,
     context: &ExprContext,
+    receipt: Option<&BoundedSampleReceipt>,
     inputs: &mut Vec<(ExactInputReference, MechanicsScalar)>,
 ) -> Result<ExactExpr, DaggerRejection> {
     match expr {
         ComposedExactExpr::Literal(value) => Ok(ExactExpr::Literal(*value)),
         ComposedExactExpr::Input(input) => {
-            let value = materialize_input(input, context)?;
+            let value = materialize_input(input, context, receipt)?;
             inputs.push((input.clone(), scalar_rejection(value)?));
             Ok(ExactExpr::Input(input.clone()))
         }
         ComposedExactExpr::Add(left, right) => Ok(ExactExpr::Add(
-            Box::new(materialize_exact(left, context, inputs)?),
-            Box::new(materialize_exact(right, context, inputs)?),
+            Box::new(materialize_exact(left, context, receipt, inputs)?),
+            Box::new(materialize_exact(right, context, receipt, inputs)?),
         )),
         ComposedExactExpr::Subtract(left, right) => Ok(ExactExpr::Subtract(
-            Box::new(materialize_exact(left, context, inputs)?),
-            Box::new(materialize_exact(right, context, inputs)?),
+            Box::new(materialize_exact(left, context, receipt, inputs)?),
+            Box::new(materialize_exact(right, context, receipt, inputs)?),
         )),
         ComposedExactExpr::Multiply(left, right) => Ok(ExactExpr::Multiply(
-            Box::new(materialize_exact(left, context, inputs)?),
-            Box::new(materialize_exact(right, context, inputs)?),
+            Box::new(materialize_exact(left, context, receipt, inputs)?),
+            Box::new(materialize_exact(right, context, receipt, inputs)?),
         )),
         ComposedExactExpr::FloorDivide(left, right) => Ok(ExactExpr::FloorDivide(
-            Box::new(materialize_exact(left, context, inputs)?),
-            Box::new(materialize_exact(right, context, inputs)?),
+            Box::new(materialize_exact(left, context, receipt, inputs)?),
+            Box::new(materialize_exact(right, context, receipt, inputs)?),
         )),
         ComposedExactExpr::TruncatingDivide(left, right) => Ok(ExactExpr::TruncatingDivide(
-            Box::new(materialize_exact(left, context, inputs)?),
-            Box::new(materialize_exact(right, context, inputs)?),
+            Box::new(materialize_exact(left, context, receipt, inputs)?),
+            Box::new(materialize_exact(right, context, receipt, inputs)?),
         )),
         ComposedExactExpr::FixedPower {
             base,
             exponent,
             scale,
         } => Ok(ExactExpr::fixed_power(
-            materialize_exact(base, context, inputs)?,
-            materialize_exact(exponent, context, inputs)?,
+            materialize_exact(base, context, receipt, inputs)?,
+            materialize_exact(exponent, context, receipt, inputs)?,
             **scale,
         )),
         ComposedExactExpr::Min(values) => values
             .iter()
-            .map(|value| materialize_exact(value, context, inputs))
+            .map(|value| materialize_exact(value, context, receipt, inputs))
             .collect::<Result<Vec<_>, _>>()
             .map(ExactExpr::Min),
         ComposedExactExpr::Max(values) => values
             .iter()
-            .map(|value| materialize_exact(value, context, inputs))
+            .map(|value| materialize_exact(value, context, receipt, inputs))
             .collect::<Result<Vec<_>, _>>()
             .map(ExactExpr::Max),
         ComposedExactExpr::Product(leaf) => Ok(ExactExpr::Literal(scalar_rejection(
-            evaluate_product_leaf(leaf.value(), context)?,
+            evaluate_product_leaf(leaf.value(), context, receipt)?,
         )?)),
     }
 }
@@ -172,12 +200,20 @@ fn materialize_exact(
 fn materialize_input(
     input: &ExactInputReference,
     context: &ExprContext,
+    receipt: Option<&BoundedSampleReceipt>,
 ) -> Result<i64, DaggerRejection> {
     match input {
         ExactInputReference::BoundedRoll { descriptor } => {
-            evidence_value(context.evidence, descriptor.id().as_str())
+            let receipt = receipt.ok_or_else(|| {
+                DaggerRejection::InvalidExpression(
+                    "bounded evidence receipt missing for expression".to_string(),
+                )
+            })?;
+            bounded_sample_value(receipt, descriptor.id().as_str())
         }
-        ExactInputReference::Roll { id, .. } => evidence_value(context.evidence, id.as_str()),
+        ExactInputReference::Roll { id, .. } => {
+            unbounded_evidence_value(context.evidence, id.as_str())
+        }
         ExactInputReference::StandardFact(StandardExactFactReference::Stat { role, stat }) => {
             let values = context.subject_values(role_subject(role.as_str())?)?;
             values.stats.get(stat.as_str()).copied().ok_or_else(|| {
@@ -234,6 +270,7 @@ fn role_subject(role: &str) -> Result<DaggerSubject, DaggerRejection> {
 fn evaluate_product_leaf(
     leaf: &DaggerExactLeaf,
     context: &ExprContext,
+    receipt: Option<&BoundedSampleReceipt>,
 ) -> Result<i64, DaggerRejection> {
     match leaf {
         DaggerExactLeaf::EquippedWeaponSkill { subject } => {
@@ -254,17 +291,22 @@ fn evaluate_product_leaf(
             let equipment = values.equipment.ok_or_else(|| {
                 DaggerRejection::MissingValue(format!("equipment@{}", values.definition.id))
             })?;
-            let (min, max) = equipment
-                .weapon
-                .and_then(|item| item.weapon.as_ref())
-                .map_or(equipment.unarmed_damage, |weapon| {
-                    (weapon.damage_min, weapon.damage_max)
-                });
-            bounded_roll(context.evidence, id, min, max)
+            let _ = equipment;
+            let receipt = receipt.ok_or_else(|| {
+                DaggerRejection::InvalidExpression(
+                    "bounded evidence receipt missing for product leaf".to_string(),
+                )
+            })?;
+            bounded_sample_value(receipt, id)
         }
         DaggerExactLeaf::StruckArmor { subject, id } => {
             let values = context.subject_values(*subject)?;
-            let part = struck_body_part_name(bounded_roll(context.evidence, id, 0, 19)?)
+            let receipt = receipt.ok_or_else(|| {
+                DaggerRejection::InvalidExpression(
+                    "bounded evidence receipt missing for product leaf".to_string(),
+                )
+            })?;
+            let part = struck_body_part_name(bounded_sample_value(receipt, id)?)
                 .expect("bounded body-part roll maps");
             let stat_id = armor_part_stat_id(part);
             values.stats.get(&stat_id).copied().ok_or_else(|| {
@@ -274,40 +316,213 @@ fn evaluate_product_leaf(
     }
 }
 
-fn bounded_roll(
-    evidence: &[DaggerEvidence],
-    id: &str,
-    min: i64,
-    max: i64,
-) -> Result<i64, DaggerRejection> {
-    let value = evidence_value(evidence, id)?;
-    if (min..=max).contains(&value) {
-        Ok(value)
-    } else {
-        Err(DaggerRejection::RollOutOfBounds {
-            id: id.to_string(),
-            value,
-            min,
-            max,
-        })
-    }
-}
-
 fn scalar_rejection(value: i64) -> Result<MechanicsScalar, DaggerRejection> {
     MechanicsScalar::new(value).map_err(|error| {
         DaggerRejection::InvalidExpression(format!("standard scalar rejected {value}: {error:?}"))
     })
 }
 
-pub(crate) fn evidence_value(
-    evidence: &[DaggerEvidence],
-    id: &str,
-) -> Result<i64, DaggerRejection> {
+/// Read a caller-supplied unbounded fact. This is intentionally separate from
+/// Engine's `BoundedSamplePlan`: `ExactInputReference::Roll` carries no
+/// declared bounds (for example the product's hit d100 and derived facts), so
+/// there is no honest plan requirement to validate here. Every bounded input
+/// and bounded product leaf is admitted and read through the Engine receipt
+/// above.
+fn unbounded_evidence_value(evidence: &[DaggerEvidence], id: &str) -> Result<i64, DaggerRejection> {
     evidence
         .iter()
         .find(|candidate| candidate.id == id)
         .map(|entry| entry.value)
         .ok_or_else(|| DaggerRejection::MissingEvidence(id.to_string()))
+}
+
+/// Build and validate one Engine-owned bounded evidence receipt. `strict`
+/// controls whether extra product evidence is rejected; action and loot
+/// boundaries use strict validation, while the public expression helper keeps
+/// its historical ability to evaluate one expression from a larger evidence
+/// vector.
+pub(crate) fn bounded_sample_receipt(
+    identity: &str,
+    requirements: &[(String, i64, i64)],
+    evidence: &[DaggerEvidence],
+    strict: bool,
+) -> Result<BoundedSampleReceipt, DaggerRejection> {
+    if requirements.is_empty() {
+        return Err(DaggerRejection::InvalidExpression(
+            "bounded evidence plan must contain at least one requirement".to_string(),
+        ));
+    }
+    let identity = BoundedSamplePlanIdentity::parse(identity.to_string()).map_err(|error| {
+        DaggerRejection::InvalidExpression(format!("bounded evidence identity: {error:?}"))
+    })?;
+    let version = BoundedSamplePlanVersion::new(1).map_err(|error| {
+        DaggerRejection::InvalidExpression(format!("bounded evidence version: {error:?}"))
+    })?;
+    let mut normalized_requirements: Vec<BoundedSampleRequirement> = Vec::new();
+    for (id, minimum, maximum) in requirements {
+        let key = BoundedSampleKey::parse(id.to_ascii_lowercase()).map_err(|error| {
+            DaggerRejection::InvalidExpression(format!("bounded evidence key: {error:?}"))
+        })?;
+        // A repeated reference is one sample requirement, even when the
+        // expression reaches it through multiple paths. Preserve the first
+        // declaration's order, but reject a contradictory second range
+        // explicitly rather than letting duplicate plan entries obscure the
+        // product error behind Engine plan admission.
+        if let Some(existing) = normalized_requirements
+            .iter()
+            .find(|existing| existing.key() == &key)
+        {
+            if (existing.minimum(), existing.maximum()) != (*minimum, *maximum) {
+                return Err(DaggerRejection::InvalidExpression(format!(
+                    "conflicting bounded evidence bounds for {}: {}..={} vs {}..={}",
+                    key.as_str(),
+                    existing.minimum(),
+                    existing.maximum(),
+                    minimum,
+                    maximum
+                )));
+            }
+            continue;
+        }
+        let requirement =
+            BoundedSampleRequirement::new(key, *minimum, *maximum).map_err(|error| {
+                DaggerRejection::InvalidExpression(format!(
+                    "bounded evidence requirement: {error:?}"
+                ))
+            })?;
+        normalized_requirements.push(requirement);
+    }
+    let requirements = normalized_requirements;
+    let plan = BoundedSamplePlan::new(identity, version, requirements).map_err(|error| {
+        DaggerRejection::InvalidExpression(format!("bounded evidence plan: {error:?}"))
+    })?;
+    let required_keys = plan
+        .requirements()
+        .iter()
+        .map(|requirement| requirement.key().as_str())
+        .collect::<std::collections::BTreeSet<_>>();
+    let samples = evidence
+        .iter()
+        .filter(|sample| strict || required_keys.contains(sample.id.to_ascii_lowercase().as_str()))
+        .map(|sample| -> Result<BoundedSample, DaggerRejection> {
+            Ok(BoundedSample::new(
+                BoundedSampleKey::parse(sample.id.to_ascii_lowercase()).map_err(|error| {
+                    DaggerRejection::InvalidExpression(format!("bounded evidence key: {error:?}"))
+                })?,
+                sample.value,
+            ))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    plan.validate(samples).map_err(bounded_sample_error)
+}
+
+/// A product boundary with no bounded requirements may omit an Engine receipt,
+/// but it must not silently accept caller-supplied samples. Callers invoke
+/// this after removing any declared unbounded observations from their own
+/// evidence surface.
+pub(crate) fn reject_unexpected_bounded_evidence(
+    evidence: &[DaggerEvidence],
+) -> Result<(), DaggerRejection> {
+    if let Some(sample) = evidence.first() {
+        let key = BoundedSampleKey::parse(sample.id.to_ascii_lowercase()).map_err(|error| {
+            DaggerRejection::InvalidExpression(format!("bounded evidence key: {error:?}"))
+        })?;
+        return Err(bounded_sample_error(
+            BoundedSamplePlanError::UnknownSample { key },
+        ));
+    }
+    Ok(())
+}
+
+fn bounded_sample_error(error: BoundedSamplePlanError) -> DaggerRejection {
+    match error {
+        BoundedSamplePlanError::MissingSample { key } => {
+            DaggerRejection::MissingEvidence(key.as_str().to_string())
+        }
+        BoundedSamplePlanError::SampleOutOfRange {
+            key,
+            value,
+            minimum,
+            maximum,
+        } => DaggerRejection::RollOutOfBounds {
+            id: key.as_str().to_string(),
+            value,
+            min: minimum,
+            max: maximum,
+        },
+        other => {
+            DaggerRejection::InvalidExpression(format!("bounded evidence validation: {other:?}"))
+        }
+    }
+}
+
+pub(crate) fn bounded_sample_value(
+    receipt: &BoundedSampleReceipt,
+    id: &str,
+) -> Result<i64, DaggerRejection> {
+    receipt
+        .accepted_samples()
+        .iter()
+        .find(|sample| sample.key().as_str() == id.to_ascii_lowercase())
+        .map(BoundedSample::value)
+        .ok_or_else(|| DaggerRejection::MissingEvidence(id.to_string()))
+}
+
+fn expression_bounded_requirements(
+    expr: &DaggerExpr,
+    context: &ExprContext,
+) -> Result<Vec<(String, i64, i64)>, DaggerRejection> {
+    let mut requirements = Vec::new();
+    collect_bounded_rolls(expr, &mut requirements);
+    collect_product_bounded_requirements(expr, context, &mut requirements)?;
+    Ok(requirements)
+}
+
+fn collect_product_bounded_requirements(
+    expr: &DaggerExpr,
+    context: &ExprContext,
+    requirements: &mut Vec<(String, i64, i64)>,
+) -> Result<(), DaggerRejection> {
+    match expr {
+        ComposedExactExpr::Product(leaf) => match leaf.value() {
+            DaggerExactLeaf::EquippedWeaponDice { subject, id } => {
+                let values = context.subject_values(*subject)?;
+                let equipment = values.equipment.ok_or_else(|| {
+                    DaggerRejection::MissingValue(format!("equipment@{}", values.definition.id))
+                })?;
+                let bounds = equipment
+                    .weapon
+                    .and_then(|item| item.weapon.as_ref())
+                    .map_or(equipment.unarmed_damage, |weapon| {
+                        (weapon.damage_min, weapon.damage_max)
+                    });
+                requirements.push((id.clone(), bounds.0, bounds.1));
+            }
+            DaggerExactLeaf::StruckArmor { id, .. } => {
+                requirements.push((id.clone(), 0, 19));
+            }
+            DaggerExactLeaf::EquippedWeaponSkill { .. } => {}
+        },
+        ComposedExactExpr::Add(left, right)
+        | ComposedExactExpr::Subtract(left, right)
+        | ComposedExactExpr::Multiply(left, right)
+        | ComposedExactExpr::FloorDivide(left, right)
+        | ComposedExactExpr::TruncatingDivide(left, right) => {
+            collect_product_bounded_requirements(left, context, requirements)?;
+            collect_product_bounded_requirements(right, context, requirements)?;
+        }
+        ComposedExactExpr::FixedPower { base, exponent, .. } => {
+            collect_product_bounded_requirements(base, context, requirements)?;
+            collect_product_bounded_requirements(exponent, context, requirements)?;
+        }
+        ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
+            for value in values {
+                collect_product_bounded_requirements(value, context, requirements)?;
+            }
+        }
+        ComposedExactExpr::Literal(_) | ComposedExactExpr::Input(_) => {}
+    }
+    Ok(())
 }
 
 fn scalar(value: i64, path: &str) -> Result<MechanicsScalar, DaggerGameplayError> {
@@ -358,6 +573,28 @@ pub fn action_roll_evidence(
             })?;
     let mut rolls = Vec::new();
     collect_program_bounded_rolls(&action.program, &mut rolls);
+    Ok(rolls)
+}
+
+/// Evidence an action's program reads through an unbounded
+/// `ExactInputReference::Roll`. These observations have no bounded-plan
+/// declaration, but they are still declared inputs of the action and must be
+/// excluded from the action's strict bounded sample validation. The product
+/// remains responsible for supplying and interpreting their values.
+pub fn action_unbounded_roll_evidence(
+    catalog: &DaggerGameplayCatalog,
+    action_id: &str,
+) -> Result<Vec<String>, DaggerGameplayError> {
+    let action =
+        catalog
+            .actions()
+            .get(action_id)
+            .ok_or_else(|| DaggerGameplayError::InvalidValue {
+                path: format!("actions[{action_id}]"),
+                reason: "unknown action definition".to_string(),
+            })?;
+    let mut rolls = Vec::new();
+    collect_program_unbounded_rolls(&action.program, &mut rolls);
     Ok(rolls)
 }
 
@@ -508,6 +745,73 @@ fn collect_comparison_bounded_rolls(
             collect_bounded_rolls(left, rolls);
             collect_bounded_rolls(right, rolls);
         }
+    }
+}
+
+fn collect_program_unbounded_rolls(program: &DaggerProgram, rolls: &mut Vec<String>) {
+    use rusty_engine::gameplay_resolution::Program;
+    match program {
+        Program::Sequence { steps } => {
+            for step in steps {
+                collect_program_unbounded_rolls(step, rolls);
+            }
+        }
+        Program::When {
+            predicate,
+            then_program,
+            otherwise_program,
+        } => {
+            collect_comparison_unbounded_rolls(predicate, rolls);
+            collect_program_unbounded_rolls(then_program, rolls);
+            if let Some(otherwise) = otherwise_program {
+                collect_program_unbounded_rolls(otherwise, rolls);
+            }
+        }
+        Program::Operation(operation) => match operation {
+            DaggerOperation::SpendTrack { amount, .. } => collect_unbounded_rolls(amount, rolls),
+            DaggerOperation::Damage { amount, .. } => collect_unbounded_rolls(amount, rolls),
+        },
+    }
+}
+
+fn collect_comparison_unbounded_rolls(predicate: &DaggerPredicate, rolls: &mut Vec<String>) {
+    match predicate {
+        ComposedExactComparison::Equal(left, right)
+        | ComposedExactComparison::LessThan(left, right)
+        | ComposedExactComparison::LessOrEqual(left, right)
+        | ComposedExactComparison::GreaterThan(left, right)
+        | ComposedExactComparison::GreaterOrEqual(left, right) => {
+            collect_unbounded_rolls(left, rolls);
+            collect_unbounded_rolls(right, rolls);
+        }
+    }
+}
+
+fn collect_unbounded_rolls(expr: &DaggerExpr, rolls: &mut Vec<String>) {
+    match expr {
+        ComposedExactExpr::Input(ExactInputReference::Roll { id, .. }) => {
+            rolls.push(id.as_str().to_owned());
+        }
+        ComposedExactExpr::Add(left, right)
+        | ComposedExactExpr::Subtract(left, right)
+        | ComposedExactExpr::Multiply(left, right)
+        | ComposedExactExpr::FloorDivide(left, right)
+        | ComposedExactExpr::TruncatingDivide(left, right) => {
+            collect_unbounded_rolls(left, rolls);
+            collect_unbounded_rolls(right, rolls);
+        }
+        ComposedExactExpr::FixedPower { base, exponent, .. } => {
+            collect_unbounded_rolls(base, rolls);
+            collect_unbounded_rolls(exponent, rolls);
+        }
+        ComposedExactExpr::Min(values) | ComposedExactExpr::Max(values) => {
+            for value in values {
+                collect_unbounded_rolls(value, rolls);
+            }
+        }
+        ComposedExactExpr::Literal(_)
+        | ComposedExactExpr::Input(_)
+        | ComposedExactExpr::Product(_) => {}
     }
 }
 
@@ -1418,5 +1722,148 @@ mod tests {
         assert!(!state
             .entities()
             .contains(rusty_engine::core_ids::EntityId::new(1)));
+    }
+
+    #[test]
+    fn bounded_receipt_delegates_complete_validation_and_preserves_plan_order() {
+        let requirements = vec![
+            ("Loot.A.Gold".to_string(), -5, 5),
+            ("loot.pick".to_string(), i64::MIN, i64::MAX),
+        ];
+        let receipt = bounded_sample_receipt(
+            "dagger.test",
+            &requirements,
+            &[
+                DaggerEvidence {
+                    id: "loot.pick".to_string(),
+                    value: i64::MAX,
+                },
+                DaggerEvidence {
+                    id: "Loot.A.Gold".to_string(),
+                    value: -5,
+                },
+            ],
+            true,
+        )
+        .expect("Engine accepts complete bounded evidence");
+
+        assert_eq!(receipt.identity().as_str(), "dagger.test");
+        assert_eq!(receipt.version().get(), 1);
+        assert_eq!(
+            receipt
+                .requirements()
+                .iter()
+                .map(|requirement| requirement.key().as_str())
+                .collect::<Vec<_>>(),
+            vec!["loot.a.gold", "loot.pick"]
+        );
+        assert_eq!(
+            receipt
+                .accepted_samples()
+                .iter()
+                .map(|sample| (sample.key().as_str(), sample.value()))
+                .collect::<Vec<_>>(),
+            vec![("loot.a.gold", -5), ("loot.pick", i64::MAX)]
+        );
+    }
+
+    #[test]
+    fn bounded_receipt_rejects_missing_unknown_duplicate_and_out_of_range_samples() {
+        let requirements = vec![("test.roll".to_string(), -2, 2)];
+        let missing = bounded_sample_receipt("dagger.test", &requirements, &[], true);
+        assert!(matches!(
+            missing,
+            Err(DaggerRejection::MissingEvidence(id)) if id == "test.roll"
+        ));
+
+        let unknown = bounded_sample_receipt(
+            "dagger.test",
+            &requirements,
+            &[DaggerEvidence {
+                id: "other.roll".to_string(),
+                value: 0,
+            }],
+            true,
+        );
+        assert!(matches!(
+            unknown,
+            Err(DaggerRejection::InvalidExpression(_))
+        ));
+
+        let duplicate = bounded_sample_receipt(
+            "dagger.test",
+            &requirements,
+            &[
+                DaggerEvidence {
+                    id: "test.roll".to_string(),
+                    value: 0,
+                },
+                DaggerEvidence {
+                    id: "TEST.ROLL".to_string(),
+                    value: 1,
+                },
+            ],
+            true,
+        );
+        assert!(matches!(
+            duplicate,
+            Err(DaggerRejection::InvalidExpression(_))
+        ));
+
+        let out_of_range = bounded_sample_receipt(
+            "dagger.test",
+            &requirements,
+            &[DaggerEvidence {
+                id: "test.roll".to_string(),
+                value: 3,
+            }],
+            true,
+        );
+        assert!(matches!(
+            out_of_range,
+            Err(DaggerRejection::RollOutOfBounds {
+                id,
+                value: 3,
+                min: -2,
+                max: 2,
+            }) if id == "test.roll"
+        ));
+    }
+
+    #[test]
+    fn bounded_receipt_deduplicates_identical_requirements_and_rejects_conflicting_bounds() {
+        let repeated = bounded_sample_receipt(
+            "dagger.test",
+            &[
+                ("Test.Roll".to_string(), -2, 2),
+                ("test.roll".to_string(), -2, 2),
+            ],
+            &[DaggerEvidence {
+                id: "test.roll".to_string(),
+                value: 1,
+            }],
+            true,
+        )
+        .expect("identical references share one bounded sample");
+        assert_eq!(repeated.requirements().len(), 1);
+        assert_eq!(repeated.accepted_samples().len(), 1);
+
+        let conflicting = bounded_sample_receipt(
+            "dagger.test",
+            &[
+                ("test.roll".to_string(), -2, 2),
+                ("TEST.ROLL".to_string(), -1, 2),
+            ],
+            &[DaggerEvidence {
+                id: "test.roll".to_string(),
+                value: 1,
+            }],
+            true,
+        );
+        assert!(matches!(
+            conflicting,
+            Err(DaggerRejection::InvalidExpression(message))
+                if message.contains("conflicting bounded evidence bounds")
+        ));
     }
 }
