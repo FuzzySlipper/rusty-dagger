@@ -1589,6 +1589,84 @@ mod tests {
                 .map_or(0, |entry| entry.quantity),
             stack.quantity - 1
         );
+        assert_eq!(
+            moved
+                .loot_containers
+                .iter()
+                .find(|entry| entry.id == "treasure-3000")
+                .expect("container")
+                .source_inventory_revision,
+            container.source_inventory_revision + 1,
+            "one successful standard transfer publishes one source inventory mutation"
+        );
+    }
+
+    #[test]
+    fn standard_loot_stack_rejections_preserve_both_inventory_sides() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real project");
+        runtime.jump_to_content(3000).expect("jump beside treasure");
+        let opened = runtime.open_aimed_loot().expect("open treasure");
+        let before_container = opened
+            .loot_containers
+            .iter()
+            .find(|entry| entry.id == "treasure-3000")
+            .expect("container")
+            .clone();
+        let stack = before_container
+            .contents
+            .stacks
+            .first()
+            .expect("generated stack")
+            .clone();
+        let before_player = opened.player_inventory.clone();
+
+        let stale = runtime
+            .transfer_loot_stack(
+                "treasure-3000",
+                before_container.source_inventory_revision + 1,
+                &stack.item,
+                1,
+            )
+            .expect("stale transfer is a product receipt");
+        assert!(!stale.equipment_log.last().expect("stale receipt").accepted);
+        let stale_container = stale
+            .loot_containers
+            .iter()
+            .find(|entry| entry.id == "treasure-3000")
+            .expect("container after stale rejection");
+        assert_eq!(stale_container.contents, before_container.contents);
+        assert_eq!(
+            stale_container.source_inventory_revision,
+            before_container.source_inventory_revision
+        );
+        assert_eq!(stale.player_inventory, before_player);
+
+        let underflow = runtime
+            .transfer_loot_stack(
+                "treasure-3000",
+                before_container.source_inventory_revision,
+                &stack.item,
+                stack.quantity + 1,
+            )
+            .expect("underflow transfer is a product receipt");
+        let receipt = underflow.equipment_log.last().expect("underflow receipt");
+        assert!(!receipt.accepted);
+        assert!(receipt
+            .reason
+            .as_deref()
+            .expect("underflow reason")
+            .contains("InventoryInsufficientQuantity"));
+        let underflow_container = underflow
+            .loot_containers
+            .iter()
+            .find(|entry| entry.id == "treasure-3000")
+            .expect("container after underflow rejection");
+        assert_eq!(underflow_container.contents, before_container.contents);
+        assert_eq!(
+            underflow_container.source_inventory_revision,
+            before_container.source_inventory_revision
+        );
+        assert_eq!(underflow.player_inventory, before_player);
     }
 
     #[test]

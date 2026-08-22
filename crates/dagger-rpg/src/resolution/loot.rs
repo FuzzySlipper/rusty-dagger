@@ -24,11 +24,13 @@
 use rusty_engine::core_ids::EntityId;
 use rusty_engine::entity_state::{EntityAuthoringService, EntityDefinition};
 use rusty_engine::gameplay_mechanics::{
-    InventoryComponent, InventoryMutationRequest, InventoryService, ItemDefinitionId, OperationId,
-    SourceInstanceId, SourceInstanceIdentity,
+    InventoryComponent, ItemDefinitionId, OperationId, SourceInstanceId, SourceInstanceIdentity,
 };
+use rusty_engine::gameplay_standard::StandardOperation;
 
-use super::eval::{bind_unique_item, evidence_value};
+use super::eval::{
+    apply_standard_inventory_operation, bind_unique_item, evidence_value, inventory_role,
+};
 use super::mechanics::mechanics_catalog_version;
 use super::{
     DaggerEvidence, DaggerGameplayCatalog, DaggerGameplayError, DaggerGameplayState,
@@ -387,21 +389,21 @@ fn bind_loot_items(
             }
         })?;
         if definition.fungible {
-            InventoryService::grant(
-                state.entities_mut(),
-                catalog.mechanics(),
-                InventoryMutationRequest {
-                    operation: operation.clone(),
-                    source: source.clone(),
-                    owner,
+            apply_standard_inventory_operation(
+                state,
+                catalog,
+                StandardOperation::GrantStack {
+                    role: inventory_role("loot-owner"),
                     item: item_id,
                     quantity: *quantity,
-                    expected_revision: None,
                 },
+                vec![(inventory_role("loot-owner"), owner)],
+                operation.clone(),
+                source.clone(),
             )
             .map_err(|error| DaggerGameplayError::InvalidValue {
                 path: path.clone(),
-                reason: format!("loot grant rejected: {error:?}"),
+                reason: format!("standard loot grant rejected: {error:?}"),
             })?;
             continue;
         }
