@@ -28,6 +28,7 @@ try {
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'gameplay');
   assert.equal(await page.getByTestId('lab-page').getAttribute('aria-hidden'), 'true');
   await assertApplicationHostBounds(page, 1280, 900);
+  await assertSupportedPresentationSizes(page);
   await assertDeveloperCommandConsole(page);
   const connectedPresentation = await assertConnectedDynamicPresentation(page);
   const semanticLook = await assertSemanticPointerDirections(page);
@@ -791,10 +792,23 @@ async function openLabFromGameplay(page) {
 }
 
 async function assertApplicationHostBounds(page, width, height, exerciseLabScroll = false) {
+  const expected = expectedPresentationFrame(width, height);
+  await page.waitForFunction(
+    ({ expectedWidth, expectedHeight }) => {
+      const frame = document.querySelector('[data-rusty-application-presentation-frame]');
+      if (frame === null) return false;
+      const bounds = frame.getBoundingClientRect();
+      return Math.abs(bounds.width - expectedWidth) <= 1 && Math.abs(bounds.height - expectedHeight) <= 1;
+    },
+    { expectedWidth: expected.width, expectedHeight: expected.height },
+  );
   const readBounds = () => page.evaluate(() => {
     const selectors = [
       '#application',
       '[data-rusty-application-host]',
+    ];
+    const frameSelectors = [
+      '[data-rusty-application-presentation-frame]',
       '[data-rusty-application-ui]',
       'dagger-root',
       '.product-shell',
@@ -813,6 +827,12 @@ async function assertApplicationHostBounds(page, width, height, exerciseLabScrol
         if (element === null) throw new Error(`application-host element missing: ${selector}`);
         const bounds = element.getBoundingClientRect();
         return [selector, { width: bounds.width, height: bounds.height }];
+      })),
+      frameElements: Object.fromEntries(frameSelectors.map((selector) => {
+        const element = document.querySelector(selector);
+        if (element === null) throw new Error(`application presentation frame element missing: ${selector}`);
+        const bounds = element.getBoundingClientRect();
+        return [selector, { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height }];
       })),
       renderer: (() => {
         const element = document.querySelector('[data-rusty-application-renderer]');
@@ -833,18 +853,16 @@ async function assertApplicationHostBounds(page, width, height, exerciseLabScrol
     assert.ok(Math.abs(bounds.width - width) <= 1, `${selector} width escaped application-host bounds`);
     assert.ok(Math.abs(bounds.height - height) <= 1, `${selector} height escaped application-host bounds`);
   }
-  const rendererWidth = Math.min(width, height * 1.6);
-  const rendererHeight = rendererWidth / 1.6;
-  assert.ok(Math.abs(before.renderer.width - rendererWidth) <= 1, 'renderer escaped 8:5 width');
-  assert.ok(Math.abs(before.renderer.height - rendererHeight) <= 1, 'renderer escaped 8:5 height');
-  assert.ok(
-    Math.abs(before.renderer.left - (width - rendererWidth) / 2) <= 1,
-    'renderer is not horizontally centered',
-  );
-  assert.ok(
-    Math.abs(before.renderer.top - (height - rendererHeight) / 2) <= 1,
-    'renderer is not vertically centered',
-  );
+  for (const [selector, bounds] of Object.entries(before.frameElements)) {
+    assert.ok(Math.abs(bounds.width - expected.width) <= 1, `${selector} width escaped shared presentation frame`);
+    assert.ok(Math.abs(bounds.height - expected.height) <= 1, `${selector} height escaped shared presentation frame`);
+    assert.ok(Math.abs(bounds.left - expected.left) <= 1, `${selector} is not horizontally centered in the presentation frame`);
+    assert.ok(Math.abs(bounds.top - expected.top) <= 1, `${selector} is not vertically centered in the presentation frame`);
+  }
+  assert.ok(Math.abs(before.renderer.width - expected.width) <= 1, 'renderer escaped shared presentation frame width');
+  assert.ok(Math.abs(before.renderer.height - expected.height) <= 1, 'renderer escaped shared presentation frame height');
+  assert.ok(Math.abs(before.renderer.left - expected.left) <= 1, 'renderer is not horizontally centered in shared presentation frame');
+  assert.ok(Math.abs(before.renderer.top - expected.top) <= 1, 'renderer is not vertically centered in shared presentation frame');
   if (!exerciseLabScroll) return;
   const scroller = page.getByTestId('lab-scroll');
   const scrollRange = await scroller.evaluate((element) => element.scrollHeight - element.clientHeight);
@@ -854,6 +872,41 @@ async function assertApplicationHostBounds(page, width, height, exerciseLabScrol
   const after = await readBounds();
   assert.deepEqual(after, before, 'Lab scrolling changed application-host or renderer bounds');
   await scroller.evaluate((element) => { element.scrollTop = 0; });
+}
+
+function expectedPresentationFrame(width, height) {
+  const minimum = 4 / 3;
+  const maximum = 16 / 9;
+  const aspect = width / height;
+  const frame = aspect < minimum
+    ? { width, height: width / minimum }
+    : aspect > maximum
+      ? { width: height * maximum, height }
+      : { width, height };
+  return { ...frame, left: (width - frame.width) / 2, top: (height - frame.height) / 2 };
+}
+
+async function assertSupportedPresentationSizes(page) {
+  for (const viewport of [
+    { width: 1024, height: 768, label: 'minimum 4:3' },
+    { width: 1280, height: 800, label: 'interior 16:10' },
+    { width: 1280, height: 720, label: 'maximum 16:9' },
+    { width: 390, height: 844, label: 'narrow out-of-range' },
+    { width: 2560, height: 900, label: 'wide out-of-range' },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.waitForFunction(
+      ({ width, height }) => document.documentElement.clientWidth === width
+        && document.documentElement.clientHeight === height,
+      viewport,
+    );
+    await assertApplicationHostBounds(page, viewport.width, viewport.height);
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForFunction(
+    () => document.documentElement.clientWidth === 1280 && document.documentElement.clientHeight === 900,
+  );
+  await assertApplicationHostBounds(page, 1280, 900);
 }
 
 async function resetAndPhysicallyMove(page, spawnPosition) {

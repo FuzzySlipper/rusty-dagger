@@ -21,6 +21,7 @@ const bootstrap = await loadDaggerProductBootstrap();
 const developerCommands = createDaggerDeveloperCommandClient();
 const application = await mountRustyApplication({
   root,
+  presentationAspectBounds: { minimum: 4 / 3, maximum: 16 / 9 },
   initialInteractionMode: 'gameplay',
   developerCommands: { client: developerCommands, label: 'Dagger developer commands' },
   renderer: { initialContent: bootstrap.content, clearColor: 0x080a0d },
