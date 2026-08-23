@@ -463,6 +463,10 @@ export class AppComponent implements OnInit, OnDestroy {
       : undefined;
   }
 
+  inventoryIcon(itemId: string): string {
+    return `/api/dagger-product/ui/assets/inventory.icon.${itemId}`;
+  }
+
   startGridDrag(event: DragEvent, slot: InventoryGridSlotReadout, readout: ProductReadout): void {
     if (slot.occupant === null) return;
     this.draggedInventory = {
@@ -503,18 +507,43 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  allowGridDrop(event: DragEvent, targetSlot: number): void {
-    if (this.draggedInventory?.kind === 'grid' && this.draggedInventory.sourceSlot !== targetSlot && !this.pending) {
+  allowGridDrop(event: DragEvent): void {
+    if (this.draggedInventory?.kind === 'grid' && !this.pending) {
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     }
   }
 
-  dropOnGridSlot(event: DragEvent, targetSlot: number): void {
+  dropOnGrid(event: DragEvent): void {
     event.preventDefault();
     const dragged = this.draggedInventory;
     this.endInventoryDrag();
-    if (dragged?.kind === 'grid') {
+    if (dragged?.kind !== 'grid') return;
+    const grid = event.currentTarget as HTMLElement;
+    const slots = Array.from(grid.querySelectorAll<HTMLElement>('.inventory-grid-slot'));
+    const directTarget = (event.target as HTMLElement | null)?.closest<HTMLElement>('.inventory-grid-slot');
+    const target = directTarget !== undefined && directTarget !== null && grid.contains(directTarget) ? directTarget : slots.reduce<HTMLElement | undefined>((closest, candidate) => {
+      const rect = candidate.getBoundingClientRect();
+      const distance = (rect.left + rect.width / 2 - event.clientX) ** 2
+        + (rect.top + rect.height / 2 - event.clientY) ** 2;
+      if (closest === undefined) return candidate;
+      const closestRect = closest.getBoundingClientRect();
+      const closestDistance = (closestRect.left + closestRect.width / 2 - event.clientX) ** 2
+        + (closestRect.top + closestRect.height / 2 - event.clientY) ** 2;
+      return distance < closestDistance ? candidate : closest;
+    }, undefined);
+    const targetSlot = Number(target?.dataset['slotIndex']);
+    if (Number.isInteger(targetSlot) && targetSlot !== dragged.sourceSlot) {
+      void this.moveInventoryGrid(dragged.sourceSlot, targetSlot, dragged.gridRevision);
+    }
+  }
+
+  dropOnGridSlot(event: DragEvent, targetSlot: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const dragged = this.draggedInventory;
+    this.endInventoryDrag();
+    if (dragged?.kind === 'grid' && targetSlot !== dragged.sourceSlot) {
       void this.moveInventoryGrid(dragged.sourceSlot, targetSlot, dragged.gridRevision);
     }
   }

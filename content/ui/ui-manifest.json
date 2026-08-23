@@ -151,6 +151,750 @@
       }
     },
     {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-dagger.png",
+      "id": "inventory.icon.iron-dagger",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 447,
+        "dimensions": [
+          56,
+          17
+        ],
+        "sha256": "a489ea123b8a539467f18835b4ab0c268c9c8796de5b1ec82b69bc324668284a"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-dagger",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 5,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-tanto.png",
+      "id": "inventory.icon.iron-tanto",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 202,
+        "dimensions": [
+          27,
+          8
+        ],
+        "sha256": "c64e35f66c4afd9c2a1216a75145e6c69cde1076cb0a6b64177de6c816cee6c9"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-tanto",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 22,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-wakazashi.png",
+      "id": "inventory.icon.iron-wakazashi",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 295,
+        "dimensions": [
+          56,
+          14
+        ],
+        "sha256": "6592747654ce39096b67ee72ffdd48633b821d83dd51efb3d0045aabd56999a8"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-wakazashi",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 26,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-shortsword.png",
+      "id": "inventory.icon.iron-shortsword",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 589,
+        "dimensions": [
+          75,
+          20
+        ],
+        "sha256": "44d7264e221148c7ec0471d00b6d8aa2185f28586553a295790773a6062a5b50"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-shortsword",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 19,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-broadsword.png",
+      "id": "inventory.icon.iron-broadsword",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 923,
+        "dimensions": [
+          98,
+          44
+        ],
+        "sha256": "26811fbe1d8cba0e805392023d62fcb9578ec8fa37c4533cde3704e934881b03"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-broadsword",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 2,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-saber.png",
+      "id": "inventory.icon.iron-saber",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 665,
+        "dimensions": [
+          84,
+          22
+        ],
+        "sha256": "4e3b6bebfc8291d750521b9b992cf133c09042121159541616883b0b6a606716"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-saber",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 17,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-katana.png",
+      "id": "inventory.icon.iron-katana",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 407,
+        "dimensions": [
+          37,
+          30
+        ],
+        "sha256": "a7e09b76296090e9eeb4c74382c3944588d209c84ea00974ceb7fa739a80f1ad"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-katana",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 10,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-longsword.png",
+      "id": "inventory.icon.iron-longsword",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 641,
+        "dimensions": [
+          88,
+          29
+        ],
+        "sha256": "2d2978376e1b908912b279a0773fea9da5527e973802bd8778c5be456b034c4d"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-longsword",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 12,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-mace.png",
+      "id": "inventory.icon.iron-mace",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 617,
+        "dimensions": [
+          82,
+          27
+        ],
+        "sha256": "12bfd5a7c764153eca2f0fbb8bd6a14af4a1d562f8428204f391a9c77438e718"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-mace",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 14,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-battle-axe.png",
+      "id": "inventory.icon.iron-battle-axe",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 586,
+        "dimensions": [
+          47,
+          43
+        ],
+        "sha256": "b29812755188b1717e2dd398298e21571f6be0c15f56dd11a0f2834b922b8a5f"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-battle-axe",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 0,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-claymore.png",
+      "id": "inventory.icon.iron-claymore",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1290,
+        "dimensions": [
+          81,
+          114
+        ],
+        "sha256": "2c49d0c8a521f9326b75764a96650ae7da3f51ebb601bf5ca9984e6c5592f127"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-claymore",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 4,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-dai-katana.png",
+      "id": "inventory.icon.iron-dai-katana",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1172,
+        "dimensions": [
+          80,
+          107
+        ],
+        "sha256": "5aa444be038698774c97c6b138cab4906e7de7cdf8d330659436d7819d9091a9"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-dai-katana",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 7,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-staff.png",
+      "id": "inventory.icon.iron-staff",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1343,
+        "dimensions": [
+          102,
+          141
+        ],
+        "sha256": "8136d4f9f45fbd500376bed22beca4a3725d4e385c67bec6194b3720593b3af4"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-staff",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 21,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-flail.png",
+      "id": "inventory.icon.iron-flail",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1195,
+        "dimensions": [
+          107,
+          91
+        ],
+        "sha256": "7abd89dc028ef85a14acb53dd9b465f11faf13a0df311728daaa0ddbe0b27c06"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-flail",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 8,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-warhammer.png",
+      "id": "inventory.icon.iron-warhammer",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1067,
+        "dimensions": [
+          111,
+          40
+        ],
+        "sha256": "b5ce1619c98637bfdf2ec9f7e442efd74b6f63a40b30084976dc2914e766c60a"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-warhammer",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 25,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-war-axe.png",
+      "id": "inventory.icon.iron-war-axe",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1004,
+        "dimensions": [
+          112,
+          41
+        ],
+        "sha256": "7eff4db7c96dc27917c1d8624c4e601be3051b55ec61e7f538b5db749f3f2cf5"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-war-axe",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 24,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-short-bow.png",
+      "id": "inventory.icon.iron-short-bow",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 491,
+        "dimensions": [
+          86,
+          47
+        ],
+        "sha256": "266c7b47949faa32f6cb46ec456e88990ae9ee0eead0c2ead7a0eb162de46946"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-short-bow",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 16,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-long-bow.png",
+      "id": "inventory.icon.iron-long-bow",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 616,
+        "dimensions": [
+          112,
+          71
+        ],
+        "sha256": "36321eaaef14c1be1db318a313349140ce94df94cd5acb4d6a73b03688e0308a"
+      },
+      "source": {
+        "archive": 234,
+        "byteLength": 51106,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.234",
+        "itemId": "iron-long-bow",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 11,
+        "sha256": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-helm.png",
+      "id": "inventory.icon.iron-helm",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 547,
+        "dimensions": [
+          42,
+          37
+        ],
+        "sha256": "d4d5db6dc3db8a6d38d7311b12f37832e0d80572bdb1d102dd1898a28a280119"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "iron-helm",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 27,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-cuirass.png",
+      "id": "inventory.icon.iron-cuirass",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 919,
+        "dimensions": [
+          36,
+          54
+        ],
+        "sha256": "af44ce6a3e89fbb91661bf3bb64f06c658cfcd055cc620f280b6c2a8c3dc4557"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "iron-cuirass",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 3,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-right-pauldron.png",
+      "id": "inventory.icon.iron-right-pauldron",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 487,
+        "dimensions": [
+          26,
+          53
+        ],
+        "sha256": "4b74efd18fc46c3539d355fa08299ddc771dc029b3feef9b91c45afc6d703bf2"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "iron-right-pauldron",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 22,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-left-pauldron.png",
+      "id": "inventory.icon.iron-left-pauldron",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 747,
+        "dimensions": [
+          30,
+          52
+        ],
+        "sha256": "8e65a7fd70b8cd7a77c8fd2dd0efb444c5f381ba568dea2da2ebdb3640f2ed57"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "iron-left-pauldron",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 17,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-gauntlets.png",
+      "id": "inventory.icon.iron-gauntlets",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 704,
+        "dimensions": [
+          61,
+          27
+        ],
+        "sha256": "ecac085d13f4a0470852c96896a96309046e8748ff86611f67773443265fe98c"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "iron-gauntlets",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 8,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-greaves.png",
+      "id": "inventory.icon.iron-greaves",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 901,
+        "dimensions": [
+          38,
+          47
+        ],
+        "sha256": "74b4816d7645adc3718da4ed2fe81a3dde3c3268922d07a754025f1fbe800e54"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "iron-greaves",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 10,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-iron-boots.png",
+      "id": "inventory.icon.iron-boots",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1060,
+        "dimensions": [
+          60,
+          47
+        ],
+        "sha256": "9553a3347a7e6bc940f63665271e10777bfbfabe5575e9350dc2d46fdd6e8d91"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "iron-boots",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 0,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-buckler.png",
+      "id": "inventory.icon.buckler",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1299,
+        "dimensions": [
+          36,
+          42
+        ],
+        "sha256": "c2141321b8fdf5e2e16b9ee0e731f5eba263f0a07582f8d8b6f51d76feb87a7a"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "buckler",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 33,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-round-shield.png",
+      "id": "inventory.icon.round-shield",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 1784,
+        "dimensions": [
+          49,
+          63
+        ],
+        "sha256": "278f8d1b3024dbe16b0a96f12cb2feaf92d4ed231e771748a8197880356fa694"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "round-shield",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 34,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-kite-shield.png",
+      "id": "inventory.icon.kite-shield",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 2040,
+        "dimensions": [
+          48,
+          67
+        ],
+        "sha256": "8d0aeb4cb116f97675d47dd6a47ca69f0dfa21b7059889b64253b2f404d68b17"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "kite-shield",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 35,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-tower-shield.png",
+      "id": "inventory.icon.tower-shield",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 2481,
+        "dimensions": [
+          58,
+          112
+        ],
+        "sha256": "5becdc3df72906b278af4a880be968774e611d97e3287ef9c8b223db8d27dfcc"
+      },
+      "source": {
+        "archive": 245,
+        "byteLength": 79857,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.245",
+        "itemId": "tower-shield",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 36,
+        "sha256": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-gold-piece.png",
+      "id": "inventory.icon.gold-piece",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 395,
+        "dimensions": [
+          39,
+          14
+        ],
+        "sha256": "5ffeae27f6efd41ea99ff06ef04e4d28d0e2f0ec53f7dbda8d0561d76443cbdc"
+      },
+      "source": {
+        "archive": 216,
+        "byteLength": 58906,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.216",
+        "itemId": "gold-piece",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 1,
+        "sha256": "f79ff477e8f7332ad67962debf2dc3d8330554c6f159d89f2a439a295cbe420b"
+      }
+    },
+    {
+      "alphaPolicy": "palette-index-0-transparent",
+      "file": "inventory-icon-arrow.png",
+      "id": "inventory.icon.arrow",
+      "mimeType": "image/png",
+      "png": {
+        "byteLength": 372,
+        "dimensions": [
+          49,
+          10
+        ],
+        "sha256": "afa30b189f0e1d57d2175228cb5c422c67caf5270e9c7cdd2304363acca08e5f"
+      },
+      "source": {
+        "archive": 207,
+        "byteLength": 19786,
+        "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+        "file": "TEXTURE.207",
+        "itemId": "arrow",
+        "kind": "classic-daggerfall-item-icon",
+        "record": 16,
+        "sha256": "c70500ca419af434cde9a5ed88993c3b01fe6d7c371bd83095a9d9456c29c29c"
+      }
+    },
+    {
       "file": "inventory-skin-panel-slate-v1.png",
       "id": "inventory.skin.panel-slate.v1",
       "mimeType": "image/png",
