@@ -35,46 +35,47 @@ button, input { font: inherit; }
 .product-notices p { background: rgba(8, 12, 13, .88); border: 1px solid rgba(240, 216, 121, .8); box-shadow: 0 5px 18px rgba(0, 0, 0, .45); color: #fff1b8; font: 700 clamp(.82rem, 2vw, 1rem) Georgia, serif; margin: 0; overflow-wrap: anywhere; padding: 7px 15px; text-shadow: 0 1px 2px #000; }
 .product-notices p[data-notice-kind="capacity-rejected"] { border-color: #d57b68; color: #ffd0c9; }
 .product-notices p[data-notice-kind="level-up"] { border-color: #92cc8f; color: #d7f0bf; }
-.inventory-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
-.inventory-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 1080px; overflow: auto; padding: 18px; position: relative; width: min(100%, 1080px); }
-.inventory-dialog > :not(.inventory-dialog-chrome) { position: relative; z-index: 1; }
-.inventory-dialog-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: contain; opacity: .16; pointer-events: none; position: absolute; width: 100%; }
-.inventory-dialog > .inventory-dialog-header { align-items: start; background: #111617; display: flex; gap: 18px; justify-content: space-between; margin: 0; padding: 7px 0 10px; position: sticky; top: 0; z-index: 2; }
+.inventory-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: hidden; padding: 18px; position: absolute; z-index: 3; }
+.inventory-dialog { background: #111617 url('/api/dagger-product/ui/assets/inventory.skin.panel-slate.v1') center / 430px repeat; border: 10px solid #302a20; box-shadow: 0 28px 90px rgba(0, 0, 0, .7), inset 0 0 0 1px #9d8959; display: grid; gap: 10px; grid-template-rows: auto auto auto minmax(0, 1fr) 46px; height: min(700px, calc(100% - 36px)); max-width: 1080px; overflow: hidden; padding: 14px; position: relative; width: min(100%, 1080px); }
+.inventory-dialog > .inventory-dialog-header { align-items: start; display: flex; gap: 18px; justify-content: space-between; margin: 0; min-height: 50px; padding: 2px 0 6px; }
 .inventory-dialog-header h2 { color: #f0d879; font: 500 1.65rem Georgia, serif; }
 .inventory-dialog-header button { padding: 7px 11px; }
-.inventory-dialog-summary { color: #b7c3bd; font-size: .82rem; margin: 8px 0 12px; }
-.inventory-dialog-error { background: #321b18; border: 1px solid #a35a50; color: #ffd0c9; margin: 8px 0 12px; padding: 8px 10px; }
-.inventory-capacity { display: flex; flex-wrap: wrap; gap: 7px; }
-.inventory-capacity div { background: rgba(13, 19, 20, .78); border: 1px solid #334142; display: grid; gap: 2px; min-width: 132px; padding: 7px 9px; }
+.inventory-dialog-summary { color: #b7c3bd; font-size: .82rem; margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inventory-dialog-error { background: #321b18; border: 1px solid #a35a50; color: #ffd0c9; margin: 0; overflow: hidden; padding: 8px 10px; text-overflow: ellipsis; white-space: nowrap; }
+.inventory-capacity { align-items: stretch; display: flex; gap: 7px; min-height: 47px; overflow: hidden; }
+.inventory-capacity div { background: rgba(13, 19, 20, .78); border: 1px solid #334142; display: grid; flex: 0 1 170px; gap: 2px; min-width: 0; padding: 7px 9px; }
 .inventory-capacity span, .inventory-receipt span { color: #c7a96a; font-size: .64rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .inventory-capacity strong { font: 600 .78rem ui-monospace, monospace; }
-.inventory-dialog-layout { display: grid; gap: 12px; grid-template-columns: minmax(240px, 280px) minmax(0, 1fr); margin-top: 14px; }
+.inventory-dialog-layout { display: grid; gap: 12px; grid-template-columns: minmax(250px, 30%) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 178px; min-height: 0; }
 .inventory-dialog h3 { color: #eddfb7; font-size: .86rem; margin-bottom: 7px; }
-.inventory-equipment, .inventory-carried, .inventory-detail { background: rgba(9, 13, 14, .78); border: 1px solid #334142; min-width: 0; padding: 10px; }
+.inventory-equipment, .inventory-carried, .inventory-detail { background: rgba(9, 13, 14, .82) url('/api/dagger-product/ui/assets/inventory.skin.panel-slate.v1') center / 260px repeat; background-blend-mode: multiply; border: 1px solid #88784d; box-shadow: inset 0 0 0 1px rgba(7, 10, 10, .72); min-height: 0; min-width: 0; overflow: hidden; padding: 10px; }
+.inventory-equipment { overflow: auto; }
 .inventory-equipment { grid-row: 1 / span 2; }
 .inventory-carried, .inventory-detail { grid-column: 2; }
 .inventory-slot-help { color: #9baaa4; font-size: .72rem; margin: 0 0 10px; }
-.equipment-slots { display: grid; gap: 7px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.equipment-slot { background: rgba(25, 31, 31, .82); border: 1px solid #334142; display: grid; gap: 5px; min-height: 94px; padding: 7px; }
+.equipment-slots { display: grid; gap: 7px; grid-auto-rows: 96px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.equipment-slot { background: rgba(20, 26, 26, .88) url('/api/dagger-product/ui/assets/inventory.skin.panel-slate.v1') center / 150px repeat; background-blend-mode: multiply; border: 1px solid #665b3e; display: grid; gap: 5px; grid-template-rows: 13px 1fr 25px; height: 96px; overflow: hidden; padding: 7px; }
 .equipment-slot.drop-ready { border-color: #d6b766; box-shadow: inset 0 0 0 1px #d6b766; }
 .equipment-slot > p { color: #9baaa4; font: .62rem ui-monospace, monospace; margin: 0; text-transform: uppercase; }
-.equipment-slot > button:first-of-type { background: #202827; border-color: #52615a; display: grid; gap: 3px; min-height: 39px; text-align: left; }
+.equipment-slot > button:first-of-type { background: #202827; border-color: #52615a; display: grid; gap: 3px; min-height: 0; overflow: hidden; text-align: left; }
+.equipment-slot > button:first-of-type strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .equipment-slot > button:first-of-type small { color: #9baaa4; font: .65rem ui-monospace, monospace; }
-.equipment-slot-empty { color: #697872; font: italic .76rem Georgia, serif; min-height: 39px; padding: 8px 0; }
-.inventory-list { display: grid; gap: 7px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); max-height: 330px; overflow: auto; padding-right: 3px; }
-.inventory-list button { align-content: space-between; align-items: start; display: flex; flex-direction: column; gap: 8px; justify-content: space-between; min-height: 74px; text-align: left; width: 100%; }
+.equipment-slot-empty { color: #697872; font: italic .76rem Georgia, serif; overflow: hidden; padding: 8px 0; }
+.inventory-list { display: grid; gap: 7px; grid-auto-rows: 74px; grid-template-columns: repeat(3, minmax(0, 1fr)); height: calc(100% - 39px); overflow: auto; padding-right: 3px; }
+.inventory-list button { align-content: space-between; align-items: start; background: rgba(18, 24, 24, .9) url('/api/dagger-product/ui/assets/inventory.skin.panel-slate.v1') center / 150px repeat; background-blend-mode: multiply; display: flex; flex-direction: column; gap: 5px; height: 74px; justify-content: space-between; min-height: 0; overflow: hidden; text-align: left; width: 100%; }
 .inventory-list button small { color: #9baaa4; font: .65rem ui-monospace, monospace; }
-.inventory-list button span { overflow-wrap: anywhere; }
+.inventory-list button span { display: -webkit-box; overflow: hidden; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .inventory-list button.selected, .inventory-equipment button.selected { background: #2d2c22; border-color: #c7a96a; color: #f6e8c3; }
 .inventory-action { font-size: .69rem; padding: 5px 8px; }
-.inventory-detail dl { display: grid; gap: 7px; margin: 12px 0; }
+.inventory-detail dl { display: grid; gap: 7px; margin: 12px 0; max-height: 102px; overflow: auto; }
 .inventory-detail dl div { border-bottom: 1px solid #273536; display: grid; gap: 2px; padding-bottom: 6px; }
 .inventory-detail dt { color: #92a39d; font-size: .66rem; text-transform: uppercase; }
 .inventory-detail dd { margin: 0; overflow-wrap: anywhere; }
 .inventory-primary { margin-right: 6px; }
 .inventory-empty { color: #94a29e; font-size: .78rem; margin: 4px 0; }
-.inventory-receipt { background: rgba(35, 29, 18, .86); border: 1px solid #827146; display: grid; gap: 3px; margin-top: 12px; padding: 9px 11px; }
-.inventory-receipt strong { font-size: .8rem; overflow-wrap: anywhere; }
+.inventory-feedback { min-height: 46px; overflow: hidden; }
+.inventory-receipt { background: rgba(35, 29, 18, .86); border: 1px solid #827146; display: grid; gap: 3px; height: 46px; padding: 6px 9px; }
+.inventory-receipt strong { font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .loot-dialog-layer { align-items: center; background: rgba(3, 6, 7, .72); display: grid; inset: 0; justify-items: center; overflow: auto; padding: 18px; position: absolute; z-index: 3; }
 .loot-dialog { background: #111617; border: 1px solid #716449; box-shadow: 0 28px 90px rgba(0, 0, 0, .7); max-height: 100%; max-width: 680px; overflow: auto; padding: 18px; position: relative; width: min(100%, 680px); }
 .loot-dialog > :not(.loot-dialog-chrome) { position: relative; z-index: 1; }
@@ -322,11 +323,10 @@ button.danger { border-color: #6d3d34; color: #efb9ac; }
   .lab-content { padding-top: 24px; width: min(100% - 20px, 1220px); }
   .game-hud { align-items: flex-end; flex-direction: column; }
   .game-hud div { margin-right: 0; }
-  .inventory-dialog-layer { align-items: start; padding: 8px; }
-  .inventory-dialog { padding: 12px; }
-  .inventory-dialog-layout { grid-template-columns: 1fr; }
-  .inventory-equipment, .inventory-carried, .inventory-detail { grid-column: auto; grid-row: auto; }
-  .inventory-list { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .inventory-dialog-layer { padding: 8px; }
+  .inventory-dialog { border-width: 6px; height: min(700px, calc(100% - 16px)); padding: 10px; }
+  .inventory-dialog-layout { gap: 8px; grid-template-columns: minmax(190px, 30%) minmax(0, 1fr); }
+  .inventory-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .loot-dialog-layer { align-items: start; padding: 8px; }
   .loot-dialog { padding: 12px; }
   .character-sheet-dialog-layer { align-items: start; padding: 8px; }

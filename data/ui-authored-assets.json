@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "assets": [
+    {
+      "id": "inventory.skin.panel-slate.v1",
+      "file": "inventory-skin-panel-slate-v1.png",
+      "sourceFile": "inventory-panel-slate-v1.png",
+      "generator": "gpt-image-1.5",
+      "prompt": "Create one original, seamless, tileable 2D fantasy inventory panel texture for a dark retro computer RPG. Square 1024x1024. Materials: charcoal slate stone, muted warm brass flecks, faint mossy green oxidation, subtle hand-painted pixel-art-era texture but not copied from any game. Low contrast so readable DOM text can sit above it. No frames, no UI controls, no text, no icons, no logos, no characters, no known game assets. Seamless edges in both directions."
+    }
+  ]
+}
