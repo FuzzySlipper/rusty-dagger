@@ -83,7 +83,7 @@ fn publish_authored_assets_from_manifest(
         return Ok(());
     }
     let manifest: Value = serde_json::from_slice(
-        &fs::read(&manifest_path)
+        &fs::read(manifest_path)
             .map_err(|error| format!("read {}: {error}", manifest_path.display()))?,
     )
     .map_err(|error| format!("decode {}: {error}", manifest_path.display()))?;
