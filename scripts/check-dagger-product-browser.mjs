@@ -32,6 +32,7 @@ try {
   await assertDeveloperCommandConsole(page);
   const connectedPresentation = await assertConnectedDynamicPresentation(page);
   const semanticLook = await assertSemanticPointerDirections(page);
+  const keyboardLook = await assertKeyboardLookDirections(page);
   const connectedDiagnostics = await assertConnectedDiagnosticKeys(page);
   assert.ok(await renderedPixelVariety(page), 'real Rust resource-backed scene did not render visible pixels');
   const initialCanvas = await page.locator('canvas').elementHandle();
@@ -110,12 +111,18 @@ try {
   await openInterface(page);
   assert.equal((await applicationReadout(page)).contentRevision, contentRevisionBeforePlay);
   const interfacePosition = await page.getByTestId('player-position').innerText();
-  await pressPhysical(page, 'KeyW');
+  const interfaceYaw = await page.locator('body').getAttribute('data-dagger-camera-yaw');
+  await pressPhysical(page, 'KeyL');
   await page.waitForTimeout(300);
   assert.equal(
     await page.getByTestId('player-position').innerText(),
     interfacePosition,
-    'interface mode leaked physical input into Rust gameplay authority',
+    'interface mode leaked physical keyboard look into Rust gameplay authority',
+  );
+  assert.equal(
+    await page.locator('body').getAttribute('data-dagger-camera-yaw'),
+    interfaceYaw,
+    'interface mode leaked physical keyboard look into the canonical camera',
   );
 
   // Browse a real committed enemy, inspect decoded reference and live patrol
@@ -264,7 +271,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated inventoryComposition=${JSON.stringify(inventoryComposition)} semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-class-career/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated inventoryComposition=${JSON.stringify(inventoryComposition)} semanticLook=${JSON.stringify(semanticLook)} keyboardLook=${JSON.stringify(keyboardLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-class-career/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
   );
 } finally {
   await browser.close();
@@ -720,6 +727,56 @@ async function assertSemanticPointerDirections(page) {
     up: up.pitchDegrees - left.pitchDegrees,
     down: down.pitchDegrees - up.pitchDegrees,
   };
+}
+
+async function assertKeyboardLookDirections(page) {
+  const camera = async () => ({
+    yawDegrees: Number(await page.locator('body').getAttribute('data-dagger-camera-yaw')),
+    pitchDegrees: Number(await page.locator('body').getAttribute('data-dagger-camera-pitch')),
+  });
+  const hold = async (code) => {
+    const key = code.slice(3).toLowerCase();
+    const beforeSequence = Number(await page.locator('body').getAttribute('data-dagger-input-sequence'));
+    const before = await camera();
+    await page.keyboard.down(key);
+    await page.waitForFunction(
+      ({ sequence, yawDegrees, pitchDegrees }) =>
+        Number(document.body.dataset.daggerInputSequence ?? '0') > sequence &&
+        (Number(document.body.dataset.daggerCameraYaw) !== yawDegrees ||
+          Number(document.body.dataset.daggerCameraPitch) !== pitchDegrees),
+      { sequence: beforeSequence, ...before },
+      { timeout: 5_000 },
+    );
+    const heldSequence = Number(
+      await page.locator('body').getAttribute('data-dagger-sampled-input-sequence'),
+    );
+    await page.keyboard.up(key);
+    await page.waitForFunction(
+      (sequence) => Number(document.body.dataset.daggerSampledInputSequence ?? '0') > sequence,
+      heldSequence,
+      { timeout: 5_000 },
+    );
+    const releaseSequence = Number(await page.locator('body').getAttribute('data-dagger-sampled-input-sequence'));
+    await page.waitForFunction(
+      (sequence) => Number(document.body.dataset.daggerInputSequence ?? '0') >= sequence,
+      releaseSequence,
+      { timeout: 5_000 },
+    );
+    const after = await camera();
+    await page.waitForTimeout(120);
+    assert.deepEqual(await camera(), after, `${code} continued turning after key release`);
+    return { before, after };
+  };
+  const angleDelta = (from, to) => ((to - from + 540) % 360) - 180;
+  const right = await hold('KeyL');
+  const left = await hold('KeyJ');
+  const up = await hold('KeyU');
+  const down = await hold('KeyO');
+  assert.ok(angleDelta(right.before.yawDegrees, right.after.yawDegrees) > 0, 'L did not turn right');
+  assert.ok(angleDelta(left.before.yawDegrees, left.after.yawDegrees) < 0, 'J did not turn left');
+  assert.ok(up.after.pitchDegrees > up.before.pitchDegrees, 'U did not look up');
+  assert.ok(down.after.pitchDegrees < down.before.pitchDegrees, 'O did not look down');
+  return { yaw: 'J/L', pitch: 'U/O', release: 'stopped' };
 }
 
 async function assertMouseLookDoesNotMultiplyMovementTicks(page) {
