@@ -3,7 +3,7 @@
 
 use std::{fs, path::Path};
 
-use arena2::{fnt::Font, img::Img, palette::Palette};
+use arena2::{fnt::Font, img::Img, palette::Palette, texture::TextureFile};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
@@ -18,6 +18,44 @@ const UI_IMAGES: &[(&str, &str, bool)] = &[
 ];
 const FONT_ID: &str = "font.classic.0003";
 const FONT_FILE: &str = "FONT0003.FNT";
+/// Inventory art chosen from DFU's committed ItemTemplates.txt. Each tuple is
+/// (Dagger item id, TextureFile archive, record). The current catalog is
+/// deliberately iron-only, so these are the original un-dyed item sprites.
+/// Gold and arrows use the donor's world-art fallback, matching
+/// ItemHelper.GetItemImage when inventory art is 0/0.
+const INVENTORY_ICON_SOURCES: &[(&str, u16, u16)] = &[
+    ("iron-dagger", 234, 5),
+    ("iron-tanto", 234, 22),
+    ("iron-wakazashi", 234, 26),
+    ("iron-shortsword", 234, 19),
+    ("iron-broadsword", 234, 2),
+    ("iron-saber", 234, 17),
+    ("iron-katana", 234, 10), // DFU uses record +1 for inventory katanas.
+    ("iron-longsword", 234, 12),
+    ("iron-mace", 234, 14),
+    ("iron-battle-axe", 234, 0),
+    ("iron-claymore", 234, 4),
+    ("iron-dai-katana", 234, 7),
+    ("iron-staff", 234, 21),
+    ("iron-flail", 234, 8),
+    ("iron-warhammer", 234, 25),
+    ("iron-war-axe", 234, 24),
+    ("iron-short-bow", 234, 16),
+    ("iron-long-bow", 234, 11),
+    ("iron-helm", 245, 27),
+    ("iron-cuirass", 245, 3),
+    ("iron-right-pauldron", 245, 22),
+    ("iron-left-pauldron", 245, 17),
+    ("iron-gauntlets", 245, 8),
+    ("iron-greaves", 245, 10),
+    ("iron-boots", 245, 0),
+    ("buckler", 245, 33),
+    ("round-shield", 245, 34),
+    ("kite-shield", 245, 35),
+    ("tower-shield", 245, 36),
+    ("gold-piece", 216, 1),
+    ("arrow", 207, 16),
+];
 const AUTHORED_ASSET_MANIFEST: &str = "data/ui-authored-assets.json";
 const AUTHORED_ASSET_ROOT: &str = "data/ui-original";
 
@@ -38,6 +76,7 @@ pub fn publish(ui_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
             *headerless,
         )?);
     }
+    publish_inventory_icons(ui_dir, arena2_dir, &palette, &mut assets)?;
     publish_authored_assets(ui_dir, &mut assets)?;
     let font = publish_font(ui_dir, arena2_dir)?;
     let manifest = json!({
@@ -59,6 +98,48 @@ pub fn publish(ui_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
         "ui:         {} classic images + font atlas + ui-manifest.json",
         UI_IMAGES.len()
     );
+    Ok(())
+}
+
+fn publish_inventory_icons(
+    ui_dir: &Path,
+    arena2_dir: &Path,
+    palette: &Palette,
+    assets: &mut Vec<Value>,
+) -> Result<(), String> {
+    for (item_id, archive, record) in INVENTORY_ICON_SOURCES {
+        let source_file = format!("TEXTURE.{archive:03}");
+        let source_path = arena2_dir.join(&source_file);
+        let source = fs::read(&source_path)
+            .map_err(|error| format!("read {}: {error}", source_path.display()))?;
+        let texture = TextureFile::parse(source.clone(), None)?;
+        let (width, height, indexed) = texture.frame_pixels(*record as usize, 0)?;
+        let png = crate::png::encode_rgba(
+            width as u32,
+            height as u32,
+            &palette.to_rgba_transparent(&indexed),
+        );
+        let id = format!("inventory.icon.{item_id}");
+        let file = format!("inventory-icon-{item_id}.png");
+        fs::write(ui_dir.join(&file), &png).map_err(|error| error.to_string())?;
+        assets.push(json!({
+            "id": id,
+            "file": file,
+            "mimeType": "image/png",
+            "source": {
+                "kind": "classic-daggerfall-item-icon",
+                "itemId": item_id,
+                "file": source_file,
+                "sha256": sha256(&source),
+                "byteLength": source.len(),
+                "archive": archive,
+                "record": record,
+                "donor": "Daggerfall Unity ItemHelper.GetInventoryImage / ItemTemplates.txt",
+            },
+            "alphaPolicy": "palette-index-0-transparent",
+            "png": {"sha256": sha256(&png), "byteLength": png.len(), "dimensions": [width, height]},
+        }));
+    }
     Ok(())
 }
 
@@ -325,12 +406,12 @@ mod tests {
             serde_json::from_slice(&fs::read(ui.join("ui-manifest.json")).unwrap()).unwrap();
         assert_eq!(
             manifest["assets"].as_array().unwrap().len(),
-            UI_IMAGES.len() + 3
+            UI_IMAGES.len() + INVENTORY_ICON_SOURCES.len() + 3
         );
         assert_eq!(manifest["assets"][0]["id"], "hud.chrome.main");
         assert_eq!(
-            manifest["assets"].as_array().unwrap().last().unwrap()["id"],
-            "inventory.skin.grid-slot-slate.v1"
+            manifest["assets"].as_array().unwrap()[UI_IMAGES.len()]["id"],
+            "inventory.icon.iron-dagger"
         );
         assert_eq!(
             manifest["assets"][0]["source"]["dimensions"],

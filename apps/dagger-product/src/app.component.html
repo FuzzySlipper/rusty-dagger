@@ -105,17 +105,21 @@
             <div><p class="kicker">Carried</p><h3 id="inventory-carried-title">Item grid</h3></div>
             <span>{{ live.inventoryGrid.slots.length }} slots</span>
           </header>
-          <div class="inventory-grid" role="listbox" aria-label="Carried inventory grid" data-testid="inventory-dialog-carried">
+          <div class="inventory-grid" role="listbox" aria-label="Carried inventory grid" data-testid="inventory-dialog-carried"
+            (dragover)="allowGridDrop($event)" (drop)="dropOnGrid($event)">
             <button *ngFor="let slot of live.inventoryGrid.slots" type="button" role="option" class="inventory-grid-slot"
               [class.occupied]="slot.occupant !== null" [class.selected]="gridItem(live, slot) && selectedInventoryKey === 'item:' + gridItem(live, slot)?.entity || gridStack(live, slot) && selectedInventoryKey === 'stack:' + gridStack(live, slot)?.item"
-              [attr.data-testid]="'inventory-grid-slot-' + slot.index" [attr.aria-label]="gridItem(live, slot)?.item || gridStack(live, slot)?.item || 'Empty inventory slot ' + (slot.index + 1)"
+              [attr.data-testid]="'inventory-grid-slot-' + slot.index" [attr.data-slot-index]="slot.index" [attr.aria-label]="gridItem(live, slot)?.item || gridStack(live, slot)?.item || 'Empty inventory slot ' + (slot.index + 1)"
               [attr.aria-selected]="slot.occupant !== null && (gridItem(live, slot) && selectedInventoryKey === 'item:' + gridItem(live, slot)?.entity || gridStack(live, slot) && selectedInventoryKey === 'stack:' + gridStack(live, slot)?.item)"
               [attr.draggable]="slot.occupant !== null ? 'true' : null"
               (click)="gridItem(live, slot) ? selectInventoryItem(gridItem(live, slot)!) : gridStack(live, slot) ? selectInventoryStack(gridStack(live, slot)!) : undefined"
               (dragstart)="startGridDrag($event, slot, live)" (dragend)="endInventoryDrag()"
-              (dragover)="allowGridDrop($event, slot.index)" (drop)="dropOnGridSlot($event, slot.index)">
+              (dragover)="allowGridDrop($event)"
+              (drop)="dropOnGridSlot($event, slot.index)">
               <strong *ngIf="gridItem(live, slot)" class="inventory-grid-quantity">×1</strong>
               <strong *ngIf="gridStack(live, slot) as stack" class="inventory-grid-quantity">×{{ stack.quantity }}</strong>
+              <img *ngIf="gridItem(live, slot) as item" class="inventory-grid-icon" aria-hidden="true" [src]="inventoryIcon(item.item)" />
+              <img *ngIf="gridStack(live, slot) as stack" class="inventory-grid-icon" aria-hidden="true" [src]="inventoryIcon(stack.item)" />
               <span *ngIf="gridItem(live, slot) as item" class="inventory-grid-name">{{ item.item }}</span>
               <span *ngIf="gridStack(live, slot) as stack" class="inventory-grid-name">{{ stack.item }}</span>
             </button>
