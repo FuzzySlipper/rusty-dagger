@@ -43,6 +43,7 @@ fn api_surface(path: &str) -> Option<ApiSurface> {
             | "/api/dagger-product/session/reset"
             | "/api/dagger-product/equipment/equip"
             | "/api/dagger-product/equipment/unequip"
+            | "/api/dagger-product/inventory/grid/move"
             | "/api/dagger-product/loot/open-aimed"
             | "/api/dagger-product/loot/transfer-stack"
             | "/api/dagger-product/loot/transfer-item"
@@ -97,6 +98,12 @@ pub(crate) enum ProductCommand {
         slot: String,
         expected_item: u64,
         expected_equipment_revision: u64,
+        reply: Sender<ProductReply>,
+    },
+    MoveInventoryGrid {
+        source_slot: usize,
+        target_slot: usize,
+        expected_revision: u64,
         reply: Sender<ProductReply>,
     },
     OpenAimedLoot {
@@ -293,16 +300,14 @@ fn handle_request(
         return write_response(stream, 404, r#"{"error":"unknown Dagger product route"}"#);
     }
     let (send_reply, receive_reply) = mpsc::channel();
-    let command =
-        match (request.method.as_str(), request.path.as_str()) {
-            ("GET", "/api/dagger-product/bootstrap") => {
-                ProductCommand::ProductBootstrap { reply: send_reply }
-            }
-            ("GET", "/api/dagger-product/state") => {
-                ProductCommand::ProductState { reply: send_reply }
-            }
-            ("POST", "/api/dagger-product/input") => {
-                let input = match serde_json::from_str(&request.body) {
+    let command = match (request.method.as_str(), request.path.as_str()) {
+        ("GET", "/api/dagger-product/bootstrap") => {
+            ProductCommand::ProductBootstrap { reply: send_reply }
+        }
+        ("GET", "/api/dagger-product/state") => ProductCommand::ProductState { reply: send_reply },
+        ("POST", "/api/dagger-product/input") => {
+            let input =
+                match serde_json::from_str(&request.body) {
                     Ok(input) => input,
                     Err(error) => return write_response(
                         stream,
@@ -311,17 +316,18 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                ProductCommand::ProductInput {
-                    input,
-                    reply: send_reply,
-                }
+            ProductCommand::ProductInput {
+                input,
+                reply: send_reply,
             }
-            ("GET", "/api/dagger-product/readout") => ProductCommand::Readout { reply: send_reply },
-            ("POST", "/api/dagger-product/session/reset") => {
-                ProductCommand::Reset { reply: send_reply }
-            }
-            ("POST", "/api/dagger-tools/content/jump") => {
-                let body: JumpRequest = match serde_json::from_str(&request.body) {
+        }
+        ("GET", "/api/dagger-product/readout") => ProductCommand::Readout { reply: send_reply },
+        ("POST", "/api/dagger-product/session/reset") => {
+            ProductCommand::Reset { reply: send_reply }
+        }
+        ("POST", "/api/dagger-tools/content/jump") => {
+            let body: JumpRequest =
+                match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
                         stream,
@@ -330,13 +336,14 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                ProductCommand::Jump {
-                    id: body.id,
-                    reply: send_reply,
-                }
+            ProductCommand::Jump {
+                id: body.id,
+                reply: send_reply,
             }
-            ("POST", "/api/dagger-product/equipment/equip") => {
-                let body: EquipRequest = match serde_json::from_str(&request.body) {
+        }
+        ("POST", "/api/dagger-product/equipment/equip") => {
+            let body: EquipRequest =
+                match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
                         stream,
@@ -345,15 +352,15 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                ProductCommand::Equip {
-                    item: body.item,
-                    slot: body.slot,
-                    expected_equipment_revision: body.expected_equipment_revision,
-                    reply: send_reply,
-                }
+            ProductCommand::Equip {
+                item: body.item,
+                slot: body.slot,
+                expected_equipment_revision: body.expected_equipment_revision,
+                reply: send_reply,
             }
-            ("POST", "/api/dagger-product/equipment/unequip") => {
-                let body: UnequipRequest = match serde_json::from_str(&request.body) {
+        }
+        ("POST", "/api/dagger-product/equipment/unequip") => {
+            let body: UnequipRequest = match serde_json::from_str(&request.body) {
                 Ok(body) => body,
                 Err(error) => return write_response(
                     stream,
@@ -362,18 +369,35 @@ fn handle_request(
                         .to_string(),
                 ),
             };
-                ProductCommand::Unequip {
-                    slot: body.slot,
-                    expected_item: body.expected_item,
-                    expected_equipment_revision: body.expected_equipment_revision,
-                    reply: send_reply,
-                }
+            ProductCommand::Unequip {
+                slot: body.slot,
+                expected_item: body.expected_item,
+                expected_equipment_revision: body.expected_equipment_revision,
+                reply: send_reply,
             }
-            ("POST", "/api/dagger-product/loot/open-aimed") => {
-                ProductCommand::OpenAimedLoot { reply: send_reply }
+        }
+        ("POST", "/api/dagger-product/inventory/grid/move") => {
+            let body: InventoryGridMoveRequest = match serde_json::from_str(&request.body) {
+                    Ok(body) => body,
+                    Err(error) => return write_response(
+                        stream,
+                        400,
+                        &serde_json::json!({ "error": format!("invalid inventory grid move: {error}") })
+                            .to_string(),
+                    ),
+                };
+            ProductCommand::MoveInventoryGrid {
+                source_slot: body.source_slot,
+                target_slot: body.target_slot,
+                expected_revision: body.expected_revision,
+                reply: send_reply,
             }
-            ("POST", "/api/dagger-product/loot/transfer-stack") => {
-                let body: LootStackRequest = match serde_json::from_str(&request.body) {
+        }
+        ("POST", "/api/dagger-product/loot/open-aimed") => {
+            ProductCommand::OpenAimedLoot { reply: send_reply }
+        }
+        ("POST", "/api/dagger-product/loot/transfer-stack") => {
+            let body: LootStackRequest = match serde_json::from_str(&request.body) {
                 Ok(body) => body,
                 Err(error) => return write_response(
                     stream,
@@ -382,16 +406,16 @@ fn handle_request(
                         .to_string(),
                 ),
             };
-                ProductCommand::TransferLootStack {
-                    container_id: body.container_id,
-                    expected_inventory_revision: body.expected_inventory_revision,
-                    item: body.item,
-                    quantity: body.quantity,
-                    reply: send_reply,
-                }
+            ProductCommand::TransferLootStack {
+                container_id: body.container_id,
+                expected_inventory_revision: body.expected_inventory_revision,
+                item: body.item,
+                quantity: body.quantity,
+                reply: send_reply,
             }
-            ("POST", "/api/dagger-product/loot/transfer-item") => {
-                let body: LootItemRequest = match serde_json::from_str(&request.body) {
+        }
+        ("POST", "/api/dagger-product/loot/transfer-item") => {
+            let body: LootItemRequest = match serde_json::from_str(&request.body) {
                 Ok(body) => body,
                 Err(error) => return write_response(
                     stream,
@@ -400,18 +424,19 @@ fn handle_request(
                         .to_string(),
                 ),
             };
-                ProductCommand::TransferLootItem {
-                    container_id: body.container_id,
-                    expected_inventory_revision: body.expected_inventory_revision,
-                    item: body.item,
-                    reply: send_reply,
-                }
+            ProductCommand::TransferLootItem {
+                container_id: body.container_id,
+                expected_inventory_revision: body.expected_inventory_revision,
+                item: body.item,
+                reply: send_reply,
             }
-            ("POST", "/api/dagger-product/loot/close") => {
-                ProductCommand::CloseLoot { reply: send_reply }
-            }
-            ("POST", "/api/dagger-tools/inventory/grant") => {
-                let body: GrantRequest = match serde_json::from_str(&request.body) {
+        }
+        ("POST", "/api/dagger-product/loot/close") => {
+            ProductCommand::CloseLoot { reply: send_reply }
+        }
+        ("POST", "/api/dagger-tools/inventory/grant") => {
+            let body: GrantRequest =
+                match serde_json::from_str(&request.body) {
                     Ok(body) => body,
                     Err(error) => return write_response(
                         stream,
@@ -420,17 +445,17 @@ fn handle_request(
                             .to_string(),
                     ),
                 };
-                ProductCommand::Grant {
-                    item: body.item,
-                    quantity: body.quantity,
-                    reply: send_reply,
-                }
+            ProductCommand::Grant {
+                item: body.item,
+                quantity: body.quantity,
+                reply: send_reply,
             }
-            ("GET", "/api/dagger-product/developer-commands") => {
-                ProductCommand::DeveloperDiscover { reply: send_reply }
-            }
-            ("POST", "/api/dagger-product/developer-commands/execute") => {
-                let request: DaggerDeveloperRequest = match serde_json::from_str(&request.body) {
+        }
+        ("GET", "/api/dagger-product/developer-commands") => {
+            ProductCommand::DeveloperDiscover { reply: send_reply }
+        }
+        ("POST", "/api/dagger-product/developer-commands/execute") => {
+            let request: DaggerDeveloperRequest = match serde_json::from_str(&request.body) {
                 Ok(request) => request,
                 Err(error) => return write_response(
                     stream,
@@ -439,15 +464,15 @@ fn handle_request(
                         .to_string(),
                 ),
             };
-                ProductCommand::DeveloperExecute {
-                    request,
-                    reply: send_reply,
-                }
+            ProductCommand::DeveloperExecute {
+                request,
+                reply: send_reply,
             }
-            _ => {
-                return write_response(stream, 404, r#"{"error":"unknown Dagger product route"}"#);
-            }
-        };
+        }
+        _ => {
+            return write_response(stream, 404, r#"{"error":"unknown Dagger product route"}"#);
+        }
+    };
     commands
         .send(command)
         .context("send command to Dagger runtime")?;
@@ -476,6 +501,14 @@ struct UnequipRequest {
     slot: String,
     expected_item: u64,
     expected_equipment_revision: u64,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct InventoryGridMoveRequest {
+    source_slot: usize,
+    target_slot: usize,
+    expected_revision: u64,
 }
 
 #[derive(serde::Deserialize)]

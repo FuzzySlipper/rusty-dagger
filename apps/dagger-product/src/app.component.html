@@ -101,22 +101,24 @@
           </div>
         </section>
         <section class="inventory-carried" aria-labelledby="inventory-carried-title">
-          <p class="kicker">Carried</p><h3 id="inventory-carried-title">Item grid</h3>
-          <div class="inventory-list" role="listbox" aria-label="Carried inventory" data-testid="inventory-dialog-carried"
-            (dragover)="allowUnequipDrop($event)" (drop)="dropIntoCarried($event)">
-            <button *ngFor="let item of carriedItems(live); trackBy: trackInventoryItem" type="button" role="option" draggable="true"
-              [attr.aria-selected]="selectedInventoryKey === 'item:' + item.entity"
-              [class.selected]="selectedInventoryKey === 'item:' + item.entity" [attr.data-testid]="'inventory-dialog-item-' + item.entity"
-              (click)="selectInventoryItem(item)" (dragstart)="startCarriedDrag($event, item, live)" (dragend)="endInventoryDrag()">
-              <span>{{ item.item }}</span><small>{{ item.equipSlot === null ? 'carried' : 'equipped · ' + item.equipSlot }}</small>
+          <header class="inventory-grid-titlebar">
+            <div><p class="kicker">Carried</p><h3 id="inventory-carried-title">Item grid</h3></div>
+            <span>{{ live.inventoryGrid.slots.length }} slots</span>
+          </header>
+          <div class="inventory-grid" role="listbox" aria-label="Carried inventory grid" data-testid="inventory-dialog-carried">
+            <button *ngFor="let slot of live.inventoryGrid.slots" type="button" role="option" class="inventory-grid-slot"
+              [class.occupied]="slot.occupant !== null" [class.selected]="gridItem(live, slot) && selectedInventoryKey === 'item:' + gridItem(live, slot)?.entity || gridStack(live, slot) && selectedInventoryKey === 'stack:' + gridStack(live, slot)?.item"
+              [attr.data-testid]="'inventory-grid-slot-' + slot.index" [attr.aria-label]="gridItem(live, slot)?.item || gridStack(live, slot)?.item || 'Empty inventory slot ' + (slot.index + 1)"
+              [attr.aria-selected]="slot.occupant !== null && (gridItem(live, slot) && selectedInventoryKey === 'item:' + gridItem(live, slot)?.entity || gridStack(live, slot) && selectedInventoryKey === 'stack:' + gridStack(live, slot)?.item)"
+              [attr.draggable]="slot.occupant !== null ? 'true' : null"
+              (click)="gridItem(live, slot) ? selectInventoryItem(gridItem(live, slot)!) : gridStack(live, slot) ? selectInventoryStack(gridStack(live, slot)!) : undefined"
+              (dragstart)="startGridDrag($event, slot, live)" (dragend)="endInventoryDrag()"
+              (dragover)="allowGridDrop($event, slot.index)" (drop)="dropOnGridSlot($event, slot.index)">
+              <strong *ngIf="gridItem(live, slot)" class="inventory-grid-quantity">×1</strong>
+              <strong *ngIf="gridStack(live, slot) as stack" class="inventory-grid-quantity">×{{ stack.quantity }}</strong>
+              <span *ngIf="gridItem(live, slot) as item" class="inventory-grid-name">{{ item.item }}</span>
+              <span *ngIf="gridStack(live, slot) as stack" class="inventory-grid-name">{{ stack.item }}</span>
             </button>
-            <button *ngFor="let stack of live.playerInventory.stacks; trackBy: trackInventoryStack" type="button" role="option"
-              [attr.aria-selected]="selectedInventoryKey === 'stack:' + stack.item"
-              [class.selected]="selectedInventoryKey === 'stack:' + stack.item" [attr.data-testid]="'inventory-dialog-stack-' + stack.item"
-              (click)="selectInventoryStack(stack)">
-              <span>{{ stack.item }}</span><small>stack × {{ stack.quantity }}</small>
-            </button>
-            <p *ngIf="carriedItems(live).length === 0 && live.playerInventory.stacks.length === 0" class="inventory-empty">Nothing carried.</p>
           </div>
         </section>
         <aside class="inventory-detail" aria-live="polite" data-testid="inventory-dialog-detail">

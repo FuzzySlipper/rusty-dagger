@@ -10,6 +10,8 @@ import {
   EquipmentLogRecord,
   InventoryStackReadout,
   InventoryItemReadout,
+  InventoryGridOccupant,
+  InventoryGridSlotReadout,
   ItemDefinition,
   ProductNoticeRecord,
   ProductReadout,
@@ -98,7 +100,7 @@ export class AppComponent implements OnInit, OnDestroy {
   lootFeedback = '';
   selectedInventoryKey: string | undefined;
   draggedInventory:
-    | { readonly kind: 'carried'; readonly item: InventoryItemReadout; readonly equipmentRevision: number }
+    | { readonly kind: 'grid'; readonly sourceSlot: number; readonly occupant: InventoryGridOccupant; readonly gridRevision: number }
     | { readonly kind: 'equipped'; readonly item: InventoryItemReadout; readonly slot: string; readonly equipmentRevision: number }
     | undefined;
   activeTab: 'explorer' | 'sprites' = 'explorer';
@@ -447,9 +449,26 @@ export class AppComponent implements OnInit, OnDestroy {
     return item !== undefined && item.equipSlot === null && item.compatibleSlots.includes(slot);
   }
 
-  startCarriedDrag(event: DragEvent, item: InventoryItemReadout, readout: ProductReadout): void {
-    this.draggedInventory = { kind: 'carried', item, equipmentRevision: readout.playerInventory.equipmentRevision };
-    event.dataTransfer?.setData('text/plain', `carried:${item.entity}`);
+  gridItem(readout: ProductReadout, slot: InventoryGridSlotReadout): InventoryItemReadout | undefined {
+    const occupant = slot.occupant;
+    return occupant?.kind === 'item'
+      ? readout.playerInventory.items.find((item) => item.entity === occupant.entity)
+      : undefined;
+  }
+
+  gridStack(readout: ProductReadout, slot: InventoryGridSlotReadout): InventoryStackReadout | undefined {
+    const occupant = slot.occupant;
+    return occupant?.kind === 'stack'
+      ? readout.playerInventory.stacks.find((stack) => stack.item === occupant.item)
+      : undefined;
+  }
+
+  startGridDrag(event: DragEvent, slot: InventoryGridSlotReadout, readout: ProductReadout): void {
+    if (slot.occupant === null) return;
+    this.draggedInventory = {
+      kind: 'grid', sourceSlot: slot.index, occupant: slot.occupant, gridRevision: readout.inventoryGrid.revision,
+    };
+    event.dataTransfer?.setData('text/plain', `inventory-grid:${slot.index}`);
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
   }
 
@@ -465,7 +484,10 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   allowEquipDrop(event: DragEvent, slot: string): void {
-    if (this.draggedInventory?.kind === 'carried' && this.draggedInventory.item.compatibleSlots.includes(slot) && !this.pending) {
+    const item = this.draggedInventory?.kind === 'grid' && this.readout !== undefined
+      ? this.gridItem(this.readout, { index: this.draggedInventory.sourceSlot, occupant: this.draggedInventory.occupant })
+      : undefined;
+    if (item?.compatibleSlots.includes(slot) && !this.pending) {
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
     }
@@ -475,7 +497,26 @@ export class AppComponent implements OnInit, OnDestroy {
     event.preventDefault();
     const dragged = this.draggedInventory;
     this.endInventoryDrag();
-    if (dragged?.kind === 'carried') void this.equipIntoSlot(dragged.item, slot, dragged.equipmentRevision);
+    if (dragged?.kind === 'grid' && this.readout !== undefined) {
+      const item = this.gridItem(this.readout, { index: dragged.sourceSlot, occupant: dragged.occupant });
+      if (item !== undefined) void this.equipIntoSlot(item, slot, this.readout.playerInventory.equipmentRevision);
+    }
+  }
+
+  allowGridDrop(event: DragEvent, targetSlot: number): void {
+    if (this.draggedInventory?.kind === 'grid' && this.draggedInventory.sourceSlot !== targetSlot && !this.pending) {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  dropOnGridSlot(event: DragEvent, targetSlot: number): void {
+    event.preventDefault();
+    const dragged = this.draggedInventory;
+    this.endInventoryDrag();
+    if (dragged?.kind === 'grid') {
+      void this.moveInventoryGrid(dragged.sourceSlot, targetSlot, dragged.gridRevision);
+    }
   }
 
   allowUnequipDrop(event: DragEvent): void {
@@ -558,6 +599,11 @@ export class AppComponent implements OnInit, OnDestroy {
   async unequipFromSlot(item: InventoryItemReadout, slot: string, expectedEquipmentRevision: number): Promise<void> {
     if (this.pending) return;
     await this.runCommand(() => this.productApi.unequipSlot(slot, item.entity, expectedEquipmentRevision));
+  }
+
+  async moveInventoryGrid(sourceSlot: number, targetSlot: number, expectedRevision: number): Promise<void> {
+    if (this.pending || sourceSlot === targetSlot) return;
+    await this.runCommand(() => this.productApi.moveInventoryGrid(sourceSlot, targetSlot, expectedRevision));
   }
 
   async grantItem(): Promise<void> {

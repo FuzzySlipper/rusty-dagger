@@ -36,11 +36,12 @@ pub use project::{AdmittedProject, ProjectAdmissionError};
 pub use runtime::{
     ActorAttributeReadout, ActorGameplayReadout, CombatAttemptRecord, CombatRecord,
     ContentEntityReadout, ContentError, ContentLiveReadout, DaggerRuntime,
-    EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, LiveActorResources,
-    LootContainerReadout, MeleePresentationPhase, MeleePresentationReadout, NamedEncounterReadout,
-    ProductNoticeKind, ProductNoticeRecord, ProductReadout, ProgressionReadout, RuntimeError,
-    LOOT_INTERACT_REACH, MELEE_ACTION_ID, MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS,
-    MELEE_RECOVERY_SECONDS, MELEE_REJECTION_SECONDS, PRODUCT_NOTICE_HISTORY_LIMIT,
+    EnemyPresentationReadout, EnemyReferenceReadout, GameplayPackageReadout, InventoryItemReadout,
+    InventoryStackReadout, LiveActorResources, LootContainerReadout, MeleePresentationPhase,
+    MeleePresentationReadout, NamedEncounterReadout, PlayerInventoryReadout, ProductNoticeKind,
+    ProductNoticeRecord, ProductReadout, ProgressionReadout, RuntimeError, LOOT_INTERACT_REACH,
+    MELEE_ACTION_ID, MELEE_ANTICIPATION_SECONDS, MELEE_CONTACT_SECONDS, MELEE_RECOVERY_SECONDS,
+    MELEE_REJECTION_SECONDS, PRODUCT_NOTICE_HISTORY_LIMIT,
 };
 
 #[cfg(test)]

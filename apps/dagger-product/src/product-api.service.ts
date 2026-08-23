@@ -29,6 +29,12 @@ export class ProductApiService {
     }));
   }
 
+  moveInventoryGrid(sourceSlot: number, targetSlot: number, expectedRevision: number): Promise<ProductReadout> {
+    return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/inventory/grid/move`, {
+      sourceSlot, targetSlot, expectedRevision,
+    }));
+  }
+
   openAimedLoot(): Promise<ProductReadout> {
     return firstValueFrom(this.http.post<ProductReadout>(`${API_URL}/loot/open-aimed`, null));
   }
