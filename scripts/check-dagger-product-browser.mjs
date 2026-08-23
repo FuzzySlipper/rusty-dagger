@@ -295,19 +295,40 @@ async function assertInventoryGameWindow(page, output) {
         const rect = element.getBoundingClientRect();
         return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)];
       }),
-      cells: [...document.querySelectorAll('.inventory-list button')].map((element) => {
+      cells: [...document.querySelectorAll('.inventory-grid-slot')].map((element) => {
         const rect = element.getBoundingClientRect();
         return [Math.round(rect.width), Math.round(rect.height)];
       }),
     };
   });
-  await page.getByTestId('open-inventory').click();
+  await pressPhysical(page, 'KeyI');
   await page.getByTestId('inventory-dialog').waitFor();
   const before = await stableBoxes();
   assert.ok(before.slots.length > 0, 'inventory has no declared equipment slots');
-  assert.ok(before.cells.length > 0, 'inventory has no carried grid cells');
+  assert.equal(before.cells.length, 50, 'inventory must render the fixed 50-slot carried grid');
   assert.equal(new Set(before.cells.map(JSON.stringify)).size, 1, 'carried grid cells are not fixed bounds');
-  await page.locator('[data-testid="inventory-dialog-carried"] button').first().click();
+  const source = page.getByTestId('inventory-grid-slot-0');
+  const target = page.getByTestId('inventory-grid-slot-1');
+  const initialSlots = await Promise.all([source.innerText(), target.innerText()]);
+  await source.dragTo(target);
+  await page.waitForFunction(
+    ({ sourceText, targetText }) =>
+      document.querySelector('[data-testid="inventory-grid-slot-0"]')?.textContent !== sourceText ||
+      document.querySelector('[data-testid="inventory-grid-slot-1"]')?.textContent !== targetText,
+    { sourceText: initialSlots[0], targetText: initialSlots[1] },
+  );
+  const movedSlots = await Promise.all([source.innerText(), target.innerText()]);
+  assert.deepEqual(movedSlots, [initialSlots[1], initialSlots[0]], 'inventory slot drag did not swap occupants');
+  await page.getByTestId('inventory-exit').click();
+  await page.getByTestId('inventory-dialog').waitFor({ state: 'detached' });
+  await pressPhysical(page, 'KeyI');
+  await page.getByTestId('inventory-dialog').waitFor();
+  assert.deepEqual(
+    await Promise.all([source.innerText(), target.innerText()]),
+    movedSlots,
+    'inventory grid placement did not survive closing and reopening the dialog',
+  );
+  await source.click();
   const afterSelection = await stableBoxes();
   assert.deepEqual(afterSelection, before, 'inventory selection changed stable region or cell geometry');
   const action = page.locator('.equipment-slot .inventory-action:not([disabled])').first();

@@ -11,7 +11,8 @@ use std::{
 use anyhow::{bail, Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use dagger_runtime::{
-    DaggerRuntime, MeleePresentationReadout, ResolvedPlayerFrame, MAX_PLAYER_FRAME_LOOK_UNITS,
+    DaggerRuntime, MeleePresentationReadout, PlayerInventoryReadout, ProductReadout,
+    ResolvedPlayerFrame, RuntimeError, MAX_PLAYER_FRAME_LOOK_UNITS,
 };
 use dagger_studio_adapter::{build_render_bundle, DaggerRenderBundle};
 use rusty_engine::render_host_contracts::RendererCameraPose;
@@ -94,6 +95,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
     io::stdout().flush()?;
 
     let mut accepted_input_sequence = 0_u64;
+    let mut inventory_grid = InventoryGrid::default();
     let mut last_tick = Instant::now();
     loop {
         let command = match server.try_recv() {
@@ -113,6 +115,7 @@ pub(crate) fn run(options: Options) -> Result<()> {
                 &bundle,
                 &mut accepted_input_sequence,
                 &mut developer_commands,
+                &mut inventory_grid,
             )?;
         }
         let now = Instant::now();
@@ -141,6 +144,7 @@ fn handle_command(
     bundle: &DaggerRenderBundle,
     accepted_input_sequence: &mut u64,
     developer_commands: &mut DaggerDeveloperCommands,
+    inventory_grid: &mut InventoryGrid,
 ) -> Result<()> {
     match command {
         ProductCommand::ProductBootstrap { reply } => {
@@ -178,18 +182,23 @@ fn handle_command(
                 ),
             }
         }
-        ProductCommand::Readout { reply } => send_runtime_result(reply, runtime.product_readout()),
-        ProductCommand::Reset { reply } => send_runtime_result(reply, runtime.reset_play_session()),
+        ProductCommand::Readout { reply } => {
+            send_product_result(reply, inventory_grid, runtime.product_readout())
+        }
+        ProductCommand::Reset { reply } => {
+            send_product_result(reply, inventory_grid, runtime.reset_play_session())
+        }
         ProductCommand::Jump { id, reply } => {
-            send_runtime_result(reply, runtime.jump_to_content(id))
+            send_product_result(reply, inventory_grid, runtime.jump_to_content(id))
         }
         ProductCommand::Equip {
             item,
             slot,
             expected_equipment_revision,
             reply,
-        } => send_runtime_result(
+        } => send_product_result(
             reply,
+            inventory_grid,
             runtime.equip_item_in_slot(item, &slot, expected_equipment_revision),
         ),
         ProductCommand::Unequip {
@@ -197,12 +206,13 @@ fn handle_command(
             expected_item,
             expected_equipment_revision,
             reply,
-        } => send_runtime_result(
+        } => send_product_result(
             reply,
+            inventory_grid,
             runtime.unequip_item_from_slot(&slot, expected_item, expected_equipment_revision),
         ),
         ProductCommand::OpenAimedLoot { reply } => {
-            send_runtime_result(reply, runtime.open_aimed_loot())
+            send_product_result(reply, inventory_grid, runtime.open_aimed_loot())
         }
         ProductCommand::TransferLootStack {
             container_id,
@@ -210,8 +220,9 @@ fn handle_command(
             item,
             quantity,
             reply,
-        } => send_runtime_result(
+        } => send_product_result(
             reply,
+            inventory_grid,
             runtime.transfer_loot_stack(
                 &container_id,
                 expected_inventory_revision,
@@ -224,16 +235,32 @@ fn handle_command(
             expected_inventory_revision,
             item,
             reply,
-        } => send_runtime_result(
+        } => send_product_result(
             reply,
+            inventory_grid,
             runtime.transfer_loot_item(&container_id, expected_inventory_revision, item),
         ),
-        ProductCommand::CloseLoot { reply } => send_runtime_result(reply, runtime.close_loot()),
+        ProductCommand::CloseLoot { reply } => {
+            send_product_result(reply, inventory_grid, runtime.close_loot())
+        }
         ProductCommand::Grant {
             item,
             quantity,
             reply,
-        } => send_runtime_result(reply, runtime.grant_item(&item, quantity)),
+        } => send_product_result(reply, inventory_grid, runtime.grant_item(&item, quantity)),
+        ProductCommand::MoveInventoryGrid {
+            source_slot,
+            target_slot,
+            expected_revision,
+            reply,
+        } => {
+            let readout = runtime.product_readout()?;
+            inventory_grid.sync(&readout.player_inventory);
+            match inventory_grid.move_occupant(source_slot, target_slot, expected_revision) {
+                Ok(()) => send_product_readout(reply, inventory_grid, readout),
+                Err(error) => send_json(reply, 409, &serde_json::json!({ "error": error })),
+            }
+        }
         ProductCommand::DeveloperDiscover { reply } => {
             send_json(reply, 200, &developer_commands.discover())
         }
@@ -587,18 +614,156 @@ fn camera_pose(
     })
 }
 
-fn send_runtime_result<T: Serialize>(
+const INVENTORY_GRID_SLOT_COUNT: usize = 50;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+enum InventoryGridOccupant {
+    Item { entity: u64 },
+    Stack { item: String },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InventoryGridSlotReadout {
+    index: usize,
+    occupant: Option<InventoryGridOccupant>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InventoryGridReadout {
+    revision: u64,
+    slots: Vec<InventoryGridSlotReadout>,
+}
+
+#[derive(Debug, Default)]
+struct InventoryGrid {
+    revision: u64,
+    slots: Vec<Option<InventoryGridOccupant>>,
+}
+
+impl InventoryGrid {
+    fn sync(&mut self, inventory: &PlayerInventoryReadout) {
+        if self.slots.len() != INVENTORY_GRID_SLOT_COUNT {
+            self.slots.resize(INVENTORY_GRID_SLOT_COUNT, None);
+        }
+        let carried = inventory
+            .items
+            .iter()
+            .filter(|item| item.equip_slot.is_none())
+            .map(|item| InventoryGridOccupant::Item {
+                entity: item.entity,
+            })
+            .chain(
+                inventory
+                    .stacks
+                    .iter()
+                    .map(|stack| InventoryGridOccupant::Stack {
+                        item: stack.item.clone(),
+                    }),
+            )
+            .collect::<BTreeSet<_>>();
+        let mut retained = BTreeSet::new();
+        for slot in &mut self.slots {
+            if slot.as_ref().is_none_or(|occupant| {
+                !carried.contains(occupant) || !retained.insert(occupant.clone())
+            }) {
+                *slot = None;
+            }
+        }
+        for occupant in carried {
+            if retained.contains(&occupant) {
+                continue;
+            }
+            if let Some(slot) = self.slots.iter_mut().find(|slot| slot.is_none()) {
+                *slot = Some(occupant.clone());
+                retained.insert(occupant);
+            }
+        }
+    }
+
+    fn move_occupant(
+        &mut self,
+        source_slot: usize,
+        target_slot: usize,
+        expected_revision: u64,
+    ) -> Result<(), String> {
+        if self.revision != expected_revision {
+            return Err(format!(
+                "stale inventory grid revision: expected {expected_revision}, current {}",
+                self.revision
+            ));
+        }
+        if source_slot >= INVENTORY_GRID_SLOT_COUNT || target_slot >= INVENTORY_GRID_SLOT_COUNT {
+            return Err(format!(
+                "inventory grid slot must be within 0..{INVENTORY_GRID_SLOT_COUNT}"
+            ));
+        }
+        if self.slots[source_slot].is_none() {
+            return Err(format!("inventory grid source slot {source_slot} is empty"));
+        }
+        if source_slot != target_slot {
+            self.slots.swap(source_slot, target_slot);
+            self.revision = self
+                .revision
+                .checked_add(1)
+                .ok_or("inventory grid revision exhausted")?;
+        }
+        Ok(())
+    }
+
+    fn readout(&self) -> InventoryGridReadout {
+        InventoryGridReadout {
+            revision: self.revision,
+            slots: self
+                .slots
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(index, occupant)| InventoryGridSlotReadout { index, occupant })
+                .collect(),
+        }
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ProductReadoutWithInventoryGrid {
+    #[serde(flatten)]
+    readout: ProductReadout,
+    inventory_grid: InventoryGridReadout,
+}
+
+fn send_product_result(
     reply: Sender<ProductReply>,
-    result: Result<T, dagger_runtime::RuntimeError>,
+    inventory_grid: &mut InventoryGrid,
+    result: Result<ProductReadout, RuntimeError>,
 ) -> Result<()> {
     match result {
-        Ok(value) => send_json(reply, 200, &value),
+        Ok(readout) => send_product_readout(reply, inventory_grid, readout),
         Err(error) => send_json(
             reply,
             400,
             &serde_json::json!({ "error": error.to_string() }),
         ),
     }
+}
+
+fn send_product_readout(
+    reply: Sender<ProductReply>,
+    inventory_grid: &mut InventoryGrid,
+    readout: ProductReadout,
+) -> Result<()> {
+    inventory_grid.sync(&readout.player_inventory);
+    send_json(
+        reply,
+        200,
+        &ProductReadoutWithInventoryGrid {
+            readout,
+            inventory_grid: inventory_grid.readout(),
+        },
+    )
 }
 
 fn send_json(reply: Sender<ProductReply>, status: u16, value: &impl Serialize) -> Result<()> {
@@ -706,6 +871,35 @@ mod tests {
 
     fn turn_delta_degrees(from: f32, to: f32) -> f32 {
         (to - from + 180.0).rem_euclid(360.0) - 180.0
+    }
+
+    #[test]
+    fn inventory_grid_swaps_only_current_carried_occupants_and_rejects_stale_moves() {
+        let runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
+        let inventory = runtime
+            .product_readout()
+            .expect("product readout")
+            .player_inventory;
+        let mut grid = InventoryGrid::default();
+        grid.sync(&inventory);
+        assert_eq!(grid.readout().slots.len(), INVENTORY_GRID_SLOT_COUNT);
+        let first = grid.slots[0].clone().expect("first carried occupant");
+        assert!(
+            grid.slots[1].is_some(),
+            "real loadout has a second carried entry"
+        );
+        grid.move_occupant(0, 1, 0).expect("swap carried slots");
+        assert_eq!(grid.slots[1], Some(first));
+        assert_eq!(grid.revision, 1);
+        assert!(grid
+            .move_occupant(1, 2, 0)
+            .expect_err("stale layout revision must reject")
+            .contains("stale inventory grid revision"));
+        assert_eq!(grid.revision, 1, "rejected moves preserve the layout");
+        assert!(grid
+            .move_occupant(49, 0, 1)
+            .expect_err("empty source must reject")
+            .contains("source slot 49 is empty"));
     }
 
     #[test]

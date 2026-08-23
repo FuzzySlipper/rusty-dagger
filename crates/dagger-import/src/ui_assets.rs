@@ -325,12 +325,12 @@ mod tests {
             serde_json::from_slice(&fs::read(ui.join("ui-manifest.json")).unwrap()).unwrap();
         assert_eq!(
             manifest["assets"].as_array().unwrap().len(),
-            UI_IMAGES.len() + 1
+            UI_IMAGES.len() + 3
         );
         assert_eq!(manifest["assets"][0]["id"], "hud.chrome.main");
         assert_eq!(
             manifest["assets"].as_array().unwrap().last().unwrap()["id"],
-            "inventory.skin.panel-slate.v1"
+            "inventory.skin.grid-slot-slate.v1"
         );
         assert_eq!(
             manifest["assets"][0]["source"]["dimensions"],

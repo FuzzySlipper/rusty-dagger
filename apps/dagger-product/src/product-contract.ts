@@ -290,6 +290,22 @@ export interface PlayerInventoryReadout {
   readonly items: readonly InventoryItemReadout[];
 }
 
+export type InventoryGridOccupant =
+  | { readonly kind: 'item'; readonly entity: number }
+  | { readonly kind: 'stack'; readonly item: string };
+
+/** Rust-owned placement for the fixed 50-slot carried-inventory grid. */
+export interface InventoryGridSlotReadout {
+  readonly index: number;
+  readonly occupant: InventoryGridOccupant | null;
+}
+
+export interface InventoryGridReadout {
+  /** Changes only after an accepted grid move/swap. */
+  readonly revision: number;
+  readonly slots: readonly InventoryGridSlotReadout[];
+}
+
 /** One Rust-owned inventory/equipment action receipt, including loot-window actions. */
 export interface EquipmentLogRecord {
   readonly sequence: number;
@@ -418,6 +434,7 @@ export interface ProductReadout {
   readonly namedEncounters: readonly NamedEncounterReadout[];
   readonly activeEncounter: NamedEncounterReadout | null;
   readonly playerInventory: PlayerInventoryReadout;
+  readonly inventoryGrid: InventoryGridReadout;
   /** Ordered Rust-owned inventory/equipment action receipts. */
   readonly equipmentLog: readonly EquipmentLogRecord[];
   /** Live loot containers (treasure piles + loot-bearing corpses). */

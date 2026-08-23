@@ -7,6 +7,20 @@
       "sourceFile": "inventory-panel-slate-v1.png",
       "generator": "gpt-image-1.5",
       "prompt": "Create one original, seamless, tileable 2D fantasy inventory panel texture for a dark retro computer RPG. Square 1024x1024. Materials: charcoal slate stone, muted warm brass flecks, faint mossy green oxidation, subtle hand-painted pixel-art-era texture but not copied from any game. Low contrast so readable DOM text can sit above it. No frames, no UI controls, no text, no icons, no logos, no characters, no known game assets. Seamless edges in both directions."
+    },
+    {
+      "id": "inventory.skin.titlebar-slate.v1",
+      "file": "inventory-titlebar-slate-v1.png",
+      "sourceFile": "inventory-titlebar-slate-v1.png",
+      "generator": "gpt-image-2",
+      "prompt": "Create a standalone wide dark retro fantasy RPG title-bar panel with no text, letters, icons, logos, or item art. Aged charcoal slate center, muted antique-brass edge bands, rivets, and slight moss-green oxidation; readable cream DOM heading text overlays the center. Original hand-painted pixel-art-era UI chrome, not copied from any game."
+    },
+    {
+      "id": "inventory.skin.grid-slot-slate.v1",
+      "file": "inventory-grid-slot-slate-v1.png",
+      "sourceFile": "inventory-grid-slot-slate-v1.png",
+      "generator": "gpt-image-2",
+      "prompt": "Create one standalone square empty inventory slot with no text, letters, icons, logos, or item art. Recessed charcoal slate interior, worn muted antique-brass bevel, corner rivets, and slight moss-green oxidation; readable DOM item name and quantity overlays it. Original hand-painted pixel-art-era UI chrome, not copied from any game."
     }
   ]
 }
