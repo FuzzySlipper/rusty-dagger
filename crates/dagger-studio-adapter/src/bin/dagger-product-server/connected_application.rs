@@ -267,7 +267,13 @@ fn apply_product_input(
     let active = |code| pressed.contains(code) || pressed_edges.contains(code);
     let forward = f32::from(active("KeyW")) - f32::from(active("KeyS"));
     let right = f32::from(active("KeyD")) - f32::from(active("KeyA"));
-    let (yaw_delta, pitch_delta) = pointer_look_delta(input.pointer_delta);
+    let (pointer_yaw, pointer_pitch) = pointer_look_delta(input.pointer_delta);
+    let (keyboard_yaw, keyboard_pitch) =
+        keyboard_look_delta(&pressed, &pressed_edges, input.step_seconds);
+    let yaw_delta = (pointer_yaw + keyboard_yaw)
+        .clamp(-MAX_PLAYER_FRAME_LOOK_UNITS, MAX_PLAYER_FRAME_LOOK_UNITS);
+    let pitch_delta = (pointer_pitch + keyboard_pitch)
+        .clamp(-MAX_PLAYER_FRAME_LOOK_UNITS, MAX_PLAYER_FRAME_LOOK_UNITS);
     if forward != 0.0 || right != 0.0 || yaw_delta != 0.0 || pitch_delta != 0.0 {
         runtime.apply_player_frame(ResolvedPlayerFrame {
             forward,
@@ -546,6 +552,25 @@ fn pointer_look_delta(pointer_delta: [f32; 2]) -> (f32, f32) {
     )
 }
 
+// J/L and U/O are intentionally distinct from the product's inventory (I),
+// equipment (E), diagnostic, route, and browser navigation conventions.
+// They are resolved from the same held-key sample as movement, so keyboard
+// look remains continuous without giving the TypeScript presentation a camera
+// authority of its own.
+const KEYBOARD_LOOK_UNITS_PER_SECOND: f32 = 18.0;
+
+fn keyboard_look_delta(
+    pressed: &BTreeSet<String>,
+    pressed_edges: &BTreeSet<String>,
+    step_seconds: f32,
+) -> (f32, f32) {
+    let active = |code| pressed.contains(code) || pressed_edges.contains(code);
+    let yaw = f32::from(active("KeyL")) - f32::from(active("KeyJ"));
+    let pitch = f32::from(active("KeyU")) - f32::from(active("KeyO"));
+    let units = KEYBOARD_LOOK_UNITS_PER_SECOND * step_seconds;
+    (yaw * units, pitch * units)
+}
+
 fn camera_pose(
     runtime: &DaggerRuntime,
 ) -> Result<RendererCameraPose, dagger_runtime::RuntimeError> {
@@ -628,6 +653,59 @@ mod tests {
             look([0.0, 10.0]).1 < 0.0,
             "mouse-down feeds canonical negative pitch"
         );
+    }
+
+    #[test]
+    fn held_keyboard_look_keys_use_the_sampled_player_frame_and_stop_on_release() {
+        let mut runtime = DaggerRuntime::from_project_json(PROJECT).expect("real runtime");
+        let mut diagnostics =
+            ProductDiagnostics::from_documents(PROJECT, NAVGRID).expect("real diagnostics");
+        let mut sequence = 0;
+        let initial = runtime.player_state();
+
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut sequence,
+            input(1, &["KeyL", "KeyU"], &[], [0.0, 0.0]),
+        )
+        .expect("held keyboard look frame");
+        let looked = runtime.player_state();
+        assert!(
+            turn_delta_degrees(initial.yaw_degrees, looked.yaw_degrees) > 0.0,
+            "L turns right",
+        );
+        assert!(looked.pitch_degrees > initial.pitch_degrees, "U looks up");
+
+        apply_product_input(
+            &mut runtime,
+            &mut diagnostics,
+            &mut sequence,
+            input(2, &[], &[], [0.0, 0.0]),
+        )
+        .expect("released keyboard look frame");
+        assert_eq!(
+            runtime.player_state(),
+            looked,
+            "a released look key must not continue turning the canonical camera",
+        );
+
+        let left_down = keyboard_look_delta(
+            &BTreeSet::from(["KeyJ".to_string()]),
+            &BTreeSet::new(),
+            0.04,
+        );
+        let down = keyboard_look_delta(
+            &BTreeSet::from(["KeyO".to_string()]),
+            &BTreeSet::new(),
+            0.04,
+        );
+        assert!(left_down.0 < 0.0, "J turns left");
+        assert!(down.1 < 0.0, "O looks down");
+    }
+
+    fn turn_delta_degrees(from: f32, to: f32) -> f32 {
+        (to - from + 180.0).rem_euclid(360.0) - 180.0
     }
 
     #[test]

@@ -46,7 +46,7 @@
       <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">
         <span>{{ encounter.name }} · {{ encounter.status }}</span><strong>{{ encounter.objective }}</strong>
       </div>
-      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD + mouse</span><span>Space / click attack</span><span>F loot</span><span>I inventory</span><span>C character</span><span>R retry</span></div>
+      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD move</span><span>Mouse or J/L turn</span><span>U/O look up/down</span><span>Space / click attack</span><span>F loot</span><span>I inventory</span><span>C character</span><span>R retry</span></div>
       <button type="button" data-testid="open-loot" [disabled]="!readout || lootOpening" (click)="openLoot()">Loot (F)</button>
       <button type="button" data-testid="open-inventory" [disabled]="!readout" (click)="openInventory()">Inventory</button>
       <button type="button" data-testid="open-character-sheet" [disabled]="!readout" (click)="openCharacterSheet()">Character</button>
