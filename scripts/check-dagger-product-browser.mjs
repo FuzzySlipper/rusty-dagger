@@ -52,6 +52,7 @@ try {
     undefined,
     { timeout: 30_000 },
   );
+  const inventoryComposition = await assertInventoryGameWindow(page, output);
   await page.getByTestId('refresh-scene').click();
   await page.waitForFunction(
     () => window.__daggerApplicationHost?.readout().contentRevision === 2,
@@ -263,10 +264,81 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-class-career/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated inventoryComposition=${JSON.stringify(inventoryComposition)} semanticLook=${JSON.stringify(semanticLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-class-career/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
   );
 } finally {
   await browser.close();
+}
+
+async function assertInventoryGameWindow(page, output) {
+  const stableBoxes = async () => page.evaluate(() => {
+    const box = (selector) => {
+      const element = document.querySelector(selector);
+      if (element === null) throw new Error(`missing ${selector}`);
+      const rect = element.getBoundingClientRect();
+      return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)];
+    };
+    return {
+      dialog: box('[data-testid="inventory-dialog"]'),
+      equipment: box('[data-testid="inventory-dialog-equipped"]'),
+      carried: box('[data-testid="inventory-dialog-carried"]'),
+      detail: box('[data-testid="inventory-dialog-detail"]'),
+      feedback: box('[data-testid="inventory-dialog-feedback"]'),
+      slots: [...document.querySelectorAll('.equipment-slot')].map((element) => {
+        const rect = element.getBoundingClientRect();
+        return [Math.round(rect.x), Math.round(rect.y), Math.round(rect.width), Math.round(rect.height)];
+      }),
+      cells: [...document.querySelectorAll('.inventory-list button')].map((element) => {
+        const rect = element.getBoundingClientRect();
+        return [Math.round(rect.width), Math.round(rect.height)];
+      }),
+    };
+  });
+  await page.getByTestId('open-inventory').click();
+  await page.getByTestId('inventory-dialog').waitFor();
+  const before = await stableBoxes();
+  assert.ok(before.slots.length > 0, 'inventory has no declared equipment slots');
+  assert.ok(before.cells.length > 0, 'inventory has no carried grid cells');
+  assert.equal(new Set(before.cells.map(JSON.stringify)).size, 1, 'carried grid cells are not fixed bounds');
+  await page.locator('[data-testid="inventory-dialog-carried"] button').first().click();
+  const afterSelection = await stableBoxes();
+  assert.deepEqual(afterSelection, before, 'inventory selection changed stable region or cell geometry');
+  const action = page.locator('.equipment-slot .inventory-action:not([disabled])').first();
+  const actionAvailable = await action.count() > 0;
+  if (actionAvailable) {
+    await action.click();
+    await page.getByTestId('inventory-dialog-receipt').waitFor();
+    const afterAction = await stableBoxes();
+    assert.deepEqual(
+      { ...afterAction, cells: [...new Set(afterAction.cells.map(JSON.stringify))] },
+      { ...before, cells: [...new Set(before.cells.map(JSON.stringify))] },
+      'inventory equipment receipt changed stable region or fixed cell geometry',
+    );
+  }
+  const aspectSweeps = [];
+  for (const [width, height, label] of [[1024, 768, '4x3'], [1280, 800, '16x10'], [1280, 720, '16x9']]) {
+    await page.setViewportSize({ width, height });
+    const geometry = await stableBoxes();
+    for (const [name, rect] of Object.entries(geometry)) {
+      if (name === 'slots' || name === 'cells') continue;
+      assert.ok(rect[2] > 0 && rect[3] > 0, `${label} inventory ${name} collapsed`);
+    }
+    const dialog = geometry.dialog;
+    assert.ok(dialog[0] >= 0 && dialog[1] >= 0 && dialog[0] + dialog[2] <= width && dialog[1] + dialog[3] <= height, `${label} inventory dialog escaped its presentation frame`);
+    await page.screenshot({ path: `${output}/inventory-game-window-${label}.png`, fullPage: true });
+    aspectSweeps.push(label);
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.screenshot({ path: `${output}/inventory-game-window.png`, fullPage: true });
+  await page.keyboard.press('Escape');
+  await page.getByTestId('inventory-dialog').waitFor({ state: 'detached' });
+  await page.evaluate(() => window.__daggerApplicationHost?.ui.setInteractionMode('interface'));
+  await page.waitForFunction(
+    () => window.__daggerApplicationHost?.readout().interactionMode === 'interface',
+    undefined,
+    { timeout: 30_000 },
+  );
+  return { stableSlots: before.slots.length, stableCells: before.cells.length, receiptChecked: actionAvailable, aspectSweeps };
 }
 
 async function assertSpriteReviewTab(page, output) {

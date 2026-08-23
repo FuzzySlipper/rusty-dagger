@@ -18,6 +18,8 @@ const UI_IMAGES: &[(&str, &str, bool)] = &[
 ];
 const FONT_ID: &str = "font.classic.0003";
 const FONT_FILE: &str = "FONT0003.FNT";
+const AUTHORED_ASSET_MANIFEST: &str = "data/ui-authored-assets.json";
+const AUTHORED_ASSET_ROOT: &str = "data/ui-original";
 
 pub fn publish(ui_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
     fs::create_dir_all(ui_dir).map_err(|error| error.to_string())?;
@@ -36,6 +38,7 @@ pub fn publish(ui_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
             *headerless,
         )?);
     }
+    publish_authored_assets(ui_dir, &mut assets)?;
     let font = publish_font(ui_dir, arena2_dir)?;
     let manifest = json!({
         "schemaVersion": 1,
@@ -57,6 +60,80 @@ pub fn publish(ui_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
         UI_IMAGES.len()
     );
     Ok(())
+}
+
+/// Publish small, repository-authored UI pieces through the same manifest and
+/// ID-only product route as the extracted classic images. Their source remains
+/// outside the generated `content/ui` directory so a normal import can
+/// recreate it and retain prompt/provenance metadata alongside the PNG digest.
+fn publish_authored_assets(ui_dir: &Path, assets: &mut Vec<Value>) -> Result<(), String> {
+    let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let manifest_path = repository_root.join(AUTHORED_ASSET_MANIFEST);
+    if !manifest_path.exists() {
+        return Ok(());
+    }
+    let manifest: Value = serde_json::from_slice(
+        &fs::read(&manifest_path)
+            .map_err(|error| format!("read {}: {error}", manifest_path.display()))?,
+    )
+    .map_err(|error| format!("decode {}: {error}", manifest_path.display()))?;
+    let entries = manifest
+        .get("assets")
+        .and_then(Value::as_array)
+        .ok_or_else(|| format!("{} must contain an assets array", manifest_path.display()))?;
+    for entry in entries {
+        let id = entry
+            .get("id")
+            .and_then(Value::as_str)
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| "authored UI asset id must be a non-empty string".to_string())?;
+        let file = entry
+            .get("file")
+            .and_then(Value::as_str)
+            .filter(is_safe_png_filename)
+            .ok_or_else(|| format!("authored UI asset {id} needs a safe PNG filename"))?;
+        let source_file = entry
+            .get("sourceFile")
+            .and_then(Value::as_str)
+            .filter(is_safe_png_filename)
+            .ok_or_else(|| format!("authored UI asset {id} needs a safe sourceFile"))?;
+        if assets
+            .iter()
+            .any(|asset| asset.get("id").and_then(Value::as_str) == Some(id))
+        {
+            return Err(format!(
+                "authored UI asset {id} duplicates a published UI id"
+            ));
+        }
+        let source_path = repository_root.join(AUTHORED_ASSET_ROOT).join(source_file);
+        let png = fs::read(&source_path)
+            .map_err(|error| format!("read {}: {error}", source_path.display()))?;
+        if !png.starts_with(b"\x89PNG\r\n\x1a\n") {
+            return Err(format!("authored UI asset {id} is not a PNG"));
+        }
+        fs::write(ui_dir.join(file), &png).map_err(|error| error.to_string())?;
+        assets.push(json!({
+            "id": id,
+            "file": file,
+            "mimeType": "image/png",
+            "source": {
+                "kind": "original-generated",
+                "sourceFile": format!("{AUTHORED_ASSET_ROOT}/{source_file}"),
+                "generator": entry.get("generator").cloned().unwrap_or(Value::String("unknown".to_string())),
+                "prompt": entry.get("prompt").cloned().unwrap_or(Value::String("".to_string())),
+            },
+            "png": {"sha256": sha256(&png), "byteLength": png.len()},
+        }));
+    }
+    Ok(())
+}
+
+fn is_safe_png_filename(file: &&str) -> bool {
+    !file.is_empty()
+        && file.ends_with(".png")
+        && !file.contains("..")
+        && !file.contains('/')
+        && !file.contains('\\')
 }
 
 fn publish_image(
@@ -169,9 +246,13 @@ mod tests {
             serde_json::from_slice(&fs::read(ui.join("ui-manifest.json")).unwrap()).unwrap();
         assert_eq!(
             manifest["assets"].as_array().unwrap().len(),
-            UI_IMAGES.len()
+            UI_IMAGES.len() + 1
         );
         assert_eq!(manifest["assets"][0]["id"], "hud.chrome.main");
+        assert_eq!(
+            manifest["assets"].as_array().unwrap().last().unwrap()["id"],
+            "inventory.skin.panel-slate.v1"
+        );
         assert_eq!(
             manifest["assets"][0]["source"]["dimensions"],
             json!([320, 46])

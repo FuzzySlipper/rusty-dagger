@@ -63,14 +63,11 @@
   <section *ngIf="inventoryOpen && readout as live" class="inventory-dialog-layer" data-testid="inventory-dialog-layer" data-rusty-ui-interactive>
     <section class="inventory-dialog" role="dialog" aria-modal="true" aria-labelledby="inventory-dialog-title"
       aria-describedby="inventory-dialog-summary" data-testid="inventory-dialog">
-      <img class="inventory-dialog-chrome" aria-hidden="true"
-        src="/api/dagger-product/ui/assets/window.inventory.chrome" />
       <header class="inventory-dialog-header">
         <div><p class="kicker">Carried equipment · Rust-authoritative</p><h2 id="inventory-dialog-title">Inventory</h2></div>
         <button type="button" data-testid="inventory-exit" (click)="closeInventory()">Exit <span aria-hidden="true">×</span></button>
       </header>
       <p class="inventory-dialog-summary" id="inventory-dialog-summary">I or Escape returns to play. Equipment changes are sent to the live Rust session.</p>
-      <p *ngIf="commandError" class="inventory-dialog-error" role="alert" data-testid="inventory-dialog-error">{{ commandError }}</p>
       <div class="inventory-capacity" data-testid="inventory-dialog-capacity">
         <div *ngFor="let capacity of live.playerInventory.capacity">
           <span>{{ capacity.metric }}</span>
@@ -140,9 +137,12 @@
           <ng-template #noInventorySelection><p class="inventory-empty">Select a carried item to inspect it.</p></ng-template>
         </aside>
       </div>
-      <section class="inventory-receipt" *ngIf="latestEquipmentReceipt(live) as receipt" aria-live="polite" data-testid="inventory-dialog-receipt">
-        <span>{{ receipt.accepted ? 'Latest equipment receipt' : 'Equipment rejected' }}</span>
-        <strong>{{ receipt.operation }} · {{ receipt.item }}<ng-container *ngIf="receipt.replacedItem"> · replaced {{ receipt.replacedItem }}</ng-container><ng-container *ngIf="receipt.reason"> · {{ receipt.reason }}</ng-container></strong>
+      <section class="inventory-feedback" aria-live="polite" data-testid="inventory-dialog-feedback">
+        <p *ngIf="commandError" class="inventory-dialog-error" role="alert" data-testid="inventory-dialog-error">{{ commandError }}</p>
+        <div class="inventory-receipt" *ngIf="latestEquipmentReceipt(live) as receipt" data-testid="inventory-dialog-receipt">
+          <span>{{ receipt.accepted ? 'Latest equipment receipt' : 'Equipment rejected' }}</span>
+          <strong>{{ receipt.operation }} · {{ receipt.item }}<ng-container *ngIf="receipt.replacedItem"> · replaced {{ receipt.replacedItem }}</ng-container><ng-container *ngIf="receipt.reason"> · {{ receipt.reason }}</ng-container></strong>
+        </div>
       </section>
     </section>
   </section>
