@@ -69,6 +69,16 @@ pub fn publish(ui_dir: &Path, arena2_dir: &Path) -> Result<(), String> {
 fn publish_authored_assets(ui_dir: &Path, assets: &mut Vec<Value>) -> Result<(), String> {
     let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let manifest_path = repository_root.join(AUTHORED_ASSET_MANIFEST);
+    let source_root = repository_root.join(AUTHORED_ASSET_ROOT);
+    publish_authored_assets_from_manifest(ui_dir, assets, &manifest_path, &source_root)
+}
+
+fn publish_authored_assets_from_manifest(
+    ui_dir: &Path,
+    assets: &mut Vec<Value>,
+    manifest_path: &Path,
+    source_root: &Path,
+) -> Result<(), String> {
     if !manifest_path.exists() {
         return Ok(());
     }
@@ -81,6 +91,15 @@ fn publish_authored_assets(ui_dir: &Path, assets: &mut Vec<Value>) -> Result<(),
         .get("assets")
         .and_then(Value::as_array)
         .ok_or_else(|| format!("{} must contain an assets array", manifest_path.display()))?;
+    let mut published_ids = assets
+        .iter()
+        .filter_map(|asset| asset.get("id").and_then(Value::as_str))
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut published_files = assets
+        .iter()
+        .filter_map(|asset| asset.get("file").and_then(Value::as_str))
+        .collect::<std::collections::BTreeSet<_>>();
+    let mut configured = Vec::with_capacity(entries.len());
     for entry in entries {
         let id = entry
             .get("id")
@@ -97,15 +116,20 @@ fn publish_authored_assets(ui_dir: &Path, assets: &mut Vec<Value>) -> Result<(),
             .and_then(Value::as_str)
             .filter(is_safe_png_filename)
             .ok_or_else(|| format!("authored UI asset {id} needs a safe sourceFile"))?;
-        if assets
-            .iter()
-            .any(|asset| asset.get("id").and_then(Value::as_str) == Some(id))
-        {
+        if !published_ids.insert(id) {
             return Err(format!(
                 "authored UI asset {id} duplicates a published UI id"
             ));
         }
-        let source_path = repository_root.join(AUTHORED_ASSET_ROOT).join(source_file);
+        if !published_files.insert(file) {
+            return Err(format!(
+                "authored UI asset {id} duplicates a published UI filename {file}"
+            ));
+        }
+        configured.push((id, file, source_file, entry));
+    }
+    for (id, file, source_file, entry) in configured {
+        let source_path = source_root.join(source_file);
         let png = fs::read(&source_path)
             .map_err(|error| format!("read {}: {error}", source_path.display()))?;
         if !png.starts_with(b"\x89PNG\r\n\x1a\n") {
@@ -227,6 +251,61 @@ fn sha256(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn write_authored_manifest(
+        root: &Path,
+        assets: Value,
+    ) -> (std::path::PathBuf, std::path::PathBuf) {
+        let manifest_path = root.join("authored-assets.json");
+        let source_root = root.join("source");
+        fs::create_dir_all(&source_root).unwrap();
+        fs::write(
+            &manifest_path,
+            serde_json::to_vec(&json!({"assets": assets})).unwrap(),
+        )
+        .unwrap();
+        (manifest_path, source_root)
+    }
+
+    #[test]
+    fn authored_ui_filenames_cannot_replace_classic_or_each_other() {
+        let root = std::env::temp_dir().join(format!(
+            "rusty-dagger-authored-ui-collision-{}",
+            std::process::id()
+        ));
+        let ui = root.join("ui");
+        fs::create_dir_all(&ui).unwrap();
+        let classic = b"classic-output";
+        fs::write(ui.join("hud-chrome-main.png"), classic).unwrap();
+        let classic_assets = vec![json!({"id": "hud.chrome.main", "file": "hud-chrome-main.png"})];
+        let collision = json!([{"id": "inventory.skin.bad", "file": "hud-chrome-main.png", "sourceFile": "bad.png"}]);
+        let (manifest_path, source_root) = write_authored_manifest(&root, collision);
+        fs::write(source_root.join("bad.png"), b"\x89PNG\r\n\x1a\nnew").unwrap();
+        let mut assets = classic_assets.clone();
+        let error =
+            publish_authored_assets_from_manifest(&ui, &mut assets, &manifest_path, &source_root)
+                .unwrap_err();
+        assert_eq!(error, "authored UI asset inventory.skin.bad duplicates a published UI filename hud-chrome-main.png");
+        assert_eq!(fs::read(ui.join("hud-chrome-main.png")).unwrap(), classic);
+        assert_eq!(assets, classic_assets);
+
+        let duplicate = json!([
+            {"id": "inventory.skin.one", "file": "inventory.png", "sourceFile": "one.png"},
+            {"id": "inventory.skin.two", "file": "inventory.png", "sourceFile": "two.png"}
+        ]);
+        let (manifest_path, source_root) = write_authored_manifest(&root, duplicate);
+        let mut assets = Vec::new();
+        let error =
+            publish_authored_assets_from_manifest(&ui, &mut assets, &manifest_path, &source_root)
+                .unwrap_err();
+        assert_eq!(
+            error,
+            "authored UI asset inventory.skin.two duplicates a published UI filename inventory.png"
+        );
+        assert!(assets.is_empty());
+        assert!(!ui.join("inventory.png").exists());
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn publishes_classic_ui_catalog_from_configured_real_arena2_files() {
