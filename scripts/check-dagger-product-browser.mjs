@@ -963,9 +963,14 @@ async function assertGameMenu(page) {
   assert.equal(await page.getByTestId('game-menu-settings-slot').count(), 1, 'missing later Settings insertion point');
   assert.ok((await page.getByTestId('game-menu-help').innerText()).includes('WASD'), 'Escape menu must own control help');
 
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('[data-testid="game-menu"]') === null);
+  await page.waitForFunction(() => window.__daggerApplicationHost?.readout().interactionMode === 'gameplay');
+
   // Playwright does not synthesize operating-system key auto-repeat for a held
-  // key, so dispatch the repeat keydown that a held Escape produces.
+  // key, so open from gameplay and dispatch the repeat keydown it would produce.
   await page.keyboard.down('Escape');
+  await page.getByTestId('game-menu').waitFor();
   await page.waitForTimeout(80);
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', {
     code: 'Escape',

@@ -42,7 +42,7 @@
       </ng-container>
     </ng-container>
       <div class="game-hud" data-rusty-ui-interactive>
-      <div><span>Privateer's Hold</span><strong>Rust-authoritative connected product</strong></div>
+      <div><span>Privateer's Hold</span></div>
       <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">
         <span>{{ encounter.name }} · {{ encounter.status }}</span><strong>{{ encounter.objective }}</strong>
       </div>
