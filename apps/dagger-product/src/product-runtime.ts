@@ -324,6 +324,7 @@ export function mountDaggerProductRuntime(
   const onReleaseGameplayInput = (): void => releaseGameplayInput();
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.code === 'Escape') {
+      if (event.repeat) return;
       releaseGameplayInput();
       const dismiss = new Event('dagger-dismiss-overlay', { cancelable: true });
       if (!window.dispatchEvent(dismiss)) {
