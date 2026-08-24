@@ -1,6 +1,6 @@
 <main class="product-shell" [attr.data-product-mode]="labOpen ? 'lab' : 'gameplay'">
   <section class="game-stage" data-testid="game-stage" aria-label="Privateer's Hold game viewport"
-    [attr.inert]="inventoryOpen || characterSheetOpen || lootOpen || lootOpening ? '' : null" [attr.aria-hidden]="inventoryOpen || characterSheetOpen || lootOpen || lootOpening ? 'true' : null">
+    [attr.inert]="gameMenuOpen || inventoryOpen || characterSheetOpen || lootOpen || lootOpening ? '' : null" [attr.aria-hidden]="gameMenuOpen || inventoryOpen || characterSheetOpen || lootOpen || lootOpening ? 'true' : null">
     <ng-container *ngIf="readout as live">
       <ng-container *ngIf="hudMeter(live.playerStats.currentHealth, live.playerStats.maxHealth) as health">
         <ng-container *ngIf="hudMeter(live.playerStats.currentStamina, live.playerStats.maxStamina) as stamina">
@@ -41,19 +41,31 @@
         </ng-container>
       </ng-container>
     </ng-container>
-    <div class="game-hud" data-rusty-ui-interactive>
+      <div class="game-hud" data-rusty-ui-interactive>
       <div><span>Privateer's Hold</span><strong>Rust-authoritative connected product</strong></div>
       <div class="encounter-status" *ngIf="readout?.activeEncounter as encounter" [attr.data-status]="encounter.status" data-testid="active-encounter">
         <span>{{ encounter.name }} · {{ encounter.status }}</span><strong>{{ encounter.objective }}</strong>
       </div>
-      <div class="game-controls"><span>1 Rat room</span><span>2 Skeleton room</span><span>WASD move</span><span>Mouse or J/L turn</span><span>U/O look up/down</span><span>Space / click attack</span><span>F loot</span><span>I inventory</span><span>C character</span><span>R retry</span></div>
-      <button type="button" data-testid="open-loot" [disabled]="!readout || lootOpening" (click)="openLoot()">Loot (F)</button>
-      <button type="button" data-testid="open-inventory" [disabled]="!readout" (click)="openInventory()">Inventory</button>
-      <button type="button" data-testid="open-character-sheet" [disabled]="!readout" (click)="openCharacterSheet()">Character</button>
-      <button type="button" data-testid="open-lab" (click)="openLab()">Open Dagger Lab</button>
-      <button type="button" data-testid="refresh-scene" (click)="refreshScene()">Refresh scene</button>
     </div>
     <p *ngIf="lootFeedback && !lootOpen" class="loot-status" role="status" aria-live="polite" data-testid="loot-status">{{ lootFeedback }}</p>
+  </section>
+  <section *ngIf="gameMenuOpen" class="game-menu-layer" data-testid="game-menu-layer" data-rusty-ui-interactive>
+    <section class="game-menu" role="dialog" aria-modal="true" aria-labelledby="game-menu-title" aria-describedby="game-menu-help" data-testid="game-menu">
+      <header><p class="kicker">Privateer's Hold</p><h1 id="game-menu-title">Game menu</h1></header>
+      <div class="game-menu-actions" aria-label="Game menu actions">
+        <button type="button" data-testid="game-menu-return" (click)="closeGameMenu()"><strong>Return to game</strong><small>Escape</small></button>
+        <button type="button" data-testid="game-menu-inventory" [disabled]="!readout" (click)="openInventory()"><strong>Inventory</strong><small>I</small></button>
+        <button type="button" data-testid="game-menu-character" [disabled]="!readout" (click)="openCharacterSheet()"><strong>Character</strong><small>C</small></button>
+        <button type="button" data-testid="game-menu-loot" [disabled]="!readout || lootOpening" (click)="openLoot()"><strong>Loot</strong><small>F</small></button>
+        <button type="button" data-testid="game-menu-lab" (click)="openLab()"><strong>Dagger Lab</strong><small>Explorer</small></button>
+        <button type="button" data-testid="game-menu-refresh" (click)="refreshSceneFromMenu()"><strong>Refresh scene</strong><small>Reload renderer</small></button>
+      </div>
+      <section class="game-menu-help" id="game-menu-help" aria-label="Controls" data-testid="game-menu-help">
+        <h2>Controls</h2>
+        <dl><div><dt>Move</dt><dd>WASD</dd></div><div><dt>Look</dt><dd>Mouse or J/L · U/O</dd></div><div><dt>Attack</dt><dd>Space or click</dd></div><div><dt>Encounters</dt><dd>1 rat room · 2 skeleton room · R retry</dd></div></dl>
+      </section>
+      <div class="game-menu-settings-slot" data-testid="game-menu-settings-slot" aria-label="Settings insertion point"></div>
+    </section>
   </section>
   <section *ngIf="!labOpen && visibleNotices.length > 0" class="product-notices" aria-live="polite"
     aria-atomic="false" aria-relevant="additions" role="status" data-testid="product-notices">

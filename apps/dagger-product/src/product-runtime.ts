@@ -330,7 +330,7 @@ export function mountDaggerProductRuntime(
         return;
       }
       context.ui.setInteractionMode('interface');
-      window.dispatchEvent(new Event('dagger-open-lab'));
+      window.dispatchEvent(new Event('dagger-toggle-game-menu'));
       flushInput();
       return;
     }

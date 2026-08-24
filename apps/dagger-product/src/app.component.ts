@@ -45,6 +45,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private lootOpenCancelled = false;
   private lootClosing = false;
   private readonly openLabRequest = (): void => this.openLab();
+  private readonly toggleGameMenuRequest = (): void => this.openGameMenu();
   private readonly openInventoryRequest = (event: Event): void => {
     if (this.labOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     event.preventDefault();
@@ -69,6 +70,16 @@ export class AppComponent implements OnInit, OnDestroy {
     void this.openLoot();
   };
   private readonly dismissOverlayRequest = (event: Event): void => {
+    if (this.labOpen) {
+      event.preventDefault();
+      this.returnToPlay();
+      return;
+    }
+    if (this.gameMenuOpen) {
+      event.preventDefault();
+      this.closeGameMenu();
+      return;
+    }
     if (this.inventoryOpen) {
       event.preventDefault();
       this.closeInventory();
@@ -93,6 +104,7 @@ export class AppComponent implements OnInit, OnDestroy {
   contentFilter = '';
   selectedContentId: number | undefined;
   labOpen = false;
+  gameMenuOpen = false;
   inventoryOpen = false;
   characterSheetOpen = false;
   lootOpen = false;
@@ -118,6 +130,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     window.addEventListener('dagger-open-lab', this.openLabRequest);
+    window.addEventListener('dagger-toggle-game-menu', this.toggleGameMenuRequest);
     window.addEventListener('dagger-open-inventory', this.openInventoryRequest);
     window.addEventListener('dagger-open-character-sheet', this.openCharacterSheetRequest);
     window.addEventListener('dagger-open-loot', this.openLootRequest);
@@ -128,6 +141,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     window.removeEventListener('dagger-open-lab', this.openLabRequest);
+    window.removeEventListener('dagger-toggle-game-menu', this.toggleGameMenuRequest);
     window.removeEventListener('dagger-open-inventory', this.openInventoryRequest);
     window.removeEventListener('dagger-open-character-sheet', this.openCharacterSheetRequest);
     window.removeEventListener('dagger-open-loot', this.openLootRequest);
@@ -138,6 +152,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   openLab(): void {
     if (this.lootOpen || this.lootOpening) return;
+    this.gameMenuOpen = false;
     this.inventoryOpen = false;
     this.characterSheetOpen = false;
     this.labOpen = true;
@@ -150,6 +165,30 @@ export class AppComponent implements OnInit, OnDestroy {
 
   returnToPlay(): void {
     this.labOpen = false;
+    this.gameMenuOpen = false;
+    this.application.ui.setInteractionMode('gameplay');
+    this.application.ui.focusGameplay();
+  }
+
+  openGameMenu(): void {
+    if (this.labOpen || this.inventoryOpen || this.characterSheetOpen || this.lootOpen || this.lootOpening) return;
+    if (this.gameMenuOpen) {
+      this.closeGameMenu();
+      return;
+    }
+    window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.gameMenuOpen = true;
+    this.application.ui.setInteractionMode('interface');
+    this.changeDetector.detectChanges();
+    requestAnimationFrame(() => {
+      if (!this.gameMenuOpen) return;
+      document.querySelector<HTMLButtonElement>('[data-testid="game-menu-return"]')?.focus();
+    });
+  }
+
+  closeGameMenu(): void {
+    if (!this.gameMenuOpen) return;
+    this.gameMenuOpen = false;
     this.application.ui.setInteractionMode('gameplay');
     this.application.ui.focusGameplay();
   }
@@ -157,6 +196,7 @@ export class AppComponent implements OnInit, OnDestroy {
   openInventory(releaseGameplayInput = true): void {
     if (this.labOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     if (releaseGameplayInput) window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.gameMenuOpen = false;
     this.characterSheetOpen = false;
     this.inventoryOpen = true;
     this.application.ui.setInteractionMode('interface');
@@ -177,6 +217,7 @@ export class AppComponent implements OnInit, OnDestroy {
   openCharacterSheet(releaseGameplayInput = true): void {
     if (this.labOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     if (releaseGameplayInput) window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.gameMenuOpen = false;
     this.inventoryOpen = false;
     this.characterSheetOpen = true;
     this.application.ui.setInteractionMode('interface');
@@ -217,6 +258,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async openLoot(): Promise<void> {
     if (this.labOpen || this.inventoryOpen || this.characterSheetOpen || this.lootOpen || this.lootOpening || this.readout === undefined) return;
     window.dispatchEvent(new Event('dagger-release-gameplay-input'));
+    this.gameMenuOpen = false;
     this.lootOpenCancelled = false;
     this.lootOpening = true;
     this.lootFeedback = '';
@@ -318,6 +360,11 @@ export class AppComponent implements OnInit, OnDestroy {
     } finally {
       this.changeDetector.markForCheck();
     }
+  }
+
+  refreshSceneFromMenu(): void {
+    this.closeGameMenu();
+    void this.refreshScene();
   }
 
   async reset(): Promise<void> {

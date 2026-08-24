@@ -30,6 +30,7 @@ try {
   await assertApplicationHostBounds(page, 1280, 900);
   await assertSupportedPresentationSizes(page);
   await assertDeveloperCommandConsole(page);
+  const gameMenu = await assertGameMenu(page);
   const connectedPresentation = await assertConnectedDynamicPresentation(page);
   const semanticLook = await assertSemanticPointerDirections(page);
   const keyboardLook = await assertKeyboardLookDirections(page);
@@ -54,7 +55,8 @@ try {
     { timeout: 30_000 },
   );
   const inventoryComposition = await assertInventoryGameWindow(page, output);
-  await page.getByTestId('refresh-scene').click();
+  await openGameMenu(page);
+  await page.getByTestId('game-menu-refresh').click();
   await page.waitForFunction(
     () => window.__daggerApplicationHost?.readout().contentRevision === 2,
     undefined,
@@ -271,7 +273,7 @@ try {
   await page.locator('canvas').waitFor({ state: 'detached' });
 
   console.log(
-    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated inventoryComposition=${JSON.stringify(inventoryComposition)} semanticLook=${JSON.stringify(semanticLook)} keyboardLook=${JSON.stringify(keyboardLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-class-career/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
+    `DAGGER_CONNECTED_PRODUCT_BROWSER_OK lifecycle=reloaded/disposed/same-rust-session renderer=engine-application-host resources=${initialHost.resourceCount}/${initialHost.resourceBytes} replacement=atomic ui_input=arbitrated gameMenu=${JSON.stringify(gameMenu)} inventoryComposition=${JSON.stringify(inventoryComposition)} semanticLook=${JSON.stringify(semanticLook)} keyboardLook=${JSON.stringify(keyboardLook)} inputCadence=${JSON.stringify(inputCadence)} diagnostics=${JSON.stringify(connectedDiagnostics)} dynamicPresentation=${JSON.stringify(connectedPresentation)} content=thief-2001-class-career/rat-2007-mobile-0 definitions=package/actors/actions/items/encounters combatA=${JSON.stringify(combatA)} reloadMove=${JSON.stringify(reloadMove)} desktop=${output}/explorer-desktop.png narrow=${output}/explorer-narrow.png spriteReview=${JSON.stringify(spriteReview)}`,
   );
 } finally {
   await browser.close();
@@ -346,6 +348,12 @@ async function assertInventoryGameWindow(page, output) {
   const aspectSweeps = [];
   for (const [width, height, label] of [[1024, 768, '4x3'], [1280, 800, '16x10'], [1280, 720, '16x9']]) {
     await page.setViewportSize({ width, height });
+    await page.waitForFunction(
+      ({ width, height }) => document.documentElement.clientWidth === width
+        && document.documentElement.clientHeight === height,
+      { width, height },
+    );
+    await assertApplicationHostBounds(page, width, height);
     const geometry = await stableBoxes();
     for (const [name, rect] of Object.entries(geometry)) {
       if (name === 'slots' || name === 'cells') continue;
@@ -711,10 +719,7 @@ async function assertSemanticPointerDirections(page) {
     return camera();
   };
   const angleDelta = (from, to) => ((to - from + 540) % 360) - 180;
-  await page.getByTestId('open-lab').click();
-  await page.waitForFunction(
-    () => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'lab',
-  );
+  await openLabFromGameplay(page);
   await page.getByTestId('return-to-play').click();
   await page.waitForFunction(() => document.pointerLockElement !== null);
   await page.mouse.move(640, 450, { steps: 1 });
@@ -928,17 +933,44 @@ async function pressPhysical(page, code) {
 }
 
 async function openInterface(page) {
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(
-    () => window.__daggerApplicationHost?.readout().interactionMode === 'interface',
-  );
+  await openGameMenu(page);
+  await page.getByTestId('game-menu-lab').click();
   await page.waitForFunction(() => document.querySelector('[data-testid="lab-page"]')?.classList.contains('is-open'));
   assert.equal(await page.locator('.product-shell').getAttribute('data-product-mode'), 'lab');
 }
 
+async function openGameMenu(page) {
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(
+    () => window.__daggerApplicationHost?.readout().interactionMode === 'interface',
+  );
+  await page.getByTestId('game-menu').waitFor();
+}
+
 async function openLabFromGameplay(page) {
-  await page.getByTestId('open-lab').click();
+  await openGameMenu(page);
+  await page.getByTestId('game-menu-lab').click();
   await page.waitForFunction(() => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'lab');
+}
+
+async function assertGameMenu(page) {
+  await openGameMenu(page);
+  assert.equal(await page.locator('.game-controls').count(), 0, 'valid key strip must only appear in the Escape menu');
+  assert.equal(await page.getByTestId('open-lab').count(), 0, 'top action buttons must be replaced by the Escape menu');
+  for (const action of ['game-menu-return', 'game-menu-inventory', 'game-menu-character', 'game-menu-loot', 'game-menu-lab', 'game-menu-refresh']) {
+    assert.equal(await page.getByTestId(action).count(), 1, `missing Escape menu action ${action}`);
+  }
+  assert.equal(await page.getByTestId('game-menu-settings-slot').count(), 1, 'missing later Settings insertion point');
+  assert.ok((await page.getByTestId('game-menu-help').innerText()).includes('WASD'), 'Escape menu must own control help');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('[data-testid="game-menu"]') === null);
+  await page.waitForFunction(() => window.__daggerApplicationHost?.readout().interactionMode === 'gameplay');
+  await openGameMenu(page);
+  await page.getByTestId('game-menu-lab').click();
+  await page.getByTestId('lab-page').filter({ has: page.getByTestId('return-to-play') }).waitFor();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('.product-shell')?.getAttribute('data-product-mode') === 'gameplay');
+  return { actions: 6, help: 'escape-only', settingsSlot: true, labEscape: 'closed-first' };
 }
 
 async function assertApplicationHostBounds(page, width, height, exerciseLabScroll = false) {
