@@ -1,0 +1,46 @@
+[product]
+id = "rusty.product.dagger"
+
+[runtime_composition]
+entrypoints = ["rules/main.ts"]
+
+[lifecycle]
+mode = "realtime"
+
+[lifecycle.realtime]
+fixed_step_hz = 60
+max_catch_up_steps = 4
+
+[kernel]
+package = "kernel/Cargo.toml"
+
+[ui]
+entry = "ui/main.ts"
+projection_stream = "dagger.ui"
+projection_contract = "dagger.ui.v1"
+
+[content]
+root = "content"
+
+[outputs]
+compiled_composition = "generated/compiled-composition.json"
+admitted_runtime_content = "generated/runtime-content"
+product_assembly = "generated/product-assembly"
+product_bundle = "generated/product-bundle"
+
+# This is branding and packaging policy only. The generated wrapper consumes
+# the same admitted Product Assembly as browser development; it does not own a
+# second Dagger runtime, renderer, or content root.
+[[wrappers]]
+id = "desktop"
+kind = "tauri"
+version = "0.1.0"
+application_id = "org.rusty.dagger"
+title = "Rusty Dagger: Privateer's Hold"
+window_width = 1280
+window_height = 720
+resizable = true
+permissions = ["window", "storage"]
+storage_namespace = "rusty.product.dagger"
+release_channel = "development"
+singleton = true

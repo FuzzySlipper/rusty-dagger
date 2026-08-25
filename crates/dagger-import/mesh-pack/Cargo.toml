@@ -1,0 +1,11 @@
+[package]
+name = "dagger-mesh-pack"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+rusty-engine = { path = "../../../../rusty-engine/rust/crates/rusty-engine" }
+serde_json = "1"

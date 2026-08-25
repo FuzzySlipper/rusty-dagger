@@ -43,7 +43,7 @@ pub(crate) fn make_readout(open: &OpenProject) -> Value {
     let entity_state_json = serde_json::to_string(&entities).unwrap();
     let content_manifest_json = serde_json::to_string(&json!({
         "projectHash": open.project_hash,
-        "meshSources": ["content/privateers-hold.mesh.json", "content/privateers-hold.glb"],
+        "meshSources": ["authoring-content/privateers-hold.mesh.json", "authoring-content/privateers-hold.glb"],
     }))
     .unwrap();
     let visible_mesh_count = entities
@@ -232,6 +232,6 @@ fn inspections(assets: &[Value], scene_name: &str, entities: &[Value]) -> Value 
         "catalog": { "entryCount": assets.len(), "dependencyCount": dependency_count, "kinds": [{"name":"material","count":assets.iter().filter(|a| a["id"].as_str().unwrap_or("").starts_with("material/")).count()},{"name":"mesh","count":assets.iter().filter(|a| a["id"].as_str().unwrap_or("").starts_with("mesh/")).count()}], "lock": {"entryCount": assets.len(), "findingCount": 0}, "diagnostics": {"diagnostics": []} },
         "scene": { "sceneId": 1, "revision": 1, "schemaVersion": 24, "name": scene_name, "nodeCount": entity_count, "rootCount": entity_count, "dependencyCount": assets.len(), "nodeKinds": [], "diagnostics": {"diagnostics": []} },
         "entityState": { "schemaVersion": 1, "revision": 1, "entityCount": entity_count, "lifecycle": [], "sources": [{"name":"authoredProject","count":entity_count}], "capabilities": [], "relationships": [], "entityIds": entity_ids, "diagnostics": {"diagnostics": []} },
-        "persistence": { "schemaVersion": 1, "artifactCount": 1, "requiredArtifactCount": 1, "declaredByteCount": 0, "classes": [{"name":"project","count":1}], "roles": [{"name":"canonical","count":1}], "loadSteps": [{"stage":"project","path":"content/projects/privateers-hold.project.json"}], "diagnostics": {"diagnostics": []} },
+        "persistence": { "schemaVersion": 1, "artifactCount": 1, "requiredArtifactCount": 1, "declaredByteCount": 0, "classes": [{"name":"project","count":1}], "roles": [{"name":"canonical","count":1}], "loadSteps": [{"stage":"project","path":"authoring-content/projects/privateers-hold.project.json"}], "diagnostics": {"diagnostics": []} },
     })
 }

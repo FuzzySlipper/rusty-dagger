@@ -1,0 +1,8 @@
+[package]
+name = "dagger-rpg"
+version = "0.1.0"
+edition = "2021"
+description = "Rusty Dagger gameplay package admission, compilation, and evaluation for the Product Kernel"
+
+[dependencies]
+rusty-engine = { path = "../../../rusty-engine/rust/crates/rusty-engine" }

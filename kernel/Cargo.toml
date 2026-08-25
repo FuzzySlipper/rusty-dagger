@@ -1,0 +1,20 @@
+[package]
+name = "rusty-dagger-product-kernel"
+version = "0.1.0"
+edition = "2021"
+description = "Resource-backed Rusty Dagger Product Kernel"
+
+[lib]
+path = "entry.rs"
+
+[dependencies]
+dagger-rpg = { path = "dagger-rpg" }
+dagger-runtime = { path = "dagger-runtime" }
+rusty-engine = { path = "../../rusty-engine/rust/crates/rusty-engine" }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+# This Product Kernel is intentionally package-mode rather than a member of
+# the legacy Dagger workspace. Product Assembly copies this complete closure.
+[workspace]

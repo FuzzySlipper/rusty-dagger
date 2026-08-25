@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Provision adjacent Rusty Engine checkout
         run: git clone --depth 1 https://github.com/FuzzySlipper/rusty-engine.git ../rusty-engine
-      - name: Install Engine facade build prerequisites
+      - name: Install Engine product-host prerequisites
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y \
@@ -23,6 +23,7 @@ jobs:
             libgtk-3-dev \
             libwebkit2gtk-4.1-dev \
             libxkbcommon-x11-0 \
+            chromium \
             ripgrep
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -34,10 +35,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
-      - name: Build adjacent Engine gameplay-rules packages
+      - name: Build required Engine rules and renderer artifacts
         run: |
-          pnpm --dir ../rusty-engine/rules install --frozen-lockfile
-          pnpm --dir ../rusty-engine/rules run build
-      - name: Verify Rust provider, Engine boundary, and web product
+          ../rusty-engine/scripts/verify-rules.sh
+          ../rusty-engine/scripts/verify-render.sh
+      - name: Build the public Rusty Product CLI
+        run: cargo build --manifest-path ../rusty-engine/Cargo.toml -p rusty-cli --locked
+      - name: Verify Dagger Product Layout and browser host
         run: ./scripts/verify.sh

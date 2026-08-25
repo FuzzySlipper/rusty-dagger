@@ -1,10 +1,10 @@
 {
   "project": "rusty-dagger",
   "serve": {
-    "command": "scripts/serve-dagger-product.sh {host} {port}",
-    "preferredPort": 4174,
-    "healthUrl": "/healthz",
-    "readyText": "\"project\":\"rusty-dagger\"",
+    "command": "cargo run --manifest-path ../rusty-engine/Cargo.toml -p rusty-cli -- dev --path . --port {port}",
+    "preferredPort": 0,
+    "healthUrl": "/",
+    "readyText": "http://127.0.0.1:",
     "reusePolicy": "broker_owned",
     "startupTimeout": "240s"
   }

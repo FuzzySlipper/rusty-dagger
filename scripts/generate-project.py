@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 """Generate a studio-openable project doc for rusty-dagger from the engine
-import artifacts (content/imported/) produced by rusty-asset-import.
+import artifacts (authoring-content/imported/) produced by rusty-asset-import.
 
 The imported artifacts are already complete catalog entries, so this script
 publishes them directly into the StoredProjectContent (schemaVersion 24) shape
 expected by Studio.
 
 Usage: python3 scripts/generate-project.py [--write|--check]
-  --write (default): write content/projects/privateers-hold.project.json
+  --write (default): write authoring-content/projects/privateers-hold.project.json
   --check: fail if the committed project doc is stale (for CI/verify hooks)
 """
-import json, sys, hashlib
+import hashlib
+import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-IMPORTED = REPO / "content" / "imported"
-TEXTURES = REPO / "content" / "textures"
-OUT = REPO / "content" / "projects" / "privateers-hold.project.json"
-GALLERY_OUT = REPO / "content" / "projects" / "encounter-gallery.project.json"
-GALLERY_NAV_OUT = REPO / "content" / "projects" / "encounter-gallery.navgrid.json"
+IMPORTED = REPO / "authoring-content" / "imported"
+TEXTURES = REPO / "authoring-content" / "textures"
+OUT = REPO / "authoring-content" / "projects" / "privateers-hold.project.json"
+GALLERY_OUT = REPO / "authoring-content" / "projects" / "encounter-gallery.project.json"
+GALLERY_NAV_OUT = REPO / "authoring-content" / "projects" / "encounter-gallery.navgrid.json"
+RUNTIME_PROJECT = REPO / "content" / "projects" / "privateers-hold.project.json"
+RUNTIME_MESH = REPO / "content" / "meshes" / "privateers-hold.rmesh"
+RUNTIME_MANIFEST = REPO / "content" / "manifest.json"
+RUNTIME_COMBAT_MANIFEST = REPO / "content" / "textures" / "combat-manifest.json"
 
 SCHEMA_VERSION = 24
 PROJECT_ID = "privateers-hold"
@@ -52,7 +60,7 @@ def load_json(p: Path):
 
 
 def load_texture_manifest() -> dict:
-    """sha256 manifest emitted by dagger-import --texture-dir (content/textures).
+    """sha256 manifest emitted by dagger-import --texture-dir (authoring-content/textures).
 
     Maps PNG file name -> {"sha256", "byteLength"}. Missing/empty manifest means
     the untextured fallback chain was run; texture catalog entries then keep
@@ -84,7 +92,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
         """Texture asset payload: decoded PNG geometry + content identity.
 
         The importer creates bare texture/ catalog entries; the exact bytes
-        live at content/textures/<slug>.png and their hash is authoritative.
+        live at authoring-content/textures/<slug>.png and their hash is authoritative.
         """
         slug = entry["id"].split("/", 1)[1]
         png_name = f"{slug}.png"
@@ -113,7 +121,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
             "height": height,
             "filter": "nearest",
             "wrap": "repeat",
-            "sourcePath": f"content/textures/{png_name}",
+            "sourcePath": f"authoring-content/textures/{png_name}",
             "contentHash": content_hash,
         }
 
@@ -171,7 +179,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
             "catalog": {
                 "version": 1,
                 "hash": tex["sha256"].removeprefix("sha256:"),
-                "sourcePath": f"content/textures/{tex['path']}",
+                "sourcePath": f"authoring-content/textures/{tex['path']}",
                 "label": slug,
                 "dependencies": [],
             },
@@ -199,7 +207,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
             "catalog": {
                 "version": 1,
                 "hash": enemy["sha256"].removeprefix("sha256:"),
-                "sourcePath": f"content/textures/{enemy['path']}",
+                "sourcePath": f"authoring-content/textures/{enemy['path']}",
                 "label": slug,
                 "dependencies": [],
             },
@@ -225,7 +233,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
                 "catalog": {
                     "version": 1,
                     "hash": corpse["sha256"].removeprefix("sha256:"),
-                    "sourcePath": f"content/textures/{corpse['path']}",
+                    "sourcePath": f"authoring-content/textures/{corpse['path']}",
                     "label": corpse_slug,
                     "dependencies": [],
                 },
@@ -263,7 +271,7 @@ def build_assets(catalog: dict, static_mesh: dict, billboard_manifest: dict, ene
             "catalog": {
                 "version": 1,
                 "hash": actual.removeprefix("sha256:"),
-                "sourcePath": f"content/textures/{combat['path']}",
+                "sourcePath": f"authoring-content/textures/{combat['path']}",
                 "label": combat["id"],
                 "dependencies": [],
             },
@@ -329,9 +337,9 @@ def build_scene(static_mesh: dict, enemy_manifest: dict, billboard_manifest: dic
     # Scene metadata sidecar from the mesh-json import run (markers, lights,
     # billboards in glTF world space). The mesh.scene.json is the complete one
     # (the GLB run's scene.json is a lighter subset).
-    scene_meta_path = REPO / "content" / "privateers-hold.mesh.scene.json"
+    scene_meta_path = REPO / "authoring-content" / "privateers-hold.mesh.scene.json"
     if not scene_meta_path.exists():
-        scene_meta_path = REPO / "content" / "privateers-hold.scene.json"
+        scene_meta_path = REPO / "authoring-content" / "privateers-hold.scene.json"
     spawn = [25.6, 1.6, -25.6]
     scene_meta = None
     if scene_meta_path.exists():
@@ -649,6 +657,84 @@ def build_encounter_gallery(project: dict, enemy_manifest: dict) -> tuple[dict, 
     return gallery, navgrid
 
 
+def pack_runtime_mesh(check: bool) -> None:
+    """Create/check the Product Assembly variant without changing Studio input.
+
+    `dagger-pack-mesh` is the sole writer of Engine's opaque resource descriptor;
+    it serializes the packed payload produced by render_model::pack_mesh_resources.
+    """
+    env = os.environ.copy()
+    env.setdefault("CARGO_TARGET_DIR", "/tmp/rusty-dagger-product-model-7266-import-target")
+    command = [
+        "cargo", "run", "-q", "--manifest-path", "crates/dagger-import/mesh-pack/Cargo.toml", "--",
+        "--input", str(OUT),
+        "--project-out", str(RUNTIME_PROJECT),
+        "--resource-out", str(RUNTIME_MESH),
+    ]
+    if check:
+        command.append("--check")
+    subprocess.run(command, cwd=REPO, env=env, check=True)
+
+
+def productize_combat_audio_manifest(check: bool) -> None:
+    """Copy the offline combat catalog with only admitted runtime audio paths.
+
+    Studio resolves audio from authoring-content. Product Assembly may only
+    resolve declared content bodies, so reject rather than normalize any path
+    outside the one intentional authoring-audio handoff.
+    """
+    catalog = load_json(TEXTURES / "combat-manifest.json")
+    audio = catalog.get("audio")
+    if not isinstance(audio, list) or not audio:
+        raise SystemExit("authoring combat manifest must contain a non-empty audio list")
+    for entry in audio:
+        if not isinstance(entry, dict):
+            raise SystemExit("authoring combat manifest audio entry must be an object")
+        path = entry.get("path")
+        if not isinstance(path, str):
+            raise SystemExit("authoring combat manifest audio path must be a string")
+        prefix = "authoring-content/audio/"
+        if not path.startswith(prefix):
+            raise SystemExit(f"unexpected authoring combat audio path: {path}")
+        filename = path.removeprefix(prefix)
+        if not filename or "/" in filename or "\\" in filename or filename in {".", ".."} or not filename.endswith(".wav"):
+            raise SystemExit(f"unsafe authoring combat audio path: {path}")
+        runtime_audio = REPO / "content" / "audio" / filename
+        if not runtime_audio.is_file():
+            raise SystemExit(f"product combat audio body is missing: {runtime_audio}")
+        payload = runtime_audio.read_bytes()
+        if entry.get("byteLength") != len(payload) or entry.get("sha256") != "sha256:" + hashlib.sha256(payload).hexdigest():
+            raise SystemExit(f"product combat audio metadata does not match admitted body: {runtime_audio}")
+        entry["path"] = f"content/audio/{filename}"
+    expected = json.dumps(catalog, indent=2) + "\n"
+    if check:
+        if not RUNTIME_COMBAT_MANIFEST.exists() or RUNTIME_COMBAT_MANIFEST.read_text() != expected:
+            raise SystemExit(f"{RUNTIME_COMBAT_MANIFEST} stale; run scripts/generate-project.py --write")
+        return
+    RUNTIME_COMBAT_MANIFEST.write_text(expected)
+
+
+def expected_runtime_manifest() -> str:
+    """Rehash the closed runtime lane after the deterministic mesh transform."""
+    current = load_json(RUNTIME_MANIFEST)
+    roles = {entry["path"]: entry["role"] for entry in current["artifacts"]}
+    roles["meshes/privateers-hold.rmesh"] = "resource:renderer-mesh"
+    artifacts = []
+    for path in sorted(p for p in RUNTIME_MANIFEST.parent.rglob("*") if p.is_file() and p != RUNTIME_MANIFEST):
+        relative = path.relative_to(RUNTIME_MANIFEST.parent).as_posix()
+        if relative not in roles:
+            raise SystemExit(f"runtime content body has no declared role: {relative}")
+        payload = path.read_bytes()
+        artifacts.append({
+            "path": relative,
+            "class": "durable",
+            "role": roles[relative],
+            "contentHash": hashlib.sha256(payload).hexdigest(),
+            "byteLen": len(payload),
+        })
+    return json.dumps({"schemaVersion": 1, "artifacts": artifacts}, indent=2) + "\n"
+
+
 def main() -> None:
     mode = sys.argv[1] if len(sys.argv) > 1 else "--write"
     project = build_project()
@@ -664,6 +750,11 @@ def main() -> None:
         stale = [path for path, expected in [(OUT, text), (GALLERY_OUT, gallery_text), (GALLERY_NAV_OUT, gallery_nav_text)] if not path.exists() or path.read_text() != expected]
         if stale:
             raise SystemExit(f"{', '.join(map(str, stale))} stale; run scripts/generate-project.py --write")
+        pack_runtime_mesh(check=True)
+        productize_combat_audio_manifest(check=True)
+        manifest = expected_runtime_manifest()
+        if not RUNTIME_MANIFEST.exists() or RUNTIME_MANIFEST.read_text() != manifest:
+            raise SystemExit(f"{RUNTIME_MANIFEST} stale; run scripts/generate-project.py --write")
         print(f"project documents up to date ({len(project['assets'])} dungeon assets, {len(gallery['assets'])} gallery assets)")
         return
     if mode != "--write":
@@ -672,6 +763,9 @@ def main() -> None:
     OUT.write_text(text)
     GALLERY_OUT.write_text(gallery_text)
     GALLERY_NAV_OUT.write_text(gallery_nav_text)
+    pack_runtime_mesh(check=False)
+    productize_combat_audio_manifest(check=False)
+    RUNTIME_MANIFEST.write_text(expected_runtime_manifest())
     digest = hashlib.sha256(text.encode()).hexdigest()[:16]
     print(f"wrote {OUT} ({len(text)} bytes, sha256:{digest}, assets={len(project['assets'])})")
     print(f"wrote {GALLERY_OUT} ({len(gallery_text)} bytes, assets={len(gallery['assets'])})")

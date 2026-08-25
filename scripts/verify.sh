@@ -4,18 +4,30 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
-./scripts/audit-engine-boundary.sh
-pnpm install --frozen-lockfile
-pnpm product:check
-pnpm gameplay:check
+rusty_cli="${RUSTY_CLI:-rusty}"
+if ! command -v "$rusty_cli" >/dev/null 2>&1 \
+  && [[ -x "$repo_root/../rusty-engine/target/debug/rusty" ]]; then
+  rusty_cli="$repo_root/../rusty-engine/target/debug/rusty"
+fi
+if ! command -v "$rusty_cli" >/dev/null 2>&1 && [[ ! -x "$rusty_cli" ]]; then
+  echo "Rusty Product CLI is unavailable; build/install the adjacent public rusty CLI first" >&2
+  exit 1
+fi
+
+# Offline format/import and Studio-adapter mechanisms remain ordinary Dagger
+# tooling. Product admission, generated assembly, browser proof, and package
+# closure are owned by the public Rusty CLI below.
 cargo fmt --all --check
 cargo test --workspace --locked
 cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo build -p dagger-studio-adapter --bin dagger-studio-adapter --locked
+cargo build --locked --bin dagger-studio-adapter
 python3 ./scripts/check-adapter.py
-cargo run -p dagger-runtime --bin dagger-gameplay-check --locked
-cargo run -p dagger-runtime --bin dagger-walkthrough --locked
-cargo run -p dagger-runtime --bin dagger-navgrid --locked -- --check
-# The Playwright browser gate (check-dagger-product-browser.sh) is a manual
-# opt-in diagnostic and deliberately not part of the automatic gate: the
-# automatic suite stays slim, fast, and deterministic.
+
+# The Product Model owns rules/content closure, nested Product Kernel probing,
+# generated build output, actual Chromium host evidence, and wrapper package
+# policy. No Dagger HTTP server, polling browser script, or alternate canvas
+# participates in this path.
+"$rusty_cli" check --path "$repo_root"
+"$rusty_cli" build --path "$repo_root"
+"$rusty_cli" test --path "$repo_root"
+"$rusty_cli" package --path "$repo_root" --wrapper desktop

@@ -1,0 +1,999 @@
+{
+  "schemaVersion": 1,
+  "artifacts": [
+    {
+      "path": "audio/audio-melee-dagger-swing.wav",
+      "class": "durable",
+      "role": "resource:renderer-audio",
+      "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
+      "byteLen": 1331
+    },
+    {
+      "path": "audio/audio-melee-hit-1.wav",
+      "class": "durable",
+      "role": "resource:renderer-audio",
+      "contentHash": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
+      "byteLen": 2173
+    },
+    {
+      "path": "audio/audio-melee-hit-2.wav",
+      "class": "durable",
+      "role": "resource:renderer-audio",
+      "contentHash": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
+      "byteLen": 2460
+    },
+    {
+      "path": "audio/audio-melee-hit-3.wav",
+      "class": "durable",
+      "role": "resource:renderer-audio",
+      "contentHash": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
+      "byteLen": 2921
+    },
+    {
+      "path": "audio/audio-melee-hit-4.wav",
+      "class": "durable",
+      "role": "resource:renderer-audio",
+      "contentHash": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
+      "byteLen": 2670
+    },
+    {
+      "path": "audio/audio-melee-hit-5.wav",
+      "class": "durable",
+      "role": "resource:renderer-audio",
+      "contentHash": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
+      "byteLen": 3557
+    },
+    {
+      "path": "meshes/privateers-hold.rmesh",
+      "class": "durable",
+      "role": "resource:renderer-mesh",
+      "contentHash": "6a5de0e6ddbdb0c70861975d72386092db28a2a29b9ded83a36fcfd12bd4f706",
+      "byteLen": 669044
+    },
+    {
+      "path": "projects/privateers-hold.navgrid.json",
+      "class": "durable",
+      "role": "resource:privateers-hold-navgrid",
+      "contentHash": "dbf976b589da5c888bc275be914a45e5a022933f8fa03442f662157a59a25518",
+      "byteLen": 1436323
+    },
+    {
+      "path": "projects/privateers-hold.project.json",
+      "class": "durable",
+      "role": "sceneDocument",
+      "contentHash": "cfaeae09372b1b9212dc9e17bcb00a967a216c6566340b0c1a2e210e0e62dfc4",
+      "byteLen": 305160
+    },
+    {
+      "path": "runtime/dagger-core.package.json",
+      "class": "durable",
+      "role": "resource:dagger-gameplay-package",
+      "contentHash": "e148c3bd6c80ebb0f1e67d501b1b557a65a8c1b9416931ad4ff97fbd650a9d07",
+      "byteLen": 113948
+    },
+    {
+      "path": "runtime/privateers-hold.encounters.json",
+      "class": "durable",
+      "role": "resource:privateers-hold-encounters",
+      "contentHash": "8353519d72c05acd8bd0f8bebe890df0251a4583b3c30fc88afd751e695e7cb8",
+      "byteLen": 558
+    },
+    {
+      "path": "textures/billboard-216-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "fff4fa768275d1d1b692bd07896200dad1539087474ce8717b0be5a019f0327c",
+      "byteLen": 571
+    },
+    {
+      "path": "textures/billboard-brazier.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "c950639cf023789c013045a478a2e78a9a99e655b2ba18237a92a996b541a20a",
+      "byteLen": 2340
+    },
+    {
+      "path": "textures/billboard-campfire.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "ff526da4770c57a21a33068c80ac3ec628947104896949cf4b9d847a10c7feae",
+      "byteLen": 2408
+    },
+    {
+      "path": "textures/billboard-candle-dish.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "fd83a54cd5281ed174f4aa5ef277f033098ad61abaa728d7e2887b5c0fae8de8",
+      "byteLen": 445
+    },
+    {
+      "path": "textures/billboard-candle.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "914fc222a34cc65fc0f9983792792adaa173581beb72f1d375b52507a923c11a",
+      "byteLen": 354
+    },
+    {
+      "path": "textures/billboard-chandelier.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "5875b1ae4c00ffbba89261a62370f0626f6280192f4a51b4f922f241fa828512",
+      "byteLen": 2407
+    },
+    {
+      "path": "textures/billboard-corpse-pile.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "d56526c600c92eb207a656069bba9d5c6ed7ff4977340223f77d710726c50a58",
+      "byteLen": 2701
+    },
+    {
+      "path": "textures/billboard-hanging-brazier-blue.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "4e566c1617ee88e9cc2f2e65b79743c6bfcf91b1a9575629d5ccfab8ed821353",
+      "byteLen": 1826
+    },
+    {
+      "path": "textures/billboard-hanging-lantern-globe.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "32fc83f77605b7fff4a0b3c92bb3e072a5c1e68c72accfd56daed7c1c945ad09",
+      "byteLen": 928
+    },
+    {
+      "path": "textures/billboard-hanging-lantern-round.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "d26ee214fa38de692af29c2bec7f2624036fbb0edf762f40df63f53392dcb549",
+      "byteLen": 986
+    },
+    {
+      "path": "textures/billboard-hanging-lantern-skull.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "b4791f612362b5aaa08b756067d2b576feed1b24e6a6e2c8a6d423f9278d25e7",
+      "byteLen": 976
+    },
+    {
+      "path": "textures/billboard-hanging-lantern.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e2ebbff3bbde875656b1b6c759f2428ee94a13b28afd3ebf0fae4f9df9526587",
+      "byteLen": 756
+    },
+    {
+      "path": "textures/billboard-hanging-roots-b.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "c516b5cbea0bab186ee6b66d9a9406869e4fa38a003a445c325d45729f384c52",
+      "byteLen": 675
+    },
+    {
+      "path": "textures/billboard-hanging-roots-c.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "18414b1b9f0d2bfeefa9b18e2a5278bede9fd8e7ff074fa68b07a97844f38ebd",
+      "byteLen": 909
+    },
+    {
+      "path": "textures/billboard-hanging-roots-d.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "79720d5da52f725df951671329f2eeae53eafcffafaeebfe7d41586a649ea20c",
+      "byteLen": 583
+    },
+    {
+      "path": "textures/billboard-hanging-roots.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "aeadf36c9d0df9e77b50fce57416726bec601be0f4e6e9e9bc91ea9bdbc727b0",
+      "byteLen": 326
+    },
+    {
+      "path": "textures/billboard-pillar-fluted.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "b137768924d3e5ed2433dc53c39995b7b347e0315baa30b4578ce54cbec6d1be",
+      "byteLen": 2653
+    },
+    {
+      "path": "textures/billboard-pillar-plain.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "b82314ae9388dc1e26afa8404c6e426b3a5cd9079b23edcb289a4c90105fe341",
+      "byteLen": 1528
+    },
+    {
+      "path": "textures/billboard-skull-front.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "589ce676d4f1359aecb1cf4697c13811b4bfba38179effa4fd1175c3f38afe85",
+      "byteLen": 310
+    },
+    {
+      "path": "textures/billboard-skull-jawed.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "452bf46e6f79d76aa15663ef0f592924ef927ddb34033fa23ff9500cc71703f7",
+      "byteLen": 1378
+    },
+    {
+      "path": "textures/billboard-skull-lying.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "44664dcb7099fe8b5f1b49c8434fa501be1c86d09d0ed00593172bf74fce1188",
+      "byteLen": 600
+    },
+    {
+      "path": "textures/billboard-skull-pike.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "4b04a2654ead824a297248e7ca2f1d779120059f8b299f354ca59bdffd412cf4",
+      "byteLen": 1309
+    },
+    {
+      "path": "textures/billboard-skull-pile.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "6c729b538b93dc1f6800fe6a31c5ac91be1aabc309df7d85d4d768431389a8d0",
+      "byteLen": 854
+    },
+    {
+      "path": "textures/billboard-skull-profile.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "c040e4e84d20b047e669398569f4e490e13930d1d67251cfccaa7ca7515f81f4",
+      "byteLen": 650
+    },
+    {
+      "path": "textures/billboard-skull-weathered.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "0d437d7268e320bf9f88893b84e21138bcd7b255463970a2df15848626af512d",
+      "byteLen": 564
+    },
+    {
+      "path": "textures/billboard-skull.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "5afb18bc491e964c052a2c025930b4dfa1cddfdaefce3019743546229e927dc2",
+      "byteLen": 275
+    },
+    {
+      "path": "textures/billboard-torch-pole-slim.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e430ab025895a3de7f4b8060fe0a969ef0c6c92b44c6851910d3162ba9343f0c",
+      "byteLen": 1087
+    },
+    {
+      "path": "textures/billboard-torch-pole.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "523faf1364f94ab07524502745ddff07d1aa08558f695cbeda7bfde0af24c38c",
+      "byteLen": 1287
+    },
+    {
+      "path": "textures/billboard-torch-stand.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "891f2e896d79d4c7458e2b04cf91e12a5976ba167864f076d168fc3c01050bb9",
+      "byteLen": 3139
+    },
+    {
+      "path": "textures/billboard-urn-flame.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "b754c7fd72504836c0a5a53b81fa8d4519ca4773c078ec59be6fc2292a4d7a82",
+      "byteLen": 524
+    },
+    {
+      "path": "textures/billboard-wall-torch-brass.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "6c41b2b57c664d8d37016a22ac3c0efc66c73e6fa994f0195a25427a6c46ae90",
+      "byteLen": 1280
+    },
+    {
+      "path": "textures/billboard-wall-torch-tall.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "f9c6e8e6a95aeb8fa2259ed699d1341d4b037e5584bddfa67f7cf50fdceaf5dd",
+      "byteLen": 851
+    },
+    {
+      "path": "textures/billboard-wall-torch.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "9c616b627460a22960ec6ef05883313fedfe8c5b7247572bca05542f8f1c16ae",
+      "byteLen": 1064
+    },
+    {
+      "path": "textures/combat-manifest.json",
+      "class": "durable",
+      "role": "resource:dagger-combat-catalog",
+      "contentHash": "07dda57ec813fe77f870c0279eb30fc05351e234ea466f6adb9eaca2435d325d",
+      "byteLen": 26574
+    },
+    {
+      "path": "textures/effect-blood-0-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "4aaf1cee5dcbeb3f65a8ff3cc469cb2cebdbde021531ad8282ee3b3061c77e2b",
+      "byteLen": 2964
+    },
+    {
+      "path": "textures/effect-blood-1-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "7ed771e03454a71508f47b3db0b846b1712a7b0a6f256c9de5ba4adcb3ae81ef",
+      "byteLen": 2586
+    },
+    {
+      "path": "textures/effect-blood-2-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "21ef57245d5ab2bfd3c54e11e434f88723f78f977cda97d66705d8c8f2356a6d",
+      "byteLen": 409
+    },
+    {
+      "path": "textures/effect-sparkle-magic-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "5d74f76bc18c26f9512f69686b89ab97096a14f42327aa1ba6c5c99d24521b66",
+      "byteLen": 2618
+    },
+    {
+      "path": "textures/enemy-archer-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "194ea298fe7446407fa93c232afee5d84fe517609f5c5d4ac63d71ea47946447",
+      "byteLen": 270118
+    },
+    {
+      "path": "textures/enemy-giantbat-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "884215d189c05e6212f499de4b1f20e620d44f186f2325c9a2e981579911a2b9",
+      "byteLen": 141492
+    },
+    {
+      "path": "textures/enemy-grizzlybear-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e2c0d5ea8af99a3815e6dd5b4320597174a43e772fb35b7b26fa82ab098453d6",
+      "byteLen": 325338
+    },
+    {
+      "path": "textures/enemy-imp-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e5fa8e7a2816a78b67545921413e947599f832e26c58ae10c5e0d65ff4874225",
+      "byteLen": 136902
+    },
+    {
+      "path": "textures/enemy-manifest.json",
+      "class": "durable",
+      "role": "resource:dagger-enemy-catalog",
+      "contentHash": "74d0e9be16e285ef0c9e3e6ac76f919b1fc80c47933e673532ebc7abff516cdc",
+      "byteLen": 319781
+    },
+    {
+      "path": "textures/enemy-orc-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "bc60f08c410fcff8b28605acdbca8a3089c665d08f96c947f83a49f4a27e1f42",
+      "byteLen": 349191
+    },
+    {
+      "path": "textures/enemy-rat-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "804fdd6edacfff6f12fba8485449ad80555c5c07cae6dc952df73d09600ad4fa",
+      "byteLen": 127664
+    },
+    {
+      "path": "textures/enemy-rat-corpse.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e52677a2307ec337262f827b0f1fcc4a0c317e9361a7010e235671801f68270c",
+      "byteLen": 2545
+    },
+    {
+      "path": "textures/enemy-skeletalwarrior-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "9dbb7c8df713cbe7ba15caac9a7653a1a947c5c112dd23f262d13651cd211602",
+      "byteLen": 292280
+    },
+    {
+      "path": "textures/enemy-skeletalwarrior-corpse.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "f8807db11b2c19e1287e306a919bd0b188c656f021f507bbcef6eb626c1f2d73",
+      "byteLen": 2706
+    },
+    {
+      "path": "textures/enemy-thief-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "8c40666e30390d2647bc94750df1192f7dd08f349d6f740dca9b154a6160dd18",
+      "byteLen": 262206
+    },
+    {
+      "path": "textures/texture-0-124.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "be0045403932c2cdc3c7ef39b26ba003deb53987d210510e292df4fda6b42777",
+      "byteLen": 102
+    },
+    {
+      "path": "textures/texture-0-44.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "8b2ed3de1b4666f2665caa4735f92715ed182665fe80284d4bedbdc418b49de7",
+      "byteLen": 105
+    },
+    {
+      "path": "textures/texture-0-45.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "30f0adba37471fed720c9159f8b95f4d91ba37668c84712269f2e26cdc680e09",
+      "byteLen": 105
+    },
+    {
+      "path": "textures/texture-0-74.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "6f1535d41f8192e6fed3bafdb4f948f53d25b3fb4d363914aa971cbece373b44",
+      "byteLen": 105
+    },
+    {
+      "path": "textures/texture-0-75.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "d93e9fbe4bd72f060f774962e775b797bd5c9aa58cedd21f996b1fab6347bbf4",
+      "byteLen": 105
+    },
+    {
+      "path": "textures/texture-0-76.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "d20412e444e7aadf90ea1e2fdc7887f16a9ae2693db9d5959dcb44061e4ab9b0",
+      "byteLen": 105
+    },
+    {
+      "path": "textures/texture-0-77.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "35c204a8678d1073a9e82b3b1d92eafa436091e9938b89b3c91e10eaec91acad",
+      "byteLen": 105
+    },
+    {
+      "path": "textures/texture-0-78.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "b659b84735cb34573533f85ac4802b54a8a902b9abdb921e35e6222710eff485",
+      "byteLen": 105
+    },
+    {
+      "path": "textures/texture-0-79.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "0204eeb5e838f0e954260e5f0e1504e1534a49cd33f2a9454b4ba6ee77a49dd5",
+      "byteLen": 104
+    },
+    {
+      "path": "textures/texture-0-89.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "153cc1db5fafa850b029cfcc2c097d45c4dffe2f8aff7688e6f9e6696934b478",
+      "byteLen": 103
+    },
+    {
+      "path": "textures/texture-1-24.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "eca9de507321dde3f0674dd7f4f188969d4cd7db140d9e1c2d726575364a63a5",
+      "byteLen": 102
+    },
+    {
+      "path": "textures/texture-121-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "637212bd0531b00ed124f830a4e15b8d84076e293bd5e48c5f33975b37622915",
+      "byteLen": 3234
+    },
+    {
+      "path": "textures/texture-121-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "2945b1ebd32b0a2b6a7bd547f29208d878f352cde14934f1b64030176b08736f",
+      "byteLen": 3466
+    },
+    {
+      "path": "textures/texture-121-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "de7ad91efd8150fa990b5c9e0dad76088937b2c9a2a4b0fb7b706fa5dedd754d",
+      "byteLen": 3633
+    },
+    {
+      "path": "textures/texture-121-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "01e3b0bb8098049640092a68ff219b059cb390d248dea642349b8fcf73a94650",
+      "byteLen": 1865
+    },
+    {
+      "path": "textures/texture-141-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "2ed1fe9265d7948fb9c8249f495c03ba1b02075e2eb5c7708f6a0200b6e862b2",
+      "byteLen": 2111
+    },
+    {
+      "path": "textures/texture-141-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "ae2998bf9218a3261a7a09da569f4dd52e23f903f5cb9bba770a097d80231682",
+      "byteLen": 3522
+    },
+    {
+      "path": "textures/texture-146-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "103bf4aaf20586efa7227c569a188072591e1faf0f6b9416e85e41f9f8f6ab04",
+      "byteLen": 7039
+    },
+    {
+      "path": "textures/texture-146-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e476d364d2aa1f1de8cfc1493e4f945311db13ac82f1a64e32f72e5504559bea",
+      "byteLen": 1110
+    },
+    {
+      "path": "textures/texture-147-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "5adc49deb1aa255e972d5acb8d0f2dee61ab3b9ea7e61bafee74baad0bb2508f",
+      "byteLen": 2387
+    },
+    {
+      "path": "textures/texture-147-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "73a31fb6010fabab25b5932f92de25ea4fa7697f9a141131693ea26fdbbb7f25",
+      "byteLen": 2547
+    },
+    {
+      "path": "textures/texture-19-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "20eb792f0efe09dc10ff01a972b36d35de7c2a7ba3cbc8d5c1aed5f0ddd121a0",
+      "byteLen": 1282
+    },
+    {
+      "path": "textures/texture-19-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "58194a6594c3ec62a7f2207601b777183505c4d4bcd5cb1b0be744d4a65ae067",
+      "byteLen": 1385
+    },
+    {
+      "path": "textures/texture-19-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "1dca4b97ec28187bc65544fc6953e2c07c262de575538e4c26f091ac157a2541",
+      "byteLen": 3392
+    },
+    {
+      "path": "textures/texture-19-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "914d0a392ad2b9914cb66e5fdab40dc379cab91b6c227bad84d8e210c5e5df0c",
+      "byteLen": 2905
+    },
+    {
+      "path": "textures/texture-19-4.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "06b7b74ce37af389ab27686c5232c17d572837aaa72d64706c7fe67bf7a76e53",
+      "byteLen": 1737
+    },
+    {
+      "path": "textures/texture-20-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "0b6893a7377c52aea8ae240956902b8e44e88ed4746081a1b974477252c07a12",
+      "byteLen": 1772
+    },
+    {
+      "path": "textures/texture-20-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "88a0acf31eb99cf8777b950e355d8e0090fdf410ff0d96480c58be9e90ba3000",
+      "byteLen": 1525
+    },
+    {
+      "path": "textures/texture-20-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "272883ac3f27e205aa628c5e143785f8160e1cb770f4330cbf9b11df3011caa7",
+      "byteLen": 2816
+    },
+    {
+      "path": "textures/texture-20-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "653c860e13551552f56a18593ddeab304ebd9892706d51de7b4bab4a9b6ed918",
+      "byteLen": 1557
+    },
+    {
+      "path": "textures/texture-20-4.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "92934f794e41c93e75822bd4a4954ea9505ae0a2cf0668fafd1ae4976a459d32",
+      "byteLen": 1111
+    },
+    {
+      "path": "textures/texture-22-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "5c86aee65d72ccdc4a9cb331764a3c5ac852f11c62746e6f0c453809ecdd1c78",
+      "byteLen": 1736
+    },
+    {
+      "path": "textures/texture-22-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e1490cec77ea32bf389a0f1b9c75351993bf353242b27a247d63f12dd22835e1",
+      "byteLen": 2852
+    },
+    {
+      "path": "textures/texture-22-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "098d42109f1397f8d60780a0adaa9f84627cf7aa19d9eb40a3db8c9c2c8b7d8e",
+      "byteLen": 2386
+    },
+    {
+      "path": "textures/texture-321-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "84470b42ba16f36e09543090da3eec6a2388cde959f2fd36d5b7b3c095cf6913",
+      "byteLen": 5028
+    },
+    {
+      "path": "textures/texture-321-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "212a44195e5ac7c5365d7fc5521d66bfc4d0c40f5031a58f4892b3ea78ac9d6b",
+      "byteLen": 1767
+    },
+    {
+      "path": "textures/texture-321-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e9413507bdfbbc4a72a52ac5411e7c951b7c032044abaabb7117e9df3f351fae",
+      "byteLen": 2605
+    },
+    {
+      "path": "textures/texture-341-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "5c423b5237a15488cc64bea11606e81e6b1021a5a8fb39f14be5c2446c76bb65",
+      "byteLen": 2409
+    },
+    {
+      "path": "textures/texture-341-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "a6915691ae32196d977937012157a26a882e23c591e06242e4c010a51e0dd7ba",
+      "byteLen": 3138
+    },
+    {
+      "path": "textures/texture-368-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "cb06e748aabda0e8c9cfddaaf1cd1a60b237c19e92639dcb75cf26fd386583dc",
+      "byteLen": 1980
+    },
+    {
+      "path": "textures/texture-368-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "c510175bdf204e4d23da84299f46a0716c239598d7ab3a5fc9d81c9acba9ac10",
+      "byteLen": 2917
+    },
+    {
+      "path": "textures/texture-368-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "b57f8d2fa8f35a11c8c9222c729d40c613a218f103bd0ed028ce93bdfba8e260",
+      "byteLen": 2865
+    },
+    {
+      "path": "textures/texture-374-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "34fdd18e24265122588feaa89c74cb482dac597174cb9d4398883bc931f45a5d",
+      "byteLen": 6078
+    },
+    {
+      "path": "textures/texture-374-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "3c92ead93427c17e8da1c14d0f50e60be66f55aa46a3e361ae09707008837caa",
+      "byteLen": 5726
+    },
+    {
+      "path": "textures/texture-41-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "068bc1392906aee416c682c53fe64dd600b4154e2b25b9d7e0e934641913d04e",
+      "byteLen": 3100
+    },
+    {
+      "path": "textures/texture-449-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "9c36c61ef78b0616a1595807d454a0cce8cd2a8c83930f2b21520bce6cd7c5c5",
+      "byteLen": 558
+    },
+    {
+      "path": "textures/texture-449-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "f15e66dee374907644ed13444719117532c4dfe77153d63a665239ffa103a4a8",
+      "byteLen": 1374
+    },
+    {
+      "path": "textures/texture-450-11.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "2384a40686a16b594d60fa4fc3b87239fc78fc35814214ea1d50084e8d59d0c2",
+      "byteLen": 1863
+    },
+    {
+      "path": "textures/texture-450-5.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "ad4d2c5ddc339426f4a5e5b8d7292bd607c7d7c1ee712c70f3ba0c2c9ca22a22",
+      "byteLen": 2029
+    },
+    {
+      "path": "textures/texture-450-7.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "d45c497ee5caeb998cacbd917763974a4d3302065f458f40942d9b59c519802c",
+      "byteLen": 1607
+    },
+    {
+      "path": "textures/texture-450-9.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "403f6c55c82d2d03b12a7e900a469765d49d2b3a421180b71f12add76c0f5d51",
+      "byteLen": 1699
+    },
+    {
+      "path": "textures/texture-46-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "89120b0f066d4143e87e5f2bc885d5505f6a714817897a691b4dcbec88106789",
+      "byteLen": 1801
+    },
+    {
+      "path": "textures/texture-46-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "252de38bef46005db9fc6162606cd6d7c424a5044b9987f5d7c6a38986b9d0c6",
+      "byteLen": 739
+    },
+    {
+      "path": "textures/texture-67-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "109b86e7e0ceb00d76403a2a82a534944f20ee0ae11d75cc84c2ec4265f049ba",
+      "byteLen": 1154
+    },
+    {
+      "path": "textures/texture-67-1.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "44975713daab1e9db94284a9085e928f1edadd3b5bdb7ed6f462810987e27574",
+      "byteLen": 1035
+    },
+    {
+      "path": "textures/texture-67-14.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "31353d7531865dd8b9cc378adf167fb194831d2c40d00ec2033ca78ec55c1868",
+      "byteLen": 319
+    },
+    {
+      "path": "textures/texture-67-15.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "87264f89b8643da64d40b7d1903427e922b4b37cd1f89e417a95c5a48b9cf73a",
+      "byteLen": 448
+    },
+    {
+      "path": "textures/texture-67-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "5b48cead162c62b90897e02d36f3951e92326f3be27bf447bfd507290c6a7fa0",
+      "byteLen": 1387
+    },
+    {
+      "path": "textures/texture-67-6.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "2acb6f90c182990f4ba98a2f5aaf3b88d57580eac7881f66f1af87f22ddf865b",
+      "byteLen": 1203
+    },
+    {
+      "path": "textures/texture-67-8.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "ac20b9998734f0806a3a2bd011e7218a2572c0e1d57a6b565e2910fe20f997f6",
+      "byteLen": 309
+    },
+    {
+      "path": "textures/texture-71-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "0052e6efe5d13c2370bf1d24c12d87660681ad0e513b6c30209df177b67aabf3",
+      "byteLen": 3961
+    },
+    {
+      "path": "textures/texture-71-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "2c4975c98af3fc26ab60fb66c84a36bc722a1192d53be607321e2d5e8db46424",
+      "byteLen": 3430
+    },
+    {
+      "path": "textures/texture-90-12.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "df28b0398e245101c9ff8c298d25f2347b400d42b6b59ee666aa40bed36b5dd6",
+      "byteLen": 393
+    },
+    {
+      "path": "textures/texture-90-13.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "38e6b7abca9168f50c6d24c9266a1a1205cca0a74566d7bb5532b85919e1d887",
+      "byteLen": 568
+    },
+    {
+      "path": "textures/texture-90-14.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "b50099052129af36410b62d9128d5e9dd2e8013db0ccc857a27a6304b25489d6",
+      "byteLen": 894
+    },
+    {
+      "path": "textures/texture-90-2.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "3d983910364089f0b6811ad7a4380d25dc8e9aaaa54a14367406c8b4a9e5a9ab",
+      "byteLen": 1216
+    },
+    {
+      "path": "textures/texture-90-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "c91ab88438bfff4b6bcf38e23c8f97aafb6c01b5d8b2ef92fbdf78008cc485f0",
+      "byteLen": 2256
+    },
+    {
+      "path": "textures/texture-92-10.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "8fe48b75445e83d3c744b6369836ae5467223928ea938901919a72f60da5a76e",
+      "byteLen": 3537
+    },
+    {
+      "path": "textures/texture-92-11.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "d997aceb026bcaaa9777ae48b8d7412f0261983220aef00997fa954b7874bcad",
+      "byteLen": 2072
+    },
+    {
+      "path": "textures/texture-92-3.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "45f2e0adf587ef85e45352b2efc6e56149e5f24c591801e9e5fd59a4e2a11460",
+      "byteLen": 2836
+    },
+    {
+      "path": "textures/texture-92-5.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "0699245f750aae842b498b786b3aa6df0b66e37364a18b49c0934d7c2746834e",
+      "byteLen": 1548
+    },
+    {
+      "path": "textures/texture-92-7.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "cd4a2223ec453f9b8f97faf8ba6882c5fe2b0a6fa719332f3945850d9627c96d",
+      "byteLen": 2034
+    },
+    {
+      "path": "textures/texture-92-8.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "ca28e2644e6cd0361ee9a0bfb5e1666400b0b391f46e689b6713266f518d3732",
+      "byteLen": 3303
+    },
+    {
+      "path": "textures/texture-93-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "12e45857872c079b1abf6c98d88c599b472bad53eb67daad5738c8a984f8dca9",
+      "byteLen": 550
+    },
+    {
+      "path": "textures/texture-93-10.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "0eceabb1c91a6d1def84956dc61f563e2e20a28f1dee7c2665bd649fe87413ba",
+      "byteLen": 1998
+    },
+    {
+      "path": "textures/texture-93-4.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "34f6717aca1ae7aaf1531668d8cf7b189ceb2096d88d4956ca6a18bdfc2235fd",
+      "byteLen": 1227
+    },
+    {
+      "path": "textures/texture-93-5.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "63b76caa9a56f3b077fe57be18fb4e95999cb3752493ec5748574475aeb93414",
+      "byteLen": 169
+    },
+    {
+      "path": "textures/texture-93-6.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "c90a1e0e014c04e81a7937642f50d949c51b0a1bf896b4083984090a7c80e553",
+      "byteLen": 5695
+    },
+    {
+      "path": "textures/texture-93-7.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "e247a2235ba34b5f39d84df3c3e109d7ee4aff23ffae42183d63c8bfed1ab42e",
+      "byteLen": 1228
+    },
+    {
+      "path": "textures/texture-93-8.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "7e27082be5a03268816db02e8f81a24b5d0caa9325661e94966e494d743b5113",
+      "byteLen": 375
+    },
+    {
+      "path": "textures/texture-95-0.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "358a5d608e8adca6cc6d173a03f87ff0ef362b8946ac298405295f24507a0bf5",
+      "byteLen": 4390
+    },
+    {
+      "path": "textures/weapon-dagger-steel-atlas.png",
+      "class": "durable",
+      "role": "resource:renderer-texture",
+      "contentHash": "072c2af3a329f10fa1cfd9c7547c1c6b3e0f192ec31d1539cdc73f31f36bd08b",
+      "byteLen": 149084
+    }
+  ]
+}

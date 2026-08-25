@@ -1,10 +1,13 @@
 use std::{fs, path::Path};
 
-use dagger_runtime::{CombatAssetCatalog, DaggerRuntime};
+use dagger_runtime::CombatAssetCatalog;
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 
-use crate::{project_access::project_resource_path, readout::transform};
+use crate::{
+    project_access::{admit_runtime, project_resource_path},
+    readout::transform,
+};
 
 /// Exact content-addressed texture descriptor (protocol-14) for one project
 /// texture asset. Returns None when the asset lacks the exact identity facts
@@ -339,7 +342,7 @@ pub struct DaggerRenderResource {
 /// public Rust facade. No downstream renderer package or TypeScript contract
 /// is exposed to the caller.
 pub fn build_render_bundle(root: &Path, project_text: &str) -> Result<DaggerRenderBundle, String> {
-    DaggerRuntime::from_project_json(project_text)
+    admit_runtime(root, project_text)
         .map_err(|error| format!("project admission failed: {error}"))?;
     let project_value = serde_json::from_str::<Value>(project_text)
         .map_err(|error| format!("project JSON failed: {error}"))?;
@@ -402,8 +405,9 @@ pub fn build_render_bundle(root: &Path, project_text: &str) -> Result<DaggerRend
             bytes,
         });
     }
-    let combat_manifest_path = project_resource_path(root, "content/textures/combat-manifest.json")
-        .ok_or_else(|| "combat asset catalog path was rejected".to_owned())?;
+    let combat_manifest_path =
+        project_resource_path(root, "authoring-content/textures/combat-manifest.json")
+            .ok_or_else(|| "combat asset catalog path was rejected".to_owned())?;
     let combat_manifest = fs::read_to_string(&combat_manifest_path)
         .map_err(|error| format!("read combat asset catalog: {error}"))?;
     let combat_catalog = CombatAssetCatalog::from_json(&combat_manifest)?;

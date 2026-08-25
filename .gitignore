@@ -1,11 +1,7 @@
 /target
 /node_modules/
-/dist/
-/gameplay/dist/
 /artifacts/
-/.angular/
+/generated/
 /local
 __pycache__/
 /AGENTS.md
-/engine-render-check/node_modules/
-/engine-render-check/generated/

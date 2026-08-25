@@ -214,7 +214,7 @@ fn publish_audio(audio_dir: &Path, arena2_dir: &Path) -> Result<Vec<Value>, Stri
                 "encoding": "unsigned-pcm8-mono",
                 "sampleRate": SAMPLE_RATE,
             },
-            "path": format!("content/audio/{file}"),
+            "path": format!("authoring-content/audio/{file}"),
             "sha256": sha256(&wav),
             "byteLength": wav.len(),
             "mimeType": "audio/wav",
@@ -455,7 +455,7 @@ mod tests {
                 entry["path"]
                     .as_str()
                     .unwrap()
-                    .strip_prefix("content/")
+                    .strip_prefix("authoring-content/")
                     .unwrap(),
             );
             assert_eq!(&fs::read(path).unwrap()[..4], b"RIFF");

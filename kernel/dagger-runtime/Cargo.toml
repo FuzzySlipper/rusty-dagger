@@ -1,0 +1,9 @@
+[package]
+name = "dagger-runtime"
+version = "0.1.0"
+edition = "2021"
+description = "Rusty Dagger live session authority for the Product Kernel"
+
+[dependencies]
+dagger-rpg = { path = "../dagger-rpg" }
+rusty-engine = { path = "../../../rusty-engine/rust/crates/rusty-engine" }

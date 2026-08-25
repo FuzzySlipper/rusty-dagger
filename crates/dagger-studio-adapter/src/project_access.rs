@@ -5,6 +5,26 @@ use std::{
 
 use sha2::{Digest, Sha256};
 
+use dagger_runtime::DaggerRuntime;
+
+const MAX_GAMEPLAY_PACKAGE_BYTES: usize = 2 * 1024 * 1024;
+const GAMEPLAY_PACKAGE_PATH: &str = "content/runtime/dagger-core.package.json";
+
+/// Admit a Studio project against the immutable gameplay package declared by
+/// the Product Layout. The adapter never reconstructs gameplay meaning from
+/// a project path or its own embedded bytes.
+pub(crate) fn admit_runtime(root: &Path, project_text: &str) -> Result<DaggerRuntime, String> {
+    let package_path = project_resource_path(root, GAMEPLAY_PACKAGE_PATH)
+        .ok_or_else(|| "canonical gameplay package is unavailable".to_owned())?;
+    let gameplay_package = fs::read(package_path)
+        .map_err(|error| format!("canonical gameplay package is unreadable: {error}"))?;
+    if gameplay_package.len() > MAX_GAMEPLAY_PACKAGE_BYTES {
+        return Err("canonical gameplay package exceeds 2 MiB".to_owned());
+    }
+    DaggerRuntime::from_project_json_with_gameplay_package(project_text, &gameplay_package)
+        .map_err(|error| error.to_string())
+}
+
 pub(crate) fn safe_project_path(
     root: &Path,
     project_file: &str,

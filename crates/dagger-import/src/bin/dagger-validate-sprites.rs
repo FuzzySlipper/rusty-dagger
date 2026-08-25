@@ -187,8 +187,9 @@ struct Summary {
 
 fn parse_args() -> Result<Args, String> {
     let mut arena2_dir = PathBuf::from("local/arena2");
-    let mut enemy_manifest = PathBuf::from("content/textures/enemy-manifest.json");
-    let mut billboard_manifest = PathBuf::from("content/textures/billboard-manifest.json");
+    let mut enemy_manifest = PathBuf::from("authoring-content/textures/enemy-manifest.json");
+    let mut billboard_manifest =
+        PathBuf::from("authoring-content/textures/billboard-manifest.json");
     let mut out_json: Option<PathBuf> = None;
     let mut out_html_dir: Option<PathBuf> = None;
     let mut check = false;
@@ -647,7 +648,7 @@ fn main() {
         // Check PNG exists and header dims match manifest (if file present)
         // For multi-frame billboards, manifest width/height is per-frame (w, h),
         // PNG dims are atlas_w = w * fc, atlas_h = h. For single-frame, they match.
-        let bb_path = Path::new("content/textures").join(&bb.path);
+        let bb_path = Path::new("authoring-content/textures").join(&bb.path);
         if bb_path.exists() {
             if let Ok(data) = std::fs::read(&bb_path) {
                 if data.len() >= 24 {

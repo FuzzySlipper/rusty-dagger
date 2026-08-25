@@ -1,118 +1,80 @@
-# rusty-dagger
+# Rusty Dagger
 
-Rusty Dagger reads locally supplied Daggerfall/Arena2 data and builds a
-playable, inspectable Privateer's Hold product on Rusty Engine. It owns the
-offline import pipeline, Dagger gameplay/runtime authority, Angular product,
-and Dagger-side Studio adapter.
+Rusty Dagger is a playable, inspectable Privateer's Hold experiment built from
+operator-supplied Daggerfall/Arena2 data. Dagger owns its semantic Rust Product
+Kernel, authored rules, content meaning, offline import pipeline, and
+read-only Studio adapter. Rusty Engine owns generated application hosting, the
+sole renderer/canvas, normalized physical input, and Product Model assembly.
 
-Permanent project documentation lives in Den:
+The product lives in the standard Product Layout:
 
-- [Project charter](den://documents/rusty-dagger/project-charter)
-- [Architecture and ownership](den://documents/rusty-dagger/architecture-and-ownership)
-- [Gameplay authoring and runtime](den://documents/rusty-dagger/gameplay-authoring-and-runtime)
-- [Content import, formats, and provenance](den://documents/rusty-dagger/content-import-and-provenance)
-- [Verification and certification](den://documents/rusty-dagger/verification-and-certification)
-- [Known limitations](den://documents/rusty-dagger/known-limitations)
+- `rusty.toml` — product identity, lifecycle, UI projection contract, content
+  root, and optional desktop packaging policy.
+- `kernel/` — the Dagger-owned Product Kernel and its nested semantic crates.
+- `rules/` — admitted Runtime Composition declarations; never a live gameplay
+  evaluator.
+- `ui/` — framework-free rich DOM presentation, subscribed only to immutable
+  Rust projection envelopes and claiming declared intents.
+- `content/` — declared, content-addressed material required by the product.
+- `authoring-content/` — importer, Studio, validation, and other offline
+  artifacts; it is intentionally outside the admitted runtime closure.
 
-Current work and review state is in the Den `rusty-dagger` project. Historical
-proposals and investigations are Board records, not current instructions.
+The retained offline and authoring tools are intentionally separate from the
+running product:
 
-## Repository map
+- `crates/arena2` reads classic binary source formats.
+- `crates/dagger-import` extracts and publishes derived content.
+- `crates/dagger-studio-adapter` provides Dagger's read-only Studio protocol
+  adapter and its stdio authoring binary.
 
-- `crates/arena2` — read-only classic data parsers.
-- `crates/dagger-import` — offline extraction and asset publication CLI.
-- `crates/dagger-rpg` — Dagger gameplay package admission and evaluation.
-- `crates/dagger-runtime` — live project, controller, collision, encounter, and
-  gameplay-session authority.
-- `crates/dagger-studio-adapter` — Dagger projection, Studio protocol adapter,
-  and `dagger-product-server`.
-- `gameplay/src` — TypeScript gameplay authoring; materializes into
-  `data/gameplay`.
-- `apps/dagger-product` — Angular product UI mounted through Engine's public
-  application host.
-- `content` — committed generated product assets and project documents.
+## Product workflow
 
-The normal feature-development product is the web application-host path. Rust
-owns gameplay/runtime meaning, Angular owns Dagger UI, and Engine owns the one
-renderer/canvas. Tauri is reserved for eventual publication and release
-certification, not ordinary feature work or default CI.
-
-## Quick start
-
-Provide an Arena2 directory at `local/arena2`, through `ARENA2_DIR`, or with the
-importer's `--arena2` option. The adjacent `../rusty-engine` checkout supplies
-the Rust facade, asset importer, and local TypeScript packages.
+The public `rusty` CLI is the only product build, host, package, and browser
+workflow. It must be available from the adjacent Rusty Engine checkout or
+installed on `PATH`.
 
 ```bash
-# Full source extraction and project regeneration
-scripts/regenerate.sh
+rusty check --path .
+rusty build --path .
+rusty test --path .
+rusty package --path . --wrapper desktop
+```
 
-# Build authored gameplay and the Angular product
-pnpm install
-pnpm gameplay:build
-pnpm product:build
+`rusty test` is the browser-owned evidence path. `rusty package` verifies the
+desktop wrapper policy and exact package closure; it does not itself certify a
+headed Tauri installation.
 
-# Run the connected product, then open http://127.0.0.1:4274
-cargo run -p dagger-studio-adapter --bin dagger-product-server
+For the full local gate, run:
 
-# Deterministic aggregate repository checks
+```bash
 scripts/verify.sh
-
-# Manual browser diagnostic for browser-visible product changes
-scripts/check-dagger-product-browser.sh
 ```
 
-## Developer command console
+## Offline content work
 
-The connected application-host product includes the Engine-owned **Dagger
-developer commands** pull-down. It uses the public Engine host envelope,
-generated client, standard command schemas, and shell; the product service
-only queues requests to its existing runtime safe point.
-
-- `standard.inspect.entity` and `standard.inspect.mechanics` are read-only
-  Engine standard inspections. The player entity is `1` in the committed
-  Privateer's Hold session.
-- `standard.admin.track.set` is the visibly privileged Engine track-owner
-  adapter. It is distinct from normal combat and restoration.
-- `dagger.scenario.prepare`, `.melee`, and `.advance` respectively set up a
-  committed target, run production first-person melee, and advance bounded
-  production ticks.
-- `dagger.scenario.progression` is an admin-only demonstration: it resets and
-  executes the committed Orc/Giant-Bat kill sequence through real melee,
-  exposing the resulting XP, level transition, receipts, events, and
-  projections in the returned Dagger readout.
-
-The console is diagnostic tooling, not a player surface or a persistence and
-replay authority.
-
-Run the importer directly when working on extraction:
+Provide Arena2 through `local/arena2`, `ARENA2_DIR`, or an explicit importer
+argument. Classic source files are not committed. Regenerate Dagger-derived
+content with:
 
 ```bash
-cargo run -p dagger-import --bin dagger-import -- \
-  --arena2 local/arena2 --region 17 --location "Privateer's Hold" \
-  --format glb --out content/privateers-hold.glb
+scripts/regenerate.sh
 ```
 
-For Engine-hosted Studio, confirm the sibling service at
-`http://127.0.0.1:4310/`, then select this repository and
-`content/projects/privateers-hold.project.json`. Dagger supplies
-`.rusty-studio.json`, project data, and `dagger-studio-adapter`; Engine owns the
-Studio service and browser product.
+## Studio
+
+Engine-hosted Studio invokes the retained `dagger-studio-adapter` stdio binary
+for Dagger-specific, read-only project admission and projection. It is not the
+playable product host and does not start an HTTP server.
 
 ## Source and attribution
 
-Daggerfall/Arena2 game data is copyrighted Bethesda material. Source game
-files are operator-supplied and are not committed. Generated assets under
-`content/` derive from that local installation; this repository does not grant
-rights to redistribute the original game data.
+Daggerfall/Arena2 data is copyrighted Bethesda material and is supplied by the
+operator. Generated content carries the relationship to those local bytes;
+this repository does not grant redistribution rights to the original game
+assets.
 
-Format and classic-semantic interpretation uses the MIT-licensed Daggerfall
-Unity project as donor evidence. The frozen consulted source is
+Daggerfall Unity is MIT-licensed donor evidence for format and classic
+semantic interpretation. The frozen consulted source is
 `/home/research/daggerfall-unity`, declared revision
-`81e89e90c27bc3c1a7a61871e545fad129174dec`. Generated manifests retain source
-file/record provenance while runtime code consumes semantic asset IDs. See
-[Content import, formats, and provenance](den://documents/rusty-dagger/content-import-and-provenance)
-for the consultation and conversion contract.
-
-Angular production builds emit `dist/apps/dagger-product/3rdpartylicenses.txt`;
-publication packaging must retain the applicable generated dependency notices.
+`81e89e90c27bc3c1a7a61871e545fad129174dec`. See the Den project documents for
+current product and provenance policy.

@@ -3,8 +3,6 @@ resolver = "2"
 members = [
     "crates/arena2",
     "crates/dagger-import",
-    "crates/dagger-rpg",
-    "crates/dagger-runtime",
     "crates/dagger-studio-adapter",
 ]
 

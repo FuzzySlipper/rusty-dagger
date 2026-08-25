@@ -1,9 +1,10 @@
 # Rusty Dagger agent guidance
 
 Rusty Dagger imports Daggerfall/Arena2 content into Rusty Engine and owns the
-Daggerfall-side runtime, gameplay policy, product service, and Studio adapter.
-It is an exploratory game project centered on Privateer's Hold, not a general
-Daggerfall remake or a place for speculative Engine APIs.
+Daggerfall-side Product Kernel, gameplay policy, rules, content meaning, and
+read-only Studio adapter. It is an exploratory game project centered on
+Privateer's Hold, not a general Daggerfall remake or a place for speculative
+Engine APIs.
 
 ## Begin with Den
 
@@ -30,16 +31,21 @@ exact implemented behavior. Do not create another repository design note.
 ## Working boundaries
 
 - Preserve unrelated changes in the shared worktree.
-- Dagger Rust owns Daggerfall/gameplay meaning and product orchestration.
-  TypeScript authors packages and presents the Angular UI; it never evaluates
-  gameplay or mounts an Engine renderer implementation.
+- Dagger Rust owns Daggerfall/gameplay meaning and product orchestration in
+  `kernel/`; `kernel/dagger-runtime` and `kernel/dagger-rpg` are the only live
+  semantic crates. TypeScript in `rules/` authors admitted composition only;
+  framework-free TypeScript in `ui/` presents immutable projection envelopes
+  and claims declared intents. Neither evaluates gameplay nor mounts an Engine
+  renderer implementation.
 - Consume only the adjacent public `rusty-engine` facade. Do not fetch, pin,
   reset, update, or enforce freshness for the sibling checkout.
-- The development product is Angular mounted by
-  `@rusty-engine/application-host`, backed by the Dagger Rust product service.
-  Engine owns the sole renderer/canvas. There is no fixed native Dagger shell.
-- Tauri is the eventual publication adapter, not an ordinary feature or CI
-  gate.
+- `rusty.toml` is the product composition root. The public `rusty` CLI owns
+  admission, generated browser host, bounded browser evidence, and package
+  closure. Engine owns the sole renderer/canvas; Dagger has no Angular
+  workspace, HTTP product service, polling client, or second input/renderer
+  loop.
+- Desktop wrapper policy is manifest-declared and verified by the Product
+  Model package flow; a native wrapper is not an ordinary feature seam.
 - Unsupported Studio mutations fail closed. Ordinary content drift and quality
   heuristics warn unless a hard stop prevents concrete loss or boundary
   violation.
@@ -61,11 +67,12 @@ report the missing evidence rather than designing from memory.
 ## Verification
 
 Run the narrowest check first, then the gate that owns the changed surface.
-`scripts/verify.sh` is the deterministic, Playwright-free aggregate gate.
-`scripts/check-dagger-product-browser.sh` is a manual product diagnostic for
-browser-visible changes, not a default CI gate. Gameplay semantics belong in
-focused Rust tests; visible interaction and composition may require browser or
-playtest evidence.
+`scripts/verify.sh` retains offline import and Studio-adapter checks, then
+uses the public `rusty` CLI for `check`, `build`, browser-owned `test`, and
+`package`. Do not recreate an Angular build, a Dagger HTTP server, polling
+browser scripts, or an alternate browser harness. Gameplay semantics belong in
+focused Product Kernel tests; visible interaction and composition require the
+Product Model browser evidence path when changed.
 
 Report exactly what ran and which relevant live checks were skipped. Add or
 retain proofs only while they serve a current product feature or risky

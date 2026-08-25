@@ -13,7 +13,7 @@ use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
 
 use crate::{
-    project_access::{safe_project_path, sha256},
+    project_access::{admit_runtime, safe_project_path, sha256},
     readout::make_readout,
 };
 
@@ -218,7 +218,7 @@ impl Adapter {
             Ok(_) => return rejected(request_id, "project_too_large", "project exceeds 64 MiB"),
             Err(error) => return rejected(request_id, "project_read_failed", error.to_string()),
         };
-        let runtime = match DaggerRuntime::from_project_json(&project_text) {
+        let runtime = match admit_runtime(&root, &project_text) {
             Ok(runtime) => runtime,
             Err(error) => return rejected(request_id, "project_rejected", error.to_string()),
         };
@@ -366,39 +366,56 @@ mod tests {
     fn catalog_texture_paths_must_be_normalized_regular_files_inside_the_project_root() {
         let tree = TempTree::new("containment");
         let root = tree.path.join("root");
-        let textures = root.join("content/textures");
+        let textures = root.join("authoring-content/textures");
         fs::create_dir_all(&textures).unwrap();
         let good_bytes = b"good-texture-bytes";
         let outside_bytes = b"outside-the-project-root";
         fs::write(textures.join("tex.png"), good_bytes).unwrap();
         fs::write(tree.path.join("outside.bin"), outside_bytes).unwrap();
-        std::os::unix::fs::symlink("../../outside.bin", root.join("content/link.png")).unwrap();
-        std::os::unix::fs::symlink("textures", root.join("content/linked-dir")).unwrap();
+        std::os::unix::fs::symlink("../../outside.bin", root.join("authoring-content/link.png"))
+            .unwrap();
+        std::os::unix::fs::symlink("textures", root.join("authoring-content/linked-dir")).unwrap();
         let good_hash = sha256_hex(good_bytes);
         let outside_hash = sha256_hex(outside_bytes);
         let absolute_outside = tree.path.join("outside.bin").to_string_lossy().into_owned();
         let assets = vec![
-            texture_asset("texture/good", "content/textures/tex.png", &good_hash),
+            texture_asset(
+                "texture/good",
+                "authoring-content/textures/tex.png",
+                &good_hash,
+            ),
             texture_asset("texture/parent-escape", "../outside.bin", &outside_hash),
             texture_asset("texture/absolute-escape", &absolute_outside, &outside_hash),
             texture_asset(
                 "texture/double-slash",
-                "content//textures/tex.png",
+                "authoring-content//textures/tex.png",
                 &good_hash,
             ),
-            texture_asset("texture/dot-dir", "content/./textures/tex.png", &good_hash),
+            texture_asset(
+                "texture/dot-dir",
+                "authoring-content/./textures/tex.png",
+                &good_hash,
+            ),
             texture_asset(
                 "texture/parent-in-middle",
-                "content/textures/../textures/tex.png",
+                "authoring-content/textures/../textures/tex.png",
                 &good_hash,
             ),
-            texture_asset("texture/symlink-file", "content/link.png", &outside_hash),
+            texture_asset(
+                "texture/symlink-file",
+                "authoring-content/link.png",
+                &outside_hash,
+            ),
             texture_asset(
                 "texture/symlink-dir",
-                "content/linked-dir/tex.png",
+                "authoring-content/linked-dir/tex.png",
                 &good_hash,
             ),
-            texture_asset("texture/directory", "content/textures", &good_hash),
+            texture_asset(
+                "texture/directory",
+                "authoring-content/textures",
+                &good_hash,
+            ),
         ];
         let project = json!({ "assets": assets });
         let project = project.as_object().unwrap();
@@ -415,12 +432,12 @@ mod tests {
         assert_eq!(resources.len(), 1);
         assert_eq!(
             resources[0].get("sourcePath").and_then(Value::as_str),
-            Some("content/textures/tex.png"),
+            Some("authoring-content/textures/tex.png"),
         );
     }
 
     /// The committed Privateer's Hold project projects its authored textures
-    /// and every texture resource stays under content/textures/. No exact
+    /// and every texture resource stays under authoring-content/textures/. No exact
     /// counts on purpose: content evolves and the live studio gates audit
     /// texture traffic; this guards only the structural invariant.
     #[test]
@@ -430,9 +447,10 @@ mod tests {
             .and_then(Path::parent)
             .expect("workspace root")
             .to_path_buf();
-        let project_text =
-            fs::read_to_string(workspace.join("content/projects/privateers-hold.project.json"))
-                .expect("committed project document");
+        let project_text = fs::read_to_string(
+            workspace.join("authoring-content/projects/privateers-hold.project.json"),
+        )
+        .expect("committed project document");
         let project = serde_json::from_str::<Value>(&project_text).unwrap();
         let project = project.as_object().unwrap();
         let projected = projection(&workspace, project, &[]);
@@ -447,7 +465,7 @@ mod tests {
         for entry in resources {
             let source_path = entry.get("sourcePath").and_then(Value::as_str).unwrap();
             assert!(
-                source_path.starts_with("content/textures/"),
+                source_path.starts_with("authoring-content/textures/"),
                 "unexpected texture resource path: {source_path}",
             );
         }
@@ -460,9 +478,10 @@ mod tests {
             .and_then(Path::parent)
             .expect("workspace root")
             .to_path_buf();
-        let project_text =
-            fs::read_to_string(workspace.join("content/projects/privateers-hold.project.json"))
-                .expect("committed project document");
+        let project_text = fs::read_to_string(
+            workspace.join("authoring-content/projects/privateers-hold.project.json"),
+        )
+        .expect("committed project document");
         let bundle = build_render_bundle(&workspace, &project_text)
             .expect("Dagger projection must decode as an Engine retained frame");
         assert!(!bundle.frame.ops.is_empty());
@@ -477,7 +496,7 @@ mod tests {
         assert!(audio.iter().all(|resource| {
             resource.identity.starts_with("audio-resource/")
                 && resource.content_hash.starts_with("sha256:")
-                && resource.source_path.starts_with("content/audio/")
+                && resource.source_path.starts_with("authoring-content/audio/")
                 && !resource.bytes.is_empty()
         }));
         for atlas_id in ["sprite/enemy-0-atlas", "sprite/enemy-1-atlas"] {

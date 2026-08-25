@@ -145,7 +145,7 @@ fn publish_inventory_icons(
 
 /// Publish small, repository-authored UI pieces through the same manifest and
 /// ID-only product route as the extracted classic images. Their source remains
-/// outside the generated `content/ui` directory so a normal import can
+/// outside the generated `authoring-content/ui` directory so a normal import can
 /// recreate it and retain prompt/provenance metadata alongside the PNG digest.
 fn publish_authored_assets(ui_dir: &Path, assets: &mut Vec<Value>) -> Result<(), String> {
     let repository_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");

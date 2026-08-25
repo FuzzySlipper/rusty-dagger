@@ -16,7 +16,7 @@ ADAPTER = os.environ.get(
     str(REPO / "target" / "debug" / "dagger-studio-adapter"),
 )
 ROOT = str(REPO)
-PROJECT = "content/projects/privateers-hold.project.json"
+PROJECT = "authoring-content/projects/privateers-hold.project.json"
 PROTOCOL = 14
 
 proc = subprocess.Popen(

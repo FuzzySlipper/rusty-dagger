@@ -1,0 +1,4802 @@
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
+
+use dagger_rpg::{
+    action_dynamic_roll_evidence, action_roll_evidence, apply_standard_mechanics_operation,
+    bind_actor_loot, compile_gameplay_package, definition_base_stats, equipped_weapon,
+    loot_roll_evidence, restore_actor_tracks, set_actor_track, spawn_container,
+    struck_body_part_name, track_maximum, unarmed_damage_range, AuthoredGameplayPayload,
+    DaggerContainerState, DaggerDynamicRoll, DaggerEvent, DaggerEvidence, DaggerGameplayCatalog,
+    DaggerGameplayError, DaggerGameplayState, DaggerIntent, DaggerIntentOrigin,
+    DaggerLootGeneration, DaggerProgressionRecord,
+};
+use rusty_engine::core_ids::EntityId;
+use rusty_engine::core_math::Vec3;
+use rusty_engine::engine_spatial::{
+    CharacterControllerService, FirstPersonLookState, SpatialCollisionHit, VoxelCollisionScene,
+};
+use rusty_engine::entity_state::{
+    replace_character_motion_state, CharacterMotionComponent, CharacterMotionStateReplacement,
+    ComponentRegistration, ComponentTypeId, EntityAuthoringService, EntityDefinition, EntityState,
+    TransformComponent,
+};
+use rusty_engine::gameplay_mechanics::{OperationId, StatId, StatService};
+use rusty_engine::gameplay_resolution::{
+    CorrelationId, ResolutionId, ResolutionIdentity, ResolutionMode,
+};
+use rusty_engine::gameplay_standard::{
+    CapabilityRoleId, StandardMechanicsReceipt, StandardOperation,
+};
+use rusty_engine::product_kernel::serde::{Deserialize, Serialize};
+use rusty_engine::runtime_standard_capabilities::{
+    ObservePairsBatchIdentity, ObservePairsEmission, ObservePairsError, ObservePairsPlan,
+    ObservePairsReadout, OBSERVE_PAIRS_RESULT_KIND,
+};
+use rusty_engine::svc_collision::{
+    StaticMeshColliderInstance, StaticMeshInstanceId, StaticMeshTransform,
+};
+use rusty_engine::svc_rng::{KeyedRngV1, RngSeed};
+
+use crate::observe_pairs::{
+    DaggerCombatTarget, DaggerPlayerObserver, DAGGER_COMBAT_TARGET_ROLE,
+    DAGGER_PLAYER_OBSERVER_ROLE,
+};
+use crate::patrol::{EnemyAiMode, PatrolService, PositionUpdate};
+use crate::player::{
+    apply_player_action, player_view, PlayerControlReceipt, PlayerControllerConfig,
+    PlayerControllerState, PlayerError, PlayerFrameReceipt, ResolvedPlayerAction,
+    ResolvedPlayerFrame,
+};
+use crate::project::{
+    AdmittedProject, ContentEntity, ContentEntityKind, ProjectAdmissionError, PLAYER_HALF_EXTENTS,
+};
+use crate::settings::{
+    SettingsError, SettingsReadout, SettingsState, DEBUG_FAILED_INVENTORY_DROP_MESSAGES_ID,
+};
+
+#[derive(Debug)]
+pub enum RuntimeError {
+    Admission(ProjectAdmissionError),
+    Gameplay(DaggerGameplayError),
+    Player(PlayerError),
+    Content(ContentError),
+    Encounter(String),
+    Resource(String),
+    Observation(String),
+    Inventory(String),
+    Settings(SettingsError),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ContentError {
+    UnknownEntity(u64),
+    NoGroundedApproach(u64),
+    NoFocusedTarget,
+    NoCombatDefinition(u64),
+    TargetDead(u64),
+    OutOfRange {
+        id: u64,
+        distance: f32,
+        maximum: f32,
+    },
+    Occluded(u64),
+}
+
+impl std::fmt::Display for RuntimeError {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{self:?}")
+    }
+}
+
+impl std::error::Error for RuntimeError {}
+
+pub struct DaggerRuntime {
+    entities: EntityState,
+    collision_scene: VoxelCollisionScene,
+    player: EntityId,
+    player_controller: PlayerControllerConfig,
+    player_look_state: FirstPersonLookState,
+    player_controller_service: CharacterControllerService,
+    player_command_sequence: u64,
+    player_start: Vec3,
+    player_start_look_state: FirstPersonLookState,
+    gameplay_catalog: DaggerGameplayCatalog,
+    gameplay_payload: AuthoredGameplayPayload,
+    gameplay: DaggerGameplayState,
+    /// Product-owned settings are live Rust authority, never a browser cache.
+    settings: SettingsState,
+    /// Rust-owned placement for the carried inventory grid. It is reconciled
+    /// against canonical Engine inventory facts before reads and moves.
+    inventory_grid: InventoryGridState,
+    /// Product debug intent for navigation visualization. The renderer only
+    /// observes this mode; it does not infer or toggle it itself.
+    debug_navigation_enabled: bool,
+    combat_sequence: u64,
+    combat_history: VecDeque<CombatRecord>,
+    combat_attempt_sequence: u64,
+    combat_attempt_history: VecDeque<CombatAttemptRecord>,
+    player_attack_cooldown_remaining: f32,
+    player_action_sequence: u64,
+    melee_presentation: Option<ActiveMeleePresentation>,
+    encounter_sequence: u64,
+    encounter_history: VecDeque<EncounterDecisionRecord>,
+    enemy_attack_sequences: BTreeMap<u64, u64>,
+    enemy_hurt_sequences: BTreeMap<u64, u64>,
+    dungeon_bounds: Option<([f64; 3], [f64; 3])>,
+    content_entities: Vec<ContentEntity>,
+    content_live_positions: BTreeMap<u64, [f32; 3]>,
+    focused_content_id: Option<u64>,
+    /// Stable instance id of the remote inventory currently opened by the
+    /// product loot window. This is session state, never an Angular cache.
+    open_loot_container_id: Option<String>,
+    patrol: Option<PatrolService>,
+    named_encounters: Vec<NamedEncounter>,
+    active_encounter_id: Option<String>,
+    active_encounter_outcome: NamedEncounterOutcome,
+    active_encounter_engaged: bool,
+    equipment_log: VecDeque<EquipmentLogRecord>,
+    equipment_log_sequence: u64,
+    /// Cursor into the stable carried-equippable ordering: index of the item
+    /// the last equip-cycle press applied to (`None` before the first press).
+    equip_cycle_cursor: Option<usize>,
+    /// Kill-XP award receipts from the progression authority (capped like
+    /// combat history).
+    progression_history: VecDeque<DaggerProgressionRecord>,
+    /// Per-player level-up sequence feeding the salt-5 hp-roll stream; reset
+    /// with the play session so hp rolls are deterministic per session.
+    player_level_up_sequence: u64,
+    notices: VecDeque<ProductNoticeRecord>,
+    notice_sequence: u64,
+}
+
+impl Clone for DaggerRuntime {
+    fn clone(&self) -> Self {
+        // `clone_for_staging` is structurally infallible today. Keep the
+        // explicit Result-bearing public method so a future owned authority
+        // can reject an uncloneable staging boundary without changing callers.
+        self.clone_for_staging()
+            .expect("DaggerRuntime staging clone is structurally infallible")
+    }
+}
+
+impl std::fmt::Debug for DaggerRuntime {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("DaggerRuntime")
+            .field("player", &self.player)
+            .field("content_entity_count", &self.content_entities.len())
+            .field("focused_content_id", &self.focused_content_id)
+            .field("active_encounter_id", &self.active_encounter_id)
+            .field("combat_sequence", &self.combat_sequence)
+            .finish_non_exhaustive()
+    }
+}
+
+pub const PLAYER_ACTOR_ID: &str = "player";
+pub const MELEE_ACTION_ID: &str = "melee-attack";
+pub const COMBAT_HISTORY_LIMIT: usize = 32;
+pub const ENCOUNTER_HISTORY_LIMIT: usize = 32;
+pub const PRODUCT_NOTICE_HISTORY_LIMIT: usize = 32;
+pub const MELEE_ANTICIPATION_SECONDS: f32 = 0.22;
+pub const MELEE_CONTACT_SECONDS: f32 = 0.32;
+pub const MELEE_RECOVERY_SECONDS: f32 = 0.72;
+pub const MELEE_REJECTION_SECONDS: f32 = 0.72;
+const MELEE_AIM_MIN_DOT: f32 = 0.64;
+/// Reach of the aimed loot-open query in world units. Classic looting is a
+/// click on the adjacent container sprite; 2.5 units covers the
+/// jump-to-content standoff (1.5u) with margin for the low corpse piles.
+pub const LOOT_INTERACT_REACH: f32 = 2.5;
+/// Player level used for loot generation. Loot generates at spawn, when the
+/// session player is always level 1 (progression persistence is
+/// session-only); if later-generated containers ever appear, the level must
+/// be read from the player's live `level` stat at generation time.
+const LOOT_GENERATION_LEVEL: i64 = 1;
+/// The classic primary attributes presented by the bounded character sheet.
+/// Reflexes is intentionally separate because its classic representation is
+/// an enum-like setting rather than another 1–100 attribute.
+const CHARACTER_SHEET_ATTRIBUTE_IDS: [&str; 8] = [
+    "strength",
+    "intelligence",
+    "willpower",
+    "agility",
+    "endurance",
+    "personality",
+    "speed",
+    "luck",
+];
+const PLAYER_REFLEXES_STAT_ID: &str = "reflexes";
+
+/// The product's deliberately small subset of Daggerfall slot vocabulary.
+/// Accessory and clothing placeholders with unrestricted classifications are
+/// not equipment targets until Rusty Dagger models their semantics.
+const PRODUCT_EQUIPMENT_SLOTS: [&str; 9] = [
+    "head",
+    "right-arm",
+    "chest-armor",
+    "left-arm",
+    "right-hand",
+    "gloves",
+    "left-hand",
+    "legs-armor",
+    "feet",
+];
+
+fn product_equipment_slot(slot: &str) -> bool {
+    PRODUCT_EQUIPMENT_SLOTS.contains(&slot)
+}
+
+/// Product-service readout of admitted catalog definitions, live state, and
+/// resolution explanation. Browser surfaces do not evaluate or edit gameplay
+/// definitions; bounded live mutations route through Rust-owned semantic
+/// commands.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ProductReadout {
+    pub gameplay_package: GameplayPackageReadout,
+    pub move_speed_units_per_second: f32,
+    pub max_health: f32,
+    pub current_health: f32,
+    pub player_stats: ActorGameplayReadout,
+    pub player_position: [f32; 3],
+    pub player_yaw_degrees: f32,
+    pub combat: Vec<CombatRecord>,
+    pub combat_attempts: Vec<CombatAttemptRecord>,
+    pub player_attack_cooldown_remaining: f32,
+    pub melee_presentation: Option<MeleePresentationReadout>,
+    pub encounter_decisions: Vec<EncounterDecisionRecord>,
+    pub content: Vec<ContentEntityReadout>,
+    pub focused_content_id: Option<u64>,
+    /// The product-open remote loot inventory, if any.
+    pub open_loot_container_id: Option<String>,
+    pub named_encounters: Vec<NamedEncounterReadout>,
+    pub active_encounter: Option<NamedEncounterReadout>,
+    /// The player's upstream inventory/equipment view (`InventoryService::view`
+    /// plus the EquipmentComponent's slot assignments).
+    pub player_inventory: PlayerInventoryReadout,
+    /// Rust-owned placement for the fixed carried-inventory grid.
+    pub inventory_grid: InventoryGridReadout,
+    /// The complete effective settings state and optimistic-concurrency token.
+    pub settings: SettingsReadout,
+    /// Whether product navigation diagnostics should be projected.
+    pub debug_navigation_enabled: bool,
+    /// Ordered equip/unequip/swap receipts from the equip-cycle verb.
+    pub equipment_log: Vec<EquipmentLogRecord>,
+    /// Live loot containers: treasure piles and loot-bearing enemy corpses,
+    /// with contents and the generation receipt from spawn.
+    pub loot_containers: Vec<LootContainerReadout>,
+    /// Kill-XP progression state: the player's live xp/level, pacing to the
+    /// next level, health, and the award history.
+    pub progression: ProgressionReadout,
+    /// Bounded, session-local semantic notices for transient product feedback.
+    /// Readout creation is pure: notices are appended only by mutation hooks.
+    pub notices: Vec<ProductNoticeRecord>,
+}
+
+/// Rust-authored semantic category for a transient product notice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "kebab-case")]
+pub enum ProductNoticeKind {
+    MaterialIneffective,
+    EmptyContainer,
+    CapacityRejected,
+    LevelUp,
+    Observation,
+    InventoryDropRejected,
+    DebugNavigation,
+}
+
+/// One monotonic, bounded product-feedback record. The message is final
+/// Rust-authored text; browser clients only queue and display it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ProductNoticeRecord {
+    pub sequence: u64,
+    pub kind: ProductNoticeKind,
+    pub message: String,
+}
+
+/// Read-only view of the kill-XP profile state: live progression
+/// stats, pacing against the `xp-level` curve, health, and the award
+/// receipts from the progression authority.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ProgressionReadout {
+    pub xp: i64,
+    pub level: i64,
+    /// xp remaining until the next `xp-level` threshold (the next level).
+    pub xp_to_next_level: i64,
+    pub current_health: f32,
+    pub max_health: f32,
+    /// Ordered kill-XP award receipts (capped like combat history).
+    pub history: Vec<DaggerProgressionRecord>,
+}
+
+/// Capacity usage for one metric in quarter-kg units (`used` / `maximum`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryCapacityReadout {
+    pub metric: String,
+    pub used: u64,
+    pub maximum: Option<u64>,
+}
+
+/// One fungible stack in the player's inventory.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryStackReadout {
+    pub item: String,
+    pub quantity: u64,
+}
+
+/// One unique item entity the player carries, with its equip slot if assigned.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryItemReadout {
+    pub item: String,
+    pub entity: u64,
+    pub equip_slot: Option<String>,
+    /// Concrete equipment slots compiled from this item's classifications.
+    /// Empty-classification accessory/clothing placeholders are intentionally
+    /// not exposed as product equipment affordances.
+    pub compatible_slots: Vec<String>,
+}
+
+/// Read-only view of the player's upstream inventory and equipment state.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerInventoryReadout {
+    /// Current optimistic-concurrency revision of the player's equipment.
+    pub equipment_revision: u64,
+    pub capacity: Vec<InventoryCapacityReadout>,
+    pub stacks: Vec<InventoryStackReadout>,
+    pub items: Vec<InventoryItemReadout>,
+}
+
+/// One carried inventory occupant placed in the product's fixed grid.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum InventoryGridOccupant {
+    Item { entity: u64 },
+    Stack { item: String },
+}
+
+/// One position in the Rust-owned carried-inventory grid.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryGridSlotReadout {
+    pub index: usize,
+    pub occupant: Option<InventoryGridOccupant>,
+}
+
+/// Read model for the fixed 50-slot carried-inventory grid.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct InventoryGridReadout {
+    /// Changes only after an accepted grid move or swap.
+    pub revision: u64,
+    pub slots: Vec<InventoryGridSlotReadout>,
+}
+
+const INVENTORY_GRID_SLOT_COUNT: usize = 50;
+
+#[derive(Debug, Clone, Default)]
+struct InventoryGridState {
+    revision: u64,
+    slots: Vec<Option<InventoryGridOccupant>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct InventoryMoveRequest {
+    source_slot: usize,
+    target_slot: usize,
+    expected_revision: u64,
+}
+
+impl InventoryGridState {
+    fn sync(&mut self, inventory: &PlayerInventoryReadout) {
+        if self.slots.len() != INVENTORY_GRID_SLOT_COUNT {
+            self.slots.resize(INVENTORY_GRID_SLOT_COUNT, None);
+        }
+        let carried = inventory
+            .items
+            .iter()
+            .filter(|item| item.equip_slot.is_none())
+            .map(|item| InventoryGridOccupant::Item {
+                entity: item.entity,
+            })
+            .chain(
+                inventory
+                    .stacks
+                    .iter()
+                    .map(|stack| InventoryGridOccupant::Stack {
+                        item: stack.item.clone(),
+                    }),
+            )
+            .collect::<BTreeSet<_>>();
+        let mut retained = BTreeSet::new();
+        for slot in &mut self.slots {
+            if slot.as_ref().is_none_or(|occupant| {
+                !carried.contains(occupant) || !retained.insert(occupant.clone())
+            }) {
+                *slot = None;
+            }
+        }
+        for occupant in carried {
+            if retained.contains(&occupant) {
+                continue;
+            }
+            if let Some(slot) = self.slots.iter_mut().find(|slot| slot.is_none()) {
+                *slot = Some(occupant.clone());
+                retained.insert(occupant);
+            }
+        }
+    }
+
+    fn move_occupant(
+        &mut self,
+        source_slot: usize,
+        target_slot: usize,
+        expected_revision: u64,
+    ) -> Result<bool, String> {
+        if self.revision != expected_revision {
+            return Err(format!(
+                "stale inventory grid revision: expected {expected_revision}, current {}",
+                self.revision
+            ));
+        }
+        if source_slot >= INVENTORY_GRID_SLOT_COUNT || target_slot >= INVENTORY_GRID_SLOT_COUNT {
+            return Err(format!(
+                "inventory grid slot must be within 0..{INVENTORY_GRID_SLOT_COUNT}"
+            ));
+        }
+        if self.slots[source_slot].is_none() {
+            return Err(format!("inventory grid source slot {source_slot} is empty"));
+        }
+        if source_slot == target_slot {
+            return Ok(false);
+        }
+        self.slots.swap(source_slot, target_slot);
+        self.revision = self
+            .revision
+            .checked_add(1)
+            .ok_or("inventory grid revision exhausted")?;
+        Ok(true)
+    }
+
+    fn readout(&self) -> InventoryGridReadout {
+        InventoryGridReadout {
+            revision: self.revision,
+            slots: self
+                .slots
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(index, occupant)| InventoryGridSlotReadout { index, occupant })
+                .collect(),
+        }
+    }
+}
+
+/// The committed gameplay package's definitions plus its admission
+/// fingerprint, served read-only for product and explorer definition panels.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct GameplayPackageReadout {
+    pub fingerprint: String,
+    #[serde(flatten)]
+    pub payload: AuthoredGameplayPayload,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct NamedEncounterReadout {
+    pub id: String,
+    pub name: String,
+    pub objective: String,
+    pub route_code: String,
+    pub member_entity_ids: Vec<u64>,
+    pub status: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct NamedEncounterCatalog {
+    schema_version: u32,
+    encounters: Vec<NamedEncounter>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct NamedEncounter {
+    id: String,
+    name: String,
+    objective: String,
+    route_code: String,
+    start_entity_id: u64,
+    member_entity_ids: Vec<u64>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+enum NamedEncounterOutcome {
+    #[default]
+    Inactive,
+    Active,
+    Victory,
+    Defeat,
+}
+
+/// Read-only view of one live loot container (treasure pile or enemy corpse).
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct LootContainerReadout {
+    /// Container instance id in the gameplay state (`treasure-<id>` /
+    /// `enemy-<id>`).
+    pub id: String,
+    /// treasure | corpse
+    pub kind: &'static str,
+    /// The scene content entity this container anchors to.
+    pub content_entity_id: u64,
+    pub loot_key: String,
+    /// Engine inventory-component revision used to reject stale transfers.
+    pub source_inventory_revision: u64,
+    /// Current contents (`InventoryService::view` on the container entity).
+    pub contents: PlayerInventoryReadout,
+    /// The spawn-time generation receipt, including the per-category
+    /// unsupported-coverage notes from the loot-table authority.
+    pub generation: DaggerLootGeneration,
+    /// True once nothing remains to take.
+    pub emptied: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ContentEntityReadout {
+    pub id: u64,
+    /// enemy | treasure
+    pub kind: &'static str,
+    pub name: String,
+    /// Decoded mobile reference for enemies; `None` for treasure containers.
+    pub reference: Option<EnemyReferenceReadout>,
+    /// Classic loot table key for treasure containers; `None` for enemies.
+    pub loot_key: Option<String>,
+    pub live: ContentLiveReadout,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct EnemyReferenceReadout {
+    pub mobile_id: u8,
+    pub mobile_name: String,
+    pub texture_archive: u16,
+    pub flying: bool,
+    pub sprite_asset: String,
+    pub authored_position: [f32; 3],
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ContentLiveReadout {
+    pub position: [f32; 3],
+    pub distance_from_player: f32,
+    pub resources: Option<LiveActorResources>,
+    pub ai_state: Option<&'static str>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct LiveActorResources {
+    pub current_health: f32,
+    pub current_stamina: f32,
+    pub current_magicka: f32,
+}
+
+/// Scenario id of one enemy instance in the live gameplay state.
+fn enemy_actor_id(id: u64) -> String {
+    format!("enemy-{id}")
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ActorGameplayReadout {
+    /// Compatibility summary for existing product surfaces.
+    pub attributes: ActorAttributeReadout,
+    /// The live mechanics evaluation of the eight primary attributes. This is
+    /// deliberately not the admitted definition map: future attributed
+    /// sources must be visible as current character state.
+    pub evaluated_attributes: BTreeMap<String, i64>,
+    /// The separately modeled live reflexes setting (2 is classic Average).
+    pub reflexes: i64,
+    /// The live mechanics evaluation of skills actually modeled for this
+    /// actor. Do not fill this with every globally declared but unmodeled
+    /// skill at zero.
+    pub modeled_skills: BTreeMap<String, i64>,
+    pub max_health: f32,
+    pub max_stamina: f32,
+    pub max_magicka: f32,
+    pub current_health: f32,
+    pub current_stamina: f32,
+    pub current_magicka: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct ActorAttributeReadout {
+    pub strength: f32,
+    pub endurance: f32,
+    pub intelligence: f32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct CombatRecord {
+    pub sequence: u64,
+    pub target_id: u64,
+    pub range: f32,
+    pub attack_range: f32,
+    pub line_of_sight_clear: bool,
+    pub action: String,
+    pub status: String,
+    pub roll: i64,
+    pub hit: bool,
+    pub damage: i64,
+    pub died: bool,
+    pub health_before: f32,
+    pub health_after: f32,
+    pub target_max_health: f32,
+    /// Weapon item id the swing resolved with, or "unarmed".
+    pub weapon: String,
+    /// The body part the struck-part roll selected, when the action reads one.
+    pub struck_part: Option<String>,
+    /// True when the target's minMetalToHit gated the damage to 0.
+    pub material_ineffective: bool,
+    pub decisions: Vec<String>,
+    pub events: Vec<String>,
+}
+
+/// One Rust-owned inventory/equipment action receipt. Successful mutations,
+/// non-mutating loot opens, and upstream rejections all append records; a
+/// rejection carries `accepted: false` and the upstream error reason.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct EquipmentLogRecord {
+    pub sequence: u64,
+    /// equip | unequip | swap | grant | loot-open | loot-transfer
+    pub operation: String,
+    /// Item definition id, or the opened container id for loot-open.
+    pub item: String,
+    pub slots: Vec<String>,
+    /// For a swap, the item definition id it replaced.
+    pub replaced_item: Option<String>,
+    /// Stack size for fungible grants or loot transfers.
+    pub quantity: Option<u64>,
+    pub accepted: bool,
+    /// Upstream rejection reason when the mutation was refused.
+    pub reason: Option<String>,
+    /// Committed component revision after a mutation (equipment revision or
+    /// inventory revision); absent on rejection and non-mutating loot-open.
+    pub committed_revision: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct CombatAttemptRecord {
+    pub sequence: u64,
+    pub target_id: Option<u64>,
+    pub accepted: bool,
+    pub outcome: String,
+    pub cooldown_before: f32,
+    pub cooldown_after: f32,
+    pub cooldown_duration: f32,
+    pub stamina_before: f32,
+    pub stamina_cost: f32,
+    pub stamina_after: f32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub enum MeleePresentationPhase {
+    Anticipation,
+    Contact,
+    Recovery,
+    Rejected,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct MeleePresentationReadout {
+    pub attempt_sequence: u64,
+    pub phase: MeleePresentationPhase,
+    pub phase_progress: f32,
+    pub accepted: bool,
+    pub outcome: String,
+    pub target_id: Option<u64>,
+    pub stamina_before: f32,
+    pub stamina_after: f32,
+    pub target_health_before: Option<f32>,
+    pub target_health_after: Option<f32>,
+    pub target_max_health: Option<f32>,
+    pub final_damage: Option<f32>,
+    pub died: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct ActiveMeleePresentation {
+    attempt_sequence: u64,
+    elapsed: f32,
+    accepted: bool,
+    outcome: String,
+    target_id: Option<u64>,
+    stamina_before: f32,
+    stamina_after: f32,
+    target_health_before: Option<f32>,
+    target_health_after: Option<f32>,
+    target_max_health: Option<f32>,
+    final_damage: Option<f32>,
+    died: bool,
+    contact_resolved: bool,
+}
+
+impl ActiveMeleePresentation {
+    fn readout(&self) -> MeleePresentationReadout {
+        let (phase, phase_progress) = if !self.accepted {
+            (
+                MeleePresentationPhase::Rejected,
+                normalized_progress(self.elapsed, MELEE_REJECTION_SECONDS),
+            )
+        } else if self.elapsed < MELEE_ANTICIPATION_SECONDS {
+            (
+                MeleePresentationPhase::Anticipation,
+                normalized_progress(self.elapsed, MELEE_ANTICIPATION_SECONDS),
+            )
+        } else if self.elapsed < MELEE_ANTICIPATION_SECONDS + MELEE_CONTACT_SECONDS {
+            (
+                MeleePresentationPhase::Contact,
+                normalized_progress(
+                    self.elapsed - MELEE_ANTICIPATION_SECONDS,
+                    MELEE_CONTACT_SECONDS,
+                ),
+            )
+        } else {
+            (
+                MeleePresentationPhase::Recovery,
+                normalized_progress(
+                    self.elapsed - MELEE_ANTICIPATION_SECONDS - MELEE_CONTACT_SECONDS,
+                    MELEE_RECOVERY_SECONDS,
+                ),
+            )
+        };
+        MeleePresentationReadout {
+            attempt_sequence: self.attempt_sequence,
+            phase,
+            phase_progress,
+            accepted: self.accepted,
+            outcome: self.outcome.clone(),
+            target_id: self.target_id,
+            stamina_before: self.stamina_before,
+            stamina_after: self.stamina_after,
+            target_health_before: self.target_health_before,
+            target_health_after: self.target_health_after,
+            target_max_health: self.target_max_health,
+            final_damage: self.final_damage,
+            died: self.died,
+        }
+    }
+
+    fn is_complete(&self) -> bool {
+        let duration = if self.accepted {
+            MELEE_ANTICIPATION_SECONDS + MELEE_CONTACT_SECONDS + MELEE_RECOVERY_SECONDS
+        } else {
+            MELEE_REJECTION_SECONDS
+        };
+        self.elapsed >= duration
+    }
+}
+
+fn normalized_progress(elapsed: f32, duration: f32) -> f32 {
+    (elapsed / duration).clamp(0.0, 1.0)
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(crate = "rusty_engine::product_kernel::serde")]
+#[serde(rename_all = "camelCase")]
+pub struct EncounterDecisionRecord {
+    pub sequence: u64,
+    pub enemy_id: u64,
+    pub enemy_name: String,
+    pub decision: String,
+    pub from: Option<String>,
+    pub to: Option<String>,
+    pub distance_to_player: f32,
+    pub damage: Option<f32>,
+    pub line_of_sight_clear: Option<bool>,
+    pub player_health_before: Option<f32>,
+    pub player_health_after: Option<f32>,
+    pub player_died: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnemyPresentationReadout {
+    pub handle: u32,
+    pub attack_sequence: u64,
+    pub hurt_sequence: u64,
+    pub dead: bool,
+}
+
+impl DaggerRuntime {
+    /// Admits the complete live runtime closure from immutable product resource
+    /// bytes. The Product Assembly supplies these bytes; this runtime never
+    /// receives a product-root path or filesystem handle.
+    pub fn from_product_resources(
+        project_bytes: &[u8],
+        navgrid_bytes: &[u8],
+        named_encounters_bytes: &[u8],
+        gameplay_package_bytes: &[u8],
+    ) -> Result<Self, RuntimeError> {
+        let project = std::str::from_utf8(project_bytes)
+            .map_err(|error| RuntimeError::Resource(format!("project is not UTF-8: {error}")))?;
+        let navgrid = std::str::from_utf8(navgrid_bytes)
+            .map_err(|error| RuntimeError::Resource(format!("navgrid is not UTF-8: {error}")))?;
+        let named_encounters = std::str::from_utf8(named_encounters_bytes).map_err(|error| {
+            RuntimeError::Resource(format!("named encounters are not UTF-8: {error}"))
+        })?;
+        let mut runtime =
+            Self::from_project_json_with_gameplay_package(project, gameplay_package_bytes)?;
+        runtime.install_encounter_navigation_json(navgrid)?;
+        runtime.install_named_encounters_json(named_encounters)?;
+        Ok(runtime)
+    }
+
+    /// Resource-backed variant used by Product Assembly when the admitted
+    /// dungeon visual/collision mesh is packed outside the project JSON.
+    pub fn from_product_resources_with_mesh_resource(
+        project_bytes: &[u8],
+        navgrid_bytes: &[u8],
+        named_encounters_bytes: &[u8],
+        gameplay_package_bytes: &[u8],
+        dungeon_mesh_bytes: &[u8],
+    ) -> Result<Self, RuntimeError> {
+        let project = std::str::from_utf8(project_bytes)
+            .map_err(|error| RuntimeError::Resource(format!("project is not UTF-8: {error}")))?;
+        let navgrid = std::str::from_utf8(navgrid_bytes)
+            .map_err(|error| RuntimeError::Resource(format!("navgrid is not UTF-8: {error}")))?;
+        let named_encounters = std::str::from_utf8(named_encounters_bytes).map_err(|error| {
+            RuntimeError::Resource(format!("named encounters are not UTF-8: {error}"))
+        })?;
+        let admitted = AdmittedProject::from_json_with_mesh_resource(project, dungeon_mesh_bytes)
+            .map_err(RuntimeError::Admission)?;
+        let mut runtime =
+            Self::from_admitted_project_with_gameplay_package(admitted, gameplay_package_bytes)?;
+        runtime.install_encounter_navigation_json(navgrid)?;
+        runtime.install_named_encounters_json(named_encounters)?;
+        Ok(runtime)
+    }
+
+    /// Project admission stays public for focused host-neutral tests and
+    /// tooling, but callers must provide the authored gameplay bytes.
+    pub fn from_project_json_with_gameplay_package(
+        document: &str,
+        gameplay_package: &[u8],
+    ) -> Result<Self, RuntimeError> {
+        let admitted = AdmittedProject::from_json(document).map_err(RuntimeError::Admission)?;
+        Self::from_admitted_project_with_gameplay_package(admitted, gameplay_package)
+    }
+
+    /// Admission with an explicit gameplay package. The committed package is
+    /// the product default; diagnostics and pacing proofs inject a mutated
+    /// package through this one seam rather than forking admission.
+    pub fn from_admitted_project_with_gameplay_package(
+        admitted: AdmittedProject,
+        gameplay_package: &[u8],
+    ) -> Result<Self, RuntimeError> {
+        let mut collision_scene = admitted.collision_scene;
+        // Register the dungeon trimesh collider so the kinematic motion sweep
+        // blocks on the full dungeon geometry (floors, walls, ramps) with no
+        // controller changes. One instance at identity over the whole mesh.
+        if let Some(collider) = admitted.dungeon_collider {
+            let geometry_hash = collider.geometry_hash;
+            let instance = StaticMeshColliderInstance {
+                id: StaticMeshInstanceId(1),
+                asset: collider.id,
+                expected_geometry_hash: geometry_hash,
+                transform: StaticMeshTransform::IDENTITY,
+            };
+            let revision = collision_scene.static_mesh_collision_revision();
+            collision_scene
+                .replace_static_mesh_colliders(revision, [collider], [instance])
+                .map_err(|error| {
+                    RuntimeError::Admission(ProjectAdmissionError::CollisionRegistration(format!(
+                        "{error:?}"
+                    )))
+                })?;
+        }
+        let player_start = admitted.player_start;
+        let player_start_look_state = admitted.player_look_state;
+        let gameplay_catalog =
+            compile_gameplay_package(gameplay_package).map_err(RuntimeError::Gameplay)?;
+        let gameplay_payload: AuthoredGameplayPayload = {
+            let package = rusty_engine::gameplay_rules::decode_rule_package(gameplay_package)
+                .map_err(|error| {
+                    RuntimeError::Gameplay(DaggerGameplayError::Package(error.to_string()))
+                })?;
+            rusty_engine::product_kernel::serde_json::from_value(package.payload().clone())
+                .map_err(|error| {
+                    RuntimeError::Gameplay(DaggerGameplayError::Payload(error.to_string()))
+                })?
+        };
+        let mut player_controller = admitted.player_controller;
+        player_controller.move_speed_units_per_second = gameplay_catalog
+            .actors()
+            .get(PLAYER_ACTOR_ID)
+            .and_then(|player| player.move_speed)
+            .ok_or_else(|| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidValue {
+                    path: "actors[player].moveSpeed".to_string(),
+                    reason: "player actor must declare a movement speed".to_string(),
+                })
+            })?;
+        player_controller.configure_engine();
+        let gameplay = spawn_live_actors(&gameplay_catalog, &admitted.content_entities)?;
+        let enemy_presentation_sequences = admitted
+            .content_entities
+            .iter()
+            .map(|entity| (entity.id, 0_u64))
+            .collect::<BTreeMap<_, _>>();
+        let content_live_positions = admitted
+            .content_entities
+            .iter()
+            .map(|entity| (entity.id, entity.authored_position))
+            .collect();
+        let mut runtime = Self {
+            entities: admitted.entities,
+            collision_scene,
+            player: admitted.player,
+            player_controller,
+            player_look_state: admitted.player_look_state,
+            player_controller_service: CharacterControllerService::default(),
+            player_command_sequence: 0,
+            player_start,
+            player_start_look_state,
+            gameplay_catalog,
+            gameplay_payload,
+            gameplay,
+            settings: SettingsState::default(),
+            inventory_grid: InventoryGridState::default(),
+            debug_navigation_enabled: false,
+            combat_sequence: 0,
+            player_action_sequence: 0,
+            combat_history: VecDeque::new(),
+            combat_attempt_sequence: 0,
+            combat_attempt_history: VecDeque::new(),
+            player_attack_cooldown_remaining: 0.0,
+            melee_presentation: None,
+            encounter_sequence: 0,
+            encounter_history: VecDeque::new(),
+            enemy_attack_sequences: enemy_presentation_sequences.clone(),
+            enemy_hurt_sequences: enemy_presentation_sequences,
+            dungeon_bounds: admitted.dungeon_bounds,
+            content_entities: admitted.content_entities,
+            content_live_positions,
+            focused_content_id: None,
+            open_loot_container_id: None,
+            patrol: None,
+            named_encounters: Vec::new(),
+            active_encounter_id: None,
+            active_encounter_outcome: NamedEncounterOutcome::Inactive,
+            active_encounter_engaged: false,
+            equipment_log: VecDeque::new(),
+            equipment_log_sequence: 0,
+            equip_cycle_cursor: None,
+            progression_history: VecDeque::new(),
+            player_level_up_sequence: 0,
+            notices: VecDeque::new(),
+            notice_sequence: 0,
+        };
+        runtime.install_observe_pairs_components()?;
+        Ok(runtime)
+    }
+
+    fn install_observe_pairs_components(&mut self) -> Result<(), RuntimeError> {
+        let observer_type = ComponentTypeId::parse(DAGGER_PLAYER_OBSERVER_ROLE)
+            .map_err(|error| RuntimeError::Encounter(format!("observer component id: {error}")))?;
+        self.entities
+            .register_component(ComponentRegistration::<DaggerPlayerObserver>::runtime_only(
+                observer_type,
+            ))
+            .map_err(|error| RuntimeError::Encounter(format!("observer registration: {error}")))?;
+        let target_type = ComponentTypeId::parse(DAGGER_COMBAT_TARGET_ROLE)
+            .map_err(|error| RuntimeError::Encounter(format!("target component id: {error}")))?;
+        self.entities
+            .register_component(ComponentRegistration::<DaggerCombatTarget>::runtime_only(
+                target_type,
+            ))
+            .map_err(|error| RuntimeError::Encounter(format!("target registration: {error}")))?;
+
+        let definitions = self.content_entities.iter().map(|content| {
+            EntityDefinition::new(EntityId::new(content.id), content.name.clone()).with_transform(
+                Vec3::new(
+                    content.authored_position[0],
+                    content.authored_position[1],
+                    content.authored_position[2],
+                ),
+            )
+        });
+        let expected_revision = self.entities.revision();
+        EntityAuthoringService
+            .admit(&mut self.entities, expected_revision, definitions)
+            .map_err(|error| {
+                RuntimeError::Encounter(format!("observe target admission: {error}"))
+            })?;
+
+        let observer_revision = self
+            .entities
+            .component_revision::<DaggerPlayerObserver>(self.player)
+            .map_err(|error| RuntimeError::Encounter(format!("observer slot: {error}")))?;
+        EntityAuthoringService
+            .attach_component(
+                &mut self.entities,
+                observer_revision,
+                self.player,
+                DaggerPlayerObserver::new(DaggerPlayerObserver::default_facts()),
+            )
+            .map_err(|error| RuntimeError::Encounter(format!("observer attach: {error}")))?;
+        for content in &self.content_entities {
+            let target = EntityId::new(content.id);
+            let target_revision = self
+                .entities
+                .component_revision::<DaggerCombatTarget>(target)
+                .map_err(|error| RuntimeError::Encounter(format!("target slot: {error}")))?;
+            EntityAuthoringService
+                .attach_component(
+                    &mut self.entities,
+                    target_revision,
+                    target,
+                    DaggerCombatTarget::new(Vec3::ZERO),
+                )
+                .map_err(|error| RuntimeError::Encounter(format!("target attach: {error}")))?;
+        }
+        Ok(())
+    }
+
+    /// Executes the one authored, typed observation plan against Dagger's
+    /// canonical entity and spatial authorities. Consequence meaning remains
+    /// outside this method; callers retain the returned readout or ask the
+    /// plan to form its one Product Kernel mutation batch.
+    pub fn evaluate_observe_pairs(
+        &self,
+        plan: &ObservePairsPlan,
+    ) -> Result<ObservePairsReadout, ObservePairsError> {
+        plan.evaluate::<DaggerPlayerObserver, DaggerCombatTarget>(
+            &self.entities,
+            &self.collision_scene,
+        )
+    }
+
+    pub fn evaluate_observe_pairs_and_batch(
+        &self,
+        plan: &ObservePairsPlan,
+        identity: ObservePairsBatchIdentity,
+    ) -> Result<ObservePairsEmission, ObservePairsError> {
+        plan.evaluate_and_batch::<DaggerPlayerObserver, DaggerCombatTarget>(
+            &self.entities,
+            &self.collision_scene,
+            identity,
+        )
+    }
+
+    /// Admits the Engine-owned observation result exactly once as Dagger
+    /// evidence. Visibility and aggregation are *not* recomputed here: the
+    /// typed `ObservePairsPlan` already read canonical EntityState and spatial
+    /// collision. Dagger only validates the bounded result, selects an
+    /// admitted content focus deterministically, and lets an active named
+    /// encounter begin when its route member is actually observed.
+    pub fn apply_observe_pairs_result(
+        &mut self,
+        payload: &rusty_engine::product_kernel::serde_json::Value,
+    ) -> Result<(), RuntimeError> {
+        const MAX_RESULTS: usize = 64;
+        let object = payload.as_object().ok_or_else(|| {
+            RuntimeError::Observation("observe-pairs result must be an object".to_string())
+        })?;
+        let expected_fields = ["kind", "operationType", "results"];
+        if object.len() != expected_fields.len()
+            || expected_fields
+                .iter()
+                .any(|field| !object.contains_key(*field))
+        {
+            return Err(RuntimeError::Observation(
+                "observe-pairs result has unknown or missing fields".to_string(),
+            ));
+        }
+        let kind = object
+            .get("kind")
+            .and_then(rusty_engine::product_kernel::serde_json::Value::as_str);
+        let operation_type = object
+            .get("operationType")
+            .and_then(rusty_engine::product_kernel::serde_json::Value::as_str);
+        if kind != Some(OBSERVE_PAIRS_RESULT_KIND)
+            || operation_type != Some(OBSERVE_PAIRS_RESULT_KIND)
+        {
+            return Err(RuntimeError::Observation(
+                "observe-pairs result kind does not match the Engine contract".to_string(),
+            ));
+        }
+        let results = object
+            .get("results")
+            .and_then(rusty_engine::product_kernel::serde_json::Value::as_array)
+            .ok_or_else(|| {
+                RuntimeError::Observation("observe-pairs results must be an array".to_string())
+            })?;
+        if results.len() > MAX_RESULTS {
+            return Err(RuntimeError::Observation(format!(
+                "observe-pairs result count {} exceeds {MAX_RESULTS}",
+                results.len()
+            )));
+        }
+
+        let mut previous_target = None;
+        let mut selected_focus = None;
+        for result in results {
+            let entry = result.as_object().ok_or_else(|| {
+                RuntimeError::Observation("observe-pairs entry must be an object".to_string())
+            })?;
+            let expected_fields = ["target", "visibleObserverCount", "evidenceTotal"];
+            if entry.len() != expected_fields.len()
+                || expected_fields
+                    .iter()
+                    .any(|field| !entry.contains_key(*field))
+            {
+                return Err(RuntimeError::Observation(
+                    "observe-pairs entry has unknown or missing fields".to_string(),
+                ));
+            }
+            let target = entry
+                .get("target")
+                .and_then(rusty_engine::product_kernel::serde_json::Value::as_u64)
+                .ok_or_else(|| {
+                    RuntimeError::Observation("observe-pairs target must be a u64".to_string())
+                })?;
+            if previous_target.is_some_and(|previous| previous >= target) {
+                return Err(RuntimeError::Observation(
+                    "observe-pairs targets must be strictly ordered".to_string(),
+                ));
+            }
+            previous_target = Some(target);
+            let visible_observers = entry
+                .get("visibleObserverCount")
+                .and_then(rusty_engine::product_kernel::serde_json::Value::as_u64)
+                .filter(|value| *value > 0 && *value <= 1)
+                .ok_or_else(|| {
+                    RuntimeError::Observation(
+                        "observe-pairs visible observer count is outside Dagger's one-player bound"
+                            .to_string(),
+                    )
+                })?;
+            let evidence_total = entry
+                .get("evidenceTotal")
+                .and_then(rusty_engine::product_kernel::serde_json::Value::as_f64)
+                .filter(|value| value.is_finite() && *value > 0.0 && *value <= 1.0)
+                .ok_or_else(|| {
+                    RuntimeError::Observation(
+                        "observe-pairs evidence total is outside Dagger's one-player bound"
+                            .to_string(),
+                    )
+                })?;
+            if (evidence_total - visible_observers as f64).abs() > f64::EPSILON {
+                return Err(RuntimeError::Observation(
+                    "observe-pairs evidence does not match Dagger's observer contribution"
+                        .to_string(),
+                ));
+            }
+            if !self
+                .content_entities
+                .iter()
+                .any(|content| content.id == target)
+            {
+                return Err(RuntimeError::Observation(format!(
+                    "observe-pairs target {target} is not admitted Dagger content"
+                )));
+            }
+            selected_focus.get_or_insert(target);
+        }
+
+        let changed_focus = self.focused_content_id != selected_focus;
+        self.focused_content_id = selected_focus;
+        if let Some(target) = selected_focus {
+            if self.active_encounter_id.is_some()
+                && self
+                    .named_encounters
+                    .iter()
+                    .any(|encounter| encounter.member_entity_ids.contains(&target))
+            {
+                self.active_encounter_engaged = true;
+            }
+            if changed_focus {
+                let name = self
+                    .content_entities
+                    .iter()
+                    .find(|content| content.id == target)
+                    .expect("admitted target checked")
+                    .name
+                    .clone();
+                self.push_notice(ProductNoticeKind::Observation, format!("Observed {name}"));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn player(&self) -> EntityId {
+        self.player
+    }
+
+    /// Produces a complete, independent session candidate for the one
+    /// `RuntimeMutation` publication boundary. The returned value owns every
+    /// live Dagger authority (entity state, collision, gameplay, encounter,
+    /// inventory, progression, and readout history); callers must mutate only
+    /// that candidate and publish it through the Engine mutation lane.
+    pub fn clone_for_staging(&self) -> Result<Self, RuntimeError> {
+        Ok(Self {
+            entities: self.entities.clone(),
+            collision_scene: self.collision_scene.clone(),
+            player: self.player,
+            player_controller: self.player_controller.clone(),
+            player_look_state: self.player_look_state,
+            // The Engine controller service is stateless; session truth is in
+            // the copied entity/spatial facts above, so a fresh service keeps
+            // the candidate independent without interior sharing.
+            player_controller_service: CharacterControllerService::default(),
+            player_command_sequence: self.player_command_sequence,
+            player_start: self.player_start,
+            player_start_look_state: self.player_start_look_state,
+            gameplay_catalog: self.gameplay_catalog.clone(),
+            gameplay_payload: self.gameplay_payload.clone(),
+            gameplay: self.gameplay.clone(),
+            settings: self.settings.clone(),
+            inventory_grid: self.inventory_grid.clone(),
+            debug_navigation_enabled: self.debug_navigation_enabled,
+            combat_sequence: self.combat_sequence,
+            combat_history: self.combat_history.clone(),
+            combat_attempt_sequence: self.combat_attempt_sequence,
+            combat_attempt_history: self.combat_attempt_history.clone(),
+            player_attack_cooldown_remaining: self.player_attack_cooldown_remaining,
+            player_action_sequence: self.player_action_sequence,
+            melee_presentation: self.melee_presentation.clone(),
+            encounter_sequence: self.encounter_sequence,
+            encounter_history: self.encounter_history.clone(),
+            enemy_attack_sequences: self.enemy_attack_sequences.clone(),
+            enemy_hurt_sequences: self.enemy_hurt_sequences.clone(),
+            dungeon_bounds: self.dungeon_bounds,
+            content_entities: self.content_entities.clone(),
+            content_live_positions: self.content_live_positions.clone(),
+            focused_content_id: self.focused_content_id,
+            open_loot_container_id: self.open_loot_container_id.clone(),
+            patrol: self.patrol.clone(),
+            named_encounters: self.named_encounters.clone(),
+            active_encounter_id: self.active_encounter_id.clone(),
+            active_encounter_outcome: self.active_encounter_outcome,
+            active_encounter_engaged: self.active_encounter_engaged,
+            equipment_log: self.equipment_log.clone(),
+            equipment_log_sequence: self.equipment_log_sequence,
+            equip_cycle_cursor: self.equip_cycle_cursor,
+            progression_history: self.progression_history.clone(),
+            player_level_up_sequence: self.player_level_up_sequence,
+            notices: self.notices.clone(),
+            notice_sequence: self.notice_sequence,
+        })
+    }
+
+    /// The canonical effective settings readout. Hosts may display or persist
+    /// it, but must submit a checked update back through this runtime.
+    pub fn settings_readout(&self) -> SettingsReadout {
+        self.settings.readout()
+    }
+
+    /// Whether rejected inventory drops should become product-visible debug
+    /// notices. This reads the Rust-owned effective setting, never host state.
+    pub fn failed_inventory_drop_messages_enabled(&self) -> Result<bool, RuntimeError> {
+        self.settings
+            .boolean(DEBUG_FAILED_INVENTORY_DROP_MESSAGES_ID)
+            .map_err(RuntimeError::Settings)
+    }
+
+    /// Applies the exact `dagger.settings.update.v1` payload shape:
+    /// `{schemaVersion, expectedRevision, changes:[{id, value}]}`. The
+    /// underlying settings service validates the full update before committing
+    /// any value, so malformed or stale submissions cannot partially mutate a
+    /// staged runtime candidate.
+    pub fn apply_settings_update(
+        &mut self,
+        payload: &rusty_engine::product_kernel::serde_json::Value,
+    ) -> Result<(), RuntimeError> {
+        let document =
+            rusty_engine::product_kernel::serde_json::to_string(payload).map_err(|error| {
+                RuntimeError::Settings(SettingsError::MalformedPayload(error.to_string()))
+            })?;
+        let request =
+            SettingsState::parse_update_request(&document).map_err(RuntimeError::Settings)?;
+        self.settings
+            .update(request)
+            .map_err(RuntimeError::Settings)?;
+        Ok(())
+    }
+
+    /// Toggles the Rust-owned navigation diagnostic mode requested by
+    /// `dagger.debug.nav`. Projection consumers may render the admitted nav
+    /// artifact only while this fact is enabled; they never own the toggle.
+    pub fn toggle_debug_nav(&mut self) -> Result<(), RuntimeError> {
+        self.debug_navigation_enabled = !self.debug_navigation_enabled;
+        self.push_notice(
+            ProductNoticeKind::DebugNavigation,
+            if self.debug_navigation_enabled {
+                "Navigation diagnostics enabled.".to_string()
+            } else {
+                "Navigation diagnostics disabled.".to_string()
+            },
+        );
+        Ok(())
+    }
+
+    /// Applies the exact `dagger.inventory.move.v1` payload shape:
+    /// `{sourceSlot, targetSlot, expectedRevision}`. Placement is a
+    /// Rust-owned arrangement of currently carried Engine inventory facts;
+    /// equipping or looting never leaves stale occupants in its readout.
+    ///
+    /// Operationally rejected drops preserve placement. They become a bounded
+    /// product notice only when `debug.failedInventoryDropMessages` is
+    /// effectively enabled; ordinary users do not receive debug noise.
+    pub fn move_inventory_item(
+        &mut self,
+        payload: &rusty_engine::product_kernel::serde_json::Value,
+    ) -> Result<(), RuntimeError> {
+        let request: InventoryMoveRequest = rusty_engine::product_kernel::serde_json::from_value(
+            payload.clone(),
+        )
+        .map_err(|error| RuntimeError::Inventory(format!("invalid inventory move: {error}")))?;
+        let inventory = self.player_inventory_readout()?;
+        self.inventory_grid.sync(&inventory);
+        if let Err(reason) = self.inventory_grid.move_occupant(
+            request.source_slot,
+            request.target_slot,
+            request.expected_revision,
+        ) {
+            self.record_failed_inventory_drop(reason)?;
+        }
+        Ok(())
+    }
+
+    fn record_failed_inventory_drop(&mut self, reason: String) -> Result<(), RuntimeError> {
+        if self.failed_inventory_drop_messages_enabled()? {
+            self.push_notice(
+                ProductNoticeKind::InventoryDropRejected,
+                format!("Inventory drop rejected: {reason}"),
+            );
+        }
+        Ok(())
+    }
+
+    fn inventory_grid_readout(&self) -> Result<InventoryGridReadout, RuntimeError> {
+        let inventory = self.player_inventory_readout()?;
+        let mut grid = self.inventory_grid.clone();
+        grid.sync(&inventory);
+        Ok(grid.readout())
+    }
+
+    pub fn player_position(&self) -> Result<Vec3, RuntimeError> {
+        Ok(player_view(&self.entities, self.player)
+            .map_err(RuntimeError::Player)?
+            .transform
+            .expect("admitted player has transform")
+            .translation)
+    }
+
+    pub fn player_controller(&self) -> &PlayerControllerConfig {
+        &self.player_controller
+    }
+
+    pub fn player_state(&self) -> PlayerControllerState {
+        PlayerControllerState::from_look_state(self.player_look_state)
+    }
+
+    /// Install the committed navigation artifact as the live enemy movement
+    /// authority. The runtime owns the resulting service; product presentation
+    /// only projects its positions.
+    pub fn install_encounter_navigation_json(
+        &mut self,
+        navgrid_document: &str,
+    ) -> Result<(), RuntimeError> {
+        #[derive(rusty_engine::product_kernel::serde::Deserialize)]
+        #[serde(crate = "rusty_engine::product_kernel::serde")]
+        #[serde(rename_all = "camelCase")]
+        struct EncounterNavGrid {
+            cells: Vec<(f64, f64, f64, f64)>,
+        }
+        let navgrid: EncounterNavGrid = rusty_engine::product_kernel::serde_json::from_str(
+            navgrid_document,
+        )
+        .map_err(|error| RuntimeError::Encounter(format!("invalid encounter navgrid: {error}")))?;
+        // Only enemies patrol; treasure containers are static anchors. Their
+        // authored positions are re-merged below so the aimed queries and the
+        // product readout and attached tools keep seeing them.
+        let spawns = self
+            .content_entities
+            .iter()
+            .filter(|entity| entity.enemy().is_some())
+            .map(|entity| {
+                let handle = u32::try_from(entity.id).map_err(|_| {
+                    RuntimeError::Encounter(format!(
+                        "content entity {} cannot be used as a patrol handle",
+                        entity.id
+                    ))
+                })?;
+                Ok((handle, entity.authored_position))
+            })
+            .collect::<Result<Vec<_>, RuntimeError>>()?;
+        let patrol = PatrolService::new(&navgrid.cells, &spawns);
+        patrol.validate().map_err(RuntimeError::Encounter)?;
+        self.content_live_positions = patrol
+            .positions()
+            .into_iter()
+            .map(|(handle, position, _, _)| (u64::from(handle), position))
+            .chain(
+                self.content_entities
+                    .iter()
+                    .filter(|entity| entity.enemy().is_none())
+                    .map(|entity| (entity.id, entity.authored_position)),
+            )
+            .collect();
+        self.patrol = Some(patrol);
+        Ok(())
+    }
+
+    pub fn install_named_encounters_json(&mut self, document: &str) -> Result<(), RuntimeError> {
+        let catalog: NamedEncounterCatalog =
+            rusty_engine::product_kernel::serde_json::from_str(document).map_err(|error| {
+                RuntimeError::Encounter(format!("invalid named encounters: {error}"))
+            })?;
+        if catalog.schema_version != 1 {
+            return Err(RuntimeError::Encounter(format!(
+                "unsupported named encounter schema {}",
+                catalog.schema_version
+            )));
+        }
+        let mut ids = BTreeSet::new();
+        let mut routes = BTreeSet::new();
+        for encounter in &catalog.encounters {
+            if encounter.id.trim().is_empty()
+                || encounter.name.trim().is_empty()
+                || encounter.objective.trim().is_empty()
+            {
+                return Err(RuntimeError::Encounter(
+                    "named encounter id, name, and objective must be non-empty".to_string(),
+                ));
+            }
+            if !ids.insert(encounter.id.as_str()) || !routes.insert(encounter.route_code.as_str()) {
+                return Err(RuntimeError::Encounter(format!(
+                    "duplicate named encounter id or route for {}",
+                    encounter.id
+                )));
+            }
+            if encounter.member_entity_ids.is_empty()
+                || !encounter
+                    .member_entity_ids
+                    .contains(&encounter.start_entity_id)
+            {
+                return Err(RuntimeError::Encounter(format!(
+                    "named encounter {} must include its start entity",
+                    encounter.id
+                )));
+            }
+            for member in &encounter.member_entity_ids {
+                if !self
+                    .content_entities
+                    .iter()
+                    .any(|entity| entity.id == *member)
+                {
+                    return Err(RuntimeError::Encounter(format!(
+                        "named encounter {} references unsupported enemy {}",
+                        encounter.id, member
+                    )));
+                }
+            }
+        }
+        self.named_encounters = catalog.encounters;
+        self.active_encounter_id = None;
+        self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
+        self.active_encounter_engaged = false;
+        Ok(())
+    }
+
+    pub fn start_named_encounter(&mut self, id: &str) -> Result<ProductReadout, RuntimeError> {
+        let encounter = self
+            .named_encounters
+            .iter()
+            .find(|encounter| encounter.id == id)
+            .cloned()
+            .ok_or_else(|| RuntimeError::Encounter(format!("unknown named encounter {id}")))?;
+        self.jump_to_content(encounter.start_entity_id)?;
+        self.active_encounter_id = Some(encounter.id);
+        self.active_encounter_outcome = NamedEncounterOutcome::Active;
+        self.active_encounter_engaged = false;
+        self.product_readout()
+    }
+
+    pub fn route_named_encounter(&mut self, route_code: &str) -> Result<bool, RuntimeError> {
+        let id = self
+            .named_encounters
+            .iter()
+            .find(|encounter| encounter.route_code == route_code)
+            .map(|encounter| encounter.id.clone());
+        let Some(id) = id else {
+            return Ok(false);
+        };
+        self.start_named_encounter(&id)?;
+        Ok(true)
+    }
+
+    pub fn tick_play_session(&mut self, dt: f32) -> Result<Vec<PositionUpdate>, RuntimeError> {
+        if !dt.is_finite() || !(0.0..=0.25).contains(&dt) {
+            return Err(RuntimeError::Encounter(
+                "play-session tick must be finite and bounded to 0.25 seconds".to_string(),
+            ));
+        }
+        if self.active_encounter_id.is_some() && !self.active_encounter_engaged {
+            return Ok(Vec::new());
+        }
+        self.player_attack_cooldown_remaining =
+            (self.player_attack_cooldown_remaining - dt).max(0.0);
+        let resolve_contact = self
+            .melee_presentation
+            .as_ref()
+            .is_some_and(|presentation| {
+                presentation.accepted
+                    && !presentation.contact_resolved
+                    && presentation.elapsed < MELEE_ANTICIPATION_SECONDS
+                    && presentation.elapsed + dt >= MELEE_ANTICIPATION_SECONDS
+            });
+        if let Some(presentation) = &mut self.melee_presentation {
+            presentation.elapsed += dt;
+        }
+        if resolve_contact {
+            self.resolve_melee_contact()?;
+        }
+        if self
+            .melee_presentation
+            .as_ref()
+            .is_some_and(ActiveMeleePresentation::is_complete)
+        {
+            self.melee_presentation = None;
+        }
+        let player = self.player_position()?;
+        // Behavior tuning and the attempted action both come from the
+        // admitted gameplay catalog; the action resolves through the shared
+        // policy.
+        let behaviors = self
+            .content_entities
+            .iter()
+            .filter_map(|entity| {
+                let reference = entity.enemy()?;
+                let behavior = self
+                    .gameplay_catalog
+                    .actors()
+                    .values()
+                    .find(|actor| actor.mobile_id == Some(reference.mobile_id))
+                    .and_then(|actor| actor.behavior.as_ref())?;
+                u32::try_from(entity.id).ok().map(|handle| {
+                    (
+                        handle,
+                        crate::patrol::EncounterBehavior {
+                            detection_range: behavior.detection_range,
+                            patrol_speed: behavior.patrol_speed,
+                            chase_speed: behavior.chase_speed,
+                            attack_range: behavior.attack_range,
+                            attack_cooldown_seconds: behavior.attack_cooldown_seconds,
+                            action: behavior.action.clone(),
+                        },
+                    )
+                })
+            })
+            .collect::<BTreeMap<_, _>>();
+        let dead = self
+            .content_entities
+            .iter()
+            .filter_map(|entity| {
+                self.is_enemy_dead(entity.id)
+                    .then(|| u32::try_from(entity.id).ok())
+                    .flatten()
+            })
+            .collect::<std::collections::BTreeSet<_>>();
+        let player_alive = self.player_health() > 0.0;
+        let Some(patrol) = self.patrol.as_mut() else {
+            return Ok(Vec::new());
+        };
+        let player_target = if player_alive {
+            [player.x, player.y, player.z]
+        } else {
+            [f32::INFINITY; 3]
+        };
+        let evaluation = patrol.evaluate_encounters(dt, player_target, &behaviors, &dead);
+        for update in &evaluation.positions {
+            self.content_live_positions
+                .insert(u64::from(update.handle), update.translation);
+        }
+        for decision in evaluation.decisions {
+            let id = u64::from(decision.handle);
+            self.push_encounter_record(EncounterDecisionRecord {
+                sequence: 0,
+                enemy_id: id,
+                enemy_name: self.enemy_name(id),
+                decision: "state changed".to_string(),
+                from: Some(ai_mode_name(decision.from).to_string()),
+                to: Some(ai_mode_name(decision.to).to_string()),
+                distance_to_player: decision.distance_to_player,
+                damage: None,
+                line_of_sight_clear: None,
+                player_health_before: None,
+                player_health_after: None,
+                player_died: false,
+            });
+        }
+        for attack in evaluation.attacks {
+            let id = u64::from(attack.handle);
+            let before = self.player_health();
+            if before <= 0.0 {
+                continue;
+            }
+            let line_of_sight_clear = self.enemy_line_of_sight_clear(id, player);
+            let (damage, after) = if line_of_sight_clear {
+                // AI attack intents resolve through the same authored action
+                // policy as the player's attempts; damage is never flat.
+                // Rolls draw from this enemy's own attack stream.
+                let roll_sequence = {
+                    let sequence = self.enemy_attack_sequences.entry(id).or_insert(0);
+                    *sequence = sequence.saturating_add(1);
+                    *sequence
+                };
+                let attempt = self.resolve_action_attempt(
+                    &attack.action,
+                    &enemy_actor_id(id),
+                    PLAYER_ACTOR_ID,
+                    DaggerIntentOrigin::Ai,
+                    id,
+                    roll_sequence,
+                )?;
+                let after = self.player_health();
+                (Some(attempt.damage as f32), Some(after))
+            } else {
+                (Some(0.0), Some(before))
+            };
+            self.push_encounter_record(EncounterDecisionRecord {
+                sequence: 0,
+                enemy_id: id,
+                enemy_name: self.enemy_name(id),
+                decision: if line_of_sight_clear {
+                    "melee attack"
+                } else {
+                    "attack blocked"
+                }
+                .to_string(),
+                from: None,
+                to: None,
+                distance_to_player: attack.distance_to_player,
+                damage,
+                line_of_sight_clear: Some(line_of_sight_clear),
+                player_health_before: Some(before),
+                player_health_after: after,
+                player_died: before > 0.0 && after.is_some_and(|after| after <= 0.0),
+            });
+        }
+        self.refresh_named_encounter_outcome();
+        Ok(evaluation.positions)
+    }
+
+    fn refresh_named_encounter_outcome(&mut self) {
+        if self.active_encounter_outcome != NamedEncounterOutcome::Active {
+            return;
+        }
+        if self.player_health() <= 0.0 {
+            self.active_encounter_outcome = NamedEncounterOutcome::Defeat;
+            return;
+        }
+        let Some(encounter) = self
+            .named_encounters
+            .iter()
+            .find(|encounter| self.active_encounter_id.as_deref() == Some(encounter.id.as_str()))
+        else {
+            return;
+        };
+        if encounter
+            .member_entity_ids
+            .iter()
+            .all(|id| self.is_enemy_dead(*id))
+        {
+            self.active_encounter_outcome = NamedEncounterOutcome::Victory;
+        }
+    }
+
+    fn enemy_name(&self, id: u64) -> String {
+        self.content_entities
+            .iter()
+            .find(|entity| entity.id == id)
+            .map_or_else(|| format!("Enemy {id}"), |entity| entity.name.clone())
+    }
+
+    fn enemy_line_of_sight_clear(&self, id: u64, player: Vec3) -> bool {
+        let Some(enemy) = self.content_live_positions.get(&id) else {
+            return false;
+        };
+        // Classic sprites do not provide per-mobile controller dimensions.
+        // Encounter sensing has already established a shared nav level, so
+        // cast between actor centers at the player's stable body height.
+        let origin = [enemy[0], player.y, enemy[2]];
+        let delta = [player.x - origin[0], player.z - origin[2]];
+        let distance = delta[0].hypot(delta[1]);
+        if distance <= 0.4 {
+            return true;
+        }
+        let direction = [
+            f64::from(delta[0] / distance),
+            0.0,
+            f64::from(delta[1] / distance),
+        ];
+        let clear_distance = f64::from((distance - 0.35).max(0.0));
+        !self
+            .collision_scene
+            .raycast_world(origin.map(f64::from), direction, clear_distance)
+            .is_some_and(|hit| collision_hit_distance(hit) + 0.05 < clear_distance)
+    }
+
+    fn push_encounter_record(&mut self, mut record: EncounterDecisionRecord) {
+        self.encounter_sequence = self.encounter_sequence.saturating_add(1);
+        record.sequence = self.encounter_sequence;
+        self.encounter_history.push_back(record);
+        while self.encounter_history.len() > ENCOUNTER_HISTORY_LIMIT {
+            self.encounter_history.pop_front();
+        }
+    }
+
+    pub fn encounter_positions(&self) -> Vec<(u32, [f32; 3], f32, bool)> {
+        self.patrol
+            .as_ref()
+            .map_or_else(Vec::new, PatrolService::positions)
+    }
+
+    pub fn encounter_sequence(&self) -> u64 {
+        self.encounter_sequence
+    }
+
+    pub fn player_attack_cooldown_remaining(&self) -> f32 {
+        self.player_attack_cooldown_remaining
+    }
+
+    pub fn melee_presentation(&self) -> Option<MeleePresentationReadout> {
+        self.melee_presentation
+            .as_ref()
+            .map(ActiveMeleePresentation::readout)
+    }
+
+    /// One required field of the wired melee action (reach, cooldown).
+    fn melee_action_field(
+        &self,
+        field: impl Fn(&dagger_rpg::DaggerActionDefinition) -> Option<f32>,
+    ) -> f32 {
+        self.gameplay_catalog
+            .actions()
+            .get(MELEE_ACTION_ID)
+            .and_then(field)
+            .unwrap_or_else(|| panic!("{MELEE_ACTION_ID} must declare this field"))
+    }
+
+    pub fn player_stamina(&self) -> (f32, f32) {
+        (
+            self.live_track(PLAYER_ACTOR_ID, "stamina"),
+            self.live_track_max(PLAYER_ACTOR_ID, "stamina"),
+        )
+    }
+
+    /// Read one live entity through the Engine's standard inspection owner.
+    ///
+    /// The developer-command product adapter borrows this runtime only at its
+    /// selected safe point.  This stays a read-only projection; Dagger does
+    /// not retain an inspector or manufacture a parallel inspection format.
+    pub fn developer_inspect_entity(
+        &self,
+        entity: EntityId,
+    ) -> Option<rusty_engine::engine_inspector::EntityInspection> {
+        rusty_engine::developer_command_standard::inspect_entity(self.gameplay.entities(), entity)
+    }
+
+    /// Read mechanics structure through the Engine's standard inspection
+    /// owner without evaluating or changing Dagger gameplay state.
+    pub fn developer_inspect_mechanics(
+        &self,
+        entity: EntityId,
+    ) -> Result<
+        rusty_engine::engine_inspector::MechanicsStructuralEntityInspection,
+        rusty_engine::gameplay_mechanics::MechanicsError,
+    > {
+        rusty_engine::developer_command_standard::inspect_mechanics(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            entity,
+        )
+    }
+
+    /// Reacquire the authoritative Dagger component revision for the standard
+    /// host admin DTO at the product safe point.  The host carries no opaque
+    /// component guard and the runtime never trusts a client-supplied guard.
+    pub fn developer_map_track_set(
+        &self,
+        request: rusty_engine::developer_command_standard::HostTrackSetRequest,
+    ) -> Result<
+        rusty_engine::gameplay_mechanics::TrackSetRequest,
+        rusty_engine::developer_command_standard::HostWireError,
+    > {
+        request.map_live(self.gameplay.entities())
+    }
+
+    /// Apply one explicit Engine standard admin track request against Dagger's
+    /// already-admitted mechanics state.  This is a visibly privileged
+    /// diagnostic path; ordinary attacks and restoration keep using Dagger's
+    /// production action and progression paths.
+    pub fn developer_set_track(
+        &mut self,
+        request: rusty_engine::gameplay_mechanics::TrackSetRequest,
+    ) -> Result<
+        rusty_engine::gameplay_mechanics::TrackSetReceipt,
+        rusty_engine::gameplay_mechanics::MechanicsError,
+    > {
+        rusty_engine::developer_command_standard::admin_set_track(
+            self.gameplay.entities_mut(),
+            self.gameplay_catalog.mechanics(),
+            request,
+        )
+    }
+
+    /// Run bounded physical swings through the same first-person action,
+    /// contact timing, and cooldown path that normal input uses.
+    pub fn run_developer_melee_scenario(
+        &mut self,
+        swings: u8,
+    ) -> Result<ProductReadout, RuntimeError> {
+        let target = self.focused_content_id.ok_or_else(|| {
+            RuntimeError::Encounter(
+                "developer melee scenario requires a prepared content target".to_string(),
+            )
+        })?;
+        for _ in 0..swings {
+            // Patrol owns the live enemy transform. Keep the player's bounded
+            // scenario setup near that live transform before issuing the same
+            // physical action edge ordinary play uses; do not freeze or
+            // overwrite patrol, damage, or progression state.
+            self.place_player_near_live_content(target)?;
+            self.attack_focused_target()?;
+            self.tick_play_session(MELEE_ANTICIPATION_SECONDS)?;
+            for _ in 0..3 {
+                self.tick_play_session(0.25)?;
+            }
+        }
+        self.product_readout()
+    }
+
+    /// Advance a bounded developer play demonstration while following its
+    /// already-selected, patrol-owned target. The ticks remain ordinary
+    /// production ticks: this helper supplies only the explicit scenario
+    /// positioning that a human player would otherwise perform.
+    pub fn run_developer_advance_scenario(
+        &mut self,
+        ticks: u8,
+    ) -> Result<ProductReadout, RuntimeError> {
+        let target = self.focused_content_id.ok_or_else(|| {
+            RuntimeError::Encounter(
+                "developer advance scenario requires a prepared content target".to_string(),
+            )
+        })?;
+        self.place_player_near_live_content(target)?;
+        for _ in 0..ticks {
+            self.tick_play_session(0.25)?;
+            if self.player_health() <= 0.0 {
+                break;
+            }
+        }
+        self.product_readout()
+    }
+
+    /// Run the bounded, committed kill-XP demonstration via physical melee
+    /// contacts.  Setup is intentionally product-admin-only; XP awards and
+    /// level transition still flow through the normal combat hook.
+    pub fn run_developer_progression_scenario(&mut self) -> Result<ProductReadout, RuntimeError> {
+        self.reset_play_session()?;
+        for (id, cap) in [(2003_u64, 80_usize), (2002, 80), (2005, 80)] {
+            self.jump_to_content(id)?;
+            for _ in 0..cap {
+                self.run_developer_melee_scenario(1)?;
+                if self
+                    .product_readout()?
+                    .combat
+                    .last()
+                    .is_some_and(|record| record.died)
+                {
+                    break;
+                }
+            }
+            if !self
+                .product_readout()?
+                .combat
+                .last()
+                .is_some_and(|record| record.died)
+            {
+                return Err(RuntimeError::Encounter(format!(
+                    "developer progression scenario did not defeat content entity {id}"
+                )));
+            }
+        }
+        self.product_readout()
+    }
+
+    fn live_track(&self, actor: &str, track: &str) -> f32 {
+        self.gameplay.track_value(actor, track).unwrap_or(0) as f32
+    }
+
+    fn live_track_max(&self, actor: &str, track: &str) -> f32 {
+        track_maximum(&self.gameplay, &self.gameplay_catalog, actor, track).unwrap_or(0) as f32
+    }
+
+    fn player_health(&self) -> f32 {
+        self.live_track(PLAYER_ACTOR_ID, "health")
+    }
+
+    fn enemy_health(&self, id: u64) -> f32 {
+        self.live_track(&enemy_actor_id(id), "health")
+    }
+
+    fn has_live_actor(&self, id: u64) -> bool {
+        self.gameplay.actor(&enemy_actor_id(id)).is_some()
+    }
+
+    fn is_enemy_dead(&self, id: u64) -> bool {
+        self.has_live_actor(id) && self.enemy_health(id) <= 0.0
+    }
+
+    fn live_resources(&self, actor: &str) -> LiveActorResources {
+        LiveActorResources {
+            current_health: self.live_track(actor, "health"),
+            current_stamina: self.live_track(actor, "stamina"),
+            current_magicka: self.live_track(actor, "magicka"),
+        }
+    }
+
+    fn live_player_stat(&self, id: &str) -> Result<i64, RuntimeError> {
+        let binding = self
+            .gameplay
+            .actor(PLAYER_ACTOR_ID)
+            .expect("player gameplay binding");
+        let stat = StatId::parse(id.to_string()).map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
+                path: "playerStats".to_string(),
+                value: format!("{id}: {error:?}"),
+            })
+        })?;
+        let operation = OperationId::parse("dagger-product-readout")
+            .expect("fixed product readout operation identity");
+        StatService::evaluate(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            binding.entity(),
+            &stat,
+            &operation,
+            &[],
+        )
+        .map(|evaluation| evaluation.value.get())
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "player stat evaluation {id}: {error:?}"
+            )))
+        })
+    }
+
+    /// Player stats panel: live values from the mechanics binding. The
+    /// admitted definition supplies only the bounded list of modeled skills;
+    /// values themselves always pass through `StatService::evaluate`.
+    fn player_gameplay_readout(&self) -> Result<ActorGameplayReadout, RuntimeError> {
+        let definition = self
+            .gameplay_catalog
+            .actors()
+            .get(PLAYER_ACTOR_ID)
+            .expect("player actor definition");
+        let mut evaluated_attributes = BTreeMap::new();
+        for id in CHARACTER_SHEET_ATTRIBUTE_IDS {
+            evaluated_attributes.insert(id.to_string(), self.live_player_stat(id)?);
+        }
+        let reflexes = self.live_player_stat(PLAYER_REFLEXES_STAT_ID)?;
+        let mut modeled_skills = BTreeMap::new();
+        for id in definition.skills.keys() {
+            modeled_skills.insert(id.clone(), self.live_player_stat(id)?);
+        }
+        Ok(ActorGameplayReadout {
+            attributes: ActorAttributeReadout {
+                strength: *evaluated_attributes
+                    .get("strength")
+                    .expect("fixed primary attribute") as f32,
+                endurance: *evaluated_attributes
+                    .get("endurance")
+                    .expect("fixed primary attribute") as f32,
+                intelligence: *evaluated_attributes
+                    .get("intelligence")
+                    .expect("fixed primary attribute") as f32,
+            },
+            evaluated_attributes,
+            reflexes,
+            modeled_skills,
+            max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
+            max_stamina: self.live_track_max(PLAYER_ACTOR_ID, "stamina"),
+            max_magicka: self.live_track_max(PLAYER_ACTOR_ID, "magicka"),
+            current_health: self.live_track(PLAYER_ACTOR_ID, "health"),
+            current_stamina: self.live_track(PLAYER_ACTOR_ID, "stamina"),
+            current_magicka: self.live_track(PLAYER_ACTOR_ID, "magicka"),
+        })
+    }
+
+    /// Session-scoped progression reset: spawn xp/level/health-max bases
+    /// through the progression authority. The caller restores tracks after
+    /// the candidate's health current has first been lowered safely.
+    fn reset_progression(&mut self) -> Result<(), RuntimeError> {
+        dagger_rpg::reset_actor_progression(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            PLAYER_ACTOR_ID,
+        )
+        .map_err(RuntimeError::Gameplay)?;
+        Ok(())
+    }
+
+    fn restore_live_actors(&mut self) -> Result<(), RuntimeError> {
+        restore_actor_tracks(&mut self.gameplay, &self.gameplay_catalog, PLAYER_ACTOR_ID)
+            .map_err(RuntimeError::Gameplay)?;
+        let enemy_ids = self
+            .content_entities
+            .iter()
+            .map(|entity| entity.id)
+            .filter(|id| self.has_live_actor(*id))
+            .collect::<Vec<_>>();
+        for id in enemy_ids {
+            restore_actor_tracks(
+                &mut self.gameplay,
+                &self.gameplay_catalog,
+                &enemy_actor_id(id),
+            )
+            .map_err(RuntimeError::Gameplay)?;
+        }
+        Ok(())
+    }
+
+    pub fn dead_encounter_ids(&self) -> BTreeSet<u32> {
+        self.content_entities
+            .iter()
+            .filter_map(|entity| {
+                self.is_enemy_dead(entity.id)
+                    .then(|| u32::try_from(entity.id).ok())
+                    .flatten()
+            })
+            .collect()
+    }
+
+    pub fn enemy_presentation(&self) -> Vec<EnemyPresentationReadout> {
+        self.content_entities
+            .iter()
+            .filter(|entity| self.has_live_actor(entity.id))
+            .filter_map(|entity| {
+                let id = entity.id;
+                Some(EnemyPresentationReadout {
+                    handle: u32::try_from(id).ok()?,
+                    attack_sequence: self.enemy_attack_sequences.get(&id).copied().unwrap_or(0),
+                    hurt_sequence: self.enemy_hurt_sequences.get(&id).copied().unwrap_or(0),
+                    dead: self.is_enemy_dead(id),
+                })
+            })
+            .collect()
+    }
+
+    fn reset_enemy_presentation_sequences(&mut self) {
+        for sequence in self.enemy_attack_sequences.values_mut() {
+            *sequence = 0;
+        }
+        for sequence in self.enemy_hurt_sequences.values_mut() {
+            *sequence = 0;
+        }
+    }
+
+    /// Reset the playable run to the committed Privateer's Hold start,
+    /// restoring catalog spawn state. Progression is session-scoped: the
+    /// reset also restores the player's spawn xp/level/health-max bases
+    /// (before track restoration reads them), clears the award history, and
+    /// restarts the level-up roll sequence so a retried session reproduces
+    /// the same hp rolls. The lab jump verb only heals — it preserves
+    /// progression within a session.
+    pub fn reset_play_session(&mut self) -> Result<ProductReadout, RuntimeError> {
+        let active_encounter = self.active_encounter_id.clone();
+        // Lowering health-max after a level-up must not transiently leave the
+        // old higher current outside the candidate's new bounds. Prepare the
+        // private gameplay candidate at a safe current, reset its progression
+        // bases, then restore all tracks. Publish it only after every step
+        // succeeds, keeping reset failure atomic to live mechanics state.
+        let previous_gameplay = self.gameplay.clone();
+        let reset_result = (|| {
+            set_actor_track(
+                &mut self.gameplay,
+                &self.gameplay_catalog,
+                PLAYER_ACTOR_ID,
+                "health",
+                0,
+            )
+            .map_err(RuntimeError::Gameplay)?;
+            self.reset_progression()?;
+            self.restore_live_actors()
+        })();
+        if let Err(error) = reset_result {
+            self.gameplay = previous_gameplay;
+            return Err(error);
+        }
+        self.progression_history.clear();
+        self.player_level_up_sequence = 0;
+        self.open_loot_container_id = None;
+        self.notices.clear();
+        if let Some(active) = active_encounter {
+            return self.start_named_encounter(&active);
+        }
+        self.set_player_position(self.player_start)?;
+        self.player_look_state = self.player_start_look_state;
+        self.restore_live_actors()?;
+        self.combat_sequence = 0;
+        self.player_action_sequence = 0;
+        self.combat_history.clear();
+        self.combat_attempt_sequence = 0;
+        self.combat_attempt_history.clear();
+        self.player_attack_cooldown_remaining = 0.0;
+        self.melee_presentation = None;
+        self.encounter_sequence = 0;
+        self.encounter_history.clear();
+        self.reset_enemy_presentation_sequences();
+        self.equipment_log.clear();
+        self.equipment_log_sequence = 0;
+        self.equip_cycle_cursor = None;
+        if let Some(patrol) = self.patrol.as_mut() {
+            patrol.reset();
+            self.content_live_positions = patrol
+                .positions()
+                .into_iter()
+                .map(|(handle, position, _, _)| (u64::from(handle), position))
+                .chain(
+                    self.content_entities
+                        .iter()
+                        .filter(|entity| entity.enemy().is_none())
+                        .map(|entity| (entity.id, entity.authored_position)),
+                )
+                .collect();
+        }
+        self.focused_content_id = None;
+        self.product_readout()
+    }
+
+    /// Reset the player beside one admitted live content entity and face it.
+    /// The collision scene chooses the floor; Angular never supplies a raw
+    /// teleport coordinate.
+    pub fn jump_to_content(&mut self, id: u64) -> Result<ProductReadout, RuntimeError> {
+        self.open_loot_container_id = None;
+        self.notices.clear();
+        self.place_player_near_live_content(id)?;
+        self.restore_live_actors()?;
+        self.combat_sequence = 0;
+        self.player_action_sequence = 0;
+        self.combat_history.clear();
+        self.combat_attempt_sequence = 0;
+        self.combat_attempt_history.clear();
+        self.player_attack_cooldown_remaining = 0.0;
+        self.melee_presentation = None;
+        self.encounter_sequence = 0;
+        self.encounter_history.clear();
+        self.reset_enemy_presentation_sequences();
+        self.active_encounter_id = None;
+        self.active_encounter_outcome = NamedEncounterOutcome::Inactive;
+        self.active_encounter_engaged = false;
+        self.focused_content_id = Some(id);
+        self.product_readout()
+    }
+
+    /// Place the player beside a content entity's current authoritative
+    /// position and face it. This is deliberately narrower than
+    /// `jump_to_content`: it does not restore actors, reset patrol, clear
+    /// histories, or reset combat/progression state.
+    fn place_player_near_live_content(&mut self, id: u64) -> Result<(), RuntimeError> {
+        let target = self
+            .content_live_positions
+            .get(&id)
+            .copied()
+            .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
+        let original_position = self.player_position()?;
+        let original_look_state = self.player_look_state;
+        for [offset_x, offset_z] in [[0.0, 1.5], [1.5, 0.0], [0.0, -1.5], [-1.5, 0.0]] {
+            let approach_probe = [target[0] + offset_x, target[1] + 2.0, target[2] + offset_z];
+            let Some(grounding) =
+                crate::navgrid::ground_spawn(&self.collision_scene, approach_probe, 6.0)
+            else {
+                continue;
+            };
+            let position = Vec3::new(
+                approach_probe[0],
+                grounding.support_y + PLAYER_HALF_EXTENTS.y + 0.3,
+                approach_probe[2],
+            );
+            self.set_player_position(position)?;
+            let mut facing_state = self.player_start_look_state;
+            let delta_x = target[0] - position.x;
+            let delta_z = target[2] - position.z;
+            facing_state.yaw_radians = delta_x.atan2(-delta_z);
+            let horizontal_distance = delta_x.hypot(delta_z).max(0.01);
+            let camera_y = position.y + 0.75;
+            let target_visual_center_y = target[1] + 0.75;
+            facing_state.pitch_radians =
+                (target_visual_center_y - camera_y).atan2(horizontal_distance);
+            self.player_look_state = facing_state;
+
+            let navigable = [
+                ResolvedPlayerAction::Move {
+                    forward: 0.0,
+                    right: 1.0,
+                },
+                ResolvedPlayerAction::Move {
+                    forward: -1.0,
+                    right: 0.0,
+                },
+            ]
+            .into_iter()
+            .any(|action| {
+                let _ = self.set_player_position(position);
+                self.player_look_state = facing_state;
+                self.apply_player_action(action).is_ok_and(|_| {
+                    self.player_position().is_ok_and(|after| {
+                        (after.x - position.x).hypot(after.z - position.z) > 0.01
+                    })
+                })
+            });
+            if navigable && self.enemy_line_of_sight_clear(id, position) {
+                self.set_player_position(position)?;
+                self.player_look_state = facing_state;
+                return Ok(());
+            }
+        }
+        self.set_player_position(original_position)?;
+        self.player_look_state = original_look_state;
+        Err(RuntimeError::Content(ContentError::NoGroundedApproach(id)))
+    }
+
+    /// Start a first-person attack from a physical input edge. A target is not
+    /// required to begin the swing; Dagger resolves the aimed contact only
+    /// when the Rust-owned action reaches its contact frame.
+    pub fn attack_focused_target(&mut self) -> Result<ProductReadout, RuntimeError> {
+        if self.active_encounter_id.is_some() {
+            self.active_encounter_engaged = true;
+        }
+        let cooldown_before = self.player_attack_cooldown_remaining;
+        let stamina_before = self.live_track(PLAYER_ACTOR_ID, "stamina");
+        let cooldown_duration = self.melee_action_field(|action| action.cooldown_seconds);
+        if cooldown_before > 0.0 {
+            self.push_combat_attempt(CombatAttemptRecord {
+                sequence: 0,
+                target_id: None,
+                accepted: false,
+                outcome: "cooldown".to_string(),
+                cooldown_before,
+                cooldown_after: cooldown_before,
+                cooldown_duration,
+                stamina_before,
+                stamina_cost: 0.0,
+                stamina_after: stamina_before,
+            });
+            return self.product_readout();
+        }
+        // The authored melee action owns its stamina cost and spends it
+        // during resolution; scheduling here only gates the swing cooldown.
+        // The attempt record's stamina cost/after update when the contact
+        // resolves with the actual spend.
+        self.player_attack_cooldown_remaining = cooldown_duration;
+        let attempt_sequence = self.push_combat_attempt(CombatAttemptRecord {
+            sequence: 0,
+            target_id: None,
+            accepted: true,
+            outcome: "swinging".to_string(),
+            cooldown_before,
+            cooldown_after: cooldown_duration,
+            cooldown_duration,
+            stamina_before,
+            stamina_cost: 0.0,
+            stamina_after: stamina_before,
+        });
+        self.melee_presentation = Some(ActiveMeleePresentation {
+            attempt_sequence,
+            elapsed: 0.0,
+            accepted: true,
+            outcome: "swinging".to_string(),
+            target_id: None,
+            stamina_before,
+            stamina_after: stamina_before,
+            target_health_before: None,
+            target_health_after: None,
+            target_max_health: None,
+            final_damage: None,
+            died: false,
+            contact_resolved: false,
+        });
+        self.product_readout()
+    }
+
+    fn resolve_melee_contact(&mut self) -> Result<(), RuntimeError> {
+        let attempt_sequence = self
+            .melee_presentation
+            .as_ref()
+            .map(|action| action.attempt_sequence)
+            .ok_or_else(|| RuntimeError::Encounter("melee contact has no active action".into()))?;
+        let attack_range = self.melee_action_field(|action| action.reach);
+        let player_position = self.player_position()?;
+        let live_enemy_resources = self
+            .content_entities
+            .iter()
+            .filter(|entity| self.has_live_actor(entity.id))
+            .map(|entity| (entity.id, self.live_resources(&enemy_actor_id(entity.id))))
+            .collect::<BTreeMap<_, _>>();
+        let target = select_aimed_melee_target(
+            player_position,
+            self.player_state().yaw_degrees,
+            attack_range,
+            &self.content_entities,
+            &self.content_live_positions,
+            &live_enemy_resources,
+        );
+        let Some(id) = target else {
+            self.finish_melee_contact(attempt_sequence, None, "miss", None);
+            return Ok(());
+        };
+        let target_position = self
+            .content_live_positions
+            .get(&id)
+            .copied()
+            .ok_or(RuntimeError::Content(ContentError::UnknownEntity(id)))?;
+        let delta = [
+            target_position[0] - player_position.x,
+            target_position[1] - player_position.y,
+            target_position[2] - player_position.z,
+        ];
+        let distance = delta[0].hypot(delta[2]);
+        if distance > 0.4 {
+            let direction = [
+                f64::from(delta[0] / distance),
+                0.0,
+                f64::from(delta[2] / distance),
+            ];
+            let origin = [
+                f64::from(player_position.x),
+                f64::from(player_position.y),
+                f64::from(player_position.z),
+            ];
+            let clear_distance = f64::from((distance - 0.35).max(0.0));
+            if self
+                .collision_scene
+                .raycast_world(origin, direction, clear_distance)
+                .is_some_and(|hit| collision_hit_distance(hit) + 0.05 < clear_distance)
+            {
+                self.finish_melee_contact(attempt_sequence, None, "miss", None);
+                return Ok(());
+            }
+        }
+        let health_before = self.enemy_health(id);
+        let target_max_health = self.live_track_max(&enemy_actor_id(id), "health");
+        // The player's melee contact resolves through the same authored
+        // action policy as AI attacks; range, aim, and line of sight above
+        // remain runtime world facts. Rolls draw from the player-action
+        // stream so outcomes are deterministic per swing.
+        self.player_action_sequence = self.player_action_sequence.saturating_add(1);
+        let roll_sequence = self.player_action_sequence;
+        let attempt = self.resolve_action_attempt(
+            "melee-attack",
+            PLAYER_ACTOR_ID,
+            &enemy_actor_id(id),
+            DaggerIntentOrigin::Player,
+            id,
+            roll_sequence,
+        )?;
+        let health_after = self.enemy_health(id);
+        let hit = attempt.damage > 0;
+        let died = health_before > 0.0 && health_after <= 0.0;
+        if died {
+            // A player-origin resolution left the enemy dead: award kill-XP
+            // through the progression authority.
+            self.award_kill_progression_for(id)?;
+        }
+        if hit {
+            if let Some(sequence) = self.enemy_hurt_sequences.get_mut(&id) {
+                *sequence = sequence.saturating_add(1);
+            }
+        }
+        let outcome = if !attempt.succeeded {
+            "rejected"
+        } else if died {
+            "killed"
+        } else if hit {
+            "hit"
+        } else if attempt.material_ineffective {
+            "ineffective"
+        } else {
+            "miss"
+        };
+        if attempt.succeeded && attempt.material_ineffective {
+            self.push_notice(
+                ProductNoticeKind::MaterialIneffective,
+                "Your weapon has no effect.".to_string(),
+            );
+        }
+        self.focused_content_id = Some(id);
+        // Combat records sequence contiguously within the history; the
+        // shared combat_sequence also advances on enemy resolutions and is
+        // only a resolution identity, not a display sequence.
+        let record_sequence = self
+            .combat_history
+            .back()
+            .map_or(1, |record| record.sequence.saturating_add(1));
+        self.combat_history.push_back(CombatRecord {
+            sequence: record_sequence,
+            target_id: id,
+            range: distance,
+            attack_range,
+            line_of_sight_clear: true,
+            action: "melee-attack".to_string(),
+            status: attempt.status.clone(),
+            roll: attempt.roll,
+            hit,
+            damage: attempt.damage,
+            died,
+            health_before,
+            health_after,
+            target_max_health,
+            weapon: attempt.weapon.clone(),
+            struck_part: attempt.struck_part.clone(),
+            material_ineffective: attempt.material_ineffective,
+            decisions: attempt.decisions.clone(),
+            events: attempt.events.clone(),
+        });
+        while self.combat_history.len() > COMBAT_HISTORY_LIMIT {
+            self.combat_history.pop_front();
+        }
+        self.finish_melee_contact(
+            attempt_sequence,
+            Some(id),
+            outcome,
+            Some(MeleeContactResult {
+                damage: attempt.damage,
+                stamina_spent: attempt.stamina_spent,
+                stamina_after: self.live_track(PLAYER_ACTOR_ID, "stamina"),
+                health_before,
+                health_after,
+                target_max_health,
+                died,
+            }),
+        );
+        Ok(())
+    }
+
+    /// Resolve one authored action attempt through the shared policy with
+    /// deterministic combat rolls supplied as evidence. Used identically for
+    /// player melee contacts and AI attack intents.
+    fn resolve_action_attempt(
+        &mut self,
+        action: &str,
+        actor: &str,
+        target: &str,
+        origin: DaggerIntentOrigin,
+        target_entity: u64,
+        roll_sequence: u64,
+    ) -> Result<ActionAttemptOutcome, RuntimeError> {
+        self.combat_sequence = self.combat_sequence.saturating_add(1);
+        let sequence = self.combat_sequence;
+        let combat_scope = match origin {
+            DaggerIntentOrigin::Player => "dagger.combat.v1",
+            // Keep the AI decision domain separate from player actions so a
+            // product demonstration can retain its authored encounter proof
+            // without coupling enemy outcomes to player swing scheduling.
+            DaggerIntentOrigin::Ai => "dagger.combat.ai.v1",
+        };
+        let roll = draw_combat_evidence(combat_scope, roll_sequence, target_entity, 1, 1, 100)?;
+        let mut evidence = vec![DaggerEvidence {
+            id: format!("{action}.d100"),
+            value: roll,
+        }];
+        for (id, min, max) in
+            action_roll_evidence(&self.gameplay_catalog, action).map_err(RuntimeError::Gameplay)?
+        {
+            // Career and swing facts (proficiency, racial bonuses, swing
+            // state) are 0 until careers and swing states are modeled;
+            // genuine rolls get a deterministic in-bounds value.
+            let value = if zeroed_career_fact(&id) {
+                0
+            } else {
+                draw_combat_evidence(combat_scope, roll_sequence, target_entity, 2, min, max)?
+            };
+            evidence.push(DaggerEvidence { value, id });
+        }
+        // Equipment-driven evidence: the weapon damage roll is bounded by the
+        // actor's CURRENTLY equipped weapon (unarmed: the derived
+        // hand-to-hand range) so evaluation bounds never spuriously reject,
+        // and the struck-body-part roll selects the armor part the hit check
+        // reads.
+        let weapon = equipped_weapon(&self.gameplay, &self.gameplay_catalog, actor)
+            .map_err(RuntimeError::Gameplay)?;
+        let weapon_label = weapon
+            .map_or("unarmed", |item| item.id.as_str())
+            .to_string();
+        let mut struck_part = None;
+        for (id, kind) in action_dynamic_roll_evidence(&self.gameplay_catalog, action)
+            .map_err(RuntimeError::Gameplay)?
+        {
+            let value = match kind {
+                DaggerDynamicRoll::StruckBodyPart => {
+                    let value =
+                        draw_combat_evidence(combat_scope, roll_sequence, target_entity, 3, 0, 19)?;
+                    struck_part = struck_body_part_name(value).map(str::to_string);
+                    value
+                }
+                DaggerDynamicRoll::EquippedWeaponDamage => {
+                    let (min, max) = match weapon {
+                        Some(item) => {
+                            let weapon = item.weapon.as_ref().expect("weapon item");
+                            (weapon.damage_min, weapon.damage_max)
+                        }
+                        None => {
+                            // Evidence bounds follow the definition-base
+                            // skills; nothing in the current packages modifies
+                            // skills at runtime, and any future divergence
+                            // fails closed as a RollOutOfBounds rejection.
+                            let binding = self.gameplay.actor(actor).ok_or_else(|| {
+                                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                                    "unknown actor {actor}"
+                                )))
+                            })?;
+                            let definition = self
+                                .gameplay_catalog
+                                .actors()
+                                .get(binding.definition())
+                                .expect("bound actor definition");
+                            unarmed_damage_range(
+                                &self.gameplay_catalog,
+                                definition,
+                                &definition_base_stats(definition),
+                            )
+                            .map_err(RuntimeError::Gameplay)?
+                        }
+                    };
+                    draw_combat_evidence(combat_scope, roll_sequence, target_entity, 2, min, max)?
+                }
+            };
+            evidence.push(DaggerEvidence { value, id });
+        }
+        let (receipt, readout) = dagger_rpg::resolve_dagger_action(
+            &self.gameplay_catalog,
+            &mut self.gameplay,
+            ResolutionIdentity::root(
+                ResolutionId::new(sequence).expect("non-zero resolution id"),
+                CorrelationId::new(sequence).expect("non-zero correlation id"),
+            ),
+            ResolutionMode::Apply,
+            DaggerIntent {
+                action: action.to_string(),
+                actor: actor.to_string(),
+                target: target.to_string(),
+                origin,
+            },
+            evidence,
+        );
+        let mut damage = 0_i64;
+        let mut stamina_spent = 0_i64;
+        for event in receipt.events() {
+            match event {
+                DaggerEvent::DamageApplied { amount, .. } => damage += amount,
+                DaggerEvent::TrackSpent { track, amount, .. } if track == "stamina" => {
+                    stamina_spent += amount;
+                }
+                _ => {}
+            }
+        }
+        let material_ineffective = readout.trace.iter().any(|record| {
+            matches!(
+                record.detail,
+                Some(dagger_rpg::DaggerTraceDetail::MaterialIneffective { .. })
+            )
+        });
+        Ok(ActionAttemptOutcome {
+            succeeded: receipt.succeeded(),
+            status: readout.status.clone(),
+            roll,
+            damage,
+            stamina_spent,
+            weapon: weapon_label,
+            struck_part,
+            material_ineffective,
+            decisions: readout
+                .trace
+                .iter()
+                .filter_map(|record| match &record.detail {
+                    Some(dagger_rpg::DaggerTraceDetail::Decision { reason }) => {
+                        Some(reason.clone())
+                    }
+                    _ => None,
+                })
+                .collect(),
+            events: readout
+                .events
+                .iter()
+                .map(|event| format!("{event:?}"))
+                .collect(),
+        })
+    }
+
+    /// Kill-XP hook: the enemy `id` just died to a player-origin resolution.
+    /// The progression authority owns the award's state changes; the runtime
+    /// supplies the per-level hp rolls from its salted stream (salt 5, the
+    /// per-player level-up sequence) so level-ups are deterministic per
+    /// session. Award receipts append to the capped progression history.
+    fn award_kill_progression_for(&mut self, id: u64) -> Result<(), RuntimeError> {
+        let victim = enemy_actor_id(id);
+        let Some((level_before, level_after)) = dagger_rpg::kill_level_gains(
+            &self.gameplay,
+            &self.gameplay_catalog,
+            PLAYER_ACTOR_ID,
+            &victim,
+        )
+        .map_err(RuntimeError::Gameplay)?
+        else {
+            return Ok(());
+        };
+        let mut evidence = Vec::new();
+        if level_after > level_before {
+            let hit_points_per_level = self
+                .gameplay_catalog
+                .actors()
+                .get(PLAYER_ACTOR_ID)
+                .and_then(|player| player.hit_points_per_level)
+                .ok_or_else(|| {
+                    RuntimeError::Gameplay(DaggerGameplayError::InvalidState(
+                        "player levels up without hitPointsPerLevel".to_string(),
+                    ))
+                })?;
+            let player_entity = self.player_actor_entity().raw();
+            for level in (level_before + 1)..=level_after {
+                self.player_level_up_sequence = self.player_level_up_sequence.saturating_add(1);
+                let roll = draw_combat_evidence(
+                    "dagger.combat.v1",
+                    self.player_level_up_sequence,
+                    player_entity,
+                    5,
+                    hit_points_per_level / 2,
+                    hit_points_per_level,
+                )?;
+                evidence.push(DaggerEvidence {
+                    id: format!("{PLAYER_ACTOR_ID}.level-up.{level}.hp-roll"),
+                    value: roll,
+                });
+            }
+        }
+        if let Some(record) = dagger_rpg::award_kill_progression(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            PLAYER_ACTOR_ID,
+            &victim,
+            &evidence,
+        )
+        .map_err(RuntimeError::Gameplay)?
+        {
+            for level_up in &record.level_ups {
+                self.push_notice(
+                    ProductNoticeKind::LevelUp,
+                    format!("You have advanced to level {}.", level_up.level),
+                );
+            }
+            self.progression_history.push_back(record);
+            while self.progression_history.len() > COMBAT_HISTORY_LIMIT {
+                self.progression_history.pop_front();
+            }
+        }
+        Ok(())
+    }
+
+    /// The player's kill-XP progression readout: live progression stats,
+    /// xp-to-next from the `xp-level` curve's own divisor (no duplicated
+    /// pacing constant), health, and the award history.
+    fn progression_readout(&self) -> Result<ProgressionReadout, RuntimeError> {
+        let xp =
+            dagger_rpg::live_stat_base(&self.gameplay, PLAYER_ACTOR_ID, dagger_rpg::XP_STAT_ID)
+                .map_err(RuntimeError::Gameplay)?;
+        let level =
+            dagger_rpg::live_stat_base(&self.gameplay, PLAYER_ACTOR_ID, dagger_rpg::LEVEL_STAT_ID)
+                .map_err(RuntimeError::Gameplay)?;
+        let divisor =
+            dagger_rpg::xp_level_divisor(&self.gameplay_catalog).map_err(RuntimeError::Gameplay)?;
+        Ok(ProgressionReadout {
+            xp,
+            level,
+            xp_to_next_level: divisor - xp.rem_euclid(divisor),
+            current_health: self.player_health(),
+            max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
+            history: self.progression_history.iter().cloned().collect(),
+        })
+    }
+
+    fn finish_melee_contact(
+        &mut self,
+        attempt_sequence: u64,
+        target_id: Option<u64>,
+        outcome: &str,
+        result: Option<MeleeContactResult>,
+    ) {
+        if let Some(attempt) = self
+            .combat_attempt_history
+            .iter_mut()
+            .find(|attempt| attempt.sequence == attempt_sequence)
+        {
+            attempt.target_id = target_id;
+            attempt.outcome = outcome.to_string();
+            if let Some(result) = &result {
+                attempt.stamina_cost = result.stamina_spent as f32;
+                attempt.stamina_after = result.stamina_after;
+            }
+        }
+        if let Some(action) = self.melee_presentation.as_mut() {
+            action.contact_resolved = true;
+            action.outcome = outcome.to_string();
+            action.target_id = target_id;
+            if let Some(result) = result {
+                action.stamina_after = result.stamina_after;
+                action.target_health_before = Some(result.health_before);
+                action.target_health_after = Some(result.health_after);
+                action.target_max_health = Some(result.target_max_health);
+                action.final_damage = Some(result.damage as f32);
+                action.died = result.died;
+            }
+        }
+    }
+
+    fn push_combat_attempt(&mut self, mut record: CombatAttemptRecord) -> u64 {
+        self.combat_attempt_sequence = self.combat_attempt_sequence.saturating_add(1);
+        record.sequence = self.combat_attempt_sequence;
+        self.combat_attempt_history.push_back(record);
+        while self.combat_attempt_history.len() > COMBAT_HISTORY_LIMIT {
+            self.combat_attempt_history.pop_front();
+        }
+        self.combat_attempt_sequence
+    }
+
+    /// The player's upstream inventory/equipment view, sourced from
+    /// `InventoryService::view` plus the entity's EquipmentComponent.
+    fn player_inventory_readout(&self) -> Result<PlayerInventoryReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{EquipmentComponent, InventoryService};
+
+        let owner = self
+            .gameplay
+            .actor(PLAYER_ACTOR_ID)
+            .expect("player actor binding")
+            .entity();
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "player inventory view: {error:?}"
+            )))
+        })?;
+        let equipment = self
+            .gameplay
+            .entities()
+            .component::<EquipmentComponent>(owner)
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment component: {error}"
+                )))
+            })?;
+        let slot_of = |entity: rusty_engine::core_ids::EntityId| {
+            equipment.and_then(|component| {
+                component
+                    .assignments()
+                    .iter()
+                    .find(|assignment| assignment.item == entity)
+                    .map(|assignment| assignment.slot.as_str().to_string())
+            })
+        };
+        let equipment_revision = self
+            .gameplay
+            .entities()
+            .component_revision::<EquipmentComponent>(owner)
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment revision: {error}"
+                )))
+            })?
+            .revision();
+        Ok(PlayerInventoryReadout {
+            equipment_revision,
+            capacity: view
+                .capacity()
+                .iter()
+                .map(|usage| InventoryCapacityReadout {
+                    metric: usage.metric.as_str().to_string(),
+                    used: usage.used,
+                    maximum: usage.maximum,
+                })
+                .collect(),
+            stacks: view
+                .stacks()
+                .iter()
+                .map(|stack| InventoryStackReadout {
+                    item: stack.definition.as_str().to_string(),
+                    quantity: stack.quantity,
+                })
+                .collect(),
+            items: view
+                .unique_items()
+                .iter()
+                .map(|item| InventoryItemReadout {
+                    item: item.definition.as_str().to_string(),
+                    entity: item.entity.raw(),
+                    equip_slot: slot_of(item.entity),
+                    compatible_slots: self.compatible_equip_slots(item.definition.as_str()),
+                })
+                .collect(),
+        })
+    }
+
+    /// The player's carried equippable unique items in the stable ordering
+    /// (item entities are allocated at spawn in loadout order, so raw entity
+    /// id order is deterministic).
+    fn carried_equippables(&self) -> Result<Vec<(EntityId, String)>, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::InventoryService;
+
+        let owner = self.player_actor_entity();
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "player inventory view: {error:?}"
+            )))
+        })?;
+        let mut carried = view
+            .unique_items()
+            .iter()
+            .filter(|entry| {
+                self.gameplay_catalog
+                    .items()
+                    .get(entry.definition.as_str())
+                    .is_some_and(dagger_rpg::DaggerItemDefinition::equippable)
+            })
+            .map(|entry| (entry.entity, entry.definition.as_str().to_string()))
+            .collect::<Vec<_>>();
+        carried.sort_by_key(|(entity, _)| entity.raw());
+        Ok(carried)
+    }
+
+    fn player_actor_entity(&self) -> EntityId {
+        self.gameplay
+            .actor(PLAYER_ACTOR_ID)
+            .expect("player actor binding")
+            .entity()
+    }
+
+    fn player_equipment_component(
+        &self,
+    ) -> Result<rusty_engine::gameplay_mechanics::EquipmentComponent, RuntimeError> {
+        self.gameplay
+            .entities()
+            .component::<rusty_engine::gameplay_mechanics::EquipmentComponent>(
+                self.player_actor_entity(),
+            )
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment component: {error}"
+                )))
+            })?
+            .cloned()
+            .ok_or_else(|| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(
+                    "player has no equipment component".to_string(),
+                ))
+            })
+    }
+
+    fn player_equipment_revision(
+        &self,
+    ) -> Result<rusty_engine::entity_state::ComponentRevision, RuntimeError> {
+        self.gameplay
+            .entities()
+            .component_revision::<rusty_engine::gameplay_mechanics::EquipmentComponent>(
+                self.player_actor_entity(),
+            )
+            .map_err(|error| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "player equipment revision: {error}"
+                )))
+            })
+    }
+
+    fn item_id_for_entity(&self, entity: EntityId) -> Option<String> {
+        self.gameplay
+            .entities()
+            .component::<rusty_engine::gameplay_mechanics::ItemComponent>(entity)
+            .ok()
+            .flatten()
+            .map(|item| item.definition().as_str().to_string())
+    }
+
+    /// Equip verb: equip one carried item entity into its preferred slot,
+    /// swapping out the occupant when the slot is taken. An upstream
+    /// rejection is logged (not thrown) so product surfaces can show the reason.
+    pub fn equip_item(&mut self, item: u64) -> Result<ProductReadout, RuntimeError> {
+        let Some(item_id) = self.item_id_for_entity(EntityId::new(item)) else {
+            self.log_equipment_rejection(
+                "equip",
+                format!("entity-{item}"),
+                Vec::new(),
+                None,
+                "not a carried equippable item".to_string(),
+            );
+            return self.product_readout();
+        };
+        let Some(slot) = self.preferred_equip_slot(&item_id) else {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                Vec::new(),
+                None,
+                "no legal equipment slot".to_string(),
+            );
+            return self.product_readout();
+        };
+        let revision = self.player_equipment_revision()?.revision();
+        self.equip_item_in_slot(item, &slot, revision)
+    }
+
+    /// Product verb: equip exactly this carried unique item in exactly this
+    /// concrete slot, guarded by the rendered equipment revision.
+    pub fn equip_item_in_slot(
+        &mut self,
+        item: u64,
+        slot: &str,
+        expected_equipment_revision: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::EquipmentSlotId;
+
+        let entity = EntityId::new(item);
+        let Some(item_id) = self.item_id_for_entity(entity) else {
+            self.log_equipment_rejection(
+                "equip",
+                format!("entity-{item}"),
+                vec![slot.to_string()],
+                None,
+                "unknown or non-carried item".to_string(),
+            );
+            return self.product_readout();
+        };
+        let inventory = self.player_inventory_readout()?;
+        let Some(readout_item) = inventory
+            .items
+            .iter()
+            .find(|candidate| candidate.entity == item)
+        else {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "unknown or non-carried item".to_string(),
+            );
+            return self.product_readout();
+        };
+        if readout_item.equip_slot.is_some() {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "duplicate: item is already equipped".to_string(),
+            );
+            return self.product_readout();
+        }
+        if !product_equipment_slot(slot) {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "unknown or unsupported equipment slot".to_string(),
+            );
+            return self.product_readout();
+        }
+        if !readout_item
+            .compatible_slots
+            .iter()
+            .any(|candidate| candidate == slot)
+        {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                "item is incompatible with target slot".to_string(),
+            );
+            return self.product_readout();
+        }
+        let equipment_revision = self.player_equipment_revision()?;
+        if equipment_revision.revision() != expected_equipment_revision {
+            self.log_equipment_rejection(
+                "equip",
+                item_id,
+                vec![slot.to_string()],
+                None,
+                format!(
+                    "stale equipment revision: expected {expected_equipment_revision}, current {}",
+                    equipment_revision.revision()
+                ),
+            );
+            return self.product_readout();
+        }
+        let slot_id = EquipmentSlotId::parse(slot.to_string()).map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
+                path: "equip.slot".to_string(),
+                value: format!("{slot}: {error:?}"),
+            })
+        })?;
+        let equipment = self.player_equipment_component()?;
+        let occupant = equipment
+            .assignment(&slot_id)
+            .map(|assignment| assignment.item);
+        let (correlation, source) = equipment_operation();
+        let owner = self.player_actor_entity();
+        let operation = match occupant {
+            Some(outgoing) => StandardOperation::SwapUniqueItem {
+                role: mechanics_role("player-equipment"),
+                outgoing_item: outgoing,
+                incoming_item: entity,
+                incoming_slots: vec![slot_id],
+            },
+            None => StandardOperation::EquipUniqueItem {
+                role: mechanics_role("player-equipment"),
+                item: entity,
+                slots: vec![slot_id],
+            },
+        };
+        let result = apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            operation,
+            vec![(mechanics_role("player-equipment"), owner)],
+            correlation,
+            source,
+        );
+        match result {
+            Ok(StandardMechanicsReceipt::Equipment(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: format!("{:?}", receipt.kind).to_lowercase(),
+                    item: item_id,
+                    slots: receipt
+                        .changes
+                        .iter()
+                        .map(|change| change.slot.as_str().to_string())
+                        .collect(),
+                    replaced_item: receipt
+                        .replaced_item
+                        .and_then(|replaced| self.item_id_for_entity(replaced))
+                        .or_else(|| {
+                            receipt
+                                .replaced_item
+                                .map(|replaced| format!("entity-{}", replaced.raw()))
+                        }),
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_equipment_revision),
+                })
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                if occupant.is_some() { "swap" } else { "equip" },
+                item_id,
+                vec![slot.to_string()],
+                None,
+                format!("unexpected standard equipment receipt: {receipt:?}"),
+            ),
+            Err(error) => self.log_equipment_rejection(
+                if occupant.is_some() { "swap" } else { "equip" },
+                item_id,
+                vec![slot.to_string()],
+                None,
+                format!("{error:?}"),
+            ),
+        }
+        self.product_readout()
+    }
+
+    /// Unequip verb: strip whatever occupies one equipment slot. An empty or
+    /// unknown slot is logged as a rejection, not thrown.
+    pub fn unequip_slot(&mut self, slot: &str) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::EquipmentSlotId;
+
+        let equipment = self.player_equipment_component()?;
+        let slot_id = match EquipmentSlotId::parse(slot) {
+            Ok(slot_id) => slot_id,
+            Err(_) => {
+                self.log_equipment_rejection(
+                    "unequip",
+                    "—".to_string(),
+                    vec![slot.to_string()],
+                    None,
+                    "unknown equipment slot".to_string(),
+                );
+                return self.product_readout();
+            }
+        };
+        let Some(assignment) = equipment.assignment(&slot_id) else {
+            self.log_equipment_rejection(
+                "unequip",
+                "—".to_string(),
+                vec![slot.to_string()],
+                None,
+                "slot is empty".to_string(),
+            );
+            return self.product_readout();
+        };
+        let item_name = self
+            .item_id_for_entity(assignment.item)
+            .unwrap_or_else(|| format!("entity-{}", assignment.item.raw()));
+        let owner = self.player_actor_entity();
+        let (correlation, source) = equipment_operation();
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::UnequipUniqueItem {
+                role: mechanics_role("player-equipment"),
+                item: assignment.item,
+            },
+            vec![(mechanics_role("player-equipment"), owner)],
+            correlation,
+            source,
+        ) {
+            Ok(StandardMechanicsReceipt::Equipment(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "unequip".to_string(),
+                    item: item_name,
+                    slots: receipt
+                        .changes
+                        .iter()
+                        .map(|change| change.slot.as_str().to_string())
+                        .collect(),
+                    replaced_item: None,
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_equipment_revision),
+                })
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                "unequip",
+                item_name,
+                vec![slot.to_string()],
+                None,
+                format!("unexpected standard equipment receipt: {receipt:?}"),
+            ),
+            Err(error) => self.log_equipment_rejection(
+                "unequip",
+                item_name,
+                vec![slot.to_string()],
+                None,
+                format!("{error:?}"),
+            ),
+        }
+        self.product_readout()
+    }
+
+    /// Product verb: unequip only when the supplied item still occupies the
+    /// requested concrete slot at the rendered equipment revision.
+    pub fn unequip_item_from_slot(
+        &mut self,
+        slot: &str,
+        expected_item: u64,
+        expected_equipment_revision: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::EquipmentSlotId;
+        if !product_equipment_slot(slot) {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                "unknown or unsupported equipment slot".to_string(),
+            );
+            return self.product_readout();
+        }
+        let equipment_revision = self.player_equipment_revision()?;
+        if equipment_revision.revision() != expected_equipment_revision {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                format!(
+                    "stale equipment revision: expected {expected_equipment_revision}, current {}",
+                    equipment_revision.revision()
+                ),
+            );
+            return self.product_readout();
+        }
+        let slot_id = EquipmentSlotId::parse(slot).map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
+                path: "unequip.slot".to_string(),
+                value: format!("{slot}: {error:?}"),
+            })
+        })?;
+        let equipment = self.player_equipment_component()?;
+        let Some(assignment) = equipment.assignment(&slot_id) else {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                "slot is empty".to_string(),
+            );
+            return self.product_readout();
+        };
+        if assignment.item.raw() != expected_item {
+            self.log_equipment_rejection(
+                "unequip",
+                format!("entity-{expected_item}"),
+                vec![slot.to_string()],
+                None,
+                format!(
+                    "stale occupant: slot holds entity-{}",
+                    assignment.item.raw()
+                ),
+            );
+            return self.product_readout();
+        }
+        let item_name = self
+            .item_id_for_entity(assignment.item)
+            .unwrap_or_else(|| format!("entity-{expected_item}"));
+        let owner = self.player_actor_entity();
+        let (correlation, source) = equipment_operation();
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::UnequipUniqueItem {
+                role: mechanics_role("player-equipment"),
+                item: assignment.item,
+            },
+            vec![(mechanics_role("player-equipment"), owner)],
+            correlation,
+            source,
+        ) {
+            Ok(StandardMechanicsReceipt::Equipment(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "unequip".to_string(),
+                    item: item_name,
+                    slots: receipt
+                        .changes
+                        .iter()
+                        .map(|change| change.slot.as_str().to_string())
+                        .collect(),
+                    replaced_item: None,
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_equipment_revision),
+                })
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                "unequip",
+                item_name,
+                vec![slot.to_string()],
+                None,
+                format!("unexpected standard equipment receipt: {receipt:?}"),
+            ),
+            Err(error) => self.log_equipment_rejection(
+                "unequip",
+                item_name,
+                vec![slot.to_string()],
+                None,
+                format!("{error:?}"),
+            ),
+        }
+        self.product_readout()
+    }
+
+    /// Experiment-lab grant verb: grant a fungible item stack through the
+    /// Engine standard operation. Unique (equippable) items are out of scope
+    /// — they would need entity allocation and containment, which the spawn
+    /// loadout already owns. Over-capacity grants reject upstream and the
+    /// rejection lands in the equipment log with the reason.
+    pub fn grant_item(
+        &mut self,
+        item: &str,
+        quantity: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::ItemDefinitionId;
+
+        let reject = |runtime: &mut Self, reason: String| {
+            runtime.log_equipment_rejection(
+                "grant",
+                item.to_string(),
+                Vec::new(),
+                Some(quantity),
+                reason,
+            );
+        };
+        let definition = self.gameplay_catalog.items().get(item);
+        let definition = match definition {
+            Some(definition) if definition.fungible => definition,
+            Some(_) => {
+                reject(
+                    self,
+                    "not a fungible item (unique items equip, not stack)".to_string(),
+                );
+                return self.product_readout();
+            }
+            None => {
+                reject(self, "unknown item".to_string());
+                return self.product_readout();
+            }
+        };
+        if quantity == 0 {
+            reject(self, "quantity must be positive".to_string());
+            return self.product_readout();
+        }
+        let item_id = ItemDefinitionId::parse(definition.id.clone()).map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidId {
+                path: "grant.item".to_string(),
+                value: format!("{item}: {error:?}"),
+            })
+        })?;
+        let owner = self.player_actor_entity();
+        let (operation, source) = equipment_operation();
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::GrantStack {
+                role: mechanics_role("player-inventory"),
+                item: item_id,
+                quantity,
+            },
+            vec![(mechanics_role("player-inventory"), owner)],
+            operation,
+            source,
+        ) {
+            Ok(StandardMechanicsReceipt::Inventory(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "grant".to_string(),
+                    item: receipt.item.as_str().to_string(),
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: Some(receipt.after_quantity - receipt.before_quantity),
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_inventory_revision),
+                })
+            }
+            Ok(receipt) => {
+                reject(
+                    self,
+                    format!("unexpected standard grant receipt: {receipt:?}"),
+                );
+            }
+            Err(error) => {
+                if let Some(mechanics) = error.mechanics_error() {
+                    self.push_capacity_notice_if_player(mechanics, owner);
+                }
+                reject(self, format!("{error:?}"));
+            }
+        }
+        self.product_readout()
+    }
+
+    /// Open the aimed eligible remote inventory without moving an item. Only
+    /// treasure and dead enemies that actually own a generated loot container
+    /// participate; a valid empty container remains a valid open target.
+    pub fn open_aimed_loot(&mut self) -> Result<ProductReadout, RuntimeError> {
+        // A new attempt supersedes any earlier remote selection even when it
+        // finds nothing, so failed aim never preserves stale authority.
+        self.open_loot_container_id = None;
+        let player_position = self.player_position()?;
+        let lootable = self
+            .content_entities
+            .iter()
+            .filter_map(|entity| {
+                let instance = match &entity.kind {
+                    ContentEntityKind::Enemy(_) => enemy_actor_id(entity.id),
+                    ContentEntityKind::Treasure { .. } => treasure_container_id(entity.id),
+                };
+                self.loot_container_owner_if_eligible(&instance)
+                    .map(|_| entity.id)
+            })
+            .collect::<BTreeSet<_>>();
+        let target = select_aimed_loot_target(
+            player_position,
+            self.player_state().yaw_degrees,
+            LOOT_INTERACT_REACH,
+            &self.content_entities,
+            &self.content_live_positions,
+            &lootable,
+        );
+        let Some(id) = target else {
+            self.log_equipment_rejection(
+                "loot-open",
+                "—".to_string(),
+                Vec::new(),
+                None,
+                format!("no eligible loot container within {LOOT_INTERACT_REACH} units of the aim"),
+            );
+            return self.product_readout();
+        };
+        let instance = self
+            .loot_container_instance_for_content(id)
+            .expect("aimed content instance");
+        self.open_loot_container_id = Some(instance.clone());
+        self.push_equipment_record(EquipmentLogRecord {
+            sequence: 0,
+            operation: "loot-open".to_string(),
+            item: instance.clone(),
+            slots: Vec::new(),
+            replaced_item: None,
+            quantity: None,
+            accepted: true,
+            reason: None,
+            committed_revision: None,
+        });
+        if matches!(self.loot_container_is_empty(&instance), Ok(true)) {
+            self.push_notice(
+                ProductNoticeKind::EmptyContainer,
+                "This container is empty.".to_string(),
+            );
+        }
+        self.product_readout()
+    }
+
+    pub fn close_loot(&mut self) -> Result<ProductReadout, RuntimeError> {
+        self.open_loot_container_id = None;
+        self.product_readout()
+    }
+
+    /// Transfer one requested fungible stack quantity from the currently open
+    /// remote inventory. The expected source revision makes stale UI state an
+    /// ordinary authored rejection rather than an Angular-side mutation.
+    pub fn transfer_loot_stack(
+        &mut self,
+        container_id: &str,
+        expected_inventory_revision: u64,
+        item: &str,
+        quantity: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::{InventoryService, ItemDefinitionId};
+
+        let Some(from_owner) = self.open_loot_owner(container_id) else {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                Some(quantity),
+                "loot container is no longer open or eligible".to_string(),
+            );
+            return self.product_readout();
+        };
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            from_owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "loot inventory view: {error:?}"
+            )))
+        })?;
+        if view.revision().revision() != expected_inventory_revision {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                Some(quantity),
+                "stale loot inventory revision".to_string(),
+            );
+            return self.product_readout();
+        }
+        let item_id = match ItemDefinitionId::parse(item.to_string()) {
+            Ok(item_id) => item_id,
+            Err(error) => {
+                self.log_equipment_rejection(
+                    "loot-transfer",
+                    item.to_string(),
+                    Vec::new(),
+                    Some(quantity),
+                    format!("invalid loot item: {error:?}"),
+                );
+                return self.product_readout();
+            }
+        };
+        let (operation, source) = equipment_operation();
+        let to_owner = self.player_actor_entity();
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::TransferStack {
+                from: mechanics_role("loot-source"),
+                to: mechanics_role("player-inventory"),
+                item: item_id,
+                quantity,
+            },
+            vec![
+                (mechanics_role("loot-source"), from_owner),
+                (mechanics_role("player-inventory"), to_owner),
+            ],
+            operation,
+            source,
+        ) {
+            Ok(StandardMechanicsReceipt::InventoryTransfer(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "loot-transfer".to_string(),
+                    item: item.to_string(),
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: Some(receipt.to_after - receipt.to_before),
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.committed_to_revision),
+                });
+                if matches!(self.loot_container_is_empty(container_id), Ok(true)) {
+                    self.push_notice(
+                        ProductNoticeKind::EmptyContainer,
+                        "This container is empty.".to_string(),
+                    );
+                }
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                Some(quantity),
+                format!("unexpected standard loot receipt: {receipt:?}"),
+            ),
+            Err(error) => {
+                if let Some(mechanics) = error.mechanics_error() {
+                    self.push_capacity_notice_if_player(mechanics, to_owner);
+                }
+                self.log_equipment_rejection(
+                    "loot-transfer",
+                    item.to_string(),
+                    Vec::new(),
+                    Some(quantity),
+                    format!("{error:?}"),
+                );
+            }
+        }
+        self.product_readout()
+    }
+
+    /// Transfer one unique item from the currently open remote inventory.
+    pub fn transfer_loot_item(
+        &mut self,
+        container_id: &str,
+        expected_inventory_revision: u64,
+        item: u64,
+    ) -> Result<ProductReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::InventoryService;
+
+        let Some(from_owner) = self.open_loot_owner(container_id) else {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                None,
+                "loot container is no longer open or eligible".to_string(),
+            );
+            return self.product_readout();
+        };
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            from_owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "loot inventory view: {error:?}"
+            )))
+        })?;
+        if view.revision().revision() != expected_inventory_revision {
+            self.log_equipment_rejection(
+                "loot-transfer",
+                item.to_string(),
+                Vec::new(),
+                None,
+                "stale loot inventory revision".to_string(),
+            );
+            return self.product_readout();
+        }
+        let entity = EntityId::new(item);
+        let item_name = view
+            .unique_items()
+            .iter()
+            .find(|entry| entry.entity == entity)
+            .map(|entry| entry.definition.as_str().to_string())
+            .unwrap_or_else(|| item.to_string());
+        let (correlation, source) = equipment_operation();
+        let to_owner = self.player_actor_entity();
+        match apply_standard_mechanics_operation(
+            &mut self.gameplay,
+            &self.gameplay_catalog,
+            StandardOperation::TransferUniqueItem {
+                from: mechanics_role("loot-source"),
+                to: mechanics_role("player-inventory"),
+                item: entity,
+            },
+            vec![
+                (mechanics_role("loot-source"), from_owner),
+                (mechanics_role("player-inventory"), to_owner),
+            ],
+            correlation,
+            source,
+        ) {
+            Ok(StandardMechanicsReceipt::UniqueItemTransfer(receipt)) => {
+                self.push_equipment_record(EquipmentLogRecord {
+                    sequence: 0,
+                    operation: "loot-transfer".to_string(),
+                    item: item_name,
+                    slots: Vec::new(),
+                    replaced_item: None,
+                    quantity: None,
+                    accepted: true,
+                    reason: None,
+                    committed_revision: Some(receipt.revision_after),
+                });
+                if matches!(self.loot_container_is_empty(container_id), Ok(true)) {
+                    self.push_notice(
+                        ProductNoticeKind::EmptyContainer,
+                        "This container is empty.".to_string(),
+                    );
+                }
+            }
+            Ok(receipt) => self.log_equipment_rejection(
+                "loot-transfer",
+                item_name,
+                Vec::new(),
+                None,
+                format!("unexpected standard unique-item receipt: {receipt:?}"),
+            ),
+            Err(error) => {
+                if let Some(mechanics) = error.mechanics_error() {
+                    self.push_capacity_notice_if_player(mechanics, to_owner);
+                }
+                self.log_equipment_rejection(
+                    "loot-transfer",
+                    item_name,
+                    Vec::new(),
+                    None,
+                    format!("{error:?}"),
+                );
+            }
+        }
+        self.product_readout()
+    }
+
+    fn loot_container_instance_for_content(&self, id: u64) -> Option<String> {
+        let entity = self
+            .content_entities
+            .iter()
+            .find(|entity| entity.id == id)?;
+        Some(match &entity.kind {
+            ContentEntityKind::Enemy(_) => enemy_actor_id(id),
+            ContentEntityKind::Treasure { .. } => treasure_container_id(id),
+        })
+    }
+
+    fn loot_container_owner_if_eligible(&self, instance: &str) -> Option<EntityId> {
+        let id = instance
+            .strip_prefix("treasure-")
+            .or_else(|| instance.strip_prefix("enemy-"))?
+            .parse::<u64>()
+            .ok()?;
+        let entity = self
+            .content_entities
+            .iter()
+            .find(|entity| entity.id == id)?;
+        if entity.enemy().is_some() && !self.is_enemy_dead(id) {
+            return None;
+        }
+        self.gameplay
+            .container(instance)
+            .map(DaggerContainerState::entity)
+    }
+
+    fn open_loot_owner(&mut self, container_id: &str) -> Option<EntityId> {
+        if self.open_loot_container_id.as_deref() != Some(container_id) {
+            return None;
+        }
+        let owner = self.loot_container_owner_if_eligible(container_id);
+        if owner.is_none() {
+            self.open_loot_container_id = None;
+        }
+        owner
+    }
+
+    fn loot_container_is_empty(&self, container_id: &str) -> Result<bool, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::InventoryService;
+
+        let owner = self
+            .loot_container_owner_if_eligible(container_id)
+            .ok_or_else(|| {
+                RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                    "loot container {container_id} is no longer eligible"
+                )))
+            })?;
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "loot inventory view: {error:?}"
+            )))
+        })?;
+        Ok(view.stacks().is_empty() && view.unique_items().is_empty())
+    }
+
+    /// Equip-cycle verb (KeyE in the gameplay product): each press equips the next
+    /// carried equippable item in the stable entity ordering, skipping
+    /// already-equipped items and swapping when the item's legal slot is
+    /// occupied. When every carried equippable is already equipped, the press
+    /// unequips the next item after the cursor instead, so the verb can also
+    /// strip gear. Every attempt lands in the equipment log, rejections
+    /// included.
+    pub fn equip_cycle(&mut self) -> Result<ProductReadout, RuntimeError> {
+        let carried = self.carried_equippables()?;
+        if carried.is_empty() {
+            return self.product_readout();
+        }
+        let equipment = self.player_equipment_component()?;
+        let equipped = |entity: EntityId| {
+            equipment
+                .assignments()
+                .iter()
+                .any(|assignment| assignment.item == entity)
+        };
+        let n = carried.len();
+        let cursor = self
+            .equip_cycle_cursor
+            .unwrap_or(n - 1)
+            .min(n.saturating_sub(1));
+        let target = (1..=n)
+            .map(|offset| (cursor + offset) % n)
+            .find(|index| !equipped(carried[*index].0));
+        match target {
+            Some(index) => {
+                self.equip_cycle_cursor = Some(index);
+                self.equip_item(carried[index].0.raw())
+            }
+            None => {
+                // Everything equippable is already equipped: strip the next
+                // item after the cursor.
+                let index = (cursor + 1) % n;
+                self.equip_cycle_cursor = Some(index);
+                let slot = equipment
+                    .assignments()
+                    .iter()
+                    .find(|assignment| assignment.item == carried[index].0)
+                    .map(|assignment| assignment.slot.as_str().to_string())
+                    .ok_or_else(|| {
+                        RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                            "equipped item {} has no assignment",
+                            carried[index].1
+                        )))
+                    })?;
+                self.unequip_slot(&slot)
+            }
+        }
+    }
+
+    /// The item's preferred equip slot: right hand for one/two-handed
+    /// weapons, left hand for left-only weapons and shields, and the first
+    /// authored slot accepting an armor piece's classification otherwise.
+    fn preferred_equip_slot(&self, item_id: &str) -> Option<String> {
+        let item = self.gameplay_catalog.items().get(item_id)?;
+        if let Some(weapon) = &item.weapon {
+            return Some(
+                match weapon.hands {
+                    dagger_rpg::DaggerWeaponHands::LeftOnly => "left-hand",
+                    _ => "right-hand",
+                }
+                .to_string(),
+            );
+        }
+        if item.shield.is_some() {
+            return Some("left-hand".to_string());
+        }
+        self.compatible_equip_slots(item_id).into_iter().next()
+    }
+
+    /// Product-visible target slots derived from compiled classifications.
+    /// The engine catalog has broader placeholder slots, but only these nine
+    /// concrete nonempty-classification slots are modeled by the Dagger UI.
+    fn compatible_equip_slots(&self, item_id: &str) -> Vec<String> {
+        let Some(item) = self.gameplay_catalog.items().get(item_id) else {
+            return Vec::new();
+        };
+        let classified_slots = self
+            .gameplay_catalog
+            .equipment()
+            .slots
+            .iter()
+            .filter(|slot| {
+                product_equipment_slot(&slot.id)
+                    && !slot.allowed_classifications.is_empty()
+                    && slot
+                        .allowed_classifications
+                        .iter()
+                        .any(|classification| item.classifications.contains(classification))
+            })
+            .map(|slot| slot.id.clone())
+            .collect::<Vec<_>>();
+        if let Some(weapon) = &item.weapon {
+            let permitted = match weapon.hands {
+                dagger_rpg::DaggerWeaponHands::LeftOnly => ["left-hand"].as_slice(),
+                dagger_rpg::DaggerWeaponHands::Either => ["right-hand", "left-hand"].as_slice(),
+                dagger_rpg::DaggerWeaponHands::Both => ["right-hand"].as_slice(),
+            };
+            return classified_slots
+                .into_iter()
+                .filter(|slot| permitted.contains(&slot.as_str()))
+                .collect();
+        }
+        if item.shield.is_some() {
+            return classified_slots
+                .into_iter()
+                .filter(|slot| slot == "left-hand")
+                .collect();
+        }
+        if item.armor.is_some() {
+            return classified_slots;
+        }
+        Vec::new()
+    }
+
+    fn push_equipment_record(&mut self, mut record: EquipmentLogRecord) {
+        self.equipment_log_sequence = self.equipment_log_sequence.saturating_add(1);
+        record.sequence = self.equipment_log_sequence;
+        self.equipment_log.push_back(record);
+        while self.equipment_log.len() > COMBAT_HISTORY_LIMIT {
+            self.equipment_log.pop_front();
+        }
+    }
+
+    fn push_notice(&mut self, kind: ProductNoticeKind, message: String) {
+        self.notice_sequence = self.notice_sequence.saturating_add(1);
+        self.notices.push_back(ProductNoticeRecord {
+            sequence: self.notice_sequence,
+            kind,
+            message,
+        });
+        while self.notices.len() > PRODUCT_NOTICE_HISTORY_LIMIT {
+            self.notices.pop_front();
+        }
+    }
+
+    fn push_capacity_notice_if_player(
+        &mut self,
+        error: &rusty_engine::gameplay_mechanics::MechanicsError,
+        player: EntityId,
+    ) {
+        if matches!(
+            error,
+            rusty_engine::gameplay_mechanics::MechanicsError::InventoryCapacityExceeded { owner, .. }
+                if *owner == player
+        ) {
+            self.push_notice(
+                ProductNoticeKind::CapacityRejected,
+                "You cannot carry any more.".to_string(),
+            );
+        }
+    }
+
+    fn log_equipment_rejection(
+        &mut self,
+        operation: impl Into<String>,
+        item: String,
+        slots: Vec<String>,
+        quantity: Option<u64>,
+        reason: String,
+    ) {
+        self.push_equipment_record(EquipmentLogRecord {
+            sequence: 0,
+            operation: operation.into(),
+            item,
+            slots,
+            replaced_item: None,
+            quantity,
+            accepted: false,
+            reason: Some(reason),
+            committed_revision: None,
+        });
+    }
+
+    pub fn product_readout(&self) -> Result<ProductReadout, RuntimeError> {
+        let position = self.player_position()?;
+        let encounter_states = self
+            .patrol
+            .as_ref()
+            .map(|patrol| {
+                patrol
+                    .states()
+                    .into_iter()
+                    .map(|(handle, mode)| (u64::from(handle), ai_mode_name(mode)))
+                    .collect::<BTreeMap<_, _>>()
+            })
+            .unwrap_or_default();
+        let content = self
+            .content_entities
+            .iter()
+            .map(|entity| {
+                let live_position = self
+                    .content_live_positions
+                    .get(&entity.id)
+                    .copied()
+                    .unwrap_or(entity.authored_position);
+                let (kind, reference, loot_key) = match entity.enemy() {
+                    Some(enemy) => (
+                        "enemy",
+                        Some(EnemyReferenceReadout {
+                            mobile_id: enemy.mobile_id,
+                            mobile_name: enemy.mobile_name.clone(),
+                            texture_archive: enemy.texture_archive,
+                            flying: enemy.flying,
+                            sprite_asset: entity.sprite_asset.clone(),
+                            authored_position: entity.authored_position,
+                        }),
+                        None,
+                    ),
+                    None => match &entity.kind {
+                        ContentEntityKind::Treasure { loot_key } => {
+                            ("treasure", None, Some(loot_key.clone()))
+                        }
+                        ContentEntityKind::Enemy(_) => unreachable!("handled above"),
+                    },
+                };
+                ContentEntityReadout {
+                    id: entity.id,
+                    kind,
+                    name: entity.name.clone(),
+                    reference,
+                    loot_key,
+                    live: ContentLiveReadout {
+                        position: live_position,
+                        distance_from_player: (live_position[0] - position.x)
+                            .hypot(live_position[1] - position.y)
+                            .hypot(live_position[2] - position.z),
+                        resources: self
+                            .has_live_actor(entity.id)
+                            .then(|| self.live_resources(&enemy_actor_id(entity.id))),
+                        ai_state: encounter_states.get(&entity.id).copied(),
+                    },
+                }
+            })
+            .collect();
+        let named_encounters = self
+            .named_encounters
+            .iter()
+            .map(|encounter| self.named_encounter_readout(encounter))
+            .collect::<Vec<_>>();
+        let active_encounter = self
+            .active_encounter_id
+            .as_deref()
+            .and_then(|id| {
+                self.named_encounters
+                    .iter()
+                    .find(|encounter| encounter.id == id)
+            })
+            .map(|encounter| self.named_encounter_readout(encounter));
+        Ok(ProductReadout {
+            gameplay_package: GameplayPackageReadout {
+                fingerprint: self.gameplay_catalog.fingerprint().to_string(),
+                payload: self.gameplay_payload.clone(),
+            },
+            move_speed_units_per_second: self.player_controller.move_speed_units_per_second,
+            max_health: self.live_track_max(PLAYER_ACTOR_ID, "health"),
+            current_health: self.player_health(),
+            player_stats: self.player_gameplay_readout()?,
+            player_position: [position.x, position.y, position.z],
+            player_yaw_degrees: self.player_state().yaw_degrees,
+            combat: self.combat_history.iter().cloned().collect(),
+            combat_attempts: self.combat_attempt_history.iter().cloned().collect(),
+            player_attack_cooldown_remaining: self.player_attack_cooldown_remaining,
+            melee_presentation: self.melee_presentation(),
+            encounter_decisions: self.encounter_history.iter().cloned().collect(),
+            content,
+            focused_content_id: self.focused_content_id,
+            open_loot_container_id: self
+                .open_loot_container_id
+                .as_deref()
+                .filter(|id| self.loot_container_owner_if_eligible(id).is_some())
+                .map(str::to_string),
+            named_encounters,
+            active_encounter,
+            player_inventory: self.player_inventory_readout()?,
+            inventory_grid: self.inventory_grid_readout()?,
+            settings: self.settings_readout(),
+            debug_navigation_enabled: self.debug_navigation_enabled,
+            equipment_log: self.equipment_log.iter().cloned().collect(),
+            loot_containers: self.loot_containers_readout()?,
+            progression: self.progression_readout()?,
+            notices: self.notices.iter().cloned().collect(),
+        })
+    }
+
+    /// One readout per tracked loot container, ordered by instance id:
+    /// treasure piles from spawn_container and loot-bearing enemies from
+    /// bind_actor_loot. Contents are the live upstream inventory view, so
+    /// looted items disappear as they transfer.
+    fn loot_containers_readout(&self) -> Result<Vec<LootContainerReadout>, RuntimeError> {
+        self.gameplay
+            .containers()
+            .iter()
+            .map(|(instance, container)| {
+                let (kind, content_entity_id) = if let Some(id) = instance.strip_prefix("treasure-")
+                {
+                    ("treasure", id.parse::<u64>().ok())
+                } else if let Some(id) = instance.strip_prefix("enemy-") {
+                    ("corpse", id.parse::<u64>().ok())
+                } else {
+                    ("corpse", None)
+                };
+                let view = self.inventory_readout_for(container.entity())?;
+                let source_inventory_revision = self
+                    .gameplay
+                    .entities()
+                    .component_revision::<rusty_engine::gameplay_mechanics::InventoryComponent>(
+                        container.entity(),
+                    )
+                    .map_err(|error| {
+                        RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                            "loot inventory revision: {error:?}"
+                        )))
+                    })?
+                    .revision();
+                let emptied = view.stacks.is_empty() && view.items.is_empty();
+                Ok(LootContainerReadout {
+                    id: instance.clone(),
+                    kind,
+                    content_entity_id: content_entity_id.unwrap_or(0),
+                    loot_key: container.key().to_string(),
+                    source_inventory_revision,
+                    contents: view,
+                    generation: container.generation().clone(),
+                    emptied,
+                })
+            })
+            .collect()
+    }
+
+    /// `InventoryService::view` for any inventory-carrying entity (player or
+    /// container), rendered as the shared inventory readout shape.
+    fn inventory_readout_for(
+        &self,
+        owner: EntityId,
+    ) -> Result<PlayerInventoryReadout, RuntimeError> {
+        use rusty_engine::gameplay_mechanics::InventoryService;
+
+        let view = InventoryService::view(
+            self.gameplay.entities(),
+            self.gameplay_catalog.mechanics(),
+            owner,
+        )
+        .map_err(|error| {
+            RuntimeError::Gameplay(DaggerGameplayError::InvalidState(format!(
+                "inventory view: {error:?}"
+            )))
+        })?;
+        let equipment_revision = self
+            .gameplay
+            .entities()
+            .component_revision::<rusty_engine::gameplay_mechanics::EquipmentComponent>(owner)
+            .map(|revision| revision.revision())
+            .unwrap_or(0);
+        Ok(PlayerInventoryReadout {
+            equipment_revision,
+            capacity: view
+                .capacity()
+                .iter()
+                .map(|usage| InventoryCapacityReadout {
+                    metric: usage.metric.as_str().to_string(),
+                    used: usage.used,
+                    maximum: usage.maximum,
+                })
+                .collect(),
+            stacks: view
+                .stacks()
+                .iter()
+                .map(|stack| InventoryStackReadout {
+                    item: stack.definition.as_str().to_string(),
+                    quantity: stack.quantity,
+                })
+                .collect(),
+            items: view
+                .unique_items()
+                .iter()
+                .map(|item| InventoryItemReadout {
+                    item: item.definition.as_str().to_string(),
+                    entity: item.entity.raw(),
+                    equip_slot: None,
+                    compatible_slots: Vec::new(),
+                })
+                .collect(),
+        })
+    }
+
+    fn named_encounter_readout(&self, encounter: &NamedEncounter) -> NamedEncounterReadout {
+        let status = if self.active_encounter_id.as_deref() == Some(encounter.id.as_str()) {
+            match self.active_encounter_outcome {
+                NamedEncounterOutcome::Inactive => "available",
+                NamedEncounterOutcome::Active => "active",
+                NamedEncounterOutcome::Victory => "victory",
+                NamedEncounterOutcome::Defeat => "defeat",
+            }
+        } else {
+            "available"
+        };
+        NamedEncounterReadout {
+            id: encounter.id.clone(),
+            name: encounter.name.clone(),
+            objective: encounter.objective.clone(),
+            route_code: encounter.route_code.clone(),
+            member_entity_ids: encounter.member_entity_ids.clone(),
+            status: status.to_string(),
+        }
+    }
+
+    /// Authoritatively reposition the player (route derivation / probing).
+    /// Sets the translation and resets canonical continuation state so a
+    /// subsequent settle starts cleanly; collision is re-evaluated next tick.
+    pub fn set_player_position(&mut self, translation: Vec3) -> Result<(), RuntimeError> {
+        let transform_revision = self
+            .entities
+            .component_revision::<TransformComponent>(self.player)
+            .expect("admitted player transform revision");
+        let motion_revision = self
+            .entities
+            .component_revision::<CharacterMotionComponent>(self.player)
+            .expect("admitted player motion revision");
+        let mut transform = *self
+            .entities
+            .transform(self.player)
+            .expect("admitted player transform");
+        transform.translation = translation;
+        let mut motion = CharacterMotionComponent::at_rest(translation.y);
+        motion.last_command_sequence = self.player_command_sequence;
+        replace_character_motion_state(
+            &mut self.entities,
+            CharacterMotionStateReplacement {
+                entity: self.player,
+                expected_transform_revision: transform_revision,
+                expected_motion_revision: motion_revision,
+                transform,
+                motion,
+            },
+        )
+        .map_err(|error| {
+            RuntimeError::Player(crate::player::PlayerError::MotionPublication(error))
+        })?;
+        Ok(())
+    }
+
+    pub fn entities(&self) -> &EntityState {
+        &self.entities
+    }
+
+    pub fn collision_scene(&self) -> &VoxelCollisionScene {
+        &self.collision_scene
+    }
+
+    /// World-space AABB (min, max) of the dungeon trimesh, when admitted.
+    pub fn dungeon_bounds(&self) -> Option<([f64; 3], [f64; 3])> {
+        self.dungeon_bounds
+    }
+
+    pub fn apply_player_action(
+        &mut self,
+        action: ResolvedPlayerAction,
+    ) -> Result<PlayerControlReceipt, RuntimeError> {
+        let result = apply_player_action(
+            &mut self.entities,
+            &self.collision_scene,
+            self.player,
+            &mut self.player_look_state,
+            &mut self.player_controller_service,
+            &mut self.player_command_sequence,
+            &self.player_controller,
+            action,
+            self.player_controller.move_step_seconds,
+        )
+        .map_err(RuntimeError::Player)?;
+        Ok(result)
+    }
+
+    /// Apply one fixed-cadence product input frame atomically. Look is
+    /// resolved first and the resulting Engine heading owns movement in this
+    /// same frame; neutral frames still advance grounding and gravity.
+    pub fn apply_player_frame(
+        &mut self,
+        frame: ResolvedPlayerFrame,
+    ) -> Result<PlayerFrameReceipt, RuntimeError> {
+        crate::player::apply_player_frame(
+            &mut self.entities,
+            &self.collision_scene,
+            self.player,
+            &mut self.player_look_state,
+            &mut self.player_controller_service,
+            &mut self.player_command_sequence,
+            &self.player_controller,
+            frame,
+        )
+        .map_err(RuntimeError::Player)
+    }
+}
+
+fn select_aimed_melee_target(
+    player_position: Vec3,
+    yaw_degrees: f32,
+    attack_range: f32,
+    entities: &[ContentEntity],
+    live_positions: &BTreeMap<u64, [f32; 3]>,
+    resources: &BTreeMap<u64, LiveActorResources>,
+) -> Option<u64> {
+    let yaw = yaw_degrees.to_radians();
+    let forward = [yaw.sin(), -yaw.cos()];
+    entities
+        .iter()
+        .filter_map(|entity| {
+            let position = live_positions.get(&entity.id)?;
+            let resources = resources.get(&entity.id)?;
+            if resources.current_health <= 0.0 {
+                return None;
+            }
+            let delta = [
+                position[0] - player_position.x,
+                position[2] - player_position.z,
+            ];
+            let distance = delta[0].hypot(delta[1]);
+            if distance <= 0.001 || distance > attack_range {
+                return None;
+            }
+            let dot = (delta[0] * forward[0] + delta[1] * forward[1]) / distance;
+            (dot >= MELEE_AIM_MIN_DOT).then_some((entity.id, dot, distance))
+        })
+        .max_by(|left, right| {
+            left.1
+                .total_cmp(&right.1)
+                .then_with(|| right.2.total_cmp(&left.2))
+                .then_with(|| right.0.cmp(&left.0))
+        })
+        .map(|candidate| candidate.0)
+}
+
+/// Aimed interact query for the loot verb: the same cone/range/ranking shape
+/// as `select_aimed_melee_target`, but over an explicit candidate set (dead
+/// enemies + treasure containers) instead of living actors.
+fn select_aimed_loot_target(
+    player_position: Vec3,
+    yaw_degrees: f32,
+    reach: f32,
+    entities: &[ContentEntity],
+    live_positions: &BTreeMap<u64, [f32; 3]>,
+    candidates: &BTreeSet<u64>,
+) -> Option<u64> {
+    let yaw = yaw_degrees.to_radians();
+    let forward = [yaw.sin(), -yaw.cos()];
+    entities
+        .iter()
+        .filter_map(|entity| {
+            if !candidates.contains(&entity.id) {
+                return None;
+            }
+            let position = live_positions.get(&entity.id)?;
+            let delta = [
+                position[0] - player_position.x,
+                position[2] - player_position.z,
+            ];
+            let distance = delta[0].hypot(delta[1]);
+            if distance <= 0.001 || distance > reach {
+                return None;
+            }
+            let dot = (delta[0] * forward[0] + delta[1] * forward[1]) / distance;
+            (dot >= MELEE_AIM_MIN_DOT).then_some((entity.id, dot, distance))
+        })
+        .max_by(|left, right| {
+            left.1
+                .total_cmp(&right.1)
+                .then_with(|| right.2.total_cmp(&left.2))
+                .then_with(|| right.0.cmp(&left.0))
+        })
+        .map(|candidate| candidate.0)
+}
+
+fn collision_hit_distance(hit: SpatialCollisionHit) -> f64 {
+    match hit {
+        SpatialCollisionHit::Voxel(hit) => hit.distance,
+        SpatialCollisionHit::StaticMesh(hit) => hit.distance,
+    }
+}
+
+/// Outcome of one authored action resolution in live play.
+struct ActionAttemptOutcome {
+    succeeded: bool,
+    status: String,
+    roll: i64,
+    damage: i64,
+    stamina_spent: i64,
+    weapon: String,
+    struck_part: Option<String>,
+    material_ineffective: bool,
+    decisions: Vec<String>,
+    events: Vec<String>,
+}
+
+/// Resolved melee contact facts for the attempt record and presentation.
+struct MeleeContactResult {
+    damage: i64,
+    stamina_spent: i64,
+    stamina_after: f32,
+    health_before: f32,
+    health_after: f32,
+    target_max_health: f32,
+    died: bool,
+}
+
+/// Fixed operation/source identity for product equipment verbs.
+fn equipment_operation() -> (
+    rusty_engine::gameplay_mechanics::OperationId,
+    rusty_engine::gameplay_mechanics::SourceInstanceIdentity,
+) {
+    use rusty_engine::gameplay_mechanics::{OperationId, SourceInstanceId, SourceInstanceIdentity};
+
+    let operation = OperationId::parse("dagger-equipment-verb").expect("fixed operation identity");
+    let source = SourceInstanceIdentity::Request {
+        operation: operation.clone(),
+        instance: SourceInstanceId::parse("dagger-equipment").expect("fixed source identity"),
+    };
+    (operation, source)
+}
+
+fn mechanics_role(value: &str) -> CapabilityRoleId {
+    CapabilityRoleId::parse(value.to_string()).expect("fixed mechanics role identity")
+}
+
+/// Career/swing evidence ids (authored in `gameplay/src/catalogs/actions.ts`)
+/// are supplied as 0 until careers and swing states are modeled: an actor
+/// without a career gets no proficiency/racial bonus, and no swing state
+/// means no swing modifier.
+fn zeroed_career_fact(evidence_id: &str) -> bool {
+    const SUFFIXES: [&str; 7] = [
+        ".swing-to-hit",
+        ".proficiency-to-hit",
+        ".racial-to-hit",
+        ".proficiency-damage",
+        ".racial-damage",
+        ".adrenaline-rush",
+        ".target-adrenaline-rush",
+    ];
+    SUFFIXES.iter().any(|suffix| evidence_id.ends_with(suffix))
+}
+
+/// Fixed session seed for the product's deterministic evidence streams. The
+/// product retains all scheduling/key material in the explicit key below;
+/// Engine owns the versioned hash and unbiased inclusive-range mapping.
+const DAGGER_EVIDENCE_SEED: RngSeed = RngSeed::new(0);
+
+fn keyed_evidence_roll(scope: &str, key: &[u8], min: i64, max: i64) -> Result<i64, RuntimeError> {
+    KeyedRngV1::draw_i64_inclusive(DAGGER_EVIDENCE_SEED, scope, key, min, max).map_err(|error| {
+        RuntimeError::Encounter(format!(
+            "Dagger keyed evidence roll rejected ({scope}, {min}..={max}): {error:?}"
+        ))
+    })
+}
+
+/// Product-owned spawn scheduling supplies the entity and complete evidence
+/// identity; Engine owns the versioned keyed mapping and inclusive bounds.
+fn draw_spawn_evidence(
+    entity_id: u64,
+    evidence_id: &str,
+    min: i64,
+    max: i64,
+) -> Result<i64, RuntimeError> {
+    let mut key = entity_id.to_le_bytes().to_vec();
+    key.extend_from_slice(evidence_id.as_bytes());
+    keyed_evidence_roll("dagger.spawn.v1", &key, min, max)
+}
+
+/// Product-owned combat scheduling supplies attempt, target, and semantic
+/// salt; Engine owns the versioned keyed mapping and inclusive bounds. Salt 1
+/// is the d100 hit roll; salt 2 is damage; salt 3 is struck body part; salt 5
+/// is progression HP.
+fn draw_combat_evidence(
+    scope: &str,
+    sequence: u64,
+    target_id: u64,
+    salt: u64,
+    min: i64,
+    max: i64,
+) -> Result<i64, RuntimeError> {
+    let mut key = Vec::with_capacity(24);
+    key.extend_from_slice(&sequence.to_le_bytes());
+    key.extend_from_slice(&target_id.to_le_bytes());
+    key.extend_from_slice(&salt.to_le_bytes());
+    keyed_evidence_roll(scope, &key, min, max)
+}
+
+/// Instance id of the loot container anchored to one treasure content
+/// entity (the 3000+ project id band).
+fn treasure_container_id(id: u64) -> String {
+    format!("treasure-{id}")
+}
+
+/// Spawn the live player and one actor instance per admitted content entity
+/// whose mobile has an actor definition in the gameplay catalog. Entities
+/// without a definition (currently the Thief, mobile 138) get no live gameplay
+/// state: they patrol but are not combatants. Spawn rolls are deterministic per
+/// entity so resets are reproducible.
+///
+/// Loot (donor EnemyDeath.cs:123 model — contents are generated AT SPAWN
+/// into the enemy's inventory and transferred out at loot time):
+/// - enemies whose definition declares `loot_table_key` get
+///   `bind_actor_loot` with evidence drawn from that enemy's spawn stream
+///   (the plain `loot.<key>...` contract ids evaluated through
+///   `draw_spawn_evidence(entity_id, ...)`); rats/bats have no key and carry no loot,
+///   exactly as classic.
+/// - each treasure content entity gets `spawn_container` with the dungeon's
+///   loot key and the same per-entity stream.
+///
+/// Loot generates at spawn with `LOOT_GENERATION_LEVEL` (see its note):
+/// the session player is level 1 at spawn; progression levels arrive only
+/// later through kill awards.
+fn spawn_live_actors(
+    catalog: &DaggerGameplayCatalog,
+    content_entities: &[ContentEntity],
+) -> Result<DaggerGameplayState, RuntimeError> {
+    /// Map a loot roll contract into one entity's deterministic spawn stream.
+    fn loot_evidence(
+        catalog: &DaggerGameplayCatalog,
+        entity_id: u64,
+        key: &str,
+    ) -> Result<Vec<DaggerEvidence>, RuntimeError> {
+        loot_roll_evidence(catalog, key)
+            .map_err(RuntimeError::Gameplay)?
+            .into_iter()
+            .map(|(id, min, max)| {
+                Ok(DaggerEvidence {
+                    value: draw_spawn_evidence(entity_id, &id, min, max)?,
+                    id,
+                })
+            })
+            .collect()
+    }
+
+    let mut state = DaggerGameplayState::default();
+    dagger_rpg::spawn_actor(&mut state, catalog, PLAYER_ACTOR_ID, PLAYER_ACTOR_ID, &[])
+        .map_err(RuntimeError::Gameplay)?;
+    for entity in content_entities {
+        match entity.enemy() {
+            Some(reference) => {
+                let Some(definition) = catalog
+                    .actors()
+                    .values()
+                    .find(|actor| actor.mobile_id == Some(reference.mobile_id))
+                else {
+                    continue;
+                };
+                let rolls = dagger_rpg::required_roll_evidence(catalog, &definition.id)
+                    .map_err(RuntimeError::Gameplay)?;
+                let evidence = rolls
+                    .into_iter()
+                    .map(|(id, min, max)| {
+                        Ok(DaggerEvidence {
+                            value: draw_spawn_evidence(entity.id, &id, min, max)?,
+                            id,
+                        })
+                    })
+                    .collect::<Result<Vec<_>, RuntimeError>>()?;
+                let instance = enemy_actor_id(entity.id);
+                dagger_rpg::spawn_actor(
+                    &mut state,
+                    catalog,
+                    &definition.id.clone(),
+                    &instance,
+                    &evidence,
+                )
+                .map_err(RuntimeError::Gameplay)?;
+                if let Some(key) = definition.loot_table_key.clone() {
+                    let evidence = loot_evidence(catalog, entity.id, &key)?;
+                    let generation = bind_actor_loot(
+                        &mut state,
+                        catalog,
+                        &instance,
+                        &key,
+                        LOOT_GENERATION_LEVEL,
+                        &evidence,
+                    )
+                    .map_err(RuntimeError::Gameplay)?;
+                    // Track the corpse container so product readout can enumerate it:
+                    // the contents live in the actor's own inventory.
+                    let container_entity =
+                        state.actor(&instance).expect("just-spawned actor").entity();
+                    state.insert_container(
+                        instance,
+                        DaggerContainerState::new(container_entity, key, generation),
+                    );
+                }
+            }
+            None => {
+                let ContentEntityKind::Treasure { loot_key } = &entity.kind else {
+                    continue;
+                };
+                let evidence = loot_evidence(catalog, entity.id, loot_key)?;
+                spawn_container(
+                    &mut state,
+                    catalog,
+                    &treasure_container_id(entity.id),
+                    loot_key,
+                    LOOT_GENERATION_LEVEL,
+                    &evidence,
+                )
+                .map_err(RuntimeError::Gameplay)?;
+            }
+        }
+    }
+    Ok(state)
+}
+
+fn ai_mode_name(mode: EnemyAiMode) -> &'static str {
+    match mode {
+        EnemyAiMode::Patrol => "patrol",
+        EnemyAiMode::Chase => "chase",
+        EnemyAiMode::Attack => "attack",
+        EnemyAiMode::Dead => "dead",
+    }
+}
+
+#[cfg(test)]
+mod aimed_melee_tests {
+    use super::*;
+
+    fn entity(id: u64) -> ContentEntity {
+        ContentEntity {
+            id,
+            name: format!("enemy-{id}"),
+            sprite_asset: "rat".to_string(),
+            authored_position: [0.0; 3],
+            kind: ContentEntityKind::Enemy(crate::project::EnemyContentReference {
+                mobile_id: 0,
+                mobile_name: "Rat".to_string(),
+                texture_archive: 0,
+                flying: false,
+            }),
+        }
+    }
+
+    #[test]
+    fn ordinary_melee_aim_selects_a_live_target_in_front_without_lab_focus() {
+        let entities = vec![entity(1), entity(2), entity(3)];
+        let positions = BTreeMap::from([
+            (1, [0.2, 0.0, -1.5]),
+            (2, [1.0, 0.0, -1.2]),
+            (3, [0.0, 0.0, 1.0]),
+        ]);
+        let resources = BTreeMap::from([
+            (
+                1,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                2,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                3,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+        ]);
+        assert_eq!(
+            select_aimed_melee_target(Vec3::ZERO, 0.0, 2.0, &entities, &positions, &resources,),
+            Some(1),
+        );
+    }
+
+    #[test]
+    fn ordinary_melee_aim_ignores_dead_out_of_cone_and_out_of_range_targets() {
+        let entities = vec![entity(1), entity(2), entity(3)];
+        let positions = BTreeMap::from([
+            (1, [0.0, 0.0, -1.0]),
+            (2, [1.5, 0.0, 0.0]),
+            (3, [0.0, 0.0, -3.0]),
+        ]);
+        let resources = BTreeMap::from([
+            (
+                1,
+                LiveActorResources {
+                    current_health: 0.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                2,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+            (
+                3,
+                LiveActorResources {
+                    current_health: 3.0,
+                    current_stamina: 0.0,
+                    current_magicka: 0.0,
+                },
+            ),
+        ]);
+        assert_eq!(
+            select_aimed_melee_target(Vec3::ZERO, 0.0, 2.0, &entities, &positions, &resources,),
+            None,
+        );
+    }
+}
+
+#[cfg(test)]
+mod keyed_evidence_tests {
+    use super::*;
+
+    #[test]
+    fn keyed_evidence_is_stable_and_uses_complete_keys() {
+        let first = draw_combat_evidence("dagger.combat.v1", 1, 2007, 1, 1, 100).unwrap();
+        assert_eq!(first, 66);
+        assert_eq!(
+            draw_combat_evidence("dagger.combat.v1", 1, 2007, 1, 1, 100).unwrap(),
+            first,
+            "repeating a keyed tuple must not advance hidden state"
+        );
+        assert_ne!(
+            draw_spawn_evidence(3002, "loot.A.gold", 1, 10).unwrap(),
+            draw_spawn_evidence(3002, "loot.A.gold.tail", 1, 10).unwrap(),
+            "the complete evidence key must affect the result"
+        );
+        assert!((1..=10).contains(&draw_spawn_evidence(3002, "loot.A.gold", 1, 10).unwrap()));
+    }
+}
+
+#[cfg(test)]
+mod inventory_grid_tests {
+    use super::*;
+
+    fn inventory() -> PlayerInventoryReadout {
+        PlayerInventoryReadout {
+            equipment_revision: 0,
+            capacity: Vec::new(),
+            stacks: vec![InventoryStackReadout {
+                item: "gold".to_string(),
+                quantity: 10,
+            }],
+            items: vec![
+                InventoryItemReadout {
+                    item: "iron-dagger".to_string(),
+                    entity: 41,
+                    equip_slot: None,
+                    compatible_slots: vec!["right-hand".to_string()],
+                },
+                InventoryItemReadout {
+                    item: "equipped-bow".to_string(),
+                    entity: 42,
+                    equip_slot: Some("left-hand".to_string()),
+                    compatible_slots: vec!["left-hand".to_string()],
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn grid_moves_only_current_carried_occupants_and_rejects_stale_revisions() {
+        let mut grid = InventoryGridState::default();
+        grid.sync(&inventory());
+        assert_eq!(grid.readout().slots.len(), INVENTORY_GRID_SLOT_COUNT);
+        assert_eq!(
+            grid.slots[0],
+            Some(InventoryGridOccupant::Item { entity: 41 })
+        );
+        assert_eq!(
+            grid.slots[1],
+            Some(InventoryGridOccupant::Stack {
+                item: "gold".to_string()
+            })
+        );
+        assert!(grid.move_occupant(0, 1, 0).expect("swap carried slots"));
+        assert_eq!(grid.revision, 1);
+        assert!(grid
+            .move_occupant(1, 2, 0)
+            .expect_err("stale move must reject")
+            .contains("stale inventory grid revision"));
+
+        let mut without_dagger = inventory();
+        without_dagger.items.remove(0);
+        grid.sync(&without_dagger);
+        assert!(grid
+            .slots
+            .iter()
+            .flatten()
+            .all(|occupant| *occupant != InventoryGridOccupant::Item { entity: 41 }));
+    }
+
+    #[test]
+    fn inventory_move_payload_is_exactly_typed() {
+        let request: InventoryMoveRequest = rusty_engine::product_kernel::serde_json::from_str(
+            r#"{"sourceSlot":0,"targetSlot":1,"expectedRevision":3}"#,
+        )
+        .expect("valid inventory move payload");
+        assert_eq!(request.expected_revision, 3);
+        assert!(
+            rusty_engine::product_kernel::serde_json::from_str::<InventoryMoveRequest>(
+                r#"{"sourceSlot":0,"targetSlot":1,"expectedRevision":3,"extra":true}"#,
+            )
+            .is_err()
+        );
+    }
+}
