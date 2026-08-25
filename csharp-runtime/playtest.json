@@ -1,0 +1,20 @@
+{
+  "project": "rusty-dagger-csharp-trial",
+  "serve": {
+    "command": "bash -c 'tail -f /dev/null | RUSTY_DAGGER_PORT={port} ./csharp-runtime/scripts/run-product.sh'",
+    "preferredPort": 0,
+    "healthUrl": "/",
+    "readyText": "Rusty Product",
+    "reusePolicy": "broker_owned",
+    "startupTimeout": "120s"
+  },
+  "playtest": {
+    "startPath": "/",
+    "viewport": {
+      "width": 1280,
+      "height": 720
+    },
+    "headed": false,
+    "recordVideo": true
+  }
+}

@@ -1,0 +1,6 @@
+Dagger.Product/bin/
+Dagger.Product/obj/
+browser-bundle/
+native/
+native-*/
+out-*/
