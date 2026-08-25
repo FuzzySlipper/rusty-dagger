@@ -14,6 +14,7 @@ pub mod patrol;
 mod player;
 mod project;
 mod runtime;
+pub mod settings;
 
 pub use animation::{
     AnimationService, AttackSequence, EnemyAnimationLayout, EnemyAnimationStateLayout,
@@ -25,6 +26,12 @@ pub use combat_assets::{
 pub use directional::evaluate_directional;
 pub use navgrid::{derive_nav_grid, ground_spawn, level_of, NavCell, NavGrid, SpawnGrounding};
 pub use patrol::{PatrolGrid, PatrolService, PositionUpdate};
+pub use settings::{
+    SettingDescriptor, SettingKind, SettingReadout, SettingUpdate, SettingValue, SettingsError,
+    SettingsReadout, SettingsReconcileRequest, SettingsRegistry, SettingsState,
+    SettingsUpdateReceipt, SettingsUpdateRequest, DEBUG_FAILED_INVENTORY_DROP_MESSAGES_ID,
+    SETTINGS_SCHEMA_VERSION,
+};
 
 pub use player::{
     PlayerControlFact, PlayerControlReceipt, PlayerControllerConfig, PlayerControllerState,
