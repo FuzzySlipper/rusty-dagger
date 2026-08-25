@@ -182,11 +182,19 @@ pub fn dagger_ui_projection(
         .skip(readout.notices.len().saturating_sub(7))
         .map(ui_notice)
         .collect::<Vec<_>>();
+    let encounter = readout.active_encounter.as_ref().map(|encounter| {
+        json!({
+            "name": encounter.name,
+            "status": encounter.status,
+            "objective": encounter.objective,
+        })
+    });
     let ui = json!({
         "hud":{"health":{"current":readout.current_health,"maximum":readout.max_health},"stamina":{"current":readout.player_stats.current_stamina,"maximum":readout.player_stats.max_stamina},"magicka":{"current":readout.player_stats.current_magicka,"maximum":readout.player_stats.max_magicka},"level":readout.progression.level,"experience":readout.progression.xp,"experienceToNext":readout.progression.xp_to_next_level,"notices":notices},
         "inventory":{"gridRevision":readout.inventory_grid.revision,"capacity":readout.player_inventory.capacity.iter().take(32).map(|capacity| json!({"label":capacity.metric,"used":capacity.used,"maximum":capacity.maximum})).collect::<Vec<_>>(),"slots":slots,"equipmentRevision":readout.player_inventory.equipment_revision,"equipment":equipment,"receipt":receipt},
         "character":{"attributes":attributes,"skills":skills},
         "loot":loot,
+        "encounter":encounter,
         "debug":{"failedInventoryDropMessages":a.runtime.failed_inventory_drop_messages_enabled().map_err(|error| error.to_string())?}
     });
     let handle = RenderHandle::new(900001);
@@ -537,6 +545,49 @@ mod tests {
         assert!(ui["inventory"]["slots"].is_array());
         assert!(ui["inventory"]["capacity"].is_array());
         assert!(ui["inventory"]["equipment"].is_array());
+    }
+
+    #[test]
+    fn dagger_ui_projects_only_the_authoritative_active_encounter_summary() {
+        let mut authority = DaggerProductAuthority {
+            runtime: DaggerRuntime::from_product_resources(
+                include_bytes!("../dagger-runtime/tests/fixtures/privateers-hold.project.json"),
+                include_bytes!("../dagger-runtime/tests/fixtures/privateers-hold.navgrid.json"),
+                include_bytes!("../dagger-runtime/tests/fixtures/privateers-hold.encounters.json"),
+                include_bytes!("../dagger-runtime/tests/fixtures/dagger-core.package.json"),
+            )
+            .expect("admitted runtime fixture"),
+            revision: 0,
+            static_scene_ops: Vec::new(),
+        };
+        let encounter_id = authority
+            .runtime
+            .product_readout()
+            .expect("initial readout")
+            .named_encounters
+            .first()
+            .expect("fixture named encounter")
+            .id
+            .clone();
+        authority
+            .runtime
+            .start_named_encounter(&encounter_id)
+            .expect("activate fixture encounter");
+        let readout = authority
+            .runtime
+            .product_readout()
+            .expect("authoritative readout");
+        let (output, _, _) = dagger_ui_projection(&authority, false, 0).expect("projection");
+        let encounter = &output.ui().first().expect("dagger.ui").ui()["encounter"];
+
+        let expected = readout.active_encounter.expect("active encounter readout");
+        assert_eq!(encounter["name"].as_str(), Some(expected.name.as_str()));
+        assert_eq!(encounter["status"].as_str(), Some(expected.status.as_str()));
+        assert_eq!(
+            encounter["objective"].as_str(),
+            Some(expected.objective.as_str())
+        );
+        assert_eq!(encounter.as_object().expect("encounter object").len(), 3);
     }
 
     #[test]

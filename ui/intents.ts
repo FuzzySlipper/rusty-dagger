@@ -41,7 +41,7 @@ export function claimInventoryMove(
 ): void {
   const revision = expectedRevision(expectedGridRevision);
   if (revision === null || sourceSlot === targetSlot) return;
-  claimPayload(context, 'dagger.inventory.move', 'dagger.inventory.move.v1', { sourceSlot, targetSlot, expectedGridRevision: revision });
+  claimPayload(context, 'dagger.inventory.move', 'dagger.inventory.move.v1', { sourceSlot, targetSlot, expectedRevision: revision });
 }
 
 export function claimLootStack(
