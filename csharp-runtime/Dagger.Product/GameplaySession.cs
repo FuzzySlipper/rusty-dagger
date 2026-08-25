@@ -16,14 +16,7 @@ public sealed class GameplaySession
     private ulong _turns;
     private ulong _projectionSequence;
     private ulong? _lastObservedNanoseconds;
-    private bool _renderCreated;
     private string _lastOutcome = "Ready";
-    private static readonly (int X, int Z)[] NavSampleOffsets =
-    [
-        (-2, -2), (0, -2), (2, -2),
-        (-2, 0),  (0, 0),  (2, 0),
-        (-2, 2),  (0, 2),  (2, 2),
-    ];
 
     public GameplaySession(NavigationGrid navigation, WorldPoint playerStart)
     {
@@ -98,7 +91,6 @@ public sealed class GameplaySession
             json.WriteNumber("duplicateFrees", 0);
             json.WriteNumber("inputEvents", InputEventsLastTurn);
             json.WritePropertyName("ui"); WriteUiEnvelope(json);
-            json.WritePropertyName("frame"); WriteFrame(json);
             json.WriteEndObject();
         }
         return Encoding.UTF8.GetString(bytes.WrittenSpan);
@@ -159,90 +151,6 @@ public sealed class GameplaySession
     private static void WritePoint(Utf8JsonWriter json, string property, WorldPoint point)
     {
         json.WritePropertyName(property); json.WriteStartArray(); json.WriteNumberValue(point.X); json.WriteNumberValue(point.Y); json.WriteNumberValue(point.Z); json.WriteEndArray();
-    }
-
-    private void WriteFrame(Utf8JsonWriter json)
-    {
-        json.WriteStartObject(); json.WriteNumber("schemaVersion", 1); json.WritePropertyName("ops"); json.WriteStartArray();
-        var navSample = NavSample();
-        if (!_renderCreated)
-        {
-            // The current Engine browser host has a fixed initial camera. This
-            // is a camera-relative presentation tableau, not a second world:
-            // gameplay/HUD retain the raw content-space points above.
-            WriteCreate(json, 5001, "player-bearing", new WorldPoint(0f, .35f, .5f), new[] { .78f, .68f, .35f, 1f }, new[] { .38f, .38f, .38f }, true);
-            foreach (var actor in _actors.Values)
-                WriteCreate(json, actor.EntityId, actor.Definition.Id, LocalActorPoint(actor.Position), actor.Definition.Id == "rat" ? new[] { .45f, .3f, .18f, 1f } : new[] { .75f, .75f, .70f, 1f }, actor.Definition.Id == "rat" ? new[] { .7f, .45f, .95f } : new[] { .9f, 1.5f, .9f }, !actor.IsDead);
-            for (var index = 0; index < NavSampleOffsets.Length; index++)
-            {
-                var point = navSample[index];
-                WriteCreate(json, 6000 + index, "nav-walkable", point is null ? new WorldPoint(0f, 0f, 0f) : LocalNavPoint(point.Value), new[] { .18f, .31f, .26f, 1f }, new[] { .34f, .06f, .34f }, point is not null);
-            }
-            _renderCreated = true;
-        }
-        else
-        {
-            WriteUpdate(json, 5001, new WorldPoint(0f, .35f, .5f), new[] { .38f, .38f, .38f }, true);
-            foreach (var actor in _actors.Values) WriteUpdate(json, actor.EntityId, LocalActorPoint(actor.Position), actor.Definition.Id == "rat" ? new[] { .7f, .45f, .95f } : new[] { .9f, 1.5f, .9f }, !actor.IsDead);
-            for (var index = 0; index < NavSampleOffsets.Length; index++)
-            {
-                var point = navSample[index];
-                WriteUpdate(json, 6000 + index, point is null ? new WorldPoint(0f, 0f, 0f) : LocalNavPoint(point.Value), new[] { .34f, .06f, .34f }, point is not null);
-            }
-        }
-        json.WriteEndArray(); json.WriteEndObject();
-    }
-
-    private WorldPoint?[] NavSample() => NavSampleOffsets
-        .Select(offset => _navigation.WalkableNeighbor(Player.Position, offset.X, offset.Z))
-        .ToArray();
-
-    private WorldPoint LocalActorPoint(WorldPoint worldPoint)
-    {
-        var local = LocalPoint(worldPoint);
-        return new WorldPoint(local.X, .95f + Math.Clamp((worldPoint.Y - Player.Position.Y) * .1f, -.35f, .65f), local.Z);
-    }
-
-    private WorldPoint LocalNavPoint(WorldPoint worldPoint)
-    {
-        var local = LocalPoint(worldPoint);
-        return new WorldPoint(local.X, .05f, local.Z);
-    }
-
-    private WorldPoint LocalPoint(WorldPoint worldPoint)
-    {
-        var dx = worldPoint.X - Player.Position.X;
-        var dz = worldPoint.Z - Player.Position.Z;
-        var yaw = Player.YawDegrees * MathF.PI / 180f;
-        var right = (dx * MathF.Cos(yaw)) + (dz * MathF.Sin(yaw));
-        var forward = (dx * MathF.Sin(yaw)) - (dz * MathF.Cos(yaw));
-        return new WorldPoint(Math.Clamp(right * 1.45f, -5.5f, 5.5f), 0f, Math.Clamp(-forward * 1.45f, -6f, 1.5f));
-    }
-
-    private static void WriteCreate(Utf8JsonWriter json, long handle, string label, WorldPoint point, float[] color, float[] scale, bool visible)
-    {
-        json.WriteStartObject(); json.WriteString("op", "create"); json.WriteNumber("handle", handle); json.WriteNull("parent");
-        json.WritePropertyName("node"); json.WriteStartObject(); json.WritePropertyName("geometry"); json.WriteStartObject(); json.WriteString("kind", "cube"); json.WriteEndObject();
-        json.WritePropertyName("material"); json.WriteStartObject(); json.WritePropertyName("color"); WriteFloatArray(json, color); json.WriteBoolean("wireframe", false); json.WriteEndObject();
-        WriteTransform(json, point, scale); json.WriteBoolean("visible", visible); json.WriteString("layer", "scene");
-        json.WritePropertyName("metadata"); json.WriteStartObject(); json.WriteNumber("sourceEntity", handle); json.WriteNull("sourceSceneNode"); json.WritePropertyName("tags"); json.WriteStartArray(); json.WriteStringValue("dagger"); json.WriteEndArray(); json.WriteString("label", label); json.WriteEndObject();
-        json.WriteEndObject(); json.WriteEndObject();
-    }
-
-    private static void WriteUpdate(Utf8JsonWriter json, long handle, WorldPoint point, float[] scale, bool visible)
-    {
-        json.WriteStartObject(); json.WriteString("op", "update"); json.WriteNumber("handle", handle); WriteTransform(json, point, scale); json.WriteBoolean("visible", visible); json.WriteEndObject();
-    }
-
-    private static void WriteTransform(Utf8JsonWriter json, WorldPoint point, float[] scale)
-    {
-        json.WritePropertyName("transform"); json.WriteStartObject(); WritePoint(json, "translation", point);
-        json.WritePropertyName("rotation"); WriteFloatArray(json, [0f, 0f, 0f, 1f]); json.WritePropertyName("scale"); WriteFloatArray(json, scale); json.WriteEndObject();
-    }
-
-    private static void WriteFloatArray(Utf8JsonWriter json, IEnumerable<float> values)
-    {
-        json.WriteStartArray(); foreach (var value in values) json.WriteNumberValue(value); json.WriteEndArray();
     }
 
     private void Move(float deltaSeconds)
