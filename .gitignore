@@ -1,7 +1,8 @@
 /target
 /node_modules/
 /artifacts/
-/generated/
+/generated/*
+!/generated/.keep
 /local
 __pycache__/
 /AGENTS.md
