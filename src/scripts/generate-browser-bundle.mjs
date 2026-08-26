@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { productBrowserBundleAssets } from '/home/dev/worktrees/rusty-engine-csharp-runtime/render/artifacts/product-browser-host/index.js';
 
@@ -15,10 +15,10 @@ const assets = productBrowserBundleAssets({
   uiProjection: { expectedStream: 'dagger.hud', expectedContract: 'dagger.ui.snapshot.v1' },
 });
 await mkdir(join(output, 'ui'), { recursive: true });
+await rm(join(output, 'renderer-preload.json'), { force: true });
 for (const asset of assets) {
   const path = join(output, asset.name);
   await mkdir(join(path, '..'), { recursive: true });
   await writeFile(path, asset.content);
 }
 await writeFile(join(output, 'runtime-adapter.js'), 'export const PRODUCT_RUNTIME_HTTP_BASE_PATH = "/__rusty/product/runtime/";\n');
-await writeFile(join(output, 'renderer-preload.json'), '{"artifact":"rusty.product.renderer-preload.v1","resources":[]}\n');

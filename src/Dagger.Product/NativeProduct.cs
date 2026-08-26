@@ -27,8 +27,9 @@ public static unsafe class NativeProduct
         try
         {
             if (args is null || handle is null || (args->content_len != 0 && args->content is null)) return 2;
-            var positions = PrivateersHoldContent.Read(args);
-            var runtime = new DaggerRuntime(DaggerGameState.CreatePrivateersHold(positions));
+            var content = PrivateersHoldContent.Read(args);
+            var engine = new EngineApi(args->engine);
+            var runtime = new DaggerRuntime(engine, content);
             *handle = (void*)GCHandle.ToIntPtr(GCHandle.Alloc(runtime));
             return 1;
         }
@@ -53,7 +54,12 @@ public static unsafe class NativeProduct
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
     private static void Destroy(void* handle)
     {
-        if (handle is not null) GCHandle.FromIntPtr((nint)handle).Free();
+        if (handle is not null)
+        {
+            var pinned = GCHandle.FromIntPtr((nint)handle);
+            ((DaggerRuntime)pinned.Target!).Dispose();
+            pinned.Free();
+        }
     }
 
     private static int WithRuntime(void* handle, Func<DaggerRuntime, int> action)
