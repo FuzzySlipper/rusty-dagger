@@ -3,7 +3,7 @@ set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 repo=$(cd "$root/.." && pwd)
-engine=/home/dev/worktrees/rusty-engine-csharp-runtime
+engine=/home/dev/rusty-engine
 "$root/scripts/build-ui.sh"
 dotnet publish "$root/Dagger.Product/Dagger.Product.csproj" -c Release -r linux-x64 -o "$root/native"
 exec cargo run --manifest-path "$engine/rust/crates/csharp-product-runtime/Cargo.toml" --locked -- \

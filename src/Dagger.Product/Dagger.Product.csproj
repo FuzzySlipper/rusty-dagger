@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StripSymbols>true</StripSymbols>
-    <EngineTrialRoot Condition="'$(EngineTrialRoot)' == ''">/home/dev/worktrees/rusty-engine-csharp-runtime</EngineTrialRoot>
+    <EngineTrialRoot Condition="'$(EngineTrialRoot)' == ''">/home/dev/rusty-engine</EngineTrialRoot>
     <NativeBindingsOutputDir>$(MSBuildProjectDirectory)/obj/Generated</NativeBindingsOutputDir>
   </PropertyGroup>
 

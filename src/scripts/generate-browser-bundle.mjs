@@ -1,11 +1,11 @@
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { productBrowserBundleAssets } from '/home/dev/worktrees/rusty-engine-csharp-runtime/render/artifacts/product-browser-host/index.js';
+import { productBrowserBundleAssets } from '/home/dev/rusty-engine/render/artifacts/product-browser-host/index.js';
 
 const [output] = process.argv.slice(2);
 if (output === undefined) throw new Error('usage: generate-browser-bundle.mjs <output-directory>');
 
-const engineHostModule = await readFile('/home/dev/worktrees/rusty-engine-csharp-runtime/render/artifacts/product-browser-host/product-browser-host.js', 'utf8');
+const engineHostModule = await readFile('/home/dev/rusty-engine/render/artifacts/product-browser-host/product-browser-host.js', 'utf8');
 const assets = productBrowserBundleAssets({
   engineHostModule,
   uiModule: './ui/main.js',

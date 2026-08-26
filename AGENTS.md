@@ -1,18 +1,14 @@
-# Rusty Dagger C# trial guidance
+# Rusty Dagger C# product guidance
 
 ## Scope and pairing
 
-This guidance applies only to:
+This is the current mainline direction for `/home/dev/rusty-dagger`, paired
+with the stable Engine checkout at `/home/dev/rusty-engine`.
 
-- Dagger worktree `/home/dev/worktrees/rusty-dagger-csharp-runtime`
-- Dagger branch `codex/csharp-product-runtime`
-- Engine worktree `/home/dev/worktrees/rusty-engine-csharp-runtime`
-- Engine branch `codex/csharp-nativeaot-trial`
-
-Stable Rusty Dagger and Engine `main` are not the implementation targets for
-this trial. Do not redirect the experiment to `/home/dev/rusty-engine`, merge
-either branch to main, or revive a stable-main compatibility path during an
-ordinary task.
+The existing C# source is walking-spike scaffolding. Preserve it while the
+Engine SDK is organized, then refactor it deliberately into safe gameplay and
+thin native-composition owners. Do not broaden gameplay in the current
+single-project shape merely because it already compiles.
 
 ## Den
 
@@ -26,8 +22,8 @@ ordinary task.
 
 ## Active source shape
 
-- `src/Dagger.Product/` is the sole active downstream application/gameplay
-  implementation lane.
+- `src/Dagger.Product/` is the current active implementation lane, not the
+  intended final project boundary.
 - `src/ui/` is a thin DOM UI adapter. It may present projections and submit
   semantic UI actions; it must not own gameplay state or render non-UI game
   elements.
@@ -80,13 +76,12 @@ valid successful task outcome.
 - Use only the narrow compile/path/readback checks named by the current task.
   Do not run old Rust, Angular, browser, packaging, conformance, or security
   suites unless explicitly requested.
-- Preserve unrelated work and donor sources. Commit and push only the
-  experimental Dagger branch.
+- Preserve unrelated work and donor sources. Follow the current task's branch
+  and promotion instructions.
 
 ## Documentation status
 
-This branch intentionally has no durable architecture corpus beyond this short
-guidance and the root README. If the C# spike is selected, a later focused task
-will extract useful durable ideas from stable history and write new documents
-from demonstrated behavior. Do not write aspirational architecture during the
-port.
+The repository intentionally has no durable architecture corpus beyond this
+short guidance and the root README during the transition. A later focused task
+will extract useful durable ideas from history and write new documents from
+demonstrated behavior. Do not write aspirational architecture during the port.

@@ -1,14 +1,10 @@
-# Rusty Dagger — C# gameplay trial
+# Rusty Dagger — C# gameplay
 
-This branch tests Rusty Dagger as an ordinary C# application/game on Rusty
-Engine's experimental NativeAOT API.
+Rusty Dagger is moving forward as an ordinary C# application/game on Rusty
+Engine's NativeAOT API.
 
-- Dagger worktree: `/home/dev/worktrees/rusty-dagger-csharp-runtime`
-- Dagger branch: `codex/csharp-product-runtime`
-- Engine worktree: `/home/dev/worktrees/rusty-engine-csharp-runtime`
-- Engine branch: `codex/csharp-nativeaot-trial`
-
-Neither branch is stable main.
+- Dagger checkout: `/home/dev/rusty-dagger`
+- Engine checkout: `/home/dev/rusty-engine`
 
 ## Active layout
 
@@ -23,15 +19,15 @@ content/            imported Privateer's Hold product inputs
 ```
 
 The root Rust crates, Angular application, HTTP product server, Studio adapter,
-and their verification scripts are historical donor material on this branch.
+and their verification scripts are historical donor material.
 Do not extend them as a parallel product path.
 
 ## Direction
 
 > The product decides. The Engine guarantees.
 
-C# owns gameplay state, services, orchestration, and product meaning. The paired
-Engine branch supplies generated direct APIs for durable mechanisms. The
+C# owns gameplay state, services, orchestration, and product meaning. Engine
+supplies generated direct APIs for durable mechanisms. The
 NativeAOT boundary is trusted and uses direct function tables rather than JSON
 method/result traffic.
 
@@ -42,14 +38,13 @@ rendering, a second canvas, or parallel retained state.
 If a required Engine function is missing, stop and request it upstream. That is
 preferred to recreating Engine infrastructure downstream.
 
-## Current preparation state
+## Current implementation state
 
-The existing C# prototype predates the generated #7289 callback tables. Moving
-it under `src/` establishes the source organization but does not certify it as
-the next gameplay foundation. The first implementation task must replace its
-old native export/output-buffer glue with the paired Engine's generated
-bindings before extending gameplay. Do not hide that integration gap with a
-compatibility shim or JSON bridge.
+The current C# implementation proves generated direct Engine access, gameplay
+state progression, and Engine-owned world publication. Its single-project
+layout is walking-spike scaffolding, not the next gameplay foundation. Engine
+SDK organization comes first; Dagger should then split safe game/application
+code from its thin NativeAOT composition boundary before broader gameplay work.
 
 The candidate launch command lives at:
 
@@ -57,9 +52,8 @@ The candidate launch command lives at:
 src/scripts/run-product.sh
 ```
 
-It resolves `/home/dev/worktrees/rusty-engine-csharp-runtime` explicitly. Run it
-only when the current task calls for product execution; this preparation task
-does not require it to pass.
+It resolves the stable sibling Engine checkout. Run it only when the current
+task calls for product execution.
 
 ## Donor material
 
@@ -74,7 +68,6 @@ README stays intentionally small.
 
 ## Documentation
 
-The old architecture prose was intentionally removed/replaced on this branch.
-If the C# direction is selected, a later focused documentation task will recover
-useful durable concepts from stable history and write a new coherent set from
-the demonstrated implementation.
+The old architecture prose was intentionally removed. A later focused
+documentation task will recover useful durable concepts from Git history and
+write a new coherent set from demonstrated implementation.
