@@ -1,118 +1,80 @@
-# rusty-dagger
+# Rusty Dagger — C# gameplay trial
 
-Rusty Dagger reads locally supplied Daggerfall/Arena2 data and builds a
-playable, inspectable Privateer's Hold product on Rusty Engine. It owns the
-offline import pipeline, Dagger gameplay/runtime authority, Angular product,
-and Dagger-side Studio adapter.
+This branch tests Rusty Dagger as an ordinary C# application/game on Rusty
+Engine's experimental NativeAOT API.
 
-Permanent project documentation lives in Den:
+- Dagger worktree: `/home/dev/worktrees/rusty-dagger-csharp-runtime`
+- Dagger branch: `codex/csharp-product-runtime`
+- Engine worktree: `/home/dev/worktrees/rusty-engine-csharp-runtime`
+- Engine branch: `codex/csharp-nativeaot-trial`
 
-- [Project charter](den://documents/rusty-dagger/project-charter)
-- [Architecture and ownership](den://documents/rusty-dagger/architecture-and-ownership)
-- [Gameplay authoring and runtime](den://documents/rusty-dagger/gameplay-authoring-and-runtime)
-- [Content import, formats, and provenance](den://documents/rusty-dagger/content-import-and-provenance)
-- [Verification and certification](den://documents/rusty-dagger/verification-and-certification)
-- [Known limitations](den://documents/rusty-dagger/known-limitations)
+Neither branch is stable main.
 
-Current work and review state is in the Den `rusty-dagger` project. Historical
-proposals and investigations are Board records, not current instructions.
+## Active layout
 
-## Repository map
+```text
+src/
+  Dagger.Product/   C# application, gameplay, and native composition root
+  ui/               thin TypeScript DOM UI only
+  scripts/          candidate build and launch plumbing
 
-- `crates/arena2` — read-only classic data parsers.
-- `crates/dagger-import` — offline extraction and asset publication CLI.
-- `crates/dagger-rpg` — Dagger gameplay package admission and evaluation.
-- `crates/dagger-runtime` — live project, controller, collision, encounter, and
-  gameplay-session authority.
-- `crates/dagger-studio-adapter` — Dagger projection, Studio protocol adapter,
-  and `dagger-product-server`.
-- `gameplay/src` — TypeScript gameplay authoring; materializes into
-  `data/gameplay`.
-- `apps/dagger-product` — Angular product UI mounted through Engine's public
-  application host.
-- `content` — committed generated product assets and project documents.
-
-The normal feature-development product is the web application-host path. Rust
-owns gameplay/runtime meaning, Angular owns Dagger UI, and Engine owns the one
-renderer/canvas. Tauri is reserved for eventual publication and release
-certification, not ordinary feature work or default CI.
-
-## Quick start
-
-Provide an Arena2 directory at `local/arena2`, through `ARENA2_DIR`, or with the
-importer's `--arena2` option. The adjacent `../rusty-engine` checkout supplies
-the Rust facade, asset importer, and local TypeScript packages.
-
-```bash
-# Full source extraction and project regeneration
-scripts/regenerate.sh
-
-# Build authored gameplay and the Angular product
-pnpm install
-pnpm gameplay:build
-pnpm product:build
-
-# Run the connected product, then open http://127.0.0.1:4274
-cargo run -p dagger-studio-adapter --bin dagger-product-server
-
-# Deterministic aggregate repository checks
-scripts/verify.sh
-
-# Manual browser diagnostic for browser-visible product changes
-scripts/check-dagger-product-browser.sh
+gameplay/           pre-pivot TypeScript semantic donor; not an active runtime
+content/            imported Privateer's Hold product inputs
 ```
 
-## Developer command console
+The root Rust crates, Angular application, HTTP product server, Studio adapter,
+and their verification scripts are historical donor material on this branch.
+Do not extend them as a parallel product path.
 
-The connected application-host product includes the Engine-owned **Dagger
-developer commands** pull-down. It uses the public Engine host envelope,
-generated client, standard command schemas, and shell; the product service
-only queues requests to its existing runtime safe point.
+## Direction
 
-- `standard.inspect.entity` and `standard.inspect.mechanics` are read-only
-  Engine standard inspections. The player entity is `1` in the committed
-  Privateer's Hold session.
-- `standard.admin.track.set` is the visibly privileged Engine track-owner
-  adapter. It is distinct from normal combat and restoration.
-- `dagger.scenario.prepare`, `.melee`, and `.advance` respectively set up a
-  committed target, run production first-person melee, and advance bounded
-  production ticks.
-- `dagger.scenario.progression` is an admin-only demonstration: it resets and
-  executes the committed Orc/Giant-Bat kill sequence through real melee,
-  exposing the resulting XP, level transition, receipts, events, and
-  projections in the returned Dagger readout.
+> The product decides. The Engine guarantees.
 
-The console is diagnostic tooling, not a player surface or a persistence and
-replay authority.
+C# owns gameplay state, services, orchestration, and product meaning. The paired
+Engine branch supplies generated direct APIs for durable mechanisms. The
+NativeAOT boundary is trusted and uses direct function tables rather than JSON
+method/result traffic.
 
-Run the importer directly when working on extraction:
+Engine owns rendering infrastructure. C# publishes product facts through named
+Engine APIs. TypeScript owns DOM UI only and must never create game-world
+rendering, a second canvas, or parallel retained state.
+
+If a required Engine function is missing, stop and request it upstream. That is
+preferred to recreating Engine infrastructure downstream.
+
+## Current preparation state
+
+The existing C# prototype predates the generated #7289 callback tables. Moving
+it under `src/` establishes the source organization but does not certify it as
+the next gameplay foundation. The first implementation task must replace its
+old native export/output-buffer glue with the paired Engine's generated
+bindings before extending gameplay. Do not hide that integration gap with a
+compatibility shim or JSON bridge.
+
+The candidate launch command lives at:
 
 ```bash
-cargo run -p dagger-import --bin dagger-import -- \
-  --arena2 local/arena2 --region 17 --location "Privateer's Hold" \
-  --format glb --out content/privateers-hold.glb
+src/scripts/run-product.sh
 ```
 
-For Engine-hosted Studio, confirm the sibling service at
-`http://127.0.0.1:4310/`, then select this repository and
-`content/projects/privateers-hold.project.json`. Dagger supplies
-`.rusty-studio.json`, project data, and `dagger-studio-adapter`; Engine owns the
-Studio service and browser product.
+It resolves `/home/dev/worktrees/rusty-engine-csharp-runtime` explicitly. Run it
+only when the current task calls for product execution; this preparation task
+does not require it to pass.
 
-## Source and attribution
+## Donor material
 
-Daggerfall/Arena2 game data is copyrighted Bethesda material. Source game
-files are operator-supplied and are not committed. Generated assets under
-`content/` derive from that local installation; this repository does not grant
-rights to redistribute the original game data.
+The valuable pre-pivot TypeScript under `gameplay/` remains available for
+catalogs, formulas, authored content meaning, and naming. Translate those ideas
+into clear C# domain modules and services. Do not port the package/evaluator/AST
+topology merely because it already exists.
 
-Format and classic-semantic interpretation uses the MIT-licensed Daggerfall
-Unity project as donor evidence. The frozen consulted source is
-`/home/research/daggerfall-unity`, declared revision
-`81e89e90c27bc3c1a7a61871e545fad129174dec`. Generated manifests retain source
-file/record provenance while runtime code consumes semantic asset IDs. See
-[Content import, formats, and provenance](den://documents/rusty-dagger/content-import-and-provenance)
-for the consultation and conversion contract.
+Daggerfall/Arena2 game data remains operator-supplied. Preserve existing source
+attribution and donor provenance in code/content records while this temporary
+README stays intentionally small.
 
-Angular production builds emit `dist/apps/dagger-product/3rdpartylicenses.txt`;
-publication packaging must retain the applicable generated dependency notices.
+## Documentation
+
+The old architecture prose was intentionally removed/replaced on this branch.
+If the C# direction is selected, a later focused documentation task will recover
+useful durable concepts from stable history and write a new coherent set from
+the demonstrated implementation.

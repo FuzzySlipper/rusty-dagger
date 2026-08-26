@@ -1,7 +1,7 @@
 {
   "project": "rusty-dagger-csharp-trial",
   "serve": {
-    "command": "bash -c 'tail -f /dev/null | RUSTY_DAGGER_PORT={port} ./csharp-runtime/scripts/run-product.sh'",
+    "command": "bash -c 'tail -f /dev/null | RUSTY_DAGGER_PORT={port} ./src/scripts/run-product.sh'",
     "preferredPort": 0,
     "healthUrl": "/",
     "readyText": "Rusty Product",
