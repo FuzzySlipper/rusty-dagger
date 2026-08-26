@@ -1,3 +1,5 @@
+using Rusty.Engine.Native;
+
 namespace RustyDagger.Product;
 
 public readonly record struct WorldPoint(float X, float Y, float Z)
@@ -8,6 +10,9 @@ public readonly record struct WorldPoint(float X, float Y, float Z)
         var dz = Z - other.Z;
         return MathF.Sqrt(dx * dx + dz * dz);
     }
+
+    public NativeVec3 ToNative() => new() { x = X, y = Y, z = Z };
+    public static WorldPoint From(NativeVec3 value) => new(value.x, value.y, value.z);
 }
 
 public sealed class DaggerGameState
@@ -23,20 +28,22 @@ public sealed class DaggerGameState
     public ulong Turns { get; set; }
     public string LastOutcome { get; set; } = "Ready";
 
-    public static DaggerGameState CreatePrivateersHold(PrivateersHoldPositions positions)
+    public static DaggerGameState CreatePrivateersHold(ProjectFacts project)
     {
-        var player = new PlayerState(positions.Player, DaggerCatalogs.Player);
-        var actors = new Dictionary<long, ActorState>
+        var player = new PlayerState(project.PlayerPosition, DaggerCatalogs.Player);
+        var actors = new Dictionary<long, ActorState>();
+        foreach (var authored in project.Actors.Values)
         {
-            [2007] = new(2007, DaggerCatalogs.Rat, positions.ForEntity(2007)),
-            [2000] = new(2000, DaggerCatalogs.SkeletalWarrior, positions.ForEntity(2000)),
-        };
+            var definition = DaggerCatalogs.ForAuthoredName(authored.Name);
+            if (definition is not null) actors[authored.EntityId] = new ActorState(authored.EntityId, definition, authored.Position, authored.Sprite);
+        }
         return new DaggerGameState(player, actors);
     }
 
     public void AdvanceTime(float deltaSeconds)
     {
         Player.AttackCooldownSeconds = Math.Max(0f, Player.AttackCooldownSeconds - deltaSeconds);
+        foreach (var actor in Actors.Values) actor.AttackCooldownSeconds = Math.Max(0f, actor.AttackCooldownSeconds - deltaSeconds);
     }
 }
 
@@ -54,30 +61,40 @@ public sealed class PlayerState
     }
 
     public ActorDefinition Definition { get; }
-    public WorldPoint? Position { get; }
-    public float YawDegrees { get; set; } = 180f;
-    public float PitchDegrees { get; set; }
+    public WorldPoint? Position { get; private set; }
+    public NativeCharacterMotion Motion { get; set; }
+    public float YawRadians { get; set; } = MathF.PI;
+    public float PitchRadians { get; set; }
     public int Health { get; private set; }
     public int Stamina { get; set; }
     public int Magicka { get; }
+    public int Experience { get; private set; }
     public float AttackCooldownSeconds { get; set; }
-    public InventoryState Inventory { get; }
+    public InventoryState Inventory { get; private set; }
     public EquipmentState Equipment { get; }
+
+    public void MoveTo(NativeVec3 position) => Position = WorldPoint.From(position);
+    public void AwardExperience(int amount) => Experience += Math.Max(0, amount);
+    public int ApplyDamage(int amount) { var applied = Math.Min(Health, Math.Max(0, amount)); Health -= applied; return applied; }
+    public void AddItem(ItemStack item) => Inventory = new InventoryState([.. Inventory.Items, item]);
 }
 
 public sealed class ActorState
 {
-    public ActorState(long entityId, ActorDefinition definition, WorldPoint? position)
+    public ActorState(long entityId, ActorDefinition definition, WorldPoint position, AuthoredSprite? sprite)
     {
         EntityId = entityId;
         Definition = definition;
         Position = position;
         Health = definition.MaximumHealth;
+        Sprite = sprite;
     }
 
     public long EntityId { get; }
     public ActorDefinition Definition { get; }
-    public WorldPoint? Position { get; }
+    public WorldPoint Position { get; }
+    public AuthoredSprite? Sprite { get; }
+    public float AttackCooldownSeconds { get; set; }
     public int Health { get; private set; }
     public bool IsDead => Health == 0;
 

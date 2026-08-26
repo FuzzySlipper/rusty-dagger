@@ -4,17 +4,23 @@ using Rusty.Engine.Native;
 namespace RustyDagger.Product;
 
 /// <summary>Owns Dagger lifecycle and persistent game state.</summary>
-public sealed unsafe class DaggerRuntime
+public sealed unsafe class DaggerRuntime : IDisposable
 {
+    private readonly EngineApi _engine;
     private readonly GameplayInput _input = new();
+    private readonly SpatialGameplayService _spatial;
+    private readonly DaggerPresentation _presentation;
     private bool _started;
     private bool _paused;
     private bool _shutdown;
     private ulong? _lastObservedNanoseconds;
 
-    public DaggerRuntime(DaggerGameState state)
+    public DaggerRuntime(EngineApi engine, PrivateersHoldInputs content)
     {
-        State = state;
+        _engine = engine;
+        State = DaggerGameState.CreatePrivateersHold(content.Project);
+        _spatial = new SpatialGameplayService(engine, content);
+        _presentation = new DaggerPresentation(engine, content.Project);
     }
 
     public DaggerGameState State { get; }
@@ -24,6 +30,7 @@ public sealed unsafe class DaggerRuntime
         if (_shutdown) return 4;
         _started = true;
         _paused = false;
+        _presentation.Publish(State);
         return 1;
     }
 
@@ -43,6 +50,8 @@ public sealed unsafe class DaggerRuntime
 
     public int Shutdown()
     {
+        if (_shutdown) return 1;
+        _spatial.Dispose();
         _shutdown = true;
         return 1;
     }
@@ -54,11 +63,16 @@ public sealed unsafe class DaggerRuntime
 
         var turn = ReadTurn(args);
         State.AdvanceTime(turn.DeltaSeconds);
-        _input.Apply(State.Player, turn);
-        if (turn.AttackRequested) CombatService.TryMelee(State);
+        _input.Apply(State, turn, _engine);
+        _spatial.Step(State, turn);
+        if (turn.AttackRequested) CombatService.TryMelee(State, _engine.Rng);
+        EnemyCombatService.TryActiveEncounterAttack(State, _engine.Rng);
         State.Turns++;
+        _presentation.Publish(State);
         return 1;
     }
+
+    public void Dispose() => Shutdown();
 
     private GameplayTurn ReadTurn(NativeTurnArgs* args)
     {
