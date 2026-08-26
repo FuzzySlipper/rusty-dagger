@@ -19,7 +19,7 @@ public static unsafe class PrivateersHoldContent
         return files.TryGetValue(ProjectPath, out var project)
             && files.TryGetValue(NavgridPath, out var navgrid)
             && files.TryGetValue(StaticMeshPath, out var mesh)
-            ? new PrivateersHoldInputs(ReadProject(project), ReadNavigation(navgrid), ReadCollision(mesh))
+            ? new PrivateersHoldInputs(ReadProject(project), ReadNavigation(navgrid), ReadCollision(mesh), StaticMeshPath)
             : PrivateersHoldInputs.Unavailable;
     }
 
@@ -135,12 +135,13 @@ public static unsafe class PrivateersHoldContent
     }
 }
 
-public sealed class PrivateersHoldInputs(ProjectFacts project, NativePlanarNavCell[] navigation, CollisionMesh collision)
+public sealed class PrivateersHoldInputs(ProjectFacts project, NativePlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
 {
-    public static readonly PrivateersHoldInputs Unavailable = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []));
+    public static readonly PrivateersHoldInputs Unavailable = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), null);
     public ProjectFacts Project { get; } = project;
     public NativePlanarNavCell[] Navigation { get; } = navigation;
     public CollisionMesh Collision { get; } = collision;
+    public string? StaticMeshContentPath { get; } = staticMeshContentPath;
 }
 
 public sealed record ProjectFacts(WorldPoint? PlayerPosition, IReadOnlyDictionary<long, AuthoredActor> Actors);
