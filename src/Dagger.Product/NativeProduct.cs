@@ -33,7 +33,11 @@ public static unsafe class NativeProduct
             *handle = (void*)GCHandle.ToIntPtr(GCHandle.Alloc(runtime));
             return 1;
         }
-        catch { return 99; }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine($"Dagger product creation failed: {error}");
+            return 99;
+        }
     }
 
     [UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
@@ -69,6 +73,10 @@ public static unsafe class NativeProduct
             if (handle is null) return 2;
             return action((DaggerRuntime)GCHandle.FromIntPtr((nint)handle).Target!);
         }
-        catch { return 99; }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine($"Dagger product callback failed: {error}");
+            return 99;
+        }
     }
 }

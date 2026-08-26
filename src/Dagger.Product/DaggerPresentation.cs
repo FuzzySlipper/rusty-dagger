@@ -2,19 +2,24 @@ using Rusty.Engine.Native;
 
 namespace RustyDagger.Product;
 
-/// <summary>Owns the HUD contract and authored enemy sprite facts. World mesh publication awaits Engine resource admission.</summary>
+/// <summary>Owns the HUD contract and Dagger's retained world appearance facts.</summary>
 public sealed class DaggerPresentation
 {
     private readonly EngineApi _engine;
     private readonly NativeUiStreamHandle _hud;
+    private readonly NativeAppearanceHandle? _world;
     private readonly Dictionary<long, NativeAppearanceHandle> _sprites = [];
     private ulong _sequence;
 
-    public DaggerPresentation(EngineApi engine, ProjectFacts project)
+    public DaggerPresentation(EngineApi engine, PrivateersHoldInputs content)
     {
         _engine = engine;
         _hud = engine.Ui.OpenStream("dagger.hud", "dagger.ui.snapshot.v1");
-        foreach (var actor in project.Actors.Values.Where(actor => actor.Sprite is not null))
+        if (content.StaticMeshContentPath is { } meshPath)
+            _world = engine.Appearance.CreateStaticMeshFromContent(
+                new NativeColor { r = .72f, g = .7f, b = .65f, a = 1f },
+                meshPath);
+        foreach (var actor in content.Project.Actors.Values.Where(actor => actor.Sprite is not null))
             _sprites[actor.EntityId] = CreateSprite(actor.Sprite!);
     }
 
@@ -32,13 +37,22 @@ public sealed class DaggerPresentation
         var root = builder.Object(("player", playerValue), ("activeEncounter", activeEncounter), ("lastOutcome", builder.String(state.LastOutcome)));
         _engine.Ui.PublishProjection(_hud, ++_sequence, builder.Build(root));
 
-        var facts = state.Actors.Values.Where(actor => !actor.IsDead && _sprites.ContainsKey(actor.EntityId)).Select(actor => new NativeAppearanceFact
+        var facts = new List<NativeAppearanceFact>();
+        if (_world is { } world)
+            facts.Add(new NativeAppearanceFact
+            {
+                object_id = 1,
+                transform = IdentityTransform(),
+                appearance = world,
+                visible = 1,
+            });
+        facts.AddRange(state.Actors.Values.Where(actor => !actor.IsDead && _sprites.ContainsKey(actor.EntityId)).Select(actor => new NativeAppearanceFact
         {
             object_id = checked((ulong)actor.EntityId),
             transform = new NativeTransform { translation = actor.Position.ToNative(), rotation = new NativeQuat { w = 1 }, scale = new NativeVec3 { x = 1, y = 1, z = 1 } },
             appearance = _sprites[actor.EntityId], visible = 1,
-        }).ToArray();
-        _engine.Appearance.PublishSnapshot(facts);
+        }));
+        _engine.Appearance.PublishSnapshot([.. facts]);
     }
 
     private NativeAppearanceHandle CreateSprite(AuthoredSprite sprite)
@@ -50,4 +64,10 @@ public sealed class DaggerPresentation
             billboard = sprite.BillboardMode, tint = new NativeColor { r = 1, g = 1, b = 1, a = 1 },
         });
     }
+
+    private static NativeTransform IdentityTransform() => new()
+    {
+        rotation = new NativeQuat { w = 1 },
+        scale = new NativeVec3 { x = 1, y = 1, z = 1 },
+    };
 }

@@ -20,7 +20,7 @@ public sealed unsafe class DaggerRuntime : IDisposable
         _engine = engine;
         State = DaggerGameState.CreatePrivateersHold(content.Project);
         _spatial = new SpatialGameplayService(engine, content);
-        _presentation = new DaggerPresentation(engine, content.Project);
+        _presentation = new DaggerPresentation(engine, content);
     }
 
     public DaggerGameState State { get; }
