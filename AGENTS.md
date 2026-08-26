@@ -1,73 +1,92 @@
-# Rusty Dagger agent guidance
+# Rusty Dagger C# trial guidance
 
-Rusty Dagger imports Daggerfall/Arena2 content into Rusty Engine and owns the
-Daggerfall-side runtime, gameplay policy, product service, and Studio adapter.
-It is an exploratory game project centered on Privateer's Hold, not a general
-Daggerfall remake or a place for speculative Engine APIs.
+## Scope and pairing
 
-## Begin with Den
+This guidance applies only to:
+
+- Dagger worktree `/home/dev/worktrees/rusty-dagger-csharp-runtime`
+- Dagger branch `codex/csharp-product-runtime`
+- Engine worktree `/home/dev/worktrees/rusty-engine-csharp-runtime`
+- Engine branch `codex/csharp-nativeaot-trial`
+
+Stable Rusty Dagger and Engine `main` are not the implementation targets for
+this trial. Do not redirect the experiment to `/home/dev/rusty-engine`, merge
+either branch to main, or revive a stable-main compatibility path during an
+ordinary task.
+
+## Den
 
 - Project ID: `rusty-dagger`.
-- Resolve `get_agent_guidance` before substantial work. Follow the returned
-  guidance and its referenced Den documents.
-- If Den is unreachable, stop and report the failed tool or command. Do not
-  reconstruct project decisions from old commits or local prose.
-- Active work, acceptance, known gaps, and review evidence live in Den tasks.
-  Board posts are historical records, not standing instructions.
+- Resolve live Den guidance before substantial work. The user's current task
+  and C#-trial task descriptions override older project documents that prescribe
+  downstream Rust, compiled TypeScript gameplay, Angular, HTTP product servers,
+  Product Model, or the previous authority posture.
+- If Den is unreachable, stop and report the failed tool. Do not reconstruct
+  current task state from deleted prose or old commits.
 
-Permanent project concepts:
+## Active source shape
 
-- [Project charter](den://documents/rusty-dagger/project-charter)
-- [Architecture and ownership](den://documents/rusty-dagger/architecture-and-ownership)
-- [Gameplay authoring and runtime](den://documents/rusty-dagger/gameplay-authoring-and-runtime)
-- [Content import and provenance](den://documents/rusty-dagger/content-import-and-provenance)
-- [Verification and certification](den://documents/rusty-dagger/verification-and-certification)
-- [Known limitations](den://documents/rusty-dagger/known-limitations)
+- `src/Dagger.Product/` is the sole active downstream application/gameplay
+  implementation lane.
+- `src/ui/` is a thin DOM UI adapter. It may present projections and submit
+  semantic UI actions; it must not own gameplay state or render non-UI game
+  elements.
+- `src/scripts/` builds the UI/product and launches the paired Engine branch.
+- `content/` and imported project/nav data remain product inputs.
+- `gameplay/` is semantic donor material from the pre-pivot TypeScript design.
+  Consult its catalogs, formulas, and authored meaning, but do not execute it,
+  extend its runtime architecture, or reproduce its AST/package machinery in
+  C#.
+- Existing root Rust crates, Angular application, HTTP server, Studio adapter,
+  Cargo workspace, package graph, and old scripts are historical donor code.
+  They are not an active product route and their tests are not acceptance gates
+  for the C# trial.
 
-These documents own durable intent; production code, schemas, and tests own
-exact implemented behavior. Do not create another repository design note.
+## Product and Engine responsibilities
 
-## Working boundaries
+> The product decides. The Engine guarantees.
 
-- Preserve unrelated changes in the shared worktree.
-- Dagger Rust owns Daggerfall/gameplay meaning and product orchestration.
-  TypeScript authors packages and presents the Angular UI; it never evaluates
-  gameplay or mounts an Engine renderer implementation.
-- Consume only the adjacent public `rusty-engine` facade. Do not fetch, pin,
-  reset, update, or enforce freshness for the sibling checkout.
-- The development product is Angular mounted by
-  `@rusty-engine/application-host`, backed by the Dagger Rust product service.
-  Engine owns the sole renderer/canvas. There is no fixed native Dagger shell.
-- Tauri is the eventual publication adapter, not an ordinary feature or CI
-  gate.
-- Unsupported Studio mutations fail closed. Ordinary content drift and quality
-  heuristics warn unless a hard stop prevents concrete loss or boundary
-  violation.
+- C# owns all new downstream application/game logic, authoritative product
+  state, gameplay services, orchestration, content meaning, and policy.
+- Do not write new downstream Rust. Do not move gameplay back into Rust to make
+  an existing type, test, or boundary easier to satisfy.
+- Use the generated C# API from the paired Engine for lifecycle, input,
+  rendering/presentation, spatial mechanisms, resources, persistence
+  primitives, and other reusable infrastructure.
+- Direct typed calls and ordinary C# organization are the green path. Do not
+  create JSON method protocols, string dispatch, capability registries, generic
+  command buses, schema/version negotiation, or security ceremony.
+- Engine owns the renderer, resources, retained handles, frames, backend, and
+  canvas. C# supplies product facts through named Engine functions. TypeScript
+  supplies DOM UI only. Any TypeScript/browser rendering of non-UI game elements
+  is a wrong turn.
 
-## Donor consultation
+## Stopping rule
 
-For new Daggerfall formats, formulas, gameplay, animation, orientation, AI, or
-world assembly, consult the frozen Daggerfall Unity source before designing an
-alternative. Use the `consult-donor-code` skill when available and follow
-[Content import and provenance](den://documents/rusty-dagger/content-import-and-provenance).
-Inspect exact source and meaningful callers/callees; classify substantial use
-as adopted, adapted, rejected, or not found in the task/review evidence.
+If the product needs an Engine capability that the generated API does not
+provide, stop. Report the exact upstream need and request an Engine task. Do not
+recreate the mechanism in C#, TypeScript, a fake renderer, a test harness, or a
+parallel host merely to mark the task complete. “This needs upstream work” is a
+valid successful task outcome.
 
-This is proportional. Engine-facade and build-plumbing work does not need donor
-ceremony. If the donor index is unavailable, read
-`/home/research/daggerfall-unity` directly. If the source is unavailable,
-report the missing evidence rather than designing from memory.
+## Task execution
 
-## Verification
+- Organize product code as ordinary C# modules with a thin native composition
+  root. Avoid a single runtime-glue dumping ground.
+- At meaningful milestones report: goal advanced, necessary surfaces, proof
+  scaffolding, drift/unsupported boundary, and upstream requests.
+- Product behavior is the deliverable. Tests, review paperwork, and conformance
+  exercises are optional evidence and must not expand the task.
+- Use only the narrow compile/path/readback checks named by the current task.
+  Do not run old Rust, Angular, browser, packaging, conformance, or security
+  suites unless explicitly requested.
+- Preserve unrelated work and donor sources. Commit and push only the
+  experimental Dagger branch.
 
-Run the narrowest check first, then the gate that owns the changed surface.
-`scripts/verify.sh` is the deterministic, Playwright-free aggregate gate.
-`scripts/check-dagger-product-browser.sh` is a manual product diagnostic for
-browser-visible changes, not a default CI gate. Gameplay semantics belong in
-focused Rust tests; visible interaction and composition may require browser or
-playtest evidence.
+## Documentation status
 
-Report exactly what ran and which relevant live checks were skipped. Add or
-retain proofs only while they serve a current product feature or risky
-boundary; see
-[Verification and certification](den://documents/rusty-dagger/verification-and-certification).
+This branch intentionally has no durable architecture corpus beyond this short
+guidance and the root README. If the C# spike is selected, a later focused task
+will extract useful durable ideas from stable history and write new documents
+from demonstrated behavior. Do not write aspirational architecture during the
+port.
