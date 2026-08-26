@@ -1,5 +1,7 @@
-Dagger.Product/bin/
-Dagger.Product/obj/
+Dagger.Game/bin/
+Dagger.Game/obj/
+Dagger.NativeProduct/bin/
+Dagger.NativeProduct/obj/
 browser-bundle/
 native/
 native-*/

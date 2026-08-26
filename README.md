@@ -10,9 +10,10 @@ Engine's NativeAOT API.
 
 ```text
 src/
-  Dagger.Product/   C# application, gameplay, and native composition root
-  ui/               thin TypeScript DOM UI only
-  scripts/          candidate build and launch plumbing
+  Dagger.Game/          safe C# application and gameplay
+  Dagger.NativeProduct/ generated NativeAOT composition boundary
+  ui/                   thin TypeScript DOM UI only
+  scripts/              candidate build and launch plumbing
 
 gameplay/           pre-pivot TypeScript semantic donor; not an active runtime
 content/            imported Privateer's Hold product inputs
@@ -40,11 +41,11 @@ preferred to recreating Engine infrastructure downstream.
 
 ## Current implementation state
 
-The current C# implementation proves generated direct Engine access, gameplay
-state progression, and Engine-owned world publication. Its single-project
-layout is walking-spike scaffolding, not the next gameplay foundation. Engine
-SDK organization comes first; Dagger should then split safe game/application
-code from its thin NativeAOT composition boundary before broader gameplay work.
+`Dagger.Game` owns ordinary safe C# gameplay, state, content interpretation,
+and Engine service use. It references only the safe `Rusty.Engine` contracts.
+`Dagger.NativeProduct` selects that product type and receives its internal ABI,
+service implementations, lifecycle adaptation, and exports from the Engine
+source generator.
 
 The candidate launch command lives at:
 

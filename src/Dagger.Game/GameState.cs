@@ -1,6 +1,7 @@
-using Rusty.Engine.Native;
+using System.Numerics;
+using Rusty.Engine;
 
-namespace RustyDagger.Product;
+namespace RustyDagger.Game;
 
 public readonly record struct WorldPoint(float X, float Y, float Z)
 {
@@ -11,8 +12,8 @@ public readonly record struct WorldPoint(float X, float Y, float Z)
         return MathF.Sqrt(dx * dx + dz * dz);
     }
 
-    public NativeVec3 ToNative() => new() { x = X, y = Y, z = Z };
-    public static WorldPoint From(NativeVec3 value) => new(value.x, value.y, value.z);
+    public Vector3 ToVector() => new(X, Y, Z);
+    public static WorldPoint From(Vector3 value) => new(value.X, value.Y, value.Z);
 }
 
 public sealed class DaggerGameState
@@ -25,7 +26,7 @@ public sealed class DaggerGameState
 
     public PlayerState Player { get; }
     public IReadOnlyDictionary<long, ActorState> Actors { get; }
-    public ulong Turns { get; set; }
+    public ulong Updates { get; set; }
     public string LastOutcome { get; set; } = "Ready";
 
     public static DaggerGameState CreatePrivateersHold(ProjectFacts project)
@@ -62,7 +63,7 @@ public sealed class PlayerState
 
     public ActorDefinition Definition { get; }
     public WorldPoint? Position { get; private set; }
-    public NativeCharacterMotion Motion { get; set; }
+    public CharacterMotion Motion { get; set; }
     public float YawRadians { get; set; } = MathF.PI;
     public float PitchRadians { get; set; }
     public int Health { get; private set; }
@@ -73,7 +74,7 @@ public sealed class PlayerState
     public InventoryState Inventory { get; private set; }
     public EquipmentState Equipment { get; }
 
-    public void MoveTo(NativeVec3 position) => Position = WorldPoint.From(position);
+    public void MoveTo(Vector3 position) => Position = WorldPoint.From(position);
     public void AwardExperience(int amount) => Experience += Math.Max(0, amount);
     public int ApplyDamage(int amount) { var applied = Math.Min(Health, Math.Max(0, amount)); Health -= applied; return applied; }
     public void AddItem(ItemStack item) => Inventory = new InventoryState([.. Inventory.Items, item]);

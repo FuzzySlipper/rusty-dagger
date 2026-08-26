@@ -1,4 +1,4 @@
-namespace RustyDagger.Product;
+namespace RustyDagger.Game;
 
 public sealed record StatBlock(int Strength, int Agility, int Luck, int LongBlade, int HandToHand, int Dodging);
 public sealed record ActorDefinition(string Id, StatBlock Stats, int ArmorValue, int MaximumHealth, int MaximumStamina, int MaximumMagicka, int ExperienceReward, EnemyAttackDefinition? Attack = null, LootDefinition? Loot = null);
