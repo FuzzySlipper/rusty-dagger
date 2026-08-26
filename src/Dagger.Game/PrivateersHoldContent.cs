@@ -1,21 +1,20 @@
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
-using Rusty.Engine.Native;
+using Rusty.Engine;
 
-namespace RustyDagger.Product;
+namespace RustyDagger.Game;
 
 /// <summary>Owns the product interpretation of the admitted Privateer's Hold inputs.</summary>
-public static unsafe class PrivateersHoldContent
+public static class PrivateersHoldContent
 {
     private const string ProjectPath = "projects/privateers-hold.project.json";
     private const string NavgridPath = "projects/privateers-hold.navgrid.json";
     private const string StaticMeshPath = "imported/privateers-hold.static-mesh.json";
 
-    public static PrivateersHoldInputs Read(NativeProductCreateArgs* args)
+    public static PrivateersHoldInputs Read(ProductContent content)
     {
-        if (args is null) return PrivateersHoldInputs.Unavailable;
-
-        var files = CopyKnownFiles(args);
+        var files = CopyKnownFiles(content);
         return files.TryGetValue(ProjectPath, out var project)
             && files.TryGetValue(NavgridPath, out var navgrid)
             && files.TryGetValue(StaticMeshPath, out var mesh)
@@ -23,18 +22,15 @@ public static unsafe class PrivateersHoldContent
             : PrivateersHoldInputs.Unavailable;
     }
 
-    private static Dictionary<string, byte[]> CopyKnownFiles(NativeProductCreateArgs* args)
+    private static Dictionary<string, byte[]> CopyKnownFiles(ProductContent content)
     {
         var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
-        if (args->content is null) return files;
-
-        for (nuint index = 0; index < args->content_len; index++)
+        foreach (var file in content.Files.Span)
         {
-            var file = args->content[index];
-            if (file.path is null || file.bytes is null || file.path_len == 0) continue;
-            var path = Encoding.UTF8.GetString(new ReadOnlySpan<byte>(file.path, checked((int)file.path_len)));
+            if (file.Path.IsEmpty) continue;
+            var path = Encoding.UTF8.GetString(file.Path.Span);
             if (path is not (ProjectPath or NavgridPath or StaticMeshPath)) continue;
-            files[path] = new ReadOnlySpan<byte>(file.bytes, checked((int)file.bytes_len)).ToArray();
+            files[path] = file.Bytes.ToArray();
         }
         return files;
     }
@@ -88,18 +84,18 @@ public static unsafe class PrivateersHoldContent
         return new AuthoredSprite(spriteAsset.Path, spriteAsset.UvMin, spriteAsset.UvMax, ReadVec2(sprite.GetProperty("pivot")), ReadVec2(sprite.GetProperty("size")), billboardMode);
     }
 
-    private static NativeVec2 ReadVec2(JsonElement value) => new() { x = value[0].GetSingle(), y = value[1].GetSingle() };
+    private static Vector2 ReadVec2(JsonElement value) => new(value[0].GetSingle(), value[1].GetSingle());
 
-    private static NativePlanarNavCell[] ReadNavigation(byte[] bytes)
+    private static PlanarNavCell[] ReadNavigation(byte[] bytes)
     {
         using var document = JsonDocument.Parse(bytes);
         var cells = document.RootElement.GetProperty("cells");
-        var result = new NativePlanarNavCell[cells.GetArrayLength()];
+        var result = new PlanarNavCell[cells.GetArrayLength()];
         var index = 0;
         foreach (var cell in cells.EnumerateArray())
         {
             // Authored order is [x, z, level, supportY]; Engine planar navigation uses x, level, z.
-            result[index++] = new NativePlanarNavCell { x = cell[0].GetInt64(), y = cell[2].GetInt64(), z = cell[1].GetInt64() };
+            result[index++] = new PlanarNavCell(cell[0].GetInt64(), cell[2].GetInt64(), cell[1].GetInt64());
         }
         return result;
     }
@@ -109,19 +105,19 @@ public static unsafe class PrivateersHoldContent
         using var document = JsonDocument.Parse(bytes);
         var source = document.RootElement.GetProperty("payload").GetProperty("source");
         var positions = source.GetProperty("positions");
-        var vertices = new NativeVec3[positions.GetArrayLength() / 3];
+        var vertices = new Vector3[positions.GetArrayLength() / 3];
         for (var index = 0; index < vertices.Length; index++)
         {
             var offset = index * 3;
-            vertices[index] = new NativeVec3 { x = positions[offset].GetSingle(), y = positions[offset + 1].GetSingle(), z = positions[offset + 2].GetSingle() };
+            vertices[index] = new Vector3(positions[offset].GetSingle(), positions[offset + 1].GetSingle(), positions[offset + 2].GetSingle());
         }
 
         var indices = source.GetProperty("indices");
-        var triangles = new NativeTriangle[indices.GetArrayLength() / 3];
+        var triangles = new Triangle[indices.GetArrayLength() / 3];
         for (var index = 0; index < triangles.Length; index++)
         {
             var offset = index * 3;
-            triangles[index] = new NativeTriangle { a = indices[offset].GetUInt32(), b = indices[offset + 1].GetUInt32(), c = indices[offset + 2].GetUInt32() };
+            triangles[index] = new Triangle(indices[offset].GetUInt32(), indices[offset + 1].GetUInt32(), indices[offset + 2].GetUInt32());
         }
         return new CollisionMesh(vertices, triangles);
     }
@@ -135,17 +131,17 @@ public static unsafe class PrivateersHoldContent
     }
 }
 
-public sealed class PrivateersHoldInputs(ProjectFacts project, NativePlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
+public sealed class PrivateersHoldInputs(ProjectFacts project, PlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
 {
     public static readonly PrivateersHoldInputs Unavailable = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), null);
     public ProjectFacts Project { get; } = project;
-    public NativePlanarNavCell[] Navigation { get; } = navigation;
+    public PlanarNavCell[] Navigation { get; } = navigation;
     public CollisionMesh Collision { get; } = collision;
     public string? StaticMeshContentPath { get; } = staticMeshContentPath;
 }
 
 public sealed record ProjectFacts(WorldPoint? PlayerPosition, IReadOnlyDictionary<long, AuthoredActor> Actors);
 public sealed record AuthoredActor(long EntityId, string Name, WorldPoint Position, AuthoredSprite? Sprite);
-public sealed record SpriteAsset(string Path, NativeVec2 UvMin, NativeVec2 UvMax);
-public sealed record AuthoredSprite(string TexturePath, NativeVec2 UvMin, NativeVec2 UvMax, NativeVec2 Pivot, NativeVec2 Size, uint BillboardMode);
-public sealed record CollisionMesh(NativeVec3[] Vertices, NativeTriangle[] Triangles);
+public sealed record SpriteAsset(string Path, Vector2 UvMin, Vector2 UvMax);
+public sealed record AuthoredSprite(string TexturePath, Vector2 UvMin, Vector2 UvMax, Vector2 Pivot, Vector2 Size, uint BillboardMode);
+public sealed record CollisionMesh(Vector3[] Vertices, Triangle[] Triangles);
