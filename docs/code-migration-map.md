@@ -2,8 +2,7 @@
 
 **Status:** living migration inventory
 
-**Snapshot:** 2026-08-26, base checkout `d0c121122efc565c0bafcfa007edacbb8a1ad0f8`
-with the #7310 working-tree implementation described below
+**Snapshot:** 2026-08-27, #7310 reopened correction using Engine mechanics task #7336
 
 **Direction:** ordinary C# product code on Rusty Engine's generated NativeAOT path
 
@@ -158,7 +157,7 @@ src/Dagger.Game/
   Content/                         shared admitted-content interpretation where honest
   Modules/
     PlayerControl/                 input, look, movement, owned control state
-    Actors/                        actor identity, vitals, and lifecycle
+    Actors/                        actor identity, mechanics bindings, and lifecycle
     Combat/                        attacks, damage, cooldowns, resolutions
     Encounters/                    activation and completion
     Inventory/                     carried-item state and deliberate mutations
@@ -248,24 +247,25 @@ focused tests. `Dagger.Game` is safe ordinary product code;
 | `src/Dagger.Game/Dagger.Game.csproj` | `net10.0`, nullable/implicit usings, unsafe disabled, direct safe Engine project reference. | Active safe product project. |
 | `src/Dagger.Game/DaggerGame.cs` | Public product type; lifecycle gating, admitted-update decoding, and bounded delta derivation. | Reorganized by #7310 into the thin Engine entrypoint. |
 | `src/Dagger.Game/AssemblyInfo.cs` | Grants the focused test assembly access to internal product owners. | Active test seam; not a public product surface. |
-| `src/Dagger.Game/Daggerfall/DaggerfallComposition.cs` | Concrete Daggerfall assembly of content, tuning, module state, Engine dependencies, ordered systems, stable fact delivery, reactions, and presentation. | Active composition root; deliberately not a plugin/module framework. |
+| `src/Dagger.Game/Daggerfall/DaggerfallComposition.cs` | Concrete Daggerfall assembly of catalog policy, Engine mechanics bindings, module state, ordered systems, stable fact delivery, rewards, and presentation. | Active composition root; deliberately not a plugin/module framework. |
 | `src/Dagger.Game/Daggerfall/DaggerfallState.cs` | Inspection/composition aggregate over module-owned mutable families and update sequence. | Active; mutation remains behind each module owner. |
 | `src/Dagger.Game/Daggerfall/DaggerfallTuning.cs` | Discoverable immutable aggregate of narrow domain tuning records. | Active initial tuning seam; breadth remains partial. |
-| `src/Dagger.Game/Daggerfall/Content/DaggerfallDefinitions.cs` | Typed player, rat, skeletal warrior, longsword, encounter, enemy-attack, and loot definitions. | Active first-contact definitions; composition-driven catalog migration remains #7323. |
+| `src/Dagger.Game/Daggerfall/Content/*` | Typed Daggerfall stat/track identities, player formulas, actor bases/initials, combat/reward/HUD policy, and Engine mechanics catalog admission. | Active corrected #7310 seam; broad content assembly remains #7323. |
 | `src/Dagger.Game/Content/PrivateersHoldContent.cs` | Allowlisted admitted-file copy; project/entity/sprite interpretation; nav-cell conversion; collision decoding. | Active product input interpretation; partial and coupled to the current three generated JSON inputs. |
 | `src/Dagger.Game/Facts/ProductFacts.cs` | Product-local immutable fact contracts and stable delivery buffer. | Active #7310 mechanism; reaction facts are deferred one admitted update. |
 | `src/Dagger.Game/Modules/PlayerControl/*` | Owned movement/look state, input interpretation, tuning, and the single disposable Engine spatial session. | Active vertical slice; accepted movement remains a direct receipt flow rather than event choreography. |
-| `src/Dagger.Game/Modules/Actors/ActorsState.cs` | Player/enemy identity, vitals, cooldown continuation, and Actors-owned damage receipt. | Active narrow actor family. |
+| `src/Dagger.Game/Modules/Actors/ActorsState.cs` | Engine mechanics entity lifetime, cooldowns, and defeat lifecycle. | Active narrow actor family; it holds no Daggerfall definition, product identity, or local vital values. |
 | `src/Dagger.Game/Modules/Combat/CombatModule.cs` | Cooldown system, player/enemy melee, local attack resolution, formulas, and step-scoped keyed RNG. | Active narrow combat slice; emits typed facts instead of mutating consequence domains. |
-| `src/Dagger.Game/Modules/Encounters/*` | Proximity selection plus encounter-owned defeat state/reaction. | Active early slice; patrol, AI, and encounter breadth remain absent. |
+| `src/Dagger.Game/Modules/Encounters/*` | Proximity selection over product-supplied target and activation-radius definitions plus encounter-owned defeat state/reaction. | Active early slice; patrol, AI, and encounter breadth remain absent. |
 | `src/Dagger.Game/Modules/Inventory/InventoryState.cs` | Carried-item collection and deliberate add mutation. | Active early slice; stacking and inventory actions remain later work. |
 | `src/Dagger.Game/Modules/Equipment/EquipmentState.cs` | Right-hand equipment ownership. | Active minimal slice. |
-| `src/Dagger.Game/Modules/Loot/LootReaction.cs` | Exactly-once death reaction, keyed loot selection, and Inventory-owned award. | Active skeletal-warrior slice. |
-| `src/Dagger.Game/Modules/Progression/*` | Experience ownership and exactly-once death reward reaction. | Active experience slice; levels and broader progression are absent. |
-| `src/Dagger.Game/Modules/Presentation/*` | Typed-fact outcome formatting, HUD state/projection, retained world appearances, and safe UI value construction. | Active renderer-neutral product presentation; animation/corpses/effects/audio absent. |
+| `src/Dagger.Game/Daggerfall/DaggerfallRewardReactions.cs` | Daggerfall-owned exactly-once death reward policy, keyed loot selection, inventory award, and experience facts. | Active skeletal-warrior reward slice. |
+| `src/Dagger.Game/Modules/Loot/` | No active source owner; the former Daggerfall-specific reaction was removed. | Retired as a generic module boundary. |
+| `src/Dagger.Game/Modules/Progression/ProgressionState.cs` | Experience state and deliberate award mutation. | Active state-only experience slice; levels and broader progression are absent. |
+| `src/Dagger.Game/Daggerfall/Presentation/*` | Daggerfall HUD rows and wording plus Privateer's Hold world/sprite appearance choices. | Active Daggerfall presentation policy. `Modules/Presentation` now only owns reusable presentation state/value construction. |
 | `src/Dagger.NativeProduct/Dagger.NativeProduct.csproj` | NativeAOT shared library; unsafe enabled only for generated code; references game, Engine, and source generator. | Active thin composition project. |
 | `src/Dagger.NativeProduct/NativeProduct.cs` | One assembly attribute selecting `DaggerGame`. | Active and appropriately minimal. |
-| `tests/Dagger.Game.Tests/*` | Focused stable/deferred fact delivery, exactly-once rewards, deterministic key vocabulary, and outcome-format coverage. | Active focused architecture/behavior evidence; broader lifecycle and browser proof remain campaign tasks. |
+| `tests/Dagger.Game.Tests/*` | Focused stable/deferred fact delivery, deterministic key vocabulary, and Daggerfall composition evidence for Engine mechanics-backed HUD rows, exact-revision spends, combat defeat, and deferred rewards. | Active focused behavior evidence; broader lifecycle and browser proof remain campaign tasks. |
 
 Ignored `src/Dagger.Product/obj/**` C# files are stale output from the retired
 single-project spike, not another source lane. Current generated raw layouts,
@@ -274,7 +274,7 @@ status adaptation live under `Dagger.NativeProduct/obj/**`; never edit or
 commit them.
 
 The currently generated safe Engine context exposes Look, Spatial, Appearance,
-Random, and UI families. Dagger uses them directly. It does not use JSON method
+Random, Mechanics, and UI families. Dagger uses them directly. It does not use JSON method
 dispatch, reflection, a service locator, handwritten ABI declarations,
 `GCHandle`, pointers, or raw status values.
 
@@ -289,7 +289,7 @@ Current C# coverage is intentionally narrow:
 | Content | Three exact files and selected scene/entity/sprite/collision fields only. |
 | Catalog/combat | Player, rat, skeleton, longsword, two encounters, simple melee and one loot entry. |
 | Appearance | Static mesh and alive enemy sprites; no camera publication, directional animation, corpses, treasure, effects, lights, or material breadth. |
-| UI | Vitals, XP, encounter, outcome, Attack action only. |
+| UI | Ordered Daggerfall resource rows, XP, encounter, outcome, Attack action only. |
 
 The admitted project contains more authored content than the C# slice uses:
 296 entities include 43 enemies, 43 corpse entities, and eight treasure
@@ -311,8 +311,8 @@ DOM UI in the separate downstream UI container.
 
 | File | Concepts and concerns | Status |
 | --- | --- | --- |
-| `src/ui/main.ts` | Declares the local HUD projection shape, mounts HUD DOM, accepts only `dagger.ui.snapshot.v1`, writes vitals/encounter/outcome text, and emits the `attack` digital intent. | Active. Real projection/action wiring; no authoritative gameplay state. |
-| `src/ui/styles.css` | Fixed overlay layout, vitals, outcome text, and interactive Attack button. The outer HUD ignores pointer events while the button opts in. | Active DOM presentation. Current layout is intentionally small and has not adopted presentation aspect bounds. |
+| `src/ui/main.ts` | Declares the local HUD projection shape, mounts HUD DOM, accepts ordered resource rows, encounter/outcome text, and emits the `attack` digital intent. | Active. Resource rendering is data-driven; no authoritative gameplay state. |
+| `src/ui/styles.css` | Fixed overlay layout, resource rows, outcome text, and interactive Attack button. The outer HUD ignores pointer events while the button opts in. | Active DOM presentation. Current layout is intentionally small and has not adopted presentation aspect bounds. |
 | `src/scripts/build-ui.sh` | Strictly compiles `main.ts`, invokes bundle generation, and copies CSS. | Active build entrypoint. |
 | `src/scripts/generate-browser-bundle.mjs` | Selects Engine's product browser host, realtime lifecycle, browser advance owner, runtime HTTP adapter, and exact UI stream/contract. | Active host assembly. Engine source owns the generated canvas/transport implementation. |
 | `src/scripts/run-product.sh` | Builds the UI, NativeAOT-publishes the product library, and launches Engine's C# runtime with bundle/content/port. | Active product launch. |
@@ -350,7 +350,7 @@ obsolete; formulas and catalogs should be ported into direct, named C# owners.
 | `gameplay/src/authoring/programs.ts` | Sequence/conditional/spend/damage/intent program grammar. | Direct C# control flow partially covers behavior; retire grammar/runtime. |
 | `gameplay/src/authoring/envelope.ts` | Schema-2 binary64 package, provenance, canonical JSON, fingerprint. | Retire runtime/package topology. |
 | `gameplay/src/authoring/mod.ts` | Barrel for old authoring DSL. | Retire. |
-| `gameplay/src/catalogs/stats.ts` | 9 attributes, 35 skills, 3 tracks, 7 armor parts, XP/level. | Six-field `StatBlock` and three player tracks are a small subset. |
+| `gameplay/src/catalogs/stats.ts` | 9 attributes, 35 skills, 3 tracks, 7 armor parts, XP/level. | Typed primary/skill bases and three Daggerfall-selected Engine-backed tracks are a small subset. |
 | `gameplay/src/catalogs/actions.ts` | Five actions, hit formula/evidence, weapon/armor leaves, stamina costs, cooldowns. | Rat/skeleton/player melee partially ported; thief/power attack and evidence breadth absent. |
 | `gameplay/src/catalogs/actors.ts` | Player and thief, starting loadout, behavior, XP, loot. | Player partial; thief absent. |
 | `gameplay/src/catalogs/monsters.ts` | 42 classic monsters, stats/skills/health/armor/attacks/XP/team/metal gates/loot. | Only rat and skeletal warrior records exist in C#. |
@@ -428,8 +428,8 @@ Legacy user-visible behaviors worth deliberate preservation include modal
 `inert`/`aria-hidden`, live regions, focus return to gameplay, Escape repeat
 protection and close-first handling, stable inventory geometry, authored/live
 distinction, sprite sequence/orientation inspection, and bounded 4:3–16:9
-presentation. The current UI has only vitals, one encounter summary, one outcome
-string, and Attack.
+presentation. The current UI has three Daggerfall-selected resource rows, one
+encounter summary, one outcome string, and Attack.
 
 Current counterparts are partial: content/project interpretation, basic player
 and actor state, movement/look, proximity encounters, small combat/loot,
@@ -672,7 +672,7 @@ behavior actually needs it.
 | Loot and inventory | TS/Rust catalogs and Angular inventory behavior | C# awards one skeleton loot entry and stores a flat inventory with right-hand weapon. **Early partial.** | #7310/#7324 separate ownership and death reactions; stack, equipment, loot-table, and UI breadth remain follow-up migration. |
 | Encounters and AI | Authored encounter data, Rust patrol/runtime | C# selects two proximity encounters and executes stationary cooldown melee. **Early partial.** | Patrol, navigation intent, spell casting, and broader actor behavior remain donor semantics. |
 | Appearance/world publication | Rust presentation/server and Angular host | C# publishes one static mesh and alive sprite facts through Engine appearance. **Ported vertical slice.** | Animation/directional frames/material breadth require named Engine capabilities as published. |
-| HUD/UI projection | Angular product contract and templates | C# publishes health/stamina/magicka/XP, active encounter, and last outcome; `src/ui` renders the DOM. **Early partial.** | #7325 certifies the thin first-contact projection/action path; richer UI remains follow-up migration. |
+| HUD/UI projection | Angular product contract and templates | Daggerfall selects ordered health/stamina/magicka resource descriptors; C# publishes Engine mechanics current/maximum values plus XP, active encounter, and last outcome; `src/ui` renders the rows generically. **Early partial.** | #7325 certifies the thin first-contact projection/action path; richer UI remains follow-up migration. |
 | Audio | Importer combat manifests and audio files | No current C# publication/service use. **Not ported.** | Stop at missing Engine audio family; do not play audio directly in downstream browser code. |
 | Persistence/settings | Old planned Rust/Angular task descriptions | No current C# persistence/settings owner. **Not ported; old tasks need re-triage.** | Use the safe Engine persistence family when published; product schema/policy stays C#. |
 | Studio/Lab/developer commands | Rust Studio adapter/server and Angular Lab | No current-path equivalent beyond donor files. **Not ported / topology retired.** | Re-scope product-useful inspection and commands against C# and named Engine APIs. |
@@ -686,16 +686,17 @@ behavior actually needs it.
 - Current content parsing deliberately admits three known JSON files directly.
   This is working product interpretation, not a promise that the current raw
   JSON shape is the final Engine content API.
-- `DaggerPresentation` creates Engine appearances and publishes facts, which is
-  the correct ownership direction. Animation, audio, materials, richer UI, and
-  other missing families must stop at the safe Engine boundary when absent.
+- `DaggerfallHudProjection`, `DaggerfallOutcomePresentation`, and
+  `PrivateersHoldAppearance` own the distinct Daggerfall HUD, wording, and
+  world-appearance concerns. Animation, audio, materials, richer UI, and other
+  missing families must stop at the safe Engine boundary when absent.
 - Engine `AppearanceFact` values are presentation-mechanism inputs and must not
   be conflated with the proposed buffered gameplay facts used for cross-module
   accepted transitions.
 - `UiValueBuilder` is downstream safe-value construction around an Engine
   contract. Do not let it grow into a generic schema/transport framework.
-- Current deterministic combat keys contain `turn:` even though updates are
-  realtime-neutral. #7310 explicitly owns the terminology/sequence cleanup.
+- Current deterministic combat keys are step-scoped (`step:`) and preserve the
+  originating update sequence for deferred loot.
 - #7310 now assigns module-local mutation ownership while allowing a top-level
   state aggregate for composition and inspection; it does not preserve a freely
   mutable global state bag.

@@ -1,22 +1,17 @@
-using RustyDagger.Game.Content;
-using RustyDagger.Game.Daggerfall.Content;
+using Rusty.Engine;
 using RustyDagger.Game.Modules.PlayerControl;
 
 namespace RustyDagger.Game.Modules.Actors;
 
-internal sealed class ActorsState
+/// <summary>Generic actor lifecycle and mechanics bindings. Product catalogs choose identities, stats, tracks, and combat policy.</summary>
+internal sealed class ActorsState : IDisposable
 {
     private readonly Dictionary<long, ActorState> _actors;
 
-    internal ActorsState(ActorDefinition playerDefinition, IEnumerable<AuthoredActor> authoredActors)
+    internal ActorsState(PlayerActorState player, IEnumerable<ActorSpawn> actors)
     {
-        Player = new PlayerActorState(playerDefinition);
-        _actors = new Dictionary<long, ActorState>();
-        foreach (AuthoredActor authored in authoredActors)
-        {
-            ActorDefinition? definition = DaggerfallDefinitions.ForAuthoredName(authored.Name);
-            if (definition is not null) _actors[authored.EntityId] = new ActorState(authored.EntityId, definition, authored.Position, authored.Sprite);
-        }
+        Player = player;
+        _actors = actors.ToDictionary(actor => actor.EntityId, actor => new ActorState(actor.EntityId, actor.Mechanics, actor.Position));
     }
 
     internal PlayerActorState Player { get; }
@@ -27,46 +22,56 @@ internal sealed class ActorsState
         Player.AdvanceCooldown(deltaSeconds);
         foreach (ActorState actor in _actors.Values) actor.AdvanceCooldown(deltaSeconds);
     }
-}
 
-internal sealed class PlayerActorState(ActorDefinition definition)
-{
-    internal ActorDefinition Definition { get; } = definition;
-    internal int Health { get; private set; } = definition.MaximumHealth;
-    internal int Stamina { get; private set; } = definition.MaximumStamina;
-    internal int Magicka { get; } = definition.MaximumMagicka;
-    internal float AttackCooldownSeconds { get; private set; }
-    internal bool IsDead => Health == 0;
-    internal void SpendStamina(int amount) => Stamina = Math.Max(0, Stamina - Math.Max(0, amount));
-    internal void BeginAttack(float cooldownSeconds) => AttackCooldownSeconds = cooldownSeconds;
-    internal DamageReceipt ApplyDamage(int amount)
+    public void Dispose()
     {
-        if (IsDead) return new(0, false);
-        int applied = Math.Min(Health, Math.Max(0, amount));
-        Health -= applied;
-        return new(applied, Health == 0);
+        Player.Dispose();
+        foreach (ActorState actor in _actors.Values) actor.Dispose();
     }
-    internal void AdvanceCooldown(float deltaSeconds) => AttackCooldownSeconds = Math.Max(0f, AttackCooldownSeconds - deltaSeconds);
 }
 
-internal sealed class ActorState(long entityId, ActorDefinition definition, WorldPoint position, AuthoredSprite? sprite)
+internal sealed record ActorMechanicsBinding(MechanicsEntity Entity);
+internal sealed record ActorSpawn(long EntityId, MechanicsEntity Mechanics, WorldPoint Position);
+
+internal interface IActorCombatant
+{
+    MechanicsEntity Mechanics { get; }
+    float AttackCooldownSeconds { get; }
+    bool IsDefeated { get; }
+    void BeginAttack(float cooldownSeconds);
+    void RecordDefeat();
+}
+
+internal sealed class PlayerActorState(ActorMechanicsBinding mechanics) : IActorCombatant, IDisposable
+{
+    internal MechanicsEntity Mechanics { get; } = mechanics.Entity;
+    internal float AttackCooldownSeconds { get; private set; }
+    internal bool IsDefeated { get; private set; }
+    internal void BeginAttack(float cooldownSeconds) => AttackCooldownSeconds = cooldownSeconds;
+    internal void AdvanceCooldown(float deltaSeconds) => AttackCooldownSeconds = Math.Max(0f, AttackCooldownSeconds - deltaSeconds);
+    internal void RecordDefeat() => IsDefeated = true;
+    MechanicsEntity IActorCombatant.Mechanics => Mechanics;
+    float IActorCombatant.AttackCooldownSeconds => AttackCooldownSeconds;
+    bool IActorCombatant.IsDefeated => IsDefeated;
+    void IActorCombatant.BeginAttack(float cooldownSeconds) => BeginAttack(cooldownSeconds);
+    void IActorCombatant.RecordDefeat() => RecordDefeat();
+    public void Dispose() => Mechanics.Dispose();
+}
+
+internal sealed class ActorState(long entityId, MechanicsEntity mechanics, WorldPoint position) : IActorCombatant, IDisposable
 {
     internal long EntityId { get; } = entityId;
-    internal ActorDefinition Definition { get; } = definition;
+    internal MechanicsEntity Mechanics { get; } = mechanics;
     internal WorldPoint Position { get; } = position;
-    internal AuthoredSprite? Sprite { get; } = sprite;
-    internal int Health { get; private set; } = definition.MaximumHealth;
     internal float AttackCooldownSeconds { get; private set; }
-    internal bool IsDead => Health == 0;
+    internal bool IsDefeated { get; private set; }
     internal void BeginAttack(float cooldownSeconds) => AttackCooldownSeconds = cooldownSeconds;
     internal void AdvanceCooldown(float deltaSeconds) => AttackCooldownSeconds = Math.Max(0f, AttackCooldownSeconds - deltaSeconds);
-    internal DamageReceipt ApplyDamage(int amount)
-    {
-        if (IsDead) return new(0, false);
-        int applied = Math.Min(Health, Math.Max(0, amount));
-        Health -= applied;
-        return new(applied, Health == 0);
-    }
+    internal void RecordDefeat() => IsDefeated = true;
+    MechanicsEntity IActorCombatant.Mechanics => Mechanics;
+    float IActorCombatant.AttackCooldownSeconds => AttackCooldownSeconds;
+    bool IActorCombatant.IsDefeated => IsDefeated;
+    void IActorCombatant.BeginAttack(float cooldownSeconds) => BeginAttack(cooldownSeconds);
+    void IActorCombatant.RecordDefeat() => RecordDefeat();
+    public void Dispose() => Mechanics.Dispose();
 }
-
-internal readonly record struct DamageReceipt(int AppliedDamage, bool Died);

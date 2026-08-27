@@ -1,18 +1,19 @@
-using RustyDagger.Game.Daggerfall;
-using RustyDagger.Game.Daggerfall.Content;
 using RustyDagger.Game.Modules.Actors;
 using RustyDagger.Game.Modules.PlayerControl;
 
 namespace RustyDagger.Game.Modules.Encounters;
 
-internal static class EncounterSystem
+/// <summary>Encounter targets selected by product content before this module is composed.</summary>
+internal sealed record EncounterTarget(string Id, string Name, string Objective, long MemberEntityId, float ActivationRadius);
+
+internal sealed class EncounterSystem(IReadOnlyList<EncounterTarget> encounters)
 {
-    internal static EncounterDefinition? ActiveEncounter(DaggerfallState state)
+    internal EncounterTarget? ActiveEncounter(PlayerControlState playerControl, ActorsState actors)
     {
-        if (state.PlayerControl.Position is not WorldPoint playerPosition) return null;
-        foreach (EncounterDefinition encounter in DaggerfallDefinitions.Encounters.Values)
+        if (playerControl.Position is not WorldPoint playerPosition) return null;
+        foreach (EncounterTarget encounter in encounters)
         {
-            if (state.Actors.TryGet(encounter.MemberEntityId, out ActorState actor) && !actor.IsDead && playerPosition.HorizontalDistanceTo(actor.Position) < 12f)
+            if (actors.TryGet(encounter.MemberEntityId, out ActorState actor) && !actor.IsDefeated && playerPosition.HorizontalDistanceTo(actor.Position) < encounter.ActivationRadius)
                 return encounter;
         }
         return null;
