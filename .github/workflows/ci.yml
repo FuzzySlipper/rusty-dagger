@@ -19,6 +19,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes libclang-dev
+          libclang=$(find /usr/lib -path '*/llvm-*/lib/libclang.so' -print -quit)
+          test -n "$libclang"
+          echo "LD_LIBRARY_PATH=$(dirname "$libclang")" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version: 24
