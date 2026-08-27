@@ -5,5 +5,5 @@
   "localVerification": [
     "./scripts/verify.sh"
   ],
-  "notes": "Managed reviews require the complete Rust, Engine-boundary, and web-product CI job. The manual Playwright product check is reported when the changed surface warrants it."
+  "notes": "Managed reviews require the active C# product CI: safe build, focused tests, DOM UI build, and NativeAOT publish. Add gates only when an active product concern requires them."
 }
