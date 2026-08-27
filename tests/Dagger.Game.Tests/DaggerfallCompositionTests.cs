@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Reflection;
 using Rusty.Engine;
 using RustyDagger.Game.Content;
 using RustyDagger.Game.Daggerfall;
@@ -13,7 +14,7 @@ public sealed class DaggerfallCompositionTests
     public void Two_update_fact_boundary_preserves_origin_key_and_presents_after_reactions()
     {
         RecordingEngine engine = new();
-        using DaggerfallComposition composition = new(engine, InputsWithSkeletalWarrior());
+        using DaggerfallComposition composition = new(engine.Context, InputsWithSkeletalWarrior());
 
         for (int attack = 0; attack < 5; attack++)
         {
@@ -37,19 +38,35 @@ public sealed class DaggerfallCompositionTests
         return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [2000] = skeletal }), [], new CollisionMesh([], []), null);
     }
 
-    private sealed class RecordingEngine : IEngineContext
+    private sealed class RecordingEngine
     {
+        internal RecordingEngine()
+        {
+            Context = DispatchProxy.Create<IEngineContext, EngineContextProxy>();
+            ((EngineContextProxy)(object)Context).Owner = this;
+        }
+
+        public IEngineContext Context { get; }
         public RecordingLook Look { get; } = new();
         public RecordingSpatial Spatial { get; } = new();
         public RecordingAppearance Appearance { get; } = new();
         public RecordingRandom Random { get; } = new();
         public RecordingUi Ui { get; } = new();
-        ILookService IEngineContext.Look => Look;
-        IDynamicsService IEngineContext.Dynamics => throw new NotSupportedException();
-        ISpatialService IEngineContext.Spatial => Spatial;
-        IAppearanceService IEngineContext.Appearance => Appearance;
-        IRandomService IEngineContext.Random => Random;
-        IUiService IEngineContext.Ui => Ui;
+    }
+
+    private class EngineContextProxy : DispatchProxy
+    {
+        internal RecordingEngine Owner { get; set; } = null!;
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args) => targetMethod?.Name switch
+        {
+            "get_Look" => Owner.Look,
+            "get_Spatial" => Owner.Spatial,
+            "get_Appearance" => Owner.Appearance,
+            "get_Random" => Owner.Random,
+            "get_Ui" => Owner.Ui,
+            _ => throw new NotSupportedException(targetMethod?.Name),
+        };
     }
 
     private sealed class RecordingLook : ILookService
