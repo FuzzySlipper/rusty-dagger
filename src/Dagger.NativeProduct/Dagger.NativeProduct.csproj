@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StripSymbols>true</StripSymbols>
-    <EngineRoot Condition="'$(EngineRoot)' == ''">/home/dev/rusty-engine</EngineRoot>
+    <EngineRoot Condition="'$(EngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../rusty-engine'))</EngineRoot>
   </PropertyGroup>
 
   <ItemGroup>
