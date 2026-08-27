@@ -9,3 +9,5 @@ __pycache__/
 /AGENTS.md
 /engine-render-check/node_modules/
 /engine-render-check/generated/
+**/bin/
+**/obj/

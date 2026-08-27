@@ -1,10 +1,10 @@
 using System.Text;
 using Rusty.Engine;
 
-namespace RustyDagger.Game;
+namespace RustyDagger.Game.Modules.Presentation;
 
 /// <summary>Builds Dagger's safe structured UI value without retaining borrowed storage.</summary>
-public sealed class UiValueBuilder
+internal sealed class UiValueBuilder
 {
     private const uint NullKind = 0;
     private const uint NumberKind = 2;
