@@ -3,10 +3,12 @@ using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
 
-namespace RustyDagger.Game;
+using RustyDagger.Game.Modules.PlayerControl;
+
+namespace RustyDagger.Game.Content;
 
 /// <summary>Owns the product interpretation of the admitted Privateer's Hold inputs.</summary>
-public static class PrivateersHoldContent
+internal static class PrivateersHoldContent
 {
     private const string ProjectPath = "projects/privateers-hold.project.json";
     private const string NavgridPath = "projects/privateers-hold.navgrid.json";
@@ -131,17 +133,17 @@ public static class PrivateersHoldContent
     }
 }
 
-public sealed class PrivateersHoldInputs(ProjectFacts project, PlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, PlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
 {
-    public static readonly PrivateersHoldInputs Unavailable = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), null);
-    public ProjectFacts Project { get; } = project;
-    public PlanarNavCell[] Navigation { get; } = navigation;
-    public CollisionMesh Collision { get; } = collision;
-    public string? StaticMeshContentPath { get; } = staticMeshContentPath;
+    internal static readonly PrivateersHoldInputs Unavailable = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), null);
+    internal ProjectFacts Project { get; } = project;
+    internal PlanarNavCell[] Navigation { get; } = navigation;
+    internal CollisionMesh Collision { get; } = collision;
+    internal string? StaticMeshContentPath { get; } = staticMeshContentPath;
 }
 
-public sealed record ProjectFacts(WorldPoint? PlayerPosition, IReadOnlyDictionary<long, AuthoredActor> Actors);
-public sealed record AuthoredActor(long EntityId, string Name, WorldPoint Position, AuthoredSprite? Sprite);
-public sealed record SpriteAsset(string Path, Vector2 UvMin, Vector2 UvMax);
-public sealed record AuthoredSprite(string TexturePath, Vector2 UvMin, Vector2 UvMax, Vector2 Pivot, Vector2 Size, uint BillboardMode);
-public sealed record CollisionMesh(Vector3[] Vertices, Triangle[] Triangles);
+internal sealed record ProjectFacts(WorldPoint? PlayerPosition, IReadOnlyDictionary<long, AuthoredActor> Actors);
+internal sealed record AuthoredActor(long EntityId, string Name, WorldPoint Position, AuthoredSprite? Sprite);
+internal sealed record SpriteAsset(string Path, Vector2 UvMin, Vector2 UvMax);
+internal sealed record AuthoredSprite(string TexturePath, Vector2 UvMin, Vector2 UvMax, Vector2 Pivot, Vector2 Size, uint BillboardMode);
+internal sealed record CollisionMesh(Vector3[] Vertices, Triangle[] Triangles);
