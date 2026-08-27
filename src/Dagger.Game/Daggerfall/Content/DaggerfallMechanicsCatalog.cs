@@ -14,21 +14,38 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
     internal DaggerfallMechanicsCatalog(IMechanicsService mechanics)
     {
         _mechanics = mechanics;
-        _catalog = mechanics.CreateCatalog(new MechanicsCatalogCreateRequest("daggerfall_active_slice_v1"));
-        DefineStats();
-        DefineTracks();
-        mechanics.AdmitCatalog(_catalog);
+        MechanicsCatalog catalog = mechanics.CreateCatalog(new MechanicsCatalogCreateRequest("daggerfall_active_slice_v1"));
+        try
+        {
+            _catalog = catalog;
+            DefineStats();
+            DefineTracks();
+            mechanics.AdmitCatalog(_catalog);
+        }
+        catch
+        {
+            catalog.Dispose();
+            throw;
+        }
     }
 
-    internal ActorMechanicsBinding Bind(DaggerfallActorDefinition definition, ulong entityId)
+    internal MechanicsEntity Bind(DaggerfallActorDefinition definition, ulong entityId)
     {
         MechanicsEntity entity = _mechanics.BindEntity(new MechanicsEntityBindRequest(_catalog, entityId, definition.Id.Replace("-", "_", StringComparison.Ordinal)));
-        SetStats(entity, definition.Stats, definition.Vitals);
-        _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Health.Value, definition.Vitals.HealthMaximum));
-        _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Stamina.Value, definition.Vitals.StaminaMaximum));
-        _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Magicka.Value, definition.Vitals.MagickaMaximum));
-        _mechanics.CommitEntity(entity);
-        return new ActorMechanicsBinding(entity);
+        try
+        {
+            SetStats(entity, definition.Stats, definition.Vitals);
+            _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Health.Value, definition.Vitals.HealthMaximum));
+            _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Stamina.Value, definition.Vitals.StaminaMaximum));
+            _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Magicka.Value, definition.Vitals.MagickaMaximum));
+            _mechanics.CommitEntity(entity);
+            return entity;
+        }
+        catch
+        {
+            entity.Dispose();
+            throw;
+        }
     }
 
     public void Dispose() => _catalog.Dispose();

@@ -8,10 +8,10 @@ internal sealed class ActorsState : IDisposable
 {
     private readonly Dictionary<long, ActorState> _actors;
 
-    internal ActorsState(PlayerActorState player, IEnumerable<ActorSpawn> actors)
+    internal ActorsState(PlayerActorState player, IEnumerable<ActorState> actors)
     {
         Player = player;
-        _actors = actors.ToDictionary(actor => actor.EntityId, actor => new ActorState(actor.EntityId, actor.Mechanics, actor.Position));
+        _actors = actors.ToDictionary(actor => actor.EntityId);
     }
 
     internal PlayerActorState Player { get; }
@@ -30,48 +30,62 @@ internal sealed class ActorsState : IDisposable
     }
 }
 
-internal sealed record ActorMechanicsBinding(MechanicsEntity Entity);
-internal sealed record ActorSpawn(long EntityId, MechanicsEntity Mechanics, WorldPoint Position);
-
 internal interface IActorCombatant
 {
     MechanicsEntity Mechanics { get; }
     float AttackCooldownSeconds { get; }
     bool IsDefeated { get; }
     void BeginAttack(float cooldownSeconds);
-    void RecordDefeat();
 }
 
-internal sealed class PlayerActorState(ActorMechanicsBinding mechanics) : IActorCombatant, IDisposable
+internal sealed class PlayerActorState(MechanicsEntity mechanics, string defeatTrack, IMechanicsService mechanicsService) : IActorCombatant, IDisposable
 {
-    internal MechanicsEntity Mechanics { get; } = mechanics.Entity;
+    private const string LifecycleReadOperation = "actor_lifecycle";
+    private readonly IMechanicsService _mechanicsService = mechanicsService;
+    private readonly string _defeatTrack = defeatTrack;
+
+    internal MechanicsEntity Mechanics { get; } = mechanics;
     internal float AttackCooldownSeconds { get; private set; }
-    internal bool IsDefeated { get; private set; }
+    internal bool IsDefeated
+    {
+        get
+        {
+            MechanicsTrackReadReceipt track = _mechanicsService.ReadTrack(new MechanicsTrackReadRequest(Mechanics, _defeatTrack, LifecycleReadOperation));
+            return track.Current <= track.Minimum;
+        }
+    }
     internal void BeginAttack(float cooldownSeconds) => AttackCooldownSeconds = cooldownSeconds;
     internal void AdvanceCooldown(float deltaSeconds) => AttackCooldownSeconds = Math.Max(0f, AttackCooldownSeconds - deltaSeconds);
-    internal void RecordDefeat() => IsDefeated = true;
     MechanicsEntity IActorCombatant.Mechanics => Mechanics;
     float IActorCombatant.AttackCooldownSeconds => AttackCooldownSeconds;
     bool IActorCombatant.IsDefeated => IsDefeated;
     void IActorCombatant.BeginAttack(float cooldownSeconds) => BeginAttack(cooldownSeconds);
-    void IActorCombatant.RecordDefeat() => RecordDefeat();
     public void Dispose() => Mechanics.Dispose();
 }
 
-internal sealed class ActorState(long entityId, MechanicsEntity mechanics, WorldPoint position) : IActorCombatant, IDisposable
+internal sealed class ActorState(long entityId, MechanicsEntity mechanics, WorldPoint position, string defeatTrack, IMechanicsService mechanicsService) : IActorCombatant, IDisposable
 {
+    private const string LifecycleReadOperation = "actor_lifecycle";
+    private readonly string _defeatTrack = defeatTrack;
+    private readonly IMechanicsService _mechanicsService = mechanicsService;
+
     internal long EntityId { get; } = entityId;
     internal MechanicsEntity Mechanics { get; } = mechanics;
     internal WorldPoint Position { get; } = position;
     internal float AttackCooldownSeconds { get; private set; }
-    internal bool IsDefeated { get; private set; }
+    internal bool IsDefeated
+    {
+        get
+        {
+            MechanicsTrackReadReceipt track = _mechanicsService.ReadTrack(new MechanicsTrackReadRequest(Mechanics, _defeatTrack, LifecycleReadOperation));
+            return track.Current <= track.Minimum;
+        }
+    }
     internal void BeginAttack(float cooldownSeconds) => AttackCooldownSeconds = cooldownSeconds;
     internal void AdvanceCooldown(float deltaSeconds) => AttackCooldownSeconds = Math.Max(0f, AttackCooldownSeconds - deltaSeconds);
-    internal void RecordDefeat() => IsDefeated = true;
     MechanicsEntity IActorCombatant.Mechanics => Mechanics;
     float IActorCombatant.AttackCooldownSeconds => AttackCooldownSeconds;
     bool IActorCombatant.IsDefeated => IsDefeated;
     void IActorCombatant.BeginAttack(float cooldownSeconds) => BeginAttack(cooldownSeconds);
-    void IActorCombatant.RecordDefeat() => RecordDefeat();
     public void Dispose() => Mechanics.Dispose();
 }

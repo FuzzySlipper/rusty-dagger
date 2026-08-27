@@ -39,38 +39,52 @@ internal sealed class DaggerfallComposition : IDisposable
 
     internal DaggerfallComposition(IEngineContext engine, PrivateersHoldInputs inputs)
     {
-        _random = engine.Random;
-        DaggerfallTuning tuning = DaggerfallTuning.Defaults.Validate();
-        DaggerfallCatalog catalog = new();
-        _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics);
-        PlayerActorState player = new(_mechanicsCatalog.Bind(catalog.Player, PlayerMechanicsEntityId));
-        List<ActorSpawn> spawns = [];
-        Dictionary<long, DaggerfallActorDefinition> authored = [];
-        foreach (AuthoredActor source in inputs.Project.Actors.Values)
+        List<IDisposable> partiallyConstructed = [];
+        try
         {
-            if (catalog.ForAuthoredName(source.Name) is not DaggerfallActorDefinition definition) continue;
-            ActorMechanicsBinding binding = _mechanicsCatalog.Bind(definition, checked((ulong)source.EntityId));
-            spawns.Add(new ActorSpawn(source.EntityId, binding.Entity, source.Position));
-            authored.Add(source.EntityId, definition);
+            _random = engine.Random;
+            DaggerfallTuning tuning = DaggerfallTuning.Defaults.Validate();
+            DaggerfallCatalog catalog = new();
+            _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics);
+            partiallyConstructed.Add(_mechanicsCatalog);
+            PlayerActorState player = new(_mechanicsCatalog.Bind(catalog.Player, PlayerMechanicsEntityId), catalog.Player.Combat.Health.Value, engine.Mechanics);
+            partiallyConstructed.Add(player);
+            List<ActorState> actorStates = [];
+            Dictionary<long, DaggerfallActorDefinition> authored = [];
+            foreach (AuthoredActor source in inputs.Project.Actors.Values)
+            {
+                if (catalog.ForAuthoredName(source.Name) is not DaggerfallActorDefinition definition) continue;
+                MechanicsEntity mechanics = _mechanicsCatalog.Bind(definition, checked((ulong)source.EntityId));
+                ActorState actor = new(source.EntityId, mechanics, source.Position, definition.Combat.Health.Value, engine.Mechanics);
+                partiallyConstructed.Add(actor);
+                actorStates.Add(actor);
+                authored.Add(source.EntityId, definition);
+            }
+            ActorsState actors = new(player, actorStates);
+            Dictionary<long, CombatantState> combatants = [];
+            foreach ((long entityId, DaggerfallActorDefinition definition) in authored)
+                if (actors.TryGet(entityId, out ActorState actor)) combatants.Add(entityId, new CombatantState(actor, definition.Combat.ToCombatantProfile()));
+            _combatants = combatants;
+            _playerCombatant = new CombatantState(player, catalog.Player.Combat.ToCombatantProfile());
+            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition), actors, new InventoryState([new ItemStack(catalog.IronLongsword.Id, 1), new ItemStack("iron-dagger", 1), new ItemStack("iron-cuirass", 1), new ItemStack("gold-piece", 25)]), new EquipmentState(catalog.IronLongsword), new CombatState(), new EncounterState(), new ProgressionState());
+            Presentation = new PresentationState();
+            _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look);
+            _spatial = new SpatialMovementSystem(engine.Spatial, inputs, tuning.Spatial);
+            partiallyConstructed.Add(_spatial);
+            _combat = new CombatModule(engine.Mechanics, tuning.Combat);
+            _encounters = new EncounterSystem(catalog.Encounters);
+            _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
+            _encounterReactions = new EncounterReaction(State.Encounters);
+            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
+            _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, catalog.HudResources);
+            _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
+            _rightHand = catalog.IronLongsword;
         }
-        ActorsState actors = new(player, spawns);
-        Dictionary<long, CombatantState> combatants = [];
-        foreach ((long entityId, DaggerfallActorDefinition definition) in authored)
-            if (actors.TryGet(entityId, out ActorState actor)) combatants.Add(entityId, new CombatantState(actor, definition.Combat.ToCombatantProfile()));
-        _combatants = combatants;
-        _playerCombatant = new CombatantState(player, catalog.Player.Combat.ToCombatantProfile());
-        State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition), actors, new InventoryState([new ItemStack(catalog.IronLongsword.Id, 1), new ItemStack("iron-dagger", 1), new ItemStack("iron-cuirass", 1), new ItemStack("gold-piece", 25)]), new EquipmentState(catalog.IronLongsword), new CombatState(), new EncounterState(), new ProgressionState());
-        Presentation = new PresentationState();
-        _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look);
-        _spatial = new SpatialMovementSystem(engine.Spatial, inputs, tuning.Spatial);
-        _combat = new CombatModule(engine.Mechanics, tuning.Combat);
-        _encounters = new EncounterSystem(catalog.Encounters);
-        _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
-        _encounterReactions = new EncounterReaction(State.Encounters);
-        _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
-        _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, catalog.HudResources);
-        _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
-        _rightHand = catalog.IronLongsword;
+        catch
+        {
+            for (int index = partiallyConstructed.Count - 1; index >= 0; index--) partiallyConstructed[index].Dispose();
+            throw;
+        }
     }
 
     internal DaggerfallState State { get; }

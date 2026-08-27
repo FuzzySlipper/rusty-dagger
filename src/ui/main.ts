@@ -56,9 +56,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   return { dispose: () => { unsubscribe(); attack.removeEventListener('click', onAttack); stylesheet.remove(); shell.remove(); } };
 }
 
-function isHud(value: unknown): value is DaggerHud {
+export function isHud(value: unknown): value is DaggerHud {
   return typeof value === 'object' && value !== null
     && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResourceRow)
+    && 'activeEncounter' in value && isEncounter(value.activeEncounter)
     && 'lastOutcome' in value && typeof value.lastOutcome === 'string';
 }
 
@@ -66,6 +67,12 @@ function isResourceRow(value: unknown): value is DaggerHud['resources'][number] 
   return typeof value === 'object' && value !== null
     && 'id' in value && typeof value.id === 'string'
     && 'label' in value && typeof value.label === 'string'
-    && 'current' in value && typeof value.current === 'number'
-    && 'maximum' in value && typeof value.maximum === 'number';
+    && 'current' in value && typeof value.current === 'number' && Number.isFinite(value.current)
+    && 'maximum' in value && typeof value.maximum === 'number' && Number.isFinite(value.maximum);
+}
+
+function isEncounter(value: unknown): value is DaggerHud['activeEncounter'] {
+  return value === null || (typeof value === 'object'
+    && 'name' in value && typeof value.name === 'string'
+    && 'objective' in value && typeof value.objective === 'string');
 }

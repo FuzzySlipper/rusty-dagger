@@ -33,7 +33,6 @@ internal sealed class CombatModule(IMechanicsService mechanics, CombatTuning tun
         facts.Append(new ActorDamagedFact(actor.EntityId, checked((int)receipt.AppliedAmount)));
         if (receipt.After == receipt.Minimum)
         {
-            target.Actor.RecordDefeat();
             facts.Append(new ActorDiedFact(actor.EntityId, checked((int)receipt.AppliedAmount), updateSequence));
         }
         else facts.Append(new AttackHitFact(actor.EntityId, checked((int)receipt.AppliedAmount), EnemyAttack: false));
@@ -51,7 +50,6 @@ internal sealed class CombatModule(IMechanicsService mechanics, CombatTuning tun
         facts.Append(new PlayerDamagedFact(checked((int)receipt.AppliedAmount)));
         if (receipt.After == receipt.Minimum)
         {
-            player.Actor.RecordDefeat();
             facts.Append(new PlayerDiedFact(checked((int)receipt.AppliedAmount)));
         }
         facts.Append(new AttackHitFact(actor.EntityId, damage, EnemyAttack: true));

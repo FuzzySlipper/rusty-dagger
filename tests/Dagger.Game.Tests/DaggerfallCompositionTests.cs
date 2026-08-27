@@ -4,6 +4,7 @@ using System.Text;
 using Rusty.Engine;
 using RustyDagger.Game.Content;
 using RustyDagger.Game.Daggerfall;
+using RustyDagger.Game.Daggerfall.Content;
 using RustyDagger.Game.Modules.PlayerControl;
 using Xunit;
 
@@ -44,6 +45,37 @@ public sealed class DaggerfallCompositionTests
         Assert.Equal((0d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
         Assert.Equal("skeletal-warrior hit for 15 damage", composition.Presentation.LastOutcome);
         Assert.True(engine.Mechanics.SpendRequests.Count(request => request.Track == "health" && request.RevisionGuard == MechanicsRevisionGuard.Exact) >= 6);
+    }
+
+    [Fact]
+    public void Actor_lifecycle_reads_the_current_engine_damage_track_after_set_and_restore()
+    {
+        RecordingEngine engine = new();
+        using DaggerfallComposition composition = new(engine.Context, SkeletalInputs());
+        MechanicsEntity player = composition.State.Actors.Player.Mechanics;
+        MechanicsTrackReadReceipt health = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
+
+        engine.Mechanics.SetTrack(new MechanicsTrackSetRequest(player, "test_set", "test", "health", health.Minimum, MechanicsTrackSetPolicy.ClampToBounds, MechanicsRevisionGuard.Exact, health.Revision));
+        Assert.True(composition.State.Actors.Player.IsDefeated);
+
+        MechanicsTrackReadReceipt defeated = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
+        engine.Mechanics.RestoreTrack(new MechanicsTrackMutationRequest(player, "test_restore", "test", "health", 1, MechanicsRevisionGuard.Exact, defeated.Revision));
+        Assert.False(composition.State.Actors.Player.IsDefeated);
+    }
+
+    [Fact]
+    public void Mechanics_construction_releases_catalog_and_all_partially_bound_entities_after_injected_failures()
+    {
+        RecordingMechanics catalogFailure = new() { FailOnDefineStatCall = 1 };
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallMechanicsCatalog(catalogFailure));
+        Assert.Equal(1, catalogFailure.CatalogDisposals);
+        Assert.Equal(0, catalogFailure.EntityDisposals);
+
+        RecordingEngine engine = new();
+        engine.Mechanics.FailOnInitialStatCall = 12;
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallComposition(engine.Context, SkeletalInputs()));
+        Assert.Equal(1, engine.Mechanics.CatalogDisposals);
+        Assert.Equal(2, engine.Mechanics.EntityDisposals);
     }
 
     private static PrivateersHoldInputs SkeletalInputs()
