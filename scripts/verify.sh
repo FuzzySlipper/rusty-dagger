@@ -4,18 +4,11 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
-./scripts/audit-engine-boundary.sh
-pnpm install --frozen-lockfile
-pnpm product:check
-pnpm gameplay:check
-cargo fmt --all --check
-cargo test --workspace --locked
-cargo clippy --workspace --all-targets --locked -- -D warnings
-cargo build -p dagger-studio-adapter --bin dagger-studio-adapter --locked
-python3 ./scripts/check-adapter.py
-cargo run -p dagger-runtime --bin dagger-gameplay-check --locked
-cargo run -p dagger-runtime --bin dagger-walkthrough --locked
-cargo run -p dagger-runtime --bin dagger-navgrid --locked -- --check
-# The Playwright browser gate (check-dagger-product-browser.sh) is a manual
-# opt-in diagnostic and deliberately not part of the automatic gate: the
-# automatic suite stays slim, fast, and deterministic.
+dotnet build src/Dagger.Game/Dagger.Game.csproj
+dotnet test tests/Dagger.Game.Tests/Dagger.Game.Tests.csproj
+src/scripts/build-ui.sh
+dotnet publish src/Dagger.NativeProduct/Dagger.NativeProduct.csproj \
+  -c Release \
+  -r linux-x64 \
+  --self-contained true \
+  -o src/native
