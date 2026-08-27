@@ -9,6 +9,7 @@ internal sealed class UiValueBuilder
     private const uint NullKind = 0;
     private const uint NumberKind = 2;
     private const uint StringKind = 3;
+    private const uint ArrayKind = 4;
     private const uint ObjectKind = 5;
 
     private readonly List<StructuredValueNode> _nodes = [];
@@ -39,6 +40,18 @@ internal sealed class UiValueBuilder
             _edges.Add(keyedValue);
         }
         return Add(ObjectKind, firstEdge: firstEdge, childCount: checked((uint)fields.Length));
+    }
+
+    public uint Array(params uint[] values)
+    {
+        ArgumentNullException.ThrowIfNull(values);
+        uint firstEdge = checked((uint)_edges.Count);
+        foreach (uint value in values)
+        {
+            if (value >= (uint)_nodes.Count) throw new ArgumentOutOfRangeException(nameof(values));
+            _edges.Add(value);
+        }
+        return Add(ArrayKind, firstEdge: firstEdge, childCount: checked((uint)values.Length));
     }
 
     public UiValue Build(uint root)

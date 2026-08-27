@@ -9,7 +9,7 @@ interface ProductUiContext {
 }
 
 interface DaggerHud {
-  readonly player: { readonly health: number; readonly maximumHealth: number; readonly stamina: number; readonly maximumStamina: number; readonly magicka: number; readonly maximumMagicka: number };
+  readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly activeEncounter: { readonly name: string; readonly objective: string } | null;
   readonly lastOutcome: string;
 }
@@ -26,9 +26,6 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     <div class="dagger-title"><span>Privateer's Hold</span><strong>Exploring</strong></div>
     <div class="dagger-reticle" aria-hidden="true">+</div>
     <section class="dagger-vitals" aria-live="polite">
-      <p><span>Health</span><strong data-vital="health">—</strong></p>
-      <p><span>Stamina</span><strong data-vital="stamina">—</strong></p>
-      <p><span>Magicka</span><strong data-vital="magicka">—</strong></p>
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <button type="button">Attack</button>`;
@@ -36,16 +33,23 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
 
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
-  const vital = (name: string): HTMLElement => shell.querySelector<HTMLElement>(`[data-vital="${name}"]`)!;
+  const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
   const attack = shell.querySelector<HTMLButtonElement>('button')!;
   const onAttack = (): void => context.intents?.claim('attack', { kind: 'digital', active: true });
   attack.addEventListener('click', onAttack);
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
-    vital('health').textContent = `${value.player.health} / ${value.player.maximumHealth}`;
-    vital('stamina').textContent = `${value.player.stamina} / ${value.player.maximumStamina}`;
-    vital('magicka').textContent = `${value.player.magicka} / ${value.player.maximumMagicka}`;
+    vitals.replaceChildren(...value.resources.map((resource) => {
+      const row = document.createElement('p');
+      const label = document.createElement('span');
+      const amount = document.createElement('strong');
+      label.textContent = resource.label;
+      amount.dataset.resource = resource.id;
+      amount.textContent = `${resource.current} / ${resource.maximum}`;
+      row.append(label, amount);
+      return row;
+    }));
     title.textContent = value.activeEncounter ? `${value.activeEncounter.name} — ${value.activeEncounter.objective}` : 'Exploring';
     outcome.textContent = value.lastOutcome;
   }) ?? (() => {});
@@ -53,5 +57,15 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
 }
 
 function isHud(value: unknown): value is DaggerHud {
-  return typeof value === 'object' && value !== null && 'player' in value && 'lastOutcome' in value;
+  return typeof value === 'object' && value !== null
+    && 'resources' in value && Array.isArray(value.resources) && value.resources.every(isResourceRow)
+    && 'lastOutcome' in value && typeof value.lastOutcome === 'string';
+}
+
+function isResourceRow(value: unknown): value is DaggerHud['resources'][number] {
+  return typeof value === 'object' && value !== null
+    && 'id' in value && typeof value.id === 'string'
+    && 'label' in value && typeof value.label === 'string'
+    && 'current' in value && typeof value.current === 'number'
+    && 'maximum' in value && typeof value.maximum === 'number';
 }

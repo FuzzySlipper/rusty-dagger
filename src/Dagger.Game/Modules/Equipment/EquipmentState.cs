@@ -1,4 +1,4 @@
-using RustyDagger.Game.Daggerfall.Content;
+using RustyDagger.Game.Modules.Combat;
 
 namespace RustyDagger.Game.Modules.Equipment;
 

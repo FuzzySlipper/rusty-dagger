@@ -1,5 +1,3 @@
-using RustyDagger.Game.Daggerfall.Content;
-
 namespace RustyDagger.Game.Modules.Inventory;
 
 internal sealed class InventoryState(IEnumerable<ItemStack> initialItems)
