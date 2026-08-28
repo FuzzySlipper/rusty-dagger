@@ -30,11 +30,14 @@ current checked-in projects remain `Dagger.Game` and `Dagger.NativeProduct`
 until #7436 moves them. No documentation claim about the target graph is proof
 that a project, canary, bundle resolver, or importer has already landed.
 
-Adjacent current-source drift is explicit: `DaggerGame` and the current direct
-composition still use obsolete ProductUpdate/input/clock/constructor shapes and
-are not asserted to build against Engine HEAD. #7441 reconciles them with the
-already-published Engine update/input/look/spatial/appearance contracts before
-the project split.
+The current #7441 Daggerfall integration consumes Engine `ProductUpdate.Facts` directly:
+only running realtime batches with a finite positive `FixedDeltaSeconds` advance
+this realtime Daggerfall product. The one input slice is interpreted on the
+first admitted step and the remaining `AdmittedStepCount` steps reuse resulting
+held state without replaying one-shot actions. Dagger does not derive a local
+clock or reinterpret protocol numbers. Its safe direct service boundary is
+Mechanics (stats/tracks), Look, Spatial, Appearance, Random, and UI; current
+constructors and receipts match the generated contracts at Engine HEAD.
 
 ## Ownership model
 
@@ -88,9 +91,9 @@ the post-#7436 home; **generated** means derived output, never authority.
 | Current source family/file | Current role | Future owner / disposition |
 | --- | --- | --- |
 | `src/Dagger.Game/Dagger.Game.csproj` | Safe ordinary product project; unsafe disabled. | **Target Host + Daggerfall ruleset + Kit** project graph; split only in #7436. |
-| `src/Dagger.Game/DaggerGame.cs` | Product lifecycle/admitted-update entry. | **Target `WorldRpg.Host/WorldRpgProduct.cs`**. |
+| `src/Dagger.Game/DaggerGame.cs` | Product lifecycle entry forwarding Engine-admitted updates to the selected product composition. | **Target `WorldRpg.Host/WorldRpgProduct.cs`**. |
 | `src/Dagger.Game/AssemblyInfo.cs` | Test access to internals. | Host/ruleset test seam as projects split. |
-| `src/Dagger.Game/Daggerfall/DaggerfallComposition.cs` | Current concrete composition, state/update order, Engine service use, disposal. | **Target `WorldRpg.Rulesets.Daggerfall/DaggerfallSession.cs`**. |
+| `src/Dagger.Game/Daggerfall/DaggerfallComposition.cs` | Current concrete composition, Daggerfall realtime-admission interpretation, state/update order, Engine service use, and disposal. | **Target `WorldRpg.Rulesets.Daggerfall/DaggerfallSession.cs`**. |
 | `src/Dagger.Game/Daggerfall/DaggerfallState.cs` | Current aggregate over domain-owned mutable state. | Daggerfall ruleset. |
 | `src/Dagger.Game/Daggerfall/DaggerfallTuning.cs` | Typed current tuning aggregate. | Daggerfall ruleset typed tuning/profile loader; bundle loading comes later. |
 | `src/Dagger.Game/Daggerfall/DaggerfallRewardReactions.cs` | Daggerfall reward/loot/XP policy. | Daggerfall ruleset. |

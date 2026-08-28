@@ -50,7 +50,7 @@ internal sealed class PlayerActorState(MechanicsEntity mechanics, string defeatT
     {
         get
         {
-            MechanicsTrackReadReceipt track = _mechanicsService.ReadTrack(new MechanicsTrackReadRequest(Mechanics, _defeatTrack, LifecycleReadOperation));
+            MechanicsTrackReadLeaseReceipt track = _mechanicsService.ReadTrack(new MechanicsTrackReadRequest(Mechanics, _defeatTrack, LifecycleReadOperation));
             return track.Current <= track.Minimum;
         }
     }
@@ -77,7 +77,7 @@ internal sealed class ActorState(long entityId, MechanicsEntity mechanics, World
     {
         get
         {
-            MechanicsTrackReadReceipt track = _mechanicsService.ReadTrack(new MechanicsTrackReadRequest(Mechanics, _defeatTrack, LifecycleReadOperation));
+            MechanicsTrackReadLeaseReceipt track = _mechanicsService.ReadTrack(new MechanicsTrackReadRequest(Mechanics, _defeatTrack, LifecycleReadOperation));
             return track.Current <= track.Minimum;
         }
     }

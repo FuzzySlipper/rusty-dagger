@@ -29,7 +29,7 @@ internal sealed class CombatModule(IMechanicsService mechanics, CombatTuning tun
         resolution.Roll = Draw(rng, resolution.HitKey, 1, 100);
         if (resolution.Roll > resolution.Chance) { facts.Append(new AttackMissedFact(actor.EntityId, resolution.Roll, resolution.Chance, EnemyAttack: false)); return; }
         int damage = Damage(player, weapon, rng, updateSequence, actor.EntityId);
-        MechanicsTrackMutationReceipt receipt = Spend(target, target.DamageTrack, damage, PlayerMeleeOperation);
+        MechanicsTrackMutationLeaseReceipt receipt = Spend(target, target.DamageTrack, damage, PlayerMeleeOperation);
         facts.Append(new ActorDamagedFact(actor.EntityId, checked((int)receipt.AppliedAmount)));
         if (receipt.After == receipt.Minimum)
         {
@@ -46,7 +46,7 @@ internal sealed class CombatModule(IMechanicsService mechanics, CombatTuning tun
         int roll = Draw(rng, CombatKeys.EnemyHit(updateSequence, actor.EntityId), 1, 100);
         if (roll > chance) { facts.Append(new AttackMissedFact(actor.EntityId, roll, chance, EnemyAttack: true)); return; }
         int damage = CombatMath.DamageRange(attack.MinimumDamage, attack.MaximumDamage, rng, CombatKeys.EnemyDamage(updateSequence, actor.EntityId));
-        MechanicsTrackMutationReceipt receipt = Spend(player, player.DamageTrack, damage, EnemyMeleeOperation);
+        MechanicsTrackMutationLeaseReceipt receipt = Spend(player, player.DamageTrack, damage, EnemyMeleeOperation);
         facts.Append(new PlayerDamagedFact(checked((int)receipt.AppliedAmount)));
         if (receipt.After == receipt.Minimum)
         {
@@ -55,11 +55,11 @@ internal sealed class CombatModule(IMechanicsService mechanics, CombatTuning tun
         facts.Append(new AttackHitFact(actor.EntityId, damage, EnemyAttack: true));
     }
 
-    private MechanicsTrackReadReceipt Track(CombatantState actor, string track) => mechanics.ReadTrack(new MechanicsTrackReadRequest(actor.Actor.Mechanics, track, ReadOperation));
-    private long Stat(CombatantState actor, string stat) => mechanics.EvaluateStat(new MechanicsStatOperationRequest(actor.Actor.Mechanics, stat, EvaluateOperation)).Value;
-    private MechanicsTrackMutationReceipt Spend(CombatantState actor, string track, int amount, string operation)
+    private MechanicsTrackReadLeaseReceipt Track(CombatantState actor, string track) => mechanics.ReadTrack(new MechanicsTrackReadRequest(actor.Actor.Mechanics, track, ReadOperation));
+    private long Stat(CombatantState actor, string stat) => mechanics.EvaluateStat(new MechanicsStatOperationRequest(actor.Actor.Mechanics, stat, EvaluateOperation, ReadOnlyMemory<MechanicsRequestSource>.Empty)).Value;
+    private MechanicsTrackMutationLeaseReceipt Spend(CombatantState actor, string track, int amount, string operation)
     {
-        MechanicsTrackReadReceipt current = Track(actor, track);
+        MechanicsTrackReadLeaseReceipt current = Track(actor, track);
         return mechanics.SpendTrack(new MechanicsTrackMutationRequest(actor.Actor.Mechanics, operation, CombatRequestSource, track, amount, MechanicsRevisionGuard.Exact, current.Revision));
     }
 

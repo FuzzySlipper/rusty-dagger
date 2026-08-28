@@ -17,15 +17,20 @@ internal sealed class SpatialMovementSystem : IDisposable
     {
         _spatial = spatial;
         _tuning = tuning;
-        _session = spatial.CreateSession(new SpatialSessionConfig(tuning.CollisionVoxelSize, tuning.CollisionChunkSize, 0));
-        if (inputs.Collision.Vertices.Length != 0)
+        SpatialSession session = spatial.CreateSession(new SpatialSessionConfig(tuning.CollisionVoxelSize, tuning.CollisionChunkSize, 0));
+        try
         {
-            var asset = new StaticMeshAsset(1, 0, checked((uint)inputs.Collision.Vertices.Length), 0, checked((uint)inputs.Collision.Triangles.Length));
-            var instance = new StaticMeshInstance(1, 1, IdentityTransform());
-            spatial.ReplaceCollision(new CollisionReplaceRequest(_session, new[] { asset }, inputs.Collision.Vertices, inputs.Collision.Triangles, new[] { instance }));
+            if (inputs.Collision.Vertices.Length != 0)
+            {
+                var asset = new StaticMeshAsset(1, 0, checked((uint)inputs.Collision.Vertices.Length), 0, checked((uint)inputs.Collision.Triangles.Length));
+                var instance = new StaticMeshInstance(1, 1, IdentityTransform());
+                spatial.ReplaceCollision(new CollisionReplaceRequest(session, new[] { asset }, inputs.Collision.Vertices, inputs.Collision.Triangles, new[] { instance }));
+            }
+            if (inputs.Navigation.Length != 0)
+                spatial.ReplaceNavigation(new NavigationReplaceRequest(session, new PlanarNavConfig(1, tuning.NavigationCellSize, tuning.NavigationChunkSize, tuning.NavigationMaximumStepCells), inputs.Navigation));
+            _session = session;
         }
-        if (inputs.Navigation.Length != 0)
-            spatial.ReplaceNavigation(new NavigationReplaceRequest(_session, new PlanarNavConfig(1, tuning.NavigationCellSize, tuning.NavigationChunkSize, tuning.NavigationMaximumStepCells), inputs.Navigation));
+        catch { session.Dispose(); throw; }
     }
 
     internal void Step(PlayerControlState player, ProductUpdateState update)
@@ -40,13 +45,14 @@ internal sealed class SpatialMovementSystem : IDisposable
             new CharacterControllerCommand(
                 update.PlanarIntent,
                 player.YawRadians,
-                JumpPressed: 0,
-                JumpHeld: 0,
-                CrouchRequested: 0,
-                Reserved: 0,
+                JumpPressed: false,
+                JumpHeld: false,
+                CrouchRequested: false,
+                ExternalVelocity: Vector3.Zero,
+                ExternalImpulse: Vector3.Zero,
                 update.DeltaSeconds,
                 ++_movementSequence)));
-        if (receipt.StepAccepted != 0)
+        if (receipt.Step.Accepted)
         {
             player.MoveTo(receipt.Transform.Translation);
             player.Motion = receipt.Motion;

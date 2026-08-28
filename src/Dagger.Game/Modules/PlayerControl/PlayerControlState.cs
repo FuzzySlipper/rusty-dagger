@@ -39,7 +39,17 @@ internal sealed record PlayerControlTuning(float LookSensitivity, float PitchMin
 
 internal sealed record SpatialTuning(double CollisionVoxelSize, uint CollisionChunkSize, double NavigationCellSize, uint NavigationChunkSize, uint NavigationMaximumStepCells, CharacterControllerConfig Controller)
 {
-    internal static SpatialTuning Defaults { get; } = new(.5, 32, .5, 32, 2, new CharacterControllerConfig(1.8f, 1.2f, .3f, .02f, 3.5f, 3.5f, 3.5f, 25f, 30f, 8f, 19.6f, 5f, .78f, .4f, .15f, .35f));
+    internal static SpatialTuning Defaults { get; } = new(.5, 32, .5, 32, 2, new CharacterControllerConfig(
+        Shape: new CharacterShapeConfig(StandingHeight: 1.8f, CrouchedHeight: 1.2f, Radius: .3f, ContactSkin: .02f, ClearancePadding: .01f),
+        Ground: new CharacterGroundConfig(ForwardSpeed: 3.5f, BackwardSpeed: 3.5f, StrafeSpeed: 3.5f, Acceleration: 25f, Braking: 30f, Friction: 8f, StopSpeed: 2f, DirectionChangeMultiplier: 1f),
+        Air: new CharacterAirConfig(MaximumSpeed: 5f, Acceleration: 12f, Braking: 0f, WishSpeedCap: 5f, LateralControl: 1f, Drag: 0f),
+        Vertical: new CharacterVerticalConfig(Gravity: 19.6f, TerminalRiseSpeed: 55f, TerminalFallSpeed: 55f, JumpSpeed: 5f, GroundedDownwardBias: .5f),
+        Jump: new CharacterJumpConfig(BufferSeconds: .12f, CoyoteSeconds: .10f, LandingLockoutSeconds: 0f, HeldInputRetriggers: false),
+        Surface: new CharacterSurfaceConfig(MaximumSlopeRadians: .78f, SlopeHysteresisRadians: MathF.PI / 180f, SteepSlideAcceleration: 20f, SteepSlideSpeed: 12f, MaximumStepHeight: .4f, MinimumStepWidth: .05f, FloorSnapDistance: .15f, FloorSnapSpeedLimit: 10f, LedgeSupportFraction: .25f),
+        Recovery: new CharacterRecoveryConfig(MaximumDistance: .5f, MaximumSpeed: 20f, NormalNudge: .001f, UnresolvedTolerance: .002f),
+        Platform: new CharacterPlatformConfig(CarryTranslation: true, CarryRotation: true, InheritDepartureVelocity: true, DepartureVelocityFactor: 1f, SupportLossGraceSeconds: 0f, CrushTolerance: .02f),
+        ExternalMotion: new CharacterExternalMotionConfig(ImpulseScale: 1f, ExternalDecayPerSecond: 0f, MaximumExternalSpeed: 50f, AuthoredMass: 80f, DynamicImpulseFactor: 1f, MaximumDynamicImpulse: 500f),
+        Solver: new CharacterSolverConfig(MaximumSlidePlanes: 5, MaximumCastIterations: 8, MaximumRecoveryPasses: 4, MaximumContacts: 32, MaximumStepAttempts: 1, MaximumDisplacementPerStep: .35f, MaximumQueriesPerStep: 64)));
     internal SpatialTuning Validate()
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(CollisionVoxelSize);

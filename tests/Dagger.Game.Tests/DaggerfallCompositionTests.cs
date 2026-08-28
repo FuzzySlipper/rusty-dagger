@@ -2,8 +2,10 @@ using System.Numerics;
 using System.Reflection;
 using System.Text;
 using Rusty.Engine;
+using RustyDagger.Game;
 using RustyDagger.Game.Daggerfall;
 using RustyDagger.Game.Daggerfall.Content;
+using RustyDagger.Game.Daggerfall.Presentation;
 using RustyDagger.Game.Modules.PlayerControl;
 using Xunit;
 
@@ -52,12 +54,12 @@ public sealed class DaggerfallCompositionTests
         RecordingEngine engine = new();
         using DaggerfallComposition composition = new(engine.Context, SkeletalInputs());
         MechanicsEntity player = composition.State.Actors.Player.Mechanics;
-        MechanicsTrackReadReceipt health = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
+        MechanicsTrackReadLeaseReceipt health = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
 
         engine.Mechanics.SetTrack(new MechanicsTrackSetRequest(player, "test_set", "test", "health", health.Minimum, MechanicsTrackSetPolicy.ClampToBounds, MechanicsRevisionGuard.Exact, health.Revision));
         Assert.True(composition.State.Actors.Player.IsDefeated);
 
-        MechanicsTrackReadReceipt defeated = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
+        MechanicsTrackReadLeaseReceipt defeated = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
         engine.Mechanics.RestoreTrack(new MechanicsTrackMutationRequest(player, "test_restore", "test", "health", 1, MechanicsRevisionGuard.Exact, defeated.Revision));
         Assert.False(composition.State.Actors.Player.IsDefeated);
     }
@@ -65,8 +67,9 @@ public sealed class DaggerfallCompositionTests
     [Fact]
     public void Mechanics_construction_releases_catalog_and_all_partially_bound_entities_after_injected_failures()
     {
-        RecordingMechanics catalogFailure = new() { FailOnDefineStatCall = 1 };
-        Assert.Throws<InvalidOperationException>(() => new DaggerfallMechanicsCatalog(catalogFailure));
+        RecordingMechanics catalogFailure = RecordingMechanics.Create();
+        catalogFailure.FailOnDefineStatCall = 1;
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallMechanicsCatalog(catalogFailure.Service));
         Assert.Equal(1, catalogFailure.CatalogDisposals);
         Assert.Equal(0, catalogFailure.EntityDisposals);
 
@@ -77,11 +80,96 @@ public sealed class DaggerfallCompositionTests
         Assert.Equal(2, engine.Mechanics.EntityDisposals);
     }
 
+    [Fact]
+    public void Input_interpretation_uses_typed_edges_controls_and_semantic_intents()
+    {
+        RecordingEngine engine = new();
+        PlayerInputSystem input = new(PlayerControlTuning.Defaults, engine.Look.Service);
+        PlayerControlState player = new(new WorldPoint(0, 0, 0));
+
+        ProductUpdateState held = new(1f);
+        held.Add(Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW));
+        held.Add(Input(InputEventKind.Key, InputEdge.Held, keyboard: KeyboardControl.KeyW));
+        held.Add(Input(InputEventKind.PointerDelta, x: .25f, y: -.5f));
+        held.Add(Input(InputEventKind.DirectDigital, InputEdge.Held, x: 1f, phase: InputPhase.Held, intent: "attack"));
+        held.Add(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1f, phase: InputPhase.Pressed, intent: "attack"));
+        input.Apply(player, held);
+
+        Assert.Equal(new Vector2(0f, 1f), held.PlanarIntent);
+        Assert.True(held.AttackRequested);
+        Assert.Equal(1, engine.Look.IntegrationCount);
+
+        ProductUpdateState released = new(1f);
+        released.Add(Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.KeyW));
+        released.Add(Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.KeyW));
+        released.Add(Input(InputEventKind.Clear));
+        released.Add(Input(InputEventKind.DirectAxis, x: .75f, y: -.25f, phase: InputPhase.DirectUi, intent: "movement"));
+        input.Apply(player, released);
+
+        Assert.Equal(new Vector2(.75f, -.25f), released.PlanarIntent);
+        Assert.False(released.AttackRequested);
+    }
+
+    [Fact]
+    public void Realtime_batch_uses_engine_fixed_delta_once_per_admitted_step_and_ignores_invalid_turns()
+    {
+        RecordingEngine engine = new();
+        using DaggerGame game = new(new ProductCreateContext(engine.Context, ProductContentWithPlayer(), EmptyInputConfiguration()));
+        game.Start();
+
+        game.Update(new ProductUpdate(
+            Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 3, fixedDeltaSeconds: .125),
+            new ProductInputEvent[] { Input(InputEventKind.MappedAxis, x: .5f, y: -.25f, phase: InputPhase.Axis, intent: "movement") }));
+        Assert.Equal(3, engine.Spatial.StepCalls);
+        Assert.All(engine.Spatial.Commands, command => Assert.Equal(.125f, command.StepSeconds));
+        Assert.All(engine.Spatial.Commands, command => Assert.Equal(new Vector2(.5f, -.25f), command.PlanarIntent));
+
+        game.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 0, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty));
+        game.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Paused, admittedSteps: 2, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty));
+        game.Update(new ProductUpdate(Facts(ProductTurnKind.Demand, ProductLifecycleState.Running, admittedSteps: 2, fixedDeltaSeconds: 0), ReadOnlySpan<ProductInputEvent>.Empty));
+        game.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 2, fixedDeltaSeconds: double.NaN), ReadOnlySpan<ProductInputEvent>.Empty));
+
+        Assert.Equal(3, engine.Spatial.StepCalls);
+    }
+
+    [Fact]
+    public void Appearance_owners_clear_retained_facts_and_release_partial_construction_once()
+    {
+        RecordingEngine engine = new();
+        AuthoredSprite sprite = new("textures/test.png", default, default, default, Vector2.One, 0);
+        PrivateersHoldInputs inputs = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor> { [9] = new(9, "enemy-rat-1", new WorldPoint(0, 0, 0), sprite) }), [], new CollisionMesh([], []), "mesh.json");
+        using (PrivateersHoldAppearance appearance = new(engine.Appearance, inputs))
+        {
+            appearance.Dispose();
+            appearance.Dispose();
+        }
+        Assert.Equal(2, engine.Appearance.AppearanceDisposals);
+        Assert.Empty(engine.Appearance.Snapshots[^1]);
+
+        RecordingEngine failing = new();
+        failing.Appearance.FailOnCreateCall = 2;
+        Assert.Throws<InvalidOperationException>(() => new PrivateersHoldAppearance(failing.Appearance, inputs));
+        Assert.Equal(1, failing.Appearance.AppearanceDisposals);
+    }
+
     private static PrivateersHoldInputs SkeletalInputs()
     {
         AuthoredActor skeletal = new(2000, "enemy-skeletalwarrior-1", new WorldPoint(0, 0, 0), null);
         return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [2000] = skeletal }), [], new CollisionMesh([], []), null);
     }
+
+    private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl keyboard = KeyboardControl.None, float x = 0f, float y = 0f, InputPhase phase = InputPhase.None, string intent = "") => new(
+        kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, keyboard, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
+
+    private static ProductUpdateFacts Facts(ProductTurnKind mode, ProductLifecycleState lifecycle, uint admittedSteps, double fixedDeltaSeconds) => new(mode, lifecycle, 1, 1, 1, 1, mode == ProductTurnKind.Realtime ? 60u : 0u, admittedSteps, 0, fixedDeltaSeconds);
+
+    private static ProductContent ProductContentWithPlayer() => new(new ProductContentFile[] {
+        new ProductContentFile(Encoding.UTF8.GetBytes("projects/privateers-hold.project.json"), Encoding.UTF8.GetBytes("""{"assets":[],"scenes":[{"entities":[{"name":"player","translation":[0,0,0]}]}]}""")),
+        new ProductContentFile(Encoding.UTF8.GetBytes("projects/privateers-hold.navgrid.json"), Encoding.UTF8.GetBytes("""{"cells":[]}""")),
+        new ProductContentFile(Encoding.UTF8.GetBytes("imported/privateers-hold.static-mesh.json"), Encoding.UTF8.GetBytes("""{"payload":{"source":{"positions":[],"indices":[]}}}"""))
+    });
+
+    private static ProductInputConfiguration EmptyInputConfiguration() => new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
 
     private static IReadOnlyList<string> ResourceIds(UiValue value) => Array(value, Field(value, value.Root, "resources")).Select(node => Text(value, value.Nodes.Span[(int)Field(value, node, "id")])).ToArray();
     private static (double Current, double Maximum) Resource(UiValue value, string id)
@@ -99,42 +187,122 @@ public sealed class DaggerfallCompositionTests
     {
         internal RecordingEngine() { Context = DispatchProxy.Create<IEngineContext, EngineContextProxy>(); ((EngineContextProxy)(object)Context).Owner = this; }
         internal IEngineContext Context { get; }
-        internal RecordingLook Look { get; } = new();
-        internal RecordingSpatial Spatial { get; } = new();
+        internal RecordingLook Look { get; } = RecordingLook.Create();
+        internal RecordingSpatial Spatial { get; } = RecordingSpatial.Create();
         internal RecordingAppearance Appearance { get; } = new();
-        internal RecordingRandom Random { get; } = new();
-        internal RecordingMechanics Mechanics { get; } = new();
-        internal RecordingUi Ui { get; } = new();
+        internal RecordingRandom Random { get; } = RecordingRandom.Create();
+        internal RecordingMechanics Mechanics { get; } = RecordingMechanics.Create();
+        internal RecordingUi Ui { get; } = RecordingUi.Create();
     }
 
     private class EngineContextProxy : DispatchProxy
     {
         internal RecordingEngine Owner { get; set; } = null!;
-        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch { "get_Look" => Owner.Look, "get_Spatial" => Owner.Spatial, "get_Appearance" => Owner.Appearance, "get_Random" => Owner.Random, "get_Mechanics" => Owner.Mechanics, "get_Ui" => Owner.Ui, _ => throw new NotSupportedException(method?.Name) };
+        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch { "get_Look" => Owner.Look.Service, "get_Spatial" => Owner.Spatial.Service, "get_Appearance" => Owner.Appearance.Service, "get_Random" => Owner.Random.Service, "get_Mechanics" => Owner.Mechanics.Service, "get_Ui" => Owner.Ui.Service, _ => throw new NotSupportedException(method?.Name) };
     }
 
-    private sealed class RecordingLook : ILookService { public LookReceipt Integrate(LookRequest request) => new(request.State, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY); }
-    private sealed class RecordingSpatial : ISpatialService
+    private class RecordingLook : DispatchProxy
     {
-        public SpatialSession CreateSession(SpatialSessionConfig request) => new(new SpatialSessionHandle(1), () => { });
-        public CollisionReplaceReceipt ReplaceCollision(CollisionReplaceRequest request) => default;
-        public NavigationReplaceReceipt ReplaceNavigation(NavigationReplaceRequest request) => default;
-        public CharacterStepReceipt ProposeCharacterStep(CharacterStepRequest request) => default;
-        public NavigationStepReceipt ProposeNavigationStep(NavigationStepRequest request) => default;
+        internal ILookService Service { get; private set; } = null!;
+        internal int IntegrationCount { get; private set; }
+        internal static RecordingLook Create()
+        {
+            ILookService service = DispatchProxy.Create<ILookService, RecordingLook>();
+            RecordingLook proxy = (RecordingLook)(object)service;
+            proxy.Service = service;
+            return proxy;
+        }
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (method?.Name == nameof(ILookService.Integrate))
+            {
+                LookRequest request = (LookRequest)args![0]!;
+                IntegrationCount++;
+                LookState after = new(request.State.YawRadians + request.Delta.X, request.State.PitchRadians + request.Delta.Y);
+                return new LookReceipt(request.State, after, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);
+            }
+            return method?.ReturnType.IsValueType == true ? Activator.CreateInstance(method.ReturnType) : null;
+        }
+    }
+    private class RecordingSpatial : DispatchProxy
+    {
+        internal ISpatialService Service { get; private set; } = null!;
+        internal int SessionDisposals { get; private set; }
+        internal int StepCalls { get; private set; }
+        internal List<CharacterControllerCommand> Commands { get; } = [];
+        internal static RecordingSpatial Create()
+        {
+            ISpatialService service = DispatchProxy.Create<ISpatialService, RecordingSpatial>();
+            RecordingSpatial proxy = (RecordingSpatial)(object)service;
+            proxy.Service = service;
+            return proxy;
+        }
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (method?.Name == nameof(ISpatialService.CreateSession)) return new SpatialSession(new SpatialSessionHandle(1), () => SessionDisposals++);
+            if (method?.Name == nameof(ISpatialService.ProposeCharacterStep)) { StepCalls++; Commands.Add(((CharacterStepRequest)args![0]!).Command); return default(CharacterStepReceipt); }
+            return method?.ReturnType.IsValueType == true ? Activator.CreateInstance(method.ReturnType) : null;
+        }
     }
     private sealed class RecordingAppearance : IAppearanceService
     {
-        public RenderResourceInfo OpenResource(RenderResourceRequest request) => new(new RenderResourceHandle(1), 0, 0);
-        public AppearanceHandle CreatePrimitive(PrimitiveAppearanceRequest request) => new(1);
-        public AppearanceHandle CreateStaticMesh(StaticMeshAppearanceRequest request) => new(1);
-        public AppearanceHandle CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) => new(1);
-        public AppearanceHandle CreateSprite(SpriteAppearanceRequest request) => new(1);
-        public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values) { }
+        internal IAppearanceService Service => this;
+        internal int AppearanceDisposals { get; private set; }
+        internal List<AppearanceFact[]> Snapshots { get; } = [];
+        internal int? FailOnCreateCall { get; set; }
+        private int CreateCalls { get; set; }
+        public RenderResourceInfo OpenResource(RenderResourceRequest request) => new(new RenderResourceHandle(1), default, 0);
+        public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => { });
+        public void UpdateMaterial(MaterialUpdateRequest request) { }
+        public Material ReplaceMaterial(MaterialUpdateRequest request) => new(new MaterialHandle(1), () => { });
+        public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance();
+        public Appearance ReplacePrimitive(PrimitiveAppearanceReplaceRequest request) => CreateAppearance();
+        public Appearance CreateStaticMesh(StaticMeshAppearanceRequest request) => CreateAppearance();
+        public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) => CreateAppearance();
+        public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
+        public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();
+        public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) { }
+        public Appearance CreateSprite(SpriteAppearanceRequest request) => CreateAppearance();
+        public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => CreateAppearance();
+        public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values) => Snapshots.Add(values.ToArray());
+        public PresentationReadout ReadPresentation() => default;
+        private Appearance CreateAppearance()
+        {
+            if (++CreateCalls == FailOnCreateCall) throw new InvalidOperationException("Injected appearance creation failure.");
+            return new(new AppearanceHandle(1), () => AppearanceDisposals++);
+        }
     }
-    private sealed class RecordingRandom : IRandomService
+    private class RecordingRandom : DispatchProxy
     {
-        public KeyedRngReceipt DrawKeyed(KeyedRngRequest request) => new(request.Maximum == 100 ? request.Minimum : request.Maximum);
-        public Rng CreateScoped(ScopedRngCreateRequest request) => throw new NotSupportedException(); public Rng ForkScoped(ScopedRngForkRequest request) => throw new NotSupportedException(); public RngValue NextU64(Rng rng) => throw new NotSupportedException(); public RngValue NextBoundedU32(ScopedRngBoundedRequest request) => throw new NotSupportedException(); public RngValue NextBool(Rng rng) => throw new NotSupportedException();
+        internal IRandomService Service { get; private set; } = null!;
+        internal static RecordingRandom Create()
+        {
+            IRandomService service = DispatchProxy.Create<IRandomService, RecordingRandom>();
+            RecordingRandom proxy = (RecordingRandom)(object)service;
+            proxy.Service = service;
+            return proxy;
+        }
+        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name == nameof(IRandomService.DrawKeyed)
+            ? new KeyedRngReceipt(((KeyedRngRequest)args![0]!).Maximum == 100 ? ((KeyedRngRequest)args[0]!).Minimum : ((KeyedRngRequest)args[0]!).Maximum)
+            : throw new NotSupportedException(method?.Name);
     }
-    private sealed class RecordingUi : IUiService { internal List<UiProjection> Projections { get; } = []; public UiStreamHandle OpenStream(UiStreamRequest request) => new(1); public void PublishProjection(UiProjection projection) => Projections.Add(projection); }
+    private class RecordingUi : DispatchProxy
+    {
+        internal IUiService Service { get; private set; } = null!;
+        internal List<UiProjection> Projections { get; } = [];
+        internal static RecordingUi Create()
+        {
+            IUiService service = DispatchProxy.Create<IUiService, RecordingUi>();
+            RecordingUi proxy = (RecordingUi)(object)service;
+            proxy.Service = service;
+            return proxy;
+        }
+        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch
+        {
+            nameof(IUiService.OpenStream) => new UiStreamHandle(1),
+            nameof(IUiService.PublishProjection) => Publish((UiProjection)args![0]!),
+            _ => throw new NotSupportedException(method?.Name)
+        };
+        private object? Publish(UiProjection projection) { Projections.Add(projection); return null; }
+    }
 }

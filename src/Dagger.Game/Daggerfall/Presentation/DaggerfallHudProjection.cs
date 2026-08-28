@@ -30,7 +30,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IMechanicsService m
 
     private uint ResourceRow(UiValueBuilder builder, PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {
-        MechanicsTrackReadReceipt value = mechanics.ReadTrack(new MechanicsTrackReadRequest(player.Mechanics, resource.Track.Value, "hud_projection"));
+        MechanicsTrackReadLeaseReceipt value = mechanics.ReadTrack(new MechanicsTrackReadRequest(player.Mechanics, resource.Track.Value, "hud_projection"));
         return builder.Object(("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)), ("current", builder.Number(value.Current)), ("maximum", builder.Number(value.Maximum)));
     }
 }
