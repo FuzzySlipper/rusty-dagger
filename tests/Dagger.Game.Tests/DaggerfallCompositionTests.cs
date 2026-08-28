@@ -2,7 +2,6 @@ using System.Numerics;
 using System.Reflection;
 using System.Text;
 using Rusty.Engine;
-using RustyDagger.Game.Content;
 using RustyDagger.Game.Daggerfall;
 using RustyDagger.Game.Daggerfall.Content;
 using RustyDagger.Game.Modules.PlayerControl;
