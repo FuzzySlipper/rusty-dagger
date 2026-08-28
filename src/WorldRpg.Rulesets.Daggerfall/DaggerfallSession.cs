@@ -1,16 +1,15 @@
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
-using WorldRpg.Rulesets.Daggerfall.Modules.Actors;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
-using WorldRpg.Rulesets.Daggerfall.Modules.Encounters;
-using WorldRpg.Rulesets.Daggerfall.Modules.Equipment;
-using WorldRpg.Rulesets.Daggerfall.Modules.Inventory;
-using WorldRpg.Rulesets.Daggerfall.Modules.PlayerControl;
-using WorldRpg.Rulesets.Daggerfall.Modules.Presentation;
-using WorldRpg.Rulesets.Daggerfall.Modules.Progression;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Facts;
+using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.Presentation;
+using WorldRpg.Kit.Progression;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
@@ -22,17 +21,12 @@ internal sealed class DaggerfallSession : IGameSession
     private readonly PlayerInputSystem _input;
     private readonly SpatialMovementSystem _spatial;
     private readonly CombatModule _combat;
-    private readonly EncounterSystem _encounters;
     private readonly DaggerfallMechanicsCatalog _mechanicsCatalog;
-    private readonly IReadOnlyDictionary<long, CombatantState> _combatants;
-    private readonly CombatantState _playerCombatant;
-    private readonly ProductFactBuffer _facts = new();
+    private readonly FactBuffer<IProductFact> _facts = new();
     private readonly DaggerfallRewardReactions _rewards;
-    private readonly EncounterReaction _encounterReactions;
     private readonly DaggerfallOutcomePresentation _outcomes;
     private readonly DaggerfallHudProjection _hud;
     private readonly PrivateersHoldAppearance _appearance;
-    private readonly WeaponDefinition _rightHand;
     private bool _disposed;
 
     internal DaggerfallSession(IEngineContext engine, ProductContent content) : this(engine, PrivateersHoldContent.Read(content)) { }
@@ -45,9 +39,9 @@ internal sealed class DaggerfallSession : IGameSession
             _random = engine.Random;
             DaggerfallTuning tuning = DaggerfallTuning.Defaults.Validate();
             DaggerfallCatalog catalog = new();
-            _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics);
+            _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics, catalog.Items);
             partiallyConstructed.Add(_mechanicsCatalog);
-            PlayerActorState player = new(_mechanicsCatalog.Bind(catalog.Player, PlayerMechanicsEntityId), catalog.Player.Combat.Health.Value, engine.Mechanics);
+            PlayerActorState player = new(_mechanicsCatalog.Bind(catalog.Player, PlayerMechanicsEntityId, InitialLoadout()), catalog.Player.Combat.Health.Value, engine.Mechanics);
             partiallyConstructed.Add(player);
             List<ActorState> actorStates = [];
             Dictionary<long, DaggerfallActorDefinition> authored = [];
@@ -61,25 +55,18 @@ internal sealed class DaggerfallSession : IGameSession
                 authored.Add(source.EntityId, definition);
             }
             ActorsState actors = new(player, actorStates);
-            Dictionary<long, CombatantState> combatants = [];
-            foreach ((long entityId, DaggerfallActorDefinition definition) in authored)
-                if (actors.TryGet(entityId, out ActorState actor)) combatants.Add(entityId, new CombatantState(actor, definition.Combat.ToCombatantProfile()));
-            _combatants = combatants;
-            _playerCombatant = new CombatantState(player, catalog.Player.Combat.ToCombatantProfile());
-            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition), actors, new InventoryState([new ItemStack(catalog.IronLongsword.Id, 1), new ItemStack("iron-dagger", 1), new ItemStack("iron-cuirass", 1), new ItemStack("gold-piece", 25)]), new EquipmentState(catalog.IronLongsword), new CombatState(), new EncounterState(), new ProgressionState());
+            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition), actors, new ProgressionState());
             Presentation = new PresentationState();
-            _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look);
-            _spatial = new SpatialMovementSystem(engine.Spatial, inputs, tuning.Spatial);
+            _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
+            _spatial = new SpatialMovementSystem(engine.Spatial, inputs.ToSpatialScene(), tuning.Spatial);
             partiallyConstructed.Add(_spatial);
-            _combat = new CombatModule(engine.Mechanics, tuning.Combat);
-            _encounters = new EncounterSystem(catalog.Encounters);
-            _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
-            _encounterReactions = new EncounterReaction(State.Encounters);
+            _combat = new CombatModule();
+            _rewards = new DaggerfallRewardReactions(new MechanicsInventoryCoordinator(engine.Mechanics, player.Mechanics), State.Progression, _random, authored);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, catalog.HudResources);
+            partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
             partiallyConstructed.Add(_appearance);
-            _rightHand = catalog.IronLongsword;
         }
         catch
         {
@@ -92,7 +79,11 @@ internal sealed class DaggerfallSession : IGameSession
     internal PresentationState Presentation { get; }
     public void PublishInitial() => PublishPresentation();
 
-    public void Update(ProductUpdate update) => Update(update.Facts, update.Input);
+    public ProductTurnRequest Update(ProductUpdate update)
+    {
+        Update(update.Facts, update.Input);
+        return ProductTurnRequest.None;
+    }
 
     internal void Update(ProductUpdateFacts facts, ReadOnlySpan<ProductInputEvent> input)
     {
@@ -121,14 +112,9 @@ internal sealed class DaggerfallSession : IGameSession
 
     internal void Update(ProductUpdateState update)
     {
-        _combat.AdvanceCooldowns(State.Actors, update.DeltaSeconds);
         _input.Apply(State.PlayerControl, update);
         _spatial.Step(State.PlayerControl, update);
-        EncounterTarget? encounter = _encounters.ActiveEncounter(State.PlayerControl, State.Actors);
-        CombatantState? target = encounter is not null && _combatants.TryGetValue(encounter.MemberEntityId, out CombatantState? combatant) ? combatant : null;
-        if (update.AttackRequested) _combat.TryPlayerMelee(State.PlayerControl, _playerCombatant, target, _rightHand, State.UpdateSequence, _random, _facts);
-        _combat.TryEnemyMelee(State.PlayerControl, _playerCombatant, target, State.UpdateSequence, _random, _facts);
-        State.AdvanceSequence();
+        if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, _facts);
         _facts.Deliver(React);
         PublishPresentation();
     }
@@ -137,7 +123,7 @@ internal sealed class DaggerfallSession : IGameSession
     {
         if (_disposed) return;
         _disposed = true;
-        DisposeAll([_mechanicsCatalog, State.Actors, _spatial, _appearance]);
+        DisposeAll([_hud, _mechanicsCatalog, State.Actors, _spatial, _appearance]);
     }
 
     private static void DisposeAll(IReadOnlyList<IDisposable> values)
@@ -153,13 +139,28 @@ internal sealed class DaggerfallSession : IGameSession
 
     private void React(IProductFact fact)
     {
-        if (fact is ActorDiedFact died) { _rewards.React(died, _facts); _encounterReactions.React(died); }
+        if (fact is ActorDiedFact died) _rewards.React(died, _facts);
         _outcomes.React(fact);
     }
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, _encounters.ActiveEncounter(State.PlayerControl, State.Actors), Presentation);
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation);
         _appearance.Publish(State.Actors);
     }
+
+    private static IReadOnlyList<MechanicsInitialInventoryStack> InitialLoadout() =>
+    [
+        new("iron-longsword", 1),
+        new("iron-dagger", 1),
+        new("iron-cuirass", 1),
+        new("gold-piece", 25),
+    ];
+}
+
+internal static class DaggerfallInput
+{
+    internal static readonly InputActionId Attack = new("daggerfall.attack");
+    internal static readonly PlayerControlBindings Controls = new(["move"u8.ToArray(), "movement"u8.ToArray()], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD);
+    internal static readonly IReadOnlyList<InputActionBinding> Bindings = [new(Attack, "attack"u8.ToArray())];
 }

@@ -1,7 +1,7 @@
 using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
-using WorldRpg.Rulesets.Daggerfall.Modules.Actors;
+using WorldRpg.Kit.Actors;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 

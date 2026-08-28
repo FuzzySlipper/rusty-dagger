@@ -29,6 +29,14 @@ public sealed class WorldRpgProduct : IEngineProduct
     public void Pause() { if (_started && !_shutdown) _paused = true; }
     public void Resume() { if (_started && !_shutdown) _paused = false; }
 
+    public void Restart()
+    {
+        if (_shutdown) return;
+        _paused = false;
+        _started = true;
+        _session.PublishInitial();
+    }
+
     public void Shutdown()
     {
         if (_shutdown) return;
@@ -38,10 +46,10 @@ public sealed class WorldRpgProduct : IEngineProduct
 
     public void Dispose() => Shutdown();
 
-    public void Update(ProductUpdate update)
+    public ProductTurnRequest Update(ProductUpdate update)
     {
-        if (!_started || _paused || _shutdown) return;
-        _session.Update(update);
+        if (!_started || _paused || _shutdown) return ProductTurnRequest.None;
+        return _session.Update(update);
     }
 }
 

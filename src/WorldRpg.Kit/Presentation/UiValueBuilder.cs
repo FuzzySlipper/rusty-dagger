@@ -1,16 +1,16 @@
 using System.Text;
 using Rusty.Engine;
 
-namespace WorldRpg.Rulesets.Daggerfall.Modules.Presentation;
+namespace WorldRpg.Kit.Presentation;
 
-/// <summary>Builds Dagger's safe structured UI value without retaining borrowed storage.</summary>
-internal sealed class UiValueBuilder
+/// <summary>Builds a safe structured UI value without retaining borrowed storage.</summary>
+public sealed class UiValueBuilder
 {
-    private const uint NullKind = 0;
-    private const uint NumberKind = 2;
-    private const uint StringKind = 3;
-    private const uint ArrayKind = 4;
-    private const uint ObjectKind = 5;
+    private const StructuredValueKind NullKind = StructuredValueKind.Null;
+    private const StructuredValueKind NumberKind = StructuredValueKind.Number;
+    private const StructuredValueKind StringKind = StructuredValueKind.String;
+    private const StructuredValueKind ArrayKind = StructuredValueKind.Array;
+    private const StructuredValueKind ObjectKind = StructuredValueKind.Object;
 
     private readonly List<StructuredValueNode> _nodes = [];
     private readonly List<uint> _edges = [];
@@ -60,7 +60,7 @@ internal sealed class UiValueBuilder
         return new UiValue(_nodes.ToArray(), _edges.ToArray(), root, _utf8.ToArray());
     }
 
-    private uint Add(uint kind, uint boolValue = 0, double numberValue = 0, uint textOffset = 0, uint textLength = 0, uint firstEdge = 0, uint childCount = 0)
+    private uint Add(StructuredValueKind kind, uint boolValue = 0, double numberValue = 0, uint textOffset = 0, uint textLength = 0, uint firstEdge = 0, uint childCount = 0)
     {
         uint index = checked((uint)_nodes.Count);
         _nodes.Add(new StructuredValueNode(kind, boolValue, numberValue, KeyOffset: 0, KeyLen: 0, textOffset, textLength, firstEdge, childCount));

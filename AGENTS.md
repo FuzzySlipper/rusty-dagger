@@ -29,23 +29,23 @@ report the failed read rather than reconstructing direction from source or Git.
 
 ## Current state versus target graph
 
-**Implemented today:** `src/WorldRpg.Kit/` contains the small safe composition
-contract, `src/WorldRpg.Rulesets.Daggerfall/` owns the current gameplay/session,
+**Implemented today:** `src/WorldRpg.Kit/` contains the safe composition
+contract and reusable world-RPG mechanisms, while `src/WorldRpg.Rulesets.Daggerfall/` owns Daggerfall policy and session composition,
 `src/WorldRpg.Host/` owns product lifecycle and built-in selection, and
 `src/RustyDagger.NativeProduct/` is the thin NativeAOT boundary. The ruleset's
-current `Modules/` placement is a migration fact, not evidence of Kit reuse.
+current `Modules/` placement is a migration fact rather than an architecture boundary.
 
 **Ordered target:** #7435 → #7441 → #7436 → #7437 → #7438 → #7323 → #7324 → #7325.
 
 #7441 reconciled the current product with the published Engine
 update/input/look/spatial/appearance contracts. #7436 establishes the project
-graph; #7437 remains the proof that a mechanism deserves promotion into Kit.
+graph; #7437 exercises Kit through an intentionally incompatible composition.
 
 | Target owner | Responsibility |
 | --- | --- |
-| `WorldRpg.Kit` | Current small world-RPG composition contract: typed IDs, compiled ruleset/session contracts, and only mechanisms proven across real compositions. Bundle/content-pack/tuning resolution is #7438 work. It is not a generic RPG framework. |
+| `WorldRpg.Kit` | Reusable and reasonably uncertain world-RPG mechanisms: typed IDs, compiled ruleset/session contracts, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, and thin Engine-backed inventory coordination. Bundle/content-pack/tuning resolution is #7438 work. It is not a universal RPG framework. |
 | `WorldRpg.Host` | Current reference-product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher selection and diagnostics expand later. It may select Daggerfall, never interpret Daggerfall rules or source files. |
-| `WorldRpg.Rulesets.Daggerfall` | All Daggerfall identities, formulas, policies, content interpretation, presentation meaning, save behavior, and Daggerfall session state. It should initially be truthfully large. |
+| `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior, and Daggerfall session composition. |
 | `RustyDagger.NativeProduct` | The microscopic NativeAOT/Engine integration assembly. Handwritten code selects the Host product type; generated output supplies ABI, lifecycle adaptation, services, handles, and exports. |
 | `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge, source formats, conversion quirks, provenance, and differential validation. Runtime code consumes normalized packs, not source-shaped data. |
 | Content packs | Authored actors, items, worlds, placements, encounters, quests, assets, and scenario state interpreted by a ruleset. |
@@ -57,12 +57,13 @@ requires a product rebuild; changing valid content/tuning does not. Do not add
 runtime assembly loading, reflection discovery, `Assembly.Load`, service
 locators, generic command buses, a new gameplay DSL, or a universal plug-in ABI.
 
-## Promotion, Daggerfall, and tuning rules
+## Kit, Daggerfall, and tuning rules
 
-Existing gameplay begins in `WorldRpg.Rulesets.Daggerfall`. A generic class or
-the current `Modules/` directory is not proof of Kit reuse. Promotion requires
-evidence from a second real composition (normally the intentionally incompatible
-canary); removing `Daggerfall` from a name is not evidence.
+Reusable mechanisms begin in `WorldRpg.Kit`; when placement is genuinely
+uncertain, prefer Kit and keep concrete Daggerfall policy behind ruleset-owned
+definitions and configuration. The canary validates that seam later; it is not a
+promotion gate. Do not make Kit universal or move Daggerfall vocabulary merely
+by renaming it.
 
 Daggerfall assumptions are legal only in the Daggerfall ruleset, Daggerfall
 content packs, Daggerfall presentation, and `Daggerfall.Import`. The Host may
@@ -94,10 +95,9 @@ resources, spatial mechanisms, and published service families.
 Use direct safe named C# Engine APIs. The current product uses the Mechanics
 stats/tracks substrate (catalogs, entity binding, reads, and guarded mutations),
 plus Look, Spatial, Appearance, Random, and UI. Mechanics also already publishes
-safe item, inventory, and equipment catalog/lifecycle/equip operations; consult
-and use that substrate when a future Daggerfall behavior needs it. The current
-local `InventoryState` and `EquipmentState` are not-yet-migrated Daggerfall
-implementation facts, not evidence that the substrate is absent. Daggerfall
+safe item, inventory, and equipment catalog/lifecycle/equip operations; use that
+substrate through Kit coordination while Daggerfall retains item definitions and
+policy. Daggerfall
 definitions, formulas, and policy remain in the ruleset. Other capabilities are
 usable only when their safe generated C# contract is verified. The generated
 surface also includes Content/ContentStore, Persistence, Rules (StandardExact and

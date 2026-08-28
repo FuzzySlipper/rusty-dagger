@@ -1,7 +1,7 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
-using WorldRpg.Rulesets.Daggerfall.Modules.Actors;
-using WorldRpg.Rulesets.Daggerfall.Modules.Presentation;
+using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -15,10 +15,8 @@ internal sealed class DaggerfallOutcomePresentation(PresentationState presentati
             case AttackRejectedFact rejected:
                 presentation.SetOutcome(rejected.Reason switch
                 {
-                    AttackRejection.WeaponRecovering => "Weapon recovering",
-                    AttackRejection.TooExhausted => "Too exhausted to attack",
                     AttackRejection.MissingPlayerPosition => "No authored player position",
-                    _ => "No active encounter target in melee reach",
+                    _ => "No target in melee reach",
                 });
                 break;
             case AttackMissedFact missed when Actor(missed.ActorId, out DaggerfallActorDefinition definition):
