@@ -1,46 +1,55 @@
 # Rusty Dagger
 
-Rusty Dagger is an evolving C# game built on Rusty Engine's active NativeAOT
-downstream path.
+Rusty Dagger is the reference repository and proving product for WorldRpg.
 
-This is no longer an architecture trial. The C# implementation is the product's
-mainline implementation and new work is fixed forward there. The path is still
-fresh and raw: Engine service coverage, safe API ergonomics, build tooling, and
-Dagger's internal organization will continue changing as real gameplay is moved
-over and missing upstream capabilities are exposed.
+WorldRpg is an opinionated construction kit and host for world-centric,
+real-time, first-person systemic RPGs. The world is the durable center of
+gravity. Story, quests, progression, combat, and characters are mechanisms for
+inhabiting and unfolding the world, not a mandatory linear product spine.
 
-- Dagger checkout: `/home/dev/rusty-dagger`
-- Engine checkout: `/home/dev/rusty-engine`
-- Evolving agent brief: `rusty-engine/downstream-csharp-agent-brief`
+Daggerfall is the first compiled ruleset, compatibility corpus, content source,
+and game-bundle family. It is not the implicit WorldRpg architecture.
 
-## Active layout
+Ownership:
 
-```text
-src/
-  Dagger.Game/          safe C# application and gameplay
-  Dagger.NativeProduct/ thin generated NativeAOT composition boundary
-  ui/                   DOM UI TypeScript only
-  browser-bundle/       assembled Engine host and UI output
-  scripts/              current build and launch path
+- Rusty Engine guarantees reusable infrastructure and admitted update services.
+- WorldRpg.Kit defines the reusable world-RPG composition grammar and only
+  mechanisms proven across compositions.
+- WorldRpg.Host owns the product lifecycle, built-in ruleset registry, shipped
+  bundles, launcher, defaults, and session selection.
+- WorldRpg.Rulesets.Daggerfall owns all Daggerfall-specific semantics, formulas,
+  identities, policies, presentation meaning, and content interpretation.
+- Content packs own authored definitions, assets, worlds, placements, quests,
+  encounters, and scenario state.
+- Daggerfall.Import owns Arena2 and Daggerfall Unity source knowledge.
+- RustyDagger.NativeProduct is only the generated NativeAOT and Engine boundary.
 
-gameplay/               pre-pivot TypeScript semantic donor
-content/                imported Privateer's Hold product inputs
-```
+Code-bearing rulesets are compiled into the product. Content packs, tuning
+profiles, and game bundles are selected at runtime. Do not introduce dynamic
+managed plug-in loading, reflection discovery, runtime C# compilation, generic
+command buses, service locators, or a replacement gameplay DSL.
 
-`Dagger.Game` references the safe `Rusty.Engine` contracts with unsafe code
-disabled. It owns product state, content interpretation, gameplay services,
-orchestration, and renderer-neutral product facts.
+Code begins in the narrowest truthful owner.
 
-`Dagger.NativeProduct` contains one handwritten product selection. Rusty
-Engine's source generator supplies its internal ABI layouts, safe-service
-implementations, lifecycle adaptation, handle ownership, and native exports.
-Ordinary gameplay does not handle pointers, native statuses, callback tables,
-or `GCHandle` lifetimes.
+A generic name is not evidence that code belongs in WorldRpg.Kit. Existing code
+moves into the Daggerfall ruleset unless a second composition demonstrates that
+the mechanism is genuinely reusable.
 
-The current `Dagger.Game` files are a compact first landing, not a frozen
-application architecture. Ongoing Den work is reorganizing them around explicit
-composition, product state, entities, named services, and realtime-neutral
-update ordering before broader gameplay migration continues.
+Daggerfall-specific assumptions are forbidden in WorldRpg.Kit. Concrete
+ruleset references are permitted in WorldRpg.Host only at the explicit built-in
+composition root.
+
+There is one Rusty Engine-admitted update. WorldRpg does not create a parallel
+loop, clock, timer, browser authority, or renderer.
+
+For every task, identify:
+
+- owning layer;
+- new assumptions introduced;
+- whether Daggerfall vocabulary is permitted;
+- whether the change is code, tuning, content, import, or infrastructure;
+- dependency changes;
+- Daggerfall and boundary-canary proof.
 
 ## Ownership
 
