@@ -42,7 +42,7 @@ constructors and receipts match the generated contracts at Engine HEAD.
 | Layer | Owns | Does not own |
 | --- | --- | --- |
 | Rusty Engine | Host lifecycle/admitted updates, input, rendering/resources, spatial mechanisms, and published service families. | Daggerfall policy or product state. |
-| `WorldRpg.Kit` | Small compiled-ruleset/session contract and typed composition IDs. Bundle/content-pack/tuning resolution remains #7438; reusable mechanisms need a second real composition. | Generic-RPG universality or Daggerfall vocabulary. |
+| `WorldRpg.Kit` | Compiled-ruleset/session contract, typed composition IDs, and reusable or placement-uncertain world-RPG mechanisms. Bundle/content-pack/tuning resolution remains #7438. | Generic-RPG universality or Daggerfall vocabulary. |
 | `WorldRpg.Host` | Product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher policy remains later work. | Daggerfall formulas, actor meaning, Arena2 files, or Privateer's Hold IDs. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, rules, formulas, policies, current content interpretation, presentation, and mutable session state. | Engine machinery and importer source formats. |
 | Content packs (target) | Authored actors, items, world/location/encounter/quest data, assets, placements, and scenario state. | Arbitrary executable C# behavior. |
@@ -51,9 +51,8 @@ constructors and receipts match the generated contracts at Engine HEAD.
 | `src/ui` | DOM projection and semantic action presentation. | Gameplay state or world rendering. |
 
 Rulesets are **compiled**; content packs, tuning profiles, and bundles are
-**loaded**. Existing gameplay moves to the Daggerfall ruleset by default. A
-generic name or current `Modules/` placement does not prove Kit reuse; promotion
-needs evidence from a second real composition/canary with shared semantics.
+**loaded**. Reusable or placement-uncertain mechanisms move to Kit by default;
+the later canary validates the seam rather than authorizing promotion.
 Daggerfall assumptions are legal only in the Daggerfall ruleset, content packs,
 presentation, and importer lanes.
 
@@ -64,10 +63,10 @@ generated **Mechanics** stats/tracks substrate for catalog creation, definitions
 entity binding, reads, and guarded track mutation. It also uses safe Look,
 Spatial, Appearance, Random, and UI families. Mechanics already publishes a safe
 item/inventory/equipment substrate, including catalog, inventory lifecycle, and
-equip operations, although the current Dagger slice has not migrated to it:
-`InventoryState` and `EquipmentState` remain local Daggerfall implementation
-facts. Future Daggerfall work must consult and use the safe substrate where it
-fits, while keeping Daggerfall definitions, formulas, and policy in the ruleset.
+equip operations. Kit now provides a thin revision-guarded inventory coordinator;
+Daggerfall defines its item identities and reward policy. Future Daggerfall work
+must continue to use the safe substrate where it fits while retaining its
+definitions, formulas, and policy in the ruleset.
 Those are verified current C# surfaces, not a promise that every Engine Rust
 capability has a safe wrapper.
 
@@ -85,15 +84,15 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 
 | Active source family/file | Current owner and role |
 | --- | --- |
-| `src/WorldRpg.Kit/WorldRpg.Kit.csproj`, `GameComposition.cs` | Safe Kit project with only typed IDs, `GameSessionContext`, `IGameRuleset`, and `IGameSession`; it references Engine only. No bundle resolver or Daggerfall vocabulary lives here. |
+| `src/WorldRpg.Kit/**` | Safe Kit project with typed composition, Mechanics-backed actor lifetime, configured controls/input frames, Engine-default spatial scene stepping, progression, bounded facts, structured UI values, and revision-guarded inventory coordination. It references Engine only and contains no bundle resolver or Daggerfall vocabulary. |
 | `src/WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj` | Safe Daggerfall ruleset project referencing Kit and Engine. |
 | `DaggerfallRuleset.cs` | Compiled `daggerfall` ruleset implementation creating the current session. |
-| `DaggerfallSession.cs`, `DaggerfallState.cs`, `DaggerfallTuning.cs`, `DaggerfallRewardReactions.cs` | Single mutable Daggerfall session, its state/update ordering, typed tuning, and Daggerfall reward policy. `ProductUpdateState` remains local and is derived inside the session from `ProductUpdate`. |
-| `Content/*`, `Facts/*`, `Modules/*`, `Presentation/*` | All current gameplay, facts, Daggerfall content interpretation, generic-looking modules, and presentation. They remain Daggerfall-owned until a later canary proves narrower shared semantics. |
+| `DaggerfallSession.cs`, `DaggerfallState.cs`, `DaggerfallTuning.cs`, `DaggerfallRewardReactions.cs` | Single mutable Daggerfall session and ordered composition, typed Daggerfall tuning, attack/reward policy, and direct use of Kit mechanisms. `ProductUpdateState` is a Kit input frame derived from Engine input by the session. |
+| `Content/*`, `Facts/*`, `Modules/Combat/*`, `Modules/Presentation/*`, `Presentation/*` | Daggerfall content interpretation, Daggerfall combat formulas/policy/facts, and Daggerfall presentation meaning. Privateer's Hold source parsing adapts to Kit spatial scene inputs. |
 | `AssemblyInfo.cs` | Exact friend access for `WorldRpg.Rulesets.Daggerfall.Tests`. |
 | `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
 | `src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj`, `NativeProduct.cs` | NativeAOT composition project. Its handwritten file has only the Engine product attribute selecting `WorldRpgProduct`; generated output remains under ignored `obj/`. |
-| `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Renamed focused Daggerfall behavior suite, including Host lifecycle/update/disposal coverage. |
+| `tests/WorldRpg.Kit.Tests/*`, `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Focused Kit mechanism and Daggerfall policy suites, including Host lifecycle/update/disposal coverage. |
 | `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; no gameplay authority. |
 | `src/browser-bundle/**`, `src/**/bin/**`, `src/**/obj/**`, `tests/**/bin/**`, `tests/**/obj/**` | Generated output; never authority or handwritten source. |
 | `content/**` | Current Daggerfall/Privateer's Hold inputs. Normalized packs remain #7438/#7323 work. |
@@ -119,7 +118,7 @@ Status terms in this retained snapshot describe the pre-split checkout;
 | `src/Dagger.Game/Daggerfall/Presentation/DaggerfallHudProjection.cs` | Daggerfall resource labels/order through Engine UI/Mechanics. | Daggerfall presentation. |
 | `src/Dagger.Game/Daggerfall/Presentation/DaggerfallOutcomePresentation.cs` | Daggerfall outcome wording. | Daggerfall presentation. |
 | `src/Dagger.Game/Daggerfall/Presentation/PrivateersHoldAppearance.cs` | Privateer's Hold appearance choices through Engine Appearance. | Daggerfall presentation/content-pack interpretation. |
-| `src/Dagger.Game/Facts/ProductFacts.cs` | Product-local accepted-transition contracts/buffer. | Daggerfall ruleset unless second real composition proves a narrower Kit mechanism. |
+| `src/Dagger.Game/Facts/ProductFacts.cs` | Product-local accepted-transition contracts/buffer. | Move the bounded buffering mechanism to Kit; keep concrete Daggerfall fact identities and reactions in the ruleset. |
 | `src/Dagger.Game/Modules/Actors/ActorsState.cs` | Mechanics-backed actor lifetime/defeat state. | Daggerfall ruleset; current generic folder is not Kit proof. |
 | `src/Dagger.Game/Modules/Combat/CombatDefinitions.cs` | Combat definitions and direct formula vocabulary. | Daggerfall ruleset. |
 | `src/Dagger.Game/Modules/Combat/CombatModule.cs` | Daggerfall melee/cooldown/RNG/track mutation. | Daggerfall ruleset. |
@@ -170,8 +169,8 @@ constant is honest; an authored or adjustable value needs a typed owner instead.
 
 `WorldRpgProduct` selects the explicit built-in `daggerfall` default and creates
 its session through `IGameRuleset`; it does not construct `DaggerfallSession`.
-The session currently defaults to Privateer's Hold. Its starting loadout/gold,
-encounter, and appearance values are Daggerfall authored data, not Host/Kit
+The session currently defaults to Privateer's Hold. Its starting loadout/gold
+and appearance values are Daggerfall authored data, not Host/Kit
 defaults; they move into packs through #7438/#7323. The current Daggerfall UI
 title and projection-contract selection likewise remain Daggerfall presentation,
 not Host/Kit policy.
@@ -180,9 +179,9 @@ not Host/Kit policy.
 
 The previous #7310-era generic `Modules` framing is superseded as target
 authority: it usefully established explicit composition, domain-owned mutation,
-direct ordered updates, local resolutions, and buffered facts, but did **not**
-prove that those modules are reusable or belong in a Kit. They begin in the
-Daggerfall ruleset under the current campaign.
+direct ordered updates, local resolutions, and buffered facts. Reusable and
+placement-uncertain mechanisms now live in Kit; concrete Daggerfall policy
+remains in the ruleset.
 
 Older Rust/Angular/HTTP/Studio/browser-runtime task language is likewise
 superseded as implementation ownership. Its useful intended behavior remains
@@ -195,10 +194,10 @@ owners. Retired Rust/Angular tasks are not actionable default work.
 
 - **#7435:** charter/map/task authority is complete.
 - **#7441:** Engine contract reconciliation is complete.
-- **#7436:** landed the compiled project graph and narrow Host/Kit/ruleset/session
-  seam while preserving the focused behavior suite.
-- **#7437:** use an intentionally incompatible canary to prove the boundary and
-  dependency laws; do not promote code merely to satisfy it.
+- **#7436:** landed the compiled project graph, Kit-default mechanism split, and
+  Host/ruleset/session seam while preserving focused proof.
+- **#7437:** use an intentionally incompatible canary to exercise the boundary
+  and dependency laws.
 - **#7438:** add loaded bundles, content packs, typed tuning, and resolution.
 - **#7323 → #7325:** normalized Daggerfall first-contact content, faithful
   Daggerfall melee/consequences, then NativeAOT browser exercise.

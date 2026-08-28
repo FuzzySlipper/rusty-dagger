@@ -38,10 +38,11 @@ internal class RecordingMechanics : DispatchProxy
         {
             nameof(IMechanicsService.CreateCatalog) => CreateCatalog(),
             nameof(IMechanicsService.DefineStat) => DefineStat(),
-            nameof(IMechanicsService.DefineTrack) or nameof(IMechanicsService.DefineContribution) or nameof(IMechanicsService.AdmitCatalog) => null,
+            nameof(IMechanicsService.DefineTrack) or nameof(IMechanicsService.DefineItem) or nameof(IMechanicsService.DefineContribution) or nameof(IMechanicsService.AdmitCatalog) => null,
             nameof(IMechanicsService.BindEntity) => BindEntity((MechanicsEntityBindRequest)argument!),
             nameof(IMechanicsService.SetInitialStat) => SetInitialStat((MechanicsInitialStatRequest)argument!),
             nameof(IMechanicsService.SetInitialTrack) => SetInitialTrack((MechanicsInitialTrackRequest)argument!),
+            nameof(IMechanicsService.SetInitialComponents) => SetInitialComponents((MechanicsInitialComponentsRequest)argument!),
             nameof(IMechanicsService.BindIntrinsicSource) => null,
             nameof(IMechanicsService.CommitEntity) => CommitEntity((MechanicsEntity)argument!),
             nameof(IMechanicsService.ReadStat) => ReadStat((MechanicsStatReadRequest)argument!),
@@ -80,6 +81,14 @@ internal class RecordingMechanics : DispatchProxy
     private object? SetInitialTrack(MechanicsInitialTrackRequest request)
     {
         State(request.Entity).Tracks.Add(request.Track, request.Current);
+        return null;
+    }
+    private object? SetInitialComponents(MechanicsInitialComponentsRequest request)
+    {
+        if (!request.HasInventory) return null;
+        EntityState state = State(request.Entity);
+        foreach (MechanicsInitialInventoryStack stack in request.InventoryStacks.Span)
+            state.Inventory.Add(stack.Definition, stack.Quantity);
         return null;
     }
     private MechanicsEntityReceipt CommitEntity(MechanicsEntity entity)
@@ -139,6 +148,7 @@ internal class RecordingMechanics : DispatchProxy
         internal ulong EntityId { get; } = entityId;
         internal Dictionary<string, long> Stats { get; } = [];
         internal Dictionary<string, long> Tracks { get; } = [];
+        internal Dictionary<string, ulong> Inventory { get; } = [];
         internal ulong StatRevision { get; } = 1;
         internal ulong TrackRevision { get; set; } = 1;
     }

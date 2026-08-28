@@ -2,8 +2,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
-
-using WorldRpg.Rulesets.Daggerfall.Modules.PlayerControl;
+using WorldRpg.Kit.Controls;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -140,6 +139,7 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, PlanarNavCell[]
     internal PlanarNavCell[] Navigation { get; } = navigation;
     internal CollisionMesh Collision { get; } = collision;
     internal string? StaticMeshContentPath { get; } = staticMeshContentPath;
+    internal SpatialSceneInputs ToSpatialScene() => new(Collision.Vertices, Collision.Triangles, Navigation);
 }
 
 internal sealed record ProjectFacts(WorldPoint? PlayerPosition, IReadOnlyDictionary<long, AuthoredActor> Actors);

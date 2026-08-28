@@ -16,8 +16,8 @@ Bundle assembles. Host launches.**
 Ownership:
 
 - Rusty Engine guarantees reusable infrastructure and admitted update services.
-- WorldRpg.Kit defines the reusable world-RPG composition grammar and only
-  mechanisms proven across compositions.
+- WorldRpg.Kit defines the reusable world-RPG composition grammar and the
+  ordinary mechanisms needed to construct a world RPG.
 - WorldRpg.Host owns the product lifecycle, built-in ruleset registry, shipped
   bundles, launcher, defaults, and session selection.
 - WorldRpg.Rulesets.Daggerfall owns all Daggerfall-specific semantics, formulas,
@@ -33,11 +33,10 @@ typed tuning profiles, and game bundles are loaded at runtime. Do not introduce
 dynamic managed plug-in loading, reflection discovery, runtime C# compilation,
 generic command buses, service locators, or a replacement gameplay DSL.
 
-Code begins in the narrowest truthful owner.
-
-A generic name is not evidence that code belongs in WorldRpg.Kit. Existing code
-moves into the Daggerfall ruleset unless a second composition demonstrates that
-the mechanism is genuinely reusable.
+Reusable mechanisms, and mechanisms whose placement is genuinely uncertain,
+begin in WorldRpg.Kit. Daggerfall retains only its identities, formulas, attack
+and reward policy, content interpretation, presentation meaning, and source
+quirks. The canary validates this seam later; it is not a promotion gate.
 
 Daggerfall-specific assumptions are forbidden in WorldRpg.Kit. Concrete
 ruleset references are permitted in WorldRpg.Host only at the explicit built-in
@@ -58,7 +57,7 @@ For every task, identify:
 - whether Daggerfall vocabulary is permitted;
 - whether the change is code, tuning, content, import, or infrastructure;
 - dependency changes;
-- Daggerfall and boundary-canary proof.
+- focused proof for the owning mechanism and ruleset policy.
 
 ## Ownership
 

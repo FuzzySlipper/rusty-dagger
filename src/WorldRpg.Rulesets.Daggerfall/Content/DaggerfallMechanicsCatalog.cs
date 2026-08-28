@@ -1,5 +1,5 @@
 using Rusty.Engine;
-using WorldRpg.Rulesets.Daggerfall.Modules.Actors;
+using WorldRpg.Kit.Actors;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -11,7 +11,7 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
     private readonly IMechanicsService _mechanics;
     private readonly MechanicsCatalog _catalog;
 
-    internal DaggerfallMechanicsCatalog(IMechanicsService mechanics)
+    internal DaggerfallMechanicsCatalog(IMechanicsService mechanics, IEnumerable<DaggerfallItemDefinition>? items = null)
     {
         _mechanics = mechanics;
         MechanicsCatalog catalog = mechanics.CreateCatalog(new MechanicsCatalogCreateRequest("daggerfall_active_slice_v1"));
@@ -20,6 +20,7 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
             _catalog = catalog;
             DefineStats();
             DefineTracks();
+            DefineItems(items ?? []);
             mechanics.AdmitCatalog(_catalog);
         }
         catch
@@ -29,7 +30,7 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
         }
     }
 
-    internal MechanicsEntity Bind(DaggerfallActorDefinition definition, ulong entityId)
+    internal MechanicsEntity Bind(DaggerfallActorDefinition definition, ulong entityId, IReadOnlyList<MechanicsInitialInventoryStack>? initialInventory = null)
     {
         MechanicsEntity entity = _mechanics.BindEntity(new MechanicsEntityBindRequest(_catalog, entityId, definition.Id.Replace("-", "_", StringComparison.Ordinal)));
         try
@@ -38,6 +39,16 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
             _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Health.Value, definition.Vitals.HealthMaximum));
             _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Stamina.Value, definition.Vitals.StaminaMaximum));
             _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Magicka.Value, definition.Vitals.MagickaMaximum));
+            if (initialInventory is not null)
+            {
+                _mechanics.SetInitialComponents(new MechanicsInitialComponentsRequest(
+                    entity, false, ReadOnlyMemory<MechanicsInitialStatValue>.Empty,
+                    false, ReadOnlyMemory<MechanicsInitialTrackValue>.Empty,
+                    false, ReadOnlyMemory<MechanicsInitialIntrinsicSource>.Empty,
+                    false, ReadOnlyMemory<MechanicsInitialActiveEffect>.Empty,
+                    true, initialInventory.ToArray(), ReadOnlyMemory<MechanicsInitialInventoryCapacityLimit>.Empty,
+                    false, string.Empty, false, ReadOnlyMemory<MechanicsInitialEquipmentAssignment>.Empty));
+            }
             _mechanics.CommitEntity(entity);
             return entity;
         }
@@ -64,6 +75,17 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
     }
 
     private void DefineTrack(DaggerfallTrackId track, DaggerfallStatId maximum) => _mechanics.DefineTrack(new MechanicsTrackDefinitionRequest(_catalog, track.Value, MinimumStatValue, MechanicsTrackMaximumKind.Stat, 0, maximum.Value));
+
+    internal void DefineItems(IEnumerable<DaggerfallItemDefinition> items)
+    {
+        foreach (DaggerfallItemDefinition item in items)
+        {
+            _mechanics.DefineItem(new MechanicsItemDefinitionRequest(
+                _catalog, item.Id, MechanicsItemKind.Fungible, item.MaximumQuantity,
+                ReadOnlyMemory<MechanicsText>.Empty, ReadOnlyMemory<MechanicsItemCapacityCostInput>.Empty,
+                false, 0, string.Empty, ReadOnlyMemory<MechanicsText>.Empty));
+        }
+    }
 
     private void SetStats(MechanicsEntity entity, DaggerfallStatBases stats, DaggerfallVitalValues vitals)
     {

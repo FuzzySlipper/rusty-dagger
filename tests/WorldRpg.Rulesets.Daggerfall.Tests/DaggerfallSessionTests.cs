@@ -6,7 +6,7 @@ using WorldRpg.Host;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
-using WorldRpg.Rulesets.Daggerfall.Modules.PlayerControl;
+using WorldRpg.Kit.Controls;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -14,7 +14,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallSessionTests
 {
     [Fact]
-    public void Daggerfall_rows_drive_the_hud_and_player_melee_uses_exact_revisioned_tracks()
+    public void Daggerfall_rows_drive_the_hud_and_unresolved_attack_has_no_target_side_effect()
     {
         RecordingEngine engine = new();
         using DaggerfallSession composition = new(engine.Context, SkeletalInputs());
@@ -24,28 +24,25 @@ public sealed class DaggerfallSessionTests
         Assert.Equal((85d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
         Assert.Equal((90d, 90d), Resource(engine.Ui.Projections[^1].Value, "stamina"));
 
-        for (int attack = 0; attack < 5; attack++) composition.Update(new ProductUpdateState(1f) { AttackRequested = true });
+        ProductUpdateState attack = new(1f);
+        attack.Request(DaggerfallInput.Attack);
+        composition.Update(attack);
 
-        Assert.Equal((65d, 90d), Resource(engine.Ui.Projections[^1].Value, "stamina"));
-        Assert.Contains(engine.Mechanics.SpendRequests, request => request.Track == "health" && request.RevisionGuard == MechanicsRevisionGuard.Exact);
-        Assert.Contains(engine.Mechanics.SpendRequests, request => request.Track == "stamina" && request.RevisionGuard == MechanicsRevisionGuard.Exact);
-        Assert.Equal("Defeated skeletal-warrior for 2 damage; gained 450 XP", composition.Presentation.LastOutcome);
-
-        composition.Update(new ProductUpdateState(1f));
-        Assert.Equal("Defeated skeletal-warrior for 2 damage; gained 450 XP; looted 10 gold-piece", composition.Presentation.LastOutcome);
+        Assert.Equal((90d, 90d), Resource(engine.Ui.Projections[^1].Value, "stamina"));
+        Assert.DoesNotContain(engine.Mechanics.SpendRequests, request => request.Track is "health" or "stamina");
+        Assert.Equal("No target in melee reach", composition.Presentation.LastOutcome);
     }
 
     [Fact]
-    public void Enemy_melee_spends_the_player_damage_track_until_defeat()
+    public void Unresolved_actors_do_not_attack_the_player()
     {
         RecordingEngine engine = new();
         using DaggerfallSession composition = new(engine.Context, SkeletalInputs());
 
         for (int update = 0; update < 6; update++) composition.Update(new ProductUpdateState(2f));
 
-        Assert.Equal((0d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
-        Assert.Equal("skeletal-warrior hit for 15 damage", composition.Presentation.LastOutcome);
-        Assert.True(engine.Mechanics.SpendRequests.Count(request => request.Track == "health" && request.RevisionGuard == MechanicsRevisionGuard.Exact) >= 6);
+        Assert.Equal((85d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
+        Assert.DoesNotContain(engine.Mechanics.SpendRequests, request => request.Track == "health");
     }
 
     [Fact]
@@ -78,13 +75,20 @@ public sealed class DaggerfallSessionTests
         Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(engine.Context, SkeletalInputs()));
         Assert.Equal(1, engine.Mechanics.CatalogDisposals);
         Assert.Equal(2, engine.Mechanics.EntityDisposals);
+
+        RecordingEngine appearanceFailure = new();
+        appearanceFailure.Appearance.FailOnCreateCall = 1;
+        PrivateersHoldInputs worldInputs = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), "privateers-hold.mesh");
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(appearanceFailure.Context, worldInputs));
+        Assert.Equal(1, appearanceFailure.Ui.StreamDisposals);
     }
 
     [Fact]
     public void Input_interpretation_uses_typed_edges_controls_and_semantic_intents()
     {
         RecordingEngine engine = new();
-        PlayerInputSystem input = new(PlayerControlTuning.Defaults, engine.Look.Service);
+        InputActionId testAttack = new("test.attack");
+        PlayerInputSystem input = new(PlayerControlTuning.Defaults, engine.Look.Service, DaggerfallInput.Controls, [new InputActionBinding(testAttack, "attack"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0, 0, 0));
 
         ProductUpdateState held = new(1f);
@@ -96,7 +100,7 @@ public sealed class DaggerfallSessionTests
         input.Apply(player, held);
 
         Assert.Equal(new Vector2(0f, 1f), held.PlanarIntent);
-        Assert.True(held.AttackRequested);
+        Assert.True(held.IsRequested(testAttack));
         Assert.Equal(1, engine.Look.IntegrationCount);
 
         ProductUpdateState released = new(1f);
@@ -107,7 +111,7 @@ public sealed class DaggerfallSessionTests
         input.Apply(player, released);
 
         Assert.Equal(new Vector2(.75f, -.25f), released.PlanarIntent);
-        Assert.False(released.AttackRequested);
+        Assert.False(released.IsRequested(testAttack));
     }
 
     [Fact]
@@ -265,6 +269,7 @@ public sealed class DaggerfallSessionTests
         protected override object? Invoke(MethodInfo? method, object?[]? args)
         {
             if (method?.Name == nameof(ISpatialService.CreateSession)) return new SpatialSession(new SpatialSessionHandle(1), () => SessionDisposals++);
+            if (method?.Name == nameof(ISpatialService.DefaultCharacterControllerConfig)) return default(CharacterControllerConfig);
             if (method?.Name == nameof(ISpatialService.ProposeCharacterStep)) { StepCalls++; Commands.Add(((CharacterStepRequest)args![0]!).Command); return default(CharacterStepReceipt); }
             return method?.ReturnType.IsValueType == true ? Activator.CreateInstance(method.ReturnType) : null;
         }
@@ -319,6 +324,7 @@ public sealed class DaggerfallSessionTests
     {
         internal IUiService Service { get; private set; } = null!;
         internal List<UiProjection> Projections { get; } = [];
+        internal int StreamDisposals { get; private set; }
         internal static RecordingUi Create()
         {
             IUiService service = DispatchProxy.Create<IUiService, RecordingUi>();
@@ -328,7 +334,7 @@ public sealed class DaggerfallSessionTests
         }
         protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch
         {
-            nameof(IUiService.OpenStream) => new UiStreamHandle(1),
+            nameof(IUiService.OpenStream) => new UiStream(new UiStreamHandle(1), () => StreamDisposals++),
             nameof(IUiService.PublishProjection) => Publish((UiProjection)args![0]!),
             _ => throw new NotSupportedException(method?.Name)
         };

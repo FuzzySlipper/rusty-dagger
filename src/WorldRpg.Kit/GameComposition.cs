@@ -22,5 +22,5 @@ public interface IGameRuleset
 public interface IGameSession : IDisposable
 {
     void PublishInitial();
-    void Update(ProductUpdate update);
+    ProductTurnRequest Update(ProductUpdate update);
 }
