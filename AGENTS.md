@@ -1,136 +1,138 @@
-# Rusty Dagger C# product guidance
+# Rusty Dagger / WorldRpg product guidance
 
-## Current direction
+## Direction and authority
 
-Rusty Dagger is an ordinary evolving C# game built on Rusty Engine's active
-NativeAOT downstream path. This is not a trial or disposable proof branch. New
-product work belongs in the C# path and is fixed forward as the Engine SDK and
-Dagger architecture mature.
+Rusty Dagger is the reference repository and proving product for **WorldRpg**:
+an opinionated construction kit and reference host for world-centric, real-time,
+first-person systemic RPGs. The world is the durable center of gravity; story,
+quests, progression, combat, and characters inhabit and unfold it rather than
+forming a mandatory linear spine.
 
-The path is still fresh and raw. Public C# shapes, build ergonomics, product
-organization, and available Engine service families may change. Do not mistake
-that expected evolution for permission to build compatibility layers, preserve
-walking-spike organization, or recreate missing Engine mechanisms downstream.
+The durable formula is:
+
+> **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
+
+Daggerfall is the first compiled ruleset, compatibility corpus, content source,
+and game-bundle family. It is not implicit WorldRpg architecture. The C# path is
+an evolving mainline product path, not a spike or a compatibility exercise.
 
 - Dagger checkout: `/home/dev/rusty-dagger`
-- Paired Engine checkout: `/home/dev/rusty-engine`
+- paired Engine checkout: `/home/dev/rusty-engine`
 - Dagger Den project: `rusty-dagger`
-- Evolving cross-repo brief: `[doc: rusty-engine/downstream-csharp-agent-brief]`
+- current shared boundary brief: `[doc: rusty-engine/downstream-csharp-agent-brief]`
+- current structure authority: Board post #139 and campaign #7322
 
-Before substantial work, resolve the current Den task and project guidance,
-then read the cross-repo brief when the task touches C# organization or the
-Engine boundary. The current user request and owning task override the brief.
-If Den is unreachable, stop and report the failed operation rather than
-reconstructing current direction from old source or Git history.
+Before substantial work, resolve the current Den task and project guidance, then
+read the downstream brief for C# organization or Engine-boundary work. The user
+request and owning task override older wording. If Den is unreachable, stop and
+report the failed read rather than reconstructing direction from source or Git.
 
-## Active source shape
+## Current state versus target graph
 
-- `src/Dagger.Game/` is the safe ordinary C# application/game project. It owns
-  product state, entities and domain records, catalogs, content interpretation,
-  gameplay services, orchestration, and renderer-neutral presentation facts.
-  It has unsafe code disabled.
-- `src/Dagger.NativeProduct/` is the thin NativeAOT composition project. Its
-  handwritten source selects the Dagger product type; Rusty Engine's source
-  generator injects raw ABI layouts, service implementations, lifecycle
-  adaptation, handle ownership, and native exports.
-- `src/ui/` owns thin DOM UI TypeScript. It may present Engine-delivered UI
-  projections and submit semantic actions. It must not own gameplay state or
-  render game-world elements.
-- `src/browser-bundle/` is generated/assembled host output, not a second product
-  runtime or gameplay implementation lane.
-- `src/scripts/` contains the current C# product build and launch path.
-- `content/` contains product inputs.
-- `gameplay/` is semantic donor material from the earlier TypeScript design.
-  Consult it for formulas, catalogs, authored meaning, and behavior, but do not
-  execute or extend its runtime/evaluator/package architecture.
+**Implemented today:** `src/Dagger.Game/` is the safe ordinary C# product and
+`src/Dagger.NativeProduct/` is its thin NativeAOT composition boundary. Their
+names and the current `Modules/` placement are migration facts, not evidence of
+reusable architecture. Do not claim the target projects already exist before
+their owning migration task lands.
 
-The root Rust crates, Angular application, HTTP product server, Studio adapter,
-Cargo workspace, package graph, and old scripts are inactive donor material.
-Do not extend them, revive their authority posture, or run their gates as proof
-for current C# work unless the current task explicitly asks for donor analysis.
+**Ordered target:** #7435 → #7441 → #7436 → #7437 → #7438 → #7323 → #7324 → #7325.
 
-## Product application shape
+#7441 first reconciles current Dagger with already-published Engine
+update/input/look/spatial/appearance contracts. Today’s `DaggerGame` and
+composition still use obsolete ProductUpdate/input/clock/constructor shapes, so
+do not claim this checkout builds against Engine HEAD before that task completes.
 
-> The product decides. The Engine guarantees.
+| Target owner | Responsibility |
+| --- | --- |
+| `WorldRpg.Kit` | Small world-RPG composition grammar: compiled ruleset/session contracts, bundle resolution, content-pack identity/dependency order, validated tuning loading, diagnostics, and only mechanisms proven across real compositions. It is not a generic RPG framework. |
+| `WorldRpg.Host` | Reference-product lifecycle, shipped compiled-ruleset registry, launcher/selection, default bundle, bundle resolution/session construction, and product-level diagnostics. It may select Daggerfall, never interpret Daggerfall rules or source files. |
+| `WorldRpg.Rulesets.Daggerfall` | All Daggerfall identities, formulas, policies, content interpretation, presentation meaning, save behavior, and Daggerfall session state. It should initially be truthfully large. |
+| `RustyDagger.NativeProduct` | The microscopic NativeAOT/Engine integration assembly. Handwritten code selects the Host product type; generated output supplies ABI, lifecycle adaptation, services, handles, and exports. |
+| `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge, source formats, conversion quirks, provenance, and differential validation. Runtime code consumes normalized packs, not source-shaped data. |
+| Content packs | Authored actors, items, worlds, placements, encounters, quests, assets, and scenario state interpreted by a ruleset. |
+| TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns neither gameplay state nor game-world rendering. |
 
-Dagger C# owns application and game logic, authoritative product state,
-orchestration, content meaning, and product policy. Prefer ordinary C#:
+Rulesets are **compiled** into the NativeAOT product. Content packs, typed tuning
+profiles, and game bundles are **loaded**. Adding code-bearing ruleset semantics
+requires a product rebuild; changing valid content/tuning does not. Do not add
+runtime assembly loading, reflection discovery, `Assembly.Load`, service
+locators, generic command buses, a new gameplay DSL, or a universal plug-in ABI.
 
-- one explicit composition root;
-- one clear persistent product-state owner;
-- ordinary entities and domain records;
-- named services with narrow responsibilities;
-- constructor-supplied dependencies;
-- direct use of safe named Engine service interfaces;
-- explicit, realtime-neutral ordering inside each Engine-admitted update.
+## Promotion, Daggerfall, and tuning rules
 
-`Rusty.Engine.Application` is an optional paved road for update phases. Use it
-only when it makes Dagger simpler. Dagger may customize phases or implement
-`IEngineProduct.Update` directly. The helper is not application authority and
-must not become a loop, clock, ECS, bus, service locator, delayed scheduler, or
-mandatory module framework.
+Existing gameplay begins in `WorldRpg.Rulesets.Daggerfall`. A generic class or
+the current `Modules/` directory is not proof of Kit reuse. Promotion requires
+evidence from a second real composition (normally the intentionally incompatible
+canary); removing `Daggerfall` from a name is not evidence.
 
-Do not create architecture merely to demonstrate a pattern. State helpers are
-for genuine top-level modes; services and folders should follow real product
-responsibilities. Current Den architecture tasks own the next organization
-step, so do not treat today's flat file placement as frozen.
+Daggerfall assumptions are legal only in the Daggerfall ruleset, Daggerfall
+content packs, Daggerfall presentation, and `Daggerfall.Import`. The Host may
+choose a built-in Daggerfall ruleset/bundle only at its explicit catalog/default
+composition seam. The Kit must not mention Daggerfall, Arena2, Privateer's Hold,
+or DFUnity vocabulary.
+
+Give each value one honest home:
+
+- Adjustable ruleset values use discoverable, validated, typed tuning handles.
+- Actor, item, encounter, and world values belong in content packs.
+- Algorithmic invariants stay beside the owning algorithm.
+- Source-format quirks stay in `Daggerfall.Import`.
+- Product default selection stays in the Host.
+
+Do not solve this with magic numbers hidden in call sites or a const field for
+every authored value. Keep compact structural constants local and promote a
+value only when it is genuinely adjustable or authored data.
 
 ## Engine boundary
 
-Engine Rust owns durable reusable infrastructure: host lifecycle and update
-admission, input delivery, rendering/presentation mechanisms, resources,
-spatial mechanisms, and other named service families as they are published.
+> The product decides. The Engine guarantees.
 
-- Do not write new downstream Rust or move product logic into Rust.
-- Ordinary `Dagger.Game` code must not use `unsafe`, pointers, `Native*`,
-  `GCHandle`, raw statuses, or handwritten native declarations.
-- Generated sources stay under ignored `obj/` output and are never edited or
-  committed.
-- NativeAOT product code is trusted first-party code. Use direct typed calls;
-  do not add JSON invocation, method-name dispatch, reflection registries,
-  generic command buses, permission systems, compatibility negotiation, or
-  adversarial boundary ceremony.
-- Engine owns renderer resources, retained handles, frame construction,
-  backend realization, and canvas lifecycle. C# publishes product facts through
-  named Engine APIs. TypeScript remains DOM UI only.
+The product owns application/gameplay logic, authoritative state, entities,
+catalogs, content meaning, policy, and ordering within each Engine-admitted
+update. Engine owns reusable host lifecycle/admission, input, rendering and
+resources, spatial mechanisms, and published service families.
 
-## Missing capability stopping rule
+Use direct safe named C# Engine APIs. The current product uses the Mechanics
+stats/tracks substrate (catalogs, entity binding, reads, and guarded mutations),
+plus Look, Spatial, Appearance, Random, and UI. Mechanics also already publishes
+safe item, inventory, and equipment catalog/lifecycle/equip operations; consult
+and use that substrate when a future Daggerfall behavior needs it. The current
+local `InventoryState` and `EquipmentState` are not-yet-migrated Daggerfall
+implementation facts, not evidence that the substrate is absent. Daggerfall
+definitions, formulas, and policy remain in the ruleset. Other capabilities are
+usable only when their safe generated C# contract is verified. The generated
+surface also includes Content/ContentStore, Persistence, Rules (StandardExact and
+StandardContinuous), Animation, Audio, and CameraView; this is boundary routing,
+not an API catalog. Reverify each contract when it is used, and keep product
+semantics and policy in the ruleset.
 
-Missing Engine capabilities are expected while this path evolves. If Dagger
-cannot express required behavior through the safe generated API:
+Do not write downstream Rust or move product logic into Rust. Ordinary safe
+product code must not use `unsafe`, pointers, `Native*`, `GCHandle`, raw
+statuses, or handwritten native declarations. Generated `obj/` sources are
+ignored output: never edit or commit them.
 
-1. name the blocked product behavior;
-2. identify the existing or missing Engine owner;
-3. confirm the safe API does not already publish it;
-4. file one narrow, purpose-neutral Engine request;
-5. stop the downstream work at that boundary.
+If a required behavior is absent from the safe API: name the behavior and Engine
+owner, confirm no safe wrapper already exposes it, file one narrow
+purpose-neutral `rusty-engine` request, and stop at that boundary. Do not
+reimplement Engine machinery in C#, TypeScript, or downstream Rust, and do not
+substitute a fake proof path or parallel host.
 
-Do not fill the gap with downstream Rust, a C# reimplementation of Engine
-machinery, browser rendering, fake proof behavior, a parallel host, or a
-Dagger-shaped callback list. An upstream request and honest stop are valid task
-outcomes.
+## Update, donors, and evidence
 
-## Work and evidence
+There is one Engine-admitted update. Host/ruleset code may use the optional
+`Rusty.Engine.Application` phases when it simplifies the product or implement
+`IEngineProduct.Update` directly; it must not create a second loop, clock,
+timer, thread, browser authority, ECS, scheduler, service locator, or renderer.
 
-- Preserve unrelated work and donor sources. Follow the current task's branch
-  and promotion instructions.
-- At meaningful milestones report the goal advanced, necessary surfaces,
-  current product behavior, proof scaffolding, drift/unsupported boundaries,
-  and upstream requests.
-- Product behavior and maintainable code are the deliverable. Tests and review
-  findings do not silently expand the task.
-- Use only the focused generation, safe compilation, NativeAOT publish, or
-  direct exercise that answers the current task.
-- Do not run legacy Rust, Angular, broad browser, packaging, conformance,
-  security, or smoke suites unless the current task explicitly requires them.
-- If review feedback conflicts with the task or an owning Engine contract,
-  record the disagreement and seek resolution instead of treating it as new
-  marching orders.
+`gameplay/` is semantic donor material for formulas, catalogs, authored meaning,
+and behavior. Root Rust crates, Angular, the HTTP server, Studio adapter, old
+scripts, and their gates are inactive donor material. Preserve useful semantics;
+do not revive their runtime/evaluator/package/transport/authority topology.
+`src/browser-bundle/` and generated NativeAOT output are assembled output, not
+another product runtime or an authority source.
 
-## Documentation posture
-
-Keep this file and the README factual and compact. Shared downstream C# guidance
-lives at the stable Den handle
-`rusty-engine/downstream-csharp-agent-brief` and is expected to evolve in place.
-Do not recreate the deleted pre-pivot documentation corpus or write speculative
-SDK promises ahead of demonstrated behavior.
+Use only focused generation, safe compilation, NativeAOT publication, or direct
+exercise required by the current task. Do not run retired Rust/Angular/broad
+browser/packaging gates unless the task explicitly calls for them. Keep this
+file and the README factual and compact; the migration map records current and
+target ownership in detail.

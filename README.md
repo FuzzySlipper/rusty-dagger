@@ -10,6 +10,9 @@ inhabiting and unfolding the world, not a mandatory linear product spine.
 Daggerfall is the first compiled ruleset, compatibility corpus, content source,
 and game-bundle family. It is not the implicit WorldRpg architecture.
 
+The working formula is: **Engine guarantees. Kit shapes. Ruleset decides.
+Bundle assembles. Host launches.**
+
 Ownership:
 
 - Rusty Engine guarantees reusable infrastructure and admitted update services.
@@ -22,12 +25,13 @@ Ownership:
 - Content packs own authored definitions, assets, worlds, placements, quests,
   encounters, and scenario state.
 - Daggerfall.Import owns Arena2 and Daggerfall Unity source knowledge.
-- RustyDagger.NativeProduct is only the generated NativeAOT and Engine boundary.
+- RustyDagger.NativeProduct is the thin NativeAOT and Engine boundary; its ABI
+  and service output are generated.
 
-Code-bearing rulesets are compiled into the product. Content packs, tuning
-profiles, and game bundles are selected at runtime. Do not introduce dynamic
-managed plug-in loading, reflection discovery, runtime C# compilation, generic
-command buses, service locators, or a replacement gameplay DSL.
+Code-bearing rulesets are compiled into the product. Content packs, validated
+typed tuning profiles, and game bundles are loaded at runtime. Do not introduce
+dynamic managed plug-in loading, reflection discovery, runtime C# compilation,
+generic command buses, service locators, or a replacement gameplay DSL.
 
 Code begins in the narrowest truthful owner.
 
@@ -38,6 +42,11 @@ the mechanism is genuinely reusable.
 Daggerfall-specific assumptions are forbidden in WorldRpg.Kit. Concrete
 ruleset references are permitted in WorldRpg.Host only at the explicit built-in
 composition root.
+
+Adjustable ruleset values belong in discoverable validated typed tuning handles;
+authored actor, item, and world values belong in content packs; algorithmic
+invariants stay beside their algorithms; source quirks belong in Daggerfall.Import;
+and default bundle selection belongs in WorldRpg.Host.
 
 There is one Rusty Engine-admitted update. WorldRpg does not create a parallel
 loop, clock, timer, browser authority, or renderer.
@@ -86,7 +95,9 @@ It builds the DOM UI, publishes `Dagger.NativeProduct` as a NativeAOT shared
 library, and launches it through the adjacent Rusty Engine C# product host. The
 current scripts assume the sibling Engine checkout at `/home/dev/rusty-engine`
 and intentionally track that checkout forward rather than pinning an early SDK
-shape.
+shape. Current Dagger source still needs #7441's reconciliation with the
+published Engine update/input/look/spatial/appearance contracts; this is not a
+claim that the checkout builds against Engine HEAD today.
 
 Run the product only when the current task needs live behavior. Focused C#
 compilation or NativeAOT publication is normally enough for organization and
