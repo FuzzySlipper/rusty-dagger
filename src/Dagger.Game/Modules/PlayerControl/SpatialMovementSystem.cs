@@ -1,6 +1,6 @@
 using System.Numerics;
 using Rusty.Engine;
-using RustyDagger.Game.Content;
+using RustyDagger.Game.Daggerfall.Content;
 
 namespace RustyDagger.Game.Modules.PlayerControl;
 
