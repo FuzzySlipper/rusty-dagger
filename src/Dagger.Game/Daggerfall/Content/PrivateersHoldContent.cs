@@ -5,7 +5,7 @@ using Rusty.Engine;
 
 using RustyDagger.Game.Modules.PlayerControl;
 
-namespace RustyDagger.Game.Content;
+namespace RustyDagger.Game.Daggerfall.Content;
 
 /// <summary>Owns the product interpretation of the admitted Privateer's Hold inputs.</summary>
 internal static class PrivateersHoldContent

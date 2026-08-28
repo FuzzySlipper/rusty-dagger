@@ -1,5 +1,4 @@
 using Rusty.Engine;
-using RustyDagger.Game.Content;
 using RustyDagger.Game.Daggerfall.Content;
 using RustyDagger.Game.Daggerfall.Presentation;
 using RustyDagger.Game.Facts;
