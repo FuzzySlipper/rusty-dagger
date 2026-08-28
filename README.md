@@ -91,13 +91,11 @@ The active build and launch command is:
 src/scripts/run-product.sh
 ```
 
-It builds the DOM UI, publishes `Dagger.NativeProduct` as a NativeAOT shared
+It builds the DOM UI, publishes `RustyDagger.NativeProduct` as a NativeAOT shared
 library, and launches it through the adjacent Rusty Engine C# product host. The
 current scripts assume the sibling Engine checkout at `/home/dev/rusty-engine`
 and intentionally track that checkout forward rather than pinning an early SDK
-shape. Current Dagger source still needs #7441's reconciliation with the
-published Engine update/input/look/spatial/appearance contracts; this is not a
-claim that the checkout builds against Engine HEAD today.
+shape.
 
 Run the product only when the current task needs live behavior. Focused C#
 compilation or NativeAOT publication is normally enough for organization and

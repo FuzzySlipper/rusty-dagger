@@ -29,23 +29,22 @@ report the failed read rather than reconstructing direction from source or Git.
 
 ## Current state versus target graph
 
-**Implemented today:** `src/Dagger.Game/` is the safe ordinary C# product and
-`src/Dagger.NativeProduct/` is its thin NativeAOT composition boundary. Their
-names and the current `Modules/` placement are migration facts, not evidence of
-reusable architecture. Do not claim the target projects already exist before
-their owning migration task lands.
+**Implemented today:** `src/WorldRpg.Kit/` contains the small safe composition
+contract, `src/WorldRpg.Rulesets.Daggerfall/` owns the current gameplay/session,
+`src/WorldRpg.Host/` owns product lifecycle and built-in selection, and
+`src/RustyDagger.NativeProduct/` is the thin NativeAOT boundary. The ruleset's
+current `Modules/` placement is a migration fact, not evidence of Kit reuse.
 
 **Ordered target:** #7435 → #7441 → #7436 → #7437 → #7438 → #7323 → #7324 → #7325.
 
-#7441 first reconciles current Dagger with already-published Engine
-update/input/look/spatial/appearance contracts. Today’s `DaggerGame` and
-composition still use obsolete ProductUpdate/input/clock/constructor shapes, so
-do not claim this checkout builds against Engine HEAD before that task completes.
+#7441 reconciled the current product with the published Engine
+update/input/look/spatial/appearance contracts. #7436 establishes the project
+graph; #7437 remains the proof that a mechanism deserves promotion into Kit.
 
 | Target owner | Responsibility |
 | --- | --- |
-| `WorldRpg.Kit` | Small world-RPG composition grammar: compiled ruleset/session contracts, bundle resolution, content-pack identity/dependency order, validated tuning loading, diagnostics, and only mechanisms proven across real compositions. It is not a generic RPG framework. |
-| `WorldRpg.Host` | Reference-product lifecycle, shipped compiled-ruleset registry, launcher/selection, default bundle, bundle resolution/session construction, and product-level diagnostics. It may select Daggerfall, never interpret Daggerfall rules or source files. |
+| `WorldRpg.Kit` | Current small world-RPG composition contract: typed IDs, compiled ruleset/session contracts, and only mechanisms proven across real compositions. Bundle/content-pack/tuning resolution is #7438 work. It is not a generic RPG framework. |
+| `WorldRpg.Host` | Current reference-product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher selection and diagnostics expand later. It may select Daggerfall, never interpret Daggerfall rules or source files. |
 | `WorldRpg.Rulesets.Daggerfall` | All Daggerfall identities, formulas, policies, content interpretation, presentation meaning, save behavior, and Daggerfall session state. It should initially be truthfully large. |
 | `RustyDagger.NativeProduct` | The microscopic NativeAOT/Engine integration assembly. Handwritten code selects the Host product type; generated output supplies ABI, lifecycle adaptation, services, handles, and exports. |
 | `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge, source formats, conversion quirks, provenance, and differential validation. Runtime code consumes normalized packs, not source-shaped data. |
