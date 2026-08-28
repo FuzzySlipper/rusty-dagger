@@ -77,11 +77,12 @@ internal sealed class DaggerfallComposition : IDisposable
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, catalog.HudResources);
             _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
+            partiallyConstructed.Add(_appearance);
             _rightHand = catalog.IronLongsword;
         }
         catch
         {
-            for (int index = partiallyConstructed.Count - 1; index >= 0; index--) partiallyConstructed[index].Dispose();
+            DisposeAll(partiallyConstructed);
             throw;
         }
     }
@@ -89,6 +90,31 @@ internal sealed class DaggerfallComposition : IDisposable
     internal DaggerfallState State { get; }
     internal PresentationState Presentation { get; }
     internal void PublishInitial() => PublishPresentation();
+
+    internal void Update(ProductUpdateFacts facts, ReadOnlySpan<ProductInputEvent> input)
+    {
+        // Daggerfall is a realtime simulation. Demand and external turns have no
+        // fixed delta, so this ruleset deliberately does not interpret them as steps.
+        if (facts.LifecycleState != ProductLifecycleState.Running
+            || facts.Mode != ProductTurnKind.Realtime
+            || facts.AdmittedStepCount == 0
+            || !double.IsFinite(facts.FixedDeltaSeconds)
+            || facts.FixedDeltaSeconds <= 0d
+            || facts.FixedDeltaSeconds > float.MaxValue)
+        {
+            return;
+        }
+
+        float deltaSeconds = (float)facts.FixedDeltaSeconds;
+        ProductUpdateState firstStep = new(deltaSeconds);
+        foreach (ProductInputEvent inputEvent in input) firstStep.Add(inputEvent);
+
+        // One admitted update owns one input slice. Apply it to the first step,
+        // then preserve held intent without replaying one-shot actions.
+        Update(firstStep);
+        for (uint step = 1; step < facts.AdmittedStepCount; step++)
+            Update(new ProductUpdateState(deltaSeconds) { PlanarIntent = firstStep.PlanarIntent });
+    }
 
     internal void Update(ProductUpdateState update)
     {
@@ -107,10 +133,19 @@ internal sealed class DaggerfallComposition : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _spatial.Dispose();
-        State.Actors.Dispose();
-        _mechanicsCatalog.Dispose();
         _disposed = true;
+        DisposeAll([_mechanicsCatalog, State.Actors, _spatial, _appearance]);
+    }
+
+    private static void DisposeAll(IReadOnlyList<IDisposable> values)
+    {
+        List<Exception>? failures = null;
+        for (int index = values.Count - 1; index >= 0; index--)
+        {
+            try { values[index].Dispose(); }
+            catch (Exception exception) { (failures ??= []).Add(exception); }
+        }
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
     private void React(IProductFact fact)
