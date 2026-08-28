@@ -5,6 +5,7 @@
 /artifacts/
 /.angular/
 /local
+/GeneratedInputs
 __pycache__/
 /AGENTS.md
 /engine-render-check/node_modules/
