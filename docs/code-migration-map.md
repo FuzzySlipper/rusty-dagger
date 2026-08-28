@@ -1,9 +1,8 @@
 # Rusty Dagger / WorldRpg code and migration map
 
-**Status:** living ownership inventory; target names below are not implemented
-project names unless explicitly marked **target**.
+**Status:** living ownership inventory; the #7436 project graph is implemented.
 
-**Snapshot:** 2026-08-28, WorldRpg foundation task #7435.
+**Snapshot:** 2026-08-28, WorldRpg foundation task #7436.
 
 ## Authority and reading order
 
@@ -24,11 +23,10 @@ The compact rule is:
 
 > **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
 
-`WorldRpg.Kit`, `WorldRpg.Host`, `WorldRpg.Rulesets.Daggerfall`,
-`RustyDagger.NativeProduct`, and `Daggerfall.Import` are **target** names. The
-current checked-in projects remain `Dagger.Game` and `Dagger.NativeProduct`
-until #7436 moves them. No documentation claim about the target graph is proof
-that a project, canary, bundle resolver, or importer has already landed.
+`WorldRpg.Kit`, `WorldRpg.Host`, `WorldRpg.Rulesets.Daggerfall`, and
+`RustyDagger.NativeProduct` are now active projects. `Daggerfall.Import`,
+loaded bundles/content packs/tuning, and the boundary canary remain later work;
+do not imply they landed with this project split.
 
 The current #7441 Daggerfall integration consumes Engine `ProductUpdate.Facts` directly:
 only running realtime batches with a finite positive `FixedDeltaSeconds` advance
@@ -44,12 +42,12 @@ constructors and receipts match the generated contracts at Engine HEAD.
 | Layer | Owns | Does not own |
 | --- | --- | --- |
 | Rusty Engine | Host lifecycle/admitted updates, input, rendering/resources, spatial mechanisms, and published service families. | Daggerfall policy or product state. |
-| `WorldRpg.Kit` (target) | Small compiled-ruleset/session and loaded-composition grammar, content-pack IDs/order, validated tuning loading, diagnostics, and mechanisms proved by a second real composition. | Generic-RPG universality or Daggerfall vocabulary. |
-| `WorldRpg.Host` (target) | Product lifecycle, shipped-ruleset registry, default bundle, launcher/selection, construction, and product diagnostics. | Daggerfall formulas, actor meaning, Arena2 files, or Privateer's Hold IDs. |
-| `WorldRpg.Rulesets.Daggerfall` (target) | Daggerfall identities, rules, formulas, policies, content interpretation, presentation, saves, and mutable session state. | Engine machinery and importer source formats. |
+| `WorldRpg.Kit` | Small compiled-ruleset/session contract and typed composition IDs. Bundle/content-pack/tuning resolution remains #7438; reusable mechanisms need a second real composition. | Generic-RPG universality or Daggerfall vocabulary. |
+| `WorldRpg.Host` | Product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher policy remains later work. | Daggerfall formulas, actor meaning, Arena2 files, or Privateer's Hold IDs. |
+| `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, rules, formulas, policies, current content interpretation, presentation, and mutable session state. | Engine machinery and importer source formats. |
 | Content packs (target) | Authored actors, items, world/location/encounter/quest data, assets, placements, and scenario state. | Arbitrary executable C# behavior. |
 | `Daggerfall.Import` (target) | Arena2/DFUnity formats, source paths/records, conversion quirks, provenance, and differential validation. | Runtime session or Host composition. |
-| `RustyDagger.NativeProduct` (target) | Handwritten product-type selection plus generated NativeAOT ABI/lifecycle/service/export output. | Product logic. |
+| `RustyDagger.NativeProduct` | Handwritten product-type selection plus generated NativeAOT ABI/lifecycle/service/export output. | Product logic. |
 | `src/ui` | DOM projection and semantic action presentation. | Gameplay state or world rendering. |
 
 Rulesets are **compiled**; content packs, tuning profiles, and bundles are
@@ -83,10 +81,28 @@ owner, confirm the wrapper is absent, file one narrow purpose-neutral
 `rusty-engine` request, and stop. Never fill the gap with downstream Rust, C#
 Engine reimplementation, browser authority, a fake proof, or a parallel host.
 
-## Current active source → future owner map
+## Active #7436 source map
 
-Status terms: **active** means used in today’s C# product path; **target** means
-the post-#7436 home; **generated** means derived output, never authority.
+| Active source family/file | Current owner and role |
+| --- | --- |
+| `src/WorldRpg.Kit/WorldRpg.Kit.csproj`, `GameComposition.cs` | Safe Kit project with only typed IDs, `GameSessionContext`, `IGameRuleset`, and `IGameSession`; it references Engine only. No bundle resolver or Daggerfall vocabulary lives here. |
+| `src/WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj` | Safe Daggerfall ruleset project referencing Kit and Engine. |
+| `DaggerfallRuleset.cs` | Compiled `daggerfall` ruleset implementation creating the current session. |
+| `DaggerfallSession.cs`, `DaggerfallState.cs`, `DaggerfallTuning.cs`, `DaggerfallRewardReactions.cs` | Single mutable Daggerfall session, its state/update ordering, typed tuning, and Daggerfall reward policy. `ProductUpdateState` remains local and is derived inside the session from `ProductUpdate`. |
+| `Content/*`, `Facts/*`, `Modules/*`, `Presentation/*` | All current gameplay, facts, Daggerfall content interpretation, generic-looking modules, and presentation. They remain Daggerfall-owned until a later canary proves narrower shared semantics. |
+| `AssemblyInfo.cs` | Exact friend access for `WorldRpg.Rulesets.Daggerfall.Tests`. |
+| `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
+| `src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj`, `NativeProduct.cs` | NativeAOT composition project. Its handwritten file has only the Engine product attribute selecting `WorldRpgProduct`; generated output remains under ignored `obj/`. |
+| `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Renamed focused Daggerfall behavior suite, including Host lifecycle/update/disposal coverage. |
+| `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; no gameplay authority. |
+| `src/browser-bundle/**`, `src/**/bin/**`, `src/**/obj/**`, `tests/**/bin/**`, `tests/**/obj/**` | Generated output; never authority or handwritten source. |
+| `content/**` | Current Daggerfall/Privateer's Hold inputs. Normalized packs remain #7438/#7323 work. |
+| `gameplay/**`, root Rust/Angular/HTTP/Studio surfaces | Donor or retired-runtime evidence, not active implementation. |
+
+## Pre-#7436 ownership snapshot (historical)
+
+Status terms in this retained snapshot describe the pre-split checkout;
+**generated** still means derived output, never authority.
 
 | Current source family/file | Current role | Future owner / disposition |
 | --- | --- | --- |
@@ -152,11 +168,13 @@ constant is honest; an authored or adjustable value needs a typed owner instead.
 
 ## Transitional current-source assumptions
 
-The current product directly constructs `DaggerfallComposition` and defaults to
-Privateer's Hold. Its starting loadout/gold, encounter, and appearance values are
-current Daggerfall authored data, not Host/Kit defaults; they move into packs
-through #7438/#7323. The current Daggerfall UI title and projection-contract
-selection likewise remain Daggerfall presentation, not Host/Kit policy.
+`WorldRpgProduct` selects the explicit built-in `daggerfall` default and creates
+its session through `IGameRuleset`; it does not construct `DaggerfallSession`.
+The session currently defaults to Privateer's Hold. Its starting loadout/gold,
+encounter, and appearance values are Daggerfall authored data, not Host/Kit
+defaults; they move into packs through #7438/#7323. The current Daggerfall UI
+title and projection-contract selection likewise remain Daggerfall presentation,
+not Host/Kit policy.
 
 ## Superseded task and architecture audit
 
@@ -175,11 +193,10 @@ owners. Retired Rust/Angular tasks are not actionable default work.
 
 ## Campaign handoff
 
-- **#7435 (current):** charter/map/task authority only; no runtime move.
-- **#7441:** reconcile the current product with published Engine
-  update/input/look/spatial/appearance contracts before the project split.
-- **#7436:** establish the target compiled C# project graph and narrow
-  Host/Kit/ruleset/session seam, preserving behavior.
+- **#7435:** charter/map/task authority is complete.
+- **#7441:** Engine contract reconciliation is complete.
+- **#7436:** landed the compiled project graph and narrow Host/Kit/ruleset/session
+  seam while preserving the focused behavior suite.
 - **#7437:** use an intentionally incompatible canary to prove the boundary and
   dependency laws; do not promote code merely to satisfy it.
 - **#7438:** add loaded bundles, content packs, typed tuning, and resolution.

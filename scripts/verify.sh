@@ -6,10 +6,12 @@ cd "$repo_root"
 
 engine_root=$(cd "$repo_root/../rusty-engine" && pwd)
 dotnet restore "$engine_root/csharp/Rusty.Engine.BindingGenerator/Rusty.Engine.BindingGenerator.csproj"
-dotnet build src/Dagger.Game/Dagger.Game.csproj
-dotnet test tests/Dagger.Game.Tests/Dagger.Game.Tests.csproj
+dotnet build src/WorldRpg.Kit/WorldRpg.Kit.csproj
+dotnet build src/WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj
+dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj
+dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
 src/scripts/build-ui.sh
-dotnet publish src/Dagger.NativeProduct/Dagger.NativeProduct.csproj \
+dotnet publish src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj \
   -c Release \
   -r linux-x64 \
   --self-contained true \
