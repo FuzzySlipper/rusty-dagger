@@ -29,10 +29,14 @@
     }
   ],
   "items": [
-    { "id": "iron-longsword", "maximumQuantity": 1, "weapon": { "minimumDamage": 2, "maximumDamage": 16, "skill": "long-blade", "handedness": "either", "value": 15, "weight": 18 } },
-    { "id": "iron-dagger", "maximumQuantity": 1 },
-    { "id": "iron-cuirass", "maximumQuantity": 1 },
-    { "id": "gold-piece", "maximumQuantity": 10000 }
+    { "id": "iron-longsword", "kind": "unique", "maximumQuantity": 1, "weapon": { "minimumDamage": 2, "maximumDamage": 16, "skill": "long-blade", "handedness": "either", "value": 15, "weight": 18 }, "equipment": { "classifications": ["weapon"], "requiredSlots": 1 } },
+    { "id": "iron-dagger", "kind": "unique", "maximumQuantity": 1 },
+    { "id": "iron-cuirass", "kind": "unique", "maximumQuantity": 1, "equipment": { "classifications": ["torso-armor"], "requiredSlots": 1 } },
+    { "id": "gold-piece", "kind": "fungible", "maximumQuantity": 10000 }
+  ],
+  "equipmentSlots": [
+    { "id": "right-hand", "allowedClassifications": ["weapon"] },
+    { "id": "torso", "allowedClassifications": ["torso-armor"] }
   ],
   "hudResources": [
     { "id": "health", "label": "Health", "track": "health" },

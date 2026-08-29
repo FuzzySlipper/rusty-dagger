@@ -7,6 +7,7 @@ using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Inventory;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -24,6 +25,8 @@ public sealed class DaggerfallSessionTests
         Assert.Equal((ulong)1, definitions.Items[new DaggerfallItemId("iron-longsword")].MaximumQuantity);
         Assert.Empty(inputs.Project.Actors);
         Assert.Equal(4, inputs.Loadout.Count);
+        Assert.Equal((ulong)1001, inputs.Loadout[0].UniqueEntityId);
+        Assert.Equal("right-hand", inputs.Loadout[0].EquipSlot?.Value);
     }
 
     [Fact]
@@ -36,6 +39,58 @@ public sealed class DaggerfallSessionTests
         string broken = ScenarioPayload.Replace("\"iron-longsword\"", "\"not-an-item\"", StringComparison.Ordinal);
         DaggerfallContentException reference = Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(broken), definitions));
         Assert.Contains(reference.Diagnostics, diagnostic => diagnostic.Contains("missing item 'not-an-item'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Equipment_metadata_and_starting_slot_references_are_validated_before_session_construction()
+    {
+        DaggerfallContentException unsupportedClassification = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(BasePayload.Replace("\"weapon\"],\"requiredSlots\":1", "\"not-a-slot-classification\"],\"requiredSlots\":1", StringComparison.Ordinal))));
+        Assert.Contains(unsupportedClassification.Diagnostics, diagnostic => diagnostic.Contains("no compatible equipment slot", StringComparison.Ordinal));
+
+        DaggerfallContentException missingSlot = Assert.Throws<DaggerfallContentException>(() =>
+            PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(ScenarioPayload.Replace("\"right-hand\"", "\"missing-hand\"", StringComparison.Ordinal)), Definitions()));
+        Assert.Contains(missingSlot.Diagnostics, diagnostic => diagnostic.Contains("missing equipment slot 'missing-hand'", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Engine_bound_inventory_metadata_and_loadout_identity_collisions_are_rejected_before_binding()
+    {
+        DaggerfallContentException uniqueQuantity = Assert.Throws<DaggerfallContentException>(() =>
+            DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(BasePayload.Replace("\"maximumQuantity\":1,\"equipment\"", "\"maximumQuantity\":2,\"equipment\"", StringComparison.Ordinal))));
+        Assert.Contains(uniqueQuantity.Diagnostics, diagnostic => diagnostic.Contains("maximumQuantity must be exactly 1", StringComparison.Ordinal));
+
+        DaggerfallContentException duplicateGold = Assert.Throws<DaggerfallContentException>(() =>
+            PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(ScenarioPayload.Replace("{\"item\":\"gold-piece\",\"quantity\":25}", "{\"item\":\"gold-piece\",\"quantity\":25},{\"item\":\"gold-piece\",\"quantity\":1}", StringComparison.Ordinal)), Definitions()));
+        Assert.Contains(duplicateGold.Diagnostics, diagnostic => diagnostic.Contains("repeats fungible item 'gold-piece'", StringComparison.Ordinal));
+
+        PrivateersHoldInputs collision = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [1001] = new(1001, new DaggerfallActorId("rat"), new WorldPoint(0, 0, 0), null) }), [], new CollisionMesh([], []), null, new PlayerInitialLook(0, 0), [new ScenarioLoadoutEntry(new DaggerfallItemId("iron-longsword"), 1, 1001, new DaggerfallEquipmentSlotId("right-hand"))], []);
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(new RecordingEngine().Context, Definitions(), collision, DaggerfallTuning.Defaults));
+    }
+
+    [Fact]
+    public void Player_starts_with_an_engine_equipment_component_even_without_assignments()
+    {
+        RecordingEngine engine = new();
+        PrivateersHoldInputs emptyLoadout = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), null);
+        using DaggerfallSession session = new(engine.Context, Definitions(), emptyLoadout, DaggerfallTuning.Defaults);
+
+        MechanicsInitialComponentsRequest player = Assert.Single(engine.Mechanics.InitialComponentRequests, request => request.HasEquipment);
+        Assert.Empty(player.EquipmentAssignments.Span.ToArray());
+    }
+
+    [Fact]
+    public void Base_reader_bounds_engine_catalog_sizes_and_fungible_loot_quantities()
+    {
+        string items = string.Join(',', Enumerable.Range(0, 257).Select(index => $"{{\"id\":\"item-{index}\",\"kind\":\"fungible\",\"maximumQuantity\":1}}"));
+        string slots = string.Join(',', Enumerable.Range(0, 65).Select(index => $"{{\"id\":\"slot-{index}\",\"allowedClassifications\":[\"class-{index}\"]}}"));
+        string oversized = "{\"schemaVersion\":1,\"ruleset\":\"daggerfall\",\"actors\":[],\"items\":[" + items + "],\"equipmentSlots\":[" + slots + "],\"hudResources\":[]}";
+        DaggerfallContentException limits = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(oversized)));
+        Assert.Contains(limits.Diagnostics, diagnostic => diagnostic.Contains("256 items", StringComparison.Ordinal));
+        Assert.Contains(limits.Diagnostics, diagnostic => diagnostic.Contains("64 equipment slots", StringComparison.Ordinal));
+
+        DaggerfallContentException loot = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(BasePayload.Replace("\"gold-piece\",\"kind\":\"fungible\",\"maximumQuantity\":10000", "\"gold-piece\",\"kind\":\"fungible\",\"maximumQuantity\":5", StringComparison.Ordinal))));
+        Assert.Contains(loot.Diagnostics, diagnostic => diagnostic.Contains("exceeds fungible item 'gold-piece'", StringComparison.Ordinal));
     }
 
     [Theory]
@@ -107,6 +162,12 @@ public sealed class DaggerfallSessionTests
         Assert.True(playerInitial.HasTracks);
         Assert.Equal(15, playerInitial.Stats.Length);
         Assert.Equal(3, playerInitial.Tracks.Length);
+        Assert.Equal(["gold-piece"], playerInitial.InventoryStacks.Span.ToArray().Select(stack => stack.Definition));
+        Assert.Equal(2, playerInitial.EquipmentAssignments.Length);
+        EquipmentRead equipped = composition.State.Equipment.Read();
+        Assert.True(equipped.TryGet(new EquipmentSlotId("right-hand"), out UniqueInventoryItem weapon));
+        Assert.Equal("iron-longsword", weapon.Definition.Value);
+        Assert.Null(typeof(DaggerfallSession).GetField("_rightHand", BindingFlags.Instance | BindingFlags.NonPublic));
         Assert.Equal(["health", "stamina", "magicka"], ResourceIds(engine.Ui.Projections[^1].Value));
         Assert.Equal((85d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
         Assert.Equal((90d, 90d), Resource(engine.Ui.Projections[^1].Value, "stamina"));
@@ -153,7 +214,7 @@ public sealed class DaggerfallSessionTests
     {
         RecordingMechanics catalogFailure = RecordingMechanics.Create();
         catalogFailure.FailOnDefineStatCall = 1;
-        Assert.Throws<InvalidOperationException>(() => new DaggerfallMechanicsCatalog(catalogFailure.Service));
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallMechanicsCatalog(catalogFailure.Service, Definitions()));
         Assert.Equal(1, catalogFailure.CatalogDisposals);
         Assert.Equal(0, catalogFailure.EntityDisposals);
 
@@ -293,7 +354,7 @@ public sealed class DaggerfallSessionTests
     private static PrivateersHoldInputs SkeletalInputs()
     {
         AuthoredActor skeletal = new(2000, new DaggerfallActorId("skeletal-warrior"), new WorldPoint(0, 0, 0), null);
-        return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [2000] = skeletal }), [], new CollisionMesh([], []), null, new PlayerInitialLook(MathF.PI, 0f), [new ScenarioInventoryStack(new DaggerfallItemId("iron-longsword"), 1), new ScenarioInventoryStack(new DaggerfallItemId("iron-dagger"), 1), new ScenarioInventoryStack(new DaggerfallItemId("iron-cuirass"), 1), new ScenarioInventoryStack(new DaggerfallItemId("gold-piece"), 25)], []);
+        return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [2000] = skeletal }), [], new CollisionMesh([], []), null, new PlayerInitialLook(MathF.PI, 0f), [new ScenarioLoadoutEntry(new DaggerfallItemId("iron-longsword"), 1, 1001, new DaggerfallEquipmentSlotId("right-hand")), new ScenarioLoadoutEntry(new DaggerfallItemId("iron-dagger"), 1, 1002, null), new ScenarioLoadoutEntry(new DaggerfallItemId("iron-cuirass"), 1, 1003, new DaggerfallEquipmentSlotId("torso")), new ScenarioLoadoutEntry(new DaggerfallItemId("gold-piece"), 25, null, null)], []);
     }
 
     private static DaggerfallDefinitions Definitions() => DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(BasePayload));
@@ -303,12 +364,13 @@ public sealed class DaggerfallSessionTests
       {"id":"player","stats":{"strength":50,"intelligence":50,"willpower":50,"agility":50,"endurance":40,"personality":50,"speed":50,"luck":50,"reflexes":2,"longBlade":60,"handToHand":40,"dodging":0},"health":{"minimum":85,"maximum":85},"armor":0,"rewards":{"experience":0}},
       {"id":"rat","mobileId":0,"stats":{"strength":40,"intelligence":10,"willpower":70,"agility":80,"endurance":55,"personality":50,"speed":45,"luck":50,"reflexes":0,"longBlade":0,"handToHand":35,"dodging":0},"health":{"minimum":9,"maximum":16},"armor":30,"attack":{"minimumDamage":1,"maximumDamage":4},"rewards":{"experience":50}},
       {"id":"skeletal-warrior","mobileId":15,"stats":{"strength":50,"intelligence":65,"willpower":40,"agility":80,"endurance":55,"personality":50,"speed":70,"luck":50,"reflexes":0,"longBlade":75,"handToHand":75,"dodging":75},"health":{"minimum":17,"maximum":66},"armor":10,"attack":{"minimumDamage":5,"maximumDamage":15},"rewards":{"experience":450,"loot":{"table":"H","item":"gold-piece","minimumQuantity":2,"maximumQuantity":10}}}],
-      "items":[{"id":"iron-longsword","maximumQuantity":1},{"id":"iron-dagger","maximumQuantity":1},{"id":"iron-cuirass","maximumQuantity":1},{"id":"gold-piece","maximumQuantity":10000}],
+      "items":[{"id":"iron-longsword","kind":"unique","maximumQuantity":1,"equipment":{"classifications":["weapon"],"requiredSlots":1}},{"id":"iron-dagger","kind":"unique","maximumQuantity":1},{"id":"iron-cuirass","kind":"unique","maximumQuantity":1,"equipment":{"classifications":["torso-armor"],"requiredSlots":1}},{"id":"gold-piece","kind":"fungible","maximumQuantity":10000}],
+      "equipmentSlots":[{"id":"right-hand","allowedClassifications":["weapon"]},{"id":"torso","allowedClassifications":["torso-armor"]}],
       "hudResources":[{"id":"health","label":"Health","track":"health"},{"id":"stamina","label":"Stamina","track":"stamina"},{"id":"magicka","label":"Magicka","track":"magicka"}]}
     """;
 
     private const string ScenarioPayload = """
-    {"schemaVersion":1,"ruleset":"daggerfall","startingState":{"position":[0,0,0],"look":{"yawRadians":3.1415927,"pitchRadians":0},"loadout":[{"item":"iron-longsword","quantity":1},{"item":"iron-dagger","quantity":1},{"item":"iron-cuirass","quantity":1},{"item":"gold-piece","quantity":25}]},"appearances":[],"placements":[],"encounters":[],"world":{"staticMesh":"imported/privateers-hold.static-mesh.json","navigation":"projects/privateers-hold.navgrid.json","collision":"imported/privateers-hold.static-mesh.json","appearance":{"tint":[0.72,0.7,0.65,1],"position":[0,0,0],"rotation":[0,0,0,1],"scale":[1,1,1],"visible":true,"layer":"scene"}}}
+    {"schemaVersion":1,"ruleset":"daggerfall","startingState":{"position":[0,0,0],"look":{"yawRadians":3.1415927,"pitchRadians":0},"loadout":[{"item":"iron-longsword","entityId":1001,"equipSlot":"right-hand"},{"item":"iron-dagger","entityId":1002},{"item":"iron-cuirass","entityId":1003,"equipSlot":"torso"},{"item":"gold-piece","quantity":25}]},"appearances":[],"placements":[],"encounters":[],"world":{"staticMesh":"imported/privateers-hold.static-mesh.json","navigation":"projects/privateers-hold.navgrid.json","collision":"imported/privateers-hold.static-mesh.json","appearance":{"tint":[0.72,0.7,0.65,1],"position":[0,0,0],"rotation":[0,0,0,1],"scale":[1,1,1],"visible":true,"layer":"scene"}}}
     """;
 
     private static ProductContent SpatialContent(string navigation = "{\"cells\":[]}", string collision = "{\"payload\":{\"source\":{\"positions\":[],\"indices\":[]}}}") => new(new ProductContentFile[]
