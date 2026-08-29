@@ -1,4 +1,4 @@
-import { enableCanvasInputThrough, isHud } from './main.js';
+import { isHud } from './main.js';
 
 const validHud = {
   resources: [{ id: 'health', label: 'Health', current: 85, maximum: 85 }],
@@ -19,12 +19,6 @@ assert(!isHud({ ...validHud, resources: [{ ...validHud.resources[0], current: Nu
 assert(!isHud({ ...validHud, resources: [{ ...validHud.resources[0], maximum: Number.POSITIVE_INFINITY }] }), 'expected infinite resource values to be rejected');
 assert(!isHud({ ...validHud, composition: { ...validHud.composition, contentPacks: ['daggerfall.base', 3] } }), 'expected non-string content-pack identities to be rejected');
 assert(!isHud({ ...validHud, composition: { ...validHud.composition, fingerprint: 'not-a-fingerprint' } }), 'expected malformed fingerprints to be rejected');
-
-const root: { style: { pointerEvents: string } } = { style: { pointerEvents: 'all' } };
-const restoreRootPointerEvents = enableCanvasInputThrough(root);
-assert(root.style.pointerEvents === 'none', 'expected the UI mount root to pass pointer input through to the Engine canvas');
-restoreRootPointerEvents();
-assert(String(root.style.pointerEvents) === 'all', 'expected UI disposal to restore the mount root pointer behavior it owns');
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);

@@ -25,7 +25,6 @@ interface CompositionIdentity {
 }
 
 export function mountProductUi(root: HTMLElement, context: ProductUiContext): { dispose(): void } {
-  const restoreRootPointerEvents = enableCanvasInputThrough(root);
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
   stylesheet.href = './ui/styles.css';
@@ -70,14 +69,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     outcome.textContent = value.lastOutcome;
     composition.replaceChildren(...diagnosticRows(value.composition));
   }) ?? (() => {});
-  return { dispose: () => { unsubscribe(); attack.removeEventListener('click', onAttack); stylesheet.remove(); shell.remove(); restoreRootPointerEvents(); } };
-}
-
-/** Keeps an Engine-owned canvas beneath the product HUD eligible for pointer input. */
-export function enableCanvasInputThrough(root: { style: { pointerEvents: string } }): () => void {
-  const previousPointerEvents = root.style.pointerEvents;
-  root.style.pointerEvents = 'none';
-  return () => { root.style.pointerEvents = previousPointerEvents; };
+  return { dispose: () => { unsubscribe(); attack.removeEventListener('click', onAttack); stylesheet.remove(); shell.remove(); } };
 }
 
 export function isHud(value: unknown): value is DaggerHud {
