@@ -29,15 +29,15 @@ internal sealed class DaggerfallSession : IGameSession
     private readonly PrivateersHoldAppearance _appearance;
     private bool _disposed;
 
-    internal DaggerfallSession(IEngineContext engine, ProductContent content) : this(engine, PrivateersHoldContent.Read(content)) { }
+    internal DaggerfallSession(IEngineContext engine, PrivateersHoldInputs inputs) : this(engine, inputs, DaggerfallTuning.Defaults) { }
 
-    internal DaggerfallSession(IEngineContext engine, PrivateersHoldInputs inputs)
+    internal DaggerfallSession(IEngineContext engine, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
     {
         List<IDisposable> partiallyConstructed = [];
         try
         {
             _random = engine.Random;
-            DaggerfallTuning tuning = DaggerfallTuning.Defaults.Validate();
+            tuning = tuning.Validate();
             DaggerfallCatalog catalog = new();
             _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics, catalog.Items);
             partiallyConstructed.Add(_mechanicsCatalog);

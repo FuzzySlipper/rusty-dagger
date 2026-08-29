@@ -9,28 +9,41 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Owns the product interpretation of the admitted Privateer's Hold inputs.</summary>
 internal static class PrivateersHoldContent
 {
-    private const string ProjectPath = "projects/privateers-hold.project.json";
-    private const string NavgridPath = "projects/privateers-hold.navgrid.json";
-    private const string StaticMeshPath = "imported/privateers-hold.static-mesh.json";
-
-    public static PrivateersHoldInputs Read(ProductContent content)
+    public static PrivateersHoldInputs Read(ProductContent content, ReadOnlyMemory<byte> selectedPack)
     {
-        var files = CopyKnownFiles(content);
-        return files.TryGetValue(ProjectPath, out var project)
-            && files.TryGetValue(NavgridPath, out var navgrid)
-            && files.TryGetValue(StaticMeshPath, out var mesh)
-            ? new PrivateersHoldInputs(ReadProject(project), ReadNavigation(navgrid), ReadCollision(mesh), StaticMeshPath)
+        SelectedPaths selected = ReadSelectedPaths(selectedPack.Span);
+        var files = CopySelectedFiles(content, selected);
+        return files.TryGetValue(selected.Project, out var project)
+            && files.TryGetValue(selected.Navigation, out var navgrid)
+            && files.TryGetValue(selected.StaticMesh, out var mesh)
+            ? new PrivateersHoldInputs(ReadProject(project), ReadNavigation(navgrid), ReadCollision(mesh), selected.StaticMesh)
             : PrivateersHoldInputs.Unavailable;
     }
 
-    private static Dictionary<string, byte[]> CopyKnownFiles(ProductContent content)
+    private static SelectedPaths ReadSelectedPaths(ReadOnlySpan<byte> bytes)
+    {
+        using JsonDocument document = JsonDocument.Parse(bytes.ToArray());
+        JsonElement root = document.RootElement;
+        return new SelectedPaths(
+            ReadPath(root, "project"),
+            ReadPath(root, "navigation"),
+            ReadPath(root, "staticMesh"));
+    }
+
+    private static string ReadPath(JsonElement root, string property)
+    {
+        string value = root.GetProperty(property).GetString() ?? throw new InvalidOperationException($"Daggerfall selected pack '{property}' must be a path.");
+        return value;
+    }
+
+    private static Dictionary<string, byte[]> CopySelectedFiles(ProductContent content, SelectedPaths selected)
     {
         var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
         foreach (var file in content.Files.Span)
         {
             if (file.Path.IsEmpty) continue;
             var path = Encoding.UTF8.GetString(file.Path.Span);
-            if (path is not (ProjectPath or NavgridPath or StaticMeshPath)) continue;
+            if (path != selected.Project && path != selected.Navigation && path != selected.StaticMesh) continue;
             files[path] = file.Bytes.ToArray();
         }
         return files;
@@ -131,6 +144,8 @@ internal static class PrivateersHoldContent
         return true;
     }
 }
+
+internal sealed record SelectedPaths(string Project, string Navigation, string StaticMesh);
 
 internal sealed class PrivateersHoldInputs(ProjectFacts project, PlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
 {

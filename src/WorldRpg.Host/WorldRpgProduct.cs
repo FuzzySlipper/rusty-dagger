@@ -12,22 +12,35 @@ public sealed class WorldRpgProduct : IEngineProduct
     private bool _shutdown;
 
     public WorldRpgProduct(ProductCreateContext context)
-        : this(context, BuiltInRulesets.Resolve(HostDefaults.DefaultRuleset))
+        : this(CreateSession(context, ruleset: null, HostDefaults.DefaultBundle))
     {
     }
 
-    /// <summary>Creates a product from an explicitly supplied compiled ruleset.</summary>
-    public WorldRpgProduct(ProductCreateContext context, IGameRuleset ruleset)
+    /// <summary>Creates a product through the same selected-bundle seam with an explicit compiled ruleset.</summary>
+    public WorldRpgProduct(ProductCreateContext context, IGameRuleset ruleset, GameBundleId bundle)
+        : this(CreateSession(context, ruleset, bundle))
     {
-        ArgumentNullException.ThrowIfNull(context);
-        ArgumentNullException.ThrowIfNull(ruleset);
-        _session = ruleset.CreateSession(new GameSessionContext(context.Engine, context.Content));
+    }
+
+    private WorldRpgProduct(IGameSession session)
+    {
+        _session = session;
         try { _session.PublishInitial(); }
         catch
         {
             _session.Dispose();
             throw;
         }
+    }
+
+    private static IGameSession CreateSession(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(context.Content, bundle).RequireComposition();
+        IGameRuleset selected = ruleset ?? BuiltInRulesets.Resolve(composition.Ruleset);
+        if (selected.Id != composition.Ruleset)
+            throw new InvalidOperationException($"Selected ruleset '{selected.Id.Value}' does not match bundle ruleset '{composition.Ruleset.Value}'.");
+        return selected.CreateSession(new GameSessionContext(context.Engine, composition));
     }
 
     public void Start()
