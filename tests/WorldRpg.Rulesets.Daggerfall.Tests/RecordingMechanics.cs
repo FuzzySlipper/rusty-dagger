@@ -11,12 +11,13 @@ internal class RecordingMechanics : DispatchProxy
 
     internal IMechanicsService Service { get; private set; } = null!;
     internal List<MechanicsTrackMutationRequest> SpendRequests { get; } = [];
+    internal List<MechanicsInitialComponentsRequest> InitialComponentRequests { get; } = [];
     internal int CatalogDisposals { get; private set; }
     internal int EntityDisposals { get; private set; }
     internal int? FailOnDefineStatCall { get; set; }
-    internal int? FailOnInitialStatCall { get; set; }
+    internal int? FailOnInitialComponentsCall { get; set; }
     private int DefineStatCalls { get; set; }
-    private int InitialStatCalls { get; set; }
+    private int InitialComponentsCalls { get; set; }
 
     internal static RecordingMechanics Create()
     {
@@ -74,7 +75,6 @@ internal class RecordingMechanics : DispatchProxy
     }
     private object? SetInitialStat(MechanicsInitialStatRequest request)
     {
-        if (++InitialStatCalls == FailOnInitialStatCall) throw new InvalidOperationException("Injected mechanics initial-stat failure.");
         State(request.Entity).Stats.Add(request.Stat, request.Base);
         return null;
     }
@@ -85,10 +85,21 @@ internal class RecordingMechanics : DispatchProxy
     }
     private object? SetInitialComponents(MechanicsInitialComponentsRequest request)
     {
-        if (!request.HasInventory) return null;
+        if (++InitialComponentsCalls == FailOnInitialComponentsCall) throw new InvalidOperationException("Injected mechanics initial-components failure.");
         EntityState state = State(request.Entity);
-        foreach (MechanicsInitialInventoryStack stack in request.InventoryStacks.Span)
-            state.Inventory.Add(stack.Definition, stack.Quantity);
+        InitialComponentRequests.Add(request);
+        state.Stats.Clear();
+        if (request.HasStats)
+            foreach (MechanicsInitialStatValue value in request.Stats.Span)
+                state.Stats.Add(value.Stat, value.Base);
+        state.Tracks.Clear();
+        if (request.HasTracks)
+            foreach (MechanicsInitialTrackValue value in request.Tracks.Span)
+                state.Tracks.Add(value.Track, value.Current);
+        state.Inventory.Clear();
+        if (request.HasInventory)
+            foreach (MechanicsInitialInventoryStack value in request.InventoryStacks.Span)
+                state.Inventory.Add(value.Definition, value.Quantity);
         return null;
     }
     private MechanicsEntityReceipt CommitEntity(MechanicsEntity entity)

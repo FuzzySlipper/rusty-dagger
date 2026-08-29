@@ -20,6 +20,13 @@ public sealed class DaggerfallSessionTests
         using DaggerfallSession composition = new(engine.Context, SkeletalInputs());
 
         composition.PublishInitial();
+        Assert.Equal(MathF.PI, composition.State.PlayerControl.YawRadians);
+        Assert.Equal(0f, composition.State.PlayerControl.PitchRadians);
+        MechanicsInitialComponentsRequest playerInitial = Assert.Single(engine.Mechanics.InitialComponentRequests, request => request.HasInventory);
+        Assert.True(playerInitial.HasStats);
+        Assert.True(playerInitial.HasTracks);
+        Assert.Equal(11, playerInitial.Stats.Length);
+        Assert.Equal(3, playerInitial.Tracks.Length);
         Assert.Equal(["health", "stamina", "magicka"], ResourceIds(engine.Ui.Projections[^1].Value));
         Assert.Equal((85d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
         Assert.Equal((90d, 90d), Resource(engine.Ui.Projections[^1].Value, "stamina"));
@@ -71,7 +78,7 @@ public sealed class DaggerfallSessionTests
         Assert.Equal(0, catalogFailure.EntityDisposals);
 
         RecordingEngine engine = new();
-        engine.Mechanics.FailOnInitialStatCall = 12;
+        engine.Mechanics.FailOnInitialComponentsCall = 2;
         Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(engine.Context, SkeletalInputs()));
         Assert.Equal(1, engine.Mechanics.CatalogDisposals);
         Assert.Equal(2, engine.Mechanics.EntityDisposals);
@@ -88,8 +95,8 @@ public sealed class DaggerfallSessionTests
     {
         RecordingEngine engine = new();
         InputActionId testAttack = new("test.attack");
-        PlayerInputSystem input = new(PlayerControlTuning.Defaults, engine.Look.Service, DaggerfallInput.Controls, [new InputActionBinding(testAttack, "attack"u8.ToArray())]);
-        PlayerControlState player = new(new WorldPoint(0, 0, 0));
+        PlayerInputSystem input = new(DaggerfallTuning.Defaults.PlayerControl, engine.Look.Service, DaggerfallInput.Controls, [new InputActionBinding(testAttack, "attack"u8.ToArray())]);
+        PlayerControlState player = new(new WorldPoint(0, 0, 0), yawRadians: 0f, pitchRadians: 0f);
 
         ProductUpdateState held = new(1f);
         held.Add(Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW));
@@ -102,6 +109,13 @@ public sealed class DaggerfallSessionTests
         Assert.Equal(new Vector2(0f, 1f), held.PlanarIntent);
         Assert.True(held.IsRequested(testAttack));
         Assert.Equal(1, engine.Look.IntegrationCount);
+        Assert.Equal(.25f, player.YawRadians);
+        Assert.Equal(-.5f, player.PitchRadians);
+        Assert.NotNull(engine.Look.LastRequest);
+        LookConfig configuration = engine.Look.LastRequest.Value.Config;
+        Assert.False(configuration.InvertHorizontal);
+        Assert.False(configuration.InvertVertical);
+        Assert.True(configuration.WrapYaw);
 
         ProductUpdateState released = new(1f);
         released.Add(Input(InputEventKind.Key, InputEdge.Released, keyboard: KeyboardControl.KeyW));
@@ -143,10 +157,12 @@ public sealed class DaggerfallSessionTests
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, ProductContentWithPlayer(), EmptyInputConfiguration()));
         ProductUpdate update = new(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 1, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty);
 
+        Assert.Single(engine.Ui.Projections);
         product.Update(update);
         Assert.Equal(0, engine.Spatial.StepCalls);
 
         product.Start();
+        Assert.Equal(2, engine.Ui.Projections.Count);
         product.Pause();
         product.Update(update);
         Assert.Equal(0, engine.Spatial.StepCalls);
@@ -159,6 +175,18 @@ public sealed class DaggerfallSessionTests
         product.Update(update);
         Assert.Equal(1, engine.Spatial.StepCalls);
         Assert.Equal(1, engine.Spatial.SessionDisposals);
+    }
+
+    [Fact]
+    public void Host_releases_the_created_session_when_create_time_projection_fails()
+    {
+        RecordingEngine engine = new();
+        engine.Ui.FailOnPublishCall = 1;
+
+        Assert.Throws<InvalidOperationException>(() => new WorldRpgProduct(new ProductCreateContext(engine.Context, ProductContentWithPlayer(), EmptyInputConfiguration())));
+
+        Assert.Equal(1, engine.Spatial.SessionDisposals);
+        Assert.Equal(1, engine.Ui.StreamDisposals);
     }
 
     [Fact]
@@ -234,6 +262,7 @@ public sealed class DaggerfallSessionTests
     {
         internal ILookService Service { get; private set; } = null!;
         internal int IntegrationCount { get; private set; }
+        internal LookRequest? LastRequest { get; private set; }
         internal static RecordingLook Create()
         {
             ILookService service = DispatchProxy.Create<ILookService, RecordingLook>();
@@ -247,6 +276,7 @@ public sealed class DaggerfallSessionTests
             {
                 LookRequest request = (LookRequest)args![0]!;
                 IntegrationCount++;
+                LastRequest = request;
                 LookState after = new(request.State.YawRadians + request.Delta.X, request.State.PitchRadians + request.Delta.Y);
                 return new LookReceipt(request.State, after, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);
             }
@@ -325,6 +355,8 @@ public sealed class DaggerfallSessionTests
         internal IUiService Service { get; private set; } = null!;
         internal List<UiProjection> Projections { get; } = [];
         internal int StreamDisposals { get; private set; }
+        internal int? FailOnPublishCall { get; set; }
+        private int PublishCalls { get; set; }
         internal static RecordingUi Create()
         {
             IUiService service = DispatchProxy.Create<IUiService, RecordingUi>();
@@ -338,6 +370,11 @@ public sealed class DaggerfallSessionTests
             nameof(IUiService.PublishProjection) => Publish((UiProjection)args![0]!),
             _ => throw new NotSupportedException(method?.Name)
         };
-        private object? Publish(UiProjection projection) { Projections.Add(projection); return null; }
+        private object? Publish(UiProjection projection)
+        {
+            if (++PublishCalls == FailOnPublishCall) throw new InvalidOperationException("Injected UI projection failure.");
+            Projections.Add(projection);
+            return null;
+        }
     }
 }

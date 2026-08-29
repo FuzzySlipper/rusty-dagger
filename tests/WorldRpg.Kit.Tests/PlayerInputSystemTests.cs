@@ -12,8 +12,8 @@ public sealed class PlayerInputSystemTests
     public void Movement_uses_ruleset_supplied_intents_and_keys()
     {
         PlayerControlBindings controls = new(["stride"u8.ToArray()], KeyboardControl.KeyI, KeyboardControl.KeyK, KeyboardControl.KeyJ, KeyboardControl.KeyL);
-        PlayerInputSystem input = new(PlayerControlTuning.Defaults, LookDouble.Create(), controls);
-        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f));
+        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, controls);
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
 
         ProductUpdateState semantic = new(1f);
         semantic.Add(Input(InputEventKind.MappedAxis, x: .5f, y: -.25f, intent: "stride"));
@@ -32,12 +32,49 @@ public sealed class PlayerInputSystemTests
         Assert.Equal(Vector2.Zero, unrelated.PlanarIntent);
     }
 
+    [Fact]
+    public void Look_configuration_comes_from_tuning()
+    {
+        LookDouble look = LookDouble.Create();
+        PlayerInputSystem input = new(new PlayerControlTuning(.01f, -.5f, .5f, 1f, InvertHorizontal: true, InvertVertical: true, WrapYaw: false), look.Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: .25f, pitchRadians: -.25f);
+        ProductUpdateState update = new(1f);
+        update.Add(Input(InputEventKind.PointerDelta, x: .125f, y: -.25f));
+
+        input.Apply(player, update);
+
+        Assert.NotNull(look.LastRequest);
+        LookConfig configuration = look.LastRequest.Value.Config;
+        Assert.Equal(.01f, configuration.HorizontalRadiansPerUnit);
+        Assert.Equal(.01f, configuration.VerticalRadiansPerUnit);
+        Assert.True(configuration.InvertHorizontal);
+        Assert.True(configuration.InvertVertical);
+        Assert.False(configuration.WrapYaw);
+    }
+
     private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl key = KeyboardControl.None, float x = 0f, float y = 0f, string intent = "") => new(
         kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, key, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, InputPhase.None, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, System.Text.Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
 
+    private static PlayerControlTuning TestTuning() => new(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true);
+
     private class LookDouble : DispatchProxy
     {
-        internal static ILookService Create() => DispatchProxy.Create<ILookService, LookDouble>();
-        protected override object? Invoke(MethodInfo? method, object?[]? args) => throw new NotSupportedException(method?.Name);
+        internal ILookService Service { get; private set; } = null!;
+        internal LookRequest? LastRequest { get; private set; }
+        internal static LookDouble Create()
+        {
+            ILookService service = DispatchProxy.Create<ILookService, LookDouble>();
+            LookDouble proxy = (LookDouble)(object)service;
+            proxy.Service = service;
+            return proxy;
+        }
+
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (method?.Name != nameof(ILookService.Integrate)) throw new NotSupportedException(method?.Name);
+            LookRequest request = (LookRequest)args![0]!;
+            LastRequest = request;
+            return new LookReceipt(request.State, request.State, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);
+        }
     }
 }
