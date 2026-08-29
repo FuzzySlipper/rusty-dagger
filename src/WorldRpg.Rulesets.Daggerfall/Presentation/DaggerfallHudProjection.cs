@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.Progression;
@@ -7,7 +8,7 @@ using WorldRpg.Kit.Progression;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
-internal sealed class DaggerfallHudProjection(IUiService ui, IMechanicsService mechanics, IReadOnlyList<DaggerfallHudResourceDefinition> resources) : IDisposable
+internal sealed class DaggerfallHudProjection(IUiService ui, IMechanicsService mechanics, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity) : IDisposable
 {
     private readonly UiStream _hud = ui.OpenStream(new UiStreamRequest("dagger.hud", "dagger.ui.snapshot.v1"));
     private ulong _sequence;
@@ -16,12 +17,26 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IMechanicsService m
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
-        uint root = builder.Object(
+        (string Key, uint Value)[] fields =
+        [
             ("resources", builder.Array(rows)),
             ("experience", builder.Number(progression.Experience)),
-            ("lastOutcome", builder.String(presentation.LastOutcome)));
+            ("lastOutcome", builder.String(presentation.LastOutcome)),
+        ];
+        if (compositionIdentity is not null)
+            fields = [.. fields, ("composition", Composition(builder, compositionIdentity))];
+        uint root = builder.Object(fields);
         ui.PublishProjection(new UiProjection(_hud, ++_sequence, builder.Build(root)));
     }
+
+    private static uint Composition(UiValueBuilder builder, ResolvedCompositionIdentity identity) => builder.Object(
+        ("bundle", builder.String(identity.Bundle.Value)),
+        ("ruleset", builder.String(identity.Ruleset.Value)),
+        ("contentPacks", builder.Array(identity.ContentPacks.Select(pack => builder.String(pack.Value)).ToArray())),
+        ("tuning", builder.String(identity.Tuning.Value)),
+        ("fingerprint", builder.String(identity.Fingerprint)),
+        ("contentFingerprint", builder.String(identity.ContentFingerprint)),
+        ("tuningFingerprint", builder.String(identity.TuningFingerprint)));
 
     private uint ResourceRow(UiValueBuilder builder, PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {

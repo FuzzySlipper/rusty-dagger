@@ -1,5 +1,5 @@
 {
-  "project": "rusty-dagger-csharp-trial",
+  "project": "rusty-dagger-worldrpg",
   "serve": {
     "command": "bash -c 'tail -f /dev/null | RUSTY_DAGGER_PORT={port} ./src/scripts/run-product.sh'",
     "preferredPort": 0,

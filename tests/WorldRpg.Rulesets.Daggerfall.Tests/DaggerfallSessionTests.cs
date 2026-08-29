@@ -7,6 +7,7 @@ using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
 using Xunit;
@@ -430,6 +431,42 @@ public sealed class DaggerfallSessionTests
         Assert.Equal(ProductTurnRequest.None, product.Update(update));
         Assert.Equal(1, engine.Spatial.StepCalls);
         Assert.Equal(1, engine.Spatial.SessionDisposals);
+    }
+
+    [Fact]
+    public void Host_projects_the_exact_resolved_composition_identity_in_pack_order()
+    {
+        ProductContent content = ProductContentWithPlayer();
+        ResolvedCompositionIdentity expected = GameCompositionResolver.Resolve(content, new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        RecordingEngine engine = new();
+
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, content, EmptyInputConfiguration()));
+
+        UiValue value = Assert.Single(engine.Ui.Projections).Value;
+        uint identity = Field(value, value.Root, "composition");
+        Assert.Equal(expected.Bundle.Value, Text(value, value.Nodes.Span[(int)Field(value, identity, "bundle")]));
+        Assert.Equal(expected.Ruleset.Value, Text(value, value.Nodes.Span[(int)Field(value, identity, "ruleset")]));
+        Assert.Equal(expected.ContentPacks.Select(pack => pack.Value), Array(value, Field(value, identity, "contentPacks")).Select(node => Text(value, value.Nodes.Span[(int)node])));
+        Assert.Equal(expected.Tuning.Value, Text(value, value.Nodes.Span[(int)Field(value, identity, "tuning")]));
+        Assert.Equal(expected.Fingerprint, Text(value, value.Nodes.Span[(int)Field(value, identity, "fingerprint")]));
+        Assert.Equal(expected.ContentFingerprint, Text(value, value.Nodes.Span[(int)Field(value, identity, "contentFingerprint")]));
+        Assert.Equal(expected.TuningFingerprint, Text(value, value.Nodes.Span[(int)Field(value, identity, "tuningFingerprint")]));
+    }
+
+    [Fact]
+    public void Normal_semantic_attack_projects_no_target_in_melee_reach_without_combat_side_effects()
+    {
+        RecordingEngine engine = new();
+        using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, ProductContentWithPlayer(), EmptyInputConfiguration()));
+        product.Start();
+
+        ProductInputEvent attack = Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack");
+        product.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 1, fixedDeltaSeconds: .125), new[] { attack }));
+
+        UiValue value = engine.Ui.Projections[^1].Value;
+        Assert.Equal("No target in melee reach", Text(value, value.Nodes.Span[(int)Field(value, value.Root, "lastOutcome")]));
+        Assert.Empty(engine.Mechanics.SpendRequests);
+        Assert.Empty(engine.Mechanics.DamageRequests);
     }
 
     [Fact]

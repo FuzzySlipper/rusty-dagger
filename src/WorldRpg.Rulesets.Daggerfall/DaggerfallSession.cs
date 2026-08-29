@@ -30,6 +30,16 @@ internal sealed class DaggerfallSession : IGameSession
     private bool _disposed;
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
+        : this(engine, definitions, inputs, tuning, compositionIdentity: null)
+    {
+    }
+
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
+        : this(engine, definitions, inputs, tuning, compositionIdentity)
+    {
+    }
+
+    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity)
     {
         List<IDisposable> partiallyConstructed = [];
         DaggerfallMechanicsCatalog? catalog = null;
@@ -81,7 +91,7 @@ internal sealed class DaggerfallSession : IGameSession
             _combat = new CombatModule(engine.Mechanics, _random, State.Actors, State.Equipment, definitions, authored, tuning.Combat);
             _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
-            _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, definitions.HudResources);
+            _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
             partiallyConstructed.Add(_appearance);

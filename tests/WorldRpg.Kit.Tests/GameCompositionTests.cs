@@ -24,6 +24,13 @@ public sealed class GameCompositionTests
         Assert.Equal(["test.base", "test.world"], composition.ContentPacks.Select(pack => pack.Id.Value));
         Assert.Equal("test", composition.Ruleset.Value);
         Assert.Equal("test.tuning", composition.Tuning.Id.Value);
+        Assert.Equal("test.bundle", composition.Identity.Bundle.Value);
+        Assert.Equal("test", composition.Identity.Ruleset.Value);
+        Assert.Equal(["test.base", "test.world"], composition.Identity.ContentPacks.Select(pack => pack.Value));
+        Assert.Equal("test.tuning", composition.Identity.Tuning.Value);
+        Assert.Equal(composition.Fingerprint, composition.Identity.Fingerprint);
+        Assert.Equal(composition.ContentFingerprint, composition.Identity.ContentFingerprint);
+        Assert.Equal(composition.TuningFingerprint, composition.Identity.TuningFingerprint);
         Assert.Equal(1, composition.Bundle.SchemaVersion);
         Assert.Equal(1, composition.ContentPacks[0].SchemaVersion);
         Assert.Equal(1, composition.Tuning.SchemaVersion);

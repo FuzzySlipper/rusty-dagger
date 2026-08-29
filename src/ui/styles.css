@@ -32,6 +32,12 @@
 .dagger-vitals span { color: #aa9c7a; font-size: .7rem; text-transform: uppercase; }
 .dagger-vitals strong { font: 700 .95rem ui-monospace, monospace; }
 .dagger-outcome { bottom: 70px; left: 24px; min-height: 1.3em; margin: 0; position: absolute; color: #f6ddb0; }
+.dagger-composition { position: absolute; right: 24px; top: 22px; max-width: min(42rem, calc(100vw - 48px)); padding: 10px 12px; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); font: .7rem ui-monospace, monospace; }
+.dagger-composition > strong { color: #d9bf80; text-transform: uppercase; letter-spacing: .08em; }
+.dagger-composition dl { margin: 8px 0 0; display: grid; gap: 4px; }
+.dagger-composition dl div { display: grid; grid-template-columns: 7rem minmax(0, 1fr); gap: 8px; }
+.dagger-composition dt { color: #aa9c7a; }
+.dagger-composition dd { margin: 0; overflow-wrap: anywhere; }
 
 .dagger-hud button {
   position: absolute;
