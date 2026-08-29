@@ -22,8 +22,8 @@ internal sealed class DaggerfallRewardReactions(MechanicsInventoryCoordinator in
         }
         if (actor.Rewards.Loot is not LootDefinition loot) return;
         int quantity = checked((int)random.DrawKeyed(new KeyedRngRequest(LootRandomKey.Seed, LootRandomKey.Scope, LootRandomKey.For(fact.OriginatingSequence, fact.ActorId, loot.TableKey), loot.MinimumQuantity, loot.MaximumQuantity)).Value);
-        inventory.Grant(new InventoryGrant("daggerfall.loot", $"actor:{fact.ActorId}:step:{fact.OriginatingSequence}", new InventoryItemId(loot.ItemId), checked((ulong)quantity)));
-        facts.Append(new LootAwardedFact(fact.ActorId, loot.ItemId, quantity, fact.OriginatingSequence));
+        inventory.Grant(new InventoryGrant("daggerfall.loot", $"actor:{fact.ActorId}:step:{fact.OriginatingSequence}", new InventoryItemId(loot.ItemId.Value), checked((ulong)quantity)));
+        facts.Append(new LootAwardedFact(fact.ActorId, loot.ItemId.Value, quantity, fact.OriginatingSequence));
     }
 }
 

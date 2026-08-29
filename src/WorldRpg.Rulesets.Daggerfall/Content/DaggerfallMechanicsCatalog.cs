@@ -32,12 +32,12 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
 
     internal MechanicsEntity Bind(DaggerfallActorDefinition definition, ulong entityId, IReadOnlyList<MechanicsInitialInventoryStack>? initialInventory = null)
     {
-        MechanicsEntity entity = _mechanics.BindEntity(new MechanicsEntityBindRequest(_catalog, entityId, definition.Id.Replace("-", "_", StringComparison.Ordinal)));
+        MechanicsEntity entity = _mechanics.BindEntity(new MechanicsEntityBindRequest(_catalog, entityId, definition.Id.Value.Replace("-", "_", StringComparison.Ordinal)));
         try
         {
             _mechanics.SetInitialComponents(new MechanicsInitialComponentsRequest(
-                entity, true, InitialStats(definition.Stats, definition.Vitals),
-                true, InitialTracks(definition.Vitals),
+                entity, true, InitialStats(definition.Stats, definition.InitialVitals),
+                true, InitialTracks(definition.InitialVitals),
                 false, ReadOnlyMemory<MechanicsInitialIntrinsicSource>.Empty,
                 false, ReadOnlyMemory<MechanicsInitialActiveEffect>.Empty,
                 initialInventory is not null, initialInventory?.ToArray() ?? [], ReadOnlyMemory<MechanicsInitialInventoryCapacityLimit>.Empty,
@@ -56,7 +56,7 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
 
     private void DefineStats()
     {
-        foreach (DaggerfallStatId stat in new[] { DaggerfallMechanicsIds.Strength, DaggerfallMechanicsIds.Agility, DaggerfallMechanicsIds.Intelligence, DaggerfallMechanicsIds.Endurance, DaggerfallMechanicsIds.Luck, DaggerfallMechanicsIds.LongBlade, DaggerfallMechanicsIds.HandToHand, DaggerfallMechanicsIds.Dodging, DaggerfallMechanicsIds.HealthMaximum, DaggerfallMechanicsIds.StaminaMaximum, DaggerfallMechanicsIds.MagickaMaximum })
+        foreach (DaggerfallStatId stat in new[] { DaggerfallMechanicsIds.Strength, DaggerfallMechanicsIds.Intelligence, DaggerfallMechanicsIds.Willpower, DaggerfallMechanicsIds.Agility, DaggerfallMechanicsIds.Endurance, DaggerfallMechanicsIds.Personality, DaggerfallMechanicsIds.Speed, DaggerfallMechanicsIds.Luck, DaggerfallMechanicsIds.Reflexes, DaggerfallMechanicsIds.LongBlade, DaggerfallMechanicsIds.HandToHand, DaggerfallMechanicsIds.Dodging, DaggerfallMechanicsIds.HealthMaximum, DaggerfallMechanicsIds.StaminaMaximum, DaggerfallMechanicsIds.MagickaMaximum })
             _mechanics.DefineStat(new MechanicsStatDefinitionRequest(_catalog, stat.Value, MinimumStatValue, MaximumStatValue));
     }
 
@@ -74,7 +74,7 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
         foreach (DaggerfallItemDefinition item in items)
         {
             _mechanics.DefineItem(new MechanicsItemDefinitionRequest(
-                _catalog, item.Id, MechanicsItemKind.Fungible, item.MaximumQuantity,
+                _catalog, item.Id.Value, MechanicsItemKind.Fungible, item.MaximumQuantity,
                 ReadOnlyMemory<MechanicsText>.Empty, ReadOnlyMemory<MechanicsItemCapacityCostInput>.Empty,
                 false, 0, string.Empty, ReadOnlyMemory<MechanicsText>.Empty));
         }
@@ -82,7 +82,7 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
 
     private static ReadOnlyMemory<MechanicsInitialStatValue> InitialStats(DaggerfallStatBases stats, DaggerfallVitalValues vitals) => new MechanicsInitialStatValue[]
     {
-        new(DaggerfallMechanicsIds.Strength.Value, stats.Strength), new(DaggerfallMechanicsIds.Agility.Value, stats.Agility), new(DaggerfallMechanicsIds.Intelligence.Value, stats.Intelligence), new(DaggerfallMechanicsIds.Endurance.Value, stats.Endurance), new(DaggerfallMechanicsIds.Luck.Value, stats.Luck), new(DaggerfallMechanicsIds.LongBlade.Value, stats.LongBlade), new(DaggerfallMechanicsIds.HandToHand.Value, stats.HandToHand), new(DaggerfallMechanicsIds.Dodging.Value, stats.Dodging), new(DaggerfallMechanicsIds.HealthMaximum.Value, vitals.HealthMaximum), new(DaggerfallMechanicsIds.StaminaMaximum.Value, vitals.StaminaMaximum), new(DaggerfallMechanicsIds.MagickaMaximum.Value, vitals.MagickaMaximum),
+        new(DaggerfallMechanicsIds.Strength.Value, stats.Strength), new(DaggerfallMechanicsIds.Intelligence.Value, stats.Intelligence), new(DaggerfallMechanicsIds.Willpower.Value, stats.Willpower), new(DaggerfallMechanicsIds.Agility.Value, stats.Agility), new(DaggerfallMechanicsIds.Endurance.Value, stats.Endurance), new(DaggerfallMechanicsIds.Personality.Value, stats.Personality), new(DaggerfallMechanicsIds.Speed.Value, stats.Speed), new(DaggerfallMechanicsIds.Luck.Value, stats.Luck), new(DaggerfallMechanicsIds.Reflexes.Value, stats.Reflexes), new(DaggerfallMechanicsIds.LongBlade.Value, stats.LongBlade), new(DaggerfallMechanicsIds.HandToHand.Value, stats.HandToHand), new(DaggerfallMechanicsIds.Dodging.Value, stats.Dodging), new(DaggerfallMechanicsIds.HealthMaximum.Value, vitals.HealthMaximum), new(DaggerfallMechanicsIds.StaminaMaximum.Value, vitals.StaminaMaximum), new(DaggerfallMechanicsIds.MagickaMaximum.Value, vitals.MagickaMaximum),
     };
 
     private static ReadOnlyMemory<MechanicsInitialTrackValue> InitialTracks(DaggerfallVitalValues vitals) => new MechanicsInitialTrackValue[]

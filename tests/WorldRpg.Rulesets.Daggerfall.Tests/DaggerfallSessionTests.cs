@@ -14,10 +14,90 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallSessionTests
 {
     [Fact]
+    public void Normalized_fixture_produces_typed_definitions_and_explicit_placements()
+    {
+        DaggerfallDefinitions definitions = Definitions();
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(ScenarioPayload), definitions);
+
+        Assert.Equal(85, definitions.RequireActor(new DaggerfallActorId("player")).InitialVitals.HealthMaximum);
+        Assert.Equal((9, 16), (definitions.RequireActor(new DaggerfallActorId("rat")).Health.Minimum, definitions.RequireActor(new DaggerfallActorId("rat")).Health.Maximum));
+        Assert.Equal((ulong)1, definitions.Items[new DaggerfallItemId("iron-longsword")].MaximumQuantity);
+        Assert.Empty(inputs.Project.Actors);
+        Assert.Equal(4, inputs.Loadout.Count);
+    }
+
+    [Fact]
+    public void Content_reader_reports_missing_artifacts_and_typed_broken_references()
+    {
+        DaggerfallDefinitions definitions = Definitions();
+        DaggerfallContentException absent = Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(new ProductContent(System.Array.Empty<ProductContentFile>()), Encoding.UTF8.GetBytes(ScenarioPayload), definitions));
+        Assert.Contains(absent.Diagnostics, diagnostic => diagnostic.Contains("asset 'projects/privateers-hold.navgrid.json'", StringComparison.Ordinal));
+
+        string broken = ScenarioPayload.Replace("\"iron-longsword\"", "\"not-an-item\"", StringComparison.Ordinal);
+        DaggerfallContentException reference = Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(broken), definitions));
+        Assert.Contains(reference.Diagnostics, diagnostic => diagnostic.Contains("missing item 'not-an-item'", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("{}", "{\"payload\":{\"source\":{\"positions\":[],\"indices\":[]}}}")]
+    [InlineData("{\"cells\":[[0,0]]}", "{\"payload\":{\"source\":{\"positions\":[],\"indices\":[]}}}")]
+    [InlineData("{\"cells\":[]}", "{\"payload\":{\"source\":{\"positions\":[0,0],\"indices\":[]}}}")]
+    [InlineData("{\"cells\":[]}", "{\"payload\":{\"source\":{\"positions\":[0,0,0],\"indices\":[0,1,0]}}}")]
+    public void Malformed_spatial_artifacts_produce_bounded_content_diagnostics(string navigation, string collision)
+    {
+        DaggerfallContentException exception = Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(SpatialContent(navigation, collision), Encoding.UTF8.GetBytes(ScenarioPayload), Definitions()));
+        Assert.Contains(exception.Diagnostics, diagnostic => diagnostic.Contains("spatial artifact", StringComparison.Ordinal));
+        Assert.True(exception.Diagnostics.Count <= 17);
+    }
+
+    [Fact]
+    public void Pack_assets_must_exist_exactly_once_and_spatial_facts_expose_read_only_memory()
+    {
+        string sprite = "{\"id\":\"missing\",\"texture\":\"textures/missing.png\",\"uvMin\":[0,0],\"uvMax\":[1,1],\"pivot\":[0,0],\"size\":[1,1],\"billboard\":\"none\",\"tint\":[1,1,1,1],\"sizeMode\":\"world\",\"renderOrder\":0,\"depth\":\"default\",\"visible\":true,\"layer\":\"scene\"}";
+        string missingSprite = ScenarioPayload.Replace("\"appearances\":[]", "\"appearances\":[" + sprite + "]", StringComparison.Ordinal);
+        DaggerfallContentException missing = Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(missingSprite), Definitions()));
+        Assert.Contains(missing.Diagnostics, diagnostic => diagnostic.Contains("textures/missing.png", StringComparison.Ordinal));
+
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(ScenarioPayload), Definitions());
+        Assert.IsType<ReadOnlyMemory<PlanarNavCell>>(inputs.Navigation);
+        Assert.IsType<ReadOnlyMemory<Vector3>>(inputs.Collision.Vertices);
+    }
+
+    [Fact]
+    public void Scenario_look_is_not_a_tuning_owner_and_spatial_inputs_copy_caller_arrays()
+    {
+        Assert.Null(typeof(DaggerfallTuning).GetProperty("InitialPlayerLook", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
+        DaggerfallTuning tuning = DaggerfallTuning.Read(Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5,"pitchMaximumRadians":1.5,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}"""));
+        Assert.Equal(.5, tuning.Spatial.NavigationCellSize);
+
+        PlanarNavCell[] navigation = [new(1, 2, 3)];
+        Vector3[] vertices = [new(1, 2, 3)];
+        CollisionMesh collision = new(vertices, []);
+        PrivateersHoldInputs inputs = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor>()), navigation, collision, null);
+        navigation[0] = new(9, 9, 9);
+        vertices[0] = Vector3.Zero;
+        Assert.Equal(1, inputs.Navigation.Span[0].X);
+        Assert.Equal(1f, inputs.Collision.Vertices.Span[0].X);
+    }
+
+    [Fact]
+    public void Base_reader_rejects_incompatible_and_duplicate_definitions_with_bounded_diagnostics()
+    {
+        DaggerfallContentException incompatible = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(BasePayload.Replace("\"daggerfall\"", "\"other-ruleset\"", StringComparison.Ordinal))));
+        Assert.Contains(incompatible.Diagnostics, diagnostic => diagnostic.Contains("ruleset", StringComparison.Ordinal));
+
+        string duplicateActors = "[" + string.Join(',', Enumerable.Repeat("{\"id\":\"rat\",\"stats\":{},\"health\":{},\"armor\":0,\"rewards\":{}}", 20)) + "]";
+        string malformed = "{\"schemaVersion\":1,\"ruleset\":\"daggerfall\",\"actors\":" + duplicateActors + ",\"items\":[],\"hudResources\":[]}";
+        DaggerfallContentException bounded = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(malformed)));
+        Assert.Equal(17, bounded.Diagnostics.Count);
+        Assert.Equal("Daggerfall content diagnostics were truncated.", bounded.Diagnostics[^1]);
+    }
+
+    [Fact]
     public void Daggerfall_rows_drive_the_hud_and_unresolved_attack_has_no_target_side_effect()
     {
         RecordingEngine engine = new();
-        using DaggerfallSession composition = new(engine.Context, SkeletalInputs());
+        using DaggerfallSession composition = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
 
         composition.PublishInitial();
         Assert.Equal(MathF.PI, composition.State.PlayerControl.YawRadians);
@@ -25,7 +105,7 @@ public sealed class DaggerfallSessionTests
         MechanicsInitialComponentsRequest playerInitial = Assert.Single(engine.Mechanics.InitialComponentRequests, request => request.HasInventory);
         Assert.True(playerInitial.HasStats);
         Assert.True(playerInitial.HasTracks);
-        Assert.Equal(11, playerInitial.Stats.Length);
+        Assert.Equal(15, playerInitial.Stats.Length);
         Assert.Equal(3, playerInitial.Tracks.Length);
         Assert.Equal(["health", "stamina", "magicka"], ResourceIds(engine.Ui.Projections[^1].Value));
         Assert.Equal((85d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
@@ -44,7 +124,7 @@ public sealed class DaggerfallSessionTests
     public void Unresolved_actors_do_not_attack_the_player()
     {
         RecordingEngine engine = new();
-        using DaggerfallSession composition = new(engine.Context, SkeletalInputs());
+        using DaggerfallSession composition = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
 
         for (int update = 0; update < 6; update++) composition.Update(new ProductUpdateState(2f));
 
@@ -56,7 +136,7 @@ public sealed class DaggerfallSessionTests
     public void Actor_lifecycle_reads_the_current_engine_damage_track_after_set_and_restore()
     {
         RecordingEngine engine = new();
-        using DaggerfallSession composition = new(engine.Context, SkeletalInputs());
+        using DaggerfallSession composition = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
         MechanicsEntity player = composition.State.Actors.Player.Mechanics;
         MechanicsTrackReadLeaseReceipt health = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
 
@@ -79,14 +159,14 @@ public sealed class DaggerfallSessionTests
 
         RecordingEngine engine = new();
         engine.Mechanics.FailOnInitialComponentsCall = 2;
-        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(engine.Context, SkeletalInputs()));
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults));
         Assert.Equal(1, engine.Mechanics.CatalogDisposals);
         Assert.Equal(2, engine.Mechanics.EntityDisposals);
 
         RecordingEngine appearanceFailure = new();
         appearanceFailure.Appearance.FailOnCreateCall = 1;
         PrivateersHoldInputs worldInputs = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), "privateers-hold.mesh");
-        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(appearanceFailure.Context, worldInputs));
+        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(appearanceFailure.Context, Definitions(), worldInputs, DaggerfallTuning.Defaults));
         Assert.Equal(1, appearanceFailure.Ui.StreamDisposals);
     }
 
@@ -195,7 +275,7 @@ public sealed class DaggerfallSessionTests
     {
         RecordingEngine engine = new();
         AuthoredSprite sprite = new("textures/test.png", default, default, default, Vector2.One, 0);
-        PrivateersHoldInputs inputs = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor> { [9] = new(9, "enemy-rat-1", new WorldPoint(0, 0, 0), sprite) }), [], new CollisionMesh([], []), "mesh.json");
+        PrivateersHoldInputs inputs = new(new ProjectFacts(null, new Dictionary<long, AuthoredActor> { [9] = new(9, new DaggerfallActorId("rat"), new WorldPoint(0, 0, 0), sprite) }), [], new CollisionMesh([], []), "mesh.json");
         using (PrivateersHoldAppearance appearance = new(engine.Appearance, inputs))
         {
             appearance.Dispose();
@@ -212,9 +292,30 @@ public sealed class DaggerfallSessionTests
 
     private static PrivateersHoldInputs SkeletalInputs()
     {
-        AuthoredActor skeletal = new(2000, "enemy-skeletalwarrior-1", new WorldPoint(0, 0, 0), null);
-        return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [2000] = skeletal }), [], new CollisionMesh([], []), null);
+        AuthoredActor skeletal = new(2000, new DaggerfallActorId("skeletal-warrior"), new WorldPoint(0, 0, 0), null);
+        return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [2000] = skeletal }), [], new CollisionMesh([], []), null, new PlayerInitialLook(MathF.PI, 0f), [new ScenarioInventoryStack(new DaggerfallItemId("iron-longsword"), 1), new ScenarioInventoryStack(new DaggerfallItemId("iron-dagger"), 1), new ScenarioInventoryStack(new DaggerfallItemId("iron-cuirass"), 1), new ScenarioInventoryStack(new DaggerfallItemId("gold-piece"), 25)], []);
     }
+
+    private static DaggerfallDefinitions Definitions() => DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(BasePayload));
+
+    private const string BasePayload = """
+    {"schemaVersion":1,"ruleset":"daggerfall","actors":[
+      {"id":"player","stats":{"strength":50,"intelligence":50,"willpower":50,"agility":50,"endurance":40,"personality":50,"speed":50,"luck":50,"reflexes":2,"longBlade":60,"handToHand":40,"dodging":0},"health":{"minimum":85,"maximum":85},"armor":0,"rewards":{"experience":0}},
+      {"id":"rat","mobileId":0,"stats":{"strength":40,"intelligence":10,"willpower":70,"agility":80,"endurance":55,"personality":50,"speed":45,"luck":50,"reflexes":0,"longBlade":0,"handToHand":35,"dodging":0},"health":{"minimum":9,"maximum":16},"armor":30,"attack":{"minimumDamage":1,"maximumDamage":4},"rewards":{"experience":50}},
+      {"id":"skeletal-warrior","mobileId":15,"stats":{"strength":50,"intelligence":65,"willpower":40,"agility":80,"endurance":55,"personality":50,"speed":70,"luck":50,"reflexes":0,"longBlade":75,"handToHand":75,"dodging":75},"health":{"minimum":17,"maximum":66},"armor":10,"attack":{"minimumDamage":5,"maximumDamage":15},"rewards":{"experience":450,"loot":{"table":"H","item":"gold-piece","minimumQuantity":2,"maximumQuantity":10}}}],
+      "items":[{"id":"iron-longsword","maximumQuantity":1},{"id":"iron-dagger","maximumQuantity":1},{"id":"iron-cuirass","maximumQuantity":1},{"id":"gold-piece","maximumQuantity":10000}],
+      "hudResources":[{"id":"health","label":"Health","track":"health"},{"id":"stamina","label":"Stamina","track":"stamina"},{"id":"magicka","label":"Magicka","track":"magicka"}]}
+    """;
+
+    private const string ScenarioPayload = """
+    {"schemaVersion":1,"ruleset":"daggerfall","startingState":{"position":[0,0,0],"look":{"yawRadians":3.1415927,"pitchRadians":0},"loadout":[{"item":"iron-longsword","quantity":1},{"item":"iron-dagger","quantity":1},{"item":"iron-cuirass","quantity":1},{"item":"gold-piece","quantity":25}]},"appearances":[],"placements":[],"encounters":[],"world":{"staticMesh":"imported/privateers-hold.static-mesh.json","navigation":"projects/privateers-hold.navgrid.json","collision":"imported/privateers-hold.static-mesh.json","appearance":{"tint":[0.72,0.7,0.65,1],"position":[0,0,0],"rotation":[0,0,0,1],"scale":[1,1,1],"visible":true,"layer":"scene"}}}
+    """;
+
+    private static ProductContent SpatialContent(string navigation = "{\"cells\":[]}", string collision = "{\"payload\":{\"source\":{\"positions\":[],\"indices\":[]}}}") => new(new ProductContentFile[]
+    {
+        new(Encoding.UTF8.GetBytes("projects/privateers-hold.navgrid.json"), Encoding.UTF8.GetBytes(navigation)),
+        new(Encoding.UTF8.GetBytes("imported/privateers-hold.static-mesh.json"), Encoding.UTF8.GetBytes(collision)),
+    });
 
     private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl keyboard = KeyboardControl.None, float x = 0f, float y = 0f, InputPhase phase = InputPhase.None, string intent = "") => new(
         kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, keyboard, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
@@ -224,12 +325,11 @@ public sealed class DaggerfallSessionTests
     private static ProductContent ProductContentWithPlayer() => new(new ProductContentFile[] {
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/bundles/daggerfall.privateers-hold.bundle.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"daggerfall.privateers-hold","version":1,"ruleset":"daggerfall","contentPacks":[{"id":"daggerfall.base","version":1},{"id":"daggerfall.privateers-hold","version":1}],"tuning":{"id":"daggerfall.defaults","version":1}}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/content-packs/daggerfall.base.pack.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"daggerfall.base","version":1,"ruleset":"daggerfall","dependencies":[],"payload":"worldrpg/payloads/daggerfall.base.json"}""")),
-        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/payloads/daggerfall.base.json"), Encoding.UTF8.GetBytes("""{"ruleset":"daggerfall"}""")),
+        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/payloads/daggerfall.base.json"), Encoding.UTF8.GetBytes(BasePayload)),
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/content-packs/daggerfall.privateers-hold.pack.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"daggerfall.privateers-hold","version":1,"ruleset":"daggerfall","dependencies":[{"id":"daggerfall.base","version":1}],"payload":"worldrpg/payloads/daggerfall.privateers-hold.json"}""")),
-        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/payloads/daggerfall.privateers-hold.json"), Encoding.UTF8.GetBytes("""{"project":"projects/privateers-hold.project.json","navigation":"projects/privateers-hold.navgrid.json","staticMesh":"imported/privateers-hold.static-mesh.json"}""")),
+        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/payloads/daggerfall.privateers-hold.json"), Encoding.UTF8.GetBytes(ScenarioPayload)),
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning/daggerfall.defaults.tuning.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"daggerfall.defaults","version":1,"ruleset":"daggerfall","payload":"worldrpg/tuning-payloads/daggerfall.defaults.json"}""")),
-        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning-payloads/daggerfall.defaults.json"), Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5533,"pitchMaximumRadians":1.5533,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2},"initialPlayerLook":{"yawRadians":3.1415927,"pitchRadians":0}}""")),
-        new ProductContentFile(Encoding.UTF8.GetBytes("projects/privateers-hold.project.json"), Encoding.UTF8.GetBytes("""{"assets":[],"scenes":[{"entities":[{"name":"player","translation":[0,0,0]}]}]}""")),
+        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning-payloads/daggerfall.defaults.json"), Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5533,"pitchMaximumRadians":1.5533,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("projects/privateers-hold.navgrid.json"), Encoding.UTF8.GetBytes("""{"cells":[]}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("imported/privateers-hold.static-mesh.json"), Encoding.UTF8.GetBytes("""{"payload":{"source":{"positions":[],"indices":[]}}}"""))
     });

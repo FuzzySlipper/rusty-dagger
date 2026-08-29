@@ -1,3 +1,42 @@
 {
-  "ruleset": "daggerfall"
+  "schemaVersion": 1,
+  "ruleset": "daggerfall",
+  "actors": [
+    {
+      "id": "player",
+      "stats": { "strength": 50, "intelligence": 50, "willpower": 50, "agility": 50, "endurance": 40, "personality": 50, "speed": 50, "luck": 50, "reflexes": 2, "longBlade": 60, "handToHand": 40, "dodging": 0 },
+      "health": { "minimum": 85, "maximum": 85 },
+      "armor": 0,
+      "rewards": { "experience": 0 }
+    },
+    {
+      "id": "rat",
+      "mobileId": 0,
+      "stats": { "strength": 40, "intelligence": 10, "willpower": 70, "agility": 80, "endurance": 55, "personality": 50, "speed": 45, "luck": 50, "reflexes": 0, "longBlade": 0, "handToHand": 35, "dodging": 0 },
+      "health": { "minimum": 9, "maximum": 16 },
+      "armor": 30,
+      "attack": { "minimumDamage": 1, "maximumDamage": 4 },
+      "rewards": { "experience": 50 }
+    },
+    {
+      "id": "skeletal-warrior",
+      "mobileId": 15,
+      "stats": { "strength": 50, "intelligence": 65, "willpower": 40, "agility": 80, "endurance": 55, "personality": 50, "speed": 70, "luck": 50, "reflexes": 0, "longBlade": 75, "handToHand": 75, "dodging": 75 },
+      "health": { "minimum": 17, "maximum": 66 },
+      "armor": 10,
+      "attack": { "minimumDamage": 5, "maximumDamage": 15 },
+      "rewards": { "experience": 450, "loot": { "table": "H", "item": "gold-piece", "minimumQuantity": 2, "maximumQuantity": 10 } }
+    }
+  ],
+  "items": [
+    { "id": "iron-longsword", "maximumQuantity": 1, "weapon": { "minimumDamage": 2, "maximumDamage": 16, "skill": "long-blade", "handedness": "either", "value": 15, "weight": 18 } },
+    { "id": "iron-dagger", "maximumQuantity": 1 },
+    { "id": "iron-cuirass", "maximumQuantity": 1 },
+    { "id": "gold-piece", "maximumQuantity": 10000 }
+  ],
+  "hudResources": [
+    { "id": "health", "label": "Health", "track": "health" },
+    { "id": "stamina", "label": "Stamina", "track": "stamina" },
+    { "id": "magicka", "label": "Magicka", "track": "magicka" }
+  ]
 }

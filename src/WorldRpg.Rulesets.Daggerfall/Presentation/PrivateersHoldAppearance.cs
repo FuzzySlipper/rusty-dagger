@@ -10,18 +10,24 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 {
     private readonly IAppearanceService _appearance;
     private Appearance? _world;
+    private readonly AuthoredWorldAppearance _worldAppearance;
     private readonly Dictionary<long, Appearance> _sprites = [];
+    private readonly Dictionary<long, AuthoredSprite> _spriteDefinitions = [];
     private bool _disposed;
 
     internal PrivateersHoldAppearance(IAppearanceService appearance, PrivateersHoldInputs content)
     {
         _appearance = appearance;
+        _worldAppearance = content.WorldAppearance;
         try
         {
             if (content.StaticMeshContentPath is { } meshPath)
-                _world = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(meshPath, new Color(.72f, .7f, .65f, 1f)));
+                _world = appearance.CreateStaticMeshFromContent(new StaticMeshContentAppearanceRequest(meshPath, _worldAppearance.Tint));
             foreach (AuthoredActor actor in content.Project.Actors.Values.Where(actor => actor.Sprite is not null))
+            {
+                _spriteDefinitions[actor.EntityId] = actor.Sprite!;
                 _sprites[actor.EntityId] = CreateSprite(actor.Sprite!);
+            }
         }
         catch
         {
@@ -34,8 +40,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         List<AppearanceFact> facts = [];
         if (_disposed) return;
-        if (_world is { } world) facts.Add(new AppearanceFact(1, new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), world, Visible: true, RenderLayer.Scene));
-        facts.AddRange(actors.All.Values.Where(actor => !actor.IsDefeated && _sprites.ContainsKey(actor.EntityId)).Select(actor => new AppearanceFact(checked((ulong)actor.EntityId), new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), _sprites[actor.EntityId], Visible: true, RenderLayer.Scene)));
+        if (_world is { } world) facts.Add(new AppearanceFact(1, _worldAppearance.Transform, world, _worldAppearance.Visible, _worldAppearance.Layer));
+        facts.AddRange(actors.All.Values.Where(actor => !actor.IsDefeated && _sprites.ContainsKey(actor.EntityId)).Select(actor => new AppearanceFact(checked((ulong)actor.EntityId), new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), _sprites[actor.EntityId], _spriteDefinitions[actor.EntityId].Visible, _spriteDefinitions[actor.EntityId].Layer)));
         _appearance.PublishSnapshot([.. facts]);
     }
 
@@ -52,6 +58,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             catch (Exception exception) { (failures ??= []).Add(exception); }
         }
         _sprites.Clear();
+        _spriteDefinitions.Clear();
         if (_world is { } world)
         {
             _world = null;
@@ -64,6 +71,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private Appearance CreateSprite(AuthoredSprite sprite)
     {
         RenderResourceInfo texture = _appearance.OpenResource(new RenderResourceRequest(sprite.TexturePath));
-        return _appearance.CreateSprite(new SpriteAppearanceRequest(texture.Handle, sprite.UvMin, sprite.UvMax, sprite.Pivot, sprite.Size, (BillboardMode)sprite.BillboardMode, SpriteSizeMode.World, RenderOrder: 0, SpriteDepthPolicy.Default, new Color(1, 1, 1, 1)));
+        return _appearance.CreateSprite(new SpriteAppearanceRequest(texture.Handle, sprite.UvMin, sprite.UvMax, sprite.Pivot, sprite.Size, (BillboardMode)sprite.BillboardMode, sprite.SizeMode, sprite.RenderOrder, sprite.DepthPolicy, sprite.Tint));
     }
 }
