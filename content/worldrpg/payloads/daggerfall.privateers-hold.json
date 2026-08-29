@@ -1,0 +1,5 @@
+{
+  "project": "projects/privateers-hold.project.json",
+  "navigation": "projects/privateers-hold.navgrid.json",
+  "staticMesh": "imported/privateers-hold.static-mesh.json"
+}

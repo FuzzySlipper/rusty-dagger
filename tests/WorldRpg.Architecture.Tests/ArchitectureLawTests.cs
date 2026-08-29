@@ -56,7 +56,7 @@ public sealed class ArchitectureLawTests
             .OrderBy(name => name, StringComparer.Ordinal)
             .ToArray();
 
-        Assert.Equal(["BuiltInRulesets.cs", "HostDefaults.cs"], concreteReferences);
+        Assert.Equal(["BuiltInRulesets.cs"], concreteReferences);
     }
 
     [Fact]

@@ -1,0 +1,22 @@
+{
+  "playerControl": {
+    "lookSensitivity": 0.0035,
+    "pitchMinimumRadians": -1.5533,
+    "pitchMaximumRadians": 1.5533,
+    "maximumLookDeltaRadians": 0.35,
+    "invertHorizontal": false,
+    "invertVertical": false,
+    "wrapYaw": true
+  },
+  "spatial": {
+    "collisionVoxelSize": 0.5,
+    "collisionChunkSize": 32,
+    "navigationCellSize": 0.5,
+    "navigationChunkSize": 32,
+    "navigationMaximumStepCells": 2
+  },
+  "initialPlayerLook": {
+    "yawRadians": 3.1415927,
+    "pitchRadians": 0.0
+  }
+}

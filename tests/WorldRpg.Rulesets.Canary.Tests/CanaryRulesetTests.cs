@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using Rusty.Engine;
 using WorldRpg.Host;
 using WorldRpg.Kit;
@@ -13,10 +14,10 @@ public sealed class CanaryRulesetTests
     public void Host_runs_one_admitted_update_and_disposes_the_canary_session()
     {
         CanaryRuleset ruleset = new();
-        ProductCreateContext context = new(EngineContextDouble.Create(), new ProductContent(ReadOnlyMemory<ProductContentFile>.Empty), EmptyInputConfiguration());
+        ProductCreateContext context = new(EngineContextDouble.Create(), CanaryContent(), EmptyInputConfiguration());
         ProductUpdate update = new(AdmittedRealtimeFacts(), ReadOnlySpan<ProductInputEvent>.Empty);
 
-        using (WorldRpgProduct product = new(context, ruleset))
+        using (WorldRpgProduct product = new(context, ruleset, CanaryRuleset.Bundle))
         {
             product.Start();
 
@@ -62,6 +63,17 @@ public sealed class CanaryRulesetTests
         ReadOnlyMemory<ProductInputDescriptor>.Empty,
         ReadOnlyMemory<ProductInputMapping>.Empty);
 
+    private static ProductContent CanaryContent() => new(new ProductContentFile[]
+    {
+        File("worldrpg/bundles/canary.single-room.bundle.json", """{"kind":"worldrpg.game-bundle","id":"canary.single-room","version":1,"ruleset":"canary","contentPacks":[{"id":"canary.single-room","version":1}],"tuning":{"id":"canary.single-room","version":1}}"""),
+        File("worldrpg/content-packs/canary.single-room.pack.json", """{"kind":"worldrpg.content-pack","id":"canary.single-room","version":1,"dependencies":[],"payload":"worldrpg/payloads/canary.single-room.json"}"""),
+        File("worldrpg/payloads/canary.single-room.json", """{"room":"observatory"}"""),
+        File("worldrpg/tuning/canary.single-room.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"canary.single-room","version":1,"ruleset":"canary","payload":"worldrpg/tuning-payloads/canary.single-room.json"}"""),
+        File("worldrpg/tuning-payloads/canary.single-room.json", """{"label":"single-room"}"""),
+    });
+
+    private static ProductContentFile File(string path, string value) => new(Encoding.UTF8.GetBytes(path), Encoding.UTF8.GetBytes(value));
+
     private class EngineContextDouble : DispatchProxy
     {
         internal static IEngineContext Create() => DispatchProxy.Create<IEngineContext, EngineContextDouble>();
@@ -74,6 +86,7 @@ public sealed class CanaryRulesetTests
 public sealed class CanaryRuleset : IGameRuleset
 {
     public static readonly RulesetId Identity = new("canary");
+    public static readonly GameBundleId Bundle = new("canary.single-room");
 
     public RulesetId Id => Identity;
     internal IGameSession? CreatedSession { get; private set; }
@@ -81,6 +94,8 @@ public sealed class CanaryRuleset : IGameRuleset
     public IGameSession CreateSession(GameSessionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        if (context.Composition.Ruleset != Identity) throw new InvalidOperationException("Canary received a different ruleset composition.");
+        _ = context.Composition.RequireContentPack(new ContentPackId("canary.single-room"));
         CanarySession session = new(CanaryScenario.SingleRoom);
         CreatedSession = session;
         return session;
