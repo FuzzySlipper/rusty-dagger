@@ -1,8 +1,8 @@
 # Rusty Dagger / WorldRpg code and migration map
 
-**Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, #7324's first accepted Daggerfall melee/consequences slice, and #7325's Dagger-owned browser wiring are implemented. Campaign #7322 remains open pending final browser evidence after upstream Rusty Engine packaging issue #7510 is fixed.
+**Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, #7324's first accepted Daggerfall melee/consequences slice, #7325's Dagger-owned browser wiring, and #7524's cohesive managed Engine SDK adoption are implemented. Campaign #7322 remains open pending final live-input/browser evidence after upstream task #7531 lands.
 
-**Snapshot:** 2026-08-28, WorldRpg foundation task #7436.
+**Snapshot:** 2026-08-29, post-#7524 and migration campaign #7533 planning.
 
 ## Authority and reading order
 
@@ -25,7 +25,8 @@ The compact rule is:
 
 `WorldRpg.Kit`, `WorldRpg.Host`, `WorldRpg.Rulesets.Daggerfall`, and
 `RustyDagger.NativeProduct` are active projects. Loaded bundles, content packs,
-tuning, and the boundary canary are implemented. `Daggerfall.Import` remains
+tuning, the boundary canary, and the cohesive managed Engine SDK migration are
+implemented. `Daggerfall.Import` remains
 the owner of source conversion/provenance work; do not imply it landed merely
 because the normalized runtime seam now exists.
 
@@ -34,17 +35,19 @@ only running realtime batches with a finite positive `FixedDeltaSeconds` advance
 this realtime Daggerfall product. The one input slice is interpreted on the
 first admitted step and the remaining `AdmittedStepCount` steps reuse resulting
 held state without replaying one-shot actions. Dagger does not derive a local
-clock or reinterpret protocol numbers. Its safe direct service boundary is
-Mechanics (stats/tracks), Look, Spatial, Appearance, Random, and UI; current
-constructors and receipts match the generated contracts at Engine HEAD.
+clock or reinterpret protocol numbers. Its safe direct service boundary is the
+managed Engine SDK, currently including Mechanics
+(stats/tracks/items/inventory/equipment), Look, Spatial, Appearance, Random, and
+UI. Product-side Kit coordinators shape those capabilities; Daggerfall supplies
+definitions and policy.
 
 ## Ownership model
 
 | Layer | Owns | Does not own |
 | --- | --- | --- |
 | Rusty Engine | Host lifecycle/admitted updates, input, rendering/resources, spatial mechanisms, and published service families. | Daggerfall policy or product state. |
-| `WorldRpg.Kit` | Compiled-ruleset/session contract, typed composition IDs, and reusable or placement-uncertain world-RPG mechanisms. Bundle/content-pack/tuning resolution remains #7438. | Generic-RPG universality or Daggerfall vocabulary. |
-| `WorldRpg.Host` | Product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher policy remains later work. | Daggerfall formulas, actor meaning, Arena2 files, or Privateer's Hold IDs. |
+| `WorldRpg.Kit` | Compiled-ruleset/session contract, typed composition IDs, loaded bundle/content/tuning resolution, and reusable or placement-uncertain world-RPG mechanisms. | Generic-RPG universality or Daggerfall vocabulary. |
+| `WorldRpg.Host` | Product lifecycle, explicit built-in ruleset/default selection, and session construction. Explicit multi-bundle selection and durable save identity are #7542. | Daggerfall formulas, actor meaning, Arena2 files, or Privateer's Hold IDs. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, rules, formulas, policies, current content interpretation, presentation, and mutable session state. | Engine machinery and importer source formats. |
 | Content packs (target) | Authored actors, items, world/location/encounter/quest data, assets, placements, and scenario state. | Arbitrary executable C# behavior. |
 | `Daggerfall.Import` (target) | Arena2/DFUnity formats, source paths/records, conversion quirks, provenance, and differential validation. | Runtime session or Host composition. |
@@ -59,17 +62,15 @@ presentation, and importer lanes.
 
 ## Current Engine boundary
 
-The product decides; Engine guarantees. Current active C# source uses the safe
-generated **Mechanics** stats/tracks substrate for catalog creation, definitions,
-entity binding, reads, and guarded track mutation. It also uses safe Look,
-Spatial, Appearance, Random, and UI families. Mechanics already publishes a safe
-item/inventory/equipment substrate, including catalog, inventory lifecycle, and
-equip operations. Kit now provides a thin revision-guarded inventory coordinator;
-Daggerfall defines its item identities and reward policy. Future Daggerfall work
-must continue to use the safe substrate where it fits while retaining its
-definitions, formulas, and policy in the ruleset.
-Those are verified current C# surfaces, not a promise that every Engine Rust
-capability has a safe wrapper.
+The product decides; Engine guarantees. #7524 moved active C# source onto the
+cohesive managed Engine SDK. Current code uses managed **Mechanics**
+stats/tracks/items/inventory/equipment for definitions, entity binding, reads,
+guarded mutation, lifecycle, and equip operations, plus managed Look, Spatial,
+Appearance, Random, and UI families. Kit provides product-shaped actor,
+inventory, and equipment coordination over that SDK; Daggerfall defines its
+identities, authored data, formulas, and reward/equip policy. These are verified
+current C# surfaces, not a promise that every Engine capability needed by the
+new campaign already has a safe managed contract.
 
 Other verified generated families are Content/ContentStore, Persistence, Rules
 (StandardExact and StandardContinuous), Animation, Audio, and CameraView. Treat
@@ -195,6 +196,37 @@ equipment/inventory/loot semantics, presentation, and focused proof vectors.
 It must be re-triaged into the WorldRpg campaign rather than executed under old
 owners. Retired Rust/Angular tasks are not actionable default work.
 
+## Post-#7325 complete-source migration campaign
+
+Campaign #7533 begins after #7325 and #7524. Its closure condition is complete
+semantic disposition of all 63 tracked Rust files and all 19 files under
+`gameplay/`, followed by removal of those source graphs. This is not a
+line-for-line port: behavior and authored meaning move to their truthful owners;
+obsolete runtime, evaluator, package, transport, and editor topology is recorded
+as rejected and removed.
+
+| Donor family | Planned disposition | Task |
+| --- | --- | --- |
+| Entire Rust/`gameplay/` corpus and coupled metadata | Establish the file/concept ledger, replacement evidence, deliberate deviations, and deletion proof before changing behavior. | #7534 |
+| `crates/arena2` | Port checked source decoders, transforms, quirks, and differential fixtures to safe offline C# `Daggerfall.Import`. | #7535 |
+| `crates/dagger-import` and source-shaped spatial/resource adapters | Produce normalized assets, spatial artifacts, manifests, hashes, and provenance for runtime packs; retire runtime parsing of legacy project schemas. | #7536 |
+| `gameplay` stats, actors, monsters, items, equipment, loot, encounters, and presentation references | Load authored values from versioned content packs, put adjustable policy in typed tuning, and keep Daggerfall identities/interpretation in the ruleset. | #7537 |
+| `gameplay` expressions/programs and `dagger-rpg` formulas/resolution | Adapt useful formulas, actions, progression, and loot to named compiled C# policy over managed Engine services; reject the evaluator, structural-program runtime, and replacement DSL. | #7538 |
+| `dagger-runtime` project/player/navigation behavior | Keep reusable world admission, controls, actor lifetime, and spatial coordination in Kit; use Engine lifecycle, Look, Spatial, Navigation, and Content rather than porting the aggregate runtime. | #7539 |
+| Rust targeting/raycast/sensing evidence | Implement Daggerfall target choice and melee admission over verified Engine perception/spatial/collision queries; do not revive the deleted encounter-targeting scaffold. | #7540 |
+| Rust patrol/directional/animation/combat-asset behavior | Split reusable coordination to Kit, Daggerfall behavior/timing to ruleset/content/tuning, and pathing/animation/appearance/audio/camera/time mechanisms to Engine. | #7541 |
+| Old server selection/readout/save identity | Add explicit Host bundle selection and durable bundle/ruleset/pack/tuning/save identity over Engine Persistence and Content. | #7542 |
+| `dagger-studio-adapter`, HTTP server, stale Angular app, and gameplay package authoring | Preserve only useful diagnostics, provenance, thin DOM presentation, and supported C# import/authoring behavior; reject and retire the old topology. | #7543 |
+| Remaining `.rs`, `gameplay/`, Cargo, retired scripts/config/apps | Delete only after replacements and provenance are proven; certify the clean C#/NativeAOT product. Authored/imported content remains. | #7544 |
+
+The dependency shape keeps the importer, catalogs/rules, and Kit/Engine world
+lanes independently reviewable, then converges through targeting/behavior,
+Host state, retired-surface removal, and final cleanup. Each implementation
+slice must consult its exact donor and finish with two Luna-max drift audits:
+missed upstream Engine reuse, then Daggerfall leakage/hardcoding/tuning
+placement. A missing safe Engine capability produces one narrow upstream task
+and stops only the affected slice.
+
 ## Campaign handoff
 
 - **#7435:** charter/map/task authority is complete.
@@ -212,15 +244,20 @@ owners. Retired Rust/Angular tasks are not actionable default work.
   exactly-once consequences. The deterministic keys are deliberately rebased
   from donor runtime randomness to Engine generation/simulation-step plus exact
   attacker/target/salt identity. No live target selector or AI was restored.
+- **#7524:** the product and focused tests use the cohesive managed Engine SDK;
+  handwritten interop-era service contracts have been retired.
 - **#7325:** Dagger-owned NativeAOT/browser wiring publishes the resolved bundle,
   compiled ruleset, ordered packs, tuning, and existing composition/content/tuning
   fingerprints through Daggerfall's HUD; normal semantic attack honestly projects
-  `NoTargetInReach`. Final clean-checkout browser certification remains blocked by
-  upstream Rusty Engine packaging issue #7510 (stale committed browser artifacts).
+  `NoTargetInReach`. Final live-input/browser certification remains blocked by
+  upstream task #7531.
+- **#7533:** planned complete-source migration campaign. #7534 inventories every
+  donor; #7535-#7543 migrate or reject coherent semantic families; #7544 removes
+  the fully dispositioned Rust/`gameplay/` graph and certifies the C#-only product.
 
 Campaign #7322 is **not closed**: it awaits that final browser evidence. Follow-up
-planning inventory includes import normalization, a real launcher, persistence
-identity, authoring tooling, targeting/senses, and broader gameplay mechanisms.
+work is now dependency-ordered under #7533 rather than left as an unowned
+inventory.
 
 No runtime code, empty project structure, or speculative architecture is
 created by this documentation task.
