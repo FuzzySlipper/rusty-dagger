@@ -1,5 +1,6 @@
 {
   "kind": "worldrpg.tuning-profile",
+  "schemaVersion": 1,
   "id": "daggerfall.privateers-hold",
   "version": 1,
   "ruleset": "daggerfall",

@@ -1,0 +1,8 @@
+{
+  "kind": "worldrpg.tuning-profile",
+  "schemaVersion": 1,
+  "id": "daggerfall.defaults",
+  "version": 1,
+  "ruleset": "daggerfall",
+  "payload": "worldrpg/tuning-payloads/daggerfall.defaults.json"
+}

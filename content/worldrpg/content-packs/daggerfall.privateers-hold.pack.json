@@ -1,7 +1,11 @@
 {
   "kind": "worldrpg.content-pack",
+  "schemaVersion": 1,
   "id": "daggerfall.privateers-hold",
   "version": 1,
-  "dependencies": [],
+  "ruleset": "daggerfall",
+  "dependencies": [
+    { "id": "daggerfall.base", "version": 1 }
+  ],
   "payload": "worldrpg/payloads/daggerfall.privateers-hold.json"
 }
