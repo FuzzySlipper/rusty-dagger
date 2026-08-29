@@ -3,18 +3,16 @@ using System.Text.Json;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallTuning(PlayerControlTuning PlayerControl, SpatialTuning Spatial, PlayerInitialLook InitialPlayerLook)
+internal sealed record DaggerfallTuning(PlayerControlTuning PlayerControl, SpatialTuning Spatial)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true),
-        new SpatialTuning(.5, 32, .5, 32, 2),
-        new PlayerInitialLook(MathF.PI, 0f));
+        new SpatialTuning(.5, 32, .5, 32, 2));
 
     internal DaggerfallTuning Validate() => this with
     {
         PlayerControl = PlayerControl.Validate(),
         Spatial = Spatial.Validate(),
-        InitialPlayerLook = InitialPlayerLook.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -23,7 +21,6 @@ internal sealed record DaggerfallTuning(PlayerControlTuning PlayerControl, Spati
         JsonElement root = document.RootElement;
         JsonElement controls = root.GetProperty("playerControl");
         JsonElement spatial = root.GetProperty("spatial");
-        JsonElement look = root.GetProperty("initialPlayerLook");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -38,8 +35,7 @@ internal sealed record DaggerfallTuning(PlayerControlTuning PlayerControl, Spati
                 checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
                 spatial.GetProperty("navigationCellSize").GetDouble(),
                 checked((uint)spatial.GetProperty("navigationChunkSize").GetInt32()),
-                checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32())),
-            new PlayerInitialLook(look.GetProperty("yawRadians").GetSingle(), look.GetProperty("pitchRadians").GetSingle()))
+                checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32())))
             .Validate();
     }
 }

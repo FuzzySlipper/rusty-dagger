@@ -16,11 +16,12 @@ public sealed class DaggerfallRuleset : IGameRuleset
         ArgumentNullException.ThrowIfNull(context);
         if (context.Composition.Ruleset != Identity)
             throw new InvalidOperationException($"Daggerfall cannot interpret ruleset '{context.Composition.Ruleset.Value}'.");
-        DaggerfallBaseContent.Read(context.Composition.RequireContentPack(BasePack).Payload);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(context.Composition.RequireContentPack(BasePack).Payload);
         ContentPack pack = context.Composition.RequireContentPack(PrivateersHoldPack);
         return new DaggerfallSession(
             context.Engine,
-            PrivateersHoldContent.Read(context.Composition.Content, pack.Payload),
+            definitions,
+            PrivateersHoldContent.Read(context.Composition.Content, pack.Payload, definitions),
             DaggerfallTuning.Read(context.Composition.Tuning.Payload.Span));
     }
 }

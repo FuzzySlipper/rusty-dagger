@@ -29,25 +29,24 @@ internal sealed class DaggerfallSession : IGameSession
     private readonly PrivateersHoldAppearance _appearance;
     private bool _disposed;
 
-    internal DaggerfallSession(IEngineContext engine, PrivateersHoldInputs inputs) : this(engine, inputs, DaggerfallTuning.Defaults) { }
-
-    internal DaggerfallSession(IEngineContext engine, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
+    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
     {
         List<IDisposable> partiallyConstructed = [];
         try
         {
             _random = engine.Random;
             tuning = tuning.Validate();
-            DaggerfallCatalog catalog = new();
-            _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics, catalog.Items);
+            _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics, definitions.Items.Values);
             partiallyConstructed.Add(_mechanicsCatalog);
-            PlayerActorState player = new(_mechanicsCatalog.Bind(catalog.Player, PlayerMechanicsEntityId, InitialLoadout()), catalog.Player.Combat.Health.Value, engine.Mechanics);
+            DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
+            PlayerActorState player = new(_mechanicsCatalog.Bind(playerDefinition, PlayerMechanicsEntityId, InitialLoadout(inputs.Loadout)), playerDefinition.Combat.Health.Value, engine.Mechanics);
             partiallyConstructed.Add(player);
             List<ActorState> actorStates = [];
             Dictionary<long, DaggerfallActorDefinition> authored = [];
             foreach (AuthoredActor source in inputs.Project.Actors.Values)
             {
-                if (catalog.ForAuthoredName(source.Name) is not DaggerfallActorDefinition definition) continue;
+                if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
+                    throw new InvalidOperationException($"Privateer's Hold placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
                 MechanicsEntity mechanics = _mechanicsCatalog.Bind(definition, checked((ulong)source.EntityId));
                 ActorState actor = new(source.EntityId, mechanics, source.Position, definition.Combat.Health.Value, engine.Mechanics);
                 partiallyConstructed.Add(actor);
@@ -55,7 +54,7 @@ internal sealed class DaggerfallSession : IGameSession
                 authored.Add(source.EntityId, definition);
             }
             ActorsState actors = new(player, actorStates);
-            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, tuning.InitialPlayerLook.YawRadians, tuning.InitialPlayerLook.PitchRadians), actors, new ProgressionState());
+            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState());
             Presentation = new PresentationState("Ready");
             _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, inputs.ToSpatialScene(), tuning.Spatial);
@@ -63,7 +62,7 @@ internal sealed class DaggerfallSession : IGameSession
             _combat = new CombatModule();
             _rewards = new DaggerfallRewardReactions(new MechanicsInventoryCoordinator(engine.Mechanics, player.Mechanics), State.Progression, _random, authored);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
-            _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, catalog.HudResources);
+            _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, definitions.HudResources);
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
             partiallyConstructed.Add(_appearance);
@@ -149,13 +148,7 @@ internal sealed class DaggerfallSession : IGameSession
         _appearance.Publish(State.Actors);
     }
 
-    private static IReadOnlyList<MechanicsInitialInventoryStack> InitialLoadout() =>
-    [
-        new("iron-longsword", 1),
-        new("iron-dagger", 1),
-        new("iron-cuirass", 1),
-        new("gold-piece", 25),
-    ];
+    private static IReadOnlyList<MechanicsInitialInventoryStack> InitialLoadout(IEnumerable<ScenarioInventoryStack> values) => values.Select(value => new MechanicsInitialInventoryStack(value.ItemId.Value, value.Quantity)).ToArray();
 }
 
 internal static class DaggerfallInput

@@ -14,9 +14,5 @@
     "navigationCellSize": 0.5,
     "navigationChunkSize": 32,
     "navigationMaximumStepCells": 2
-  },
-  "initialPlayerLook": {
-    "yawRadians": 3.1415927,
-    "pitchRadians": 0.0
   }
 }

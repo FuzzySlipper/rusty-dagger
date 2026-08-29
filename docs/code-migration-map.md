@@ -1,6 +1,6 @@
 # Rusty Dagger / WorldRpg code and migration map
 
-**Status:** living ownership inventory; the #7436 project graph is implemented.
+**Status:** living ownership inventory; the #7436 project graph and #7323's first normalized Daggerfall content packs are implemented.
 
 **Snapshot:** 2026-08-28, WorldRpg foundation task #7436.
 
@@ -24,9 +24,10 @@ The compact rule is:
 > **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
 
 `WorldRpg.Kit`, `WorldRpg.Host`, `WorldRpg.Rulesets.Daggerfall`, and
-`RustyDagger.NativeProduct` are now active projects. `Daggerfall.Import`,
-loaded bundles/content packs/tuning, and the boundary canary remain later work;
-do not imply they landed with this project split.
+`RustyDagger.NativeProduct` are active projects. Loaded bundles, content packs,
+tuning, and the boundary canary are implemented. `Daggerfall.Import` remains
+the owner of source conversion/provenance work; do not imply it landed merely
+because the normalized runtime seam now exists.
 
 The current #7441 Daggerfall integration consumes Engine `ProductUpdate.Facts` directly:
 only running realtime batches with a finite positive `FixedDeltaSeconds` advance
@@ -88,14 +89,18 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 | `src/WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj` | Safe Daggerfall ruleset project referencing Kit and Engine. |
 | `DaggerfallRuleset.cs` | Compiled `daggerfall` ruleset implementation creating the current session. |
 | `DaggerfallSession.cs`, `DaggerfallState.cs`, `DaggerfallTuning.cs`, `DaggerfallRewardReactions.cs` | Single mutable Daggerfall session and ordered composition, typed Daggerfall tuning, attack/reward policy, and direct use of Kit mechanisms. `ProductUpdateState` is a Kit input frame derived from Engine input by the session. |
-| `Content/*`, `Facts/*`, `Modules/Combat/*`, `Modules/Presentation/*`, `Presentation/*` | Daggerfall content interpretation, Daggerfall combat formulas/policy/facts, and Daggerfall presentation meaning. Privateer's Hold source parsing adapts to Kit spatial scene inputs. |
+| `Content/DaggerfallDefinitions.cs`, `Content/DaggerfallBaseContent.cs` | Daggerfall-owned immutable typed actor/item/HUD/loot/attack definitions and bounded schema/version/ruleset/duplicate/reference diagnostics from `daggerfall.base`. No global catalog or source-name selection remains. |
+| `Content/PrivateersHoldContent.cs`, `Presentation/PrivateersHoldAppearance.cs` | Explicit typed Privateer's Hold start state, loadout, placements, authored encounter groupings, sprite meaning, and pack-authored world/nav/collision references. Existing navgrid/static-mesh shape reading is isolated as a temporary importer adapter; its coordinate conversion, source format, and provenance destination is `Daggerfall.Import`. |
+| `Facts/*`, `Modules/Combat/*`, `Presentation/*` | Daggerfall combat facts/policy and Daggerfall presentation meaning. Encounter entries are authored scenario groupings only; no encounter runtime/system is active. |
 | `AssemblyInfo.cs` | Exact friend access for `WorldRpg.Rulesets.Daggerfall.Tests`. |
 | `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
 | `src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj`, `NativeProduct.cs` | NativeAOT composition project. Its handwritten file has only the Engine product attribute selecting `WorldRpgProduct`; generated output remains under ignored `obj/`. |
 | `tests/WorldRpg.Kit.Tests/*`, `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Focused Kit mechanism and Daggerfall policy suites, including Host lifecycle/update/disposal coverage. |
 | `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; no gameplay authority. |
 | `src/browser-bundle/**`, `src/**/bin/**`, `src/**/obj/**`, `tests/**/bin/**`, `tests/**/obj/**` | Generated output; never authority or handwritten source. |
-| `content/**` | Current Daggerfall/Privateer's Hold inputs. Normalized packs remain #7438/#7323 work. |
+| `content/worldrpg/payloads/daggerfall.base.json` | Normalized immutable Daggerfall base definitions: player, rat, skeletal warrior, items, attacks/loot, and HUD resources. |
+| `content/worldrpg/payloads/daggerfall.privateers-hold.json` | Normalized Privateer's Hold start/loadout/look, explicit actor placements, scenario groupings, appearance refs, and stable spatial artifact refs. |
+| `content/projects/privateers-hold.navgrid.json`, `content/imported/privateers-hold.static-mesh.json` | Admitted spatial artifacts currently read behind the Daggerfall ruleset adapter. Their source artifact shape and coordinate conversion must move to `Daggerfall.Import` producing a purpose-neutral normalized spatial output. |
 | `gameplay/**`, root Rust/Angular/HTTP/Studio surfaces | Donor or retired-runtime evidence, not active implementation. |
 
 ## Pre-#7436 ownership snapshot (historical)
@@ -112,7 +117,7 @@ Status terms in this retained snapshot describe the pre-split checkout;
 | `src/Dagger.Game/Daggerfall/DaggerfallState.cs` | Current aggregate over domain-owned mutable state. | Daggerfall ruleset. |
 | `src/Dagger.Game/Daggerfall/DaggerfallTuning.cs` | Typed current tuning aggregate. | Daggerfall ruleset typed tuning/profile loader; bundle loading comes later. |
 | `src/Dagger.Game/Daggerfall/DaggerfallRewardReactions.cs` | Daggerfall reward/loot/XP policy. | Daggerfall ruleset. |
-| `src/Dagger.Game/Daggerfall/Content/DaggerfallDefinitions.cs` | Daggerfall stat/track IDs, actor/item/HUD definitions, formulas/defaults; current `enemy-rat`/`enemy-skeletalwarrior` authored-name prefix heuristics. | Daggerfall ruleset; prefix heuristics are transitional importer adapters whose durable destination is `Daggerfall.Import` under #7323. |
+| `src/Dagger.Game/Daggerfall/Content/DaggerfallDefinitions.cs` | Historical Daggerfall stat/track IDs, actor/item/HUD defaults, and prefix-based authored-name selection. | Superseded by #7323's typed loaded definitions/placements; source conversion and provenance remain `Daggerfall.Import` work. |
 | `src/Dagger.Game/Daggerfall/Content/DaggerfallMechanicsCatalog.cs` | Daggerfall definitions admitted through safe Mechanics stats/tracks. | Daggerfall ruleset consuming Engine Mechanics. |
 | `src/Dagger.Game/Daggerfall/Content/PrivateersHoldContent.cs` | Current exact-file selection/parsing from Engine-admitted `ProductContent`, with source-shaped project/entity/sprite interpretation. | Transitional Daggerfall ruleset code; source-path/format quirks move to `Daggerfall.Import`, normalized result to packs. |
 | `src/Dagger.Game/Daggerfall/Presentation/DaggerfallHudProjection.cs` | Daggerfall resource labels/order through Engine UI/Mechanics. | Daggerfall presentation. |
@@ -169,11 +174,11 @@ constant is honest; an authored or adjustable value needs a typed owner instead.
 
 `WorldRpgProduct` selects the explicit built-in `daggerfall` default and creates
 its session through `IGameRuleset`; it does not construct `DaggerfallSession`.
-The session currently defaults to Privateer's Hold. Its starting loadout/gold
-and appearance values are Daggerfall authored data, not Host/Kit
-defaults; they move into packs through #7438/#7323. The current Daggerfall UI
-title and projection-contract selection likewise remain Daggerfall presentation,
-not Host/Kit policy.
+The session receives its ordered `daggerfall.base` and
+`daggerfall.privateers-hold` definitions from the resolved composition. Starting
+loadout/gold/look, placements, appearances, and world refs are authored pack
+data, not Host/Kit defaults. The Daggerfall UI title and projection-contract
+selection remain Daggerfall presentation, not Host/Kit policy.
 
 ## Superseded task and architecture audit
 
@@ -198,9 +203,11 @@ owners. Retired Rust/Angular tasks are not actionable default work.
   Host/ruleset/session seam while preserving focused proof.
 - **#7437:** use an intentionally incompatible canary to exercise the boundary
   and dependency laws.
-- **#7438:** add loaded bundles, content packs, typed tuning, and resolution.
-- **#7323 → #7325:** normalized Daggerfall first-contact content, faithful
-  Daggerfall melee/consequences, then NativeAOT browser exercise.
+- **#7438:** loaded bundles, content packs, typed tuning, and resolution are complete.
+- **#7323:** normalized Daggerfall first-contact definitions/scenario packs are
+  complete, retaining one explicit `Daggerfall.Import` spatial artifact adapter.
+- **#7324 → #7325:** faithful Daggerfall melee/consequences, then NativeAOT
+  browser exercise.
 
 No runtime code, empty project structure, or speculative architecture is
 created by this documentation task.
