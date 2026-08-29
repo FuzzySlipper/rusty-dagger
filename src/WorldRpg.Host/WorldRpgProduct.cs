@@ -71,9 +71,9 @@ public sealed class WorldRpgProduct : IEngineProduct
 
     public void Dispose() => Shutdown();
 
-    public ProductTurnRequest Update(ProductUpdate update)
+    public ProductUpdateResult Update(ProductUpdate update)
     {
-        if (!_started || _paused || _shutdown) return ProductTurnRequest.None;
+        if (!_started || _paused || _shutdown) return ProductUpdateResult.None;
         return _session.Update(update);
     }
 }

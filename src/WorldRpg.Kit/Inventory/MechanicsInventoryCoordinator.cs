@@ -1,12 +1,12 @@
-using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
 
 namespace WorldRpg.Kit.Inventory;
 
 public readonly record struct InventoryItemId(string Value);
 public readonly record struct EquipmentSlotId(string Value);
 public readonly record struct UniqueInventoryItem(ulong EntityId, InventoryItemId Definition);
-/// <summary>A product-owned safe entity lease for a unique item already admitted by Engine.</summary>
-public sealed record EquipmentItemLease(UniqueInventoryItem Item, MechanicsEntity Entity);
+
 public sealed record InventoryGrant(string Operation, string SourceInstance, InventoryItemId Item, ulong Quantity)
 {
     public InventoryGrant Validate()
@@ -54,221 +54,220 @@ public sealed record UniqueItemMaterialization(string Identity, ulong EntityId, 
 
 public sealed record EquipmentAssignment(EquipmentSlotId Slot, UniqueInventoryItem Item);
 
-/// <summary>One Engine-observed equipment view, joined to its contained unique-item definitions.</summary>
-public sealed class EquipmentRead(IReadOnlyList<EquipmentAssignment> assignments, MechanicsComponentRevision revision, ulong relationshipStateRevision)
+/// <summary>A copied managed equipment view joined to its contained item definitions.</summary>
+public sealed class EquipmentRead(
+    IReadOnlyList<EquipmentAssignment> assignments,
+    ulong revision,
+    ulong relationshipStateRevision)
 {
     public IReadOnlyList<EquipmentAssignment> Assignments { get; } = Array.AsReadOnly(assignments.ToArray());
-    public MechanicsComponentRevision Revision { get; } = revision;
+    public ulong Revision { get; } = revision;
     public ulong RelationshipStateRevision { get; } = relationshipStateRevision;
+
     public bool TryGet(EquipmentSlotId slot, out UniqueInventoryItem item)
     {
         foreach (EquipmentAssignment assignment in Assignments)
-            if (assignment.Slot == slot) { item = assignment.Item; return true; }
+        {
+            if (assignment.Slot == slot)
+            {
+                item = assignment.Item;
+                return true;
+            }
+        }
+
         item = default;
         return false;
     }
 }
 
-/// <summary>Thin revision-guarded product coordinator over Engine-authoritative inventory state.</summary>
-public sealed class MechanicsInventoryCoordinator(IMechanicsService mechanics, MechanicsEntity owner)
+/// <summary>
+/// Thin product coordinator over the managed Engine inventory mechanism. Item
+/// definitions remain owned by the ruleset; the Engine helper owns stack and
+/// capacity invariants.
+/// </summary>
+public sealed class MechanicsInventoryCoordinator
 {
-    private readonly IMechanicsService _mechanics = mechanics ?? throw new ArgumentNullException(nameof(mechanics));
-    private readonly MechanicsEntity _owner = owner ?? throw new ArgumentNullException(nameof(owner));
+    private readonly InventoryWorld _world;
+    private readonly EntityId _owner;
+    private readonly IReadOnlyDictionary<InventoryItemId, ItemDefinition> _items;
 
-    public MechanicsInventoryViewLeaseReceipt Read() => _mechanics.ReadInventoryView(_owner);
+    public MechanicsInventoryCoordinator(
+        InventoryWorld world,
+        EntityId owner,
+        IReadOnlyDictionary<InventoryItemId, ItemDefinition> items)
+    {
+        _world = world ?? throw new ArgumentNullException(nameof(world));
+        _owner = owner;
+        _items = items ?? throw new ArgumentNullException(nameof(items));
+    }
 
-    public MechanicsInventoryMutationLeaseReceipt Grant(InventoryGrant grant)
+    public InventoryView Read() => _world.Read(_owner);
+
+    public InventoryMutationReceipt Grant(InventoryGrant grant)
     {
         grant.Validate();
-        MechanicsInventoryViewLeaseReceipt current = Read();
-        return _mechanics.GrantInventory(new MechanicsInventoryMutationRequest(
-            _owner,
-            grant.Operation,
-            MechanicsActiveEffectProvenanceKind.Request,
-            0,
-            string.Empty,
-            0,
-            string.Empty,
-            0,
-            string.Empty,
-            0,
-            0,
-            string.Empty,
-            grant.Operation,
-            grant.SourceInstance,
-            grant.Item.Value,
-            grant.Quantity,
-            MechanicsRevisionGuard.Exact,
-            current.InventoryRevision));
+        return _world.Grant(_owner, RequireDefinition(grant.Item), grant.Quantity);
     }
 
-    public MechanicsInventoryMutationLeaseReceipt Consume(InventoryConsume consume)
+    public InventoryMutationReceipt Consume(InventoryConsume consume)
     {
         consume.Validate();
-        MechanicsInventoryViewLeaseReceipt current = Read();
-        return _mechanics.ConsumeInventory(new MechanicsInventoryMutationRequest(
-            _owner,
-            consume.Operation,
-            MechanicsActiveEffectProvenanceKind.Request,
-            0,
-            string.Empty,
-            0,
-            string.Empty,
-            0,
-            string.Empty,
-            0,
-            0,
-            string.Empty,
-            consume.Operation,
-            consume.SourceInstance,
-            consume.Item.Value,
-            consume.Quantity,
-            MechanicsRevisionGuard.Exact,
-            current.InventoryRevision));
+        return _world.Consume(_owner, RequireDefinition(consume.Item), consume.Quantity);
     }
+
+    private ItemDefinition RequireDefinition(InventoryItemId id) => _items.TryGetValue(id, out ItemDefinition? definition)
+        ? definition
+        : throw new InvalidOperationException($"Managed inventory does not define item '{id.Value}'.");
 }
 
 /// <summary>
-/// Thin typed coordination over Engine-authoritative unique-item containment and equipment.
-/// It stores only disposable leases for items it materializes; inventory and equipment facts are
-/// always read from Mechanics immediately before a guarded mutation.
+/// Thin typed coordination over managed unique-item containment and equipment.
+/// It keeps only ruleset-facing identity conversion; InventoryWorld remains the
+/// state owner and validates every relationship mutation atomically.
 /// </summary>
 public sealed class MechanicsEquipmentCoordinator : IDisposable
 {
-    private readonly IMechanicsService _mechanics;
-    private readonly MechanicsCatalog _catalog;
-    private readonly MechanicsEntity _owner;
-    private readonly Dictionary<ulong, MechanicsEntity> _items = [];
-    private readonly List<OwnedUniqueItem> _materialized = [];
+    private readonly InventoryWorld _world;
+    private readonly EntityId _owner;
+    private readonly IReadOnlyDictionary<InventoryItemId, ItemDefinition> _items;
+    private readonly IReadOnlyDictionary<EquipmentSlotId, EquipmentSlotDefinition> _slots;
+    private readonly Dictionary<ulong, InventoryItemId> _knownItems = [];
     private bool _disposed;
 
-    public MechanicsEquipmentCoordinator(IMechanicsService mechanics, MechanicsCatalog catalog, MechanicsEntity owner, IEnumerable<EquipmentItemLease>? existingItems = null)
+    public MechanicsEquipmentCoordinator(
+        InventoryWorld world,
+        EntityId owner,
+        IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
+        IReadOnlyDictionary<EquipmentSlotId, EquipmentSlotDefinition> slots)
     {
-        _mechanics = mechanics ?? throw new ArgumentNullException(nameof(mechanics));
-        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
-        _owner = owner ?? throw new ArgumentNullException(nameof(owner));
-        if (existingItems is not null)
-            foreach (EquipmentItemLease item in existingItems)
-            {
-                ArgumentException.ThrowIfNullOrWhiteSpace(item.Item.Definition.Value);
-                if (!_items.TryAdd(item.Item.EntityId, item.Entity)) throw new ArgumentException($"Duplicate unique item entity id {item.Item.EntityId}.", nameof(existingItems));
-            }
+        _world = world ?? throw new ArgumentNullException(nameof(world));
+        _owner = owner;
+        _items = items ?? throw new ArgumentNullException(nameof(items));
+        _slots = slots ?? throw new ArgumentNullException(nameof(slots));
     }
 
     public EquipmentRead Read()
     {
         ThrowIfDisposed();
-        MechanicsInventoryViewLeaseReceipt inventory = _mechanics.ReadInventoryView(_owner);
-        MechanicsEquipmentAssignmentComponentLeaseReceipt equipment = _mechanics.ReadEquipmentAssignmentComponent(_owner);
-        Dictionary<ulong, InventoryItemId> contained = [];
-        foreach (MechanicsInventoryViewUniqueItemRow item in inventory.UniqueItems.Span)
-            contained.Add(item.EntityId, new InventoryItemId(item.Definition));
-        List<EquipmentAssignment> assignments = [];
-        foreach (MechanicsEquipmentAssignmentComponentRow assignment in equipment.Entries.Span)
+        InventoryView inventory = _world.Read(_owner);
+        if (!_world.TryGetEquipment(_owner, out EquipmentState? equipment) || equipment is null)
         {
-            if (!contained.TryGetValue(assignment.ItemEntityId, out InventoryItemId definition))
-                throw new InvalidOperationException($"Engine equipment assignment '{assignment.Slot}' refers to item {assignment.ItemEntityId} outside its owner's inventory.");
-            assignments.Add(new(new EquipmentSlotId(assignment.Slot), new UniqueInventoryItem(assignment.ItemEntityId, definition)));
+            throw new InvalidOperationException($"Managed equipment is not registered for owner {_owner.Value}.");
         }
-        MechanicsComponentReadMetadata metadata = equipment.Metadata;
-        return new EquipmentRead(assignments, new MechanicsComponentRevision(metadata.EntityId, metadata.Revision, metadata.Component, metadata.Present), inventory.RelationshipStateRevision);
+
+        Dictionary<ulong, InventoryItemId> contained = inventory.UniqueItems
+            .ToDictionary(item => item.Entity.Value, item => new InventoryItemId(item.Definition.Value));
+        List<EquipmentAssignment> assignments = [];
+        foreach (Rusty.Engine.Mechanics.EquipmentAssignment assignment in equipment.Assignments)
+        {
+            assignments.Add(new EquipmentAssignment(
+                new EquipmentSlotId(assignment.Slot.Value),
+                new UniqueInventoryItem(assignment.Item.Value, RequireContained(contained, assignment.Item))));
+        }
+
+        return new EquipmentRead(assignments, equipment.Revision, inventory.WorldRevision);
     }
 
     public UniqueInventoryItem Materialize(UniqueItemMaterialization item)
     {
         ThrowIfDisposed();
         item.Validate();
-        MechanicsInventoryViewLeaseReceipt current = _mechanics.ReadInventoryView(_owner);
-        MechanicsEntity entity = _mechanics.BindEntity(new MechanicsEntityBindRequest(_catalog, item.EntityId, item.Identity));
-        try
+        ItemDefinition definition = RequireDefinition(item.Definition);
+        if (definition.Kind != ItemKind.Unique)
         {
-            MechanicsUniqueItemMaterializationLeaseReceipt receipt = _mechanics.MaterializeUniqueItem(new MechanicsUniqueItemMaterializationRequest(entity, _owner, item.Definition.Value, current.RelationshipStateRevision));
-            _materialized.Add(new OwnedUniqueItem(receipt.ItemEntityId, entity));
-            _items.Add(receipt.ItemEntityId, entity);
-            return new UniqueInventoryItem(receipt.ItemEntityId, new InventoryItemId(receipt.ItemDefinition));
+            throw new InvalidOperationException($"Item '{item.Definition.Value}' is not a unique item definition.");
         }
-        catch
+
+        EntityId entity = new(item.EntityId);
+        _world.MaterializeUnique(new ItemState(entity, definition), _owner);
+        UniqueInventoryItem result = new(item.EntityId, item.Definition);
+        _knownItems.Add(item.EntityId, item.Definition);
+        return result;
+    }
+
+    public EquipmentMutationReceipt Equip(
+        UniqueInventoryItem item,
+        IReadOnlyList<EquipmentSlotId> slots,
+        EquipmentChange change)
+    {
+        ThrowIfDisposed();
+        change.Validate();
+        ArgumentNullException.ThrowIfNull(slots);
+        if (slots.Count == 0)
         {
-            entity.Dispose();
-            throw;
+            throw new ArgumentException("At least one equipment slot is required.", nameof(slots));
         }
+
+        return EquipmentService.Equip(
+            _world,
+            _owner,
+            RequireEntity(item),
+            slots.Select(RequireSlot));
     }
 
-    public MechanicsEquipmentMutationLeaseReceipt Equip(UniqueInventoryItem item, IReadOnlyList<EquipmentSlotId> slots, EquipmentChange change)
+    public EquipmentMutationReceipt Unequip(UniqueInventoryItem item, EquipmentChange change)
     {
+        ThrowIfDisposed();
         change.Validate();
-        if (slots.Count == 0) throw new ArgumentException("At least one equipment slot is required.", nameof(slots));
-        EquipmentRead current = Read();
-        return _mechanics.EquipEquipment(new MechanicsEquipmentEquipRequest(
-            _owner, RequireLease(item), change.Operation, MechanicsActiveEffectProvenanceKind.Request,
-            0, string.Empty, 0, string.Empty, 0, string.Empty, 0, 0, string.Empty,
-            change.Operation, change.SourceInstance, slots.Select(slot => new MechanicsText(slot.Value)).ToArray(),
-            MechanicsRevisionGuard.Exact, current.Revision, current.RelationshipStateRevision));
+        return EquipmentService.Unequip(_world, _owner, RequireEntity(item));
     }
 
-    public MechanicsEquipmentMutationLeaseReceipt Unequip(UniqueInventoryItem item, EquipmentChange change)
+    public EquipmentMutationReceipt Swap(
+        UniqueInventoryItem outgoing,
+        UniqueInventoryItem incoming,
+        IReadOnlyList<EquipmentSlotId> incomingSlots,
+        EquipmentChange change)
     {
+        ThrowIfDisposed();
         change.Validate();
-        EquipmentRead current = Read();
-        return _mechanics.UnequipEquipment(new MechanicsEquipmentUnequipRequest(
-            _owner, RequireLease(item), change.Operation, MechanicsActiveEffectProvenanceKind.Request,
-            0, string.Empty, 0, string.Empty, 0, string.Empty, 0, 0, string.Empty,
-            change.Operation, change.SourceInstance, MechanicsRevisionGuard.Exact, current.Revision, current.RelationshipStateRevision));
-    }
+        ArgumentNullException.ThrowIfNull(incomingSlots);
+        if (incomingSlots.Count == 0)
+        {
+            throw new ArgumentException("At least one equipment slot is required.", nameof(incomingSlots));
+        }
 
-    public MechanicsEquipmentMutationLeaseReceipt Swap(UniqueInventoryItem outgoing, UniqueInventoryItem incoming, IReadOnlyList<EquipmentSlotId> incomingSlots, EquipmentChange change)
-    {
-        change.Validate();
-        if (incomingSlots.Count == 0) throw new ArgumentException("At least one equipment slot is required.", nameof(incomingSlots));
-        EquipmentRead current = Read();
-        return _mechanics.SwapEquipment(new MechanicsEquipmentSwapRequest(
-            _owner, RequireLease(outgoing), RequireLease(incoming), change.Operation, MechanicsActiveEffectProvenanceKind.Request,
-            0, string.Empty, 0, string.Empty, 0, string.Empty, 0, 0, string.Empty,
-            change.Operation, change.SourceInstance, incomingSlots.Select(slot => new MechanicsText(slot.Value)).ToArray(),
-            MechanicsRevisionGuard.Exact, current.Revision, current.RelationshipStateRevision));
+        return EquipmentService.Swap(
+            _world,
+            _owner,
+            RequireEntity(outgoing),
+            RequireEntity(incoming),
+            incomingSlots.Select(RequireSlot));
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        List<Exception>? failures = null;
-        for (int index = _materialized.Count - 1; index >= 0; index--)
-        {
-            OwnedUniqueItem item = _materialized[index];
-            try
-            {
-                EquipmentRead equipment = Read();
-                if (equipment.Assignments.Any(assignment => assignment.Item.EntityId == item.EntityId))
-                    Unequip(item.AsInventoryItem(), new EquipmentChange("kit.dispose.unequip", $"item:{item.EntityId}"));
-                ulong relationshipRevision = _mechanics.ReadInventoryView(_owner).RelationshipStateRevision;
-                _mechanics.DestroyUniqueItem(new MechanicsUniqueItemDestroyRequest(
-                    item.Entity, "kit.dispose.destroy", MechanicsActiveEffectProvenanceKind.Request,
-                    0, string.Empty, 0, string.Empty, 0, string.Empty, 0, 0, string.Empty,
-                    "kit.dispose.destroy", $"item:{item.EntityId}", relationshipRevision));
-                item.Entity.Dispose();
-                _items.Remove(item.EntityId);
-                _materialized.RemoveAt(index);
-            }
-            catch (Exception exception) { (failures ??= []).Add(exception); }
-        }
-        if (_materialized.Count == 0) _disposed = true;
-        if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        _disposed = true;
+        _knownItems.Clear();
     }
 
-    private MechanicsEntity RequireLease(UniqueInventoryItem item)
+    private EntityId RequireEntity(UniqueInventoryItem item)
     {
-        return _items.TryGetValue(item.EntityId, out MechanicsEntity? entity)
-            ? entity
-            : throw new InvalidOperationException($"Unique item {item.EntityId} is not known to this coordinator.");
+        if (!_knownItems.TryGetValue(item.EntityId, out InventoryItemId definition)
+            || definition != item.Definition)
+        {
+            throw new InvalidOperationException($"Unique item {item.EntityId} is not known to this coordinator.");
+        }
+
+        return new EntityId(item.EntityId);
     }
+
+    private ItemDefinition RequireDefinition(InventoryItemId id) => _items.TryGetValue(id, out ItemDefinition? definition)
+        ? definition
+        : throw new InvalidOperationException($"Managed inventory does not define item '{id.Value}'.");
+
+    private EquipmentSlotDefinition RequireSlot(EquipmentSlotId id) => _slots.TryGetValue(id, out EquipmentSlotDefinition? slot)
+        ? slot
+        : throw new InvalidOperationException($"Managed equipment does not define slot '{id.Value}'.");
+
+    private static InventoryItemId RequireContained(
+        IReadOnlyDictionary<ulong, InventoryItemId> contained,
+        EntityId item) => contained.TryGetValue(item.Value, out InventoryItemId definition)
+        ? definition
+        : throw new InvalidOperationException($"Managed equipment assignment refers to item {item.Value} outside its owner's inventory.");
 
     private void ThrowIfDisposed()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(MechanicsEquipmentCoordinator));
-    }
-
-    private sealed record OwnedUniqueItem(ulong EntityId, MechanicsEntity Entity)
-    {
-        internal UniqueInventoryItem AsInventoryItem() => new(EntityId, new InventoryItemId(string.Empty));
     }
 }
