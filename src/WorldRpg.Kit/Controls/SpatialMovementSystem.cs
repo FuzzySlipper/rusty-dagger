@@ -17,7 +17,10 @@ public sealed class SpatialMovementSystem : IDisposable
         _spatial = spatial;
         _tuning = tuning;
         _controller = spatial.DefaultCharacterControllerConfig();
-        SpatialSession session = spatial.CreateSession(new SpatialSessionConfig(tuning.CollisionVoxelSize, tuning.CollisionChunkSize, 0));
+        SpatialSession session = spatial.CreateSession(new SpatialSessionConfig(
+            tuning.CollisionVoxelSize,
+            tuning.CollisionChunkSize,
+            VoxelSurfaceMode.GreedyCubes));
         try
         {
             if (inputs.CollisionVertices.Length != 0)
@@ -41,6 +44,7 @@ public sealed class SpatialMovementSystem : IDisposable
             position.ToVector(),
             player.Motion,
             default,
+            ReadOnlyMemory<CharacterObstacle>.Empty,
             _controller,
             new CharacterControllerCommand(
                 update.PlanarIntent,
