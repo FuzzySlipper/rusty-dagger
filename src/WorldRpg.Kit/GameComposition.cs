@@ -282,4 +282,4 @@ public sealed class GameSessionContext(IEngineContext engine, ResolvedGameCompos
     public ResolvedCompositionIdentity CompositionIdentity => Composition.Identity;
 }
 public interface IGameRuleset { RulesetId Id { get; } IGameSession CreateSession(GameSessionContext context); }
-public interface IGameSession : IDisposable { void PublishInitial(); ProductTurnRequest Update(ProductUpdate update); }
+public interface IGameSession : IDisposable { void PublishInitial(); ProductUpdateResult Update(ProductUpdate update); }

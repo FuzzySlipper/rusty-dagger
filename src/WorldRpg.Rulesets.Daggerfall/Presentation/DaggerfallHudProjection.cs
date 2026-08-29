@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
@@ -8,7 +9,7 @@ using WorldRpg.Kit.Progression;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
-internal sealed class DaggerfallHudProjection(IUiService ui, IMechanicsService mechanics, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity) : IDisposable
+internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity) : IDisposable
 {
     private readonly UiStream _hud = ui.OpenStream(new UiStreamRequest("dagger.hud", "dagger.ui.snapshot.v1"));
     private ulong _sequence;
@@ -40,8 +41,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IMechanicsService m
 
     private uint ResourceRow(UiValueBuilder builder, PlayerActorState player, DaggerfallHudResourceDefinition resource)
     {
-        MechanicsTrackReadLeaseReceipt value = mechanics.ReadTrack(new MechanicsTrackReadRequest(player.Mechanics, resource.Track.Value, "hud_projection"));
-        return builder.Object(("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)), ("current", builder.Number(value.Current)), ("maximum", builder.Number(value.Maximum)));
+        ExactTrack value = player.Mechanics.ReadTrack(TrackId.Parse(resource.Track.Value));
+        return builder.Object(("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)), ("current", builder.Number(value.Current.Raw)), ("maximum", builder.Number(value.Bounds.Maximum.Raw)));
     }
 
     public void Dispose() => _hud.Dispose();
