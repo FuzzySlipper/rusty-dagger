@@ -22,6 +22,7 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
             _catalog = catalog;
             DefineStats();
             DefineTracks();
+            mechanics.DefineDamageKind(new MechanicsDamageKindDefinitionRequest(_catalog, DaggerfallMechanicsIds.PhysicalDamage.Value));
             DefineItems(definitions.Items.Values);
             DefineEquipmentSlots(definitions.EquipmentSlots.Values);
             mechanics.AdmitCatalog(_catalog);
@@ -35,14 +36,14 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
 
     internal MechanicsCatalog Catalog => _catalog;
 
-    internal MechanicsEntity Bind(DaggerfallActorDefinition definition, ulong entityId, IReadOnlyList<MechanicsInitialInventoryStack>? initialInventory = null, IReadOnlyList<MechanicsInitialEquipmentAssignment>? initialEquipment = null, IReadOnlyList<MechanicsEntity>? containedItems = null)
+    internal MechanicsEntity Bind(DaggerfallActorDefinition definition, DaggerfallVitalValues vitals, ulong entityId, IReadOnlyList<MechanicsInitialInventoryStack>? initialInventory = null, IReadOnlyList<MechanicsInitialEquipmentAssignment>? initialEquipment = null, IReadOnlyList<MechanicsEntity>? containedItems = null)
     {
         MechanicsEntity entity = _mechanics.BindEntity(new MechanicsEntityBindRequest(_catalog, entityId, definition.Id.Value.Replace("-", "_", StringComparison.Ordinal)));
         try
         {
             _mechanics.SetInitialComponents(new MechanicsInitialComponentsRequest(
-                entity, true, InitialStats(definition.Stats, definition.InitialVitals),
-                true, InitialTracks(definition.InitialVitals),
+                entity, true, InitialStats(definition.Stats, vitals),
+                true, InitialTracks(vitals),
                 false, ReadOnlyMemory<MechanicsInitialIntrinsicSource>.Empty,
                 false, ReadOnlyMemory<MechanicsInitialActiveEffect>.Empty,
                 initialInventory is not null, initialInventory?.ToArray() ?? [], ReadOnlyMemory<MechanicsInitialInventoryCapacityLimit>.Empty,

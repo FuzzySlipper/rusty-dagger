@@ -11,6 +11,8 @@ internal class RecordingMechanics : DispatchProxy
 
     internal IMechanicsService Service { get; private set; } = null!;
     internal List<MechanicsTrackMutationRequest> SpendRequests { get; } = [];
+    internal List<MechanicsDamageRequest> DamageRequests { get; } = [];
+    internal List<MechanicsInventoryMutationRequest> GrantRequests { get; } = [];
     internal List<MechanicsInitialComponentsRequest> InitialComponentRequests { get; } = [];
     internal List<MechanicsInitialContainmentRequest> InitialContainmentRequests { get; } = [];
     internal List<MechanicsLifecycleRequest> LifecycleRequests { get; } = [];
@@ -18,8 +20,10 @@ internal class RecordingMechanics : DispatchProxy
     internal int EntityDisposals { get; private set; }
     internal int? FailOnDefineStatCall { get; set; }
     internal int? FailOnInitialComponentsCall { get; set; }
+    internal int? FailOnApplyDamageCall { get; set; }
     private int DefineStatCalls { get; set; }
     private int InitialComponentsCalls { get; set; }
+    private int ApplyDamageCalls { get; set; }
 
     internal static RecordingMechanics Create()
     {
@@ -41,7 +45,7 @@ internal class RecordingMechanics : DispatchProxy
         {
             nameof(IMechanicsService.CreateCatalog) => CreateCatalog(),
             nameof(IMechanicsService.DefineStat) => DefineStat(),
-            nameof(IMechanicsService.DefineTrack) or nameof(IMechanicsService.DefineItem) or nameof(IMechanicsService.DefineEquipmentSlot) or nameof(IMechanicsService.DefineContribution) or nameof(IMechanicsService.AdmitCatalog) => null,
+            nameof(IMechanicsService.DefineTrack) or nameof(IMechanicsService.DefineItem) or nameof(IMechanicsService.DefineEquipmentSlot) or nameof(IMechanicsService.DefineContribution) or nameof(IMechanicsService.DefineDamageKind) or nameof(IMechanicsService.AdmitCatalog) => null,
             nameof(IMechanicsService.BindEntity) => BindEntity((MechanicsEntityBindRequest)argument!),
             nameof(IMechanicsService.SetInitialStat) => SetInitialStat((MechanicsInitialStatRequest)argument!),
             nameof(IMechanicsService.SetInitialTrack) => SetInitialTrack((MechanicsInitialTrackRequest)argument!),
@@ -52,6 +56,7 @@ internal class RecordingMechanics : DispatchProxy
             nameof(IMechanicsService.CommitEntity) => CommitEntity((MechanicsEntity)argument!),
             nameof(IMechanicsService.SetEntityLifecycle) => SetEntityLifecycle((MechanicsLifecycleRequest)argument!),
             nameof(IMechanicsService.ReadInventoryView) => ReadInventoryView((MechanicsEntity)argument!),
+            nameof(IMechanicsService.GrantInventory) => GrantInventory((MechanicsInventoryMutationRequest)argument!),
             nameof(IMechanicsService.ReadEquipmentAssignmentComponent) => ReadEquipment((MechanicsEntity)argument!),
             nameof(IMechanicsService.ReadStat) => ReadStat((MechanicsStatReadRequest)argument!),
             nameof(IMechanicsService.EvaluateStat) => EvaluateStat((MechanicsStatOperationRequest)argument!),
@@ -59,6 +64,7 @@ internal class RecordingMechanics : DispatchProxy
             nameof(IMechanicsService.SetTrack) => SetTrackCore((MechanicsTrackSetRequest)argument!),
             nameof(IMechanicsService.SpendTrack) => SpendTrack((MechanicsTrackMutationRequest)argument!),
             nameof(IMechanicsService.RestoreTrack) => AdjustTrack((MechanicsTrackMutationRequest)argument!, spend: false),
+            nameof(IMechanicsService.ApplyDamage) => ApplyDamage((MechanicsDamageRequest)argument!),
             _ => throw new NotSupportedException($"Focused mechanics double does not implement {method.Name}.")
         };
     }
@@ -149,6 +155,16 @@ internal class RecordingMechanics : DispatchProxy
         MechanicsEquipmentAssignmentComponentRow[] entries = state.Equipment.Select(entry => new MechanicsEquipmentAssignmentComponentRow(entry.Slot, entry.ItemEntityId)).ToArray();
         return new(entries, new MechanicsComponentReadMetadata(state.EntityId, MechanicsRevisionComponent.Equipment, 1, state.Equipment.Count > 0, 0, string.Empty, string.Empty));
     }
+    private MechanicsInventoryMutationLeaseReceipt GrantInventory(MechanicsInventoryMutationRequest request)
+    {
+        GrantRequests.Add(request);
+        EntityState state = State(request.Owner);
+        state.Inventory.TryGetValue(request.Item, out ulong before);
+        ulong after = checked(before + request.Quantity);
+        state.Inventory[request.Item] = after;
+        MechanicsComponentRevision observed = new(state.EntityId, 1, MechanicsRevisionComponent.Inventory, true);
+        return new(ReadOnlyMemory<MechanicsInventoryViewCapacityUsageRow>.Empty, ReadOnlyMemory<MechanicsInventoryViewCapacityUsageRow>.Empty, 0, string.Empty, string.Empty, request.Operation, default, MechanicsInventoryMutationKind.Grant, state.EntityId, request.Item, request.Quantity, before, after, observed, observed, default);
+    }
     private MechanicsStatReadReceipt ReadStat(MechanicsStatReadRequest request)
     {
         EntityState state = State(request.Entity);
@@ -177,6 +193,23 @@ internal class RecordingMechanics : DispatchProxy
         return new(ReadOnlyMemory<MechanicsObservedComponentRevisionRow>.Empty, 0, string.Empty, string.Empty, request.Operation, default, state.EntityId, request.Track, request.Policy, target, before, target, 0, maximum, observed, TracksRevision(state), default);
     }
     private MechanicsTrackMutationLeaseReceipt SpendTrack(MechanicsTrackMutationRequest request) => AdjustTrack(request, spend: true);
+    private MechanicsDamageLeaseReceipt ApplyDamage(MechanicsDamageRequest request)
+    {
+        DamageRequests.Add(request);
+        if (++ApplyDamageCalls == FailOnApplyDamageCall) throw new InvalidOperationException("Injected mechanics damage failure.");
+        EntityState state = State(request.Target);
+        long before = state.Tracks[request.TargetTrack];
+        long requested = 0;
+        foreach (MechanicsDamagePart part in request.Parts.Span) requested = checked(requested + part.Amount);
+        long after = Math.Clamp(before - requested, 0, Maximum(state, request.TargetTrack));
+        state.Tracks[request.TargetTrack] = after;
+        MechanicsTracksRevision observed = TracksRevision(state);
+        state.TrackRevision++;
+        MechanicsTracksRevision committed = TracksRevision(state);
+        MechanicsDamagePartReceiptRow[] parts = request.Parts.Span.ToArray().Select((part, index) => new MechanicsDamagePartReceiptRow(checked((ushort)index), part.Kind, part.Amount, false, part.Amount, default, default, default, part.Amount, 0, Math.Min(part.Amount, before), Math.Max(0, part.Amount - before))).ToArray();
+        MechanicsTrackDepletionRow[] depleted = after == 0 && before > 0 ? [new MechanicsTrackDepletionRow(request.TargetTrack, 0)] : [];
+        return new(parts, ReadOnlyMemory<MechanicsDamageDecisionRow>.Empty, new MechanicsTrackDamageChangeRow[] { new(request.TargetTrack, before, after) }, ReadOnlyMemory<MechanicsTrackDepletionRow>.Empty, depleted, ReadOnlyMemory<MechanicsObservedComponentRevisionRow>.Empty, 0, string.Empty, string.Empty, request.Operation, default, request.HasActor, request.ActorEntityId, state.EntityId, request.TargetTrack, observed, true, committed, default);
+    }
     private MechanicsTrackMutationLeaseReceipt AdjustTrack(MechanicsTrackMutationRequest request, bool spend)
     {
         SpendRequests.Add(request);

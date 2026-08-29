@@ -55,7 +55,7 @@ internal sealed class DaggerfallSession : IGameSession
                 .Select(entry => new MechanicsInitialEquipmentAssignment(entry.EquipSlot!.Value.Value, entry.UniqueEntityId!.Value))
                 .ToArray();
             // An empty-but-present component is required for later Engine-owned Equip operations.
-            PlayerActorState player = new(_mechanicsCatalog.Bind(playerDefinition, PlayerMechanicsEntityId, InitialFungibleLoadout(inputs.Loadout, definitions), equipment, uniqueItems), playerDefinition.Combat.Health.Value, engine.Mechanics);
+            PlayerActorState player = new(_mechanicsCatalog.Bind(playerDefinition, playerDefinition.PlayerInitialVitals, PlayerMechanicsEntityId, InitialFungibleLoadout(inputs.Loadout, definitions), equipment, uniqueItems), playerDefinition.Combat.Health.Value, engine.Mechanics);
             partiallyConstructed.Add(player);
             List<ActorState> actorStates = [];
             Dictionary<long, DaggerfallActorDefinition> authored = [];
@@ -63,7 +63,7 @@ internal sealed class DaggerfallSession : IGameSession
             {
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
                     throw new InvalidOperationException($"Privateer's Hold placement '{source.EntityId}' refers to missing actor '{source.ActorId.Value}'.");
-                MechanicsEntity mechanics = _mechanicsCatalog.Bind(definition, checked((ulong)source.EntityId));
+                MechanicsEntity mechanics = _mechanicsCatalog.Bind(definition, InitialVitals(definition, source.EntityId), checked((ulong)source.EntityId));
                 ActorState actor = new(source.EntityId, mechanics, source.Position, definition.Combat.Health.Value, engine.Mechanics);
                 partiallyConstructed.Add(actor);
                 actorStates.Add(actor);
@@ -77,7 +77,8 @@ internal sealed class DaggerfallSession : IGameSession
             _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, inputs.ToSpatialScene(), tuning.Spatial);
             partiallyConstructed.Add(_spatial);
-            _combat = new CombatModule();
+            authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
+            _combat = new CombatModule(engine.Mechanics, _random, State.Actors, State.Equipment, definitions, authored, tuning.Combat);
             _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, definitions.HudResources);
@@ -181,6 +182,20 @@ internal sealed class DaggerfallSession : IGameSession
         .Where(value => definitions.Items[value.ItemId].IsFungible)
         .Select(value => new MechanicsInitialInventoryStack(value.ItemId.Value, value.Quantity))
         .ToArray();
+
+    internal void ResolveExplicitMelee(ExplicitMeleeRequest request)
+    {
+        _combat.ResolveExplicit(request, _facts);
+        _facts.Deliver(React);
+        PublishPresentation();
+    }
+
+    private DaggerfallVitalValues InitialVitals(DaggerfallActorDefinition definition, long entityId)
+    {
+        if (definition.Id.Value == "player") return definition.PlayerInitialVitals;
+        int health = checked((int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, CombatRandomKey.EnemyScope, CombatRandomKey.InitialHealth(entityId, definition.Id.Value), definition.Health.Minimum, definition.Health.Maximum)).Value);
+        return new DaggerfallVitalValues(health, 0, 0);
+    }
 
     private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs)
     {

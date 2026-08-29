@@ -16,14 +16,19 @@ internal sealed class DaggerfallOutcomePresentation(PresentationState presentati
                 presentation.SetOutcome(rejected.Reason switch
                 {
                     AttackRejection.MissingPlayerPosition => "No authored player position",
-                    _ => "No target in melee reach",
+                    AttackRejection.NoTargetInReach => "No target in melee reach",
+                    AttackRejection.Cooldown => "Cooldown",
+                    AttackRejection.InsufficientStamina => "Too exhausted to attack",
+                    AttackRejection.RightHandWeaponRequired => "No melee weapon equipped",
+                    AttackRejection.TargetDefeated => "Target already defeated",
+                    _ => "Melee request rejected",
                 });
                 break;
-            case AttackMissedFact missed when Actor(missed.ActorId, out DaggerfallActorDefinition definition):
-                presentation.SetOutcome(missed.EnemyAttack ? $"{definition.Id} missed ({missed.Roll} vs {missed.Chance})" : $"Missed {definition.Id} ({missed.Roll} vs {missed.Chance})");
+            case AttackMissedFact missed when Actor(missed.TargetId, out DaggerfallActorDefinition definition):
+                presentation.SetOutcome(missed.EnemyAttack ? $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})" : $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})");
                 break;
-            case AttackHitFact hit when Actor(hit.AttackerId, out DaggerfallActorDefinition definition):
-                presentation.SetOutcome(hit.EnemyAttack ? $"{definition.Id} hit for {hit.Damage} damage" : $"Hit {definition.Id} for {hit.Damage} damage");
+            case AttackHitFact hit when Actor(hit.TargetId, out DaggerfallActorDefinition definition):
+                presentation.SetOutcome(hit.EnemyAttack ? $"Hit {definition.Id.Value} for {hit.Damage} damage" : $"Hit {definition.Id.Value} for {hit.Damage} damage");
                 break;
             case ActorDiedFact died when Actor(died.ActorId, out DaggerfallActorDefinition definition):
                 presentation.SetOutcome($"Defeated {definition.Id} for {died.AppliedDamage} damage; gained {definition.Rewards.ExperienceReward} XP");

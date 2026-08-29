@@ -8,6 +8,10 @@
     "invertVertical": false,
     "wrapYaw": true
   },
+  "combat": {
+    "playerMeleeStaminaCost": 5,
+    "playerMeleeCooldownSeconds": 0.75
+  },
   "spatial": {
     "collisionVoxelSize": 0.5,
     "collisionChunkSize": 32,

@@ -79,8 +79,11 @@ internal static class DaggerfallBaseContent
     private static DaggerfallAttackDefinition ReadAttack(JsonElement value, DaggerfallContentDiagnostics diagnostics)
     {
         int minimum = Integer(value, "minimumDamage", diagnostics), maximum = Integer(value, "maximumDamage", diagnostics);
-        if (minimum < 0 || maximum < minimum || maximum > 100_000) diagnostics.Add($"Attack range [{minimum}, {maximum}] is invalid.");
-        return new(minimum, maximum);
+        string skill = Text(value, "skill", diagnostics);
+        double cooldown = Number(value, "cooldownSeconds", diagnostics);
+        if (minimum < 0 || maximum < minimum || maximum > 100_000 || skill is not ("long-blade" or "hand-to-hand") || !double.IsFinite(cooldown) || cooldown <= 0d || cooldown > 60d)
+            diagnostics.Add($"Attack values for skill '{skill}' are outside the supported range.");
+        return new(skill, minimum, maximum, cooldown);
     }
 
     private static DaggerfallRewardPolicy ReadRewards(JsonElement value, DaggerfallContentDiagnostics diagnostics)

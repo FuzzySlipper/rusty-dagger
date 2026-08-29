@@ -30,6 +30,7 @@ internal static class DaggerfallMechanicsIds
     internal static readonly DaggerfallTrackId Health = new("health");
     internal static readonly DaggerfallTrackId Stamina = new("stamina");
     internal static readonly DaggerfallTrackId Magicka = new("magicka");
+    internal static readonly DaggerfallTrackId PhysicalDamage = new("physical");
 }
 
 internal sealed record DaggerfallStatBases(int Strength, int Intelligence, int Willpower, int Agility, int Endurance, int Personality, int Speed, int Luck, int Reflexes, int LongBlade, int HandToHand, int Dodging);
@@ -42,13 +43,13 @@ internal sealed record DaggerfallVitalValues(int HealthMaximum, int StaminaMaxim
 
 internal sealed record DaggerfallVitalRange(int Minimum, int Maximum);
 internal sealed record DaggerfallCombatProfile(DaggerfallTrackId Health, DaggerfallTrackId? AttackCost);
-internal sealed record DaggerfallAttackDefinition(int MinimumDamage, int MaximumDamage);
+/// <summary>Immutable, ruleset-owned attack policy for one authored actor.</summary>
+internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds);
 internal sealed record DaggerfallRewardPolicy(int ExperienceReward, LootDefinition? Loot = null);
 internal sealed record LootDefinition(string TableKey, DaggerfallItemId ItemId, int MinimumQuantity, int MaximumQuantity);
 internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, DaggerfallAttackDefinition? Attack)
 {
-    /// <summary>The current slice initializes bounded monster health at the upper value until #7324 owns faithful rolls.</summary>
-    internal DaggerfallVitalValues InitialVitals => Id.Value == "player" ? DaggerfallVitalValues.Player(Stats) : new(Health.Maximum, 0, 0);
+    internal DaggerfallVitalValues PlayerInitialVitals => DaggerfallVitalValues.Player(Stats);
 }
 
 internal sealed record DaggerfallWeaponDefinition(int MinimumDamage, int MaximumDamage, string Skill, string Handedness, int Value, int Weight);
