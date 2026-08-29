@@ -5,6 +5,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// <summary>Daggerfall-owned identities. Their string forms are only used at the Engine service edge.</summary>
 internal readonly record struct DaggerfallActorId(string Value);
 internal readonly record struct DaggerfallItemId(string Value);
+internal readonly record struct DaggerfallEquipmentSlotId(string Value);
 internal readonly record struct DaggerfallAppearanceId(string Value);
 internal readonly record struct DaggerfallStatId(string Value);
 internal readonly record struct DaggerfallTrackId(string Value);
@@ -51,14 +52,21 @@ internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, Daggerfal
 }
 
 internal sealed record DaggerfallWeaponDefinition(int MinimumDamage, int MaximumDamage, string Skill, string Handedness, int Value, int Weight);
-internal sealed record DaggerfallItemDefinition(DaggerfallItemId Id, ulong MaximumQuantity, DaggerfallWeaponDefinition? Weapon = null);
+internal enum DaggerfallItemKind { Fungible, Unique }
+internal sealed record DaggerfallEquipmentDefinition(IReadOnlyList<string> Classifications, ushort RequiredSlots, string? ExclusiveGroup);
+internal sealed record DaggerfallEquipmentSlotDefinition(DaggerfallEquipmentSlotId Id, IReadOnlyList<string> AllowedClassifications);
+internal sealed record DaggerfallItemDefinition(DaggerfallItemId Id, DaggerfallItemKind Kind, ulong MaximumQuantity, DaggerfallWeaponDefinition? Weapon = null, DaggerfallEquipmentDefinition? Equipment = null)
+{
+    internal bool IsFungible => Kind == DaggerfallItemKind.Fungible;
+}
 internal sealed record DaggerfallHudResourceDefinition(string Id, string Label, DaggerfallTrackId Track);
 
 /// <summary>Immutable typed definitions loaded from the ordered daggerfall.base payload.</summary>
-internal sealed class DaggerfallDefinitions(IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources)
+internal sealed class DaggerfallDefinitions(IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources)
 {
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());
     internal IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> Items { get; } = new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items.ToDictionary());
+    internal IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> EquipmentSlots { get; } = new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots.ToDictionary());
     internal IReadOnlyList<DaggerfallHudResourceDefinition> HudResources { get; } = Array.AsReadOnly(hudResources.ToArray());
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 }

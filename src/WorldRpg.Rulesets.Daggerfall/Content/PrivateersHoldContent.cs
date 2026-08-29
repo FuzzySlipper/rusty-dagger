@@ -49,18 +49,53 @@ internal static class PrivateersHoldContent
         WorldPoint position = Point(DaggerfallBaseContent.Property(value, "position", diagnostics), "startingState.position", diagnostics);
         JsonElement look = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(value, "look", diagnostics), "startingState.look", diagnostics);
         PlayerInitialLook initialLook = new(DaggerfallBaseContent.Number(look, "yawRadians", diagnostics), DaggerfallBaseContent.Number(look, "pitchRadians", diagnostics));
-        List<ScenarioInventoryStack> loadout = [];
+        List<ScenarioLoadoutEntry> loadout = [];
+        HashSet<ulong> uniqueEntityIds = [];
+        HashSet<DaggerfallItemId> fungibleItemIds = [];
+        HashSet<DaggerfallEquipmentSlotId> equippedSlots = [];
         foreach (JsonElement stack in DaggerfallBaseContent.Array(value, "loadout", diagnostics))
         {
             JsonElement item = DaggerfallBaseContent.Object(stack, "loadout item", diagnostics);
             DaggerfallItemId itemId = new(DaggerfallBaseContent.Text(item, "item", diagnostics));
-            int quantity = DaggerfallBaseContent.Integer(item, "quantity", diagnostics);
             if (!definitions.Items.TryGetValue(itemId, out DaggerfallItemDefinition? definition)) diagnostics.Add($"Starting loadout refers to missing item '{itemId.Value}'.");
-            else if (quantity < 1 || (ulong)quantity > definition.MaximumQuantity) diagnostics.Add($"Starting loadout quantity for '{itemId.Value}' is outside its item limit.");
-            loadout.Add(new(itemId, quantity > 0 ? checked((ulong)quantity) : 1));
+            else if (definition.IsFungible)
+            {
+                int quantity = DaggerfallBaseContent.Integer(item, "quantity", diagnostics);
+                if (quantity < 1 || (ulong)quantity > definition.MaximumQuantity) diagnostics.Add($"Starting loadout quantity for '{itemId.Value}' is outside its item limit.");
+                if (item.TryGetProperty("entityId", out JsonElement entityId) && entityId.ValueKind != JsonValueKind.Null) diagnostics.Add($"Fungible item '{itemId.Value}' must not have an entityId.");
+                if (item.TryGetProperty("equipSlot", out JsonElement slot) && slot.ValueKind != JsonValueKind.Null) diagnostics.Add($"Fungible item '{itemId.Value}' cannot be equipped.");
+                if (!fungibleItemIds.Add(itemId)) diagnostics.Add($"Starting loadout repeats fungible item '{itemId.Value}'.");
+                loadout.Add(new(itemId, quantity > 0 ? checked((ulong)quantity) : 1, null, null));
+            }
+            else
+            {
+                ulong entityId = UnsignedInteger(item, "entityId", diagnostics);
+                DaggerfallEquipmentSlotId? slot = item.TryGetProperty("equipSlot", out JsonElement slotValue) && slotValue.ValueKind != JsonValueKind.Null
+                    ? new DaggerfallEquipmentSlotId(DaggerfallBaseContent.Text(item, "equipSlot", diagnostics))
+                    : null;
+                if (item.TryGetProperty("quantity", out JsonElement quantity) && quantity.ValueKind != JsonValueKind.Null) diagnostics.Add($"Unique item '{itemId.Value}' must use entityId rather than quantity.");
+                if (!uniqueEntityIds.Add(entityId)) diagnostics.Add($"Starting loadout repeats unique entityId '{entityId}'.");
+                if (slot is not null)
+                {
+                    if (definition.Equipment is null) diagnostics.Add($"Unique item '{itemId.Value}' has an equipSlot but is not equipable.");
+                    else if (definition.Equipment.RequiredSlots != 1) diagnostics.Add($"Initial equipment assignment for '{itemId.Value}' requires {definition.Equipment.RequiredSlots} slots, but this scenario supports exactly one equipSlot.");
+                    else if (!definitions.EquipmentSlots.TryGetValue(slot.Value, out DaggerfallEquipmentSlotDefinition? slotDefinition)) diagnostics.Add($"Starting loadout refers to missing equipment slot '{slot.Value.Value}'.");
+                    else if (!definition.Equipment.Classifications.Any(slotDefinition.AllowedClassifications.Contains)) diagnostics.Add($"Item '{itemId.Value}' is incompatible with equipment slot '{slot.Value.Value}'.");
+                    if (!equippedSlots.Add(slot.Value)) diagnostics.Add($"Starting loadout repeats equipment slot '{slot.Value.Value}'.");
+                }
+                loadout.Add(new(itemId, 1, entityId, slot));
+            }
         }
         if (loadout.Count == 0) diagnostics.Add("Privateer's Hold must define a starting loadout.");
         return new(position, initialLook, loadout);
+    }
+
+    private static ulong UnsignedInteger(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement result = DaggerfallBaseContent.Property(value, property, diagnostics);
+        if (result.ValueKind == JsonValueKind.Number && result.TryGetUInt64(out ulong integer) && integer > 0) return integer;
+        diagnostics.Add($"'{property}' must be a non-zero unsigned integer.");
+        return 1;
     }
 
     private static Dictionary<DaggerfallAppearanceId, AuthoredSprite> ReadAppearances(JsonElement root, DaggerfallContentDiagnostics diagnostics)
@@ -265,17 +300,17 @@ internal sealed class AdmittedFiles
     internal byte[]? GetExactlyOne(string path) => ContainsExactlyOne(path) ? _files[path][0].ToArray() : null;
 }
 
-internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, IReadOnlyList<ScenarioInventoryStack> Loadout);
-internal sealed record ScenarioInventoryStack(DaggerfallItemId ItemId, ulong Quantity);
+internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, IReadOnlyList<ScenarioLoadoutEntry> Loadout);
+internal sealed record ScenarioLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
 internal sealed record ScenarioEncounter(string Id, string Name, string Objective, IReadOnlyList<long> Members);
 internal sealed record WorldArtifactReferences(string StaticMesh, string Navigation, string Collision, AuthoredWorldAppearance Appearance);
 internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, bool Visible, RenderLayer Layer);
-internal sealed class PrivateersHoldInputs(ProjectFacts project, IEnumerable<PlanarNavCell> navigation, CollisionMesh collision, string? staticMeshContentPath, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<ScenarioInventoryStack> loadout, IReadOnlyList<ScenarioEncounter> encounters)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, IEnumerable<PlanarNavCell> navigation, CollisionMesh collision, string? staticMeshContentPath, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<ScenarioLoadoutEntry> loadout, IReadOnlyList<ScenarioEncounter> encounters)
 {
-    internal PrivateersHoldInputs(ProjectFacts project, IEnumerable<PlanarNavCell> navigation, CollisionMesh collision, string? staticMeshContentPath, PlayerInitialLook initialLook, IReadOnlyList<ScenarioInventoryStack> loadout, IReadOnlyList<ScenarioEncounter> encounters)
+    internal PrivateersHoldInputs(ProjectFacts project, IEnumerable<PlanarNavCell> navigation, CollisionMesh collision, string? staticMeshContentPath, PlayerInitialLook initialLook, IReadOnlyList<ScenarioLoadoutEntry> loadout, IReadOnlyList<ScenarioEncounter> encounters)
         : this(project, navigation, collision, staticMeshContentPath, new AuthoredWorldAppearance(new Color(.72f, .7f, .65f, 1f), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene), initialLook, loadout, encounters) { }
     internal PrivateersHoldInputs(ProjectFacts project, PlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
-        : this(project, navigation, collision, staticMeshContentPath, new AuthoredWorldAppearance(new Color(.72f, .7f, .65f, 1f), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene), new PlayerInitialLook(MathF.PI, 0f), Array.Empty<ScenarioInventoryStack>(), Array.Empty<ScenarioEncounter>()) { }
+        : this(project, navigation, collision, staticMeshContentPath, new AuthoredWorldAppearance(new Color(.72f, .7f, .65f, 1f), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene), new PlayerInitialLook(MathF.PI, 0f), Array.Empty<ScenarioLoadoutEntry>(), Array.Empty<ScenarioEncounter>()) { }
     internal ProjectFacts Project { get; } = project;
     private readonly PlanarNavCell[] _navigation = navigation.ToArray();
     internal ReadOnlyMemory<PlanarNavCell> Navigation => _navigation;
@@ -283,7 +318,7 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, IEnumerable<Pla
     internal string? StaticMeshContentPath { get; } = staticMeshContentPath;
     internal AuthoredWorldAppearance WorldAppearance { get; } = worldAppearance;
     internal PlayerInitialLook InitialLook { get; } = initialLook;
-    internal IReadOnlyList<ScenarioInventoryStack> Loadout { get; } = Array.AsReadOnly(loadout.ToArray());
+    internal IReadOnlyList<ScenarioLoadoutEntry> Loadout { get; } = Array.AsReadOnly(loadout.ToArray());
     internal IReadOnlyList<ScenarioEncounter> Encounters { get; } = Array.AsReadOnly(encounters.Select(encounter => new ScenarioEncounter(encounter.Id, encounter.Name, encounter.Objective, Array.AsReadOnly(encounter.Members.ToArray()))).ToArray());
     internal SpatialSceneInputs ToSpatialScene() => new(Collision.Vertices, Collision.Triangles, Navigation);
 }

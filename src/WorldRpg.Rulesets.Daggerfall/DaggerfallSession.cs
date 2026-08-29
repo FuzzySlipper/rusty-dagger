@@ -32,14 +32,30 @@ internal sealed class DaggerfallSession : IGameSession
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
     {
         List<IDisposable> partiallyConstructed = [];
+        DaggerfallMechanicsCatalog? catalog = null;
         try
         {
             _random = engine.Random;
             tuning = tuning.Validate();
-            _mechanicsCatalog = new DaggerfallMechanicsCatalog(engine.Mechanics, definitions.Items.Values);
+            ValidateInitialEntityIds(inputs);
+            _mechanicsCatalog = catalog = new DaggerfallMechanicsCatalog(engine.Mechanics, definitions);
             partiallyConstructed.Add(_mechanicsCatalog);
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
-            PlayerActorState player = new(_mechanicsCatalog.Bind(playerDefinition, PlayerMechanicsEntityId, InitialLoadout(inputs.Loadout)), playerDefinition.Combat.Health.Value, engine.Mechanics);
+            IReadOnlyList<ScenarioLoadoutEntry> uniqueLoadout = inputs.Loadout.Where(entry => !definitions.Items[entry.ItemId].IsFungible).ToArray();
+            List<MechanicsEntity> uniqueItems = [];
+            List<EquipmentItemLease> equipmentItemLeases = [];
+            foreach (ScenarioLoadoutEntry entry in uniqueLoadout)
+            {
+                MechanicsEntity item = _mechanicsCatalog.BindUniqueItem(definitions.Items[entry.ItemId], entry.UniqueEntityId!.Value);
+                uniqueItems.Add(item);
+                equipmentItemLeases.Add(new EquipmentItemLease(new UniqueInventoryItem(entry.UniqueEntityId.Value, new InventoryItemId(entry.ItemId.Value)), item));
+            }
+            IReadOnlyList<MechanicsInitialEquipmentAssignment> equipment = uniqueLoadout
+                .Where(entry => entry.EquipSlot is not null)
+                .Select(entry => new MechanicsInitialEquipmentAssignment(entry.EquipSlot!.Value.Value, entry.UniqueEntityId!.Value))
+                .ToArray();
+            // An empty-but-present component is required for later Engine-owned Equip operations.
+            PlayerActorState player = new(_mechanicsCatalog.Bind(playerDefinition, PlayerMechanicsEntityId, InitialFungibleLoadout(inputs.Loadout, definitions), equipment, uniqueItems), playerDefinition.Combat.Health.Value, engine.Mechanics);
             partiallyConstructed.Add(player);
             List<ActorState> actorStates = [];
             Dictionary<long, DaggerfallActorDefinition> authored = [];
@@ -54,23 +70,36 @@ internal sealed class DaggerfallSession : IGameSession
                 authored.Add(source.EntityId, definition);
             }
             ActorsState actors = new(player, actorStates);
-            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState());
+            MechanicsInventoryCoordinator inventory = new(engine.Mechanics, player.Mechanics);
+            MechanicsEquipmentCoordinator equipmentCoordinator = new(engine.Mechanics, _mechanicsCatalog.Catalog, player.Mechanics, equipmentItemLeases);
+            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState(), inventory, equipmentCoordinator);
             Presentation = new PresentationState("Ready");
             _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, inputs.ToSpatialScene(), tuning.Spatial);
             partiallyConstructed.Add(_spatial);
             _combat = new CombatModule();
-            _rewards = new DaggerfallRewardReactions(new MechanicsInventoryCoordinator(engine.Mechanics, player.Mechanics), State.Progression, _random, authored);
+            _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, engine.Mechanics, definitions.HudResources);
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
             partiallyConstructed.Add(_appearance);
         }
-        catch
+        catch (Exception constructionFailure)
         {
-            DisposeAll(partiallyConstructed);
-            throw;
+            // Catalog-owned mechanics entities must receive their terminal lifecycle while their
+            // safe handles remain live. Preserve and surface both failures rather than hiding cleanup.
+            List<Exception> failures = [constructionFailure];
+            if (catalog is not null)
+            {
+                partiallyConstructed.Remove(catalog);
+                try { catalog.Dispose(); }
+                catch (Exception cleanupFailure) { failures.Add(cleanupFailure); }
+            }
+            try { DisposeAll(partiallyConstructed); }
+            catch (Exception cleanupFailure) { failures.Add(cleanupFailure); }
+            if (failures.Count == 1) throw;
+            throw new AggregateException(failures);
         }
     }
 
@@ -122,7 +151,7 @@ internal sealed class DaggerfallSession : IGameSession
     {
         if (_disposed) return;
         _disposed = true;
-        DisposeAll([_hud, _mechanicsCatalog, State.Actors, _spatial, _appearance]);
+        DisposeAll([_hud, State.Actors, _mechanicsCatalog, State.Equipment, _spatial, _appearance]);
     }
 
     private static void DisposeAll(IReadOnlyList<IDisposable> values)
@@ -148,7 +177,23 @@ internal sealed class DaggerfallSession : IGameSession
         _appearance.Publish(State.Actors);
     }
 
-    private static IReadOnlyList<MechanicsInitialInventoryStack> InitialLoadout(IEnumerable<ScenarioInventoryStack> values) => values.Select(value => new MechanicsInitialInventoryStack(value.ItemId.Value, value.Quantity)).ToArray();
+    private static IReadOnlyList<MechanicsInitialInventoryStack> InitialFungibleLoadout(IEnumerable<ScenarioLoadoutEntry> values, DaggerfallDefinitions definitions) => values
+        .Where(value => definitions.Items[value.ItemId].IsFungible)
+        .Select(value => new MechanicsInitialInventoryStack(value.ItemId.Value, value.Quantity))
+        .ToArray();
+
+    private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs)
+    {
+        HashSet<ulong> ids = [PlayerMechanicsEntityId];
+        foreach (AuthoredActor actor in inputs.Project.Actors.Values)
+        {
+            if (actor.EntityId <= 0 || !ids.Add(checked((ulong)actor.EntityId)))
+                throw new InvalidOperationException($"Initial Mechanics entity id '{actor.EntityId}' collides with another player, placement, or item entity.");
+        }
+        foreach (ScenarioLoadoutEntry item in inputs.Loadout)
+            if (item.UniqueEntityId is ulong entityId && !ids.Add(entityId))
+                throw new InvalidOperationException($"Initial Mechanics entity id '{entityId}' collides with another player, placement, or item entity.");
+    }
 }
 
 internal static class DaggerfallInput
