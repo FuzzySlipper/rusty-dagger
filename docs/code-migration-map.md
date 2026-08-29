@@ -1,6 +1,6 @@
 # Rusty Dagger / WorldRpg code and migration map
 
-**Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, #7324's first accepted Daggerfall melee/consequences slice, #7325's Dagger-owned browser wiring, and #7524's cohesive managed Engine SDK adoption are implemented. Campaign #7322 remains open pending final live-input/browser evidence after upstream task #7531 lands.
+**Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, #7324's first accepted Daggerfall melee/consequences slice, #7325's Dagger-owned browser wiring, and #7524's cohesive managed Engine SDK adoption are implemented. Engine #7545/#7546 have landed; campaign #7322 remains open pending final live #7325 input/browser evidence.
 
 **Snapshot:** 2026-08-29, post-#7524 and migration campaign #7533 planning.
 
@@ -249,8 +249,8 @@ and stops only the affected slice.
 - **#7325:** Dagger-owned NativeAOT/browser wiring publishes the resolved bundle,
   compiled ruleset, ordered packs, tuning, and existing composition/content/tuning
   fingerprints through Daggerfall's HUD; normal semantic attack honestly projects
-  `NoTargetInReach`. Final live-input/browser certification remains blocked by
-  upstream task #7531.
+  `NoTargetInReach`. Engine #7545/#7546 are landed; final live-input/browser
+  evidence is pending.
 - **#7533:** planned complete-source migration campaign. #7534 inventories every
   donor; #7535-#7543 migrate or reject coherent semantic families; #7544 removes
   the fully dispositioned Rust/`gameplay/` graph and certifies the C#-only product.

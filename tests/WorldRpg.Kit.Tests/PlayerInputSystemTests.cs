@@ -32,6 +32,56 @@ public sealed class PlayerInputSystemTests
         Assert.Equal(Vector2.Zero, unrelated.PlanarIntent);
     }
 
+    [Theory]
+    [InlineData("go.forward", 0f, 1f)]
+    [InlineData("go.backward", 0f, -1f)]
+    [InlineData("go.left", -1f, 0f)]
+    [InlineData("go.right", 1f, 0f)]
+    public void Mapped_digital_directional_intents_use_ruleset_bindings(string intent, float expectedX, float expectedY)
+    {
+        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, DirectionalControls());
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
+        ProductUpdateState update = new(1f);
+        update.Add(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1f, phase: InputPhase.Pressed, intent: intent));
+
+        input.Apply(player, update);
+
+        Assert.Equal(new Vector2(expectedX, expectedY), update.PlanarIntent);
+    }
+
+    [Fact]
+    public void Mapped_digital_directions_persist_aggregate_and_clear()
+    {
+        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, DirectionalControls());
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
+
+        ProductUpdateState simultaneous = new(1f);
+        simultaneous.Add(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1f, phase: InputPhase.Pressed, intent: "go.forward"));
+        simultaneous.Add(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1f, phase: InputPhase.Pressed, intent: "go.right"));
+        input.Apply(player, simultaneous);
+        Assert.Equal(new Vector2(1f, 1f), simultaneous.PlanarIntent);
+
+        ProductUpdateState opposed = new(1f);
+        opposed.Add(Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1f, phase: InputPhase.Held, intent: "go.backward"));
+        input.Apply(player, opposed);
+        Assert.Equal(new Vector2(1f, 0f), opposed.PlanarIntent);
+
+        ProductUpdateState released = new(1f);
+        released.Add(Input(InputEventKind.MappedDigital, InputEdge.Released, phase: InputPhase.Released, intent: "go.forward"));
+        input.Apply(player, released);
+        Assert.Equal(new Vector2(1f, -1f), released.PlanarIntent);
+
+        ProductUpdateState physicalRelease = new(1f);
+        physicalRelease.Add(Input(InputEventKind.Key, InputEdge.Released, key: KeyboardControl.KeyD));
+        input.Apply(player, physicalRelease);
+        Assert.Equal(new Vector2(0f, -1f), physicalRelease.PlanarIntent);
+
+        ProductUpdateState cleared = new(1f);
+        cleared.Add(Input(InputEventKind.Clear));
+        input.Apply(player, cleared);
+        Assert.Equal(Vector2.Zero, cleared.PlanarIntent);
+    }
+
     [Fact]
     public void Look_configuration_comes_from_tuning()
     {
@@ -84,6 +134,14 @@ public sealed class PlayerInputSystemTests
         kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, key, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, System.Text.Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
 
     private static PlayerControlTuning TestTuning() => new(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true);
+
+    private static PlayerControlBindings DirectionalControls() => new(
+        [],
+        KeyboardControl.KeyW,
+        KeyboardControl.KeyS,
+        KeyboardControl.KeyA,
+        KeyboardControl.KeyD,
+        new DirectionalMovementBindings("go.forward"u8.ToArray(), "go.backward"u8.ToArray(), "go.left"u8.ToArray(), "go.right"u8.ToArray()));
 
     private class LookDouble : DispatchProxy
     {

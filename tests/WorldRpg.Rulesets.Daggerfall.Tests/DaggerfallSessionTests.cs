@@ -302,14 +302,14 @@ public sealed class DaggerfallSessionTests
         PlayerControlState player = new(new WorldPoint(0, 0, 0), yawRadians: 0f, pitchRadians: 0f);
 
         ProductUpdateState held = new(1f);
-        held.Add(Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW));
-        held.Add(Input(InputEventKind.Key, InputEdge.Held, keyboard: KeyboardControl.KeyW));
+        held.Add(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1f, phase: InputPhase.Pressed, intent: "move.forward"));
+        held.Add(Input(InputEventKind.MappedDigital, InputEdge.Held, x: 1f, phase: InputPhase.Held, intent: "move.left"));
         held.Add(Input(InputEventKind.PointerDelta, x: .25f, y: -.5f));
         held.Add(Input(InputEventKind.DirectDigital, InputEdge.Held, x: 1f, phase: InputPhase.Held, intent: "attack"));
         held.Add(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1f, phase: InputPhase.Pressed, intent: "attack"));
         input.Apply(player, held);
 
-        Assert.Equal(new Vector2(0f, 1f), held.PlanarIntent);
+        Assert.Equal(new Vector2(-1f, 1f), held.PlanarIntent);
         Assert.True(held.IsRequested(testAttack));
         Assert.Equal(1, engine.Look.IntegrationCount);
         Assert.Equal(.25f, player.YawRadians);

@@ -256,6 +256,12 @@ internal sealed class DaggerfallSession : IGameSession
 internal static class DaggerfallInput
 {
     internal static readonly InputActionId Attack = new("daggerfall.attack");
-    internal static readonly PlayerControlBindings Controls = new(["move"u8.ToArray(), "movement"u8.ToArray()], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD);
+    internal static readonly PlayerControlBindings Controls = new(
+        ["move"u8.ToArray(), "movement"u8.ToArray()],
+        KeyboardControl.KeyW,
+        KeyboardControl.KeyS,
+        KeyboardControl.KeyA,
+        KeyboardControl.KeyD,
+        new DirectionalMovementBindings("move.forward"u8.ToArray(), "move.backward"u8.ToArray(), "move.left"u8.ToArray(), "move.right"u8.ToArray()));
     internal static readonly IReadOnlyList<InputActionBinding> Bindings = [new(Attack, "attack"u8.ToArray())];
 }

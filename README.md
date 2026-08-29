@@ -94,8 +94,9 @@ It builds the DOM UI, publishes `RustyDagger.NativeProduct` as a NativeAOT share
 library, and launches it through the adjacent Rusty Engine C# product host. The
 current scripts assume the sibling Engine checkout at `/home/dev/rusty-engine`
 and intentionally track that checkout forward rather than pinning an early SDK
-shape. The host declares the semantic `attack=digital` intent; the DOM attack
-control only claims that declared intent and renders the product projection.
+shape. The host declares the semantic `attack=digital` intent and Engine-owned
+held WASD mappings for the four `move.*` digital intents; the DOM attack control
+only claims that declared intent and renders the product projection.
 
 Run the product only when the current task needs live behavior. Focused C#
 compilation or NativeAOT publication is normally enough for organization and
