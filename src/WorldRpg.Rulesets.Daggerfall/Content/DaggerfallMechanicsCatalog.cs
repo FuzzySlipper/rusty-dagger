@@ -35,20 +35,13 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
         MechanicsEntity entity = _mechanics.BindEntity(new MechanicsEntityBindRequest(_catalog, entityId, definition.Id.Replace("-", "_", StringComparison.Ordinal)));
         try
         {
-            SetStats(entity, definition.Stats, definition.Vitals);
-            _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Health.Value, definition.Vitals.HealthMaximum));
-            _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Stamina.Value, definition.Vitals.StaminaMaximum));
-            _mechanics.SetInitialTrack(new MechanicsInitialTrackRequest(entity, DaggerfallMechanicsIds.Magicka.Value, definition.Vitals.MagickaMaximum));
-            if (initialInventory is not null)
-            {
-                _mechanics.SetInitialComponents(new MechanicsInitialComponentsRequest(
-                    entity, false, ReadOnlyMemory<MechanicsInitialStatValue>.Empty,
-                    false, ReadOnlyMemory<MechanicsInitialTrackValue>.Empty,
-                    false, ReadOnlyMemory<MechanicsInitialIntrinsicSource>.Empty,
-                    false, ReadOnlyMemory<MechanicsInitialActiveEffect>.Empty,
-                    true, initialInventory.ToArray(), ReadOnlyMemory<MechanicsInitialInventoryCapacityLimit>.Empty,
-                    false, string.Empty, false, ReadOnlyMemory<MechanicsInitialEquipmentAssignment>.Empty));
-            }
+            _mechanics.SetInitialComponents(new MechanicsInitialComponentsRequest(
+                entity, true, InitialStats(definition.Stats, definition.Vitals),
+                true, InitialTracks(definition.Vitals),
+                false, ReadOnlyMemory<MechanicsInitialIntrinsicSource>.Empty,
+                false, ReadOnlyMemory<MechanicsInitialActiveEffect>.Empty,
+                initialInventory is not null, initialInventory?.ToArray() ?? [], ReadOnlyMemory<MechanicsInitialInventoryCapacityLimit>.Empty,
+                false, string.Empty, false, ReadOnlyMemory<MechanicsInitialEquipmentAssignment>.Empty));
             _mechanics.CommitEntity(entity);
             return entity;
         }
@@ -87,10 +80,15 @@ internal sealed class DaggerfallMechanicsCatalog : IDisposable
         }
     }
 
-    private void SetStats(MechanicsEntity entity, DaggerfallStatBases stats, DaggerfallVitalValues vitals)
+    private static ReadOnlyMemory<MechanicsInitialStatValue> InitialStats(DaggerfallStatBases stats, DaggerfallVitalValues vitals) => new MechanicsInitialStatValue[]
     {
-        Set(entity, DaggerfallMechanicsIds.Strength, stats.Strength); Set(entity, DaggerfallMechanicsIds.Agility, stats.Agility); Set(entity, DaggerfallMechanicsIds.Intelligence, stats.Intelligence); Set(entity, DaggerfallMechanicsIds.Endurance, stats.Endurance); Set(entity, DaggerfallMechanicsIds.Luck, stats.Luck); Set(entity, DaggerfallMechanicsIds.LongBlade, stats.LongBlade); Set(entity, DaggerfallMechanicsIds.HandToHand, stats.HandToHand); Set(entity, DaggerfallMechanicsIds.Dodging, stats.Dodging); Set(entity, DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum); Set(entity, DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum); Set(entity, DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
-    }
+        new(DaggerfallMechanicsIds.Strength.Value, stats.Strength), new(DaggerfallMechanicsIds.Agility.Value, stats.Agility), new(DaggerfallMechanicsIds.Intelligence.Value, stats.Intelligence), new(DaggerfallMechanicsIds.Endurance.Value, stats.Endurance), new(DaggerfallMechanicsIds.Luck.Value, stats.Luck), new(DaggerfallMechanicsIds.LongBlade.Value, stats.LongBlade), new(DaggerfallMechanicsIds.HandToHand.Value, stats.HandToHand), new(DaggerfallMechanicsIds.Dodging.Value, stats.Dodging), new(DaggerfallMechanicsIds.HealthMaximum.Value, vitals.HealthMaximum), new(DaggerfallMechanicsIds.StaminaMaximum.Value, vitals.StaminaMaximum), new(DaggerfallMechanicsIds.MagickaMaximum.Value, vitals.MagickaMaximum),
+    };
 
-    private void Set(MechanicsEntity entity, DaggerfallStatId stat, long value) => _mechanics.SetInitialStat(new MechanicsInitialStatRequest(entity, stat.Value, value));
+    private static ReadOnlyMemory<MechanicsInitialTrackValue> InitialTracks(DaggerfallVitalValues vitals) => new MechanicsInitialTrackValue[]
+    {
+        new(DaggerfallMechanicsIds.Health.Value, vitals.HealthMaximum),
+        new(DaggerfallMechanicsIds.Stamina.Value, vitals.StaminaMaximum),
+        new(DaggerfallMechanicsIds.Magicka.Value, vitals.MagickaMaximum),
+    };
 }

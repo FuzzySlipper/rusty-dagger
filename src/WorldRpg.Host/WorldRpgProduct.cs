@@ -16,6 +16,12 @@ public sealed class WorldRpgProduct : IEngineProduct
     {
         IGameRuleset ruleset = BuiltInRulesets.Resolve(HostDefaults.DefaultRuleset);
         _session = ruleset.CreateSession(new GameSessionContext(context.Engine, context.Content));
+        try { _session.PublishInitial(); }
+        catch
+        {
+            _session.Dispose();
+            throw;
+        }
     }
 
     public void Start()

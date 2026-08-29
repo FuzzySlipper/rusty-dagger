@@ -91,7 +91,15 @@ public sealed class PlayerInputSystem(PlayerControlTuning tuning, ILookService l
         return false;
     }
 
-    private LookConfig LookConfiguration() => new(tuning.LookSensitivity, tuning.LookSensitivity, tuning.PitchMinimumRadians, tuning.PitchMaximumRadians, tuning.MaximumLookDeltaRadians, InvertHorizontal: false, InvertVertical: false, WrapYaw: true);
+    private LookConfig LookConfiguration() => new(
+        tuning.LookSensitivity,
+        tuning.LookSensitivity,
+        tuning.PitchMinimumRadians,
+        tuning.PitchMaximumRadians,
+        tuning.MaximumLookDeltaRadians,
+        tuning.InvertHorizontal,
+        tuning.InvertVertical,
+        tuning.WrapYaw);
 }
 
 public sealed class ProductUpdateState(float deltaSeconds)

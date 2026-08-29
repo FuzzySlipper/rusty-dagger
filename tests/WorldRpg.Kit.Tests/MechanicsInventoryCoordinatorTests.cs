@@ -14,11 +14,11 @@ public sealed class MechanicsInventoryCoordinatorTests
         using MechanicsEntity owner = new(new MechanicsEntityHandle(7), static () => { });
         MechanicsInventoryCoordinator inventory = new(mechanics.Service, owner);
 
-        inventory.Grant(new InventoryGrant("reward", "actor:9", new InventoryItemId("gold-piece"), 3));
+        inventory.Grant(new InventoryGrant("reward", "actor:9", new InventoryItemId("test-reward-item"), 3));
 
         Assert.True(mechanics.ReadCalled);
         Assert.Equal(MechanicsRevisionGuard.Exact, mechanics.Grant!.Value.RevisionGuard);
-        Assert.Equal("gold-piece", mechanics.Grant.Value.Item);
+        Assert.Equal("test-reward-item", mechanics.Grant.Value.Item);
         Assert.Equal(3UL, mechanics.Grant.Value.Quantity);
     }
 

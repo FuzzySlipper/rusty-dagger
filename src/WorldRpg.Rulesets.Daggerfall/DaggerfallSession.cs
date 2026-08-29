@@ -55,8 +55,8 @@ internal sealed class DaggerfallSession : IGameSession
                 authored.Add(source.EntityId, definition);
             }
             ActorsState actors = new(player, actorStates);
-            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition), actors, new ProgressionState());
-            Presentation = new PresentationState();
+            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, tuning.InitialPlayerLook.YawRadians, tuning.InitialPlayerLook.PitchRadians), actors, new ProgressionState());
+            Presentation = new PresentationState("Ready");
             _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, inputs.ToSpatialScene(), tuning.Spatial);
             partiallyConstructed.Add(_spatial);
