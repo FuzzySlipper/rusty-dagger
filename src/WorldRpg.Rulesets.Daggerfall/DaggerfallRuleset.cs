@@ -20,6 +20,7 @@ public sealed class DaggerfallRuleset : IGameRuleset
         ContentPack pack = context.Composition.RequireContentPack(PrivateersHoldPack);
         return new DaggerfallSession(
             context.Engine,
+            context.CompositionIdentity,
             definitions,
             PrivateersHoldContent.Read(context.Composition.Content, pack.Payload, definitions),
             DaggerfallTuning.Read(context.Composition.Tuning.Payload.Span));

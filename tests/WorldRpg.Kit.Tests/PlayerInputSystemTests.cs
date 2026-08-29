@@ -52,8 +52,36 @@ public sealed class PlayerInputSystemTests
         Assert.False(configuration.WrapYaw);
     }
 
-    private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl key = KeyboardControl.None, float x = 0f, float y = 0f, string intent = "") => new(
-        kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, key, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, InputPhase.None, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, System.Text.Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
+    [Fact]
+    public void Direct_ui_digital_claims_activate_actions_without_turning_unedged_or_held_input_into_actions()
+    {
+        InputActionId action = new("test.activate");
+        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
+
+        ProductUpdateState nativeDirectClaim = new(1f);
+        nativeDirectClaim.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
+        input.Apply(player, nativeDirectClaim);
+        Assert.True(nativeDirectClaim.IsRequested(action));
+
+        ProductUpdateState releasedDirectClaim = new(1f);
+        releasedDirectClaim.Add(Input(InputEventKind.DirectDigital, x: 0f, phase: InputPhase.DirectUi, intent: "activate"));
+        input.Apply(player, releasedDirectClaim);
+        Assert.False(releasedDirectClaim.IsRequested(action));
+
+        ProductUpdateState heldDirectClaim = new(1f);
+        heldDirectClaim.Add(Input(InputEventKind.DirectDigital, edge: InputEdge.Held, x: 1f, phase: InputPhase.Held, intent: "activate"));
+        input.Apply(player, heldDirectClaim);
+        Assert.False(heldDirectClaim.IsRequested(action));
+
+        ProductUpdateState unedgedMappedClaim = new(1f);
+        unedgedMappedClaim.Add(Input(InputEventKind.MappedDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
+        input.Apply(player, unedgedMappedClaim);
+        Assert.False(unedgedMappedClaim.IsRequested(action));
+    }
+
+    private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl key = KeyboardControl.None, float x = 0f, float y = 0f, InputPhase phase = InputPhase.None, string intent = "") => new(
+        kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, key, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, System.Text.Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
 
     private static PlayerControlTuning TestTuning() => new(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true);
 

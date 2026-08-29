@@ -1,6 +1,6 @@
 # Rusty Dagger / WorldRpg code and migration map
 
-**Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, and #7324's first accepted Daggerfall melee/consequences slice are implemented.
+**Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, #7324's first accepted Daggerfall melee/consequences slice, and #7325's Dagger-owned browser wiring are implemented. Campaign #7322 remains open pending final browser evidence after upstream Rusty Engine packaging issue #7510 is fixed.
 
 **Snapshot:** 2026-08-28, WorldRpg foundation task #7436.
 
@@ -96,7 +96,7 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 | `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
 | `src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj`, `NativeProduct.cs` | NativeAOT composition project. Its handwritten file has only the Engine product attribute selecting `WorldRpgProduct`; generated output remains under ignored `obj/`. |
 | `tests/WorldRpg.Kit.Tests/*`, `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Focused Kit mechanism and Daggerfall policy suites, including Host lifecycle/update/disposal coverage. |
-| `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; no gameplay authority. |
+| `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; UI renders the Daggerfall semantic projection plus the exact resolved generic composition identity and only claims declared semantic input. `run-product.sh` declares `attack=digital` through the Engine host; no gameplay authority or browser bridge is added. |
 | `src/browser-bundle/**`, `src/**/bin/**`, `src/**/obj/**`, `tests/**/bin/**`, `tests/**/obj/**` | Generated output; never authority or handwritten source. |
 | `content/worldrpg/payloads/daggerfall.base.json` | Normalized immutable Daggerfall base definitions: player, rat, skeletal warrior, items, attacks/loot, and HUD resources. |
 | `content/worldrpg/payloads/daggerfall.privateers-hold.json` | Normalized Privateer's Hold start/loadout/look, explicit actor placements, scenario groupings, appearance refs, and stable spatial artifact refs. |
@@ -212,7 +212,15 @@ owners. Retired Rust/Angular tasks are not actionable default work.
   exactly-once consequences. The deterministic keys are deliberately rebased
   from donor runtime randomness to Engine generation/simulation-step plus exact
   attacker/target/salt identity. No live target selector or AI was restored.
-- **#7325:** NativeAOT browser exercise.
+- **#7325:** Dagger-owned NativeAOT/browser wiring publishes the resolved bundle,
+  compiled ruleset, ordered packs, tuning, and existing composition/content/tuning
+  fingerprints through Daggerfall's HUD; normal semantic attack honestly projects
+  `NoTargetInReach`. Final clean-checkout browser certification remains blocked by
+  upstream Rusty Engine packaging issue #7510 (stale committed browser artifacts).
+
+Campaign #7322 is **not closed**: it awaits that final browser evidence. Follow-up
+planning inventory includes import normalization, a real launcher, persistence
+identity, authoring tooling, targeting/senses, and broader gameplay mechanisms.
 
 No runtime code, empty project structure, or speculative architecture is
 created by this documentation task.

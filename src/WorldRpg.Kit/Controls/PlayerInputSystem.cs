@@ -79,10 +79,14 @@ public sealed class PlayerInputSystem(PlayerControlTuning tuning, ILookService l
 
     private void CaptureSemanticAction(ProductInputEvent input, ProductUpdateState update)
     {
-        if (input.X <= 0f || input.Edge is not InputEdge.Pressed || input.Phase == InputPhase.Held) return;
+        if (input.X <= 0f || !IsActionActivation(input)) return;
         foreach (InputActionBinding binding in _bindings)
             if (input.Intent.Span.SequenceEqual(binding.Intent.Span)) update.Request(binding.Action);
     }
+
+    private static bool IsActionActivation(ProductInputEvent input) =>
+        input.Edge == InputEdge.Pressed
+        || (input.Kind == InputEventKind.DirectDigital && input.Phase == InputPhase.DirectUi && input.Edge == InputEdge.None);
 
     private bool IsMovementIntent(ReadOnlySpan<byte> intent)
     {

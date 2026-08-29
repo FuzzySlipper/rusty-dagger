@@ -58,6 +58,7 @@ public sealed class ResolvedGameComposition
         Bundle = bundle; ContentPacks = Freeze(packs); Tuning = tuning;
         _files = files.Select(file => new StoredFile(file.Key, file.Value.ToArray())).ToArray();
         Fingerprint = fingerprint; ContentFingerprint = contentFingerprint; TuningFingerprint = tuningFingerprint;
+        Identity = new ResolvedCompositionIdentity(Bundle, ContentPacks, Tuning, Fingerprint, ContentFingerprint, TuningFingerprint);
     }
     public GameBundle Bundle { get; }
     public RulesetId Ruleset => Bundle.Ruleset;
@@ -66,10 +67,40 @@ public sealed class ResolvedGameComposition
     public string Fingerprint { get; }
     public string ContentFingerprint { get; }
     public string TuningFingerprint { get; }
+    /// <summary>The resolved selection and fingerprints, retained for product diagnostics and future save identity.</summary>
+    public ResolvedCompositionIdentity Identity { get; }
     public ProductContent Content => new(_files.Select(file => new ProductContentFile(Encoding.UTF8.GetBytes(file.Path), file.Bytes.ToArray())).ToArray());
     public ContentPack RequireContentPack(ContentPackId id) => ContentPacks.SingleOrDefault(pack => pack.Id == id) ?? throw new InvalidOperationException($"Resolved composition does not contain content pack '{id.Value}'.");
     private static IReadOnlyList<T> Freeze<T>(IEnumerable<T> values) => Array.AsReadOnly(values.ToArray());
     private sealed record StoredFile(string Path, byte[] Bytes);
+}
+
+/// <summary>Immutable, ruleset-neutral identity of one resolved product composition.</summary>
+public sealed class ResolvedCompositionIdentity
+{
+    private readonly IReadOnlyList<ContentPackId> _contentPacks;
+
+    internal ResolvedCompositionIdentity(GameBundle bundle, IEnumerable<ContentPack> contentPacks, TuningProfile tuning, string fingerprint, string contentFingerprint, string tuningFingerprint)
+    {
+        ArgumentNullException.ThrowIfNull(bundle);
+        ArgumentNullException.ThrowIfNull(contentPacks);
+        ArgumentNullException.ThrowIfNull(tuning);
+        Bundle = bundle.Id;
+        Ruleset = bundle.Ruleset;
+        _contentPacks = Array.AsReadOnly(contentPacks.Select(pack => pack.Id).ToArray());
+        Tuning = tuning.Id;
+        Fingerprint = fingerprint;
+        ContentFingerprint = contentFingerprint;
+        TuningFingerprint = tuningFingerprint;
+    }
+
+    public GameBundleId Bundle { get; }
+    public RulesetId Ruleset { get; }
+    public IReadOnlyList<ContentPackId> ContentPacks => _contentPacks;
+    public TuningProfileId Tuning { get; }
+    public string Fingerprint { get; }
+    public string ContentFingerprint { get; }
+    public string TuningFingerprint { get; }
 }
 
 public sealed record CompositionDiagnostic(string Code, string Message);
@@ -248,6 +279,7 @@ public sealed class GameSessionContext(IEngineContext engine, ResolvedGameCompos
 {
     public IEngineContext Engine { get; } = engine ?? throw new ArgumentNullException(nameof(engine));
     public ResolvedGameComposition Composition { get; } = composition ?? throw new ArgumentNullException(nameof(composition));
+    public ResolvedCompositionIdentity CompositionIdentity => Composition.Identity;
 }
 public interface IGameRuleset { RulesetId Id { get; } IGameSession CreateSession(GameSessionContext context); }
 public interface IGameSession : IDisposable { void PublishInitial(); ProductTurnRequest Update(ProductUpdate update); }
