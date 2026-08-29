@@ -2,6 +2,9 @@ using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Kit.Inventory;
 using Xunit;
+using EngineEquipmentSlotId = Rusty.Engine.Mechanics.EquipmentSlotId;
+using KitEquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
+using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
 namespace WorldRpg.Kit.Tests;
 
@@ -59,7 +62,7 @@ public sealed class MechanicsInventoryCoordinatorTests
         ItemDefinition sword = UniqueEquipment("sword");
         ItemDefinition dagger = UniqueEquipment("dagger");
         EquipmentSlotDefinition hand = new(
-            EquipmentSlotId.Parse("hand"),
+            EngineEquipmentSlotId.Parse("hand"),
             [ItemClassificationId.Parse("blade")]);
         MechanicsEquipmentCoordinator equipment = new(
             world,
@@ -69,24 +72,24 @@ public sealed class MechanicsInventoryCoordinatorTests
                 [new InventoryItemId("sword")] = sword,
                 [new InventoryItemId("dagger")] = dagger,
             },
-            new Dictionary<EquipmentSlotId, EquipmentSlotDefinition>
+            new Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition>
             {
-                [new EquipmentSlotId("hand")] = hand,
+                [new KitEquipmentSlotId("hand")] = hand,
             });
 
-        UniqueInventoryItem swordItem = equipment.Materialize(
+        KitUniqueInventoryItem swordItem = equipment.Materialize(
             new UniqueItemMaterialization("runtime-sword", 44, new InventoryItemId("sword")));
-        UniqueInventoryItem daggerItem = equipment.Materialize(
+        KitUniqueInventoryItem daggerItem = equipment.Materialize(
             new UniqueItemMaterialization("runtime-dagger", 45, new InventoryItemId("dagger")));
 
         EquipmentMutationReceipt equipped = equipment.Equip(
             swordItem,
-            [new EquipmentSlotId("hand")],
+            [new KitEquipmentSlotId("hand")],
             new EquipmentChange("equip", "test"));
         EquipmentRead equippedView = equipment.Read();
 
         Assert.Equal(EquipmentMutationKind.Equip, equipped.Kind);
-        Assert.True(equippedView.TryGet(new EquipmentSlotId("hand"), out UniqueInventoryItem equippedItem));
+        Assert.True(equippedView.TryGet(new KitEquipmentSlotId("hand"), out KitUniqueInventoryItem equippedItem));
         Assert.Equal(swordItem, equippedItem);
         Assert.Contains(
             world.Read(owner).UniqueItems,
@@ -97,16 +100,16 @@ public sealed class MechanicsInventoryCoordinatorTests
             new EquipmentChange("unequip", "test"));
         Assert.Equal(EquipmentMutationKind.Unequip, unequipped.Kind);
 
-        equipment.Equip(swordItem, [new EquipmentSlotId("hand")], new EquipmentChange("equip", "test"));
+        equipment.Equip(swordItem, [new KitEquipmentSlotId("hand")], new EquipmentChange("equip", "test"));
         EquipmentMutationReceipt swapped = equipment.Swap(
             swordItem,
             daggerItem,
-            [new EquipmentSlotId("hand")],
+            [new KitEquipmentSlotId("hand")],
             new EquipmentChange("swap", "test"));
 
         Assert.Equal(EquipmentMutationKind.Swap, swapped.Kind);
         Assert.Equal(swordItem.EntityId, swapped.ReplacedItem!.Value.Value);
-        Assert.True(equipment.Read().TryGet(new EquipmentSlotId("hand"), out UniqueInventoryItem swappedItem));
+        Assert.True(equipment.Read().TryGet(new KitEquipmentSlotId("hand"), out KitUniqueInventoryItem swappedItem));
         Assert.Equal(daggerItem, swappedItem);
     }
 

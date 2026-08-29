@@ -21,7 +21,7 @@ public sealed class CanaryRulesetTests
         {
             product.Start();
 
-            Assert.Equal(ProductTurnRequest.None, product.Update(update));
+            Assert.Equal(ProductUpdateResult.None, product.Update(update));
         }
 
         CanarySession session = Assert.IsType<CanarySession>(ruleset.CreatedSession);
@@ -46,7 +46,7 @@ public sealed class CanaryRulesetTests
     }
 
     private static ProductUpdateFacts AdmittedRealtimeFacts() => new(
-        ProductTurnKind.Realtime,
+        ProductUpdateMode.Realtime,
         ProductLifecycleState.Running,
         1,
         1,
@@ -128,17 +128,17 @@ internal sealed class CanarySession : IGameSession
         InitialPublishCount++;
     }
 
-    public ProductTurnRequest Update(ProductUpdate update)
+    public ProductUpdateResult Update(ProductUpdate update)
     {
         ThrowIfDisposed();
         if (update.Facts.LifecycleState == ProductLifecycleState.Running
-            && update.Facts.Mode == ProductTurnKind.Realtime
+            && update.Facts.Mode == ProductUpdateMode.Realtime
             && update.Facts.AdmittedStepCount > 0)
         {
             AppliedStepCount = checked(AppliedStepCount + update.Facts.AdmittedStepCount);
         }
 
-        return ProductTurnRequest.None;
+        return ProductUpdateResult.None;
     }
 
     public void Dispose() => _disposed = true;

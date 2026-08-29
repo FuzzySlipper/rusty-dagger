@@ -71,14 +71,13 @@ public sealed class DaggerfallSessionTests
     }
 
     [Fact]
-    public void Player_starts_with_an_engine_equipment_component_even_without_assignments()
+    public void Player_starts_with_managed_equipment_state_even_without_assignments()
     {
         RecordingEngine engine = new();
         PrivateersHoldInputs emptyLoadout = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), null);
         using DaggerfallSession session = new(engine.Context, Definitions(), emptyLoadout, DaggerfallTuning.Defaults);
 
-        MechanicsInitialComponentsRequest player = Assert.Single(engine.Mechanics.InitialComponentRequests, request => request.HasEquipment);
-        Assert.Empty(player.EquipmentAssignments.Span.ToArray());
+        Assert.Empty(session.State.Equipment.Read().Assignments);
     }
 
     [Fact]
@@ -159,13 +158,11 @@ public sealed class DaggerfallSessionTests
         composition.PublishInitial();
         Assert.Equal(MathF.PI, composition.State.PlayerControl.YawRadians);
         Assert.Equal(0f, composition.State.PlayerControl.PitchRadians);
-        MechanicsInitialComponentsRequest playerInitial = Assert.Single(engine.Mechanics.InitialComponentRequests, request => request.HasInventory);
-        Assert.True(playerInitial.HasStats);
-        Assert.True(playerInitial.HasTracks);
-        Assert.Equal(15, playerInitial.Stats.Length);
-        Assert.Equal(3, playerInitial.Tracks.Length);
-        Assert.Equal(["gold-piece"], playerInitial.InventoryStacks.Span.ToArray().Select(stack => stack.Definition));
-        Assert.Equal(2, playerInitial.EquipmentAssignments.Length);
+        Assert.Equal(50, composition.State.Actors.Player.Mechanics.ReadStat(Rusty.Engine.Mechanics.StatId.Parse("strength")).Base.Raw);
+        Assert.Equal(85, composition.State.Actors.Player.Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw);
+        Assert.Equal(90, composition.State.Actors.Player.Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("stamina")).Current.Raw);
+        Assert.Equal(["gold-piece"], composition.State.Inventory.Read().Stacks.Select(stack => stack.Definition.Value));
+        Assert.Equal(2, composition.State.Equipment.Read().Assignments.Count);
         EquipmentRead equipped = composition.State.Equipment.Read();
         Assert.True(equipped.TryGet(new EquipmentSlotId("right-hand"), out UniqueInventoryItem weapon));
         Assert.Equal("iron-longsword", weapon.Definition.Value);
@@ -179,7 +176,6 @@ public sealed class DaggerfallSessionTests
         composition.Update(attack);
 
         Assert.Equal((90d, 90d), Resource(engine.Ui.Projections[^1].Value, "stamina"));
-        Assert.DoesNotContain(engine.Mechanics.SpendRequests, request => request.Track is "health" or "stamina");
         Assert.Equal("No target in melee reach", composition.Presentation.LastOutcome);
     }
 
@@ -192,7 +188,6 @@ public sealed class DaggerfallSessionTests
         for (int update = 0; update < 6; update++) composition.Update(new ProductUpdateState(2f));
 
         Assert.Equal((85d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
-        Assert.DoesNotContain(engine.Mechanics.SpendRequests, request => request.Track == "health");
     }
 
     [Fact]
@@ -203,18 +198,13 @@ public sealed class DaggerfallSessionTests
 
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 7, 10, .125));
 
-        Assert.Single(engine.Mechanics.SpendRequests, request => request.Track == "stamina" && request.Amount == 5);
-        MechanicsDamageRequest damage = Assert.Single(engine.Mechanics.DamageRequests);
-        Assert.Equal((ulong)1, damage.ActorEntityId);
-        Assert.Equal("health", damage.TargetTrack);
-        Assert.Equal("physical", damage.Parts.Span[0].Kind);
-        Assert.Equal("daggerfall.melee.g7.s10.a1.t2000", damage.SourceRequestInstance);
+        Assert.Equal(85, session.State.Actors.Player.Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("stamina")).Current.Raw);
+        Assert.Equal(1, session.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw);
         Assert.Equal("Hit skeletal-warrior for 16 damage", session.Presentation.LastOutcome);
-        Assert.Equal(85, engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(session.State.Actors.Player.Mechanics, "health", "test")).Current);
 
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 7, 11, .125));
-        Assert.Single(engine.Mechanics.DamageRequests);
-        Assert.Single(engine.Mechanics.SpendRequests);
+        Assert.Equal(85, session.State.Actors.Player.Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("stamina")).Current.Raw);
+        Assert.Equal(1, session.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw);
         Assert.Equal("Cooldown", session.Presentation.LastOutcome);
     }
 
@@ -225,20 +215,18 @@ public sealed class DaggerfallSessionTests
         using DaggerfallSession session = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
 
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(2000, 1, 3, 1, .125));
-        Assert.Single(engine.Mechanics.DamageRequests);
-        Assert.Empty(engine.Mechanics.SpendRequests);
-        Assert.Equal(70, engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(session.State.Actors.Player.Mechanics, "health", "test")).Current);
+        Assert.Equal(70, session.State.Actors.Player.Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw);
 
-        MechanicsEntity skeleton = session.State.Actors.All[2000].Mechanics;
-        MechanicsTrackReadLeaseReceipt health = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(skeleton, "health", "test"));
-        engine.Mechanics.SetTrack(new MechanicsTrackSetRequest(skeleton, "test", "test", "health", 1, MechanicsTrackSetPolicy.ClampToBounds, MechanicsRevisionGuard.Exact, health.Revision));
+        WorldRpg.Kit.Actors.ActorMechanicsState skeleton = session.State.Actors.All[2000].Mechanics;
+        skeleton.SetTrack(
+            Rusty.Engine.Mechanics.TrackId.Parse("health"),
+            new Rusty.Engine.Mechanics.ExactValue(1),
+            Rusty.Engine.Mechanics.ExactTrackSetPolicy.ClampToBounds);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 3, 20, .125));
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 3, 30, .125));
 
-        Assert.Equal(2, engine.Mechanics.DamageRequests.Count);
         Assert.Equal(450, session.State.Progression.Experience);
-        Assert.Single(engine.Mechanics.GrantRequests);
-        Assert.Equal("daggerfall.loot.a2000.g3.s20", engine.Mechanics.GrantRequests[0].SourceRequestInstance);
+        Assert.Equal(35UL, Assert.Single(session.State.Inventory.Read().Stacks, stack => stack.Definition.Value == "gold-piece").Quantity);
     }
 
     [Theory]
@@ -252,25 +240,6 @@ public sealed class DaggerfallSessionTests
     }
 
     [Fact]
-    public void Damage_failure_has_no_optimistic_hit_fact_or_cooldown_but_preserves_engine_stamina_spend()
-    {
-        RecordingEngine engine = new();
-        engine.Mechanics.FailOnApplyDamageCall = 1;
-        using DaggerfallSession session = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
-
-        Assert.Throws<InvalidOperationException>(() => session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 4, 10, .125)));
-        Assert.Equal("Ready", session.Presentation.LastOutcome);
-        Assert.Single(engine.Mechanics.SpendRequests);
-        Assert.Single(engine.Mechanics.DamageRequests);
-
-        engine.Mechanics.FailOnApplyDamageCall = null;
-        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 4, 10, .125));
-        Assert.Equal(2, engine.Mechanics.SpendRequests.Count);
-        Assert.Equal(2, engine.Mechanics.DamageRequests.Count);
-        Assert.Equal("Hit skeletal-warrior for 16 damage", session.Presentation.LastOutcome);
-    }
-
-    [Fact]
     public void Explicit_melee_miss_spends_stamina_but_insufficient_stamina_rejects_before_mutation()
     {
         RecordingEngine miss = new();
@@ -278,18 +247,19 @@ public sealed class DaggerfallSessionTests
         using (DaggerfallSession missSession = new(miss.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults))
         {
             missSession.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-            Assert.Single(miss.Mechanics.SpendRequests);
-            Assert.Empty(miss.Mechanics.DamageRequests);
+            Assert.Equal(85, missSession.State.Actors.Player.Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("stamina")).Current.Raw);
+            Assert.Equal(66, missSession.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw);
         }
 
         RecordingEngine exhausted = new();
         using DaggerfallSession session = new(exhausted.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
-        MechanicsEntity player = session.State.Actors.Player.Mechanics;
-        MechanicsTrackReadLeaseReceipt stamina = exhausted.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "stamina", "test"));
-        exhausted.Mechanics.SetTrack(new MechanicsTrackSetRequest(player, "test", "test", "stamina", 4, MechanicsTrackSetPolicy.ClampToBounds, MechanicsRevisionGuard.Exact, stamina.Revision));
+        WorldRpg.Kit.Actors.ActorMechanicsState player = session.State.Actors.Player.Mechanics;
+        player.SetTrack(
+            Rusty.Engine.Mechanics.TrackId.Parse("stamina"),
+            new Rusty.Engine.Mechanics.ExactValue(4),
+            Rusty.Engine.Mechanics.ExactTrackSetPolicy.ClampToBounds);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
-        Assert.Empty(exhausted.Mechanics.SpendRequests);
-        Assert.Empty(exhausted.Mechanics.DamageRequests);
+        Assert.Equal(4, player.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("stamina")).Current.Raw);
         Assert.Equal("Too exhausted to attack", session.Presentation.LastOutcome);
     }
 
@@ -299,10 +269,9 @@ public sealed class DaggerfallSessionTests
         RecordingEngine engine = new();
         using DaggerfallSession session = new(engine.Context, Definitions(), ActorInputs(3000, "rat"), DaggerfallTuning.Defaults);
 
-        MechanicsEntity rat = session.State.Actors.All[3000].Mechanics;
-        Assert.Equal(9, engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(rat, "health", "test")).Current);
+        WorldRpg.Kit.Actors.ActorMechanicsState rat = session.State.Actors.All[3000].Mechanics;
+        Assert.Equal(9, rat.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(3000, 1, 8, 1, .125));
-        Assert.Single(engine.Mechanics.DamageRequests);
         Assert.Contains(engine.Random.Requests, request => request.Key.Contains("spawn:actor:3000:rat:health", StringComparison.Ordinal));
         Assert.Contains(engine.Random.Requests, request => request.Scope == "dagger.combat.ai.v1" && request.Key.Contains("attacker:3000:target:1:salt:2", StringComparison.Ordinal));
     }
@@ -312,37 +281,16 @@ public sealed class DaggerfallSessionTests
     {
         RecordingEngine engine = new();
         using DaggerfallSession composition = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
-        MechanicsEntity player = composition.State.Actors.Player.Mechanics;
-        MechanicsTrackReadLeaseReceipt health = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
+        WorldRpg.Kit.Actors.ActorMechanicsState player = composition.State.Actors.Player.Mechanics;
 
-        engine.Mechanics.SetTrack(new MechanicsTrackSetRequest(player, "test_set", "test", "health", health.Minimum, MechanicsTrackSetPolicy.ClampToBounds, MechanicsRevisionGuard.Exact, health.Revision));
+        player.SetTrack(
+            Rusty.Engine.Mechanics.TrackId.Parse("health"),
+            Rusty.Engine.Mechanics.ExactValue.Zero,
+            Rusty.Engine.Mechanics.ExactTrackSetPolicy.ClampToBounds);
         Assert.True(composition.State.Actors.Player.IsDefeated);
 
-        MechanicsTrackReadLeaseReceipt defeated = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "health", "test_read"));
-        engine.Mechanics.RestoreTrack(new MechanicsTrackMutationRequest(player, "test_restore", "test", "health", 1, MechanicsRevisionGuard.Exact, defeated.Revision));
+        player.RestoreTrack(Rusty.Engine.Mechanics.TrackId.Parse("health"), new Rusty.Engine.Mechanics.ExactValue(1));
         Assert.False(composition.State.Actors.Player.IsDefeated);
-    }
-
-    [Fact]
-    public void Mechanics_construction_releases_catalog_and_all_partially_bound_entities_after_injected_failures()
-    {
-        RecordingMechanics catalogFailure = RecordingMechanics.Create();
-        catalogFailure.FailOnDefineStatCall = 1;
-        Assert.Throws<InvalidOperationException>(() => new DaggerfallMechanicsCatalog(catalogFailure.Service, Definitions()));
-        Assert.Equal(1, catalogFailure.CatalogDisposals);
-        Assert.Equal(0, catalogFailure.EntityDisposals);
-
-        RecordingEngine engine = new();
-        engine.Mechanics.FailOnInitialComponentsCall = 2;
-        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults));
-        Assert.Equal(1, engine.Mechanics.CatalogDisposals);
-        Assert.Equal(2, engine.Mechanics.EntityDisposals);
-
-        RecordingEngine appearanceFailure = new();
-        appearanceFailure.Appearance.FailOnCreateCall = 1;
-        PrivateersHoldInputs worldInputs = new(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor>()), [], new CollisionMesh([], []), "privateers-hold.mesh");
-        Assert.Throws<InvalidOperationException>(() => new DaggerfallSession(appearanceFailure.Context, Definitions(), worldInputs, DaggerfallTuning.Defaults));
-        Assert.Equal(1, appearanceFailure.Ui.StreamDisposals);
     }
 
     [Fact]
@@ -390,18 +338,18 @@ public sealed class DaggerfallSessionTests
         using WorldRpgProduct game = new(new ProductCreateContext(engine.Context, ProductContentWithPlayer(), EmptyInputConfiguration()));
         game.Start();
 
-        ProductTurnRequest request = game.Update(new ProductUpdate(
-            Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 3, fixedDeltaSeconds: .125),
+        ProductUpdateResult request = game.Update(new ProductUpdate(
+            Facts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, admittedSteps: 3, fixedDeltaSeconds: .125),
             new ProductInputEvent[] { Input(InputEventKind.MappedAxis, x: .5f, y: -.25f, phase: InputPhase.Axis, intent: "movement") }));
-        Assert.Equal(ProductTurnRequest.None, request);
+        Assert.Equal(ProductUpdateResult.None, request);
         Assert.Equal(3, engine.Spatial.StepCalls);
         Assert.All(engine.Spatial.Commands, command => Assert.Equal(.125f, command.StepSeconds));
         Assert.All(engine.Spatial.Commands, command => Assert.Equal(new Vector2(.5f, -.25f), command.PlanarIntent));
 
-        game.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 0, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty));
-        game.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Paused, admittedSteps: 2, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty));
-        game.Update(new ProductUpdate(Facts(ProductTurnKind.Demand, ProductLifecycleState.Running, admittedSteps: 2, fixedDeltaSeconds: 0), ReadOnlySpan<ProductInputEvent>.Empty));
-        game.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 2, fixedDeltaSeconds: double.NaN), ReadOnlySpan<ProductInputEvent>.Empty));
+        game.Update(new ProductUpdate(Facts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, admittedSteps: 0, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty));
+        game.Update(new ProductUpdate(Facts(ProductUpdateMode.Realtime, ProductLifecycleState.Paused, admittedSteps: 2, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty));
+        game.Update(new ProductUpdate(Facts(ProductUpdateMode.Demand, ProductLifecycleState.Running, admittedSteps: 2, fixedDeltaSeconds: 0), ReadOnlySpan<ProductInputEvent>.Empty));
+        game.Update(new ProductUpdate(Facts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, admittedSteps: 2, fixedDeltaSeconds: double.NaN), ReadOnlySpan<ProductInputEvent>.Empty));
 
         Assert.Equal(3, engine.Spatial.StepCalls);
     }
@@ -411,24 +359,24 @@ public sealed class DaggerfallSessionTests
     {
         RecordingEngine engine = new();
         using WorldRpgProduct product = new(new ProductCreateContext(engine.Context, ProductContentWithPlayer(), EmptyInputConfiguration()));
-        ProductUpdate update = new(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 1, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty);
+        ProductUpdate update = new(Facts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, admittedSteps: 1, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty);
 
         Assert.Single(engine.Ui.Projections);
-        Assert.Equal(ProductTurnRequest.None, product.Update(update));
+        Assert.Equal(ProductUpdateResult.None, product.Update(update));
         Assert.Equal(0, engine.Spatial.StepCalls);
 
         product.Start();
         Assert.Equal(2, engine.Ui.Projections.Count);
         product.Pause();
-        Assert.Equal(ProductTurnRequest.None, product.Update(update));
+        Assert.Equal(ProductUpdateResult.None, product.Update(update));
         Assert.Equal(0, engine.Spatial.StepCalls);
 
         product.Resume();
-        Assert.Equal(ProductTurnRequest.None, product.Update(update));
+        Assert.Equal(ProductUpdateResult.None, product.Update(update));
         Assert.Equal(1, engine.Spatial.StepCalls);
 
         product.Shutdown();
-        Assert.Equal(ProductTurnRequest.None, product.Update(update));
+        Assert.Equal(ProductUpdateResult.None, product.Update(update));
         Assert.Equal(1, engine.Spatial.StepCalls);
         Assert.Equal(1, engine.Spatial.SessionDisposals);
     }
@@ -461,12 +409,10 @@ public sealed class DaggerfallSessionTests
         product.Start();
 
         ProductInputEvent attack = Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack");
-        product.Update(new ProductUpdate(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 1, fixedDeltaSeconds: .125), new[] { attack }));
+        product.Update(new ProductUpdate(Facts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, admittedSteps: 1, fixedDeltaSeconds: .125), new[] { attack }));
 
         UiValue value = engine.Ui.Projections[^1].Value;
         Assert.Equal("No target in melee reach", Text(value, value.Nodes.Span[(int)Field(value, value.Root, "lastOutcome")]));
-        Assert.Empty(engine.Mechanics.SpendRequests);
-        Assert.Empty(engine.Mechanics.DamageRequests);
     }
 
     [Fact]
@@ -537,7 +483,7 @@ public sealed class DaggerfallSessionTests
     private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl keyboard = KeyboardControl.None, float x = 0f, float y = 0f, InputPhase phase = InputPhase.None, string intent = "") => new(
         kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, keyboard, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
 
-    private static ProductUpdateFacts Facts(ProductTurnKind mode, ProductLifecycleState lifecycle, uint admittedSteps, double fixedDeltaSeconds) => new(mode, lifecycle, 1, 1, 1, 1, mode == ProductTurnKind.Realtime ? 60u : 0u, admittedSteps, 0, fixedDeltaSeconds);
+    private static ProductUpdateFacts Facts(ProductUpdateMode mode, ProductLifecycleState lifecycle, uint admittedSteps, double fixedDeltaSeconds) => new(mode, lifecycle, 1, 1, 1, 1, mode == ProductUpdateMode.Realtime ? 60u : 0u, admittedSteps, 0, fixedDeltaSeconds);
 
     private static ProductContent ProductContentWithPlayer() => new(new ProductContentFile[] {
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/bundles/daggerfall.privateers-hold.bundle.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"daggerfall.privateers-hold","version":1,"ruleset":"daggerfall","contentPacks":[{"id":"daggerfall.base","version":1},{"id":"daggerfall.privateers-hold","version":1}],"tuning":{"id":"daggerfall.defaults","version":1}}""")),
@@ -573,14 +519,13 @@ public sealed class DaggerfallSessionTests
         internal RecordingSpatial Spatial { get; } = RecordingSpatial.Create();
         internal RecordingAppearance Appearance { get; } = new();
         internal RecordingRandom Random { get; } = RecordingRandom.Create();
-        internal RecordingMechanics Mechanics { get; } = RecordingMechanics.Create();
         internal RecordingUi Ui { get; } = RecordingUi.Create();
     }
 
     private class EngineContextProxy : DispatchProxy
     {
         internal RecordingEngine Owner { get; set; } = null!;
-        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch { "get_Look" => Owner.Look.Service, "get_Spatial" => Owner.Spatial.Service, "get_Appearance" => Owner.Appearance.Service, "get_Random" => Owner.Random.Service, "get_Mechanics" => Owner.Mechanics.Service, "get_Ui" => Owner.Ui.Service, _ => throw new NotSupportedException(method?.Name) };
+        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch { "get_Look" => Owner.Look.Service, "get_Spatial" => Owner.Spatial.Service, "get_Appearance" => Owner.Appearance.Service, "get_Random" => Owner.Random.Service, "get_Ui" => Owner.Ui.Service, _ => throw new NotSupportedException(method?.Name) };
     }
 
     private class RecordingLook : DispatchProxy
