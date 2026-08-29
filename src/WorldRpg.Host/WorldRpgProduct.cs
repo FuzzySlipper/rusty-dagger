@@ -1,6 +1,5 @@
 using Rusty.Engine;
 using WorldRpg.Kit;
-using WorldRpg.Rulesets.Daggerfall;
 
 namespace WorldRpg.Host;
 
@@ -13,8 +12,15 @@ public sealed class WorldRpgProduct : IEngineProduct
     private bool _shutdown;
 
     public WorldRpgProduct(ProductCreateContext context)
+        : this(context, BuiltInRulesets.Resolve(HostDefaults.DefaultRuleset))
     {
-        IGameRuleset ruleset = BuiltInRulesets.Resolve(HostDefaults.DefaultRuleset);
+    }
+
+    /// <summary>Creates a product from an explicitly supplied compiled ruleset.</summary>
+    public WorldRpgProduct(ProductCreateContext context, IGameRuleset ruleset)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(ruleset);
         _session = ruleset.CreateSession(new GameSessionContext(context.Engine, context.Content));
         try { _session.PublishInitial(); }
         catch
@@ -56,19 +62,5 @@ public sealed class WorldRpgProduct : IEngineProduct
     {
         if (!_started || _paused || _shutdown) return ProductTurnRequest.None;
         return _session.Update(update);
-    }
-}
-
-internal static class HostDefaults
-{
-    internal static readonly RulesetId DefaultRuleset = DaggerfallRuleset.Identity;
-}
-
-internal static class BuiltInRulesets
-{
-    internal static IGameRuleset Resolve(RulesetId id)
-    {
-        if (id == DaggerfallRuleset.Identity) return new DaggerfallRuleset();
-        throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown built-in ruleset.");
     }
 }
