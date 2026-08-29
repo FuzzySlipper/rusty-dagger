@@ -135,9 +135,10 @@ public sealed class DaggerfallSessionTests
         using WorldRpgProduct game = new(new ProductCreateContext(engine.Context, ProductContentWithPlayer(), EmptyInputConfiguration()));
         game.Start();
 
-        game.Update(new ProductUpdate(
+        ProductTurnRequest request = game.Update(new ProductUpdate(
             Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 3, fixedDeltaSeconds: .125),
             new ProductInputEvent[] { Input(InputEventKind.MappedAxis, x: .5f, y: -.25f, phase: InputPhase.Axis, intent: "movement") }));
+        Assert.Equal(ProductTurnRequest.None, request);
         Assert.Equal(3, engine.Spatial.StepCalls);
         Assert.All(engine.Spatial.Commands, command => Assert.Equal(.125f, command.StepSeconds));
         Assert.All(engine.Spatial.Commands, command => Assert.Equal(new Vector2(.5f, -.25f), command.PlanarIntent));
@@ -158,21 +159,21 @@ public sealed class DaggerfallSessionTests
         ProductUpdate update = new(Facts(ProductTurnKind.Realtime, ProductLifecycleState.Running, admittedSteps: 1, fixedDeltaSeconds: .125), ReadOnlySpan<ProductInputEvent>.Empty);
 
         Assert.Single(engine.Ui.Projections);
-        product.Update(update);
+        Assert.Equal(ProductTurnRequest.None, product.Update(update));
         Assert.Equal(0, engine.Spatial.StepCalls);
 
         product.Start();
         Assert.Equal(2, engine.Ui.Projections.Count);
         product.Pause();
-        product.Update(update);
+        Assert.Equal(ProductTurnRequest.None, product.Update(update));
         Assert.Equal(0, engine.Spatial.StepCalls);
 
         product.Resume();
-        product.Update(update);
+        Assert.Equal(ProductTurnRequest.None, product.Update(update));
         Assert.Equal(1, engine.Spatial.StepCalls);
 
         product.Shutdown();
-        product.Update(update);
+        Assert.Equal(ProductTurnRequest.None, product.Update(update));
         Assert.Equal(1, engine.Spatial.StepCalls);
         Assert.Equal(1, engine.Spatial.SessionDisposals);
     }
