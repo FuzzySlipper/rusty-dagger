@@ -12,7 +12,7 @@ public sealed class ProductFactsTests
     {
         FactBuffer<IProductFact> buffer = new();
         List<string> delivered = [];
-        buffer.Append(new ActorDiedFact(2000, 16, 7));
+        buffer.Append(new ActorDiedFact(2000, 16, 1, 7));
         buffer.Deliver(fact => { delivered.Add(fact.GetType().Name); buffer.Append(new LootAwardedFact(2000, "gold-piece", 2, 7)); });
         Assert.Equal(["ActorDiedFact"], delivered);
         buffer.Deliver(fact => delivered.Add(fact.GetType().Name));
@@ -22,6 +22,6 @@ public sealed class ProductFactsTests
     [Fact]
     public void Loot_rng_labels_are_step_scoped_and_stable()
     {
-        Assert.Equal("step:7:loot:2000:H", LootRandomKey.For(7, 2000, "H"));
+        Assert.Equal("generation:1:step:7:loot:2000:H", LootRandomKey.For(1, 7, 2000, "H"));
     }
 }

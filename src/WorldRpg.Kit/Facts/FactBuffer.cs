@@ -21,6 +21,16 @@ public sealed class FactBuffer<TFact> where TFact : IWorldRpgFact
         ArgumentNullException.ThrowIfNull(react);
         List<TFact> stable = _pending;
         _pending = [];
-        foreach (TFact fact in stable) react(fact);
+        for (int index = 0; index < stable.Count; index++)
+        {
+            try { react(stable[index]); }
+            catch
+            {
+                // Preserve the failed fact and its untouched successors ahead of facts
+                // appended by earlier reactions; callers may retry without losing work.
+                _pending.InsertRange(0, stable.Skip(index));
+                throw;
+            }
+        }
     }
 }

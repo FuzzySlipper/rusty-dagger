@@ -15,7 +15,7 @@
       "stats": { "strength": 40, "intelligence": 10, "willpower": 70, "agility": 80, "endurance": 55, "personality": 50, "speed": 45, "luck": 50, "reflexes": 0, "longBlade": 0, "handToHand": 35, "dodging": 0 },
       "health": { "minimum": 9, "maximum": 16 },
       "armor": 30,
-      "attack": { "minimumDamage": 1, "maximumDamage": 4 },
+      "attack": { "skill": "hand-to-hand", "minimumDamage": 1, "maximumDamage": 4, "cooldownSeconds": 1.5 },
       "rewards": { "experience": 50 }
     },
     {
@@ -24,7 +24,7 @@
       "stats": { "strength": 50, "intelligence": 65, "willpower": 40, "agility": 80, "endurance": 55, "personality": 50, "speed": 70, "luck": 50, "reflexes": 0, "longBlade": 75, "handToHand": 75, "dodging": 75 },
       "health": { "minimum": 17, "maximum": 66 },
       "armor": 10,
-      "attack": { "minimumDamage": 5, "maximumDamage": 15 },
+      "attack": { "skill": "long-blade", "minimumDamage": 5, "maximumDamage": 15, "cooldownSeconds": 2.0 },
       "rewards": { "experience": 450, "loot": { "table": "H", "item": "gold-piece", "minimumQuantity": 2, "maximumQuantity": 10 } }
     }
   ],

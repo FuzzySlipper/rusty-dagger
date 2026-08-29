@@ -5,6 +5,7 @@ using Rusty.Engine;
 using WorldRpg.Host;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
@@ -20,7 +21,7 @@ public sealed class DaggerfallSessionTests
         DaggerfallDefinitions definitions = Definitions();
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(SpatialContent(), Encoding.UTF8.GetBytes(ScenarioPayload), definitions);
 
-        Assert.Equal(85, definitions.RequireActor(new DaggerfallActorId("player")).InitialVitals.HealthMaximum);
+        Assert.Equal(85, definitions.RequireActor(new DaggerfallActorId("player")).PlayerInitialVitals.HealthMaximum);
         Assert.Equal((9, 16), (definitions.RequireActor(new DaggerfallActorId("rat")).Health.Minimum, definitions.RequireActor(new DaggerfallActorId("rat")).Health.Maximum));
         Assert.Equal((ulong)1, definitions.Items[new DaggerfallItemId("iron-longsword")].MaximumQuantity);
         Assert.Empty(inputs.Project.Actors);
@@ -122,7 +123,7 @@ public sealed class DaggerfallSessionTests
     public void Scenario_look_is_not_a_tuning_owner_and_spatial_inputs_copy_caller_arrays()
     {
         Assert.Null(typeof(DaggerfallTuning).GetProperty("InitialPlayerLook", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
-        DaggerfallTuning tuning = DaggerfallTuning.Read(Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5,"pitchMaximumRadians":1.5,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}"""));
+        DaggerfallTuning tuning = DaggerfallTuning.Read(Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5,"pitchMaximumRadians":1.5,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"combat":{"playerMeleeStaminaCost":5,"playerMeleeCooldownSeconds":0.75},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}"""));
         Assert.Equal(.5, tuning.Spatial.NavigationCellSize);
 
         PlanarNavCell[] navigation = [new(1, 2, 3)];
@@ -191,6 +192,118 @@ public sealed class DaggerfallSessionTests
 
         Assert.Equal((85d, 85d), Resource(engine.Ui.Projections[^1].Value, "health"));
         Assert.DoesNotContain(engine.Mechanics.SpendRequests, request => request.Track == "health");
+    }
+
+    [Fact]
+    public void Explicit_player_melee_reads_equipped_longsword_spends_stamina_and_applies_damage_once()
+    {
+        RecordingEngine engine = new();
+        using DaggerfallSession session = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
+
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 7, 10, .125));
+
+        Assert.Single(engine.Mechanics.SpendRequests, request => request.Track == "stamina" && request.Amount == 5);
+        MechanicsDamageRequest damage = Assert.Single(engine.Mechanics.DamageRequests);
+        Assert.Equal((ulong)1, damage.ActorEntityId);
+        Assert.Equal("health", damage.TargetTrack);
+        Assert.Equal("physical", damage.Parts.Span[0].Kind);
+        Assert.Equal("daggerfall.melee.g7.s10.a1.t2000", damage.SourceRequestInstance);
+        Assert.Equal("Hit skeletal-warrior for 16 damage", session.Presentation.LastOutcome);
+        Assert.Equal(85, engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(session.State.Actors.Player.Mechanics, "health", "test")).Current);
+
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 7, 11, .125));
+        Assert.Single(engine.Mechanics.DamageRequests);
+        Assert.Single(engine.Mechanics.SpendRequests);
+        Assert.Equal("Cooldown", session.Presentation.LastOutcome);
+    }
+
+    [Fact]
+    public void Explicit_enemy_melee_can_target_player_without_restoring_ai_and_duplicate_death_awards_once()
+    {
+        RecordingEngine engine = new();
+        using DaggerfallSession session = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
+
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(2000, 1, 3, 1, .125));
+        Assert.Single(engine.Mechanics.DamageRequests);
+        Assert.Empty(engine.Mechanics.SpendRequests);
+        Assert.Equal(70, engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(session.State.Actors.Player.Mechanics, "health", "test")).Current);
+
+        MechanicsEntity skeleton = session.State.Actors.All[2000].Mechanics;
+        MechanicsTrackReadLeaseReceipt health = engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(skeleton, "health", "test"));
+        engine.Mechanics.SetTrack(new MechanicsTrackSetRequest(skeleton, "test", "test", "health", 1, MechanicsTrackSetPolicy.ClampToBounds, MechanicsRevisionGuard.Exact, health.Revision));
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 3, 20, .125));
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 3, 30, .125));
+
+        Assert.Equal(2, engine.Mechanics.DamageRequests.Count);
+        Assert.Equal(450, session.State.Progression.Experience);
+        Assert.Single(engine.Mechanics.GrantRequests);
+        Assert.Equal("daggerfall.loot.a2000.g3.s20", engine.Mechanics.GrantRequests[0].SourceRequestInstance);
+    }
+
+    [Theory]
+    [InlineData(60, 30, 80, 50, 90, 50, 0, 47)]
+    [InlineData(60, 30, 50, 80, 50, 90, 0, 33)]
+    [InlineData(10, 0, 0, 100, 0, 100, 1000, 3)]
+    [InlineData(100, 100, 100, 0, 100, 0, 0, 97)]
+    public void Hit_chance_uses_signed_truncating_attacker_target_differentials_and_clamps(int skill, int armor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge, int expected)
+    {
+        Assert.Equal(expected, CombatModule.CalculateHitChance(skill, armor, attackerLuck, targetLuck, attackerAgility, targetAgility, targetDodge));
+    }
+
+    [Fact]
+    public void Damage_failure_has_no_optimistic_hit_fact_or_cooldown_but_preserves_engine_stamina_spend()
+    {
+        RecordingEngine engine = new();
+        engine.Mechanics.FailOnApplyDamageCall = 1;
+        using DaggerfallSession session = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
+
+        Assert.Throws<InvalidOperationException>(() => session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 4, 10, .125)));
+        Assert.Equal("Ready", session.Presentation.LastOutcome);
+        Assert.Single(engine.Mechanics.SpendRequests);
+        Assert.Single(engine.Mechanics.DamageRequests);
+
+        engine.Mechanics.FailOnApplyDamageCall = null;
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 4, 10, .125));
+        Assert.Equal(2, engine.Mechanics.SpendRequests.Count);
+        Assert.Equal(2, engine.Mechanics.DamageRequests.Count);
+        Assert.Equal("Hit skeletal-warrior for 16 damage", session.Presentation.LastOutcome);
+    }
+
+    [Fact]
+    public void Explicit_melee_miss_spends_stamina_but_insufficient_stamina_rejects_before_mutation()
+    {
+        RecordingEngine miss = new();
+        miss.Random.Draw = request => checked((ulong)request.Maximum);
+        using (DaggerfallSession missSession = new(miss.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults))
+        {
+            missSession.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+            Assert.Single(miss.Mechanics.SpendRequests);
+            Assert.Empty(miss.Mechanics.DamageRequests);
+        }
+
+        RecordingEngine exhausted = new();
+        using DaggerfallSession session = new(exhausted.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults);
+        MechanicsEntity player = session.State.Actors.Player.Mechanics;
+        MechanicsTrackReadLeaseReceipt stamina = exhausted.Mechanics.ReadTrack(new MechanicsTrackReadRequest(player, "stamina", "test"));
+        exhausted.Mechanics.SetTrack(new MechanicsTrackSetRequest(player, "test", "test", "stamina", 4, MechanicsTrackSetPolicy.ClampToBounds, MechanicsRevisionGuard.Exact, stamina.Revision));
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        Assert.Empty(exhausted.Mechanics.SpendRequests);
+        Assert.Empty(exhausted.Mechanics.DamageRequests);
+        Assert.Equal("Too exhausted to attack", session.Presentation.LastOutcome);
+    }
+
+    [Fact]
+    public void Rat_explicit_attack_uses_exact_ids_and_initial_monster_health_is_keyed_within_authored_range()
+    {
+        RecordingEngine engine = new();
+        using DaggerfallSession session = new(engine.Context, Definitions(), ActorInputs(3000, "rat"), DaggerfallTuning.Defaults);
+
+        MechanicsEntity rat = session.State.Actors.All[3000].Mechanics;
+        Assert.Equal(9, engine.Mechanics.ReadTrack(new MechanicsTrackReadRequest(rat, "health", "test")).Current);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(3000, 1, 8, 1, .125));
+        Assert.Single(engine.Mechanics.DamageRequests);
+        Assert.Contains(engine.Random.Requests, request => request.Key.Contains("spawn:actor:3000:rat:health", StringComparison.Ordinal));
+        Assert.Contains(engine.Random.Requests, request => request.Scope == "dagger.combat.ai.v1" && request.Key.Contains("attacker:3000:target:1:salt:2", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -353,8 +466,13 @@ public sealed class DaggerfallSessionTests
 
     private static PrivateersHoldInputs SkeletalInputs()
     {
-        AuthoredActor skeletal = new(2000, new DaggerfallActorId("skeletal-warrior"), new WorldPoint(0, 0, 0), null);
-        return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [2000] = skeletal }), [], new CollisionMesh([], []), null, new PlayerInitialLook(MathF.PI, 0f), [new ScenarioLoadoutEntry(new DaggerfallItemId("iron-longsword"), 1, 1001, new DaggerfallEquipmentSlotId("right-hand")), new ScenarioLoadoutEntry(new DaggerfallItemId("iron-dagger"), 1, 1002, null), new ScenarioLoadoutEntry(new DaggerfallItemId("iron-cuirass"), 1, 1003, new DaggerfallEquipmentSlotId("torso")), new ScenarioLoadoutEntry(new DaggerfallItemId("gold-piece"), 25, null, null)], []);
+        return ActorInputs(2000, "skeletal-warrior");
+    }
+
+    private static PrivateersHoldInputs ActorInputs(long entityId, string actorId)
+    {
+        AuthoredActor actor = new(entityId, new DaggerfallActorId(actorId), new WorldPoint(0, 0, 0), null);
+        return new PrivateersHoldInputs(new ProjectFacts(new WorldPoint(0, 0, 0), new Dictionary<long, AuthoredActor> { [entityId] = actor }), [], new CollisionMesh([], []), null, new PlayerInitialLook(MathF.PI, 0f), [new ScenarioLoadoutEntry(new DaggerfallItemId("iron-longsword"), 1, 1001, new DaggerfallEquipmentSlotId("right-hand")), new ScenarioLoadoutEntry(new DaggerfallItemId("iron-dagger"), 1, 1002, null), new ScenarioLoadoutEntry(new DaggerfallItemId("iron-cuirass"), 1, 1003, new DaggerfallEquipmentSlotId("torso")), new ScenarioLoadoutEntry(new DaggerfallItemId("gold-piece"), 25, null, null)], []);
     }
 
     private static DaggerfallDefinitions Definitions() => DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(BasePayload));
@@ -362,9 +480,9 @@ public sealed class DaggerfallSessionTests
     private const string BasePayload = """
     {"schemaVersion":1,"ruleset":"daggerfall","actors":[
       {"id":"player","stats":{"strength":50,"intelligence":50,"willpower":50,"agility":50,"endurance":40,"personality":50,"speed":50,"luck":50,"reflexes":2,"longBlade":60,"handToHand":40,"dodging":0},"health":{"minimum":85,"maximum":85},"armor":0,"rewards":{"experience":0}},
-      {"id":"rat","mobileId":0,"stats":{"strength":40,"intelligence":10,"willpower":70,"agility":80,"endurance":55,"personality":50,"speed":45,"luck":50,"reflexes":0,"longBlade":0,"handToHand":35,"dodging":0},"health":{"minimum":9,"maximum":16},"armor":30,"attack":{"minimumDamage":1,"maximumDamage":4},"rewards":{"experience":50}},
-      {"id":"skeletal-warrior","mobileId":15,"stats":{"strength":50,"intelligence":65,"willpower":40,"agility":80,"endurance":55,"personality":50,"speed":70,"luck":50,"reflexes":0,"longBlade":75,"handToHand":75,"dodging":75},"health":{"minimum":17,"maximum":66},"armor":10,"attack":{"minimumDamage":5,"maximumDamage":15},"rewards":{"experience":450,"loot":{"table":"H","item":"gold-piece","minimumQuantity":2,"maximumQuantity":10}}}],
-      "items":[{"id":"iron-longsword","kind":"unique","maximumQuantity":1,"equipment":{"classifications":["weapon"],"requiredSlots":1}},{"id":"iron-dagger","kind":"unique","maximumQuantity":1},{"id":"iron-cuirass","kind":"unique","maximumQuantity":1,"equipment":{"classifications":["torso-armor"],"requiredSlots":1}},{"id":"gold-piece","kind":"fungible","maximumQuantity":10000}],
+      {"id":"rat","mobileId":0,"stats":{"strength":40,"intelligence":10,"willpower":70,"agility":80,"endurance":55,"personality":50,"speed":45,"luck":50,"reflexes":0,"longBlade":0,"handToHand":35,"dodging":0},"health":{"minimum":9,"maximum":16},"armor":30,"attack":{"skill":"hand-to-hand","minimumDamage":1,"maximumDamage":4,"cooldownSeconds":1.5},"rewards":{"experience":50}},
+      {"id":"skeletal-warrior","mobileId":15,"stats":{"strength":50,"intelligence":65,"willpower":40,"agility":80,"endurance":55,"personality":50,"speed":70,"luck":50,"reflexes":0,"longBlade":75,"handToHand":75,"dodging":75},"health":{"minimum":17,"maximum":66},"armor":10,"attack":{"skill":"long-blade","minimumDamage":5,"maximumDamage":15,"cooldownSeconds":2.0},"rewards":{"experience":450,"loot":{"table":"H","item":"gold-piece","minimumQuantity":2,"maximumQuantity":10}}}],
+      "items":[{"id":"iron-longsword","kind":"unique","maximumQuantity":1,"weapon":{"minimumDamage":2,"maximumDamage":16,"skill":"long-blade","handedness":"either","value":15,"weight":18},"equipment":{"classifications":["weapon"],"requiredSlots":1}},{"id":"iron-dagger","kind":"unique","maximumQuantity":1},{"id":"iron-cuirass","kind":"unique","maximumQuantity":1,"equipment":{"classifications":["torso-armor"],"requiredSlots":1}},{"id":"gold-piece","kind":"fungible","maximumQuantity":10000}],
       "equipmentSlots":[{"id":"right-hand","allowedClassifications":["weapon"]},{"id":"torso","allowedClassifications":["torso-armor"]}],
       "hudResources":[{"id":"health","label":"Health","track":"health"},{"id":"stamina","label":"Stamina","track":"stamina"},{"id":"magicka","label":"Magicka","track":"magicka"}]}
     """;
@@ -391,7 +509,7 @@ public sealed class DaggerfallSessionTests
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/content-packs/daggerfall.privateers-hold.pack.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"daggerfall.privateers-hold","version":1,"ruleset":"daggerfall","dependencies":[{"id":"daggerfall.base","version":1}],"payload":"worldrpg/payloads/daggerfall.privateers-hold.json"}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/payloads/daggerfall.privateers-hold.json"), Encoding.UTF8.GetBytes(ScenarioPayload)),
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning/daggerfall.defaults.tuning.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"daggerfall.defaults","version":1,"ruleset":"daggerfall","payload":"worldrpg/tuning-payloads/daggerfall.defaults.json"}""")),
-        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning-payloads/daggerfall.defaults.json"), Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5533,"pitchMaximumRadians":1.5533,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}""")),
+        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning-payloads/daggerfall.defaults.json"), Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5533,"pitchMaximumRadians":1.5533,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"combat":{"playerMeleeStaminaCost":5,"playerMeleeCooldownSeconds":0.75},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("projects/privateers-hold.navgrid.json"), Encoding.UTF8.GetBytes("""{"cells":[]}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("imported/privateers-hold.static-mesh.json"), Encoding.UTF8.GetBytes("""{"payload":{"source":{"positions":[],"indices":[]}}}"""))
     });
@@ -509,6 +627,8 @@ public sealed class DaggerfallSessionTests
     private class RecordingRandom : DispatchProxy
     {
         internal IRandomService Service { get; private set; } = null!;
+        internal List<KeyedRngRequest> Requests { get; } = [];
+        internal Func<KeyedRngRequest, ulong>? Draw { get; set; }
         internal static RecordingRandom Create()
         {
             IRandomService service = DispatchProxy.Create<IRandomService, RecordingRandom>();
@@ -516,9 +636,14 @@ public sealed class DaggerfallSessionTests
             proxy.Service = service;
             return proxy;
         }
-        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name == nameof(IRandomService.DrawKeyed)
-            ? new KeyedRngReceipt(((KeyedRngRequest)args![0]!).Maximum == 100 ? ((KeyedRngRequest)args[0]!).Minimum : ((KeyedRngRequest)args[0]!).Maximum)
-            : throw new NotSupportedException(method?.Name);
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
+            KeyedRngRequest request = (KeyedRngRequest)args![0]!;
+            Requests.Add(request);
+            ulong value = Draw?.Invoke(request) ?? checked((ulong)(request.Key.StartsWith("spawn:", StringComparison.Ordinal) || request.Maximum == 100 ? request.Minimum : request.Maximum));
+            return new KeyedRngReceipt(checked((long)value));
+        }
     }
     private class RecordingUi : DispatchProxy
     {

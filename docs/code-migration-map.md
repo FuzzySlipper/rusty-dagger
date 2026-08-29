@@ -1,6 +1,6 @@
 # Rusty Dagger / WorldRpg code and migration map
 
-**Status:** living ownership inventory; the #7436 project graph and #7323's first normalized Daggerfall content packs are implemented.
+**Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, and #7324's first accepted Daggerfall melee/consequences slice are implemented.
 
 **Snapshot:** 2026-08-28, WorldRpg foundation task #7436.
 
@@ -88,10 +88,10 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 | `src/WorldRpg.Kit/**` | Safe Kit project with typed composition, Mechanics-backed actor lifetime, configured controls/input frames, Engine-default spatial scene stepping, progression, bounded facts, structured UI values, and revision-guarded inventory/equipment coordination. Its equipment view joins Engine assignments to Engine unique-item inventory and its guarded mutations use observed Engine revisions. It references Engine only and contains no bundle resolver or Daggerfall vocabulary. |
 | `src/WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj` | Safe Daggerfall ruleset project referencing Kit and Engine. |
 | `DaggerfallRuleset.cs` | Compiled `daggerfall` ruleset implementation creating the current session. |
-| `DaggerfallSession.cs`, `DaggerfallState.cs`, `DaggerfallTuning.cs`, `DaggerfallRewardReactions.cs` | Single mutable Daggerfall session and ordered composition, typed Daggerfall tuning, attack/reward policy, and direct use of Kit mechanisms. Initial unique items are Engine item entities staged into the player before the atomic initial equipment assignment; gold is an Engine fungible stack. `ProductUpdateState` is a Kit input frame derived from Engine input by the session. |
+| `DaggerfallSession.cs`, `DaggerfallState.cs`, `DaggerfallTuning.cs`, `DaggerfallRewardReactions.cs` | Single mutable Daggerfall session and ordered composition, typed Daggerfall tuning, attack/reward policy, and direct use of Kit mechanisms. Initial unique items are Engine item entities staged into the player before the atomic initial equipment assignment; gold is an Engine fungible stack. Monster health is a keyed authored-range roll. `ProductUpdateState` is a Kit input frame derived from Engine input by the session. |
 | `Content/DaggerfallDefinitions.cs`, `Content/DaggerfallBaseContent.cs` | Daggerfall-owned immutable typed actor/item/HUD/loot/attack definitions plus item kinds, equipment classifications, and authored slot policy, with bounded schema/version/ruleset/duplicate/reference diagnostics from `daggerfall.base`. No global catalog or source-name selection remains. |
 | `Content/PrivateersHoldContent.cs`, `Presentation/PrivateersHoldAppearance.cs` | Explicit typed Privateer's Hold start state, entity-backed unique loadout/equip assignments, placements, authored encounter groupings, sprite meaning, and pack-authored world/nav/collision references. Existing navgrid/static-mesh shape reading is isolated as a temporary importer adapter; its coordinate conversion, source format, and provenance destination is `Daggerfall.Import`. |
-| `Facts/*`, `Modules/Combat/*`, `Presentation/*` | Daggerfall combat facts/policy and Daggerfall presentation meaning. Encounter entries are authored scenario groupings only; no encounter runtime/system is active. |
+| `Facts/*`, `Modules/Combat/*`, `Presentation/*` | Daggerfall combat facts/policy and Daggerfall presentation meaning. #7324 adopts direct exact-id player/rat/skeletal melee through Engine Mechanics: equipment truth is read from Engine, stamina spend and health damage are guarded Engine mutations, and damage/death/rewards are fact-ordered. A miss latches cadence; a hit latches it only after a valid accepted damage receipt. If damage application fails, no optimistic hit fact/cooldown is invented, while a previously accepted Engine stamina spend remains authoritative. It adapts the donor struck-body table to current scalar armor (the roll is retained but does not select body armor), selected hit formula omits donor monster +40/optional modifiers, and the local XP/500 progression experiment is not classic kill XP. It rejects target acquisition, range/LOS, encounter activation, senses, nearest-actor selection, and autonomous enemy/AI loops pending named owners. |
 | `AssemblyInfo.cs` | Exact friend access for `WorldRpg.Rulesets.Daggerfall.Tests`. |
 | `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
 | `src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj`, `NativeProduct.cs` | NativeAOT composition project. Its handwritten file has only the Engine product attribute selecting `WorldRpgProduct`; generated output remains under ignored `obj/`. |
@@ -206,8 +206,13 @@ owners. Retired Rust/Angular tasks are not actionable default work.
 - **#7438:** loaded bundles, content packs, typed tuning, and resolution are complete.
 - **#7323:** normalized Daggerfall first-contact definitions/scenario packs are
   complete, retaining one explicit `Daggerfall.Import` spatial artifact adapter.
-- **#7324 → #7325:** faithful Daggerfall melee/consequences, then NativeAOT
-  browser exercise.
+- **#7324:** accepted first-contact melee/consequences: deterministic keyed health,
+  hit/body/damage/loot rolls (seed 0; player `dagger.combat.v1`, enemy
+  `dagger.combat.ai.v1`), direct safe Engine damage receipts, and deferred
+  exactly-once consequences. The deterministic keys are deliberately rebased
+  from donor runtime randomness to Engine generation/simulation-step plus exact
+  attacker/target/salt identity. No live target selector or AI was restored.
+- **#7325:** NativeAOT browser exercise.
 
 No runtime code, empty project structure, or speculative architecture is
 created by this documentation task.
