@@ -65,10 +65,10 @@ public sealed class CanaryRulesetTests
 
     private static ProductContent CanaryContent() => new(new ProductContentFile[]
     {
-        File("worldrpg/bundles/canary.single-room.bundle.json", """{"kind":"worldrpg.game-bundle","id":"canary.single-room","version":1,"ruleset":"canary","contentPacks":[{"id":"canary.single-room","version":1}],"tuning":{"id":"canary.single-room","version":1}}"""),
-        File("worldrpg/content-packs/canary.single-room.pack.json", """{"kind":"worldrpg.content-pack","id":"canary.single-room","version":1,"dependencies":[],"payload":"worldrpg/payloads/canary.single-room.json"}"""),
+        File("worldrpg/bundles/canary.single-room.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"canary.single-room","version":1,"ruleset":"canary","contentPacks":[{"id":"canary.single-room","version":1}],"tuning":{"id":"canary.single-room","version":1}}"""),
+        File("worldrpg/content-packs/canary.single-room.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"canary.single-room","version":1,"ruleset":"canary","dependencies":[],"payload":"worldrpg/payloads/canary.single-room.json"}"""),
         File("worldrpg/payloads/canary.single-room.json", """{"room":"observatory"}"""),
-        File("worldrpg/tuning/canary.single-room.tuning.json", """{"kind":"worldrpg.tuning-profile","id":"canary.single-room","version":1,"ruleset":"canary","payload":"worldrpg/tuning-payloads/canary.single-room.json"}"""),
+        File("worldrpg/tuning/canary.single-room.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"canary.single-room","version":1,"ruleset":"canary","payload":"worldrpg/tuning-payloads/canary.single-room.json"}"""),
         File("worldrpg/tuning-payloads/canary.single-room.json", """{"label":"single-room"}"""),
     });
 

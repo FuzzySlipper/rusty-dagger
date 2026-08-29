@@ -6,6 +6,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 public sealed class DaggerfallRuleset : IGameRuleset
 {
     public static readonly RulesetId Identity = new("daggerfall");
+    internal static readonly ContentPackId BasePack = new("daggerfall.base");
     internal static readonly ContentPackId PrivateersHoldPack = new("daggerfall.privateers-hold");
 
     public RulesetId Id => Identity;
@@ -15,6 +16,7 @@ public sealed class DaggerfallRuleset : IGameRuleset
         ArgumentNullException.ThrowIfNull(context);
         if (context.Composition.Ruleset != Identity)
             throw new InvalidOperationException($"Daggerfall cannot interpret ruleset '{context.Composition.Ruleset.Value}'.");
+        DaggerfallBaseContent.Read(context.Composition.RequireContentPack(BasePack).Payload);
         ContentPack pack = context.Composition.RequireContentPack(PrivateersHoldPack);
         return new DaggerfallSession(
             context.Engine,
