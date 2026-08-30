@@ -10,7 +10,7 @@ public sealed class ImportPublicationArtifact
 {
     private readonly byte[] bytes;
 
-    public ImportPublicationArtifact(string relativePath, ReadOnlySpan<byte> bytes)
+    public ImportPublicationArtifact(string relativePath, ReadOnlySpan<byte> bytes, IReadOnlyList<string>? dependsOnPaths = null)
     {
         NormalizedImportDocument.RequireLogicalPath(relativePath, nameof(relativePath));
         if (bytes.IsEmpty)
@@ -20,11 +20,21 @@ public sealed class ImportPublicationArtifact
 
         RelativePath = relativePath;
         this.bytes = bytes.ToArray();
+        DependsOnPaths = (dependsOnPaths ?? [])
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToArray();
+        NormalizedImportDocument.ValidateUnique(DependsOnPaths, path => path, "published artifact dependency");
+        foreach (string dependency in DependsOnPaths)
+        {
+            NormalizedImportDocument.RequireLogicalPath(dependency, nameof(dependsOnPaths));
+        }
     }
 
     public string RelativePath { get; }
 
     public ReadOnlyMemory<byte> Bytes => bytes;
+
+    public IReadOnlyList<string> DependsOnPaths { get; }
 
     public ContentDigest ContentHash => ContentDigest.Compute(bytes);
 }
@@ -44,8 +54,13 @@ public sealed record ImportPublicationSource(string SourcePath, ContentDigest Co
 }
 
 /// <summary>One deterministic artifact entry in the canonical publication manifest.</summary>
-public sealed record ImportPublicationManifestArtifact(string RelativePath, ContentDigest ContentHash, long ByteLen)
+public sealed record ImportPublicationManifestArtifact(string RelativePath, ContentDigest ContentHash, long ByteLen, IReadOnlyList<string> DependsOnPaths)
 {
+    public ImportPublicationManifestArtifact Canonicalize() => this with
+    {
+        DependsOnPaths = DependsOnPaths.OrderBy(path => path, StringComparer.Ordinal).ToArray(),
+    };
+
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalPath(RelativePath, nameof(RelativePath));
@@ -53,6 +68,13 @@ public sealed record ImportPublicationManifestArtifact(string RelativePath, Cont
         if (ByteLen < 0)
         {
             throw new ArgumentOutOfRangeException(nameof(ByteLen), ByteLen, "An artifact byte length cannot be negative.");
+        }
+
+        ArgumentNullException.ThrowIfNull(DependsOnPaths);
+        NormalizedImportDocument.ValidateUnique(DependsOnPaths, path => path, "publication manifest artifact dependency");
+        foreach (string dependency in DependsOnPaths)
+        {
+            NormalizedImportDocument.RequireLogicalPath(dependency, nameof(DependsOnPaths));
         }
     }
 }
@@ -73,7 +95,7 @@ public sealed record CanonicalImportManifest(
     public CanonicalImportManifest Canonicalize() => this with
     {
         Sources = Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray(),
-        Artifacts = Artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).ToArray(),
+        Artifacts = Artifacts.OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal).Select(artifact => artifact.Canonicalize()).ToArray(),
     };
 
     public void Validate()
@@ -102,6 +124,19 @@ public sealed record CanonicalImportManifest(
         {
             artifact.Validate();
         }
+
+        HashSet<string> paths = Artifacts.Select(artifact => artifact.RelativePath).ToHashSet(StringComparer.Ordinal);
+        foreach (ImportPublicationManifestArtifact artifact in Artifacts)
+        {
+            foreach (string dependency in artifact.DependsOnPaths)
+            {
+                if (StringComparer.Ordinal.Equals(dependency, artifact.RelativePath) || !paths.Contains(dependency))
+                {
+                    throw new InvalidOperationException($"Publication artifact '{artifact.RelativePath}' has an unresolved or self dependency '{dependency}'.");
+                }
+            }
+        }
+        ValidateAcyclicArtifactDependencies(Artifacts);
     }
 
     private static void ValidateUnique<T>(IEnumerable<T> values, Func<T, string> value, string kind)
@@ -114,6 +149,45 @@ public sealed record CanonicalImportManifest(
                 throw new InvalidOperationException($"The publication manifest contains a duplicate {kind} '{value(entry)}'.");
             }
         }
+    }
+
+    private static void ValidateAcyclicArtifactDependencies(IReadOnlyList<ImportPublicationManifestArtifact> artifacts)
+    {
+        Dictionary<string, ImportPublicationManifestArtifact> byPath = artifacts.ToDictionary(artifact => artifact.RelativePath, StringComparer.Ordinal);
+        Dictionary<string, VisitState> states = [];
+        foreach (ImportPublicationManifestArtifact artifact in artifacts)
+        {
+            Visit(artifact.RelativePath);
+        }
+
+        return;
+
+        void Visit(string path)
+        {
+            if (states.TryGetValue(path, out VisitState state))
+            {
+                if (state == VisitState.Visiting)
+                {
+                    throw new InvalidOperationException($"Publication artifact dependency graph contains a cycle at '{path}'.");
+                }
+
+                return;
+            }
+
+            states[path] = VisitState.Visiting;
+            foreach (string dependency in byPath[path].DependsOnPaths)
+            {
+                Visit(dependency);
+            }
+
+            states[path] = VisitState.Visited;
+        }
+    }
+
+    private enum VisitState
+    {
+        Visiting,
+        Visited,
     }
 }
 
@@ -182,7 +256,7 @@ public sealed class ImportPublicationPlan
             provenance.ImporterId,
             provenance.ImporterVersion,
             provenance.Sources.Select(source => new ImportPublicationSource(source.SourcePath, source.ContentDigest, source.ByteLength)).ToArray(),
-            orderedContent.Select(artifact => new ImportPublicationManifestArtifact(artifact.RelativePath, artifact.ContentHash, artifact.Bytes.Length)).ToArray());
+            orderedContent.Select(artifact => new ImportPublicationManifestArtifact(artifact.RelativePath, artifact.ContentHash, artifact.Bytes.Length, artifact.DependsOnPaths)).ToArray());
         manifest.Validate();
         byte[] manifestBytes = ImportPublicationManifestSerializer.Serialize(manifest);
         ImportPublicationArtifact manifestArtifact = new(ImportPublicationManifestSerializer.ManifestRelativePath, manifestBytes);

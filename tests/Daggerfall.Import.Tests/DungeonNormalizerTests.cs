@@ -15,7 +15,7 @@ public sealed class DungeonNormalizerTests
 
         result.Validate();
         NormalizedMesh mesh = Assert.Single(result.Document.Meshes);
-        Assert.Equal("mesh/fixture-hold/texture-2-0", mesh.Id);
+        Assert.Equal("mesh/fixture-hold/texture-2-0/static", mesh.Id);
         Assert.Equal(3, mesh.Vertices.Count);
         Assert.Equal(new NormalizedVector3(51.2F, 0F, -51.2F), mesh.Vertices[0]);
         Assert.Equal(new NormalizedTriangle(0, 1, 2), Assert.Single(mesh.Triangles));
@@ -23,8 +23,14 @@ public sealed class DungeonNormalizerTests
         Assert.Equal("marker/start", result.Document.World.StartMarker!.Id);
         Assert.Single(result.Document.World.Lights);
         Assert.NotNull(result.Document.Navigation);
+        Assert.All(result.Document.Navigation!.Cells, cell => Assert.True(cell.Walkable));
         Assert.Contains(result.RecordProvenance, record => record.Kind == "rdb-model");
         Assert.Contains(result.Document.Resources, resource => resource.Id == "material/texture-2-0");
+        Assert.All(result.Document.Meshes, published => Assert.DoesNotContain("artifact/source", published.ArtifactId, StringComparison.Ordinal));
+        Assert.All(result.Document.Artifacts, artifact => Assert.DoesNotContain("artifact/source", artifact.Id, StringComparison.Ordinal));
+        Assert.Equal(3, result.SpatialPublication.Artifacts.Count);
+        Assert.All(result.Document.Resources, resource => Assert.Equal(result.SpatialPublication.ResourceCatalog.Id, resource.ArtifactId));
+        Assert.DoesNotContain("pixels", Encoding.UTF8.GetString(result.SpatialPublication.ResourceCatalog.Bytes.Span), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("encounter", Encoding.UTF8.GetString(NormalizedImportSerializer.Serialize(result.Document)), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -98,6 +104,24 @@ public sealed class DungeonNormalizerTests
         Assert.Empty(marker.Document.World.Actors);
         Assert.Single(treasure.Document.World.Treasures);
         Assert.Empty(treasure.Document.World.Actors);
+    }
+
+    [Fact]
+    public void RetainsActionDoorGeometryForVisualPublicationButExcludesItFromCollision()
+    {
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixture(modelDescription: "DOR"))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        Assert.Single(result.Document.World.Doors);
+        NormalizedMesh visualDoor = Assert.Single(result.Document.Meshes, mesh => mesh.Id.EndsWith("/action-visual", StringComparison.Ordinal));
+        Assert.All(visualDoor.MaterialGroups, group => Assert.False(group.ParticipatesInCollision));
+        Assert.All(result.Document.World.MeshIds, meshId => Assert.Contains(result.Document.Meshes, mesh => mesh.Id == meshId));
+        Assert.Equal([visualDoor.Id], Assert.Single(result.Document.World.Doors).VisualMeshIds);
+        string collisionNavigation = Encoding.UTF8.GetString(result.SpatialPublication.CollisionNavigation.Bytes.Span);
+        Assert.Contains("\"triangles\": []", collisionNavigation, StringComparison.Ordinal);
+        Assert.Contains("\"positions\": []", collisionNavigation, StringComparison.Ordinal);
     }
 
     private static DungeonNormalizationRequest Request(IEnumerable<DungeonLogicalSource> sources) =>
@@ -183,7 +207,8 @@ public sealed class DungeonNormalizerTests
     private static byte[] CreateRdbFixture(
         ushort flatTextureArchive = RdbSourceClassification.EditorFlatArchive,
         ushort flatTextureRecord = RdbSourceClassification.StartMarkerRecord,
-        ushort factionOrMobileId = 0)
+        ushort factionOrMobileId = 0,
+        string modelDescription = "MOD")
     {
         const int roots = 6020;
         const int modelNode = 6024;
@@ -197,7 +222,7 @@ public sealed class DungeonNormalizerTests
         BitConverter.GetBytes(1U).CopyTo(data, 8);
         BitConverter.GetBytes((uint)roots).CopyTo(data, 12);
         Encoding.ASCII.GetBytes("42\0").CopyTo(data, 20);
-        Encoding.ASCII.GetBytes("MOD").CopyTo(data, 25);
+        Encoding.ASCII.GetBytes(modelDescription).CopyTo(data, 25);
         BitConverter.GetBytes(modelNode).CopyTo(data, roots);
         WriteNode(data, modelNode, flatNode, [0, 0, 0], 1, modelResource);
         WriteNode(data, flatNode, lightNode, [10, -20, 30], 3, flatResource);
@@ -221,7 +246,7 @@ public sealed class DungeonNormalizerTests
         BitConverter.GetBytes(100).CopyTo(data, 60);
         WriteVector(data, 64, [0, 0, 0]);
         WriteVector(data, 76, [256, 0, 0]);
-        WriteVector(data, 88, [256, 256, 0]);
+        WriteVector(data, 88, [0, 0, 256]);
         data[100] = 3;
         BitConverter.GetBytes((ushort)((2 << 7) | 0)).CopyTo(data, 102);
         foreach ((int index, short u, short v) in new[] { (0, (short)0, (short)0), (1, (short)32, (short)0), (2, (short)0, (short)32) })

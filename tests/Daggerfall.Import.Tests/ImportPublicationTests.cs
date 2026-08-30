@@ -30,6 +30,25 @@ public sealed class ImportPublicationTests : IDisposable
     }
 
     [Fact]
+    public void PlanCarriesValidatedArtifactDependenciesAlongsideExactBytes()
+    {
+        ImportPublicationPlan plan = CreatePlan(
+            new ImportPublicationArtifact("spatial/static-mesh.json", "mesh"u8),
+            new ImportPublicationArtifact("spatial/collision-navigation.json", "spatial"u8, ["spatial/static-mesh.json"]),
+            new ImportPublicationArtifact("normalized.json", "normalized"u8, ["spatial/collision-navigation.json", "spatial/static-mesh.json"]));
+
+        ImportPublicationManifestArtifact spatial = plan.Manifest.Artifacts.Single(artifact => artifact.RelativePath == "spatial/collision-navigation.json");
+        Assert.Equal(["spatial/static-mesh.json"], spatial.DependsOnPaths);
+        Assert.Equal(7, spatial.ByteLen);
+        Assert.Contains("\"dependsOnPaths\"", Encoding.UTF8.GetString(ImportPublicationManifestSerializer.Serialize(plan.Manifest)), StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(() => CreatePlan(new ImportPublicationArtifact("only.json", "only"u8, ["missing.json"])));
+        Assert.Throws<InvalidOperationException>(() => CreatePlan(new ImportPublicationArtifact("self.json", "self"u8, ["self.json"])));
+        Assert.Throws<InvalidOperationException>(() => CreatePlan(
+            new ImportPublicationArtifact("first.json", "first"u8, ["second.json"]),
+            new ImportPublicationArtifact("second.json", "second"u8, ["first.json"])));
+    }
+
+    [Fact]
     public void CompareSeparatesMissingChangedAndUnexpectedClosureFiles()
     {
         ImportPublicationPlan plan = CreatePlan(new ImportPublicationArtifact("nested/value.bin", "expected"u8));
