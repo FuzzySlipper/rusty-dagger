@@ -50,9 +50,9 @@ internal sealed class DaggerfallSession : IGameSession
         {
             _random = engine.Random;
             tuning = tuning.Validate();
-            ValidateInitialEntityIds(inputs);
             DaggerfallMechanicsState mechanics = new();
             DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
+            ValidateInitialEntityIds(inputs, playerDefinition.Loadout);
             Dictionary<InventoryItemId, ItemDefinition> itemDefinitions = definitions.Items.Values
                 .ToDictionary(item => new InventoryItemId(item.Id.Value), ToManagedItem);
             Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> equipmentSlots = definitions.EquipmentSlots.Values
@@ -64,7 +64,7 @@ internal sealed class DaggerfallSession : IGameSession
             MechanicsInventoryCoordinator inventory = new(inventoryWorld, playerEntity, itemDefinitions);
             MechanicsEquipmentCoordinator equipmentCoordinator = new(inventoryWorld, playerEntity, itemDefinitions, equipmentSlots);
             partiallyConstructed.Add(equipmentCoordinator);
-            foreach (ScenarioLoadoutEntry entry in inputs.Loadout.Where(entry => definitions.Items[entry.ItemId].IsFungible))
+            foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => definitions.Items[entry.ItemId].IsFungible))
             {
                 inventory.Grant(new InventoryGrant(
                     "daggerfall.initial-loadout",
@@ -72,7 +72,7 @@ internal sealed class DaggerfallSession : IGameSession
                     new InventoryItemId(entry.ItemId.Value),
                     entry.Quantity));
             }
-            foreach (ScenarioLoadoutEntry entry in inputs.Loadout.Where(entry => !definitions.Items[entry.ItemId].IsFungible))
+            foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => !definitions.Items[entry.ItemId].IsFungible))
             {
                 KitUniqueInventoryItem item = equipmentCoordinator.Materialize(new UniqueItemMaterialization(
                     $"daggerfall.loadout.{entry.UniqueEntityId!.Value}",
@@ -114,7 +114,7 @@ internal sealed class DaggerfallSession : IGameSession
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
-            _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored, tuning.Combat);
+            _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored);
             _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
@@ -214,8 +214,11 @@ internal sealed class DaggerfallSession : IGameSession
             : new ItemEquipmentPolicy(
                 item.Equipment.RequiredSlots,
                 item.Equipment.ExclusiveGroup is { } group ? EquipmentExclusivityId.Parse(group) : null);
-        IEnumerable<ItemCapacityCost>? capacity = item.Weapon?.Weight > 0
-            ? [new ItemCapacityCost(CapacityMetricId.Parse("weight"), checked((ulong)item.Weapon.Weight))]
+        // Weight is authored item metadata for every catalog entry.  The current
+        // reference session does not register a carrying-capacity policy, so this
+        // is a cost declaration rather than a claim that encumbrance is enforced.
+        IEnumerable<ItemCapacityCost>? capacity = item.Weight > 0
+            ? [new ItemCapacityCost(CapacityMetricId.Parse("weight"), checked((ulong)item.Weight))]
             : null;
         return new ItemDefinition(
             ItemDefinitionId.Parse(item.Id.Value),
@@ -243,7 +246,7 @@ internal sealed class DaggerfallSession : IGameSession
         return new DaggerfallVitalValues(health, 0, 0);
     }
 
-    private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs)
+    private static void ValidateInitialEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
     {
         HashSet<ulong> ids = [PlayerMechanicsEntityId];
         foreach (AuthoredActor actor in inputs.Project.Actors.Values)
@@ -251,7 +254,7 @@ internal sealed class DaggerfallSession : IGameSession
             if (actor.EntityId <= 0 || !ids.Add(checked((ulong)actor.EntityId)))
                 throw new InvalidOperationException($"Initial Mechanics entity id '{actor.EntityId}' collides with another player, placement, or item entity.");
         }
-        foreach (ScenarioLoadoutEntry item in inputs.Loadout)
+        foreach (DaggerfallLoadoutEntry item in loadout)
             if (item.UniqueEntityId is ulong entityId && !ids.Add(entityId))
                 throw new InvalidOperationException($"Initial Mechanics entity id '{entityId}' collides with another player, placement, or item entity.");
     }

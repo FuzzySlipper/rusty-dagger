@@ -19,18 +19,18 @@ internal sealed class CombatModule
     private readonly ActorsState _actors;
     private readonly MechanicsEquipmentCoordinator _equipment;
     private readonly IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> _items;
+    private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
-    private readonly DaggerfallCombatTuning _tuning;
     private readonly Dictionary<(ulong Generation, long Attacker), ulong> _readyAtStep = [];
 
-    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallCombatTuning tuning)
+    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity)
     {
         _random = random;
         _actors = actors;
         _equipment = equipment;
         _items = definitions.Items;
+        _actions = definitions.Actions;
         _definitions = definitionsByEntity;
-        _tuning = tuning.Validate();
     }
 
     internal void TryPlayerMelee(PlayerControlState playerControl, FactBuffer<IProductFact> facts)
@@ -68,10 +68,15 @@ internal sealed class CombatModule
                 facts.Append(new AttackRejectedFact(AttackRejection.RightHandWeaponRequired));
                 return;
             }
-            attack = new DaggerfallAttackDefinition(weapon.Skill, weapon.MinimumDamage, weapon.MaximumDamage, _tuning.PlayerMeleeCooldownSeconds);
-            if (!SpendPlayerStamina(attacker, facts)) return;
+            if (attacker.Definition.ActionId is not { } playerActionId || !_actions.TryGetValue(playerActionId, out DaggerfallActionDefinition? playerAction) || playerAction.Interpretation != "player-equipped-melee" || playerAction.CooldownSeconds is not double playerCooldown || playerAction.StaminaCost is not int staminaCost)
+            {
+                facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
+                return;
+            }
+            attack = new DaggerfallAttackDefinition(weapon.Skill, weapon.MinimumDamage, weapon.MaximumDamage, playerCooldown);
+            if (!SpendPlayerStamina(attacker, staminaCost, facts)) return;
         }
-        else if (attacker.Definition.Attack is { } authoredAttack) attack = authoredAttack;
+        else if (attacker.Definition.ActionId is { } actionId && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? authoredAction) && authoredAction.CooldownSeconds is double authoredCooldown) attack = ResolveFixedAttack(attacker.Definition, authoredAction, authoredCooldown);
         else
         {
             facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
@@ -106,16 +111,16 @@ internal sealed class CombatModule
         if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(target.Id, applied, request.Generation, request.SimulationStep));
     }
 
-    private bool SpendPlayerStamina(Combatant player, FactBuffer<IProductFact> facts)
+    private bool SpendPlayerStamina(Combatant player, int staminaCost, FactBuffer<IProductFact> facts)
     {
         ExactTrack stamina = player.Mechanics.ReadTrack(TrackId.Parse(StaminaTrack));
-        if (stamina.Current.Raw < _tuning.PlayerMeleeStaminaCost)
+        if (stamina.Current.Raw < staminaCost)
         {
             facts.Append(new AttackRejectedFact(AttackRejection.InsufficientStamina));
             return false;
         }
-        ExactTrackMutationReceipt spent = player.Mechanics.SpendTrack(TrackId.Parse(StaminaTrack), new ExactValue(_tuning.PlayerMeleeStaminaCost));
-        if (spent.AppliedAmount.Raw == _tuning.PlayerMeleeStaminaCost) return true;
+        ExactTrackMutationReceipt spent = player.Mechanics.SpendTrack(TrackId.Parse(StaminaTrack), new ExactValue(staminaCost));
+        if (spent.AppliedAmount.Raw == staminaCost) return true;
         // A surprising partial receipt has no fake local rollback.
         facts.Append(new AttackRejectedFact(AttackRejection.StaminaSpendNotAccepted));
         return false;
@@ -130,7 +135,10 @@ internal sealed class CombatModule
     }
 
     private static bool IsDefeated(Combatant combatant) => combatant.Mechanics.ReadTrack(TrackId.Parse(HealthTrack)).Current.Raw <= 0;
-    private int HitChance(Combatant attacker, Combatant target, string skill) => CalculateHitChance(ReadStat(attacker, Skill(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging));
+    private static DaggerfallAttackDefinition ResolveFixedAttack(DaggerfallActorDefinition actor, DaggerfallActionDefinition action, double cooldown) => action.AttackRangeIndex is int index
+        ? new DaggerfallAttackDefinition(action.Skill, actor.Attacks[index].MinimumDamage, actor.Attacks[index].MaximumDamage, cooldown)
+        : new DaggerfallAttackDefinition(action.Skill, action.MinimumDamage!.Value, action.MaximumDamage!.Value, cooldown);
+    private int HitChance(Combatant attacker, Combatant target, string skill) => CalculateHitChance(ReadStat(attacker, new DaggerfallStatId(skill)), target.Definition.Armor, ReadStat(attacker, DaggerfallMechanicsIds.Luck), ReadStat(target, DaggerfallMechanicsIds.Luck), ReadStat(attacker, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Agility), ReadStat(target, DaggerfallMechanicsIds.Dodging));
     internal static int CalculateHitChance(int skill, int struckArmor, int attackerLuck, int targetLuck, int attackerAgility, int targetAgility, int targetDodge) => Math.Clamp(skill + struckArmor - 50 + ((attackerLuck - targetLuck) / 10) + ((attackerAgility - targetAgility) / 10) - (targetDodge / 4), 3, 97);
     private int StrengthModifier(Combatant attacker) => FloorDivision(ReadStat(attacker, DaggerfallMechanicsIds.Strength) - 50, 5);
     private static int ReadStat(Combatant actor, DaggerfallStatId stat) => checked((int)actor.Mechanics.ReadStat(StatId.Parse(stat.Value)).Base.Raw);
@@ -140,5 +148,4 @@ internal sealed class CombatModule
     private void LatchCooldown(ExplicitMeleeRequest request, DaggerfallAttackDefinition attack) => _readyAtStep[(request.Generation, request.AttackerId)] = checked(request.SimulationStep + RequiredSteps(attack.CooldownSeconds, request.FixedDeltaSeconds));
     private static readonly int[] StruckBodyTable = [0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 6];
     private readonly record struct Combatant(long Id, ActorMechanicsState Mechanics, DaggerfallActorDefinition Definition);
-    private static DaggerfallStatId Skill(string skill) => skill switch { "long-blade" => DaggerfallMechanicsIds.LongBlade, "hand-to-hand" => DaggerfallMechanicsIds.HandToHand, _ => throw new InvalidOperationException($"Unsupported Daggerfall skill '{skill}'.") };
 }

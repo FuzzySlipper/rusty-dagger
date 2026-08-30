@@ -108,7 +108,7 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 | `DaggerfallRuleset.cs` | Compiled `daggerfall` ruleset implementation creating the current session. |
 | `DaggerfallSession.cs`, `DaggerfallState.cs`, `DaggerfallTuning.cs`, `DaggerfallRewardReactions.cs` | Single mutable Daggerfall session and ordered composition, typed Daggerfall tuning, attack/reward policy, and direct use of Kit mechanisms. Initial unique items are Engine item entities staged into the player before the atomic initial equipment assignment; gold is an Engine fungible stack. Monster health is a keyed authored-range roll. `ProductUpdateState` is a Kit input frame derived from Engine input by the session. |
 | `Content/DaggerfallDefinitions.cs`, `Content/DaggerfallBaseContent.cs` | Daggerfall-owned immutable typed actor/item/HUD/loot/attack definitions plus item kinds, equipment classifications, and authored slot policy, with bounded schema/version/ruleset/duplicate/reference diagnostics from `daggerfall.base`. No global catalog or source-name selection remains. |
-| `Content/PrivateersHoldContent.cs`, `Presentation/PrivateersHoldAppearance.cs` | Explicit typed Privateer's Hold start state, entity-backed unique loadout/equip assignments, placements, and interpretation of normalized Import manifests/media sidecars. The ruleset verifies artifact identities, then delegates opaque collision/navigation and static-mesh documents plus texture resources to Engine Content, Spatial, and Appearance. Material slots come from the same offline mesh assembly that writes the static mesh; sprites use Engine atlases. No encounter schema, authored UV topology, or runtime spatial parser remains. |
+| `Content/PrivateersHoldContent.cs`, `Presentation/PrivateersHoldAppearance.cs` | Explicit typed Privateer's Hold start position/look, placements, and interpretation of normalized Import manifests/media sidecars. The canonical player loadout and equipment assignments belong solely to `daggerfall.base`. The ruleset verifies artifact identities, then delegates opaque collision/navigation and static-mesh documents plus texture resources to Engine Content, Spatial, and Appearance. Material slots come from the same offline mesh assembly that writes the static mesh; sprites use Engine atlases. No encounter schema, authored UV topology, or runtime spatial parser remains. |
 | `Facts/*`, `Modules/Combat/*`, `Presentation/*` | Daggerfall combat facts/policy and Daggerfall presentation meaning. #7324 adopts direct exact-id player/rat/skeletal melee through Engine Mechanics: equipment truth is read from Engine, stamina spend and health damage are guarded Engine mutations, and damage/death/rewards are fact-ordered. A miss latches cadence; a hit latches it only after a valid accepted damage receipt. If damage application fails, no optimistic hit fact/cooldown is invented, while a previously accepted Engine stamina spend remains authoritative. It adapts the donor struck-body table to current scalar armor (the roll is retained but does not select body armor), selected hit formula omits donor monster +40/optional modifiers, and the local XP/500 progression experiment is not classic kill XP. It rejects target acquisition, range/LOS, encounter activation, senses, nearest-actor selection, and autonomous enemy/AI loops pending named owners. |
 | `AssemblyInfo.cs` | Exact friend access for `WorldRpg.Rulesets.Daggerfall.Tests`. |
 | `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
@@ -118,8 +118,8 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 | `tests/WorldRpg.Kit.Tests/*`, `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Focused Kit mechanism and Daggerfall policy suites, including Host lifecycle/update/disposal coverage. |
 | `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; UI renders the Daggerfall semantic projection plus the exact resolved generic composition identity and only claims declared semantic input. `run-product.sh` declares `attack=digital` through the Engine host; no gameplay authority or browser bridge is added. |
 | `src/browser-bundle/**`, `src/**/bin/**`, `src/**/obj/**`, `tests/**/bin/**`, `tests/**/obj/**` | Generated output; never authority or handwritten source. |
-| `content/worldrpg/payloads/daggerfall.base.json` | Normalized immutable Daggerfall base definitions: player, rat, skeletal warrior, items, attacks/loot, and HUD resources. |
-| `content/worldrpg/payloads/daggerfall.privateers-hold.json`, `content/worldrpg/imports/privateers-hold/**` | Normalized Privateer's Hold start/loadout/look and explicit actor placements select the checked-in Import publication root. The generated closure carries manifests, hashes, provenance, opaque Engine spatial/static-mesh artifacts, material textures, and actor atlases. It contains no encounter/grouping/activation metadata. |
+| `content/worldrpg/payloads/daggerfall.base.json` | Versioned immutable Daggerfall catalog definitions: full attribute/skill/track vocabulary, player and thief, 42 monsters with mobile 39 explicitly absent, items/materials, equipment slots/loadout, actions, loot tables/deferred pools, donor errata, and HUD resources. |
+| `content/worldrpg/payloads/daggerfall.privateers-hold.json`, `content/worldrpg/imports/privateers-hold/**` | Normalized Privateer's Hold start position/look and explicit actor placements select the checked-in Import publication root. The generated closure carries manifests, hashes, provenance, opaque Engine spatial/static-mesh artifacts, material textures, and actor atlases. It contains no encounter/grouping/activation metadata. |
 | `content/projects/privateers-hold.navgrid.json`, `content/imported/privateers-hold.static-mesh.json` | Inactive donor artifacts retained only until later cleanup slices prove no remaining consumer; the active C# product no longer reads them. |
 | `gameplay/**`, root Rust/Angular/HTTP/Studio surfaces | Donor or retired-runtime evidence, not active implementation. |
 
@@ -194,7 +194,8 @@ constant is honest; an authored or adjustable value needs a typed owner instead.
 its session through `IGameRuleset`; it does not construct `DaggerfallSession`.
 The session receives its ordered `daggerfall.base` and
 `daggerfall.privateers-hold` definitions from the resolved composition. Starting
-loadout/gold/look, placements, appearances, and world refs are authored pack
+loadout/gold are `daggerfall.base` actor facts; start look, placements, appearances,
+and world refs are scenario-pack
 data, not Host/Kit defaults. The Daggerfall UI title and projection-contract
 selection remain Daggerfall presentation, not Host/Kit policy.
 
@@ -353,5 +354,19 @@ and stops only the affected slice.
 Campaign #7322 is **closed**. Follow-up work is dependency-ordered under #7533
 rather than left as an unowned inventory.
 
-No runtime code, empty project structure, or speculative architecture is
-created by this documentation task.
+## #7537 catalog donor ledger
+
+`gameplay/src/catalogs/{stats,actors,monsters,items,equipment,actions,loot,derived}.ts`
+and `gameplay/src/authoring/definitions.ts` were consulted as semantic donors.
+Stats, actors, items, slots, actions, material armor values, loot matrix, and
+the documented mobile-39 / Chain2 / bow-hand errata are **adapted** into the
+versioned `daggerfall.base` content payload and typed Daggerfall interpretation.
+The TypeScript evaluator, package materializer, and encounter grouping are
+**rejected**: no runtime TypeScript, evaluator, package metadata, or encounter
+topology is loaded by the NativeAOT product. Loot category pools are carried as
+explicitly deferred authored references until a later ruleset-owned generator
+has normalized item pools; this catalog slice does not fabricate them.
+
+The active C# ruleset loads and validates this catalog directly. No TypeScript
+or Rust evaluator/runtime, encounter topology, empty project structure, or
+speculative architecture is introduced.
