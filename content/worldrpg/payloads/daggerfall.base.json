@@ -1,46 +1,3330 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "ruleset": "daggerfall",
+  "vocabulary": {
+    "attributes": [
+      "strength",
+      "intelligence",
+      "willpower",
+      "agility",
+      "endurance",
+      "personality",
+      "speed",
+      "luck",
+      "reflexes"
+    ],
+    "skills": [
+      "medical",
+      "etiquette",
+      "streetwise",
+      "jumping",
+      "orcish",
+      "harpy",
+      "giantish",
+      "dragonish",
+      "nymph",
+      "daedric",
+      "spriggan",
+      "centaurian",
+      "impish",
+      "lockpicking",
+      "mercantile",
+      "pickpocket",
+      "stealth",
+      "swimming",
+      "climbing",
+      "backstabbing",
+      "dodging",
+      "running",
+      "destruction",
+      "restoration",
+      "illusion",
+      "alteration",
+      "thaumaturgy",
+      "mysticism",
+      "short-blade",
+      "long-blade",
+      "hand-to-hand",
+      "axe",
+      "blunt-weapon",
+      "archery",
+      "critical-strike"
+    ],
+    "tracks": [
+      "health",
+      "stamina",
+      "magicka"
+    ],
+    "armorParts": [
+      "head",
+      "right-arm",
+      "left-arm",
+      "chest",
+      "hands",
+      "legs",
+      "feet"
+    ],
+    "progression": [
+      "xp",
+      "level"
+    ]
+  },
+  "armorValuesByMaterial": {
+    "leather": 3,
+    "chain": 6,
+    "iron": 7,
+    "steel": 9,
+    "silver": 9,
+    "elven": 11,
+    "dwarven": 13,
+    "mithril": 15,
+    "adamantium": 15,
+    "ebony": 17,
+    "orcish": 19,
+    "daedric": 21
+  },
   "actors": [
     {
       "id": "player",
-      "stats": { "strength": 50, "intelligence": 50, "willpower": 50, "agility": 50, "endurance": 40, "personality": 50, "speed": 50, "luck": 50, "reflexes": 2, "longBlade": 60, "handToHand": 40, "dodging": 0 },
-      "health": { "minimum": 85, "maximum": 85 },
+      "kind": "player",
+      "attributes": {
+        "strength": 50,
+        "endurance": 40,
+        "intelligence": 50,
+        "willpower": 50,
+        "agility": 50,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50,
+        "reflexes": 2
+      },
+      "skills": {
+        "long-blade": 60,
+        "hand-to-hand": 40,
+        "medical": 30,
+        "backstabbing": 30
+      },
       "armor": 0,
-      "rewards": { "experience": 0 }
+      "health": {
+        "minimum": 85,
+        "maximum": 85
+      },
+      "hitPointsPerLevel": 8,
+      "attacks": [],
+      "loadout": [
+        {
+          "item": "iron-longsword",
+          "entityId": 1001,
+          "equipSlot": "right-hand"
+        },
+        {
+          "item": "iron-dagger",
+          "entityId": 1002
+        },
+        {
+          "item": "iron-cuirass",
+          "entityId": 1003,
+          "equipSlot": "chest-armor"
+        },
+        {
+          "item": "gold-piece",
+          "quantity": 25
+        }
+      ],
+      "action": "melee-attack"
+    },
+    {
+      "id": "thief",
+      "kind": "enemy-class",
+      "attributes": {
+        "strength": 45,
+        "intelligence": 47,
+        "willpower": 45,
+        "agility": 58,
+        "endurance": 50,
+        "personality": 47,
+        "speed": 58,
+        "luck": 50
+      },
+      "skills": {
+        "pickpocket": 35,
+        "stealth": 35,
+        "short-blade": 35,
+        "backstabbing": 35,
+        "climbing": 35,
+        "lockpicking": 35,
+        "critical-strike": 35,
+        "jumping": 35,
+        "running": 35,
+        "dodging": 35,
+        "streetwise": 35,
+        "mercantile": 35
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 11,
+        "maximum": 20
+      },
+      "mobileId": 138,
+      "xpReward": 50,
+      "team": "criminals",
+      "lootTableKey": "T",
+      "attacks": [],
+      "action": "thief-strike"
     },
     {
       "id": "rat",
-      "mobileId": 0,
-      "stats": { "strength": 40, "intelligence": 10, "willpower": 70, "agility": 80, "endurance": 55, "personality": 50, "speed": 45, "luck": 50, "reflexes": 0, "longBlade": 0, "handToHand": 35, "dodging": 0 },
-      "health": { "minimum": 9, "maximum": 16 },
+      "kind": "monster",
+      "attributes": {
+        "strength": 40,
+        "intelligence": 10,
+        "willpower": 70,
+        "agility": 80,
+        "endurance": 55,
+        "personality": 50,
+        "speed": 45,
+        "luck": 50
+      },
+      "skills": {
+        "climbing": 35,
+        "backstabbing": 35,
+        "stealth": 35,
+        "axe": 35,
+        "nymph": 35,
+        "streetwise": 35,
+        "centaurian": 35,
+        "lockpicking": 35,
+        "hand-to-hand": 35,
+        "critical-strike": 35,
+        "mysticism": 35,
+        "giantish": 35
+      },
       "armor": 30,
-      "attack": { "skill": "hand-to-hand", "minimumDamage": 1, "maximumDamage": 4, "cooldownSeconds": 1.5 },
-      "rewards": { "experience": 50 }
+      "health": {
+        "minimum": 9,
+        "maximum": 16
+      },
+      "mobileId": 0,
+      "level": 1,
+      "xpReward": 50,
+      "weight": 2,
+      "team": "vermin",
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 4
+        }
+      ],
+      "action": "rat-bite"
+    },
+    {
+      "id": "imp",
+      "kind": "monster",
+      "attributes": {
+        "strength": 40,
+        "intelligence": 65,
+        "willpower": 70,
+        "agility": 80,
+        "endurance": 55,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "stealth": 40,
+        "daedric": 40,
+        "archery": 40,
+        "climbing": 40,
+        "nymph": 40,
+        "lockpicking": 40,
+        "blunt-weapon": 40,
+        "pickpocket": 40,
+        "etiquette": 40,
+        "streetwise": 40,
+        "running": 40,
+        "centaurian": 40
+      },
+      "armor": 15,
+      "health": {
+        "minimum": 11,
+        "maximum": 18
+      },
+      "mobileId": 1,
+      "level": 2,
+      "xpReward": 100,
+      "weight": 40,
+      "minMetalToHit": "steel",
+      "team": "magic",
+      "lootTableKey": "D",
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "spriggan",
+      "kind": "monster",
+      "attributes": {
+        "strength": 80,
+        "intelligence": 50,
+        "willpower": 30,
+        "agility": 50,
+        "endurance": 75,
+        "personality": 50,
+        "speed": 40,
+        "luck": 50
+      },
+      "skills": {
+        "dodging": 45,
+        "climbing": 45,
+        "stealth": 45,
+        "backstabbing": 45,
+        "etiquette": 45,
+        "nymph": 45,
+        "impish": 45,
+        "daedric": 45,
+        "centaurian": 45,
+        "lockpicking": 45,
+        "spriggan": 45,
+        "orcish": 45
+      },
+      "armor": -20,
+      "health": {
+        "minimum": 12,
+        "maximum": 26
+      },
+      "mobileId": 2,
+      "level": 3,
+      "xpReward": 150,
+      "weight": 240,
+      "team": "spriggans",
+      "lootTableKey": "B",
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        }
+      ]
+    },
+    {
+      "id": "giant-bat",
+      "kind": "monster",
+      "attributes": {
+        "strength": 50,
+        "intelligence": 40,
+        "willpower": 60,
+        "agility": 70,
+        "endurance": 55,
+        "personality": 40,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "archery": 45,
+        "axe": 45,
+        "climbing": 45,
+        "streetwise": 45,
+        "giantish": 45,
+        "critical-strike": 45,
+        "nymph": 45,
+        "daedric": 45,
+        "lockpicking": 45,
+        "etiquette": 45,
+        "running": 45,
+        "centaurian": 45
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 12,
+        "maximum": 26
+      },
+      "mobileId": 3,
+      "level": 3,
+      "xpReward": 150,
+      "weight": 80,
+      "team": "vermin",
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        }
+      ]
+    },
+    {
+      "id": "grizzly-bear",
+      "kind": "monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 70,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "archery": 50,
+        "axe": 50,
+        "critical-strike": 50,
+        "climbing": 50,
+        "stealth": 50,
+        "streetwise": 50,
+        "nymph": 50,
+        "etiquette": 50,
+        "blunt-weapon": 50,
+        "daedric": 50,
+        "impish": 50,
+        "spriggan": 50
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "mobileId": 4,
+      "level": 4,
+      "xpReward": 200,
+      "weight": 1000,
+      "team": "bears",
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 8
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        }
+      ]
+    },
+    {
+      "id": "sabertooth-tiger",
+      "kind": "monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 60,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "backstabbing": 50,
+        "long-blade": 50,
+        "climbing": 50,
+        "axe": 50,
+        "hand-to-hand": 50,
+        "nymph": 50,
+        "thaumaturgy": 50,
+        "etiquette": 50,
+        "lockpicking": 50,
+        "daedric": 50,
+        "centaurian": 50
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "mobileId": 5,
+      "level": 4,
+      "xpReward": 200,
+      "weight": 1000,
+      "team": "tigers",
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 3,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "spider",
+      "kind": "monster",
+      "attributes": {
+        "strength": 50,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 75,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 50,
+        "long-blade": 50,
+        "hand-to-hand": 50,
+        "dodging": 50,
+        "harpy": 50,
+        "axe": 50,
+        "swimming": 50,
+        "climbing": 50,
+        "stealth": 50,
+        "nymph": 50,
+        "etiquette": 50,
+        "daedric": 50
+      },
+      "armor": 25,
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "mobileId": 6,
+      "level": 4,
+      "xpReward": 200,
+      "weight": 400,
+      "team": "spiders",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "orc",
+      "kind": "monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 40,
+        "willpower": 80,
+        "agility": 50,
+        "endurance": 75,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 55,
+        "climbing": 55,
+        "backstabbing": 55,
+        "hand-to-hand": 55,
+        "blunt-weapon": 55,
+        "archery": 55,
+        "axe": 55,
+        "thaumaturgy": 55,
+        "jumping": 55,
+        "giantish": 55,
+        "dodging": 55,
+        "critical-strike": 55
+      },
+      "armor": 35,
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "mobileId": 7,
+      "level": 5,
+      "xpReward": 250,
+      "weight": 600,
+      "team": "orcs",
+      "lootTableKey": "A",
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 6
+        }
+      ]
+    },
+    {
+      "id": "centaur",
+      "kind": "monster",
+      "attributes": {
+        "strength": 80,
+        "intelligence": 80,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "climbing": 55,
+        "centaurian": 55,
+        "backstabbing": 55,
+        "hand-to-hand": 55,
+        "archery": 55,
+        "medical": 55,
+        "blunt-weapon": 55,
+        "alteration": 55,
+        "swimming": 55,
+        "axe": 55,
+        "harpy": 55,
+        "giantish": 55
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 14,
+        "maximum": 46
+      },
+      "mobileId": 8,
+      "level": 5,
+      "xpReward": 250,
+      "weight": 1200,
+      "team": "centaurs",
+      "lootTableKey": "C",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "werewolf",
+      "kind": "monster",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 20,
+        "willpower": 40,
+        "agility": 80,
+        "endurance": 65,
+        "personality": 30,
+        "speed": 85,
+        "luck": 50
+      },
+      "skills": {
+        "critical-strike": 60,
+        "backstabbing": 60,
+        "long-blade": 60,
+        "axe": 60,
+        "hand-to-hand": 60,
+        "jumping": 60,
+        "stealth": 60,
+        "blunt-weapon": 60,
+        "etiquette": 60,
+        "lockpicking": 60,
+        "giantish": 60,
+        "orcish": 60
+      },
+      "armor": 25,
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "mobileId": 9,
+      "level": 6,
+      "xpReward": 300,
+      "weight": 480,
+      "minMetalToHit": "silver",
+      "team": "werecreatures",
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 10
+        },
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        }
+      ]
+    },
+    {
+      "id": "nymph",
+      "kind": "monster",
+      "attributes": {
+        "strength": 40,
+        "intelligence": 70,
+        "willpower": 60,
+        "agility": 80,
+        "endurance": 55,
+        "personality": 60,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 60,
+        "backstabbing": 60,
+        "axe": 60,
+        "mercantile": 60,
+        "long-blade": 60,
+        "climbing": 60,
+        "hand-to-hand": 60,
+        "spriggan": 60,
+        "pickpocket": 60,
+        "harpy": 60,
+        "orcish": 60,
+        "daedric": 60
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 15,
+        "maximum": 50
+      },
+      "mobileId": 10,
+      "level": 6,
+      "xpReward": 300,
+      "weight": 200,
+      "minMetalToHit": "silver",
+      "team": "nymphs",
+      "lootTableKey": "C",
+      "attacks": [
+        {
+          "minimumDamage": 1,
+          "maximumDamage": 5
+        }
+      ]
+    },
+    {
+      "id": "slaughterfish",
+      "kind": "monster",
+      "attributes": {
+        "strength": 70,
+        "intelligence": 50,
+        "willpower": 80,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "mysticism": 65,
+        "backstabbing": 65,
+        "long-blade": 65,
+        "archery": 65,
+        "hand-to-hand": 65,
+        "harpy": 65,
+        "streetwise": 65,
+        "nymph": 65,
+        "daedric": 65,
+        "lockpicking": 65,
+        "etiquette": 65,
+        "centaurian": 65
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 15,
+        "maximum": 50
+      },
+      "mobileId": 11,
+      "level": 7,
+      "xpReward": 350,
+      "weight": 400,
+      "team": "aquatic",
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        }
+      ]
+    },
+    {
+      "id": "orc-sergeant",
+      "kind": "monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 50,
+        "willpower": 80,
+        "agility": 50,
+        "endurance": 75,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "axe": 65,
+        "blunt-weapon": 65,
+        "climbing": 65,
+        "critical-strike": 65,
+        "long-blade": 65,
+        "dodging": 65,
+        "hand-to-hand": 65,
+        "harpy": 65,
+        "orcish": 65,
+        "etiquette": 65,
+        "running": 65,
+        "thaumaturgy": 65
+      },
+      "armor": 25,
+      "health": {
+        "minimum": 15,
+        "maximum": 50
+      },
+      "mobileId": 12,
+      "level": 7,
+      "xpReward": 350,
+      "weight": 600,
+      "team": "orcs",
+      "lootTableKey": "A",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "harpy",
+      "kind": "monster",
+      "attributes": {
+        "strength": 70,
+        "intelligence": 50,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 55,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "axe": 70,
+        "long-blade": 70,
+        "archery": 70,
+        "spriggan": 70,
+        "pickpocket": 70,
+        "hand-to-hand": 70,
+        "etiquette": 70,
+        "running": 70,
+        "centaurian": 70,
+        "orcish": 70,
+        "harpy": 70,
+        "giantish": 70
+      },
+      "armor": 10,
+      "health": {
+        "minimum": 16,
+        "maximum": 85
+      },
+      "mobileId": 13,
+      "level": 8,
+      "xpReward": 400,
+      "weight": 200,
+      "minMetalToHit": "dwarven",
+      "team": "harpies",
+      "lootTableKey": "D",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "wereboar",
+      "kind": "monster",
+      "attributes": {
+        "strength": 80,
+        "intelligence": 10,
+        "willpower": 40,
+        "agility": 70,
+        "endurance": 75,
+        "personality": 40,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 70,
+        "archery": 70,
+        "dodging": 70,
+        "daedric": 70,
+        "hand-to-hand": 70,
+        "medical": 70,
+        "dragonish": 70,
+        "harpy": 70,
+        "climbing": 70,
+        "critical-strike": 70,
+        "blunt-weapon": 70,
+        "streetwise": 70
+      },
+      "armor": 15,
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "mobileId": 14,
+      "level": 8,
+      "xpReward": 400,
+      "weight": 560,
+      "minMetalToHit": "silver",
+      "team": "werecreatures",
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        },
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 12
+        },
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
     },
     {
       "id": "skeletal-warrior",
-      "mobileId": 15,
-      "stats": { "strength": 50, "intelligence": 65, "willpower": 40, "agility": 80, "endurance": 55, "personality": 50, "speed": 70, "luck": 50, "reflexes": 0, "longBlade": 75, "handToHand": 75, "dodging": 75 },
-      "health": { "minimum": 17, "maximum": 66 },
+      "kind": "monster",
+      "attributes": {
+        "strength": 50,
+        "intelligence": 65,
+        "willpower": 40,
+        "agility": 80,
+        "endurance": 55,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "archery": 75,
+        "axe": 75,
+        "long-blade": 75,
+        "hand-to-hand": 75,
+        "daedric": 75,
+        "dodging": 75,
+        "giantish": 75,
+        "etiquette": 75,
+        "dragonish": 75,
+        "climbing": 75,
+        "blunt-weapon": 75,
+        "stealth": 75
+      },
       "armor": 10,
-      "attack": { "skill": "long-blade", "minimumDamage": 5, "maximumDamage": 15, "cooldownSeconds": 2.0 },
-      "rewards": { "experience": 450, "loot": { "table": "H", "item": "gold-piece", "minimumQuantity": 2, "maximumQuantity": 10 } }
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "mobileId": 15,
+      "level": 9,
+      "xpReward": 450,
+      "weight": 80,
+      "team": "undead",
+      "lootTableKey": "H",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ],
+      "action": "skeleton-strike"
+    },
+    {
+      "id": "giant",
+      "kind": "monster",
+      "attributes": {
+        "strength": 110,
+        "intelligence": 40,
+        "willpower": 50,
+        "agility": 70,
+        "endurance": 75,
+        "personality": 40,
+        "speed": 60,
+        "luck": 50
+      },
+      "skills": {
+        "dodging": 80,
+        "etiquette": 80,
+        "hand-to-hand": 80,
+        "impish": 80,
+        "giantish": 80,
+        "harpy": 80,
+        "dragonish": 80,
+        "long-blade": 80,
+        "climbing": 80,
+        "blunt-weapon": 80,
+        "nymph": 80,
+        "daedric": 80
+      },
+      "armor": 15,
+      "health": {
+        "minimum": 18,
+        "maximum": 74
+      },
+      "mobileId": 16,
+      "level": 10,
+      "xpReward": 500,
+      "weight": 3000,
+      "team": "giants",
+      "lootTableKey": "F",
+      "attacks": [
+        {
+          "minimumDamage": 10,
+          "maximumDamage": 30
+        }
+      ]
+    },
+    {
+      "id": "zombie",
+      "kind": "monster",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 40,
+        "willpower": 90,
+        "agility": 80,
+        "endurance": 100,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "axe": 80,
+        "critical-strike": 80,
+        "long-blade": 80,
+        "archery": 80,
+        "etiquette": 80,
+        "dragonish": 80,
+        "mysticism": 80,
+        "climbing": 80,
+        "stealth": 80,
+        "streetwise": 80,
+        "blunt-weapon": 80,
+        "hand-to-hand": 80
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 52,
+        "maximum": 66
+      },
+      "mobileId": 17,
+      "level": 10,
+      "xpReward": 500,
+      "weight": 4000,
+      "team": "undead",
+      "lootTableKey": "G",
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ]
+    },
+    {
+      "id": "ghost",
+      "kind": "monster",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 65,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 85,
+        "daedric": 85,
+        "dodging": 85,
+        "hand-to-hand": 85,
+        "thaumaturgy": 85,
+        "axe": 85,
+        "etiquette": 85,
+        "long-blade": 85,
+        "harpy": 85,
+        "critical-strike": 85,
+        "climbing": 85,
+        "stealth": 85
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "mobileId": 18,
+      "level": 11,
+      "xpReward": 550,
+      "weight": 0,
+      "minMetalToHit": "silver",
+      "team": "undead",
+      "lootTableKey": "I",
+      "attacks": [
+        {
+          "minimumDamage": 10,
+          "maximumDamage": 35
+        }
+      ]
+    },
+    {
+      "id": "mummy",
+      "kind": "monster",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 40,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 85,
+        "thaumaturgy": 85,
+        "daedric": 85,
+        "critical-strike": 85,
+        "dragonish": 85,
+        "axe": 85,
+        "climbing": 85,
+        "stealth": 85,
+        "blunt-weapon": 85,
+        "hand-to-hand": 85,
+        "streetwise": 85,
+        "etiquette": 85
+      },
+      "armor": 10,
+      "health": {
+        "minimum": 17,
+        "maximum": 66
+      },
+      "mobileId": 19,
+      "level": 11,
+      "xpReward": 550,
+      "weight": 300,
+      "minMetalToHit": "silver",
+      "team": "undead",
+      "lootTableKey": "E",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "giant-scorpion",
+      "kind": "monster",
+      "attributes": {
+        "strength": 120,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 90,
+        "dodging": 90,
+        "alteration": 90,
+        "axe": 90,
+        "dragonish": 90,
+        "giantish": 90,
+        "climbing": 90,
+        "short-blade": 90,
+        "stealth": 90,
+        "blunt-weapon": 90,
+        "streetwise": 90,
+        "hand-to-hand": 90
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 18,
+        "maximum": 74
+      },
+      "mobileId": 20,
+      "level": 12,
+      "xpReward": 600,
+      "weight": 600,
+      "team": "scorpions",
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 25
+        }
+      ]
+    },
+    {
+      "id": "orc-shaman",
+      "kind": "monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 70,
+        "willpower": 80,
+        "agility": 50,
+        "endurance": 75,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "axe": 95,
+        "backstabbing": 95,
+        "long-blade": 95,
+        "climbing": 95,
+        "dodging": 95,
+        "blunt-weapon": 95,
+        "critical-strike": 95,
+        "etiquette": 95,
+        "archery": 95,
+        "hand-to-hand": 95,
+        "giantish": 95,
+        "harpy": 95
+      },
+      "armor": 35,
+      "health": {
+        "minimum": 18,
+        "maximum": 74
+      },
+      "mobileId": 21,
+      "level": 13,
+      "xpReward": 650,
+      "weight": 400,
+      "team": "orcs",
+      "lootTableKey": "U",
+      "attacks": [
+        {
+          "minimumDamage": 2,
+          "maximumDamage": 20
+        }
+      ]
+    },
+    {
+      "id": "gargoyle",
+      "kind": "monster",
+      "attributes": {
+        "strength": 90,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 100,
+        "archery": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "orcish": 100,
+        "thaumaturgy": 100,
+        "dodging": 100,
+        "daedric": 100,
+        "etiquette": 100,
+        "illusion": 100,
+        "climbing": 100,
+        "streetwise": 100
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 19,
+        "maximum": 82
+      },
+      "mobileId": 22,
+      "level": 14,
+      "xpReward": 700,
+      "weight": 300,
+      "minMetalToHit": "mithril",
+      "team": "magic",
+      "attacks": [
+        {
+          "minimumDamage": 10,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "wraith",
+      "kind": "monster",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 10,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 85,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "axe": 100,
+        "dodging": 100,
+        "climbing": 100,
+        "centaurian": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "giantish": 100,
+        "archery": 100,
+        "impish": 100,
+        "etiquette": 100
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 30,
+        "maximum": 90
+      },
+      "mobileId": 23,
+      "level": 15,
+      "xpReward": 750,
+      "weight": 0,
+      "minMetalToHit": "silver",
+      "team": "undead",
+      "lootTableKey": "I",
+      "attacks": [
+        {
+          "minimumDamage": 20,
+          "maximumDamage": 45
+        }
+      ]
+    },
+    {
+      "id": "orc-warlord",
+      "kind": "monster",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 70,
+        "willpower": 80,
+        "agility": 50,
+        "endurance": 75,
+        "personality": 50,
+        "speed": 50,
+        "luck": 50
+      },
+      "skills": {
+        "backstabbing": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "blunt-weapon": 100,
+        "dodging": 100,
+        "dragonish": 100,
+        "etiquette": 100,
+        "alteration": 100,
+        "giantish": 100,
+        "critical-strike": 100,
+        "nymph": 100
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 20,
+        "maximum": 90
+      },
+      "mobileId": 24,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 700,
+      "team": "orcs",
+      "lootTableKey": "T",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 50
+        }
+      ]
+    },
+    {
+      "id": "frost-daedra",
+      "kind": "monster",
+      "attributes": {
+        "strength": 120,
+        "intelligence": 80,
+        "willpower": 30,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 95,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "archery": 100,
+        "centaurian": 100,
+        "daedric": 100,
+        "dodging": 100,
+        "stealth": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "axe": 100,
+        "harpy": 100,
+        "giantish": 100,
+        "orcish": 100
+      },
+      "armor": -25,
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "mobileId": 25,
+      "level": 17,
+      "xpReward": 850,
+      "weight": 800,
+      "minMetalToHit": "mithril",
+      "team": "daedra",
+      "lootTableKey": "J",
+      "attacks": [
+        {
+          "minimumDamage": 50,
+          "maximumDamage": 100
+        }
+      ]
+    },
+    {
+      "id": "fire-daedra",
+      "kind": "monster",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 110,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 90,
+        "speed": 95,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "centaurian": 100,
+        "daedric": 100,
+        "climbing": 100,
+        "stealth": 100,
+        "dragonish": 100,
+        "impish": 100,
+        "critical-strike": 100,
+        "long-blade": 100,
+        "harpy": 100,
+        "giantish": 100,
+        "axe": 100
+      },
+      "armor": 5,
+      "health": {
+        "minimum": 26,
+        "maximum": 138
+      },
+      "mobileId": 26,
+      "level": 17,
+      "xpReward": 850,
+      "weight": 800,
+      "minMetalToHit": "mithril",
+      "team": "daedra",
+      "lootTableKey": "J",
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ]
+    },
+    {
+      "id": "daedroth",
+      "kind": "monster",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 110,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 90,
+        "speed": 100,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "archery": 100,
+        "climbing": 100,
+        "critical-strike": 100,
+        "stealth": 100,
+        "dodging": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "dragonish": 100,
+        "thaumaturgy": 100,
+        "axe": 100,
+        "etiquette": 100
+      },
+      "armor": 5,
+      "health": {
+        "minimum": 27,
+        "maximum": 146
+      },
+      "mobileId": 27,
+      "level": 18,
+      "xpReward": 900,
+      "weight": 400,
+      "minMetalToHit": "mithril",
+      "team": "daedra",
+      "lootTableKey": "E",
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ]
+    },
+    {
+      "id": "vampire",
+      "kind": "monster",
+      "attributes": {
+        "strength": 100,
+        "intelligence": 90,
+        "willpower": 80,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 100,
+        "speed": 100,
+        "luck": 50
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "daedric": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100,
+        "axe": 100,
+        "critical-strike": 100,
+        "giantish": 100,
+        "etiquette": 100,
+        "orcish": 100,
+        "harpy": 100,
+        "thaumaturgy": 100
+      },
+      "armor": -10,
+      "health": {
+        "minimum": 28,
+        "maximum": 154
+      },
+      "mobileId": 28,
+      "level": 19,
+      "xpReward": 950,
+      "weight": 400,
+      "minMetalToHit": "silver",
+      "team": "undead",
+      "lootTableKey": "Q",
+      "attacks": [
+        {
+          "minimumDamage": 20,
+          "maximumDamage": 50
+        }
+      ]
+    },
+    {
+      "id": "daedra-seducer",
+      "kind": "monster",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 60,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 120,
+        "speed": 70,
+        "luck": 50
+      },
+      "skills": {
+        "blunt-weapon": 100,
+        "dragonish": 100,
+        "archery": 100,
+        "daedric": 100,
+        "stealth": 100,
+        "long-blade": 100,
+        "etiquette": 100,
+        "critical-strike": 100,
+        "harpy": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "impish": 100
+      },
+      "armor": 5,
+      "health": {
+        "minimum": 27,
+        "maximum": 146
+      },
+      "mobileId": 29,
+      "level": 19,
+      "xpReward": 950,
+      "weight": 200,
+      "minMetalToHit": "mithril",
+      "team": "daedra",
+      "lootTableKey": "Q",
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ]
+    },
+    {
+      "id": "vampire-ancient",
+      "kind": "monster",
+      "attributes": {
+        "strength": 120,
+        "intelligence": 90,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 100,
+        "speed": 120,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "daedric": 100,
+        "archery": 100,
+        "stealth": 100,
+        "backstabbing": 100,
+        "giantish": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": -25,
+      "health": {
+        "minimum": 30,
+        "maximum": 170
+      },
+      "mobileId": 30,
+      "level": 20,
+      "xpReward": 1000,
+      "weight": 400,
+      "minMetalToHit": "mithril",
+      "team": "undead",
+      "lootTableKey": "Q",
+      "attacks": [
+        {
+          "minimumDamage": 20,
+          "maximumDamage": 60
+        }
+      ]
+    },
+    {
+      "id": "daedra-lord",
+      "kind": "monster",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 110,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 90,
+        "speed": 120,
+        "luck": 50
+      },
+      "skills": {
+        "axe": 100,
+        "blunt-weapon": 100,
+        "etiquette": 100,
+        "dragonish": 100,
+        "critical-strike": 100,
+        "stealth": 100,
+        "archery": 100,
+        "long-blade": 100,
+        "thaumaturgy": 100,
+        "dodging": 100,
+        "hand-to-hand": 100,
+        "daedric": 100
+      },
+      "armor": -50,
+      "health": {
+        "minimum": 35,
+        "maximum": 210
+      },
+      "mobileId": 31,
+      "level": 20,
+      "xpReward": 1000,
+      "weight": 1000,
+      "minMetalToHit": "mithril",
+      "team": "daedra",
+      "lootTableKey": "S",
+      "attacks": [
+        {
+          "minimumDamage": 15,
+          "maximumDamage": 50
+        }
+      ]
+    },
+    {
+      "id": "lich",
+      "kind": "monster",
+      "attributes": {
+        "strength": 80,
+        "intelligence": 120,
+        "willpower": 95,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 80,
+        "luck": 50
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "centaurian": 100,
+        "archery": 100,
+        "critical-strike": 100,
+        "dragonish": 100,
+        "giantish": 100,
+        "orcish": 100,
+        "harpy": 100,
+        "thaumaturgy": 100,
+        "long-blade": 100,
+        "hand-to-hand": 100
+      },
+      "armor": -50,
+      "health": {
+        "minimum": 30,
+        "maximum": 170
+      },
+      "mobileId": 32,
+      "level": 20,
+      "xpReward": 1000,
+      "weight": 300,
+      "minMetalToHit": "mithril",
+      "team": "undead",
+      "lootTableKey": "S",
+      "attacks": [
+        {
+          "minimumDamage": 70,
+          "maximumDamage": 100
+        }
+      ]
+    },
+    {
+      "id": "ancient-lich",
+      "kind": "monster",
+      "attributes": {
+        "strength": 110,
+        "intelligence": 200,
+        "willpower": 95,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 100,
+        "luck": 50
+      },
+      "skills": {
+        "climbing": 100,
+        "blunt-weapon": 100,
+        "etiquette": 100,
+        "dodging": 100,
+        "critical-strike": 100,
+        "thaumaturgy": 100,
+        "long-blade": 100,
+        "archery": 100,
+        "axe": 100,
+        "harpy": 100,
+        "giantish": 100,
+        "orcish": 100
+      },
+      "armor": -60,
+      "health": {
+        "minimum": 30,
+        "maximum": 170
+      },
+      "mobileId": 33,
+      "level": 21,
+      "xpReward": 1050,
+      "weight": 300,
+      "minMetalToHit": "mithril",
+      "team": "undead",
+      "lootTableKey": "S",
+      "attacks": [
+        {
+          "minimumDamage": 70,
+          "maximumDamage": 100
+        }
+      ]
+    },
+    {
+      "id": "dragonling",
+      "kind": "monster",
+      "attributes": {
+        "strength": 250,
+        "intelligence": 30,
+        "willpower": 70,
+        "agility": 100,
+        "endurance": 95,
+        "personality": 50,
+        "speed": 100,
+        "luck": 50
+      },
+      "skills": {
+        "archery": 100,
+        "axe": 100,
+        "centaurian": 100,
+        "critical-strike": 100,
+        "climbing": 100,
+        "stealth": 100,
+        "blunt-weapon": 100,
+        "streetwise": 100,
+        "nymph": 100,
+        "etiquette": 100,
+        "lockpicking": 100,
+        "daedric": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 14,
+        "maximum": 42
+      },
+      "mobileId": 34,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 10000,
+      "team": "dragonlings",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "fire-atronach",
+      "kind": "monster",
+      "attributes": {
+        "strength": 130,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 100,
+        "speed": 60,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "archery": 100,
+        "running": 100,
+        "stealth": 100,
+        "etiquette": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "mobileId": 35,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 1000,
+      "team": "magic",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "iron-atronach",
+      "kind": "monster",
+      "attributes": {
+        "strength": 140,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 100,
+        "speed": 55,
+        "luck": 50
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "archery": 100,
+        "running": 100,
+        "stealth": 100,
+        "daedric": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "mobileId": 36,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 1000,
+      "team": "magic",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "flesh-atronach",
+      "kind": "monster",
+      "attributes": {
+        "strength": 125,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 69,
+        "speed": 61,
+        "luck": 55
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "archery": 100,
+        "running": 100,
+        "stealth": 100,
+        "dragonish": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "mobileId": 37,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 1000,
+      "team": "magic",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "ice-atronach",
+      "kind": "monster",
+      "attributes": {
+        "strength": 150,
+        "intelligence": 78,
+        "willpower": 80,
+        "agility": 90,
+        "endurance": 95,
+        "personality": 69,
+        "speed": 65,
+        "luck": 60
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "centaurian": 100,
+        "running": 100,
+        "stealth": 100,
+        "climbing": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 25,
+        "maximum": 130
+      },
+      "mobileId": 38,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 1000,
+      "team": "magic",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "dragonling-40",
+      "kind": "monster",
+      "attributes": {
+        "strength": 61,
+        "intelligence": 93,
+        "willpower": 80,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 62,
+        "speed": 70,
+        "luck": 60
+      },
+      "skills": {
+        "long-blade": 100,
+        "blunt-weapon": 100,
+        "archery": 100,
+        "running": 100,
+        "stealth": 100,
+        "dragonish": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 14,
+        "maximum": 42
+      },
+      "mobileId": 40,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 10000,
+      "team": "dragonlings",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "dreugh",
+      "kind": "monster",
+      "attributes": {
+        "strength": 71,
+        "intelligence": 84,
+        "willpower": 80,
+        "agility": 80,
+        "endurance": 95,
+        "personality": 62,
+        "speed": 70,
+        "luck": 60
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "daedric": 100,
+        "running": 100,
+        "stealth": 100,
+        "etiquette": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 13,
+        "maximum": 34
+      },
+      "mobileId": 41,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 600,
+      "team": "aquatic",
+      "lootTableKey": "R",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
+    },
+    {
+      "id": "lamia",
+      "kind": "monster",
+      "attributes": {
+        "strength": 75,
+        "intelligence": 84,
+        "willpower": 80,
+        "agility": 85,
+        "endurance": 95,
+        "personality": 62,
+        "speed": 65,
+        "luck": 70
+      },
+      "skills": {
+        "backstabbing": 100,
+        "blunt-weapon": 100,
+        "climbing": 100,
+        "running": 100,
+        "stealth": 100,
+        "dragonish": 100,
+        "illusion": 100,
+        "critical-strike": 100,
+        "axe": 100,
+        "hand-to-hand": 100,
+        "thaumaturgy": 100,
+        "orcish": 100
+      },
+      "armor": 30,
+      "health": {
+        "minimum": 16,
+        "maximum": 58
+      },
+      "mobileId": 42,
+      "level": 16,
+      "xpReward": 800,
+      "weight": 200,
+      "team": "aquatic",
+      "lootTableKey": "R",
+      "attacks": [
+        {
+          "minimumDamage": 5,
+          "maximumDamage": 15
+        }
+      ]
     }
   ],
   "items": [
-    { "id": "iron-longsword", "kind": "unique", "maximumQuantity": 1, "weapon": { "minimumDamage": 2, "maximumDamage": 16, "skill": "long-blade", "handedness": "either", "value": 15, "weight": 18 }, "equipment": { "classifications": ["weapon"], "requiredSlots": 1 } },
-    { "id": "iron-dagger", "kind": "unique", "maximumQuantity": 1 },
-    { "id": "iron-cuirass", "kind": "unique", "maximumQuantity": 1, "equipment": { "classifications": ["torso-armor"], "requiredSlots": 1 } },
-    { "id": "gold-piece", "kind": "fungible", "maximumQuantity": 10000 }
+    {
+      "id": "iron-dagger",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 2,
+      "value": 1,
+      "weapon": {
+        "minimumDamage": 1,
+        "maximumDamage": 6,
+        "material": "iron",
+        "skill": "short-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-tanto",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 3,
+      "value": 3,
+      "weapon": {
+        "minimumDamage": 1,
+        "maximumDamage": 8,
+        "material": "iron",
+        "skill": "short-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-wakazashi",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 8,
+      "value": 8,
+      "weapon": {
+        "minimumDamage": 1,
+        "maximumDamage": 10,
+        "material": "iron",
+        "skill": "short-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-shortsword",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 10,
+      "value": 5,
+      "weapon": {
+        "minimumDamage": 1,
+        "maximumDamage": 8,
+        "material": "iron",
+        "skill": "short-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-broadsword",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 20,
+      "value": 10,
+      "weapon": {
+        "minimumDamage": 1,
+        "maximumDamage": 12,
+        "material": "iron",
+        "skill": "long-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-saber",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 15,
+      "value": 12,
+      "weapon": {
+        "minimumDamage": 3,
+        "maximumDamage": 12,
+        "material": "iron",
+        "skill": "long-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-katana",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 10,
+      "value": 25,
+      "weapon": {
+        "minimumDamage": 3,
+        "maximumDamage": 16,
+        "material": "iron",
+        "skill": "long-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-longsword",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 18,
+      "value": 15,
+      "weapon": {
+        "minimumDamage": 2,
+        "maximumDamage": 16,
+        "material": "iron",
+        "skill": "long-blade",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-mace",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 18,
+      "value": 10,
+      "weapon": {
+        "minimumDamage": 1,
+        "maximumDamage": 12,
+        "material": "iron",
+        "skill": "blunt-weapon",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-battle-axe",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 24,
+      "value": 20,
+      "weapon": {
+        "minimumDamage": 2,
+        "maximumDamage": 12,
+        "material": "iron",
+        "skill": "axe",
+        "handedness": "either"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-one-hand"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-claymore",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 30,
+      "value": 30,
+      "weapon": {
+        "minimumDamage": 2,
+        "maximumDamage": 18,
+        "material": "iron",
+        "skill": "long-blade",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-dai-katana",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 14,
+      "value": 50,
+      "weapon": {
+        "minimumDamage": 3,
+        "maximumDamage": 21,
+        "material": "iron",
+        "skill": "long-blade",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-staff",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 8,
+      "value": 5,
+      "weapon": {
+        "minimumDamage": 1,
+        "maximumDamage": 8,
+        "material": "iron",
+        "skill": "blunt-weapon",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-flail",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 28,
+      "value": 15,
+      "weapon": {
+        "minimumDamage": 2,
+        "maximumDamage": 14,
+        "material": "iron",
+        "skill": "blunt-weapon",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-warhammer",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 28,
+      "value": 20,
+      "weapon": {
+        "minimumDamage": 3,
+        "maximumDamage": 18,
+        "material": "iron",
+        "skill": "blunt-weapon",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-war-axe",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 30,
+      "value": 20,
+      "weapon": {
+        "minimumDamage": 2,
+        "maximumDamage": 16,
+        "material": "iron",
+        "skill": "axe",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-short-bow",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 4,
+      "value": 10,
+      "weapon": {
+        "minimumDamage": 4,
+        "maximumDamage": 16,
+        "material": "iron",
+        "skill": "archery",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-long-bow",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 6,
+      "value": 20,
+      "weapon": {
+        "minimumDamage": 4,
+        "maximumDamage": 18,
+        "material": "iron",
+        "skill": "archery",
+        "handedness": "both"
+      },
+      "equipment": {
+        "classifications": [
+          "weapon-two-hand"
+        ],
+        "requiredSlots": 2,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "iron-helm",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 10,
+      "value": 80,
+      "armor": {
+        "material": "iron",
+        "part": "head"
+      },
+      "equipment": {
+        "classifications": [
+          "armor-head"
+        ],
+        "requiredSlots": 1
+      }
+    },
+    {
+      "id": "iron-cuirass",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 50,
+      "value": 100,
+      "armor": {
+        "material": "iron",
+        "part": "chest"
+      },
+      "equipment": {
+        "classifications": [
+          "armor-chest"
+        ],
+        "requiredSlots": 1
+      }
+    },
+    {
+      "id": "iron-right-pauldron",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 8,
+      "value": 60,
+      "armor": {
+        "material": "iron",
+        "part": "right-arm"
+      },
+      "equipment": {
+        "classifications": [
+          "armor-right-arm"
+        ],
+        "requiredSlots": 1
+      }
+    },
+    {
+      "id": "iron-left-pauldron",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 8,
+      "value": 60,
+      "armor": {
+        "material": "iron",
+        "part": "left-arm"
+      },
+      "equipment": {
+        "classifications": [
+          "armor-left-arm"
+        ],
+        "requiredSlots": 1
+      }
+    },
+    {
+      "id": "iron-gauntlets",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 5,
+      "value": 50,
+      "armor": {
+        "material": "iron",
+        "part": "hands"
+      },
+      "equipment": {
+        "classifications": [
+          "armor-hands"
+        ],
+        "requiredSlots": 1
+      }
+    },
+    {
+      "id": "iron-greaves",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 10,
+      "value": 80,
+      "armor": {
+        "material": "iron",
+        "part": "legs"
+      },
+      "equipment": {
+        "classifications": [
+          "armor-legs"
+        ],
+        "requiredSlots": 1
+      }
+    },
+    {
+      "id": "iron-boots",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 8,
+      "value": 50,
+      "armor": {
+        "material": "iron",
+        "part": "feet"
+      },
+      "equipment": {
+        "classifications": [
+          "armor-feet"
+        ],
+        "requiredSlots": 1
+      }
+    },
+    {
+      "id": "buckler",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 8,
+      "value": 10,
+      "shield": {
+        "armor": 1
+      },
+      "equipment": {
+        "classifications": [
+          "shield"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "round-shield",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 18,
+      "value": 20,
+      "shield": {
+        "armor": 2
+      },
+      "equipment": {
+        "classifications": [
+          "shield"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "kite-shield",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 30,
+      "value": 30,
+      "shield": {
+        "armor": 3
+      },
+      "equipment": {
+        "classifications": [
+          "shield"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "tower-shield",
+      "maximumQuantity": 1,
+      "kind": "unique",
+      "weight": 50,
+      "value": 50,
+      "shield": {
+        "armor": 4
+      },
+      "equipment": {
+        "classifications": [
+          "shield"
+        ],
+        "requiredSlots": 1,
+        "exclusiveGroup": "hands"
+      }
+    },
+    {
+      "id": "gold-piece",
+      "maximumQuantity": 1000000000,
+      "kind": "fungible",
+      "weight": 0,
+      "value": 1
+    },
+    {
+      "id": "arrow",
+      "maximumQuantity": 1000000000,
+      "kind": "fungible",
+      "weight": 1,
+      "value": 2
+    }
   ],
   "equipmentSlots": [
-    { "id": "right-hand", "allowedClassifications": ["weapon"] },
-    { "id": "torso", "allowedClassifications": ["torso-armor"] }
+    {
+      "id": "amulet0",
+      "allowedClassifications": []
+    },
+    {
+      "id": "amulet1",
+      "allowedClassifications": []
+    },
+    {
+      "id": "bracelet0",
+      "allowedClassifications": []
+    },
+    {
+      "id": "bracelet1",
+      "allowedClassifications": []
+    },
+    {
+      "id": "ring0",
+      "allowedClassifications": []
+    },
+    {
+      "id": "ring1",
+      "allowedClassifications": []
+    },
+    {
+      "id": "bracer0",
+      "allowedClassifications": []
+    },
+    {
+      "id": "bracer1",
+      "allowedClassifications": []
+    },
+    {
+      "id": "mark0",
+      "allowedClassifications": []
+    },
+    {
+      "id": "mark1",
+      "allowedClassifications": []
+    },
+    {
+      "id": "crystal0",
+      "allowedClassifications": []
+    },
+    {
+      "id": "crystal1",
+      "allowedClassifications": []
+    },
+    {
+      "id": "head",
+      "allowedClassifications": [
+        "armor-head"
+      ]
+    },
+    {
+      "id": "right-arm",
+      "allowedClassifications": [
+        "armor-right-arm"
+      ]
+    },
+    {
+      "id": "cloak1",
+      "allowedClassifications": []
+    },
+    {
+      "id": "left-arm",
+      "allowedClassifications": [
+        "armor-left-arm"
+      ]
+    },
+    {
+      "id": "cloak2",
+      "allowedClassifications": []
+    },
+    {
+      "id": "chest-clothes",
+      "allowedClassifications": []
+    },
+    {
+      "id": "chest-armor",
+      "allowedClassifications": [
+        "armor-chest"
+      ]
+    },
+    {
+      "id": "right-hand",
+      "allowedClassifications": [
+        "weapon-one-hand",
+        "weapon-two-hand"
+      ]
+    },
+    {
+      "id": "gloves",
+      "allowedClassifications": [
+        "armor-hands"
+      ]
+    },
+    {
+      "id": "left-hand",
+      "allowedClassifications": [
+        "weapon-one-hand",
+        "shield"
+      ]
+    },
+    {
+      "id": "legs-armor",
+      "allowedClassifications": [
+        "armor-legs"
+      ]
+    },
+    {
+      "id": "legs-clothes",
+      "allowedClassifications": []
+    },
+    {
+      "id": "feet",
+      "allowedClassifications": [
+        "armor-feet"
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "id": "melee-attack",
+      "tags": [
+        "attack",
+        "melee"
+      ],
+      "reach": 2.25,
+      "cooldownSeconds": 0.75,
+      "interpretation": "player-equipped-melee",
+      "skill": "equipped",
+      "staminaCost": 5
+    },
+    {
+      "id": "rat-bite",
+      "tags": [
+        "attack",
+        "melee"
+      ],
+      "interpretation": "fixed-melee",
+      "skill": "hand-to-hand",
+      "cooldownSeconds": 1.5,
+      "attackRangeIndex": 0
+    },
+    {
+      "id": "skeleton-strike",
+      "tags": [
+        "attack",
+        "melee"
+      ],
+      "interpretation": "fixed-melee",
+      "skill": "long-blade",
+      "cooldownSeconds": 2,
+      "attackRangeIndex": 0
+    },
+    {
+      "id": "thief-strike",
+      "tags": [
+        "attack",
+        "melee"
+      ],
+      "interpretation": "fixed-melee",
+      "skill": "short-blade",
+      "cooldownSeconds": 1.2,
+      "minimumDamage": 2,
+      "maximumDamage": 8
+    },
+    {
+      "id": "power-attack",
+      "tags": [
+        "attack",
+        "melee"
+      ],
+      "reach": 2.25,
+      "cooldownSeconds": 1.2,
+      "interpretation": "player-equipped-melee",
+      "skill": "equipped",
+      "staminaCost": 25
+    }
+  ],
+  "lootTables": [
+    {
+      "key": "-",
+      "gold": {
+        "minimum": 0,
+        "maximum": 0
+      },
+      "categories": {}
+    },
+    {
+      "key": "A",
+      "gold": {
+        "minimum": 1,
+        "maximum": 10
+      },
+      "categories": {
+        "misc2": 2,
+        "armor": 5,
+        "weapons": 5,
+        "magic": 2,
+        "clothing": 4
+      }
+    },
+    {
+      "key": "B",
+      "gold": {
+        "minimum": 0,
+        "maximum": 0
+      },
+      "categories": {
+        "plant1": 10,
+        "plant2": 10
+      }
+    },
+    {
+      "key": "C",
+      "gold": {
+        "minimum": 2,
+        "maximum": 20
+      },
+      "categories": {
+        "plant1": 10,
+        "plant2": 10,
+        "creature1": 5,
+        "creature2": 5,
+        "creature3": 5,
+        "misc1": 5,
+        "misc2": 2,
+        "armor": 5,
+        "weapons": 25,
+        "magic": 3,
+        "books": 2,
+        "religious": 2
+      }
+    },
+    {
+      "key": "D",
+      "gold": {
+        "minimum": 1,
+        "maximum": 4
+      },
+      "categories": {
+        "plant1": 6,
+        "plant2": 6,
+        "creature1": 6,
+        "creature2": 6,
+        "creature3": 6,
+        "misc1": 6,
+        "religious": 4
+      }
+    },
+    {
+      "key": "E",
+      "gold": {
+        "minimum": 20,
+        "maximum": 80
+      },
+      "categories": {
+        "misc2": 1,
+        "armor": 10,
+        "weapons": 10,
+        "magic": 3,
+        "clothing": 4,
+        "books": 2,
+        "religious": 15
+      }
+    },
+    {
+      "key": "F",
+      "gold": {
+        "minimum": 4,
+        "maximum": 30
+      },
+      "categories": {
+        "plant1": 2,
+        "plant2": 2,
+        "creature1": 5,
+        "creature2": 5,
+        "creature3": 5,
+        "misc1": 2,
+        "misc2": 3,
+        "armor": 50,
+        "weapons": 50,
+        "magic": 1
+      }
+    },
+    {
+      "key": "G",
+      "gold": {
+        "minimum": 3,
+        "maximum": 15
+      },
+      "categories": {
+        "misc2": 3,
+        "armor": 50,
+        "weapons": 50,
+        "magic": 1,
+        "clothing": 5
+      }
+    },
+    {
+      "key": "H",
+      "gold": {
+        "minimum": 2,
+        "maximum": 10
+      },
+      "categories": {
+        "weapons": 100,
+        "magic": 1,
+        "clothing": 2
+      }
+    },
+    {
+      "key": "I",
+      "gold": {
+        "minimum": 0,
+        "maximum": 0
+      },
+      "categories": {
+        "magic": 2,
+        "religious": 5
+      }
+    },
+    {
+      "key": "J",
+      "gold": {
+        "minimum": 50,
+        "maximum": 150
+      },
+      "categories": {
+        "armor": 5,
+        "weapons": 5,
+        "magic": 3
+      }
+    },
+    {
+      "key": "K",
+      "gold": {
+        "minimum": 1,
+        "maximum": 10
+      },
+      "categories": {
+        "plant1": 3,
+        "plant2": 3,
+        "creature1": 3,
+        "creature2": 3,
+        "creature3": 3,
+        "misc1": 3,
+        "misc2": 2,
+        "armor": 5,
+        "weapons": 5,
+        "magic": 3,
+        "books": 5,
+        "religious": 100
+      }
+    },
+    {
+      "key": "L",
+      "gold": {
+        "minimum": 1,
+        "maximum": 20
+      },
+      "categories": {
+        "creature1": 3,
+        "creature2": 3,
+        "creature3": 3,
+        "misc1": 3,
+        "misc2": 5,
+        "armor": 50,
+        "weapons": 50,
+        "magic": 1,
+        "clothing": 75,
+        "religious": 3
+      }
+    },
+    {
+      "key": "M",
+      "gold": {
+        "minimum": 1,
+        "maximum": 15
+      },
+      "categories": {
+        "plant1": 1,
+        "plant2": 1,
+        "creature1": 1,
+        "creature2": 1,
+        "creature3": 1,
+        "misc1": 2,
+        "misc2": 3,
+        "armor": 10,
+        "weapons": 10,
+        "magic": 1,
+        "clothing": 15,
+        "books": 2,
+        "religious": 1
+      }
+    },
+    {
+      "key": "N",
+      "gold": {
+        "minimum": 1,
+        "maximum": 80
+      },
+      "categories": {
+        "plant1": 5,
+        "plant2": 5,
+        "creature1": 5,
+        "creature2": 5,
+        "creature3": 5,
+        "misc1": 5,
+        "misc2": 2,
+        "armor": 5,
+        "weapons": 5,
+        "magic": 1,
+        "clothing": 20,
+        "books": 5,
+        "religious": 5
+      }
+    },
+    {
+      "key": "O",
+      "gold": {
+        "minimum": 5,
+        "maximum": 20
+      },
+      "categories": {
+        "plant1": 1,
+        "plant2": 1,
+        "creature1": 1,
+        "creature2": 1,
+        "creature3": 1,
+        "misc1": 1,
+        "armor": 10,
+        "weapons": 15,
+        "magic": 2
+      }
+    },
+    {
+      "key": "P",
+      "gold": {
+        "minimum": 5,
+        "maximum": 20
+      },
+      "categories": {
+        "plant1": 5,
+        "plant2": 5,
+        "creature1": 5,
+        "creature2": 5,
+        "creature3": 5,
+        "misc1": 5,
+        "misc2": 5,
+        "armor": 5,
+        "weapons": 10,
+        "magic": 2,
+        "books": 10
+      }
+    },
+    {
+      "key": "Q",
+      "gold": {
+        "minimum": 20,
+        "maximum": 80
+      },
+      "categories": {
+        "plant1": 2,
+        "plant2": 2,
+        "creature1": 8,
+        "creature2": 8,
+        "creature3": 8,
+        "misc1": 2,
+        "misc2": 3,
+        "armor": 10,
+        "weapons": 25,
+        "magic": 3,
+        "clothing": 35,
+        "books": 5
+      }
+    },
+    {
+      "key": "R",
+      "gold": {
+        "minimum": 5,
+        "maximum": 20
+      },
+      "categories": {
+        "creature1": 3,
+        "creature2": 3,
+        "creature3": 3,
+        "misc1": 5,
+        "armor": 5,
+        "weapons": 15,
+        "magic": 2
+      }
+    },
+    {
+      "key": "S",
+      "gold": {
+        "minimum": 50,
+        "maximum": 125
+      },
+      "categories": {
+        "plant1": 5,
+        "plant2": 5,
+        "creature1": 5,
+        "creature2": 5,
+        "creature3": 5,
+        "misc1": 15,
+        "misc2": 5,
+        "armor": 10,
+        "weapons": 10,
+        "magic": 3,
+        "books": 5
+      }
+    },
+    {
+      "key": "T",
+      "gold": {
+        "minimum": 20,
+        "maximum": 80
+      },
+      "categories": {
+        "armor": 100,
+        "weapons": 100,
+        "magic": 1
+      }
+    },
+    {
+      "key": "U",
+      "gold": {
+        "minimum": 7,
+        "maximum": 30
+      },
+      "categories": {
+        "plant1": 5,
+        "plant2": 5,
+        "creature1": 5,
+        "creature2": 5,
+        "creature3": 5,
+        "misc1": 10,
+        "misc2": 2,
+        "armor": 10,
+        "weapons": 10,
+        "magic": 2,
+        "books": 2,
+        "religious": 10
+      }
+    }
   ],
   "hudResources": [
-    { "id": "health", "label": "Health", "track": "health" },
-    { "id": "stamina", "label": "Stamina", "track": "stamina" },
-    { "id": "magicka", "label": "Magicka", "track": "magicka" }
+    {
+      "id": "health",
+      "label": "Health",
+      "track": "health"
+    },
+    {
+      "id": "stamina",
+      "label": "Stamina",
+      "track": "stamina"
+    },
+    {
+      "id": "magicka",
+      "label": "Magicka",
+      "track": "magicka"
+    }
+  ],
+  "lootCategoryPools": [
+    {
+      "id": "plant1",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "plant2",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "creature1",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "creature2",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "creature3",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "misc1",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "misc2",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "armor",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "weapons",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "magic",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "clothing",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "books",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    },
+    {
+      "id": "religious",
+      "status": "deferred",
+      "reason": "No normalized item pool is loaded by this catalog-only slice."
+    }
+  ],
+  "donorErrata": [
+    "mobile-39-horse-is-explicitly-absent",
+    "chain2-material-alias-is-not-authored",
+    "bows-retain-donor-both-hands-policy",
+    "loot-matrix-uses-fall-exe-errata"
   ]
 }

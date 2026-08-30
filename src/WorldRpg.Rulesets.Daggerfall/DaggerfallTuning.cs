@@ -3,33 +3,20 @@ using System.Text.Json;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
-internal sealed record DaggerfallCombatTuning(int PlayerMeleeStaminaCost, double PlayerMeleeCooldownSeconds)
-{
-    internal DaggerfallCombatTuning Validate()
-    {
-        if (PlayerMeleeStaminaCost is < 1 or > 10_000) throw new ArgumentOutOfRangeException(nameof(PlayerMeleeStaminaCost));
-        if (!double.IsFinite(PlayerMeleeCooldownSeconds) || PlayerMeleeCooldownSeconds <= 0d || PlayerMeleeCooldownSeconds > 60d) throw new ArgumentOutOfRangeException(nameof(PlayerMeleeCooldownSeconds));
-        return this;
-    }
-}
-
 internal sealed record DaggerfallTuning(
     PlayerControlTuning PlayerControl,
     SpatialTuning Spatial,
-    DaggerfallCombatTuning Combat,
     FirstPersonCameraTuning Camera)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true),
         new SpatialTuning(.5, 32, 32, 2),
-        new DaggerfallCombatTuning(5, .75d),
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d));
 
     internal DaggerfallTuning Validate() => this with
     {
         PlayerControl = PlayerControl.Validate(),
         Spatial = Spatial.Validate(),
-        Combat = Combat.Validate(),
         Camera = Camera.Validate(),
     };
 
@@ -39,7 +26,6 @@ internal sealed record DaggerfallTuning(
         JsonElement root = document.RootElement;
         JsonElement controls = root.GetProperty("playerControl");
         JsonElement spatial = root.GetProperty("spatial");
-        JsonElement combat = root.GetProperty("combat");
         JsonElement camera = root.GetProperty("camera");
         return new DaggerfallTuning(
             new PlayerControlTuning(
@@ -55,9 +41,6 @@ internal sealed record DaggerfallTuning(
                 checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
                 checked((uint)spatial.GetProperty("navigationChunkSize").GetInt32()),
                 checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32())),
-            new DaggerfallCombatTuning(
-                combat.GetProperty("playerMeleeStaminaCost").GetInt32(),
-                combat.GetProperty("playerMeleeCooldownSeconds").GetDouble()),
             new FirstPersonCameraTuning(
                 camera.GetProperty("eyeHeight").GetSingle(),
                 camera.GetProperty("fieldOfViewYDegrees").GetDouble(),

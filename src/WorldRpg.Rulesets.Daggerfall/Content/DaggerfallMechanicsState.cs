@@ -33,26 +33,18 @@ internal sealed class DaggerfallMechanicsState
         ValidateVitals(vitals);
         return new ActorMechanicsState(
             new EntityId(entityId),
-            InitialStats(definition.Stats, vitals),
+            InitialStats(definition, vitals),
             InitialTracks(vitals));
     }
 
     private static IEnumerable<(ExactStatDefinition Definition, ExactValue Base)> InitialStats(
-        DaggerfallStatBases stats,
+        DaggerfallActorDefinition actor,
         DaggerfallVitalValues vitals)
     {
-        yield return Stat(DaggerfallMechanicsIds.Strength, stats.Strength);
-        yield return Stat(DaggerfallMechanicsIds.Intelligence, stats.Intelligence);
-        yield return Stat(DaggerfallMechanicsIds.Willpower, stats.Willpower);
-        yield return Stat(DaggerfallMechanicsIds.Agility, stats.Agility);
-        yield return Stat(DaggerfallMechanicsIds.Endurance, stats.Endurance);
-        yield return Stat(DaggerfallMechanicsIds.Personality, stats.Personality);
-        yield return Stat(DaggerfallMechanicsIds.Speed, stats.Speed);
-        yield return Stat(DaggerfallMechanicsIds.Luck, stats.Luck);
-        yield return Stat(DaggerfallMechanicsIds.Reflexes, stats.Reflexes);
-        yield return Stat(DaggerfallMechanicsIds.LongBlade, stats.LongBlade);
-        yield return Stat(DaggerfallMechanicsIds.HandToHand, stats.HandToHand);
-        yield return Stat(DaggerfallMechanicsIds.Dodging, stats.Dodging);
+        foreach ((DaggerfallStatId id, int value) in actor.Stats.Values)
+        {
+            yield return Stat(id, value);
+        }
         yield return Stat(DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
         yield return Stat(DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
         yield return Stat(DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);

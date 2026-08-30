@@ -54,6 +54,19 @@ public sealed class NormalizedPrivateersHoldContentTests
         Assert.Contains("missing actor 'missing-actor'", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void RejectsDuplicateScenarioProperties()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+
+        DaggerfallContentException exception = Assert.Throws<DaggerfallContentException>(() =>
+            PrivateersHoldContent.Read(GeneratedContent(root), Encoding.UTF8.GetBytes(payload.Replace("\"ruleset\": \"daggerfall\"", "\"ruleset\": \"daggerfall\", \"ruleset\": \"daggerfall\"", StringComparison.Ordinal)), definitions));
+
+        Assert.Contains("repeats property 'ruleset'", exception.Message, StringComparison.Ordinal);
+    }
+
     private static ProductContent GeneratedContent(string root)
     {
         string contentRoot = Path.Combine(root, "content");

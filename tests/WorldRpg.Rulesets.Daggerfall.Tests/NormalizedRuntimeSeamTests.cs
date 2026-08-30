@@ -49,7 +49,6 @@ public sealed class NormalizedRuntimeSeamTests
             new ContentArtifact("mesh/hold.json", Hash),
             new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
             new PlayerInitialLook(0, 0),
-            [],
             [new NormalizedMaterial(3, "texture/wall.png", Hash)],
             new Dictionary<long, NormalizedActorSprite>
             {

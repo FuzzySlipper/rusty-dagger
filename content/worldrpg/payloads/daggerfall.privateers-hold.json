@@ -10,27 +10,7 @@
     "look": {
       "yawRadians": 3.1415927,
       "pitchRadians": 0
-    },
-    "loadout": [
-      {
-        "item": "iron-longsword",
-        "entityId": 1001,
-        "equipSlot": "right-hand"
-      },
-      {
-        "item": "iron-dagger",
-        "entityId": 1002
-      },
-      {
-        "item": "iron-cuirass",
-        "entityId": 1003,
-        "equipSlot": "torso"
-      },
-      {
-        "item": "gold-piece",
-        "quantity": 25
-      }
-    ]
+    }
   },
   "placements": [
     {
