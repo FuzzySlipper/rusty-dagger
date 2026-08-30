@@ -109,7 +109,7 @@ internal sealed class CombatModule
             return;
         }
         int damage = Math.Max(1, checked(rawDamage + StrengthModifier(attacker) + attack.DamageBonus));
-        ExactTrack targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
+        ActorTrackRead targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
         ExactTrackSetReceipt change = target.Mechanics.SetTrack(
             TrackId.Parse(HealthTrack),
             new ExactValue(checked(targetHealth.Current.Raw - damage)),
@@ -126,7 +126,7 @@ internal sealed class CombatModule
 
     private bool SpendPlayerStamina(Combatant player, int staminaCost, FactBuffer<IProductFact> facts)
     {
-        ExactTrack stamina = player.Mechanics.ReadTrack(TrackId.Parse(StaminaTrack));
+        ActorTrackRead stamina = player.Mechanics.ReadTrack(TrackId.Parse(StaminaTrack));
         if (stamina.Current.Raw < staminaCost)
         {
             facts.Append(new AttackRejectedFact(AttackRejection.InsufficientStamina));

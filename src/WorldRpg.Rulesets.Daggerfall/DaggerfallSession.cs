@@ -118,6 +118,8 @@ internal sealed class DaggerfallSession : IGameSession
             _rewards = new DaggerfallRewardReactions(
                 State.Inventory,
                 State.Progression,
+                State.Actors.Player.Mechanics,
+                playerDefinition,
                 _random,
                 authored,
                 definitions,
