@@ -8,6 +8,13 @@ internal readonly record struct DaggerfallItemId(string Value);
 internal readonly record struct DaggerfallEquipmentSlotId(string Value);
 internal readonly record struct DaggerfallStatId(string Value);
 internal readonly record struct DaggerfallTrackId(string Value);
+internal readonly record struct DaggerfallActionId(string Value);
+
+internal static class DaggerfallActorIdentity
+{
+    // The compiled session reserves this identity for the authored player.
+    internal const long PlayerEntityId = 1;
+}
 
 internal static class DaggerfallMechanicsIds
 {
@@ -46,9 +53,8 @@ internal sealed record DaggerfallVitalValues(int HealthMaximum, int StaminaMaxim
 internal sealed record DaggerfallVitalRange(int Minimum, int Maximum);
 internal sealed record DaggerfallCombatProfile(DaggerfallTrackId Health, DaggerfallTrackId? AttackCost);
 internal sealed record DaggerfallAttackRange(int MinimumDamage, int MaximumDamage);
-internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds);
-internal sealed record DaggerfallRewardPolicy(int ExperienceReward, LootDefinition? Loot = null);
-internal sealed record LootDefinition(string TableKey, DaggerfallItemId ItemId, int MinimumQuantity, int MaximumQuantity);
+internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds, string? Material = null, int DamageBonus = 0);
+internal sealed record DaggerfallRewardPolicy(int ExperienceReward);
 internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
 internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout)
 {
@@ -67,7 +73,7 @@ internal sealed record DaggerfallItemDefinition(DaggerfallItemId Id, DaggerfallI
 }
 internal sealed record DaggerfallHudResourceDefinition(string Id, string Label, DaggerfallTrackId Track);
 /// <summary>Action-owned damage is allowed only for a fixed action without a donor actor range (the thief).</summary>
-internal sealed record DaggerfallActionDefinition(string Id, IReadOnlyList<string> Tags, string Interpretation, string Skill, int? AttackRangeIndex, int? MinimumDamage, int? MaximumDamage, int? StaminaCost, double? Reach, double? CooldownSeconds);
+internal sealed record DaggerfallActionDefinition(string Id, IReadOnlyList<string> Tags, string Interpretation, string Skill, int? AttackRangeIndex, int? MinimumDamage, int? MaximumDamage, int? StaminaCost, double? Reach, double? CooldownSeconds, int DamageBonus = 0);
 internal sealed record DaggerfallLootTableDefinition(string Key, int MinimumGold, int MaximumGold, IReadOnlyDictionary<string, int> Categories);
 /// <summary>Catalog metadata deliberately retained as data until a later ruleset-owned loot slice interprets it.</summary>
 internal sealed record DaggerfallDeferredLootCategoryPool(string Id, string Status, string Reason);

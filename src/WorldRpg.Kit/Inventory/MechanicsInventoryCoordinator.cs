@@ -52,6 +52,24 @@ public sealed record UniqueItemMaterialization(string Identity, ulong EntityId, 
     }
 }
 
+/// <summary>One fungible or unique item admitted as part of one atomic grant.</summary>
+public sealed record InventoryAtomicGrant(
+    InventoryItemId Item,
+    ulong Quantity = 1,
+    string? Identity = null,
+    ulong? EntityId = null)
+{
+    public InventoryAtomicGrant Validate()
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(Item.Value);
+        ArgumentOutOfRangeException.ThrowIfZero(Quantity);
+        bool unique = EntityId is not null || Identity is not null;
+        if (unique && (EntityId is null || EntityId == 0 || string.IsNullOrWhiteSpace(Identity)))
+            throw new ArgumentException("Unique atomic grants require both an identity and entity id.", nameof(EntityId));
+        return this;
+    }
+}
+
 public sealed record EquipmentAssignment(EquipmentSlotId Slot, UniqueInventoryItem Item);
 
 /// <summary>A copied managed equipment view joined to its contained item definitions.</summary>
@@ -107,6 +125,39 @@ public sealed class MechanicsInventoryCoordinator
     {
         grant.Validate();
         return _world.Grant(_owner, RequireDefinition(grant.Item), grant.Quantity);
+    }
+
+    /// <summary>
+    /// Applies fungible grants and unique materializations against one
+    /// detached Engine inventory candidate, publishing only after every item
+    /// validates. This keeps multi-drop rewards atomic without becoming a
+    /// second inventory authority.
+    /// </summary>
+    public void GrantAtomic(IEnumerable<InventoryAtomicGrant> grants)
+    {
+        ArgumentNullException.ThrowIfNull(grants);
+        InventoryAtomicGrant[] values = grants.Select(grant => grant.Validate()).ToArray();
+        if (values.Length == 0) throw new ArgumentException("At least one atomic grant is required.", nameof(grants));
+        InventoryWorldCandidate candidate = _world.Prepare();
+        foreach (InventoryAtomicGrant grant in values)
+        {
+            ItemDefinition definition = RequireDefinition(grant.Item);
+            if (grant.EntityId is ulong entityId)
+            {
+                if (definition.Kind != ItemKind.Unique || grant.Quantity != 1)
+                    throw new InvalidOperationException($"Atomic unique grant '{grant.Item.Value}' has an invalid item shape.");
+                candidate.MaterializeUnique(
+                    new ItemState(new EntityId(entityId), definition),
+                    _owner);
+            }
+            else
+            {
+                if (definition.Kind != ItemKind.Fungible)
+                    throw new InvalidOperationException($"Atomic stack grant '{grant.Item.Value}' requires a fungible item.");
+                candidate.Grant(_owner, definition, grant.Quantity);
+            }
+        }
+        candidate.Publish();
     }
 
     public InventoryMutationReceipt Consume(InventoryConsume consume)
@@ -243,8 +294,20 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
 
     private EntityId RequireEntity(UniqueInventoryItem item)
     {
-        if (!_knownItems.TryGetValue(item.EntityId, out InventoryItemId definition)
-            || definition != item.Definition)
+        if (!_knownItems.TryGetValue(item.EntityId, out InventoryItemId definition))
+        {
+            InventoryView current = _world.Read(_owner);
+            UniqueInventoryItem? observed = current.UniqueItems
+                .Where(value => value.Entity.Value == item.EntityId)
+                .Select(value => (UniqueInventoryItem?)new UniqueInventoryItem(value.Entity.Value, new InventoryItemId(value.Definition.Value)))
+                .SingleOrDefault();
+            if (observed is UniqueInventoryItem found)
+            {
+                definition = found.Definition;
+                _knownItems[item.EntityId] = definition;
+            }
+        }
+        if (definition != item.Definition)
         {
             throw new InvalidOperationException($"Unique item {item.EntityId} is not known to this coordinator.");
         }

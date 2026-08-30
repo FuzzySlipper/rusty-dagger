@@ -2866,7 +2866,8 @@
       "cooldownSeconds": 1.2,
       "interpretation": "player-equipped-melee",
       "skill": "equipped",
-      "staminaCost": 25
+      "staminaCost": 25,
+      "damageBonus": 4
     }
   ],
   "lootTables": [

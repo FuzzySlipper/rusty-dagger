@@ -55,6 +55,47 @@ public sealed class MechanicsInventoryCoordinatorTests
     }
 
     [Fact]
+    public void Atomic_grants_publish_all_items_or_none()
+    {
+        EntityId owner = new(7);
+        InventoryWorld world = CreateWorld(owner);
+        ItemDefinition gold = Fungible("gold", maximumQuantity: 100);
+        ItemDefinition sword = UniqueEquipment("sword");
+        MechanicsInventoryCoordinator inventory = new(
+            world,
+            owner,
+            new Dictionary<InventoryItemId, ItemDefinition>
+            {
+                [new InventoryItemId("gold")] = gold,
+                [new InventoryItemId("sword")] = sword,
+            });
+
+        Assert.Throws<InvalidOperationException>(() => inventory.GrantAtomic(
+        [
+            new InventoryAtomicGrant(new InventoryItemId("gold"), 3),
+            new InventoryAtomicGrant(new InventoryItemId("missing"), 1),
+        ]));
+        Assert.Empty(inventory.Read().Stacks);
+        Assert.Empty(inventory.Read().UniqueItems);
+
+        Assert.Throws<InvalidOperationException>(() => inventory.GrantAtomic(
+        [
+            new InventoryAtomicGrant(new InventoryItemId("sword"), Identity: "loot:sword", EntityId: 44),
+            new InventoryAtomicGrant(new InventoryItemId("missing"), 1),
+        ]));
+        Assert.Empty(inventory.Read().UniqueItems);
+
+        inventory.GrantAtomic(
+        [
+            new InventoryAtomicGrant(new InventoryItemId("gold"), 3),
+            new InventoryAtomicGrant(new InventoryItemId("sword"), Identity: "loot:sword", EntityId: 44),
+        ]);
+        inventory.GrantAtomic([new InventoryAtomicGrant(new InventoryItemId("gold"), 2)]);
+        Assert.Equal(5UL, inventory.Read().Stacks.Single().Quantity);
+        Assert.Equal(new EntityId(44), inventory.Read().UniqueItems.Single().Entity);
+    }
+
+    [Fact]
     public void Materialize_equip_unequip_and_swap_use_managed_item_and_equipment_state()
     {
         EntityId owner = new(7);

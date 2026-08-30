@@ -19,7 +19,7 @@ internal sealed class DaggerfallOutcomePresentation(PresentationState presentati
                     AttackRejection.NoTargetInReach => "No target in melee reach",
                     AttackRejection.Cooldown => "Cooldown",
                     AttackRejection.InsufficientStamina => "Too exhausted to attack",
-                    AttackRejection.RightHandWeaponRequired => "No melee weapon equipped",
+                    AttackRejection.InsufficientWeaponMaterial => "Weapon material cannot harm this target",
                     AttackRejection.TargetDefeated => "Target already defeated",
                     _ => "Melee request rejected",
                 });

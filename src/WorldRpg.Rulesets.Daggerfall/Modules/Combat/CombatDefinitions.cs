@@ -1,15 +1,18 @@
+using WorldRpg.Rulesets.Daggerfall.Content;
+
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
 /// <summary>
 /// An explicit, exact-id request supplied by a future targeting owner or focused tests.
 /// This seam performs no target acquisition, proximity, sight, encounter, or AI work.
 /// </summary>
-internal readonly record struct ExplicitMeleeRequest(long AttackerId, long TargetId, ulong Generation, ulong SimulationStep, double FixedDeltaSeconds)
+internal readonly record struct ExplicitMeleeRequest(long AttackerId, long TargetId, ulong Generation, ulong SimulationStep, double FixedDeltaSeconds, DaggerfallActionId? Action = null)
 {
     internal ExplicitMeleeRequest Validate()
     {
         if (AttackerId <= 0 || TargetId <= 0 || AttackerId == TargetId) throw new ArgumentOutOfRangeException(nameof(AttackerId));
         if (!double.IsFinite(FixedDeltaSeconds) || FixedDeltaSeconds <= 0d) throw new ArgumentOutOfRangeException(nameof(FixedDeltaSeconds));
+        if (Action is DaggerfallActionId action && string.IsNullOrWhiteSpace(action.Value)) throw new ArgumentException("Action identity cannot be empty.", nameof(Action));
         return this;
     }
 }
