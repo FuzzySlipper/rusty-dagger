@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Publication;
 using Daggerfall.Import.Normalized;
@@ -40,52 +42,66 @@ internal static class Program
 
     private static ImportPublicationPlan BuildPlan(ToolOptions options)
     {
-        List<DungeonLogicalSource> sources = LoadRequiredSources(options);
+        AdmittedArena2Sources sources = new(options.Arena2Directory);
+        LoadRequiredDungeonSources(sources);
+        LoadClassicMediaSources(sources);
         while (true)
         {
             try
             {
                 DungeonNormalizationRequest request = new(
-                    new DungeonLogicalSourceSet(sources),
+                    new DungeonLogicalSourceSet(sources.DungeonSources),
                     options.Region,
                     options.Location,
                     options.TextureTableMode,
                     DungeonNormalizationQuotas.Default with { MaximumSourceBytes = MaximumTotalSourceBytes });
                 DungeonNormalizationResult result = DungeonNormalizer.Normalize(request);
-                GeneratedSpatialArtifact staticMesh = result.SpatialPublication.StaticMesh;
-                GeneratedSpatialArtifact collisionNavigation = result.SpatialPublication.CollisionNavigation;
-                GeneratedSpatialArtifact resourceCatalog = result.SpatialPublication.ResourceCatalog;
-                return ImportPublicationPlan.Create(
-                    result.Document.Provenance,
-                    [
-                        new ImportPublicationArtifact(staticMesh.RelativePath, staticMesh.Bytes.Span),
-                        new ImportPublicationArtifact(collisionNavigation.RelativePath, collisionNavigation.Bytes.Span, [staticMesh.RelativePath]),
-                        new ImportPublicationArtifact(resourceCatalog.RelativePath, resourceCatalog.Bytes.Span),
-                        new ImportPublicationArtifact(
-                            "normalized.json",
-                            NormalizedImportSerializer.Serialize(result.Document),
-                            [staticMesh.RelativePath, collisionNavigation.RelativePath, resourceCatalog.RelativePath]),
-                    ]);
+
+                Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
+                    Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)));
+                Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
+                    sources.ClassicMediaInputs,
+                    options.ClassicMediaProfile,
+                    new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes));
+                return Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia).Plan;
             }
             catch (InvalidOperationException exception) when (TryRequiredTexture(exception.Message, out string? textureName))
             {
-                sources.Add(LoadSource(options.Arena2Directory, textureName!));
+                sources.LoadDungeon(textureName!);
+            }
+            catch (InvalidOperationException exception) when (TryRequiredDungeonMediaTexture(exception.Message, out string? textureName))
+            {
+                sources.LoadDungeon(textureName!);
+            }
+            catch (InvalidOperationException exception) when (TryMissingDungeonMediaTextures(exception.Message, out IReadOnlyList<string>? textureNames))
+            {
+                foreach (string textureName in textureNames!)
+                {
+                    sources.LoadDungeon(textureName);
+                }
             }
         }
     }
 
-    private static List<DungeonLogicalSource> LoadRequiredSources(ToolOptions options) =>
-    [
-        LoadSource(options.Arena2Directory, "MAPS.BSA"),
-        LoadSource(options.Arena2Directory, "BLOCKS.BSA"),
-        LoadSource(options.Arena2Directory, "ARCH3D.BSA"),
-        LoadSource(options.Arena2Directory, "CLIMATE.PAK"),
-        LoadSource(options.Arena2Directory, "PAL.PAL"),
-    ];
-
-    private static DungeonLogicalSource LoadSource(string arena2Directory, string fileName)
+    private static void LoadRequiredDungeonSources(AdmittedArena2Sources sources)
     {
-        if (!IsKnownSourceName(fileName))
+        foreach (string name in DungeonSourceNames)
+        {
+            sources.LoadDungeon(name);
+        }
+    }
+
+    private static void LoadClassicMediaSources(AdmittedArena2Sources sources)
+    {
+        foreach (string name in ClassicMediaSourceNames)
+        {
+            sources.LoadClassic(name);
+        }
+    }
+
+    private static DungeonLogicalSource ReadSource(string arena2Directory, string fileName)
+    {
+        if (!IsAdmittedSourceName(fileName))
         {
             throw new InvalidOperationException($"'{fileName}' is not an admitted Arena2 source name.");
         }
@@ -111,8 +127,11 @@ internal static class Program
         return new DungeonLogicalSource($"arena2/{fileName}", bytes);
     }
 
-    private static bool IsKnownSourceName(string value) => value is "MAPS.BSA" or "BLOCKS.BSA" or "ARCH3D.BSA" or "CLIMATE.PAK" or "PAL.PAL"
-        || value.Length == "TEXTURE.000".Length
+    private static bool IsAdmittedSourceName(string value) => DungeonSourceNames.Contains(value, StringComparer.Ordinal)
+        || ClassicMediaSourceNames.Contains(value, StringComparer.Ordinal)
+        || IsTextureLeaf(value);
+
+    private static bool IsTextureLeaf(string value) => value.Length == "TEXTURE.000".Length
         && value.StartsWith("TEXTURE.", StringComparison.Ordinal)
         && value[8..].All(char.IsAsciiDigit);
 
@@ -126,7 +145,7 @@ internal static class Program
         }
 
         string candidate = message[prefix.Length..^2];
-        if (!IsKnownSourceName(candidate))
+        if (!IsTextureLeaf(candidate))
         {
             return false;
         }
@@ -134,6 +153,172 @@ internal static class Program
         textureName = candidate;
         return true;
     }
+
+    private static bool TryRequiredDungeonMediaTexture(string message, out string? textureName)
+    {
+        const string prefix = "Arena2 dungeon media requires ";
+        textureName = null;
+        if (!message.StartsWith(prefix, StringComparison.Ordinal) || !message.EndsWith(".", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string candidate = message[prefix.Length..^1];
+        if (!IsTextureLeaf(candidate))
+        {
+            return false;
+        }
+
+        textureName = candidate;
+        return true;
+    }
+
+    private static bool TryMissingDungeonMediaTextures(string message, out IReadOnlyList<string>? textureNames)
+    {
+        const string prefix = "Arena2 dungeon media texture closure does not match normalized references. Missing: [";
+        const string separator = "]. Unneeded: [";
+        textureNames = null;
+        if (!message.StartsWith(prefix, StringComparison.Ordinal) || !message.EndsWith("].", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        int separatorIndex = message.IndexOf(separator, prefix.Length, StringComparison.Ordinal);
+        if (separatorIndex < 0)
+        {
+            return false;
+        }
+
+        string unneeded = message[(separatorIndex + separator.Length)..^2];
+        if (unneeded.Length != 0)
+        {
+            return false;
+        }
+
+        string missing = message[prefix.Length..separatorIndex];
+        string[] names = missing.Length == 0 ? [] : missing.Split(", ", StringSplitOptions.None);
+        if (names.Length == 0 || names.Any(name => !IsTextureLeaf(name)))
+        {
+            return false;
+        }
+
+        textureNames = names.OrderBy(name => name, StringComparer.Ordinal).ToArray();
+        return true;
+    }
+
+    /// <summary>
+    /// Reads the tracked authored UI input through two explicit caller paths.
+    /// The importer itself receives only portable labels and copied bytes, so
+    /// it never gains filesystem authority or discovers a directory.
+    /// </summary>
+    private static Arena2ClassicMediaProfile LoadClassicMediaProfile(string authoredManifestPath, string originalDirectory)
+    {
+        byte[] manifestBytes = ReadBoundedExternalFile(authoredManifestPath, "authored UI manifest");
+        AuthoredUiAssetFileSet manifest = JsonSerializer.Deserialize<AuthoredUiAssetFileSet>(manifestBytes, AuthoredUiJsonOptions)
+            ?? throw new FormatException("The authored UI manifest is empty.");
+        if (manifest.SchemaVersion != AuthoredUiAssetFileSet.CurrentSchemaVersion || manifest.Assets is null || manifest.Assets.Count == 0)
+        {
+            throw new FormatException("The authored UI manifest schema or asset list is not supported.");
+        }
+
+        string originalsRoot = Path.GetFullPath(originalDirectory);
+        if (!Directory.Exists(originalsRoot))
+        {
+            throw new DirectoryNotFoundException($"The authored UI original directory '{originalsRoot}' was not found.");
+        }
+
+        HashSet<string> ids = new(StringComparer.Ordinal);
+        HashSet<string> outputFiles = new(StringComparer.Ordinal);
+        HashSet<string> sourceFiles = new(StringComparer.Ordinal);
+        long totalBytes = manifestBytes.LongLength;
+        List<ClassicAuthoredUiAsset> assets = new(manifest.Assets.Count);
+        foreach (AuthoredUiAssetFile asset in manifest.Assets.OrderBy(asset => asset.Id, StringComparer.Ordinal))
+        {
+            ArgumentNullException.ThrowIfNull(asset);
+            RequirePortableLeaf(asset.File, nameof(asset.File));
+            RequirePortableLeaf(asset.SourceFile, nameof(asset.SourceFile));
+            if (string.IsNullOrWhiteSpace(asset.Id) || asset.Id.Any(char.IsControl)
+                || string.IsNullOrWhiteSpace(asset.Generator) || string.IsNullOrWhiteSpace(asset.Prompt)
+                || asset.Generator.Any(char.IsControl) || asset.Prompt.Any(char.IsControl)
+                || !ids.Add(asset.Id) || !outputFiles.Add(asset.File) || !sourceFiles.Add(asset.SourceFile))
+            {
+                throw new FormatException("Authored UI asset IDs, output files, and source files must be unique plain values.");
+            }
+
+            string sourcePath = Path.Combine(originalsRoot, asset.SourceFile);
+            if (!StringComparer.Ordinal.Equals(Path.GetFullPath(sourcePath), Path.Combine(originalsRoot, asset.SourceFile)))
+            {
+                throw new FormatException("An authored UI source file escaped its explicit original directory.");
+            }
+
+            byte[] bytes = ReadBoundedExternalFile(sourcePath, $"authored UI source '{asset.SourceFile}'");
+            totalBytes = checked(totalBytes + bytes.LongLength);
+            if (totalBytes > MaximumTotalSourceBytes)
+            {
+                throw new InvalidOperationException("The authored UI input exceeds the total source byte quota.");
+            }
+
+            assets.Add(new ClassicAuthoredUiAsset(
+                asset.Id,
+                $"media/ui/authored/{asset.File}",
+                $"ui-original/{asset.SourceFile}",
+                bytes,
+                asset.Generator,
+                asset.Prompt));
+        }
+
+        return new Arena2ClassicMediaProfile(
+            AuthoredUiManifest: new ClassicAuthoredUiManifestInput("ui-authored-assets.json", manifestBytes),
+            AuthoredUiAssets: assets);
+    }
+
+    private static byte[] ReadBoundedExternalFile(string path, string subject)
+    {
+        string fullPath = Path.GetFullPath(path);
+        FileInfo info = new(fullPath);
+        if (!info.Exists)
+        {
+            throw new FileNotFoundException($"Required {subject} '{fullPath}' was not found.", fullPath);
+        }
+
+        if (info.Length is <= 0 or > MaximumIndividualSourceBytes)
+        {
+            throw new InvalidOperationException($"{subject} is outside the permitted byte range.");
+        }
+
+        byte[] bytes = File.ReadAllBytes(fullPath);
+        if (bytes.LongLength != info.Length)
+        {
+            throw new IOException($"{subject} changed while it was being read.");
+        }
+
+        return bytes;
+    }
+
+    private static void RequirePortableLeaf(string value, string name)
+    {
+        if (string.IsNullOrWhiteSpace(value)
+            || !StringComparer.Ordinal.Equals(value, Path.GetFileName(value))
+            || value is "." or ".."
+            || value.Contains('/') || value.Contains('\\')
+            || value.IndexOfAny([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]) >= 0)
+        {
+            throw new FormatException($"{name} must be one portable file leaf.");
+        }
+    }
+
+    private static readonly JsonSerializerOptions AuthoredUiJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+    };
+
+    private sealed record AuthoredUiAssetFileSet(int SchemaVersion, IReadOnlyList<AuthoredUiAssetFile> Assets)
+    {
+        public const int CurrentSchemaVersion = 1;
+    }
+
+    private sealed record AuthoredUiAssetFile(string Id, string File, string SourceFile, string Generator, string Prompt);
 
     private static void VerifyDeterminism(ImportPublicationPlan plan, ToolOptions options)
     {
@@ -188,7 +373,133 @@ internal static class Program
         VerifyRealData,
     }
 
-    private sealed record ToolOptions(ToolCommand Command, string Arena2Directory, string OutputDirectory, int Region, string Location, DungeonTextureTableMode TextureTableMode)
+    private sealed class AdmittedArena2Sources
+    {
+        private readonly string arena2Directory;
+        private readonly Dictionary<string, DungeonLogicalSource> loaded = new(StringComparer.Ordinal);
+        private readonly HashSet<string> dungeonSourceNames = new(StringComparer.Ordinal);
+        private long totalBytes;
+
+        public AdmittedArena2Sources(string arena2Directory)
+        {
+            this.arena2Directory = arena2Directory;
+        }
+
+        public IReadOnlyList<DungeonLogicalSource> DungeonSources => dungeonSourceNames
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .Select(name => loaded[name])
+            .ToArray();
+
+        /// <summary>
+        /// Only PAL.PAL and the exact dynamically selected dungeon texture
+        /// closure enter this source set. Classic-only TEXTURE archives never
+        /// reach the dungeon media exact-closure validator.
+        /// </summary>
+        public IReadOnlyList<Arena2DungeonMediaSource> DungeonMediaSources => dungeonSourceNames
+            .Where(name => name is "PAL.PAL" || IsTextureLeaf(name))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .Select(name => new Arena2DungeonMediaSource(loaded[name].Label, loaded[name].Bytes.Span))
+            .ToArray();
+
+        public Arena2ClassicMediaInputs ClassicMediaInputs => new(
+            Require("WEAPON02.CIF").Bytes.ToArray(),
+            Require("ART_PAL.COL").Bytes.ToArray(),
+            Require("TEXTURE.380").Bytes.ToArray(),
+            Require("PAL.PAL").Bytes.ToArray(),
+            Require("DAGGER.SND").Bytes.ToArray(),
+            Require("MAIN00I0.IMG").Bytes.ToArray(),
+            Require("MAIN03I0.IMG").Bytes.ToArray(),
+            Require("MAIN04I0.IMG").Bytes.ToArray(),
+            Require("MAIN05I0.IMG").Bytes.ToArray(),
+            Require("INVE00I0.IMG").Bytes.ToArray(),
+            Require("INFO00I0.IMG").Bytes.ToArray(),
+            Require("TEXTURE.207").Bytes.ToArray(),
+            Require("TEXTURE.216").Bytes.ToArray(),
+            Require("TEXTURE.234").Bytes.ToArray(),
+            Require("TEXTURE.245").Bytes.ToArray(),
+            Require("FONT0003.FNT").Bytes.ToArray());
+
+        public void LoadDungeon(string fileName)
+        {
+            if (!DungeonSourceNames.Contains(fileName, StringComparer.Ordinal) && !IsTextureLeaf(fileName))
+            {
+                throw new InvalidOperationException($"'{fileName}' is not an admitted Arena2 dungeon source name.");
+            }
+
+            Load(fileName);
+            dungeonSourceNames.Add(fileName);
+        }
+
+        public void LoadClassic(string fileName)
+        {
+            if (!ClassicMediaSourceNames.Contains(fileName, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException($"'{fileName}' is not in the fixed classic media source set.");
+            }
+
+            Load(fileName);
+        }
+
+        private DungeonLogicalSource Require(string fileName) => loaded.TryGetValue(fileName, out DungeonLogicalSource? source)
+            ? source
+            : throw new InvalidOperationException($"The admitted Arena2 source '{fileName}' was not loaded.");
+
+        private void Load(string fileName)
+        {
+            if (loaded.ContainsKey(fileName))
+            {
+                return;
+            }
+
+            DungeonLogicalSource source = ReadSource(arena2Directory, fileName);
+            long nextTotal = checked(totalBytes + source.Bytes.Length);
+            if (nextTotal > MaximumTotalSourceBytes)
+            {
+                throw new InvalidOperationException("The admitted Arena2 source closure exceeds the total byte quota.");
+            }
+
+            loaded.Add(fileName, source);
+            totalBytes = nextTotal;
+        }
+    }
+
+    private static readonly string[] DungeonSourceNames =
+    [
+        "MAPS.BSA",
+        "BLOCKS.BSA",
+        "ARCH3D.BSA",
+        "CLIMATE.PAK",
+        "PAL.PAL",
+    ];
+
+    private static readonly string[] ClassicMediaSourceNames =
+    [
+        "ART_PAL.COL",
+        "WEAPON02.CIF",
+        "DAGGER.SND",
+        "MAIN00I0.IMG",
+        "MAIN03I0.IMG",
+        "MAIN04I0.IMG",
+        "MAIN05I0.IMG",
+        "INVE00I0.IMG",
+        "INFO00I0.IMG",
+        "FONT0003.FNT",
+        "TEXTURE.380",
+        "TEXTURE.207",
+        "TEXTURE.216",
+        "TEXTURE.234",
+        "TEXTURE.245",
+        "PAL.PAL",
+    ];
+
+    private sealed record ToolOptions(
+        ToolCommand Command,
+        string Arena2Directory,
+        string OutputDirectory,
+        int Region,
+        string Location,
+        DungeonTextureTableMode TextureTableMode,
+        Arena2ClassicMediaProfile ClassicMediaProfile)
     {
         public static ToolOptions Parse(IReadOnlyList<string> args)
         {
@@ -213,7 +524,7 @@ internal static class Program
                 }
             }
 
-            EnsureExactKeys(values, ["--arena2", "--output", "--region", "--location", "--texture-table"]);
+            EnsureExactKeys(values, ["--arena2", "--output", "--region", "--location", "--texture-table", "--ui-authored-assets", "--ui-original"]);
             if (!int.TryParse(values["--region"], NumberStyles.None, CultureInfo.InvariantCulture, out int region) || region is < 0 or > 999)
             {
                 throw new ArgumentException("--region must be an integer in 0..999.");
@@ -230,7 +541,14 @@ internal static class Program
                 "default" => DungeonTextureTableMode.Default,
                 _ => throw new ArgumentException("--texture-table must be classic or default."),
             };
-            return new(command, Path.GetFullPath(values["--arena2"]), Path.GetFullPath(values["--output"]), region, values["--location"], table);
+            return new(
+                command,
+                Path.GetFullPath(values["--arena2"]),
+                Path.GetFullPath(values["--output"]),
+                region,
+                values["--location"],
+                table,
+                LoadClassicMediaProfile(values["--ui-authored-assets"], values["--ui-original"]));
         }
 
         private static void EnsureExactKeys(IReadOnlyDictionary<string, string> values, IReadOnlyList<string> keys)
@@ -241,6 +559,6 @@ internal static class Program
             }
         }
 
-        private static string Usage() => "usage: daggerfall-import-tool <plan|write|verify-real-data> --arena2 DIR --output DIR --region 0..999 --location NAME --texture-table classic|default";
+        private static string Usage() => "usage: daggerfall-import-tool <plan|write|verify-real-data> --arena2 DIR --output DIR --region 0..999 --location NAME --texture-table classic|default --ui-authored-assets FILE --ui-original DIR";
     }
 }

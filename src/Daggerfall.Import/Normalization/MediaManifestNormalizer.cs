@@ -5,6 +5,7 @@ namespace Daggerfall.Import.Normalization;
 /// <summary>Purpose-neutral media families used by normalized content packs.</summary>
 public enum NormalizedMediaKind
 {
+    Texture,
     Billboard,
     EnemySprite,
     WeaponSprite,
