@@ -18,5 +18,11 @@
     "navigationCellSize": 0.5,
     "navigationChunkSize": 32,
     "navigationMaximumStepCells": 2
+  },
+  "camera": {
+    "eyeHeight": 0.75,
+    "fieldOfViewYDegrees": 65.0,
+    "nearPlane": 0.1,
+    "farPlane": 100.0
   }
 }

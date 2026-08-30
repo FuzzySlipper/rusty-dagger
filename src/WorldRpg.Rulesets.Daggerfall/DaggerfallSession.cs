@@ -24,6 +24,7 @@ internal sealed class DaggerfallSession : IGameSession
     private readonly IRandomService _random;
     private readonly PlayerInputSystem _input;
     private readonly SpatialMovementSystem _spatial;
+    private readonly FirstPersonCameraSystem _camera;
     private readonly CombatModule _combat;
     private readonly FactBuffer<IProductFact> _facts = new();
     private readonly DaggerfallRewardReactions _rewards;
@@ -110,6 +111,8 @@ internal sealed class DaggerfallSession : IGameSession
             _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, inputs.ToSpatialScene(), tuning.Spatial);
             partiallyConstructed.Add(_spatial);
+            _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
+            partiallyConstructed.Add(_camera);
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
             _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored, tuning.Combat);
             _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
@@ -168,6 +171,7 @@ internal sealed class DaggerfallSession : IGameSession
     {
         _input.Apply(State.PlayerControl, update);
         _spatial.Step(State.PlayerControl, update);
+        _camera.Update(State.PlayerControl);
         if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, _facts);
         _facts.Deliver(React);
         PublishPresentation();
@@ -177,7 +181,7 @@ internal sealed class DaggerfallSession : IGameSession
     {
         if (_disposed) return;
         _disposed = true;
-        DisposeAll([_hud, State.Actors, State.Equipment, _spatial, _appearance]);
+        DisposeAll([_hud, State.Actors, State.Equipment, _camera, _spatial, _appearance]);
     }
 
     private static void DisposeAll(IReadOnlyList<IDisposable> values)

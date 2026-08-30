@@ -13,18 +13,24 @@ internal sealed record DaggerfallCombatTuning(int PlayerMeleeStaminaCost, double
     }
 }
 
-internal sealed record DaggerfallTuning(PlayerControlTuning PlayerControl, SpatialTuning Spatial, DaggerfallCombatTuning Combat)
+internal sealed record DaggerfallTuning(
+    PlayerControlTuning PlayerControl,
+    SpatialTuning Spatial,
+    DaggerfallCombatTuning Combat,
+    FirstPersonCameraTuning Camera)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true),
         new SpatialTuning(.5, 32, .5, 32, 2),
-        new DaggerfallCombatTuning(5, .75d));
+        new DaggerfallCombatTuning(5, .75d),
+        new FirstPersonCameraTuning(.75f, 65d, .1d, 100d));
 
     internal DaggerfallTuning Validate() => this with
     {
         PlayerControl = PlayerControl.Validate(),
         Spatial = Spatial.Validate(),
         Combat = Combat.Validate(),
+        Camera = Camera.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -34,6 +40,7 @@ internal sealed record DaggerfallTuning(PlayerControlTuning PlayerControl, Spati
         JsonElement controls = root.GetProperty("playerControl");
         JsonElement spatial = root.GetProperty("spatial");
         JsonElement combat = root.GetProperty("combat");
+        JsonElement camera = root.GetProperty("camera");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -51,7 +58,12 @@ internal sealed record DaggerfallTuning(PlayerControlTuning PlayerControl, Spati
                 checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32())),
             new DaggerfallCombatTuning(
                 combat.GetProperty("playerMeleeStaminaCost").GetInt32(),
-                combat.GetProperty("playerMeleeCooldownSeconds").GetDouble()))
+                combat.GetProperty("playerMeleeCooldownSeconds").GetDouble()),
+            new FirstPersonCameraTuning(
+                camera.GetProperty("eyeHeight").GetSingle(),
+                camera.GetProperty("fieldOfViewYDegrees").GetDouble(),
+                camera.GetProperty("nearPlane").GetDouble(),
+                camera.GetProperty("farPlane").GetDouble()))
             .Validate();
     }
 }
