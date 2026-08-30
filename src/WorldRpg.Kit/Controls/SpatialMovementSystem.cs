@@ -56,11 +56,8 @@ public sealed class SpatialMovementSystem : IDisposable
                 ExternalImpulse: Vector3.Zero,
                 update.DeltaSeconds,
                 ++_movementSequence)));
-        if (receipt.Step.Accepted)
-        {
-            player.MoveTo(receipt.Transform.Translation);
-            player.Motion = receipt.Motion;
-        }
+        player.MoveTo(receipt.Transform.Translation);
+        player.Motion = receipt.Motion;
     }
 
     public void Dispose()

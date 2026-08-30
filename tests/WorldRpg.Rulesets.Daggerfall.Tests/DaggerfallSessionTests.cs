@@ -335,16 +335,21 @@ public sealed class DaggerfallSessionTests
     public void Session_publishes_authoritative_player_pose_through_the_engine_camera()
     {
         RecordingEngine engine = new();
+        engine.Spatial.Propose = request => default(CharacterStepReceipt) with
+        {
+            Transform = new Transform(new Vector3(4f, 2f, 3f), Quaternion.Identity, Vector3.One),
+            Motion = request.Motion,
+        };
         using (DaggerfallSession session = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults))
         {
             Assert.Single(engine.Camera.Descriptors);
             Assert.Equal(1, engine.Camera.ActiveSelections);
 
-            session.State.PlayerControl.MoveTo(new Vector3(4f, 2f, 3f));
             session.State.PlayerControl.YawRadians = .5f;
             session.State.PlayerControl.PitchRadians = -.25f;
             session.Update(new ProductUpdateState(.125f));
 
+            Assert.Equal(new WorldPoint(4f, 2f, 3f), session.State.PlayerControl.Position);
             CameraDescriptor descriptor = engine.Camera.Descriptors[^1];
             Assert.Equal(new Vector3(4f, 2.75f, 3f), descriptor.Pose.Position);
             Assert.Equal(.5d * 180d / Math.PI, descriptor.Pose.YawDegrees, 5);
@@ -585,6 +590,7 @@ public sealed class DaggerfallSessionTests
         internal int SessionDisposals { get; private set; }
         internal int StepCalls { get; private set; }
         internal List<CharacterControllerCommand> Commands { get; } = [];
+        internal Func<CharacterStepRequest, CharacterStepReceipt>? Propose { get; set; }
         internal static RecordingSpatial Create()
         {
             ISpatialService service = DispatchProxy.Create<ISpatialService, RecordingSpatial>();
@@ -596,7 +602,17 @@ public sealed class DaggerfallSessionTests
         {
             if (method?.Name == nameof(ISpatialService.CreateSession)) return new SpatialSession(new SpatialSessionHandle(1), () => SessionDisposals++);
             if (method?.Name == nameof(ISpatialService.DefaultCharacterControllerConfig)) return default(CharacterControllerConfig);
-            if (method?.Name == nameof(ISpatialService.ProposeCharacterStep)) { StepCalls++; Commands.Add(((CharacterStepRequest)args![0]!).Command); return default(CharacterStepReceipt); }
+            if (method?.Name == nameof(ISpatialService.ProposeCharacterStep))
+            {
+                CharacterStepRequest request = (CharacterStepRequest)args![0]!;
+                StepCalls++;
+                Commands.Add(request.Command);
+                return Propose?.Invoke(request) ?? default(CharacterStepReceipt) with
+                {
+                    Transform = new Transform(request.Position, Quaternion.Identity, Vector3.One),
+                    Motion = request.Motion,
+                };
+            }
             return method?.ReturnType.IsValueType == true ? Activator.CreateInstance(method.ReturnType) : null;
         }
     }
