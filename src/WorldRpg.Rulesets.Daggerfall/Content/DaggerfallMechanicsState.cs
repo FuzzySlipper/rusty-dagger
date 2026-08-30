@@ -34,7 +34,8 @@ internal sealed class DaggerfallMechanicsState
         return new ActorMechanicsState(
             new EntityId(entityId),
             InitialStats(definition, vitals),
-            InitialTracks(vitals));
+            InitialTracks(vitals),
+            [InitialHealth(vitals)]);
     }
 
     private static IEnumerable<(ExactStatDefinition Definition, ExactValue Base)> InitialStats(
@@ -45,7 +46,6 @@ internal sealed class DaggerfallMechanicsState
         {
             yield return Stat(id, value);
         }
-        yield return Stat(DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
         yield return Stat(DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
         yield return Stat(DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
     }
@@ -64,21 +64,27 @@ internal sealed class DaggerfallMechanicsState
 
     private static IEnumerable<ExactTrack> InitialTracks(DaggerfallVitalValues vitals)
     {
-        yield return Track(DaggerfallMechanicsIds.Health, DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
         yield return Track(DaggerfallMechanicsIds.Stamina, DaggerfallMechanicsIds.StaminaMaximum, vitals.StaminaMaximum);
         yield return Track(DaggerfallMechanicsIds.Magicka, DaggerfallMechanicsIds.MagickaMaximum, vitals.MagickaMaximum);
+    }
+
+    private static ExactStatTrackState InitialHealth(DaggerfallVitalValues vitals)
+    {
+        (ExactStatDefinition stat, ExactValue baseValue) = Stat(DaggerfallMechanicsIds.HealthMaximum, vitals.HealthMaximum);
+        ExactTrackDefinition track = TrackDefinition(DaggerfallMechanicsIds.Health, DaggerfallMechanicsIds.HealthMaximum);
+        return new ExactStatTrackState(stat, baseValue, Array.Empty<ExactSource>(), track, baseValue);
     }
 
     private static ExactTrack Track(DaggerfallTrackId id, DaggerfallStatId maximum, int current)
     {
         ExactValue value = new(current);
-        ExactValue minimum = new(MinimumStatValue);
-        ExactTrackDefinition definition = new(
-            TrackId.Parse(id.Value),
-            minimum,
-            new ExactTrackMaximum.FromStat(StatId.Parse(maximum.Value)));
-        return new ExactTrack(definition, value, new ExactTrackBounds(minimum, value));
+        return new ExactTrack(TrackDefinition(id, maximum), value, new ExactTrackBounds(new ExactValue(MinimumStatValue), value));
     }
+
+    private static ExactTrackDefinition TrackDefinition(DaggerfallTrackId id, DaggerfallStatId maximum) => new(
+        TrackId.Parse(id.Value),
+        new ExactValue(MinimumStatValue),
+        new ExactTrackMaximum.FromStat(StatId.Parse(maximum.Value)));
 
     private static void ValidateVitals(DaggerfallVitalValues vitals)
     {

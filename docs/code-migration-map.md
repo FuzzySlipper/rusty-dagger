@@ -400,8 +400,13 @@ equipment truth in right-hand/left-hand order with compiled hand-to-hand
 fallback, admits an explicit typed optional action identity for power attack,
 and performs the classic weapon-material gate after hit/body/damage rolls;
 the gate uses a separate weapon-material ordinal ladder rather than armor
-values. Health maximum mutation for level-up remains outside the current safe
-managed actor wrapper. Upstream rusty-engine **#7593 is the sole remaining
-HP-per-level blocker**; this downstream slice keeps the named roll bounds and
-goldens but introduces no local HP maximum authority or workaround. Only the
-active XP/500 level reconciliation is applied here.
+values. Engine #7599 now supplies the revisioned `ExactStatTrackState`
+current/source candidates used by the Kit actor seam: player health maximum
+and current health have one Engine-owned authority, while stamina and magicka
+remain standalone tracks. The active experimental XP/500 profile now rolls
+each crossed player level in the named inclusive career range with keyed
+Engine Random, retains one Daggerfall-owned health-max source per level, and
+uses `PreserveDistanceFromMaximum` (so current health rises with the maximum).
+This current-healing behavior remains an explicit experiment deviation: the
+donor raises maximum health, while classic skill-sum progression remains
+separate from the live XP/500 curve.
