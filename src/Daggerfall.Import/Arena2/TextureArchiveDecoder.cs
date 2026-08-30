@@ -36,6 +36,7 @@ public sealed class TextureArchive
     private const int RecordHeaderBytes = 28;
     private const int SingleFrameRowStride = 256;
     private const int VirtualSolidDimension = 32;
+    private const int MaximumVirtualSolidRecords = 128;
     private const int MaxDimension = 4096;
     private const int MaxFramePixels = MaxDimension * MaxDimension;
     private const ushort Uncompressed = 0x0000;
@@ -76,9 +77,8 @@ public sealed class TextureArchive
             ? DecodeSolid(recordOrdinal, width, height)
             : record.Info.Compression switch
             {
-                Uncompressed => DecodeUncompressed(record, frameOrdinal, width, height),
                 ImageRle or RecordRle => DecodeRle(record, frameOrdinal, width, height),
-                _ => throw new Arena2FormatException(Source, record.Offset + 8, $"unsupported texture compression 0x{record.Info.Compression:X4}"),
+                _ => DecodeUncompressed(record, frameOrdinal, width, height),
             };
         return new IndexedTextureFrame(Source, recordOrdinal, frameOrdinal, width, height, pixels);
     }
@@ -129,10 +129,15 @@ public sealed class TextureArchive
     private byte[] DecodeSolid(int recordOrdinal, ushort width, ushort height)
     {
         int pixels = checked(width * height);
-        byte paletteIndex = solidPalette == TextureSolidPalette.FirstHalf
-            ? checked((byte)recordOrdinal)
-            : unchecked((byte)(128 + recordOrdinal));
-        return Enumerable.Repeat(paletteIndex, pixels).ToArray();
+        int paletteIndex = solidPalette == TextureSolidPalette.FirstHalf
+            ? recordOrdinal
+            : checked(MaximumVirtualSolidRecords + recordOrdinal);
+        if ((uint)paletteIndex > byte.MaxValue)
+        {
+            throw new Arena2FormatException(Source, 0, $"virtual solid palette index {paletteIndex} exceeds the 8-bit palette range");
+        }
+
+        return Enumerable.Repeat((byte)paletteIndex, pixels).ToArray();
     }
 
     private byte[] DecodeUncompressed(TextureRecord record, int frameOrdinal, ushort width, ushort height)
@@ -318,12 +323,18 @@ public sealed class TextureArchive
         }
 
         int sourceCount = signedCount;
-        if (solidPalette.HasValue)
+        TextureSolidPalette? resolvedSolidPalette = solidPalette ?? InferSolidPalette(source);
+        if (resolvedSolidPalette.HasValue)
         {
+            if (sourceCount > MaximumVirtualSolidRecords)
+            {
+                throw header.Error($"virtual solid texture record count {sourceCount} exceeds supported limit {MaximumVirtualSolidRecords}");
+            }
+
             int virtualCount = Math.Max(1, sourceCount);
             TextureRecordInfo info = new(VirtualSolidDimension, VirtualSolidDimension, Uncompressed, 1, 0, 0);
             TextureRecord[] virtualRecords = Enumerable.Range(0, virtualCount).Select(_ => new TextureRecord(0, 0, info)).ToArray();
-            return new TextureArchive(ownedData, source, virtualRecords, solidPalette);
+            return new TextureArchive(ownedData, source, virtualRecords, resolvedSolidPalette);
         }
 
         int tableBytes;
@@ -396,5 +407,17 @@ public sealed class TextureArchive
         }
 
         return new TextureArchive(ownedData, source, records, null);
+    }
+
+    private static TextureSolidPalette? InferSolidPalette(string source)
+    {
+        int finalSeparator = source.LastIndexOf('/');
+        string fileName = source[(finalSeparator + 1)..];
+        return fileName switch
+        {
+            "TEXTURE.000" => TextureSolidPalette.FirstHalf,
+            "TEXTURE.001" => TextureSolidPalette.SecondHalf,
+            _ => null,
+        };
     }
 }

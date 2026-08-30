@@ -22,9 +22,18 @@ public sealed class BsaArchive
         recordsByName = records
             .Where(static record => record.Name is not null)
             .ToDictionary(static record => record.Name!, StringComparer.Ordinal);
-        recordsById = records
-            .Where(static record => record.NumericId.HasValue)
-            .ToDictionary(static record => record.NumericId!.Value);
+        recordsById = new Dictionary<uint, BsaRecord>();
+        foreach (BsaRecord record in records)
+        {
+            if (record.NumericId is uint numericId)
+            {
+                // Numeric BSA directory entries can intentionally reuse an ID.
+                // Daggerfall Unity resolves a numeric lookup to the first
+                // directory-order match while Records retains every source
+                // record for ordinal consumers.
+                recordsById.TryAdd(numericId, record);
+            }
+        }
     }
 
     /// <summary>Logical source identity supplied to <see cref="Parse"/>.</summary>
@@ -137,7 +146,6 @@ public sealed class BsaArchive
         }
 
         ValidatePayloadBoundary(payloadOffset, directoryStart, source, "numeric BSA");
-        ValidateDistinctNumericIds(records, source);
         return new BsaArchive(data, source, records);
     }
 
@@ -210,15 +218,4 @@ public sealed class BsaArchive
         }
     }
 
-    private static void ValidateDistinctNumericIds(IEnumerable<BsaRecord> records, string source)
-    {
-        HashSet<uint> ids = [];
-        foreach (BsaRecord record in records)
-        {
-            if (!ids.Add(record.NumericId!.Value))
-            {
-                throw new Arena2FormatException(source, record.Offset, $"duplicate numeric BSA record ID {record.NumericId}");
-            }
-        }
-    }
 }

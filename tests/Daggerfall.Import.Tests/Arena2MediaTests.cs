@@ -19,6 +19,41 @@ public sealed class Arena2MediaTests
         Assert.Throws<ArgumentOutOfRangeException>(() => solid.DecodeFrame(2, 0));
     }
 
+    [Theory]
+    [InlineData("arena2/TEXTURE.000", 0, 0)]
+    [InlineData("arena2/TEXTURE.000", 127, 127)]
+    [InlineData("arena2/TEXTURE.001", 0, 128)]
+    [InlineData("arena2/TEXTURE.001", 127, 255)]
+    public void TextureArchiveInfersClassicVirtualSolidPaletteFromFinalLogicalSourceSegment(string source, int recordOrdinal, byte expectedPaletteIndex)
+    {
+        TextureArchive texture = TextureArchive.Parse(CreateTextureHeader(128), source);
+
+        Assert.Equal(128, texture.RecordCount);
+        IndexedTextureFrame frame = texture.DecodeFrame(recordOrdinal, 0);
+        Assert.Equal((ushort)32, frame.Width);
+        Assert.Equal((ushort)32, frame.Height);
+        Assert.Equal(1024, frame.Pixels.Length);
+        Assert.All(frame.Pixels.ToArray(), pixel => Assert.Equal(expectedPaletteIndex, pixel));
+    }
+
+    [Fact]
+    public void TextureArchiveRejectsVirtualSolidRecordCountsAboveClassicBound()
+    {
+        Assert.Throws<Arena2FormatException>(() => TextureArchive.Parse(CreateTextureHeader(129), "arena2/TEXTURE.000"));
+        Assert.Throws<Arena2FormatException>(() => TextureArchive.Parse(CreateTextureHeader(129), "texture.999", TextureSolidPalette.FirstHalf));
+    }
+
+    [Theory]
+    [InlineData(0x0900)]
+    [InlineData(0x0100)]
+    [InlineData(0x0101)]
+    public void TextureArchiveTreatsNonRleCompressionTagsAsPaddedUncompressedRows(ushort compression)
+    {
+        TextureArchive texture = TextureArchive.Parse(CreateUncompressedTexture(compression), $"texture-{compression:X4}");
+
+        Assert.Equal([1, 2, 3, 4], texture.DecodeFrame(0, 0).Pixels.ToArray());
+    }
+
     [Fact]
     public void TextureArchiveDecodesRowRleAndRejectsTruncatedRows()
     {
@@ -75,14 +110,14 @@ public sealed class Arena2MediaTests
         return bytes;
     }
 
-    private static byte[] CreateUncompressedTexture()
+    private static byte[] CreateUncompressedTexture(ushort compression = 0)
     {
         const int recordOffset = 46;
         const int dataOffset = 28;
         byte[] bytes = new byte[recordOffset + dataOffset + 258];
         BitConverter.GetBytes((short)1).CopyTo(bytes, 0);
         BitConverter.GetBytes(recordOffset).CopyTo(bytes, 28);
-        WriteTextureRecord(bytes, recordOffset, 2, 2, 0, dataOffset, 1);
+        WriteTextureRecord(bytes, recordOffset, 2, 2, compression, dataOffset, 1);
         bytes[recordOffset + dataOffset] = 1;
         bytes[recordOffset + dataOffset + 1] = 2;
         bytes[recordOffset + dataOffset + 256] = 3;

@@ -70,6 +70,33 @@ public sealed class Arena2SpatialFormatTests
     }
 
     [Fact]
+    public void RdbTreatsAllFfUnusedModelReferencesAsEmptyFields()
+    {
+        byte[] fixture = CreateRdbFixture();
+        const int unusedReference = 1;
+        const int firstReference = 20;
+        const int modelReferenceBytes = 8;
+        const int modelResource = 6099;
+        fixture.AsSpan(firstReference + (unusedReference * modelReferenceBytes), modelReferenceBytes).Fill(byte.MaxValue);
+        BitConverter.GetBytes((ushort)unusedReference).CopyTo(fixture, modelResource + 12);
+
+        RdbModelSource model = Assert.Single(RdbDecoder.Decode(fixture, "ff-unused.rdb").Models);
+
+        Assert.Equal(string.Empty, model.ModelId);
+        Assert.Equal(string.Empty, model.Description);
+    }
+
+    [Fact]
+    public void RdbRejectsMixedHighByteModelReferenceFields()
+    {
+        byte[] fixture = CreateRdbFixture();
+        const int firstReferenceDescription = 25;
+        fixture[firstReferenceDescription + 2] = byte.MaxValue;
+
+        Assert.Throws<Arena2FormatException>(() => RdbDecoder.Decode(fixture, "mixed-padding.rdb"));
+    }
+
+    [Fact]
     public void RdbRejectsOneObjectChainSharedAcrossCellRoots()
     {
         byte[] fixture = CreateRdbFixture();

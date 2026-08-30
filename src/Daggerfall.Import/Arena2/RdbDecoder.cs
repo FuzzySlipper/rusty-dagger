@@ -172,11 +172,50 @@ public static class RdbDecoder
         {
             int offset = HeaderBytes + (index * ModelReferenceBytes);
             CheckedLittleEndianReader reader = At(bytes, source, offset, "RDB model reference");
-            modelIds[index] = reader.ReadNullTerminatedAscii(5);
-            descriptions[index] = reader.ReadNullTerminatedAscii(3);
+            modelIds[index] = ReadModelReferenceField(ref reader, 5);
+            descriptions[index] = ReadModelReferenceField(ref reader, 3);
         }
 
         return (modelIds, descriptions);
+    }
+
+    /// <summary>
+    /// Reads one fixed-width model-reference field. Classic RDB leaves an unused table entry as
+    /// an all-<c>0xFF</c> field, unlike the ASCII/NUL encoding used by populated entries.
+    /// </summary>
+    private static string ReadModelReferenceField(ref CheckedLittleEndianReader reader, int width)
+    {
+        ReadOnlySpan<byte> field = reader.ReadBytes(width);
+        bool allUnusedPadding = true;
+        foreach (byte value in field)
+        {
+            if (value != byte.MaxValue)
+            {
+                allUnusedPadding = false;
+            }
+
+            if (value > 0x7F && value != byte.MaxValue)
+            {
+                throw reader.Error($"non-ASCII byte {value} in RDB model-reference field");
+            }
+        }
+
+        if (allUnusedPadding)
+        {
+            return string.Empty;
+        }
+
+        foreach (byte value in field)
+        {
+            if (value == byte.MaxValue)
+            {
+                throw reader.Error("mixed 0xFF padding in RDB model-reference field");
+            }
+        }
+
+        int terminator = field.IndexOf((byte)0);
+        ReadOnlySpan<byte> text = terminator >= 0 ? field[..terminator] : field;
+        return System.Text.Encoding.ASCII.GetString(text);
     }
 
     private static void DecodeObjectList(
