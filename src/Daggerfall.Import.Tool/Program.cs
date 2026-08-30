@@ -52,9 +52,20 @@ internal static class Program
                     options.TextureTableMode,
                     DungeonNormalizationQuotas.Default with { MaximumSourceBytes = MaximumTotalSourceBytes });
                 DungeonNormalizationResult result = DungeonNormalizer.Normalize(request);
+                GeneratedSpatialArtifact staticMesh = result.SpatialPublication.StaticMesh;
+                GeneratedSpatialArtifact collisionNavigation = result.SpatialPublication.CollisionNavigation;
+                GeneratedSpatialArtifact resourceCatalog = result.SpatialPublication.ResourceCatalog;
                 return ImportPublicationPlan.Create(
                     result.Document.Provenance,
-                    [new ImportPublicationArtifact("normalized.json", NormalizedImportSerializer.Serialize(result.Document))]);
+                    [
+                        new ImportPublicationArtifact(staticMesh.RelativePath, staticMesh.Bytes.Span),
+                        new ImportPublicationArtifact(collisionNavigation.RelativePath, collisionNavigation.Bytes.Span, [staticMesh.RelativePath]),
+                        new ImportPublicationArtifact(resourceCatalog.RelativePath, resourceCatalog.Bytes.Span),
+                        new ImportPublicationArtifact(
+                            "normalized.json",
+                            NormalizedImportSerializer.Serialize(result.Document),
+                            [staticMesh.RelativePath, collisionNavigation.RelativePath, resourceCatalog.RelativePath]),
+                    ]);
             }
             catch (InvalidOperationException exception) when (TryRequiredTexture(exception.Message, out string? textureName))
             {

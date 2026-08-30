@@ -33,8 +33,10 @@ tuning, the boundary canary, and the cohesive managed Engine SDK migration are
 implemented. `Daggerfall.Import` now contains the #7535 checked Arena2 source
 decoder and differential-fixture foundation. #7536's current foundation adds
 Engine-free normalized dungeon/media contracts, canonical hashing/provenance,
-atomic publication tooling, and deterministic real-data proof; generated
-mesh/media closure and runtime consumption remain #7536 work.
+atomic publication tooling, and deterministic real-data proof. Its spatial
+closure now publishes an Engine-compatible static mesh, purpose-neutral
+collision/navigation facts, and exact resource metadata with generated hashes;
+media closure and runtime consumption remain #7536 work.
 
 The current #7441 Daggerfall integration consumes Engine `ProductUpdate.Facts` directly:
 only running realtime batches with a finite positive `FixedDeltaSeconds` advance
@@ -106,7 +108,7 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 | `AssemblyInfo.cs` | Exact friend access for `WorldRpg.Rulesets.Daggerfall.Tests`. |
 | `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
 | `src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj`, `NativeProduct.cs` | NativeAOT composition project. Its handwritten file has only the Engine product attribute selecting `WorldRpgProduct`; generated output remains under ignored `obj/`. |
-| `src/Daggerfall.Import/**`, `src/Daggerfall.Import.Tool/**` | Standalone safe `net10.0` offline library and narrow operator CLI with no Engine/product/package dependencies. #7535 ports bounded Arena2 decoders and source transforms. #7536's current foundation adds purpose-neutral normalized geometry/navigation/world/resource contracts, deterministic PNG/atlas/media helpers, content hashes, portable source paths and byte lengths, canonical manifests, and atomic publication. The CLI consumes explicit operator-supplied Arena2 paths and can plan, write, and repeat-verify Privateer's Hold without publishing raw source. It owns no runtime entities, renderer, playback, encounters, or gameplay randomness. The current closure contains normalized JSON and its manifest; generated mesh/media artifacts and runtime adoption are still pending. |
+| `src/Daggerfall.Import/**`, `src/Daggerfall.Import.Tool/**` | Standalone safe `net10.0` offline library and narrow operator CLI with no Engine/product/package dependencies. #7535 ports bounded Arena2 decoders and source transforms. #7536 adds purpose-neutral normalized world/resource contracts, deterministic PNG/atlas/media helpers, content hashes, portable source paths and byte lengths, canonical manifests, and atomic publication. The current deterministic five-artifact spatial closure contains normalized world facts, an exact resource-metadata catalog, Engine-compatible static-mesh JSON, collision/navigation facts, and the import manifest. It preserves per-door visual mesh identities while excluding doors from collision and derives bounded signed/multilevel walkable supports offline. The CLI consumes explicit operator-supplied Arena2 paths and can plan, write, and repeat-verify Privateer's Hold without publishing raw source. It owns no runtime entities, renderer, playback, encounters, or gameplay randomness. Media artifacts and runtime adoption are still pending. |
 | `tests/Daggerfall.Import.Tests/**` | Focused generated-byte differential, malformed-input, normalized-contract, media, publication, and real-format compatibility fixtures. Local copyrighted Arena2 files remain optional developer evidence and are never required or committed; the local operator corpus has separately proven deterministic Privateer's Hold publication. |
 | `tests/WorldRpg.Kit.Tests/*`, `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Focused Kit mechanism and Daggerfall policy suites, including Host lifecycle/update/disposal coverage. |
 | `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; UI renders the Daggerfall semantic projection plus the exact resolved generic composition identity and only claims declared semantic input. `run-product.sh` declares `attack=digital` through the Engine host; no gameplay authority or browser bridge is added. |
@@ -333,8 +335,9 @@ and stops only the affected slice.
   and inventories every donor. **#7535 has implemented** the standalone safe
   Arena2 decoder/test foundation. **#7536 is in progress** with normalized
   contracts, deterministic publication/provenance tooling, and a successful
-  operator-corpus Privateer's Hold repeatability proof; it still owes generated
-  mesh/media closure and runtime adoption. #7537-#7543 migrate or reject the
+  operator-corpus Privateer's Hold repeatability proof. Its generated spatial
+  closure is implemented; it still owes media closure and runtime adoption.
+  #7537-#7543 migrate or reject the
   remaining coherent semantic families; #7544 removes the fully dispositioned
   Rust/`gameplay/` graph and certifies the C#-only product. Named encounter
   scaffolding is a campaign-wide rejection, while #7543 preserves the sprite

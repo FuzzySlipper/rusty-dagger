@@ -121,6 +121,13 @@ public sealed record DungeonNormalizationRequest(
     DungeonTextureTableMode TextureTableMode,
     DungeonNormalizationQuotas Quotas)
 {
+    /// <summary>
+    /// Explicit offline support-surface policy.  Callers may preserve the
+    /// classic defaults or select a validated profile without changing any
+    /// source-format transform.
+    /// </summary>
+    public NavigationDerivationConfig Navigation { get; init; } = NavigationDerivationConfig.ClassicDefault;
+
     public static DungeonNormalizationRequest Create(DungeonLogicalSourceSet sources, int region, string locationName) =>
         new(sources, region, locationName, DungeonTextureTableMode.Classic, DungeonNormalizationQuotas.Default);
 
@@ -140,6 +147,8 @@ public sealed record DungeonNormalizationRequest(
 
         ArgumentNullException.ThrowIfNull(Quotas);
         Quotas.Validate();
+        ArgumentNullException.ThrowIfNull(Navigation);
+        Navigation.Validate();
     }
 }
 
@@ -159,18 +168,24 @@ public sealed record DungeonRecordProvenance(string Id, string Kind, string Sour
 }
 
 /// <summary>Pure normalized document plus per-record source provenance.</summary>
-public sealed record DungeonNormalizationResult(NormalizedImportDocument Document, IReadOnlyList<DungeonRecordProvenance> RecordProvenance)
+public sealed record DungeonNormalizationResult(
+    NormalizedImportDocument Document,
+    IReadOnlyList<DungeonRecordProvenance> RecordProvenance,
+    DungeonSpatialPublication SpatialPublication)
 {
     public void Validate()
     {
         ArgumentNullException.ThrowIfNull(Document);
         ArgumentNullException.ThrowIfNull(RecordProvenance);
+        ArgumentNullException.ThrowIfNull(SpatialPublication);
         Document.Validate();
         NormalizedImportDocument.ValidateUnique(RecordProvenance, provenance => provenance.Id, "dungeon record provenance");
         foreach (DungeonRecordProvenance provenance in RecordProvenance)
         {
             provenance.Validate();
         }
+
+        SpatialPublication.ValidateAgainst(Document);
     }
 }
 
@@ -187,7 +202,6 @@ public static class DungeonNormalizer
     // Classic Arena2 coordinate units use a fixed conversion to metres. This
     // is a source-format invariant, not a product or presentation setting.
     private const float SourceUnitMetres = 0.025F;
-    private const float BlockSideMetres = 2_048F * SourceUnitMetres;
     private const float LightRangeMultiplier = 3F;
 
     public static DungeonNormalizationResult Normalize(DungeonNormalizationRequest request)
@@ -267,14 +281,13 @@ public static class DungeonNormalizer
         private readonly ushort[] textureTable;
         private readonly ushort climateBase;
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
-        private readonly Dictionary<(ushort Archive, ushort Record), GeometryBuilder> geometry = [];
+        private readonly Dictionary<(ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId), GeometryBuilder> geometry = [];
         private readonly List<NormalizedLightPlacement> lights = [];
         private readonly List<NormalizedBillboardPlacement> billboards = [];
         private readonly List<NormalizedActorPlacement> actors = [];
         private readonly List<NormalizedTreasurePlacement> treasures = [];
-        private readonly List<NormalizedDoorPlacement> doors = [];
+        private readonly List<DoorDraft> doorDrafts = [];
         private readonly List<DungeonRecordProvenance> provenance = [];
-        private readonly List<NormalizedNavigationCell> navigationCells = [];
         private NormalizedMarker? startMarker;
         private NormalizedMarker? enterMarker;
         private int models;
@@ -303,8 +316,6 @@ public static class DungeonNormalizer
             string blockId = $"block/{Slug(reference.SourceName)}/{reference.X}/{reference.Z}";
             AddProvenance(blockId, "rdb-block", blocks.Source, record.Ordinal);
             Arena2ImportPoint origin = Arena2SourceTransform.ToBlockOrigin(reference);
-            navigationCells.Add(new(reference.X - MinBlockX(), reference.Z - MinBlockZ(), 0, 0F, false));
-
             for (int index = 0; index < block.Lights.Count; index++)
             {
                 RdbLightSource light = block.Lights[index];
@@ -373,15 +384,16 @@ public static class DungeonNormalizer
                 RdbModelSource model = block.Models[index];
                 string modelId = $"model/{Slug(reference.SourceName)}/{index}";
                 AddProvenance(modelId, "rdb-model", blocks.Source, index);
-                if (RdbSourceClassification.HasActionDoorTag(model))
+                bool actionDoor = RdbSourceClassification.HasActionDoorTag(model);
+                string? doorId = null;
+                if (actionDoor)
                 {
                     AddPlacement();
-                    string doorId = $"door/{Slug(reference.SourceName)}/{index}";
+                    doorId = $"door/{Slug(reference.SourceName)}/{index}";
                     string doorResourceId = $"door/model-{Slug(model.ModelId)}";
                     Arena2EulerDegrees degrees = Arena2SourceTransform.ToEulerDegrees(model);
-                    doors.Add(new(doorId, doorResourceId, ToRightHanded(Place(model.X, model.Y, model.Z, reference)), new(degrees.X, degrees.Y, degrees.Z)));
+                    doorDrafts.Add(new(doorId, doorResourceId, ToRightHanded(Place(model.X, model.Y, model.Z, reference)), new(degrees.X, degrees.Y, degrees.Z)));
                     AddProvenance(doorId, "rdb-action-door", blocks.Source, index);
-                    continue;
                 }
 
                 Arch3dMesh mesh = ResolveMesh(model.ModelId);
@@ -395,7 +407,11 @@ public static class DungeonNormalizer
 
                     (ushort archiveId, ushort recordId) = RemapTexture(plane.TextureArchive, plane.TextureRecord);
                     TextureInfo texture = ResolveTexture(archiveId, recordId);
-                    GeometryBuilder group = Geometry(archiveId, recordId, texture.MaterialId);
+                    // Action-door model geometry remains in the visual mesh so
+                    // an eventual ruleset can render its source state, but it
+                    // must not become static collision before that policy
+                    // exists.
+                    GeometryBuilder group = Geometry(archiveId, recordId, texture.MaterialId, !actionDoor, actionDoor ? doorId : null);
                     List<NormalizedVector3> polygon = new(plane.Points.Count);
                     List<NormalizedVector2> uvs = new(plane.Points.Count);
                     foreach (Arch3dPoint point in plane.Points)
@@ -424,24 +440,54 @@ public static class DungeonNormalizer
                 throw new InvalidOperationException("Dungeon normalization produced no static geometry.");
             }
 
-            string root = $"dungeon/{Slug(layout.LocationName)}";
-            List<NormalizedArtifactDescriptor> artifacts = SourceArtifacts();
-            string meshArtifactId = ArtifactIdFor("ARCH3D.BSA");
+            string locationSlug = Slug(layout.LocationName);
+            string root = $"dungeon/{locationSlug}";
+            string staticMeshArtifactId = $"artifact/{root}/static-mesh";
+            string spatialArtifactId = $"artifact/{root}/collision-navigation";
+            string resourceCatalogArtifactId = $"artifact/{root}/resource-catalog";
+            string visualMeshAssetId = $"mesh/{locationSlug}";
             List<NormalizedMesh> meshes = [];
-            List<NormalizedResourceCatalogEntry> resources = ResourceCatalog();
             List<NormalizedVector3> allVertices = [];
-            foreach (((ushort archiveId, ushort recordId), GeometryBuilder group) in geometry.OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record))
+            Dictionary<string, List<string>> visualMeshIdsByDoor = new(StringComparer.Ordinal);
+            foreach (((ushort archiveId, ushort recordId, bool participatesInCollision, string? doorId), GeometryBuilder group) in geometry
+                .OrderBy(pair => pair.Key.Archive).ThenBy(pair => pair.Key.Record).ThenByDescending(pair => pair.Key.ParticipatesInCollision).ThenBy(pair => pair.Key.DoorId, StringComparer.Ordinal))
             {
-                string id = $"mesh/{Slug(layout.LocationName)}/texture-{archiveId}-{recordId}";
-                meshes.Add(group.ToMesh(id, meshArtifactId));
+                string participation = participatesInCollision ? "static" : "action-visual";
+                string id = doorId is null
+                    ? $"mesh/{locationSlug}/texture-{archiveId}-{recordId}/{participation}"
+                    : $"mesh/{doorId}/texture-{archiveId}-{recordId}/{participation}";
+                meshes.Add(group.ToMesh(id, staticMeshArtifactId));
                 allVertices.AddRange(group.Vertices);
+                if (doorId is not null)
+                {
+                    if (!visualMeshIdsByDoor.TryGetValue(doorId, out List<string>? doorMeshIds))
+                    {
+                        doorMeshIds = [];
+                        visualMeshIdsByDoor.Add(doorId, doorMeshIds);
+                    }
+
+                    doorMeshIds.Add(id);
+                }
             }
 
             NormalizedBounds bounds = Bounds(allVertices);
-            NormalizedNavigationGrid navigation = Navigation(root, meshArtifactId, bounds);
+            NormalizedNavigationSurface navigation = Navigation(spatialArtifactId, meshes);
+            List<NormalizedDoorPlacement> doors = doorDrafts
+                .OrderBy(door => door.Id, StringComparer.Ordinal)
+                .Select(door => new NormalizedDoorPlacement(
+                    door.Id,
+                    door.DoorResourceId,
+                    visualMeshIdsByDoor.TryGetValue(door.Id, out List<string>? meshIds)
+                        ? meshIds.OrderBy(meshId => meshId, StringComparer.Ordinal).ToArray()
+                        : [],
+                    door.Position,
+                    door.RotationDegrees))
+                .ToList();
+            List<NormalizedResourceCatalogEntry> resources = ResourceCatalog(resourceCatalogArtifactId, doors);
             NormalizedWorld world = new(
                 NormalizedWorld.CurrentSchemaVersion,
-                meshes[0].Id,
+                visualMeshAssetId,
+                meshes.Select(mesh => mesh.Id).ToArray(),
                 navigation.Id,
                 startMarker,
                 enterMarker,
@@ -450,59 +496,64 @@ public static class DungeonNormalizer
                 actors,
                 treasures,
                 doors);
+            DungeonSpatialPublication spatialPublication = DungeonSpatialPublication.Create(
+                staticMeshArtifactId,
+                $"spatial/{locationSlug}/static-mesh.json",
+                spatialArtifactId,
+                $"spatial/{locationSlug}/collision-navigation.json",
+                resourceCatalogArtifactId,
+                $"resources/{locationSlug}/catalog.json",
+                visualMeshAssetId,
+                bounds,
+                meshes,
+                world,
+                navigation,
+                resources);
             NormalizedImportDocument document = new NormalizedImportDocument(
                 NormalizedImportDocument.CurrentSchemaVersion,
                 new ImportProvenance(ImportProvenance.CurrentSchemaVersion, ImporterId, ImporterVersion,
                     request.Sources.Sources.Select(source => new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, source.Label, ContentDigest.Compute(source.Bytes.Span), source.Bytes.Length, 1)).ToArray()),
-                artifacts,
+                spatialPublication.ArtifactDescriptors,
                 new NormalizedCoordinateConvention(NormalizedCoordinateConvention.CurrentSchemaVersion, NormalizedHandedness.Right, NormalizedVerticalAxis.PositiveY, 1F),
                 bounds,
                 meshes,
                 navigation,
                 world,
                 resources).Canonicalize();
-            DungeonNormalizationResult result = new(document, provenance.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray());
+            DungeonNormalizationResult result = new(document, provenance.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(), spatialPublication);
             result.Validate();
             return result;
         }
 
-        private List<NormalizedArtifactDescriptor> SourceArtifacts() => request.Sources.Sources.Select(source => new NormalizedArtifactDescriptor(
-            NormalizedArtifactDescriptor.CurrentSchemaVersion,
-            ArtifactIdFor(Leaf(source.Label)),
-            $"sources/{Slug(source.Label)}",
-            ContentDigest.Compute(source.Bytes.Span),
-            source.Bytes.Length,
-            [])).ToList();
-
         private static float ToMetres(int sourceUnits) => sourceUnits * SourceUnitMetres;
 
-        private List<NormalizedResourceCatalogEntry> ResourceCatalog()
+        private List<NormalizedResourceCatalogEntry> ResourceCatalog(string resourceCatalogArtifactId, IReadOnlyList<NormalizedDoorPlacement> doors)
         {
             List<NormalizedResourceCatalogEntry> resources = [];
             foreach (TextureInfo texture in textures.Values.OrderBy(value => value.Archive).ThenBy(value => value.Record))
             {
                 resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, texture.TextureId, NormalizedResourceKind.Texture,
-                    ArtifactIdFor($"TEXTURE.{texture.Archive:000}"), [], []));
+                    resourceCatalogArtifactId, [], []));
                 resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, texture.MaterialId, NormalizedResourceKind.Material,
-                    ArtifactIdFor($"TEXTURE.{texture.Archive:000}"), [texture.TextureId], []));
+                    resourceCatalogArtifactId, [texture.TextureId], []));
                 resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, texture.SpriteId, NormalizedResourceKind.Sprite,
-                    ArtifactIdFor($"TEXTURE.{texture.Archive:000}"), [texture.TextureId],
+                    resourceCatalogArtifactId, [texture.TextureId],
                     [new($"frame/texture-{texture.Archive}-{texture.Record}", 0, 0, 0, texture.Width, texture.Height, new(0.5F, 0F))]));
             }
 
             foreach (string actorId in actors.Select(actor => actor.ActorResourceId).Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal))
             {
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, actorId, NormalizedResourceKind.ActorDefinition, ArtifactIdFor("BLOCKS.BSA"), [], []));
+                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, actorId, NormalizedResourceKind.ActorDefinition, resourceCatalogArtifactId, [], []));
             }
 
             foreach (string treasureId in treasures.Select(treasure => treasure.TreasureResourceId).Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal))
             {
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, treasureId, NormalizedResourceKind.TreasureDefinition, ArtifactIdFor("MAPS.BSA"), [], []));
+                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, treasureId, NormalizedResourceKind.TreasureDefinition, resourceCatalogArtifactId, [], []));
             }
 
             foreach (string doorId in doors.Select(door => door.DoorResourceId).Distinct(StringComparer.Ordinal).OrderBy(id => id, StringComparer.Ordinal))
             {
-                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, doorId, NormalizedResourceKind.DoorDefinition, ArtifactIdFor("BLOCKS.BSA"), [], []));
+                resources.Add(new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, doorId, NormalizedResourceKind.DoorDefinition, resourceCatalogArtifactId, [], []));
             }
 
             if (resources.Count > request.Quotas.MaximumResources)
@@ -513,20 +564,17 @@ public static class DungeonNormalizer
             return resources;
         }
 
-        private NormalizedNavigationGrid Navigation(string root, string artifactId, NormalizedBounds bounds)
+        private NormalizedNavigationSurface Navigation(string artifactId, IReadOnlyList<NormalizedMesh> meshes)
         {
-            int width = checked(MaxBlockX() - MinBlockX() + 1);
-            int height = checked(MaxBlockZ() - MinBlockZ() + 1);
-            return new(NormalizedNavigationGrid.CurrentSchemaVersion, $"navigation/{Slug(layout.LocationName)}", artifactId,
-                new(MinBlockX() * BlockSideMetres, 0F, -(MaxBlockZ() * BlockSideMetres)), BlockSideMetres, width, height, BlockSideMetres, navigationCells);
+            return OfflineNavigationDeriver.Derive($"navigation/{Slug(layout.LocationName)}", artifactId, meshes, request.Navigation);
         }
 
-        private GeometryBuilder Geometry(ushort archiveId, ushort recordId, string materialId)
+        private GeometryBuilder Geometry(ushort archiveId, ushort recordId, string materialId, bool participatesInCollision, string? doorId)
         {
-            (ushort Archive, ushort Record) key = (archiveId, recordId);
+            (ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId) key = (archiveId, recordId, participatesInCollision, doorId);
             if (!geometry.TryGetValue(key, out GeometryBuilder? group))
             {
-                group = new GeometryBuilder(materialId);
+                group = new GeometryBuilder(materialId, participatesInCollision);
                 geometry.Add(key, group);
             }
 
@@ -618,13 +666,9 @@ public static class DungeonNormalizer
             provenance.Add(new(id, kind, sourceLabel, ordinal));
         }
 
-        private int MinBlockX() => layout.Blocks.Min(block => (int)block.X);
-        private int MaxBlockX() => layout.Blocks.Max(block => (int)block.X);
-        private int MinBlockZ() => layout.Blocks.Min(block => (int)block.Z);
-        private int MaxBlockZ() => layout.Blocks.Max(block => (int)block.Z);
     }
 
-    private sealed class GeometryBuilder(string materialId)
+    private sealed class GeometryBuilder(string materialId, bool participatesInCollision)
     {
         private readonly List<NormalizedVector3> vertices = [];
         private readonly List<NormalizedVector3> normals = [];
@@ -649,10 +693,12 @@ public static class DungeonNormalizer
 
         public NormalizedMesh ToMesh(string id, string artifactId) => new(
             NormalizedMesh.CurrentSchemaVersion, id, artifactId, vertices, normals, textureCoordinates, triangles,
-            [new NormalizedMaterialGroup(materialId, 0, triangles.Count, true)]);
+            [new NormalizedMaterialGroup(materialId, 0, triangles.Count, participatesInCollision)]);
     }
 
     private sealed record TextureInfo(ushort Archive, ushort Record, int Width, int Height, string TextureId, string MaterialId, string SpriteId);
+
+    private sealed record DoorDraft(string Id, string DoorResourceId, NormalizedVector3 Position, NormalizedVector3 RotationDegrees);
 
     private readonly record struct Matrix3(float M11, float M12, float M13, float M21, float M22, float M23, float M31, float M32, float M33)
     {
@@ -725,10 +771,6 @@ public static class DungeonNormalizer
         float maxZ = vertices.Max(vertex => vertex.Z);
         return new(NormalizedBounds.CurrentSchemaVersion, new(minX, minY, minZ), new(maxX, maxY, maxZ));
     }
-
-    private static string ArtifactIdFor(string leaf) => $"artifact/source/{Slug(leaf)}";
-
-    private static string Leaf(string label) => label[(label.LastIndexOf('/') + 1)..];
 
     private static string Slug(string value)
     {

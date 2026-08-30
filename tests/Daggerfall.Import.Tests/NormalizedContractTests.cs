@@ -63,6 +63,21 @@ public sealed class NormalizedContractTests
     }
 
     [Fact]
+    public void ValidationRejectsMutualArtifactDependencyCycles()
+    {
+        NormalizedImportDocument cyclic = CreateDocument() with
+        {
+            Artifacts =
+            [
+                new(NormalizedArtifactDescriptor.CurrentSchemaVersion, "artifact/geometry", "geometry.json", new ContentDigest("1111111111111111111111111111111111111111111111111111111111111111"), 12, ["artifact/materials"]),
+                new(NormalizedArtifactDescriptor.CurrentSchemaVersion, "artifact/materials", "materials.json", new ContentDigest("2222222222222222222222222222222222222222222222222222222222222222"), 8, ["artifact/geometry"]),
+            ],
+        };
+
+        Assert.Throws<InvalidOperationException>(cyclic.Validate);
+    }
+
+    [Fact]
     public void CompatibilityAdapterPreservesSourcePathAndByteLen()
     {
         ExternalImportManifest manifest = new(
@@ -135,18 +150,15 @@ public sealed class NormalizedContractTests
                 [new(0, 1, 2), new(2, 3, 0)],
                 [new("material/stone", 0, 2, true)])],
             new(
-                NormalizedNavigationGrid.CurrentSchemaVersion,
+                NormalizedNavigationSurface.CurrentSchemaVersion,
                 "navigation/example",
                 "artifact/geometry",
-                new(0F, 0F, 0F),
-                1F,
-                2,
-                1,
-                1F,
+                NavigationDerivationConfig.ClassicDefault with { CellSize = 1F, LevelQuantum = 1F },
                 [new(0, 0, 0, 0F, true), new(1, 0, 0, 0F, true)]),
             new(
                 NormalizedWorld.CurrentSchemaVersion,
                 "mesh/example",
+                ["mesh/example"],
                 "navigation/example",
                 new("start", new(0F, 0F, 0F)),
                 new("enter", new(1F, 0F, 0F)),
@@ -154,7 +166,7 @@ public sealed class NormalizedContractTests
                 [new("billboard/sign", "sprite/sign", new(1F, 0F, 0F), new(1F, 1F))],
                 [new("actor/b", "actor/example", new(1F, 0F, 0F)), new("actor/a", "actor/example", new(0F, 0F, 0F))],
                 [new("treasure/chest", "treasure/example", new(1F, 0F, 0F))],
-                [new("door/main", "door/example", new(2F, 0F, 0F), new(0F, 90F, 0F))]),
+                [new("door/main", "door/example", ["mesh/example"], new(2F, 0F, 0F), new(0F, 90F, 0F))]),
             [
                 new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "material/stone", NormalizedResourceKind.Material, "artifact/materials", [], []),
                 new(NormalizedResourceCatalogEntry.CurrentSchemaVersion, "sprite/sign", NormalizedResourceKind.Sprite, "artifact/materials", [], [new("frame/idle", 0, 0, 0, 16, 16, new(0.5F, 0F))]),

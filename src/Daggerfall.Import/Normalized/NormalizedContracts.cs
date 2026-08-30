@@ -17,7 +17,7 @@ public sealed record NormalizedImportDocument(
     NormalizedCoordinateConvention Coordinates,
     NormalizedBounds Bounds,
     IReadOnlyList<NormalizedMesh> Meshes,
-    NormalizedNavigationGrid? Navigation,
+    NormalizedNavigationSurface? Navigation,
     NormalizedWorld World,
     IReadOnlyList<NormalizedResourceCatalogEntry> Resources)
 {
@@ -62,6 +62,7 @@ public sealed record NormalizedImportDocument(
         {
             ValidateReferences(artifact.DependsOnArtifactIds, artifactIds, $"artifact '{artifact.Id}' dependency");
         }
+        ValidateAcyclicArtifactDependencies(Artifacts);
 
         ValidateUnique(Resources, resource => resource.Id, "resource");
         foreach (NormalizedResourceCatalogEntry resource in Resources)
@@ -165,6 +166,45 @@ public sealed record NormalizedImportDocument(
                 throw new InvalidOperationException($"Duplicate {kind} ID '{candidate}'.");
             }
         }
+    }
+
+    private static void ValidateAcyclicArtifactDependencies(IReadOnlyList<NormalizedArtifactDescriptor> artifacts)
+    {
+        Dictionary<string, NormalizedArtifactDescriptor> byId = artifacts.ToDictionary(artifact => artifact.Id, StringComparer.Ordinal);
+        Dictionary<string, VisitState> states = [];
+        foreach (NormalizedArtifactDescriptor artifact in artifacts)
+        {
+            Visit(artifact.Id);
+        }
+
+        return;
+
+        void Visit(string id)
+        {
+            if (states.TryGetValue(id, out VisitState state))
+            {
+                if (state == VisitState.Visiting)
+                {
+                    throw new InvalidOperationException($"Normalized artifact dependency graph contains a cycle at '{id}'.");
+                }
+
+                return;
+            }
+
+            states[id] = VisitState.Visiting;
+            foreach (string dependency in byId[id].DependsOnArtifactIds)
+            {
+                Visit(dependency);
+            }
+
+            states[id] = VisitState.Visited;
+        }
+    }
+
+    private enum VisitState
+    {
+        Visiting,
+        Visited,
     }
 }
 
@@ -495,33 +535,77 @@ public sealed record NormalizedMesh(
     }
 }
 
-public sealed record NormalizedNavigationCell(int Column, int Row, int Level, float SupportHeight, bool Walkable)
+/// <summary>
+/// Explicit, content-visible controls used by the offline navigation derivation.
+/// These are import policy defaults, rather than hidden magic numbers in the
+/// geometry walker.  They never create a runtime navigation system.
+/// </summary>
+public sealed record NavigationDerivationConfig(
+    int SchemaVersion,
+    float CellSize,
+    float LevelQuantum,
+    float MaximumSlopeDegrees,
+    float RequiredHeadroom,
+    float SupportProbeDrop)
 {
-    public void Validate(NormalizedNavigationGrid grid)
+    public const int CurrentSchemaVersion = 1;
+
+    public static NavigationDerivationConfig ClassicDefault { get; } = new(
+        CurrentSchemaVersion,
+        CellSize: 0.8F,
+        LevelQuantum: 0.25F,
+        MaximumSlopeDegrees: 45F,
+        RequiredHeadroom: 1.8F,
+        SupportProbeDrop: 0.05F);
+
+    public void Validate()
     {
-        if (Column < 0 || Column >= grid.Width || Row < 0 || Row >= grid.Height)
+        if (SchemaVersion != CurrentSchemaVersion)
         {
-            throw new ArgumentOutOfRangeException(nameof(Column), "A navigation cell lies outside its declared grid dimensions.");
+            throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only navigation derivation schema version {CurrentSchemaVersion} is supported.");
         }
 
-        NormalizedImportDocument.RequireFinite(SupportHeight, nameof(SupportHeight));
+        NormalizedImportDocument.RequireFinite(CellSize, nameof(CellSize));
+        NormalizedImportDocument.RequireFinite(LevelQuantum, nameof(LevelQuantum));
+        NormalizedImportDocument.RequireFinite(MaximumSlopeDegrees, nameof(MaximumSlopeDegrees));
+        NormalizedImportDocument.RequireFinite(RequiredHeadroom, nameof(RequiredHeadroom));
+        NormalizedImportDocument.RequireFinite(SupportProbeDrop, nameof(SupportProbeDrop));
+        if (CellSize <= 0F || LevelQuantum <= 0F || MaximumSlopeDegrees is <= 0F or >= 90F
+            || RequiredHeadroom <= 0F || SupportProbeDrop < 0F)
+        {
+            throw new ArgumentOutOfRangeException(nameof(CellSize), "Navigation derivation values must be finite, positive, and use a slope below ninety degrees.");
+        }
     }
 }
 
-public sealed record NormalizedNavigationGrid(
+/// <summary>One signed horizontal cell and quantized support level derived offline from collision geometry.</summary>
+public sealed record NormalizedNavigationCell(int Column, int Row, int Level, float SupportHeight, bool Walkable)
+{
+    public void Validate(NormalizedNavigationSurface surface)
+    {
+        NormalizedImportDocument.RequireFinite(SupportHeight, nameof(SupportHeight));
+        int expectedLevel = checked((int)MathF.Round(SupportHeight / surface.Config.LevelQuantum, MidpointRounding.AwayFromZero));
+        if (Level != expectedLevel)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Level), "A navigation cell level must be the configured quantization of its support height.");
+        }
+    }
+}
+
+/// <summary>
+/// Sparse offline navigation supports. Coordinates deliberately remain signed:
+/// importing an Arena2 layout must not silently shift authored block space.
+/// </summary>
+public sealed record NormalizedNavigationSurface(
     int SchemaVersion,
     string Id,
     string ArtifactId,
-    NormalizedVector3 Origin,
-    float CellSize,
-    int Width,
-    int Height,
-    float LevelHeight,
+    NavigationDerivationConfig Config,
     IReadOnlyList<NormalizedNavigationCell> Cells)
 {
     public const int CurrentSchemaVersion = 1;
 
-    public NormalizedNavigationGrid Canonicalize() => this with
+    public NormalizedNavigationSurface Canonicalize() => this with
     {
         Cells = Cells.OrderBy(cell => cell.Column).ThenBy(cell => cell.Row).ThenBy(cell => cell.Level).ToArray(),
     };
@@ -535,13 +619,8 @@ public sealed record NormalizedNavigationGrid(
 
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         NormalizedImportDocument.RequireReference(ArtifactId, artifactIds, nameof(ArtifactId));
-        Origin.Validate(nameof(Origin));
-        NormalizedImportDocument.RequireFinite(CellSize, nameof(CellSize));
-        NormalizedImportDocument.RequireFinite(LevelHeight, nameof(LevelHeight));
-        if (CellSize <= 0F || LevelHeight <= 0F || Width <= 0 || Height <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(CellSize), "Navigation grid dimensions and quantization values must be positive.");
-        }
+        ArgumentNullException.ThrowIfNull(Config);
+        Config.Validate();
 
         ArgumentNullException.ThrowIfNull(Cells);
         HashSet<(int Column, int Row, int Level)> keys = [];
@@ -615,12 +694,33 @@ public sealed record NormalizedTreasurePlacement(string Id, string TreasureResou
     }
 }
 
-public sealed record NormalizedDoorPlacement(string Id, string DoorResourceId, NormalizedVector3 Position, NormalizedVector3 RotationDegrees)
+public sealed record NormalizedDoorPlacement(
+    string Id,
+    string DoorResourceId,
+    IReadOnlyList<string> VisualMeshIds,
+    NormalizedVector3 Position,
+    NormalizedVector3 RotationDegrees)
 {
-    public void Validate(IReadOnlySet<string> resourceIds)
+    public NormalizedDoorPlacement Canonicalize() => this with
+    {
+        VisualMeshIds = VisualMeshIds.OrderBy(meshId => meshId, StringComparer.Ordinal).ToArray(),
+    };
+
+    public void Validate(IReadOnlySet<string> resourceIds, IReadOnlySet<string> meshIds)
     {
         NormalizedImportDocument.RequireLogicalId(Id, nameof(Id));
         NormalizedImportDocument.RequireReference(DoorResourceId, resourceIds, nameof(DoorResourceId));
+        ArgumentNullException.ThrowIfNull(VisualMeshIds);
+        if (VisualMeshIds.Count == 0)
+        {
+            throw new InvalidOperationException("A normalized door placement requires at least one visual mesh.");
+        }
+
+        NormalizedImportDocument.ValidateUnique(VisualMeshIds, meshId => meshId, "door visual mesh");
+        foreach (string meshId in VisualMeshIds)
+        {
+            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(VisualMeshIds));
+        }
         Position.Validate(nameof(Position));
         RotationDegrees.Validate(nameof(RotationDegrees));
     }
@@ -628,7 +728,8 @@ public sealed record NormalizedDoorPlacement(string Id, string DoorResourceId, N
 
 public sealed record NormalizedWorld(
     int SchemaVersion,
-    string MeshId,
+    string VisualMeshAssetId,
+    IReadOnlyList<string> MeshIds,
     string? NavigationId,
     NormalizedMarker? StartMarker,
     NormalizedMarker? EnterMarker,
@@ -642,11 +743,12 @@ public sealed record NormalizedWorld(
 
     public NormalizedWorld Canonicalize() => this with
     {
+        MeshIds = MeshIds.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
         Lights = Lights.OrderBy(light => light.Id, StringComparer.Ordinal).ToArray(),
         Billboards = Billboards.OrderBy(billboard => billboard.Id, StringComparer.Ordinal).ToArray(),
         Actors = Actors.OrderBy(actor => actor.Id, StringComparer.Ordinal).ToArray(),
         Treasures = Treasures.OrderBy(treasure => treasure.Id, StringComparer.Ordinal).ToArray(),
-        Doors = Doors.OrderBy(door => door.Id, StringComparer.Ordinal).ToArray(),
+        Doors = Doors.OrderBy(door => door.Id, StringComparer.Ordinal).Select(door => door.Canonicalize()).ToArray(),
     };
 
     public void Validate(IReadOnlySet<string> meshIds, IReadOnlySet<string> resourceIds)
@@ -656,7 +758,18 @@ public sealed record NormalizedWorld(
             throw new ArgumentOutOfRangeException(nameof(SchemaVersion), SchemaVersion, $"Only world schema version {CurrentSchemaVersion} is supported.");
         }
 
-        NormalizedImportDocument.RequireReference(MeshId, meshIds, nameof(MeshId));
+        NormalizedImportDocument.RequireLogicalId(VisualMeshAssetId, nameof(VisualMeshAssetId));
+        ArgumentNullException.ThrowIfNull(MeshIds);
+        if (MeshIds.Count == 0)
+        {
+            throw new InvalidOperationException("A normalized world requires at least one visual mesh.");
+        }
+
+        NormalizedImportDocument.ValidateUnique(MeshIds, id => id, "world mesh");
+        foreach (string meshId in MeshIds)
+        {
+            NormalizedImportDocument.RequireReference(meshId, meshIds, nameof(MeshIds));
+        }
         if (NavigationId is not null)
         {
             NormalizedImportDocument.RequireLogicalId(NavigationId, nameof(NavigationId));
@@ -678,7 +791,7 @@ public sealed record NormalizedWorld(
         foreach (NormalizedBillboardPlacement billboard in Billboards) billboard.Validate(resourceIds);
         foreach (NormalizedActorPlacement actor in Actors) actor.Validate(resourceIds);
         foreach (NormalizedTreasurePlacement treasure in Treasures) treasure.Validate(resourceIds);
-        foreach (NormalizedDoorPlacement door in Doors) door.Validate(resourceIds);
+        foreach (NormalizedDoorPlacement door in Doors) door.Validate(resourceIds, meshIds);
     }
 }
 
