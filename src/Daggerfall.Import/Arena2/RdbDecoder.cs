@@ -58,6 +58,9 @@ public static class RdbSourceClassification
     /// <summary>Classic editor-flat random-treasure marker record.</summary>
     public const ushort RandomTreasureMarkerRecord = 19;
 
+    /// <summary>Classic editor-flat fixed-mobile marker record.</summary>
+    public const ushort FixedMobileMarkerRecord = 16;
+
     /// <summary>Determines whether a flat is a classic editor start-marker source fact.</summary>
     public static bool IsStartMarker(RdbFlatSource flat)
     {
@@ -77,6 +80,18 @@ public static class RdbSourceClassification
     {
         ArgumentNullException.ThrowIfNull(flat);
         return flat.TextureArchive == EditorFlatArchive && flat.TextureRecord == RandomTreasureMarkerRecord;
+    }
+
+    /// <summary>
+    /// Determines whether a flat is the classic fixed-mobile editor marker.
+    /// Raw Arena2 RDB data has no DFU custom-data bit, so callers must retain
+    /// the classic low-byte mobile interpretation rather than inventing a
+    /// custom 16-bit extension.
+    /// </summary>
+    public static bool IsFixedMobileMarker(RdbFlatSource flat)
+    {
+        ArgumentNullException.ThrowIfNull(flat);
+        return flat.TextureArchive == EditorFlatArchive && flat.TextureRecord == FixedMobileMarkerRecord;
     }
 
     /// <summary>Determines whether a model has a classic action-door tag; it does not create a door runtime.</summary>

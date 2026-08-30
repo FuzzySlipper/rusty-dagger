@@ -43,13 +43,12 @@ public sealed record PlayerControlTuning(
     }
 }
 
-public sealed record SpatialTuning(double CollisionVoxelSize, uint CollisionChunkSize, double NavigationCellSize, uint NavigationChunkSize, uint NavigationMaximumStepCells)
+public sealed record SpatialTuning(double CollisionVoxelSize, uint CollisionChunkSize, uint NavigationChunkSize, uint NavigationMaximumStepCells)
 {
     public SpatialTuning Validate()
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(CollisionVoxelSize);
         ArgumentOutOfRangeException.ThrowIfZero(CollisionChunkSize);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(NavigationCellSize);
         ArgumentOutOfRangeException.ThrowIfZero(NavigationChunkSize);
         ArgumentOutOfRangeException.ThrowIfZero(NavigationMaximumStepCells);
         return this;

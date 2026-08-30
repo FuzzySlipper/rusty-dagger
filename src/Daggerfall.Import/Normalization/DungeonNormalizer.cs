@@ -354,8 +354,15 @@ public static class DungeonNormalizer
                     continue;
                 }
 
+                // Daggerfall's fixed-mobile meaning is carried only by the
+                // editor flat marker (archive 199, record 16).  Its classic
+                // source data has garbage high bits; mobile zero is valid and
+                // 99 is the one reserved invalid value.  Do not classify an
+                // ordinary billboard from an incidental faction low byte.
                 byte mobileId = unchecked((byte)flat.FactionOrMobileId);
-                if (mobileId is not 0 and not 99 && MobileSourceMetadata.TryGet(new Arena2MobileId(mobileId), out Arena2MobileSource? mobile))
+                if (RdbSourceClassification.IsFixedMobileMarker(flat)
+                    && mobileId != 99
+                    && MobileSourceMetadata.TryGet(new Arena2MobileId(mobileId), out Arena2MobileSource? mobile))
                 {
                     AddPlacement();
                     string actorPlacementId = $"actor/{Slug(reference.SourceName)}/{index}";

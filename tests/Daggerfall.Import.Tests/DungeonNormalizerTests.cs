@@ -86,9 +86,21 @@ public sealed class DungeonNormalizerTests
     }
 
     [Fact]
-    public void RoutesOnlyKnownMobileMetadataByFactionLowByteAfterEditorMarkers()
+    public void RoutesOnlyFixedMobileMarkersAndRetainsOrdinaryLowByteMatchesAsBillboards()
     {
-        DungeonNormalizationResult actor = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(2, 0, 0x0101)));
+        DungeonNormalizationResult actor = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(
+            RdbSourceClassification.EditorFlatArchive,
+            RdbSourceClassification.FixedMobileMarkerRecord,
+            0x0101)));
+        DungeonNormalizationResult rat = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(
+            RdbSourceClassification.EditorFlatArchive,
+            RdbSourceClassification.FixedMobileMarkerRecord,
+            0xAB00)));
+        DungeonNormalizationResult invalidMarker = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(
+            RdbSourceClassification.EditorFlatArchive,
+            RdbSourceClassification.FixedMobileMarkerRecord,
+            0x0063)));
+        DungeonNormalizationResult ordinaryBillboard = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(2, 0, 0x0101)));
         DungeonNormalizationResult marker = DungeonNormalizer.Normalize(Request(CreateSourcesForFlat(
             RdbSourceClassification.EditorFlatArchive,
             RdbSourceClassification.StartMarkerRecord,
@@ -100,6 +112,11 @@ public sealed class DungeonNormalizerTests
 
         Assert.Equal("actor/mobile-1", Assert.Single(actor.Document.World.Actors).ActorResourceId);
         Assert.Contains(actor.Document.Resources, resource => resource.Id == "actor/mobile-1");
+        Assert.Equal("actor/mobile-0", Assert.Single(rat.Document.World.Actors).ActorResourceId);
+        Assert.Empty(invalidMarker.Document.World.Actors);
+        Assert.Empty(invalidMarker.Document.World.Billboards);
+        Assert.Empty(ordinaryBillboard.Document.World.Actors);
+        Assert.Single(ordinaryBillboard.Document.World.Billboards);
         Assert.NotNull(marker.Document.World.StartMarker);
         Assert.Empty(marker.Document.World.Actors);
         Assert.Single(treasure.Document.World.Treasures);

@@ -2,57 +2,318 @@
   "schemaVersion": 1,
   "ruleset": "daggerfall",
   "startingState": {
-    "position": [28.375, 38.975002, -12.400001],
-    "look": { "yawRadians": 3.1415927, "pitchRadians": 0 },
+    "position": [
+      28.375,
+      38.975002,
+      -12.400001
+    ],
+    "look": {
+      "yawRadians": 3.1415927,
+      "pitchRadians": 0
+    },
     "loadout": [
-      { "item": "iron-longsword", "entityId": 1001, "equipSlot": "right-hand" },
-      { "item": "iron-dagger", "entityId": 1002 },
-      { "item": "iron-cuirass", "entityId": 1003, "equipSlot": "torso" },
-      { "item": "gold-piece", "quantity": 25 }
+      {
+        "item": "iron-longsword",
+        "entityId": 1001,
+        "equipSlot": "right-hand"
+      },
+      {
+        "item": "iron-dagger",
+        "entityId": 1002
+      },
+      {
+        "item": "iron-cuirass",
+        "entityId": 1003,
+        "equipSlot": "torso"
+      },
+      {
+        "item": "gold-piece",
+        "quantity": 25
+      }
     ]
   },
-  "appearances": [
-    { "id": "rat", "texture": "textures/enemy-rat-atlas.png", "uvMin": [0.0102602603, 0.0659574468], "uvMax": [0.0265265265, 0.2], "pivot": [0.5, 0], "size": [1.575, 0.75], "billboard": "cylindrical", "tint": [1, 1, 1, 1], "sizeMode": "world", "renderOrder": 0, "depth": "default", "visible": true, "layer": "scene" },
-    { "id": "skeletal-warrior", "texture": "textures/enemy-skeletalwarrior-atlas.png", "uvMin": [0.0042606516, 0.1266294227], "uvMax": [0.0243107769, 0.3333333333], "pivot": [0.5, 0], "size": [1.375, 1.9421875], "billboard": "cylindrical", "tint": [1, 1, 1, 1], "sizeMode": "world", "renderOrder": 0, "depth": "default", "visible": true, "layer": "scene" }
-  ],
   "placements": [
-    { "entityId": 2000, "actor": "skeletal-warrior", "position": [13.5, 45.825, -17.5], "appearance": "skeletal-warrior" },
-    { "entityId": 2007, "actor": "rat", "position": [47.75, 42.625, -11.25], "appearance": "rat" },
-    { "entityId": 2008, "actor": "rat", "position": [37.825, 39.425, -15.3], "appearance": "rat" },
-    { "entityId": 2010, "actor": "rat", "position": [33.850002, 39.425, -3.175], "appearance": "rat" },
-    { "entityId": 2012, "actor": "skeletal-warrior", "position": [40.225002, 26.175001, -19.075], "appearance": "skeletal-warrior" },
-    { "entityId": 2013, "actor": "rat", "position": [32.675, 13.825, -3.775], "appearance": "rat" },
-    { "entityId": 2014, "actor": "rat", "position": [35.875, 13.825, -10.175], "appearance": "rat" },
-    { "entityId": 2017, "actor": "rat", "position": [26, 0.6, -12.775001], "appearance": "rat" },
-    { "entityId": 2019, "actor": "rat", "position": [15.275001, 20.225, -43.075], "appearance": "rat" },
-    { "entityId": 2020, "actor": "skeletal-warrior", "position": [33.075, 45.825, -45.25], "appearance": "skeletal-warrior" },
-    { "entityId": 2024, "actor": "rat", "position": [37.125, 7.425, -33.675], "appearance": "rat" },
-    { "entityId": 2026, "actor": "rat", "position": [-29.775, 32.575, -10.725], "appearance": "rat" },
-    { "entityId": 2027, "actor": "rat", "position": [-28.050001, 29, -47.95], "appearance": "rat" },
-    { "entityId": 2028, "actor": "rat", "position": [-1.8250008, 13.35, -29.325], "appearance": "rat" },
-    { "entityId": 2029, "actor": "rat", "position": [9.675, 13.35, 33.7], "appearance": "rat" },
-    { "entityId": 2030, "actor": "rat", "position": [48.05, 32.575, 43.350002], "appearance": "rat" },
-    { "entityId": 2031, "actor": "rat", "position": [7.925, 19.75, 22.4], "appearance": "rat" },
-    { "entityId": 2032, "actor": "rat", "position": [11.2, 32.575, 8.224998], "appearance": "rat" },
-    { "entityId": 2033, "actor": "rat", "position": [43.975002, 13.400001, 16.175], "appearance": "rat" },
-    { "entityId": 2034, "actor": "rat", "position": [60.825, 13.325, -17.7], "appearance": "rat" },
-    { "entityId": 2035, "actor": "rat", "position": [74.875, 13.35, -22.5], "appearance": "rat" },
-    { "entityId": 2036, "actor": "rat", "position": [86.675, 13.375, -2.025], "appearance": "rat" },
-    { "entityId": 2037, "actor": "rat", "position": [58.9, 32.55, -40.275], "appearance": "rat" },
-    { "entityId": 2038, "actor": "rat", "position": [68.475, 16.625, -47.9], "appearance": "rat" },
-    { "entityId": 2039, "actor": "rat", "position": [22.825, 13.325, -75.525], "appearance": "rat" },
-    { "entityId": 2040, "actor": "rat", "position": [8.25, 13.35, -77.05], "appearance": "rat" },
-    { "entityId": 2041, "actor": "rat", "position": [44.275, 13.35, -83.625], "appearance": "rat" },
-    { "entityId": 2042, "actor": "rat", "position": [28.4, 13.375, -92.15], "appearance": "rat" }
-  ],
-  "encounters": [
-    { "id": "rat-introduction", "name": "Rat Cellar", "objective": "Defeat the rat and inspect its classic corpse marker.", "members": [2007] },
-    { "id": "skeletal-guardroom", "name": "Skeletal Guardroom", "objective": "Defeat the tougher Skeletal Warrior and survive its slower, heavier attacks.", "members": [2000] }
+    {
+      "entityId": 2000,
+      "actor": "skeletal-warrior",
+      "position": [
+        13.5,
+        45.825,
+        -17.5
+      ]
+    },
+    {
+      "entityId": 2007,
+      "actor": "rat",
+      "position": [
+        47.75,
+        42.625,
+        -11.25
+      ]
+    },
+    {
+      "entityId": 2008,
+      "actor": "rat",
+      "position": [
+        37.825,
+        39.425,
+        -15.3
+      ]
+    },
+    {
+      "entityId": 2010,
+      "actor": "rat",
+      "position": [
+        33.850002,
+        39.425,
+        -3.175
+      ]
+    },
+    {
+      "entityId": 2012,
+      "actor": "skeletal-warrior",
+      "position": [
+        40.225002,
+        26.175001,
+        -19.075
+      ]
+    },
+    {
+      "entityId": 2013,
+      "actor": "rat",
+      "position": [
+        32.675,
+        13.825,
+        -3.775
+      ]
+    },
+    {
+      "entityId": 2014,
+      "actor": "rat",
+      "position": [
+        35.875,
+        13.825,
+        -10.175
+      ]
+    },
+    {
+      "entityId": 2017,
+      "actor": "rat",
+      "position": [
+        26,
+        0.6,
+        -12.775001
+      ]
+    },
+    {
+      "entityId": 2019,
+      "actor": "rat",
+      "position": [
+        15.275001,
+        20.225,
+        -43.075
+      ]
+    },
+    {
+      "entityId": 2020,
+      "actor": "skeletal-warrior",
+      "position": [
+        33.075,
+        45.825,
+        -45.25
+      ]
+    },
+    {
+      "entityId": 2024,
+      "actor": "rat",
+      "position": [
+        37.125,
+        7.425,
+        -33.675
+      ]
+    },
+    {
+      "entityId": 2026,
+      "actor": "rat",
+      "position": [
+        -29.775,
+        32.575,
+        -10.725
+      ]
+    },
+    {
+      "entityId": 2027,
+      "actor": "rat",
+      "position": [
+        -28.050001,
+        29,
+        -47.95
+      ]
+    },
+    {
+      "entityId": 2028,
+      "actor": "rat",
+      "position": [
+        -1.8250008,
+        13.35,
+        -29.325
+      ]
+    },
+    {
+      "entityId": 2029,
+      "actor": "rat",
+      "position": [
+        9.675,
+        13.35,
+        33.7
+      ]
+    },
+    {
+      "entityId": 2030,
+      "actor": "rat",
+      "position": [
+        48.05,
+        32.575,
+        43.350002
+      ]
+    },
+    {
+      "entityId": 2031,
+      "actor": "rat",
+      "position": [
+        7.925,
+        19.75,
+        22.4
+      ]
+    },
+    {
+      "entityId": 2032,
+      "actor": "rat",
+      "position": [
+        11.2,
+        32.575,
+        8.224998
+      ]
+    },
+    {
+      "entityId": 2033,
+      "actor": "rat",
+      "position": [
+        43.975002,
+        13.400001,
+        16.175
+      ]
+    },
+    {
+      "entityId": 2034,
+      "actor": "rat",
+      "position": [
+        60.825,
+        13.325,
+        -17.7
+      ]
+    },
+    {
+      "entityId": 2035,
+      "actor": "rat",
+      "position": [
+        74.875,
+        13.35,
+        -22.5
+      ]
+    },
+    {
+      "entityId": 2036,
+      "actor": "rat",
+      "position": [
+        86.675,
+        13.375,
+        -2.025
+      ]
+    },
+    {
+      "entityId": 2037,
+      "actor": "rat",
+      "position": [
+        58.9,
+        32.55,
+        -40.275
+      ]
+    },
+    {
+      "entityId": 2038,
+      "actor": "rat",
+      "position": [
+        68.475,
+        16.625,
+        -47.9
+      ]
+    },
+    {
+      "entityId": 2039,
+      "actor": "rat",
+      "position": [
+        22.825,
+        13.325,
+        -75.525
+      ]
+    },
+    {
+      "entityId": 2040,
+      "actor": "rat",
+      "position": [
+        8.25,
+        13.35,
+        -77.05
+      ]
+    },
+    {
+      "entityId": 2041,
+      "actor": "rat",
+      "position": [
+        44.275,
+        13.35,
+        -83.625
+      ]
+    },
+    {
+      "entityId": 2042,
+      "actor": "rat",
+      "position": [
+        28.4,
+        13.375,
+        -92.15
+      ]
+    }
   ],
   "world": {
-    "staticMesh": "imported/privateers-hold.static-mesh.json",
-    "navigation": "projects/privateers-hold.navgrid.json",
-    "collision": "imported/privateers-hold.static-mesh.json",
-    "appearance": { "tint": [0.72, 0.7, 0.65, 1], "position": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1], "visible": true, "layer": "scene" }
+    "publicationRoot": "worldrpg/imports/privateers-hold",
+    "appearance": {
+      "tint": [
+        0.72,
+        0.7,
+        0.65,
+        1
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0,
+        1
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "visible": true,
+      "layer": "scene"
+    },
+    "navigationGridId": 1
   }
 }

@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.Buffers.Binary;
 using System.Numerics;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
@@ -23,14 +25,14 @@ internal static class PrivateersHoldContent
             if (DaggerfallBaseContent.Integer(root, "schemaVersion", diagnostics) != SchemaVersion) diagnostics.Add($"Privateer's Hold payload schemaVersion must be {SchemaVersion}.");
             AdmittedFiles files = AdmittedFiles.Copy(content, diagnostics);
             ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), definitions, diagnostics);
-            Dictionary<DaggerfallAppearanceId, AuthoredSprite> appearances = ReadAppearances(root, diagnostics);
-            List<AuthoredActor> actors = ReadPlacements(root, definitions, appearances, diagnostics);
-            List<ScenarioEncounter> encounters = ReadEncounters(root, actors, diagnostics);
-            WorldArtifactReferences world = ReadWorld(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics), diagnostics);
-            ValidateAssetReferences(files, world, appearances.Values, diagnostics);
-            (PlanarNavCell[] navigation, CollisionMesh collision) = ReadSpatialArtifacts(files, world, diagnostics);
+            PrivateersHoldInputs inputs = ReadNormalizedClosure(
+                files,
+                root,
+                start,
+                definitions,
+                diagnostics);
             diagnostics.ThrowIfAny();
-            return new PrivateersHoldInputs(new ProjectFacts(start.Position, new ReadOnlyDictionary<long, AuthoredActor>(actors.ToDictionary(actor => actor.EntityId))), navigation, collision, world.StaticMesh, world.Appearance, start.Look, Array.AsReadOnly(start.Loadout.ToArray()), Array.AsReadOnly(encounters.ToArray()));
+            return inputs;
         }
         catch (JsonException exception)
         {
@@ -42,6 +44,232 @@ internal static class PrivateersHoldContent
             diagnostics.Add($"Privateer's Hold payload is malformed: {exception.Message}");
             throw diagnostics.Exception();
         }
+    }
+
+    private static PrivateersHoldInputs ReadNormalizedClosure(AdmittedFiles files, JsonElement root, ScenarioStart start, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement world = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "world", diagnostics), "world", diagnostics);
+        string publicationRoot = DaggerfallBaseContent.Text(world, "publicationRoot", diagnostics);
+        if (!DaggerfallBaseContent.ValidId(publicationRoot.Replace('/', '-')) || publicationRoot.Contains("..", StringComparison.Ordinal))
+        {
+            diagnostics.Add("Privateer's Hold publicationRoot must be a stable relative logical path.");
+        }
+
+        string Prefix(string relativePath) => $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+        Dictionary<string, ContentSha256> artifacts = ReadImportArtifacts(files, Prefix("import-manifest.json"), publicationRoot, diagnostics);
+        string spatialPath = Prefix("spatial/privateer-s-hold/collision-navigation.json");
+        string meshPath = Prefix("spatial/privateer-s-hold/static-mesh.json");
+        string mediaPath = Prefix("media/dungeon/manifest.json");
+        ContentSha256 spatialHash = RequireArtifact(artifacts, spatialPath, diagnostics);
+        ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
+        ContentSha256 mediaHash = RequireArtifact(artifacts, mediaPath, diagnostics);
+        VerifyAdmittedArtifact(files, spatialPath, spatialHash, diagnostics);
+        VerifyAdmittedArtifact(files, meshPath, meshHash, diagnostics);
+        VerifyAdmittedArtifact(files, mediaPath, mediaHash, diagnostics);
+        ulong gridId = UnsignedInteger(world, "navigationGridId", diagnostics);
+        AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
+        Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics);
+        (IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<int, NormalizedActorSprite> sprites) = ReadDungeonMedia(
+            files.GetExactlyOne(mediaPath),
+            publicationRoot,
+            artifacts,
+            definitions,
+            diagnostics);
+        Dictionary<long, NormalizedActorSprite> actorSprites = [];
+        foreach (AuthoredActor actor in actors.Values)
+        {
+            if (!definitions.Actors.TryGetValue(actor.ActorId, out DaggerfallActorDefinition? definition))
+            {
+                // Placement validation already records the product-facing
+                // diagnostic. Avoid indexing an untrusted authored ID while
+                // gathering generated presentation facts.
+                continue;
+            }
+            if (definition.MobileId is not int mobileId || !sprites.TryGetValue(mobileId, out NormalizedActorSprite? sprite))
+            {
+                diagnostics.Add($"Placement '{actor.EntityId}' has no generated actor media for Daggerfall mobile '{definition.MobileId}'.");
+                continue;
+            }
+            actorSprites.Add(actor.EntityId, sprite);
+        }
+
+        return new PrivateersHoldInputs(
+            new ProjectFacts(start.Position, new ReadOnlyDictionary<long, AuthoredActor>(actors)),
+            new SpatialContentArtifact(spatialPath, spatialHash, gridId),
+            new ContentArtifact(meshPath, meshHash),
+            worldAppearance,
+            start.Look,
+            Array.AsReadOnly(start.Loadout.ToArray()),
+            materials,
+            new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites));
+    }
+
+    private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<long, AuthoredActor> actors = [];
+        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "placements", diagnostics))
+        {
+            JsonElement placement = DaggerfallBaseContent.Object(value, "placement", diagnostics);
+            long entityId = Long(placement, "entityId", diagnostics);
+            DaggerfallActorId actorId = new(DaggerfallBaseContent.Text(placement, "actor", diagnostics));
+            if (entityId < 1 || !actors.TryAdd(entityId, new AuthoredActor(entityId, actorId, Point(DaggerfallBaseContent.Property(placement, "position", diagnostics), "placement.position", diagnostics))))
+            {
+                diagnostics.Add($"Placement entity id '{entityId}' is invalid or duplicated.");
+            }
+            if (!definitions.Actors.ContainsKey(actorId)) diagnostics.Add($"Placement '{entityId}' refers to missing actor '{actorId.Value}'.");
+        }
+        return actors;
+    }
+
+    private static Dictionary<string, ContentSha256> ReadImportArtifacts(AdmittedFiles files, string manifestPath, string publicationRoot, DaggerfallContentDiagnostics diagnostics)
+    {
+        byte[]? bytes = files.GetExactlyOne(manifestPath);
+        if (bytes is null) { diagnostics.Add($"Generated import manifest '{manifestPath}' must occur exactly once in admitted content."); return []; }
+        Dictionary<string, ContentSha256> artifacts = new(StringComparer.Ordinal);
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(bytes);
+            foreach (JsonElement artifact in DaggerfallBaseContent.Array(DaggerfallBaseContent.Object(document.RootElement, "import manifest", diagnostics), "artifacts", diagnostics))
+            {
+                JsonElement value = DaggerfallBaseContent.Object(artifact, "import artifact", diagnostics);
+                string relativePath = DaggerfallBaseContent.Text(value, "relativePath", diagnostics);
+                ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(value, "contentHash", diagnostics), diagnostics);
+                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+                if (!artifacts.TryAdd(path, hash)) diagnostics.Add($"Generated import manifest repeats artifact '{relativePath}'.");
+            }
+        }
+        catch (JsonException exception) { diagnostics.Add($"Generated import manifest is not valid JSON: {exception.Message}"); }
+        return artifacts;
+    }
+
+    private static ContentSha256 RequireArtifact(IReadOnlyDictionary<string, ContentSha256> artifacts, string path, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (artifacts.TryGetValue(path, out ContentSha256 hash)) return hash;
+        diagnostics.Add($"Generated import manifest does not describe required artifact '{path}'.");
+        return default;
+    }
+
+    private static void VerifyAdmittedArtifact(AdmittedFiles files, string path, ContentSha256 expected, DaggerfallContentDiagnostics diagnostics)
+    {
+        byte[]? bytes = files.GetExactlyOne(path);
+        if (bytes is null) { diagnostics.Add($"Generated artifact '{path}' must occur exactly once in admitted content."); return; }
+        if (ContentHash(Convert.ToHexString(SHA256.HashData(bytes)), diagnostics) != expected)
+        {
+            diagnostics.Add($"Generated artifact '{path}' does not match its manifest content digest.");
+        }
+    }
+
+    private static ContentSha256 ContentHash(string hex, DaggerfallContentDiagnostics diagnostics)
+    {
+        try
+        {
+            byte[] bytes = Convert.FromHexString(hex);
+            if (bytes.Length != 32) throw new FormatException("SHA-256 needs 32 bytes.");
+            return new ContentSha256(
+                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(0, 8)),
+                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(8, 8)),
+                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(16, 8)),
+                BinaryPrimitives.ReadUInt64BigEndian(bytes.AsSpan(24, 8)));
+        }
+        catch (FormatException) { diagnostics.Add("Generated content digest must be a 64-character hexadecimal SHA-256."); return default; }
+    }
+
+    private static (IReadOnlyList<NormalizedMaterial> Materials, IReadOnlyDictionary<int, NormalizedActorSprite> Sprites) ReadDungeonMedia(
+        byte[]? bytes,
+        string publicationRoot,
+        IReadOnlyDictionary<string, ContentSha256> artifacts,
+        DaggerfallDefinitions definitions,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        if (bytes is null) { diagnostics.Add("Generated dungeon media manifest is unavailable."); return ([], new Dictionary<int, NormalizedActorSprite>()); }
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(bytes);
+            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "dungeon media manifest", diagnostics);
+            Dictionary<string, MediaResource> resources = [];
+            JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "dungeon media", diagnostics);
+            foreach (JsonElement value in DaggerfallBaseContent.Array(media, "resources", diagnostics))
+            {
+                JsonElement resource = DaggerfallBaseContent.Object(value, "dungeon media resource", diagnostics);
+                string id = DaggerfallBaseContent.Text(resource, "id", diagnostics);
+                string relativePath = DaggerfallBaseContent.Text(resource, "relativePath", diagnostics);
+                int atlasWidth = DaggerfallBaseContent.Integer(resource, "atlasWidth", diagnostics);
+                int atlasHeight = DaggerfallBaseContent.Integer(resource, "atlasHeight", diagnostics);
+                ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(resource, "contentDigest", diagnostics), diagnostics);
+                List<NormalizedAtlasFrame> frames = [];
+                foreach (JsonElement frameValue in DaggerfallBaseContent.Array(resource, "frames", diagnostics))
+                {
+                    JsonElement frame = DaggerfallBaseContent.Object(frameValue, "atlas frame", diagnostics);
+                    uint frameId = checked((uint)DaggerfallBaseContent.Integer(frame, "frameIndex", diagnostics));
+                    int x = DaggerfallBaseContent.Integer(frame, "x", diagnostics), y = DaggerfallBaseContent.Integer(frame, "y", diagnostics);
+                    int width = DaggerfallBaseContent.Integer(frame, "width", diagnostics), height = DaggerfallBaseContent.Integer(frame, "height", diagnostics);
+                    if (atlasWidth <= 0 || atlasHeight <= 0 || width <= 0 || height <= 0 || x < 0 || y < 0 || x + width > atlasWidth || y + height > atlasHeight)
+                    {
+                        diagnostics.Add($"Generated atlas resource '{id}' has a frame outside its atlas bounds.");
+                    }
+                    frames.Add(new NormalizedAtlasFrame(frameId, x, y, width, height));
+                }
+                if (frames.Count > 4096 || frames.Select(frame => frame.Id).Distinct().Count() != frames.Count)
+                {
+                    diagnostics.Add($"Generated atlas resource '{id}' exceeds Engine's 4096-frame limit or repeats a frame id.");
+                }
+                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
+                if (!artifacts.TryGetValue(path, out ContentSha256 artifactHash) || artifactHash != hash)
+                {
+                    diagnostics.Add($"Generated media resource '{id}' does not agree with the import manifest.");
+                }
+                if (!resources.TryAdd(id, new MediaResource(path, hash, atlasWidth, atlasHeight, frames))) diagnostics.Add($"Generated dungeon media repeats resource '{id}'.");
+            }
+
+            List<NormalizedMaterial> materials = [];
+            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "materials", diagnostics))
+            {
+                JsonElement material = DaggerfallBaseContent.Object(value, "dungeon material", diagnostics);
+                uint slot = checked((uint)DaggerfallBaseContent.Integer(material, "materialSlot", diagnostics));
+                string textureId = DaggerfallBaseContent.Text(material, "mediaId", diagnostics);
+                if (!resources.TryGetValue(textureId, out MediaResource? texture)) diagnostics.Add($"Generated material slot '{slot}' refers to missing media '{textureId}'.");
+                else materials.Add(new NormalizedMaterial(slot, texture.Path, texture.Hash));
+            }
+            if (materials.Select(material => material.Slot).Distinct().Count() != materials.Count) diagnostics.Add("Generated dungeon materials repeat a static-mesh material slot.");
+
+            Dictionary<int, NormalizedActorSprite> sprites = [];
+            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "actors", diagnostics))
+            {
+                JsonElement actor = DaggerfallBaseContent.Object(value, "dungeon actor media", diagnostics);
+                int mobileId = DaggerfallBaseContent.Integer(actor, "mobileId", diagnostics);
+                string spriteId = DaggerfallBaseContent.Text(actor, "spriteResourceId", diagnostics);
+                if (!resources.TryGetValue(spriteId, out MediaResource? texture)) { diagnostics.Add($"Generated actor mobile '{mobileId}' refers to missing sprite media '{spriteId}'."); continue; }
+                if (texture.Frames.Count == 0) { diagnostics.Add($"Generated actor mobile '{mobileId}' has no atlas frames."); continue; }
+                Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(actor, "pivot", diagnostics), "actor.pivot", diagnostics);
+                Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(actor, "worldSize", diagnostics), "actor.worldSize", diagnostics);
+                if (size.X <= 0 || size.Y <= 0) diagnostics.Add($"Generated actor mobile '{mobileId}' has a non-positive world size.");
+                if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, texture.Frames, texture.Frames[0].Id, pivot, size))) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
+            }
+            return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites));
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Generated dungeon media manifest is not valid JSON: {exception.Message}");
+            return ([], new Dictionary<int, NormalizedActorSprite>());
+        }
+    }
+
+    private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
+
+    private static Vector2 GeneratedVector2(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (value.ValueKind != JsonValueKind.Object
+            || !value.TryGetProperty("x", out JsonElement x)
+            || !value.TryGetProperty("y", out JsonElement y)
+            || !x.TryGetSingle(out float horizontal)
+            || !y.TryGetSingle(out float vertical)
+            || !float.IsFinite(horizontal)
+            || !float.IsFinite(vertical))
+        {
+            diagnostics.Add($"'{name}' must be a finite generated vector object.");
+            return default;
+        }
+        return new(horizontal, vertical);
     }
 
     private static ScenarioStart ReadStart(JsonElement value, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
@@ -98,128 +326,12 @@ internal static class PrivateersHoldContent
         return 1;
     }
 
-    private static Dictionary<DaggerfallAppearanceId, AuthoredSprite> ReadAppearances(JsonElement root, DaggerfallContentDiagnostics diagnostics)
-    {
-        Dictionary<DaggerfallAppearanceId, AuthoredSprite> result = [];
-        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "appearances", diagnostics))
-        {
-            JsonElement appearance = DaggerfallBaseContent.Object(value, "appearance", diagnostics);
-            DaggerfallAppearanceId id = new(DaggerfallBaseContent.Text(appearance, "id", diagnostics));
-            string texture = DaggerfallBaseContent.Text(appearance, "texture", diagnostics);
-            if (!DaggerfallBaseContent.ValidId(id.Value) || string.IsNullOrWhiteSpace(texture)) diagnostics.Add("Appearance id and texture must be stable non-empty references.");
-            uint billboard = DaggerfallBaseContent.Text(appearance, "billboard", diagnostics) switch { "spherical" => 1u, "cylindrical" => 2u, "none" => 0u, _ => InvalidBillboard(diagnostics) };
-            Vector2 size = Vector2Value(DaggerfallBaseContent.Property(appearance, "size", diagnostics), "appearance.size", diagnostics);
-            if (size.X <= 0f || size.Y <= 0f) diagnostics.Add("Appearance sprite size must be positive.");
-            SpriteSizeMode sizeMode = DaggerfallBaseContent.Text(appearance, "sizeMode", diagnostics) switch { "world" => SpriteSizeMode.World, _ => InvalidSizeMode(diagnostics) };
-            SpriteDepthPolicy depth = DaggerfallBaseContent.Text(appearance, "depth", diagnostics) switch { "default" => SpriteDepthPolicy.Default, _ => InvalidDepthPolicy(diagnostics) };
-            RenderLayer layer = DaggerfallBaseContent.Text(appearance, "layer", diagnostics) switch { "scene" => RenderLayer.Scene, _ => InvalidLayer(diagnostics) };
-            int renderOrder = DaggerfallBaseContent.Integer(appearance, "renderOrder", diagnostics);
-            if (renderOrder is < -10_000 or > 10_000) diagnostics.Add("Appearance renderOrder is outside the supported range.");
-            AuthoredSprite sprite = new(texture, Vector2Value(DaggerfallBaseContent.Property(appearance, "uvMin", diagnostics), "appearance.uvMin", diagnostics), Vector2Value(DaggerfallBaseContent.Property(appearance, "uvMax", diagnostics), "appearance.uvMax", diagnostics), Vector2Value(DaggerfallBaseContent.Property(appearance, "pivot", diagnostics), "appearance.pivot", diagnostics), size, billboard, ColorValue(DaggerfallBaseContent.Property(appearance, "tint", diagnostics), "appearance.tint", diagnostics), sizeMode, renderOrder, depth, Boolean(appearance, "visible", diagnostics), layer);
-            if (!result.TryAdd(id, sprite)) diagnostics.Add($"Duplicate appearance '{id.Value}'.");
-        }
-        return result;
-    }
-
-    private static List<AuthoredActor> ReadPlacements(JsonElement root, DaggerfallDefinitions definitions, IReadOnlyDictionary<DaggerfallAppearanceId, AuthoredSprite> appearances, DaggerfallContentDiagnostics diagnostics)
-    {
-        List<AuthoredActor> actors = [];
-        HashSet<long> entityIds = [];
-        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "placements", diagnostics))
-        {
-            JsonElement placement = DaggerfallBaseContent.Object(value, "placement", diagnostics);
-            long entityId = Long(placement, "entityId", diagnostics);
-            DaggerfallActorId actorId = new(DaggerfallBaseContent.Text(placement, "actor", diagnostics));
-            DaggerfallAppearanceId? appearanceId = placement.TryGetProperty("appearance", out JsonElement appearance) && appearance.ValueKind != JsonValueKind.Null ? new(DaggerfallBaseContent.Text(placement, "appearance", diagnostics)) : null;
-            if (entityId < 1 || !entityIds.Add(entityId)) diagnostics.Add($"Placement entity id '{entityId}' is invalid or duplicated.");
-            if (!definitions.Actors.ContainsKey(actorId)) diagnostics.Add($"Placement '{entityId}' refers to missing actor '{actorId.Value}'.");
-            AuthoredSprite? sprite = null;
-            if (appearanceId is { } id && !appearances.TryGetValue(id, out sprite)) diagnostics.Add($"Placement '{entityId}' refers to missing appearance '{id.Value}'.");
-            actors.Add(new(entityId, actorId, Point(DaggerfallBaseContent.Property(placement, "position", diagnostics), "placement.position", diagnostics), sprite));
-        }
-        return actors;
-    }
-
-    private static List<ScenarioEncounter> ReadEncounters(JsonElement root, IReadOnlyList<AuthoredActor> actors, DaggerfallContentDiagnostics diagnostics)
-    {
-        HashSet<long> placements = actors.Select(actor => actor.EntityId).ToHashSet();
-        HashSet<string> ids = new(StringComparer.Ordinal);
-        List<ScenarioEncounter> result = [];
-        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "encounters", diagnostics))
-        {
-            JsonElement encounter = DaggerfallBaseContent.Object(value, "encounter", diagnostics);
-            string id = DaggerfallBaseContent.Text(encounter, "id", diagnostics);
-            if (!ids.Add(id)) diagnostics.Add($"Duplicate encounter '{id}'.");
-            long[] members = DaggerfallBaseContent.Array(encounter, "members", diagnostics).Select(member => member.TryGetInt64(out long entityId) ? entityId : InvalidMember(diagnostics)).ToArray();
-            foreach (long member in members)
-                if (!placements.Contains(member)) diagnostics.Add($"Encounter '{id}' refers to missing placement '{member}'.");
-            result.Add(new(id, DaggerfallBaseContent.Text(encounter, "name", diagnostics), DaggerfallBaseContent.Text(encounter, "objective", diagnostics), Array.AsReadOnly(members)));
-        }
-        return result;
-    }
-
-    private static WorldArtifactReferences ReadWorld(JsonElement value, DaggerfallContentDiagnostics diagnostics) => new(
-        DaggerfallBaseContent.Text(value, "staticMesh", diagnostics),
-        DaggerfallBaseContent.Text(value, "navigation", diagnostics),
-        DaggerfallBaseContent.Text(value, "collision", diagnostics),
-        ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(value, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics));
-
     private static AuthoredWorldAppearance ReadWorldAppearance(JsonElement value, DaggerfallContentDiagnostics diagnostics)
     {
         RenderLayer layer = DaggerfallBaseContent.Text(value, "layer", diagnostics) switch { "scene" => RenderLayer.Scene, _ => InvalidLayer(diagnostics) };
         return new(ColorValue(DaggerfallBaseContent.Property(value, "tint", diagnostics), "world.appearance.tint", diagnostics), new Transform(Vector3Value(DaggerfallBaseContent.Property(value, "position", diagnostics), "world.appearance.position", diagnostics), QuaternionValue(DaggerfallBaseContent.Property(value, "rotation", diagnostics), "world.appearance.rotation", diagnostics), Vector3Value(DaggerfallBaseContent.Property(value, "scale", diagnostics), "world.appearance.scale", diagnostics)), Boolean(value, "visible", diagnostics), layer);
     }
 
-    private static void ValidateAssetReferences(AdmittedFiles files, WorldArtifactReferences world, IEnumerable<AuthoredSprite> sprites, DaggerfallContentDiagnostics diagnostics)
-    {
-        foreach (string path in new[] { world.StaticMesh, world.Navigation, world.Collision }.Concat(sprites.Select(sprite => sprite.TexturePath)))
-            if (!files.ContainsExactlyOne(path)) diagnostics.Add($"Privateer's Hold asset '{path}' must occur exactly once in admitted content.");
-    }
-
-    private static (PlanarNavCell[] Navigation, CollisionMesh Collision) ReadSpatialArtifacts(AdmittedFiles files, WorldArtifactReferences references, DaggerfallContentDiagnostics diagnostics)
-    {
-        byte[]? navigation = files.GetExactlyOne(references.Navigation);
-        byte[]? collision = files.GetExactlyOne(references.Collision);
-        if (navigation is null || collision is null) return ([], new CollisionMesh([], []));
-        try { return (ReadNavigation(navigation), ReadCollision(collision)); }
-        catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException or OverflowException or IndexOutOfRangeException or KeyNotFoundException or InvalidDataException) { diagnostics.Add($"Privateer's Hold spatial artifact is malformed: {exception.Message}"); return ([], new CollisionMesh([], [])); }
-    }
-
-    // These two readers isolate the current admitted artifact shapes. Their format/provenance conversion remains a Daggerfall.Import task; session construction consumes only the typed result above.
-    private static PlanarNavCell[] ReadNavigation(byte[] bytes)
-    {
-        using JsonDocument document = JsonDocument.Parse(bytes);
-        if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("cells", out JsonElement cells) || cells.ValueKind != JsonValueKind.Array) throw new InvalidDataException("Navigation artifact requires a cells array.");
-        if (cells.GetArrayLength() > 1_000_000) throw new InvalidDataException("Navigation cells exceed the supported limit.");
-        PlanarNavCell[] result = new PlanarNavCell[cells.GetArrayLength()];
-        int index = 0;
-        foreach (JsonElement cell in cells.EnumerateArray())
-        {
-            if (cell.ValueKind != JsonValueKind.Array || cell.GetArrayLength() != 4 || !cell[0].TryGetInt64(out long x) || !cell[1].TryGetInt64(out long z) || !cell[2].TryGetInt64(out long level) || !cell[3].TryGetSingle(out float support) || !float.IsFinite(support) || Math.Abs(x) > 10_000_000 || Math.Abs(z) > 10_000_000 || Math.Abs(level) > 10_000_000) throw new InvalidDataException("Navigation cell must be [x, z, level, finiteSupport] within supported bounds.");
-            result[index++] = new(x, level, z);
-        }
-        return result;
-    }
-
-    private static CollisionMesh ReadCollision(byte[] bytes)
-    {
-        using JsonDocument document = JsonDocument.Parse(bytes);
-        if (document.RootElement.ValueKind != JsonValueKind.Object || !document.RootElement.TryGetProperty("payload", out JsonElement payload) || payload.ValueKind != JsonValueKind.Object || !payload.TryGetProperty("source", out JsonElement source) || source.ValueKind != JsonValueKind.Object || !source.TryGetProperty("positions", out JsonElement positions) || positions.ValueKind != JsonValueKind.Array || !source.TryGetProperty("indices", out JsonElement indices) || indices.ValueKind != JsonValueKind.Array) throw new InvalidDataException("Collision artifact requires payload.source positions and indices arrays.");
-        if (positions.GetArrayLength() % 3 != 0 || indices.GetArrayLength() % 3 != 0 || positions.GetArrayLength() > 3_000_000 || indices.GetArrayLength() > 3_000_000) throw new InvalidDataException("Collision positions/indices must be bounded multiples of three.");
-        Vector3[] vertices = new Vector3[positions.GetArrayLength() / 3];
-        for (int index = 0; index < vertices.Length; index++)
-        {
-            if (!positions[index * 3].TryGetSingle(out float x) || !positions[index * 3 + 1].TryGetSingle(out float y) || !positions[index * 3 + 2].TryGetSingle(out float z) || !float.IsFinite(x) || !float.IsFinite(y) || !float.IsFinite(z)) throw new InvalidDataException("Collision positions must be finite numbers.");
-            vertices[index] = new(x, y, z);
-        }
-        Triangle[] triangles = new Triangle[indices.GetArrayLength() / 3];
-        for (int index = 0; index < triangles.Length; index++)
-        {
-            if (!indices[index * 3].TryGetUInt32(out uint a) || !indices[index * 3 + 1].TryGetUInt32(out uint b) || !indices[index * 3 + 2].TryGetUInt32(out uint c) || a >= vertices.Length || b >= vertices.Length || c >= vertices.Length) throw new InvalidDataException("Collision triangle indices must address an existing vertex.");
-            triangles[index] = new(a, b, c);
-        }
-        return new(vertices, triangles);
-    }
 
     private static WorldPoint Point(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {
@@ -271,11 +383,7 @@ internal static class PrivateersHoldContent
         diagnostics.Add($"'{property}' must be an integer.");
         return 0;
     }
-    private static uint InvalidBillboard(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Appearance billboard must be spherical, cylindrical, or none."); return 0; }
-    private static SpriteSizeMode InvalidSizeMode(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Appearance sizeMode must be world."); return SpriteSizeMode.World; }
-    private static SpriteDepthPolicy InvalidDepthPolicy(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Appearance depth must be default."); return SpriteDepthPolicy.Default; }
     private static RenderLayer InvalidLayer(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Appearance layer must be scene."); return RenderLayer.Scene; }
-    private static long InvalidMember(DaggerfallContentDiagnostics diagnostics) { diagnostics.Add("Encounter members must be integer placement ids."); return 0; }
 }
 
 internal sealed class AdmittedFiles
@@ -302,25 +410,21 @@ internal sealed class AdmittedFiles
 
 internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, IReadOnlyList<ScenarioLoadoutEntry> Loadout);
 internal sealed record ScenarioLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
-internal sealed record ScenarioEncounter(string Id, string Name, string Objective, IReadOnlyList<long> Members);
-internal sealed record WorldArtifactReferences(string StaticMesh, string Navigation, string Collision, AuthoredWorldAppearance Appearance);
 internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, bool Visible, RenderLayer Layer);
-internal sealed class PrivateersHoldInputs(ProjectFacts project, IEnumerable<PlanarNavCell> navigation, CollisionMesh collision, string? staticMeshContentPath, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<ScenarioLoadoutEntry> loadout, IReadOnlyList<ScenarioEncounter> encounters)
+internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
+internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256);
+internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height);
+internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size);
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<ScenarioLoadoutEntry> loadout, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites)
 {
-    internal PrivateersHoldInputs(ProjectFacts project, IEnumerable<PlanarNavCell> navigation, CollisionMesh collision, string? staticMeshContentPath, PlayerInitialLook initialLook, IReadOnlyList<ScenarioLoadoutEntry> loadout, IReadOnlyList<ScenarioEncounter> encounters)
-        : this(project, navigation, collision, staticMeshContentPath, new AuthoredWorldAppearance(new Color(.72f, .7f, .65f, 1f), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene), initialLook, loadout, encounters) { }
-    internal PrivateersHoldInputs(ProjectFacts project, PlanarNavCell[] navigation, CollisionMesh collision, string? staticMeshContentPath)
-        : this(project, navigation, collision, staticMeshContentPath, new AuthoredWorldAppearance(new Color(.72f, .7f, .65f, 1f), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene), new PlayerInitialLook(MathF.PI, 0f), Array.Empty<ScenarioLoadoutEntry>(), Array.Empty<ScenarioEncounter>()) { }
     internal ProjectFacts Project { get; } = project;
-    private readonly PlanarNavCell[] _navigation = navigation.ToArray();
-    internal ReadOnlyMemory<PlanarNavCell> Navigation => _navigation;
-    internal CollisionMesh Collision { get; } = collision;
-    internal string? StaticMeshContentPath { get; } = staticMeshContentPath;
+    internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
+    internal ContentArtifact StaticMesh { get; } = staticMesh;
     internal AuthoredWorldAppearance WorldAppearance { get; } = worldAppearance;
     internal PlayerInitialLook InitialLook { get; } = initialLook;
     internal IReadOnlyList<ScenarioLoadoutEntry> Loadout { get; } = Array.AsReadOnly(loadout.ToArray());
-    internal IReadOnlyList<ScenarioEncounter> Encounters { get; } = Array.AsReadOnly(encounters.Select(encounter => new ScenarioEncounter(encounter.Id, encounter.Name, encounter.Objective, Array.AsReadOnly(encounter.Members.ToArray()))).ToArray());
-    internal SpatialSceneInputs ToSpatialScene() => new(Collision.Vertices, Collision.Triangles, Navigation);
+    internal IReadOnlyList<NormalizedMaterial> Materials { get; } = Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray());
+    internal IReadOnlyDictionary<long, NormalizedActorSprite> ActorSprites { get; } = new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites.ToDictionary());
 }
 
 internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictionary<long, AuthoredActor> actors)
@@ -328,16 +432,4 @@ internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictiona
     internal WorldPoint? PlayerPosition { get; } = playerPosition;
     internal IReadOnlyDictionary<long, AuthoredActor> Actors { get; } = new ReadOnlyDictionary<long, AuthoredActor>(actors.ToDictionary());
 }
-internal sealed record AuthoredActor(long EntityId, DaggerfallActorId ActorId, WorldPoint Position, AuthoredSprite? Sprite);
-internal sealed record AuthoredSprite(string TexturePath, Vector2 UvMin, Vector2 UvMax, Vector2 Pivot, Vector2 Size, uint BillboardMode, Color Tint, SpriteSizeMode SizeMode, int RenderOrder, SpriteDepthPolicy DepthPolicy, bool Visible, RenderLayer Layer)
-{
-    internal AuthoredSprite(string texturePath, Vector2 uvMin, Vector2 uvMax, Vector2 pivot, Vector2 size, uint billboardMode)
-        : this(texturePath, uvMin, uvMax, pivot, size, billboardMode, new Color(1, 1, 1, 1), SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, true, RenderLayer.Scene) { }
-}
-internal sealed class CollisionMesh(IEnumerable<Vector3> vertices, IEnumerable<Triangle> triangles)
-{
-    private readonly Vector3[] _vertices = vertices.ToArray();
-    private readonly Triangle[] _triangles = triangles.ToArray();
-    internal ReadOnlyMemory<Vector3> Vertices => _vertices;
-    internal ReadOnlyMemory<Triangle> Triangles => _triangles;
-}
+internal sealed record AuthoredActor(long EntityId, DaggerfallActorId ActorId, WorldPoint Position);
