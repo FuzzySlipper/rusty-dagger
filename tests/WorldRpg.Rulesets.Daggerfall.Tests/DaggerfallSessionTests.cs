@@ -123,7 +123,7 @@ public sealed class DaggerfallSessionTests
     public void Scenario_look_is_not_a_tuning_owner_and_spatial_inputs_copy_caller_arrays()
     {
         Assert.Null(typeof(DaggerfallTuning).GetProperty("InitialPlayerLook", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic));
-        DaggerfallTuning tuning = DaggerfallTuning.Read(Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5,"pitchMaximumRadians":1.5,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"combat":{"playerMeleeStaminaCost":5,"playerMeleeCooldownSeconds":0.75},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}"""));
+        DaggerfallTuning tuning = DaggerfallTuning.Read(Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5,"pitchMaximumRadians":1.5,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"combat":{"playerMeleeStaminaCost":5,"playerMeleeCooldownSeconds":0.75},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2},"camera":{"eyeHeight":0.75,"fieldOfViewYDegrees":65,"nearPlane":0.1,"farPlane":100}}"""));
         Assert.Equal(.5, tuning.Spatial.NavigationCellSize);
 
         PlanarNavCell[] navigation = [new(1, 2, 3)];
@@ -332,6 +332,31 @@ public sealed class DaggerfallSessionTests
     }
 
     [Fact]
+    public void Session_publishes_authoritative_player_pose_through_the_engine_camera()
+    {
+        RecordingEngine engine = new();
+        using (DaggerfallSession session = new(engine.Context, Definitions(), SkeletalInputs(), DaggerfallTuning.Defaults))
+        {
+            Assert.Single(engine.Camera.Descriptors);
+            Assert.Equal(1, engine.Camera.ActiveSelections);
+
+            session.State.PlayerControl.MoveTo(new Vector3(4f, 2f, 3f));
+            session.State.PlayerControl.YawRadians = .5f;
+            session.State.PlayerControl.PitchRadians = -.25f;
+            session.Update(new ProductUpdateState(.125f));
+
+            CameraDescriptor descriptor = engine.Camera.Descriptors[^1];
+            Assert.Equal(new Vector3(4f, 2.75f, 3f), descriptor.Pose.Position);
+            Assert.Equal(.5d * 180d / Math.PI, descriptor.Pose.YawDegrees, 5);
+            Assert.Equal(-.25d * 180d / Math.PI, descriptor.Pose.PitchDegrees, 5);
+            Assert.Equal(CameraProjectionKind.Perspective, descriptor.Projection.Kind);
+        }
+
+        Assert.Equal(1, engine.Camera.ActiveClears);
+        Assert.Equal(1, engine.Camera.Disposals);
+    }
+
+    [Fact]
     public void Realtime_batch_uses_engine_fixed_delta_once_per_admitted_step_and_ignores_invalid_turns()
     {
         RecordingEngine engine = new();
@@ -492,7 +517,7 @@ public sealed class DaggerfallSessionTests
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/content-packs/daggerfall.privateers-hold.pack.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"daggerfall.privateers-hold","version":1,"ruleset":"daggerfall","dependencies":[{"id":"daggerfall.base","version":1}],"payload":"worldrpg/payloads/daggerfall.privateers-hold.json"}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/payloads/daggerfall.privateers-hold.json"), Encoding.UTF8.GetBytes(ScenarioPayload)),
         new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning/daggerfall.defaults.tuning.json"), Encoding.UTF8.GetBytes("""{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"daggerfall.defaults","version":1,"ruleset":"daggerfall","payload":"worldrpg/tuning-payloads/daggerfall.defaults.json"}""")),
-        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning-payloads/daggerfall.defaults.json"), Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5533,"pitchMaximumRadians":1.5533,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"combat":{"playerMeleeStaminaCost":5,"playerMeleeCooldownSeconds":0.75},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2}}""")),
+        new ProductContentFile(Encoding.UTF8.GetBytes("worldrpg/tuning-payloads/daggerfall.defaults.json"), Encoding.UTF8.GetBytes("""{"playerControl":{"lookSensitivity":0.0035,"pitchMinimumRadians":-1.5533,"pitchMaximumRadians":1.5533,"maximumLookDeltaRadians":0.35,"invertHorizontal":false,"invertVertical":false,"wrapYaw":true},"combat":{"playerMeleeStaminaCost":5,"playerMeleeCooldownSeconds":0.75},"spatial":{"collisionVoxelSize":0.5,"collisionChunkSize":32,"navigationCellSize":0.5,"navigationChunkSize":32,"navigationMaximumStepCells":2},"camera":{"eyeHeight":0.75,"fieldOfViewYDegrees":65,"nearPlane":0.1,"farPlane":100}}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("projects/privateers-hold.navgrid.json"), Encoding.UTF8.GetBytes("""{"cells":[]}""")),
         new ProductContentFile(Encoding.UTF8.GetBytes("imported/privateers-hold.static-mesh.json"), Encoding.UTF8.GetBytes("""{"payload":{"source":{"positions":[],"indices":[]}}}"""))
     });
@@ -518,6 +543,7 @@ public sealed class DaggerfallSessionTests
         internal RecordingLook Look { get; } = RecordingLook.Create();
         internal RecordingSpatial Spatial { get; } = RecordingSpatial.Create();
         internal RecordingAppearance Appearance { get; } = new();
+        internal RecordingCamera Camera { get; } = RecordingCamera.Create();
         internal RecordingRandom Random { get; } = RecordingRandom.Create();
         internal RecordingUi Ui { get; } = RecordingUi.Create();
     }
@@ -525,7 +551,7 @@ public sealed class DaggerfallSessionTests
     private class EngineContextProxy : DispatchProxy
     {
         internal RecordingEngine Owner { get; set; } = null!;
-        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch { "get_Look" => Owner.Look.Service, "get_Spatial" => Owner.Spatial.Service, "get_Appearance" => Owner.Appearance.Service, "get_Random" => Owner.Random.Service, "get_Ui" => Owner.Ui.Service, _ => throw new NotSupportedException(method?.Name) };
+        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch { "get_Look" => Owner.Look.Service, "get_Spatial" => Owner.Spatial.Service, "get_Appearance" => Owner.Appearance.Service, "get_CameraView" => Owner.Camera.Service, "get_Random" => Owner.Random.Service, "get_Ui" => Owner.Ui.Service, _ => throw new NotSupportedException(method?.Name) };
     }
 
     private class RecordingLook : DispatchProxy
@@ -605,6 +631,37 @@ public sealed class DaggerfallSessionTests
             if (++CreateCalls == FailOnCreateCall) throw new InvalidOperationException("Injected appearance creation failure.");
             return new(new AppearanceHandle(1), () => AppearanceDisposals++);
         }
+    }
+    private class RecordingCamera : DispatchProxy
+    {
+        internal ICameraViewService Service { get; private set; } = null!;
+        internal List<CameraDescriptor> Descriptors { get; } = [];
+        internal int ActiveSelections { get; private set; }
+        internal int ActiveClears { get; private set; }
+        internal int Disposals { get; private set; }
+        internal static RecordingCamera Create()
+        {
+            ICameraViewService service = DispatchProxy.Create<ICameraViewService, RecordingCamera>();
+            RecordingCamera proxy = (RecordingCamera)(object)service;
+            proxy.Service = service;
+            return proxy;
+        }
+        protected override object? Invoke(MethodInfo? method, object?[]? args) => method?.Name switch
+        {
+            nameof(ICameraViewService.CreateCamera) => CreateCamera((CameraDescriptor)args![0]!),
+            nameof(ICameraViewService.UpdateCamera) => UpdateCamera((CameraUpdateRequest)args![0]!),
+            nameof(ICameraViewService.SetActiveCamera) => Select(),
+            nameof(ICameraViewService.ClearActiveCamera) => Clear(),
+            _ => throw new NotSupportedException(method?.Name)
+        };
+        private Camera CreateCamera(CameraDescriptor descriptor)
+        {
+            Descriptors.Add(descriptor);
+            return new Camera(new CameraHandle(1), () => Disposals++);
+        }
+        private object? UpdateCamera(CameraUpdateRequest request) { Descriptors.Add(request.Descriptor); return null; }
+        private object? Select() { ActiveSelections++; return null; }
+        private object? Clear() { ActiveClears++; return null; }
     }
     private class RecordingRandom : DispatchProxy
     {
