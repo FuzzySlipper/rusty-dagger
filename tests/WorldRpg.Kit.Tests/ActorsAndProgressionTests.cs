@@ -25,6 +25,10 @@ public sealed class ActorsAndProgressionTests
         progression.Award(-4);
         progression.Award(7);
         Assert.Equal(7, progression.Experience);
+        Assert.Equal(1, progression.Level);
+        progression.Award(493);
+        progression.AdvanceTo(500, 2);
+        Assert.Equal(2, progression.Level);
 
         actors.Dispose();
         Assert.Throws<ObjectDisposedException>(() => playerMechanics.ReadTrack(TrackId.Parse("health")));

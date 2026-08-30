@@ -12,7 +12,7 @@ public sealed class ProductFactsTests
     {
         FactBuffer<IProductFact> buffer = new();
         List<string> delivered = [];
-        buffer.Append(new ActorDiedFact(2000, 16, 1, 7));
+        buffer.Append(new ActorDiedFact(2000, 1, 16, 1, 7));
         buffer.Deliver(fact => { delivered.Add(fact.GetType().Name); buffer.Append(new LootAwardedFact(2000, "gold-piece", 2, 7)); });
         Assert.Equal(["ActorDiedFact"], delivered);
         buffer.Deliver(fact => delivered.Add(fact.GetType().Name));

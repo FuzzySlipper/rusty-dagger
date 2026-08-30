@@ -4,8 +4,8 @@ namespace WorldRpg.Rulesets.Daggerfall.Facts;
 
 internal interface IProductFact : IWorldRpgFact;
 internal sealed record ActorDamagedFact(long ActorId, int Amount) : IProductFact;
-internal sealed record ActorDiedFact(long ActorId, int AppliedDamage, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
-internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, RightHandWeaponRequired, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted }
+internal sealed record ActorDiedFact(long ActorId, long KillerId, int AppliedDamage, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
+internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted, InsufficientWeaponMaterial }
 internal sealed record AttackRejectedFact(AttackRejection Reason) : IProductFact;
 internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll, int Chance, bool EnemyAttack) : IProductFact;
 /// <summary>Struck body follows the donor table; scalar current armor deliberately ignores it.</summary>

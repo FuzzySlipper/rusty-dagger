@@ -20,7 +20,7 @@ namespace WorldRpg.Rulesets.Daggerfall;
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
 internal sealed class DaggerfallSession : IGameSession
 {
-    private const ulong PlayerMechanicsEntityId = 1;
+    private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
     private readonly IRandomService _random;
     private readonly PlayerInputSystem _input;
     private readonly SpatialMovementSystem _spatial;
@@ -115,7 +115,13 @@ internal sealed class DaggerfallSession : IGameSession
             partiallyConstructed.Add(_camera);
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
             _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored);
-            _rewards = new DaggerfallRewardReactions(State.Inventory, State.Progression, _random, authored);
+            _rewards = new DaggerfallRewardReactions(
+                State.Inventory,
+                State.Progression,
+                _random,
+                authored,
+                definitions,
+                new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId));
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);

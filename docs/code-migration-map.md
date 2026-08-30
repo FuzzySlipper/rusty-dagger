@@ -370,3 +370,38 @@ has normalized item pools; this catalog slice does not fabricate them.
 The active C# ruleset loads and validates this catalog directly. No TypeScript
 or Rust evaluator/runtime, encounter topology, empty project structure, or
 speculative architecture is introduced.
+
+## #7538 formula and policy donor ledger
+
+The semantic formula/action/progression/loot donors were read from
+`gameplay/src/catalogs/{derived,actions,loot}.ts` and the connected Rust
+resolution sources under `crates/dagger-rpg/src/resolution/`. The compiled
+C# policy adopts the classic arithmetic shapes and the donor's ordering:
+stamina admission precedes hit/damage, struck-body selection is a bounded
+0..19 roll, hit terms use truncating attribute divisions and floor dodging,
+and loot evaluates gold followed by weapons, armor, ingredients, magic,
+clothing, books, and religious categories with three bounded geometric slots.
+
+The policy adapts Engine keyed Random as the roll provider and Engine
+Mechanics/Inventory/Equipment as state authorities. The live XP/500 curve is
+kept explicitly separate from classic skill-sum progression; classic
+hit-point-per-level bounds and skill-use multipliers remain named compiled
+policies. The scalar-armor combat adaptation and iron-only loaded item pools
+are deliberate current-profile limits. Production rewards interpret each
+actor's authored loot-table key through the compiled policy and apply the
+result as one Engine inventory candidate, including unique item
+materialization. Material scaling, career/racial
+evidence, autonomous multi-attack scheduling, and unsupported ingredient or
+magic item pools are not fabricated; successful unsupported category rolls
+remain visible in the policy result for later content work. The TypeScript and
+Rust evaluators, encounter grouping, AI/targeting, and second transaction
+authority are rejected rather than translated. The combat seam uses Engine
+equipment truth in right-hand/left-hand order with compiled hand-to-hand
+fallback, admits an explicit typed optional action identity for power attack,
+and performs the classic weapon-material gate after hit/body/damage rolls;
+the gate uses a separate weapon-material ordinal ladder rather than armor
+values. Health maximum mutation for level-up remains outside the current safe
+managed actor wrapper. Upstream rusty-engine **#7593 is the sole remaining
+HP-per-level blocker**; this downstream slice keeps the named roll bounds and
+goldens but introduces no local HP maximum authority or workaround. Only the
+active XP/500 level reconciliation is applied here.

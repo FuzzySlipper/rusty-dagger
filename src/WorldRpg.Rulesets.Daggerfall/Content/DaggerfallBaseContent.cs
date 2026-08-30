@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine.Mechanics;
+using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Content;
 
@@ -69,7 +70,7 @@ internal static class DaggerfallBaseContent
             Add("item", item.Id.Value, item.Kind, item.MaximumQuantity, item.Weight, item.Value, item.Weapon?.MinimumDamage, item.Weapon?.MaximumDamage, item.Weapon?.Material, item.Weapon?.Skill, item.Weapon?.Handedness, item.Armor?.Material, item.Armor?.Part, item.Shield?.Armor, item.Equipment?.RequiredSlots, item.Equipment?.ExclusiveGroup, item.Equipment is null ? "" : string.Join(',', item.Equipment.Classifications.Order()));
         foreach (DaggerfallEquipmentSlotDefinition slot in definitions.EquipmentSlots.Values.OrderBy(slot => slot.Id.Value)) Add("slot", slot.Id.Value, string.Join(',', slot.AllowedClassifications.Order()));
         foreach ((string material, int armor) in definitions.ArmorValuesByMaterial.OrderBy(pair => pair.Key)) Add("material", material, armor);
-        foreach (DaggerfallActionDefinition action in definitions.Actions.Values.OrderBy(action => action.Id)) Add("action", action.Id, action.Interpretation, action.Skill, action.AttackRangeIndex, action.MinimumDamage, action.MaximumDamage, action.StaminaCost, action.Reach, action.CooldownSeconds, string.Join(',', action.Tags));
+        foreach (DaggerfallActionDefinition action in definitions.Actions.Values.OrderBy(action => action.Id)) Add("action", action.Id, action.Interpretation, action.Skill, action.AttackRangeIndex, action.MinimumDamage, action.MaximumDamage, action.StaminaCost, action.Reach, action.CooldownSeconds, action.DamageBonus, string.Join(',', action.Tags));
         foreach (DaggerfallLootTableDefinition loot in definitions.LootTables.Values.OrderBy(loot => loot.Key)) Add("loot", loot.Key, loot.MinimumGold, loot.MaximumGold, string.Join(',', loot.Categories.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}={FingerprintField(pair.Value)}")));
         foreach (DaggerfallHudResourceDefinition hud in definitions.HudResources.OrderBy(resource => resource.Id)) Add("hud", hud.Id, hud.Label, hud.Track.Value);
         foreach (DaggerfallDeferredLootCategoryPool pool in definitions.LootCategoryPools.OrderBy(pool => pool.Id)) Add("pool", pool.Id, pool.Status, pool.Reason);
@@ -254,7 +255,7 @@ internal static class DaggerfallBaseContent
             if (actor.Kind == "monster" && (actor.MobileId is null || actor.MobileId is 39 or < 0 or > 42)) diagnostics.Add($"Monster '{actor.Id.Value}' has an unsupported mobile id.");
             if (actor.Level is < 1 or > 100 || actor.Weight is < 0 or > 100_000 || actor.Armor is < -MaximumAuthoredArmor or > MaximumAuthoredArmor || actor.Rewards.ExperienceReward is < 0 or > 1_000_000) diagnostics.Add($"Actor '{actor.Id.Value}' has an out-of-range level, weight, armor, or xp reward.");
             if (actor.Team is { } team && !ValidId(team)) diagnostics.Add($"Actor '{actor.Id.Value}' has an invalid team.");
-            if (actor.MinimumMaterial is { } material && !armorValues.ContainsKey(material)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to unknown minimum material '{material}'.");
+            if (actor.MinimumMaterial is { } material && !DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks.ContainsKey(material)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to unknown minimum weapon material '{material}'.");
             if (actor.LootTableKey is { } lootTable && !lootTables.ContainsKey(lootTable)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to missing loot table '{lootTable}'.");
             if (actor.ActionId is { } actionId && !actions.ContainsKey(actionId)) diagnostics.Add($"Actor '{actor.Id.Value}' refers to missing action '{actionId}'.");
             if (actor.Attacks.Any(range => range.MinimumDamage < 0 || range.MaximumDamage < range.MinimumDamage || range.MaximumDamage > MaximumAuthoredDamage)) diagnostics.Add($"Actor '{actor.Id.Value}' has an invalid attack range.");
@@ -268,12 +269,6 @@ internal static class DaggerfallBaseContent
                 if (action.AttackRangeIndex is int index && (index < 0 || index >= actor.Attacks.Count)) diagnostics.Add($"Action '{action.Id}' references missing attack range {index} on actor '{actor.Id.Value}'.");
                 if (action.AttackRangeIndex is null && action.MinimumDamage is null && actor.Kind != "player") diagnostics.Add($"Fixed action '{action.Id}' needs either an actor attack range reference or direct damage.");
             }
-            if (actor.Rewards.Loot is LootDefinition loot)
-            {
-                if (!items.TryGetValue(loot.ItemId, out DaggerfallItemDefinition? item)) diagnostics.Add($"Actor '{actor.Id.Value}' loot refers to missing item '{loot.ItemId.Value}'.");
-                else if (!item.IsFungible) diagnostics.Add($"Actor '{actor.Id.Value}' loot refers to unique item '{loot.ItemId.Value}' without a materialization policy.");
-                else if ((ulong)loot.MinimumQuantity > item.MaximumQuantity || (ulong)loot.MaximumQuantity > item.MaximumQuantity) diagnostics.Add($"Actor '{actor.Id.Value}' loot range [{loot.MinimumQuantity}, {loot.MaximumQuantity}] exceeds fungible item '{loot.ItemId.Value}' maximumQuantity {item.MaximumQuantity}.");
-            }
             ValidateLoadout(actor, items, equipmentSlots, diagnostics);
         }
         HashSet<int> mobiles = [];
@@ -286,7 +281,7 @@ internal static class DaggerfallBaseContent
         if (!items.ContainsKey(new DaggerfallItemId("iron-longsword"))) diagnostics.Add("Base payload is missing required item 'iron-longsword'.");
         foreach (DaggerfallItemDefinition item in items.Values)
         {
-            if (item.Weapon is not null && (!armorValues.ContainsKey(item.Weapon.Material) || !vocabulary.Skills.Any(skill => skill.Value == item.Weapon.Skill))) diagnostics.Add($"Weapon '{item.Id.Value}' refers to an unknown material or skill.");
+            if (item.Weapon is not null && (!DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks.ContainsKey(item.Weapon.Material) || !vocabulary.Skills.Any(skill => skill.Value == item.Weapon.Skill))) diagnostics.Add($"Weapon '{item.Id.Value}' refers to an unknown classic weapon material or skill.");
             if (item.Armor is not null && (!armorValues.ContainsKey(item.Armor.Material) || !vocabulary.ArmorParts.Contains(item.Armor.Part))) diagnostics.Add($"Armor '{item.Id.Value}' refers to an unknown material or armor part.");
             if (item.Shield is { Armor: < 0 or > MaximumAuthoredArmor }) diagnostics.Add($"Shield '{item.Id.Value}' armor is outside the Daggerfall policy range.");
             if (item.Weapon is not null && item.Armor is not null || item.Weapon is not null && item.Shield is not null || item.Armor is not null && item.Shield is not null) diagnostics.Add($"Item '{item.Id.Value}' cannot be weapon, armor, and shield simultaneously.");
@@ -420,6 +415,7 @@ internal static class DaggerfallBaseContent
             double? cooldown = OptionalNumber(action, "cooldownSeconds", diagnostics);
             int? stamina = OptionalInteger(action, "staminaCost", diagnostics);
             int? attackRangeIndex = OptionalInteger(action, "attackRangeIndex", diagnostics);
+            int damageBonus = OptionalInteger(action, "damageBonus", diagnostics) ?? 0;
             bool hasMinimum = action.TryGetProperty("minimumDamage", out JsonElement minimumValue) && minimumValue.ValueKind != JsonValueKind.Null;
             bool hasMaximum = action.TryGetProperty("maximumDamage", out JsonElement maximumValue) && maximumValue.ValueKind != JsonValueKind.Null;
             int? minimum = hasMinimum && minimumValue.TryGetInt32(out int parsedMinimum) ? parsedMinimum : null;
@@ -436,9 +432,10 @@ internal static class DaggerfallBaseContent
                 && cooldown is > 0 and <= 60
                 && stamina is null or > 0 and <= 10_000
                 && attackRangeIndex is null or >= 0 and <= 16
+                && damageBonus is >= -MaximumAuthoredDamage and <= MaximumAuthoredDamage
                 && (!directRange || minimum is not null && maximum is not null && minimum >= 0 && maximum >= minimum && maximum <= MaximumAuthoredDamage)
                 && validDamageShape;
-            if (!valid || !result.TryAdd(id, new(id, System.Array.AsReadOnly(tags), interpretation, skill, attackRangeIndex, minimum, maximum, stamina, reach, cooldown))) diagnostics.Add($"Action '{id}' is invalid or duplicated.");
+            if (!valid || !result.TryAdd(id, new(id, System.Array.AsReadOnly(tags), interpretation, skill, attackRangeIndex, minimum, maximum, stamina, reach, cooldown, damageBonus))) diagnostics.Add($"Action '{id}' is invalid or duplicated.");
         }
         return result;
     }
@@ -470,7 +467,7 @@ internal static class DaggerfallBaseContent
         };
         if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(["attack", "melee"]))) diagnostics.Add("Actions must be the exact five adopted ids, interpretations, skills, and tags.");
         if (!actions.TryGetValue("melee-attack", out DaggerfallActionDefinition? melee) || melee.StaminaCost != 5 || melee.MinimumDamage is not null || melee.MaximumDamage is not null || melee.AttackRangeIndex is not null
-            || !actions.TryGetValue("power-attack", out DaggerfallActionDefinition? power) || power.StaminaCost != 25 || power.MinimumDamage is not null || power.MaximumDamage is not null || power.AttackRangeIndex is not null
+            || !actions.TryGetValue("power-attack", out DaggerfallActionDefinition? power) || power.StaminaCost != 25 || power.DamageBonus != 4 || power.MinimumDamage is not null || power.MaximumDamage is not null || power.AttackRangeIndex is not null
             || !actions.TryGetValue("rat-bite", out DaggerfallActionDefinition? ratAction) || ratAction.AttackRangeIndex != 0 || ratAction.MinimumDamage is not null || ratAction.MaximumDamage is not null
             || !actions.TryGetValue("skeleton-strike", out DaggerfallActionDefinition? skeletonAction) || skeletonAction.AttackRangeIndex != 0 || skeletonAction.MinimumDamage is not null || skeletonAction.MaximumDamage is not null
             || !actions.TryGetValue("thief-strike", out DaggerfallActionDefinition? thiefAction) || thiefAction.AttackRangeIndex is not null || thiefAction.MinimumDamage != 2 || thiefAction.MaximumDamage != 8) diagnostics.Add("Action damage and stamina ownership does not match the adopted actor/action catalog.");
@@ -478,6 +475,7 @@ internal static class DaggerfallBaseContent
             || !actors.TryGetValue(new("rat"), out DaggerfallActorDefinition? ratActionOwner) || ratActionOwner.ActionId != "rat-bite"
             || !actors.TryGetValue(new("skeletal-warrior"), out DaggerfallActorDefinition? skeletonActionOwner) || skeletonActionOwner.ActionId != "skeleton-strike"
             || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thiefActionOwner) || thiefActionOwner.ActionId != "thief-strike") diagnostics.Add("The four adopted actor/action associations must remain explicit.");
+        if (actions.Values.Any(action => action.Id != "power-attack" && action.DamageBonus != 0)) diagnostics.Add("Only the authored power-attack may carry an action damage bonus.");
         string[] categories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
         if (pools.Count != categories.Length || !pools.Select(pool => pool.Id).Order().SequenceEqual(categories.Order()) || pools.Any(pool => pool.Status != "deferred" || string.IsNullOrWhiteSpace(pool.Reason))) diagnostics.Add("Deferred loot category pools must be the exact adopted category set with a reason.");
         string[] expectedErrata = ["mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata"];
