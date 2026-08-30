@@ -1,0 +1,1580 @@
+{
+  "schemaVersion": 1,
+  "importerId": "daggerfall-import/dungeon-normalizer",
+  "importerVersion": 1,
+  "sources": [
+    {
+      "sourcePath": "arena2/ARCH3D.BSA",
+      "contentHash": "a51a9e149168814c4a14dc80bb93d38f153be18dc9754be44bc9c7b25dd46a85",
+      "byteLen": 27143532
+    },
+    {
+      "sourcePath": "arena2/ART_PAL.COL",
+      "contentHash": "8744e48e64017a94ee72ec27045a07384b82f45b7dec2041123c0697730a499a",
+      "byteLen": 776
+    },
+    {
+      "sourcePath": "arena2/BLOCKS.BSA",
+      "contentHash": "6f5a4c8d9401c1b00ef83eaac9b0c6c32f53cef6eaa4c7d7027deb739bde4795",
+      "byteLen": 32884997
+    },
+    {
+      "sourcePath": "arena2/CLIMATE.PAK",
+      "contentHash": "6032403010707ed09394a9b72bf3418d3450ccc99f28e4c8451771f5d7e54cd0",
+      "byteLen": 14771
+    },
+    {
+      "sourcePath": "arena2/DAGGER.SND",
+      "contentHash": "fbb6195ba72f9b2787b659e38afd9ed92d95ca185916d8bdd28ba947b986f3e2",
+      "byteLen": 7661766
+    },
+    {
+      "sourcePath": "arena2/FONT0003.FNT",
+      "contentHash": "53d4b92cfcd0d2158d9af2c2d6fa0f97736db571e80b8b2476ceae944673ef54",
+      "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/INFO00I0.IMG",
+      "contentHash": "96d1ade7b51633ec5a8484e7f0400d1b400743ec550ce27873f95c62eab2ca96",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/INVE00I0.IMG",
+      "contentHash": "ebbe1b8615db14c8c7011b8a2958b53bc7d43e3d8ee9ac40bd19f6134bee4b66",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/MAIN00I0.IMG",
+      "contentHash": "a482cc6b23d2945c32b58de88453c5abf229cc7a48a7f3401612ed3430a87ec5",
+      "byteLen": 14732
+    },
+    {
+      "sourcePath": "arena2/MAIN03I0.IMG",
+      "contentHash": "fc757cd5ba9a538428b2859a318830e55ea28dcd95c9acd75086875cd0d0f6d3",
+      "byteLen": 140
+    },
+    {
+      "sourcePath": "arena2/MAIN04I0.IMG",
+      "contentHash": "3d64562ae43baf2cc87a5fbb391a587339cbfdfee47c931c565b985f4d06585f",
+      "byteLen": 140
+    },
+    {
+      "sourcePath": "arena2/MAIN05I0.IMG",
+      "contentHash": "56b28071d389d21c5b5ca2d3df3008d042ba2dbb0744f812eee3e4bcfb45c910",
+      "byteLen": 140
+    },
+    {
+      "sourcePath": "arena2/MAPS.BSA",
+      "contentHash": "8b5550bfcac03b6f605842568fdbfb7cc6bbed7ace5999c33c900ad286fc24be",
+      "byteLen": 22129312
+    },
+    {
+      "sourcePath": "arena2/PAL.PAL",
+      "contentHash": "42b8da761c310cfd7f4949e95bbe7dbda19b490dc5e11746857a89808b826f99",
+      "byteLen": 776
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.000",
+      "contentHash": "b6adacc9b6a7f604bb82d82136c593c9d23b59d9c3576a041ecc01951afae680",
+      "byteLen": 2586
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.001",
+      "contentHash": "cca317a742d13a6aa1ba323ba45d12c2e716f089cbd86e1d2b1e7c3262d66bfb",
+      "byteLen": 2586
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.041",
+      "contentHash": "7e060eedb3331ee07365fe0f982d7824233ba58358991b20d7bb4a83d17eaa18",
+      "byteLen": 16602
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.046",
+      "contentHash": "501b94b3e7eee4266236e2dcf7645b8547a54bd3eec89d0d4de80c2f244b1c51",
+      "byteLen": 9898
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.067",
+      "contentHash": "0f627b0b9a1437f8e0abb761c111c208dd5ec64b27803aa842a4a204b0c22789",
+      "byteLen": 21274
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.071",
+      "contentHash": "b570bb8496cce91bbb1e3cf28b34b253c2a70ab5a4b9cead40faaa23cf50ad38",
+      "byteLen": 25818
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.090",
+      "contentHash": "16fca391e4a5139e4fe372eb256b21d36f8f8b57b266535244ec6d69bb494564",
+      "byteLen": 49898
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.092",
+      "contentHash": "ca3412ff0a4d2ac91908d7220643a937908534d3167d5f2ea7035f5981ed4786",
+      "byteLen": 50570
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.093",
+      "contentHash": "a5307deec96a477eb7cb88226c701d6c9d319e0e9f030055661517db7442b07e",
+      "byteLen": 33322
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.095",
+      "contentHash": "0ec26f535aa8e2b0078c040eb544ad6d8dd31284a066f04fa83a0b1347730193",
+      "byteLen": 23626
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.119",
+      "contentHash": "005d4a05a7bc72dbb4bbc9915f6d022afcebbe294a2c7a40822d04e3c9c63dc3",
+      "byteLen": 19210
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.120",
+      "contentHash": "6d0450088ebc46f23c4c1de82338d68d96e348d5cfb8ecbe8296a49ef7a601b4",
+      "byteLen": 19210
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.121",
+      "contentHash": "d8cfd2170ce0868c9c1ca36e59f2bdc2882ebdbcad29863fc4bbc29cce9b336f",
+      "byteLen": 30938
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.122",
+      "contentHash": "6989496f5162c172b4f75b049ac3df62b1e4a61d7480888dec41cbf4429c3191",
+      "byteLen": 19770
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.141",
+      "contentHash": "111607517b805ec8f6186d284a0f3d03a965201a4056a00356250758cf009bbc",
+      "byteLen": 16602
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.146",
+      "contentHash": "3f150e5532b9813e0d8c234e6943f89be3ac4b1b7acf2f6e0d82a5a23979147e",
+      "byteLen": 32986
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.147",
+      "contentHash": "e76599a7b182b1897eacf5ebdac415b72e7479f7ada4446b3bd6c89f6938df79",
+      "byteLen": 36714
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.203",
+      "contentHash": "34dd389fc0f309d44dab224b7424cdc3c102d00731a0228509dc57cf486844ce",
+      "byteLen": 45418
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.206",
+      "contentHash": "e7e2ebf6b091bf1fb80b0c2b863a611cb923cb99a72abdd7c1ff7e13900b55af",
+      "byteLen": 159754
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.207",
+      "contentHash": "c70500ca419af434cde9a5ed88993c3b01fe6d7c371bd83095a9d9456c29c29c",
+      "byteLen": 19786
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.210",
+      "contentHash": "6088cea95c48e8355c04089c9989946dfaec32a40793765f79f33f0a35378f9b",
+      "byteLen": 103526
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.213",
+      "contentHash": "63520fcfb7d3180321f28370796c36a5519f7c5e17b1e6ed678a7473f6adfcf8",
+      "byteLen": 66938
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.216",
+      "contentHash": "f79ff477e8f7332ad67962debf2dc3d8330554c6f159d89f2a439a295cbe420b",
+      "byteLen": 58906
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.234",
+      "contentHash": "1a09989588c486b7b5348832a331520421c7d3ab47b6765aa3f1bf921a9812d3",
+      "byteLen": 51106
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.245",
+      "contentHash": "7273a1117041104a7d10485c3635b96f48e56c4f2337a6a7b78dee9b836c8447",
+      "byteLen": 79857
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.255",
+      "contentHash": "ea0084dc4250f69d4ef63c9b6aab76365bc8a08ac654f6b23b0ab0eca33c1f0e",
+      "byteLen": 149788
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.256",
+      "contentHash": "62b333323a00be3565948ca2f7f2151488b2d37ec8d3908f05404d1dae62b44c",
+      "byteLen": 65466
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.258",
+      "contentHash": "c6a2b93cc5f3315653dc6eff77ce017a8a5e1bd00aa8ade1c63f1301cfa38533",
+      "byteLen": 82779
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.262",
+      "contentHash": "bde194db19924836019540b55d237c6c4e040772812bc889a4654a66364126b8",
+      "byteLen": 362576
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.270",
+      "contentHash": "0ff25c02bcafea04b905547b2428303a98e325bd3350a62f4aa901d3f6237c76",
+      "byteLen": 292402
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.306",
+      "contentHash": "17b4e6c9614766f3bdae65b6e4728e6e589a1ef815a83fca6737283de8ab07a1",
+      "byteLen": 40506
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.321",
+      "contentHash": "fcfd29797d7315df5ffda4152a852713f653d87239772af08301704e260db4ee",
+      "byteLen": 46586
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.341",
+      "contentHash": "abc9efe5414456ca2f45e5315018b598c211243cc0f14957698f2afcdab8d01e",
+      "byteLen": 16602
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.380",
+      "contentHash": "5f7255f09d942e86cdcf559c8123c969382fd1fbf8c3d6d783d6dd40763fa4c5",
+      "byteLen": 27519
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.401",
+      "contentHash": "ed01c0564fe92a4707f14dd47e46ae12bc008c19efc85bf6e4ac597f19cde89e",
+      "byteLen": 40506
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.449",
+      "contentHash": "110af74fe800cde8f96ec480648c03c9f6200d4c7a08068dc3c7e7ce93e6834e",
+      "byteLen": 18650
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.450",
+      "contentHash": "f6074ea1758936c3bb2bee73517ade298ba674dccdb0c527db317e241a6b6a6c",
+      "byteLen": 74522
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.468",
+      "contentHash": "65318f78425086dc85eac7d6d91f82b0120055ab7db4663e547fbac2b1eb9f11",
+      "byteLen": 33274
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.474",
+      "contentHash": "db33cf551b0d848100f2f072623485edd46f41d122e000315256ec5342259097",
+      "byteLen": 35034
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.482",
+      "contentHash": "01651358a870c7f97c58bcb88354c2db7c58efeacfd21487439822f00416ba08",
+      "byteLen": 355018
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.484",
+      "contentHash": "32c3c0e4f78792041c78d6555753cba819a593336bbc91771c6b90dccbd166c7",
+      "byteLen": 327366
+    },
+    {
+      "sourcePath": "arena2/WEAPON02.CIF",
+      "contentHash": "707746fb170007077bdaf4066bb4ab3b88cb8bbdfa91cb93c9dde5b505d5c8a3",
+      "byteLen": 163844
+    },
+    {
+      "sourcePath": "authored-ui/ui-authored-assets.json",
+      "contentHash": "ec5656b12b9a05fbf18a9b8da0204e6936dfc9ee5d93f5b21d86fc6faebc8c91",
+      "byteLen": 1835
+    },
+    {
+      "sourcePath": "authored-ui/ui-original/inventory-grid-slot-slate-v1.png",
+      "contentHash": "f19aca28a45f24c61cc55af1ee2be864a742ffcdb5f8f7fd46e4cd55b643a7b3",
+      "byteLen": 1970798
+    },
+    {
+      "sourcePath": "authored-ui/ui-original/inventory-panel-slate-v1.png",
+      "contentHash": "a54e0ca6bcc5f9ec2df87cb967365b844f0f9a7572150005a7eddcd1d448805c",
+      "byteLen": 2387369
+    },
+    {
+      "sourcePath": "authored-ui/ui-original/inventory-titlebar-slate-v1.png",
+      "contentHash": "80d2fe6b0c7f9fb089d3d2ca6fb6a0ec053331bb1874ceb94c3dad8341d584d2",
+      "byteLen": 1671134
+    }
+  ],
+  "artifacts": [
+    {
+      "relativePath": "media/audio/audio-melee-dagger-swing.wav",
+      "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
+      "byteLen": 1331,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/audio-melee-hit-1.wav",
+      "contentHash": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
+      "byteLen": 2173,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/audio-melee-hit-2.wav",
+      "contentHash": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
+      "byteLen": 2460,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/audio-melee-hit-3.wav",
+      "contentHash": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
+      "byteLen": 2921,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/audio-melee-hit-4.wav",
+      "contentHash": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
+      "byteLen": 2670,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/audio/audio-melee-hit-5.wav",
+      "contentHash": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
+      "byteLen": 3557,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/classic/manifest.json",
+      "contentHash": "360ae51523120ecfe93b0dfd7386d71f26bc00f0bb2eda56bc244279a4028ca4",
+      "byteLen": 162268,
+      "dependsOnPaths": [
+        "media/audio/audio-melee-dagger-swing.wav",
+        "media/audio/audio-melee-hit-1.wav",
+        "media/audio/audio-melee-hit-2.wav",
+        "media/audio/audio-melee-hit-3.wav",
+        "media/audio/audio-melee-hit-4.wav",
+        "media/audio/audio-melee-hit-5.wav",
+        "media/combat/weapon-dagger-steel-atlas.png",
+        "media/effects/effect-blood-0-atlas.png",
+        "media/effects/effect-blood-1-atlas.png",
+        "media/effects/effect-blood-2-atlas.png",
+        "media/effects/effect-sparkle-magic-atlas.png",
+        "media/fonts/font-classic-0003-atlas.png",
+        "media/ui/authored/inventory-grid-slot-slate-v1.png",
+        "media/ui/authored/inventory-skin-panel-slate-v1.png",
+        "media/ui/authored/inventory-titlebar-slate-v1.png",
+        "media/ui/hud-chrome-main.png",
+        "media/ui/hud-vital-fatigue.png",
+        "media/ui/hud-vital-health.png",
+        "media/ui/hud-vital-magicka.png",
+        "media/ui/inventory-icons/inventory-icon-arrow.png",
+        "media/ui/inventory-icons/inventory-icon-buckler.png",
+        "media/ui/inventory-icons/inventory-icon-gold-piece.png",
+        "media/ui/inventory-icons/inventory-icon-iron-battle-axe.png",
+        "media/ui/inventory-icons/inventory-icon-iron-boots.png",
+        "media/ui/inventory-icons/inventory-icon-iron-broadsword.png",
+        "media/ui/inventory-icons/inventory-icon-iron-claymore.png",
+        "media/ui/inventory-icons/inventory-icon-iron-cuirass.png",
+        "media/ui/inventory-icons/inventory-icon-iron-dagger.png",
+        "media/ui/inventory-icons/inventory-icon-iron-dai-katana.png",
+        "media/ui/inventory-icons/inventory-icon-iron-flail.png",
+        "media/ui/inventory-icons/inventory-icon-iron-gauntlets.png",
+        "media/ui/inventory-icons/inventory-icon-iron-greaves.png",
+        "media/ui/inventory-icons/inventory-icon-iron-helm.png",
+        "media/ui/inventory-icons/inventory-icon-iron-katana.png",
+        "media/ui/inventory-icons/inventory-icon-iron-left-pauldron.png",
+        "media/ui/inventory-icons/inventory-icon-iron-long-bow.png",
+        "media/ui/inventory-icons/inventory-icon-iron-longsword.png",
+        "media/ui/inventory-icons/inventory-icon-iron-mace.png",
+        "media/ui/inventory-icons/inventory-icon-iron-right-pauldron.png",
+        "media/ui/inventory-icons/inventory-icon-iron-saber.png",
+        "media/ui/inventory-icons/inventory-icon-iron-short-bow.png",
+        "media/ui/inventory-icons/inventory-icon-iron-shortsword.png",
+        "media/ui/inventory-icons/inventory-icon-iron-staff.png",
+        "media/ui/inventory-icons/inventory-icon-iron-tanto.png",
+        "media/ui/inventory-icons/inventory-icon-iron-wakazashi.png",
+        "media/ui/inventory-icons/inventory-icon-iron-war-axe.png",
+        "media/ui/inventory-icons/inventory-icon-iron-warhammer.png",
+        "media/ui/inventory-icons/inventory-icon-kite-shield.png",
+        "media/ui/inventory-icons/inventory-icon-round-shield.png",
+        "media/ui/inventory-icons/inventory-icon-tower-shield.png",
+        "media/ui/window-character-sheet-chrome.png",
+        "media/ui/window-inventory-chrome.png"
+      ]
+    },
+    {
+      "relativePath": "media/combat/weapon-dagger-steel-atlas.png",
+      "contentHash": "d8b5c9659660acf879d2a5b37ae0f60e2c061c3d0861f9fd9c35db30b4b9ecdc",
+      "byteLen": 147440,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-0-corpse.png",
+      "contentHash": "ecb5088c51721a80d369399cffbbe35cbf76c6416316541b7e926c645037e23d",
+      "byteLen": 2535,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-0.png",
+      "contentHash": "85598b76838bd24b52c65d5896a8b41c03e6514364a717acec6b07b341a5aa6b",
+      "byteLen": 130724,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-1.png",
+      "contentHash": "6082e7442f5f0434f5d66638caeff10e4905ffae78d0dac3fbfc3431f9914921",
+      "byteLen": 97423,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-138.png",
+      "contentHash": "d8fec08b20c14f899314c400ff4bf6705ccae5513829e55d939efd811962657e",
+      "byteLen": 268631,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-141.png",
+      "contentHash": "5c173befcedbe3793e53cbed59dfebcbe806110b146cddf612ead2c94eebeee6",
+      "byteLen": 280009,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-15-corpse.png",
+      "contentHash": "c5595044ecfb096edb015cc07817e1cee716ebdb49bdf61caee75b93cf68bd3b",
+      "byteLen": 2695,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-15.png",
+      "contentHash": "be101e1a618b6bbaa1836ede4fe3d9331af7e334d86e1a5a83528097a724ed87",
+      "byteLen": 296932,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-3.png",
+      "contentHash": "af3649ca646f4a225162076ca1f25e8b15c8165bfcaaf051b6e8fc64f829843e",
+      "byteLen": 96286,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-7.png",
+      "contentHash": "718f9381cd0b96fe681bf9c864f2aa0b9485c1af68e6e6c059911a2f700c6643",
+      "byteLen": 356158,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-203-5.png",
+      "contentHash": "e053fed0cc2d1bab398d08d2a6876bace2f078b6f49887ae3c6bd43efc906702",
+      "byteLen": 2654,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-203-6.png",
+      "contentHash": "d04c3561aeba366a0643fb4350c4d7232a7fc92357f7dd49bcda8244516b4b70",
+      "byteLen": 1525,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-0.png",
+      "contentHash": "2ac2b5718095fc267a2cd5e994edaa85a4f15c0f5c61022fc0a3c53f7a118be1",
+      "byteLen": 276,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-1.png",
+      "contentHash": "ea88c1352b2e54bdac6a0256b5dba151134fdb1020b616dddfcc5755f86a2a11",
+      "byteLen": 310,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-14.png",
+      "contentHash": "30db9a8cae8b872f856f7d0d4bfa37a542ae995148cfb806b09506f540c2c042",
+      "byteLen": 2699,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-17.png",
+      "contentHash": "2b40bb8644cc95808aa1a16dc202430d4128375e928fdef51cfd1adcf87bc2f8",
+      "byteLen": 1306,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-2.png",
+      "contentHash": "2de8baed439dc5171a69b22625d4157bffeb29576a09223ecec0cfbf240e914f",
+      "byteLen": 1101,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-3.png",
+      "contentHash": "aaa9f359c1dc8d4692a7a0fc2e1c48674b8d8cd4026c46f48de8c5d19fd373ec",
+      "byteLen": 1376,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-4.png",
+      "contentHash": "e6bc002c419811d74e68ba8efd7840c23956f9e737cb1a996847b537811454ea",
+      "byteLen": 565,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-5.png",
+      "contentHash": "4662e0dce944df882abea6178709c56872eaa650f69d848c04a98c73a449e344",
+      "byteLen": 651,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-6.png",
+      "contentHash": "6b84301dc810d732c2f5329d58dcf1b959bc484e419e15058943434097c032ee",
+      "byteLen": 600,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-206-8.png",
+      "contentHash": "013b13fe69264a8d25c757d8506f9456b5ed4540955c22dbb1beed222d3d0fb9",
+      "byteLen": 842,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-0.png",
+      "contentHash": "320a8cbfdf17f6144f569e950432118c2606618e03c516ba12a5bde462d16795",
+      "byteLen": 2313,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-1.png",
+      "contentHash": "fcf6e959b5781bbb312894d691f3e7d47694de351d6c516fd0b24633af80e363",
+      "byteLen": 2371,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-11.png",
+      "contentHash": "4403f13ad6a7000d4dad9aa68e02729af7cdbe6e034e7d5252e5fdeadb5a47c5",
+      "byteLen": 986,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-12.png",
+      "contentHash": "3ff4d93bf7c201b62a5090f57161ce8a02ef2ef44c28f0ef73513037a9b05b2f",
+      "byteLen": 974,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-13.png",
+      "contentHash": "db61fb79978d02f2c895ee0d5bd5acc9d8b681c883bc90c79299e5f76d1dc12c",
+      "byteLen": 925,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-16.png",
+      "contentHash": "140ea9a898b93b3566ce1e6c5dbcc3d0b42090da1363bd2a611a2c8ed4a2a840",
+      "byteLen": 1063,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-17.png",
+      "contentHash": "6c07f16948579dc422f8c70a3186ba95d2e0721ceeca82b26c5b288679c025b6",
+      "byteLen": 1289,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-18.png",
+      "contentHash": "409f41261642b8a51ce6a2825c04b34a04934ad3611d4cf2b89396110dc64941",
+      "byteLen": 849,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-19.png",
+      "contentHash": "09a7c97ed3904e6e46e5494ccda2fe35b9e3d2ca48b63a62f476a4fac968dadb",
+      "byteLen": 3116,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-2.png",
+      "contentHash": "88eb40adad3fb7a3bf3ae62c954882f470f20a4a0e791dac1bb7feccffcd382d",
+      "byteLen": 520,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-20.png",
+      "contentHash": "783318bd53b52f3d1ca1930555530e2398e43f7de9dac2a14f2fec4dc57b98de",
+      "byteLen": 1082,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-22.png",
+      "contentHash": "b4bb4324e60a4778e807545a3f981723cf70418e3959ffb284111ad48f65a06b",
+      "byteLen": 745,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-3.png",
+      "contentHash": "fd68eaa459d771175d6b60b0bce42c63f25c2ad89c2b1e98ff9da0d2d8c93dd5",
+      "byteLen": 353,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-4.png",
+      "contentHash": "bc31acb78b586970ac736ca0a0bcb32ded5aebf857f8891a2f6205b54adf95c4",
+      "byteLen": 442,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-6.png",
+      "contentHash": "34afffb360e9dc7c28692a9411934131ae1ff6cac8dc8d662d3753cf1e5e114f",
+      "byteLen": 1282,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-8.png",
+      "contentHash": "77384996861277aead42cbdc2f62edf16db866a219997299a7d292addb58f9a7",
+      "byteLen": 1820,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-210-9.png",
+      "contentHash": "03159e17ec6ee89b56a16790ac464dc9e2381d097bf04ef9b62cf890f7b17eea",
+      "byteLen": 2363,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-213-10.png",
+      "contentHash": "0ad3b21946ed92b6505c1febf49a1e0d1e509c5ecfe099cb8223f1f8e25f1d0c",
+      "byteLen": 567,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-213-7.png",
+      "contentHash": "4e7bb6e0588602a01a3bd541ce60ffd3658ba5d02478aa3dca17d5c60c827d2c",
+      "byteLen": 324,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-213-8.png",
+      "contentHash": "61532ec2cf2402f62fdae139994034ccdc4769c01ba6cff6289a81bbb3708bf2",
+      "byteLen": 659,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/billboards/texture-213-9.png",
+      "contentHash": "6e1b38c6bfba8ff1ea521bcab0693cb4796ef94b792fcf210749ce763360a3ef",
+      "byteLen": 888,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/manifest.json",
+      "contentHash": "28cfa9b5692d296b311af867579d4108a576bfb48a707de64dd91871f160404d",
+      "byteLen": 850770,
+      "dependsOnPaths": [
+        "media/dungeon/actors/mobile-0-corpse.png",
+        "media/dungeon/actors/mobile-0.png",
+        "media/dungeon/actors/mobile-1.png",
+        "media/dungeon/actors/mobile-138.png",
+        "media/dungeon/actors/mobile-141.png",
+        "media/dungeon/actors/mobile-15-corpse.png",
+        "media/dungeon/actors/mobile-15.png",
+        "media/dungeon/actors/mobile-3.png",
+        "media/dungeon/actors/mobile-7.png",
+        "media/dungeon/billboards/texture-203-5.png",
+        "media/dungeon/billboards/texture-203-6.png",
+        "media/dungeon/billboards/texture-206-0.png",
+        "media/dungeon/billboards/texture-206-1.png",
+        "media/dungeon/billboards/texture-206-14.png",
+        "media/dungeon/billboards/texture-206-17.png",
+        "media/dungeon/billboards/texture-206-2.png",
+        "media/dungeon/billboards/texture-206-3.png",
+        "media/dungeon/billboards/texture-206-4.png",
+        "media/dungeon/billboards/texture-206-5.png",
+        "media/dungeon/billboards/texture-206-6.png",
+        "media/dungeon/billboards/texture-206-8.png",
+        "media/dungeon/billboards/texture-210-0.png",
+        "media/dungeon/billboards/texture-210-1.png",
+        "media/dungeon/billboards/texture-210-11.png",
+        "media/dungeon/billboards/texture-210-12.png",
+        "media/dungeon/billboards/texture-210-13.png",
+        "media/dungeon/billboards/texture-210-16.png",
+        "media/dungeon/billboards/texture-210-17.png",
+        "media/dungeon/billboards/texture-210-18.png",
+        "media/dungeon/billboards/texture-210-19.png",
+        "media/dungeon/billboards/texture-210-2.png",
+        "media/dungeon/billboards/texture-210-20.png",
+        "media/dungeon/billboards/texture-210-22.png",
+        "media/dungeon/billboards/texture-210-3.png",
+        "media/dungeon/billboards/texture-210-4.png",
+        "media/dungeon/billboards/texture-210-6.png",
+        "media/dungeon/billboards/texture-210-8.png",
+        "media/dungeon/billboards/texture-210-9.png",
+        "media/dungeon/billboards/texture-213-10.png",
+        "media/dungeon/billboards/texture-213-7.png",
+        "media/dungeon/billboards/texture-213-8.png",
+        "media/dungeon/billboards/texture-213-9.png",
+        "media/dungeon/materials/texture-0-124.png",
+        "media/dungeon/materials/texture-0-44.png",
+        "media/dungeon/materials/texture-0-45.png",
+        "media/dungeon/materials/texture-0-74.png",
+        "media/dungeon/materials/texture-0-75.png",
+        "media/dungeon/materials/texture-0-76.png",
+        "media/dungeon/materials/texture-0-77.png",
+        "media/dungeon/materials/texture-0-78.png",
+        "media/dungeon/materials/texture-0-79.png",
+        "media/dungeon/materials/texture-0-89.png",
+        "media/dungeon/materials/texture-1-24.png",
+        "media/dungeon/materials/texture-119-0.png",
+        "media/dungeon/materials/texture-119-1.png",
+        "media/dungeon/materials/texture-119-2.png",
+        "media/dungeon/materials/texture-119-3.png",
+        "media/dungeon/materials/texture-119-4.png",
+        "media/dungeon/materials/texture-120-0.png",
+        "media/dungeon/materials/texture-120-1.png",
+        "media/dungeon/materials/texture-120-2.png",
+        "media/dungeon/materials/texture-120-3.png",
+        "media/dungeon/materials/texture-120-4.png",
+        "media/dungeon/materials/texture-121-0.png",
+        "media/dungeon/materials/texture-121-1.png",
+        "media/dungeon/materials/texture-121-2.png",
+        "media/dungeon/materials/texture-121-3.png",
+        "media/dungeon/materials/texture-122-0.png",
+        "media/dungeon/materials/texture-122-2.png",
+        "media/dungeon/materials/texture-122-3.png",
+        "media/dungeon/materials/texture-141-1.png",
+        "media/dungeon/materials/texture-141-2.png",
+        "media/dungeon/materials/texture-146-0.png",
+        "media/dungeon/materials/texture-146-1.png",
+        "media/dungeon/materials/texture-147-1.png",
+        "media/dungeon/materials/texture-147-2.png",
+        "media/dungeon/materials/texture-321-0.png",
+        "media/dungeon/materials/texture-321-1.png",
+        "media/dungeon/materials/texture-321-2.png",
+        "media/dungeon/materials/texture-341-0.png",
+        "media/dungeon/materials/texture-341-3.png",
+        "media/dungeon/materials/texture-41-1.png",
+        "media/dungeon/materials/texture-449-1.png",
+        "media/dungeon/materials/texture-449-2.png",
+        "media/dungeon/materials/texture-450-11.png",
+        "media/dungeon/materials/texture-450-5.png",
+        "media/dungeon/materials/texture-450-7.png",
+        "media/dungeon/materials/texture-450-9.png",
+        "media/dungeon/materials/texture-46-1.png",
+        "media/dungeon/materials/texture-46-2.png",
+        "media/dungeon/materials/texture-468-0.png",
+        "media/dungeon/materials/texture-468-2.png",
+        "media/dungeon/materials/texture-468-3.png",
+        "media/dungeon/materials/texture-474-0.png",
+        "media/dungeon/materials/texture-474-2.png",
+        "media/dungeon/materials/texture-67-0.png",
+        "media/dungeon/materials/texture-67-1.png",
+        "media/dungeon/materials/texture-67-14.png",
+        "media/dungeon/materials/texture-67-15.png",
+        "media/dungeon/materials/texture-67-2.png",
+        "media/dungeon/materials/texture-67-6.png",
+        "media/dungeon/materials/texture-67-8.png",
+        "media/dungeon/materials/texture-71-0.png",
+        "media/dungeon/materials/texture-71-2.png",
+        "media/dungeon/materials/texture-90-12.png",
+        "media/dungeon/materials/texture-90-13.png",
+        "media/dungeon/materials/texture-90-14.png",
+        "media/dungeon/materials/texture-90-2.png",
+        "media/dungeon/materials/texture-90-3.png",
+        "media/dungeon/materials/texture-92-10.png",
+        "media/dungeon/materials/texture-92-11.png",
+        "media/dungeon/materials/texture-92-3.png",
+        "media/dungeon/materials/texture-92-5.png",
+        "media/dungeon/materials/texture-92-7.png",
+        "media/dungeon/materials/texture-92-8.png",
+        "media/dungeon/materials/texture-93-0.png",
+        "media/dungeon/materials/texture-93-10.png",
+        "media/dungeon/materials/texture-93-4.png",
+        "media/dungeon/materials/texture-93-5.png",
+        "media/dungeon/materials/texture-93-6.png",
+        "media/dungeon/materials/texture-93-7.png",
+        "media/dungeon/materials/texture-93-8.png",
+        "media/dungeon/materials/texture-95-0.png"
+      ]
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-124.png",
+      "contentHash": "728bbf96bad493a8f3e94d80972695d5ea32e108c37c22a4c3e2b0521b86fec5",
+      "byteLen": 102,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-44.png",
+      "contentHash": "a1265c577bc33cf42726f4ddd41780ab28986fb186b85010603b389e55aa21d7",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-45.png",
+      "contentHash": "f893a5de79dbbbe79bd490ef36e5ad6a4908ba875b91f27e7f89085c3a3d601d",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-74.png",
+      "contentHash": "c68566eef6dd817e197a907d260579eb628092dc519ae091b19903931b1191b4",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-75.png",
+      "contentHash": "8abee266f65014e198d97c83269d892b17a04cd405da39d68441825579e5ec49",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-76.png",
+      "contentHash": "c702588cbdb16e13f7db586e6800a5afdd088e93b83ca96eb17a07f4fd87226b",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-77.png",
+      "contentHash": "43666a2550e44df2894906f38756dfb06720d75452194c7b632cf71099fa9320",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-78.png",
+      "contentHash": "089992d194042a2bffefde14664ddec53d602aa06ee1c117b8c320895ebfb4cb",
+      "byteLen": 105,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-79.png",
+      "contentHash": "a02d993d6118e65098a66576b35d2e466de4ed3791e84df6b4702988aa5b7fb3",
+      "byteLen": 104,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-0-89.png",
+      "contentHash": "db7f589583a30880387870d7e893a839acb5b4f17346dbccdab4b0c7a6f3724d",
+      "byteLen": 103,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-1-24.png",
+      "contentHash": "3bf36bbb146f02689666b5b1bf648a4c05dcf3ecc3f77becf6a72fae9aba2f79",
+      "byteLen": 102,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-119-0.png",
+      "contentHash": "fa47dbf5f9ab2ca6f1121a40777ebe255f7f6eefbdbaa370418b92c2a6444106",
+      "byteLen": 1575,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-119-1.png",
+      "contentHash": "92b253b4124fbd95d5b5ed9d16efe1c514d0b162ad81c7cf2f5a6157689c7135",
+      "byteLen": 1545,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-119-2.png",
+      "contentHash": "4da8d976fc5ec4f42d1fb8c5643a41b28e42e6fdcb6908778b08977d09fb8941",
+      "byteLen": 2106,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-119-3.png",
+      "contentHash": "225d73816d1869949e709a38de6b3a2895602b77cc59f38f5e0b2f8d2edb2ca5",
+      "byteLen": 2947,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-119-4.png",
+      "contentHash": "1cc82f02b9e675f905394f8d96249ee4499c5087d2c1394f10c431408bc71707",
+      "byteLen": 1441,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-120-0.png",
+      "contentHash": "d814c7627ffa912dab86327263295654ab5ecc26b98c0cf382210a875dc41241",
+      "byteLen": 1737,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-120-1.png",
+      "contentHash": "e53f910e8e6358b85cf9dcc2282e29f2efd4e50740dcdacfdc585f57a2f14b36",
+      "byteLen": 1737,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-120-2.png",
+      "contentHash": "39d54af87786dca365624422b2deeafc6136be38f9fe4dc1e8b8f924a059c0d8",
+      "byteLen": 2555,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-120-3.png",
+      "contentHash": "31575e85218ade3bd44cd763bb6bd876e98ca6b5fe21b4a405edfe3ec24f878c",
+      "byteLen": 2117,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-120-4.png",
+      "contentHash": "ca1678586395573ff37f2cdd959f58cb54ffdd2c7f20a59527df2308f567bf55",
+      "byteLen": 1397,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-121-0.png",
+      "contentHash": "966172d30c65ff0cab73fa9d437791c91513b117f0e7d5f6bf89177f8713796c",
+      "byteLen": 3226,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-121-1.png",
+      "contentHash": "ec92fab5f0f03a0f740972962fdd5590500a6170155b8ef4169e95a9cbbd4cd4",
+      "byteLen": 3461,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-121-2.png",
+      "contentHash": "255337c30aeb21ba2ee38fffe38160a8bb0a1fb88c1cc7443cf3e03a5223c927",
+      "byteLen": 3625,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-121-3.png",
+      "contentHash": "0d67f855d602c16ccc99b508355f4c273be975f6f0605e538902ed46bf0cf1f3",
+      "byteLen": 1857,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-122-0.png",
+      "contentHash": "0845e114a23b7210389c2597d0427225d3467e532605a25340880aeb247c329f",
+      "byteLen": 2040,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-122-2.png",
+      "contentHash": "f4047eb0a3432f57e31a5c5bfb69c11e270315862cf0f8a79b948f3d91fa2533",
+      "byteLen": 2052,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-122-3.png",
+      "contentHash": "51e9ee0f55057965fa672dfdb4f168d5fa5c3a67c2f61bdd638d8ddb09a23861",
+      "byteLen": 2760,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-141-1.png",
+      "contentHash": "21345385c480549277f1c62f4c84a93392a5a595d7186e47fdb9ec51d3afe8da",
+      "byteLen": 2094,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-141-2.png",
+      "contentHash": "5bd42121c119cf308dec6ad88c9ddd2f7eea830a96cde3d3fd8c38d5435fbd51",
+      "byteLen": 3522,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-146-0.png",
+      "contentHash": "9f3957844c8f76c702c93401c6f783d7f29f3c765790fd24f1b6aaff3360b9d1",
+      "byteLen": 6959,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-146-1.png",
+      "contentHash": "ec62bdcf21fa11e39a5a04d9f317d170762986d16102957c6bb137e9034522be",
+      "byteLen": 1110,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-147-1.png",
+      "contentHash": "c7c4df9c0f14ae2c916cc7ac55d5029712f6884927040488afbabef9d2e5f0b9",
+      "byteLen": 2388,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-147-2.png",
+      "contentHash": "190ad3dcb168297b4b404d0fb855ee0d5a3e47a6da5a964d7e4816c279a4e6f3",
+      "byteLen": 2555,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-321-0.png",
+      "contentHash": "0e4e16868719a6b9c4a7edb8ffad3931f6e7fcb59e8e7960b59fa21f70e4e94d",
+      "byteLen": 4948,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-321-1.png",
+      "contentHash": "3304aa5130ff97fd18f5a3bd158d454d1baced7cc06134f83d26426218fc2a63",
+      "byteLen": 1760,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-321-2.png",
+      "contentHash": "57ee374b3091303de97eaf3402a9ca7116b90a7b45fab3df48c96ba51c9f9e55",
+      "byteLen": 2612,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-341-0.png",
+      "contentHash": "b74f647b39c7e62b98a5612485e7e16ba19fbaf6df32a4c9b84a18ae5b3f27c9",
+      "byteLen": 2390,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-341-3.png",
+      "contentHash": "b314bc0f00384ac83bd5058957289e0c08ade844d835c175594f46511bf671b3",
+      "byteLen": 3131,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-41-1.png",
+      "contentHash": "24d8ad9444354c4f4e31c89d9f42d8bba5e0492d0dc1ab9488e783b2cea8c16f",
+      "byteLen": 3100,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-449-1.png",
+      "contentHash": "91c9cd61949dc071f80ddb6933ae833985f2f8a77816de4347ff32f3b2509535",
+      "byteLen": 525,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-449-2.png",
+      "contentHash": "ca95f44d178d49b6a3e69736d295d569e514c1559b71d506a15581a9dac3c1df",
+      "byteLen": 1364,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-450-11.png",
+      "contentHash": "2442bafbcecec4e66e4186a374d8ea3b3455f996da8f420795cb86a83963b4b8",
+      "byteLen": 1824,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-450-5.png",
+      "contentHash": "0d7524fe45eecbe19ad496f5236f39c1aa646b446d5f213bf4ccc21e8e77818a",
+      "byteLen": 2020,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-450-7.png",
+      "contentHash": "f260f5fca906c862f202206d1219f5f075c0271eb56cc49972c88b19017fcb92",
+      "byteLen": 1600,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-450-9.png",
+      "contentHash": "586e5eb997072f89d8c134a6ce316821936dc17623b7bf383ecb212f60b3eb3f",
+      "byteLen": 1688,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-46-1.png",
+      "contentHash": "5c7e34c4d60eea15864dcc6c732e4a21d5b4a14212494d85b12057b39954de33",
+      "byteLen": 1801,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-46-2.png",
+      "contentHash": "e9da300ef1a7f6ce840eed096864f0fe35610f1b0ef657b8beb92026c7cd698e",
+      "byteLen": 740,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-468-0.png",
+      "contentHash": "847062ed80bf0d1211161f87cffd5ea7dfbe04c27226c7e406f0d7737d0641d1",
+      "byteLen": 1600,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-468-2.png",
+      "contentHash": "7fdb6c9bfb4060c64b8a214aba8a81f5f4de818f7ab57812924fe8ff58447408",
+      "byteLen": 1797,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-468-3.png",
+      "contentHash": "0425a244bd56801b41fdab81aa8ba3d4cebf61cc702b94fcec88eeecd580bb6e",
+      "byteLen": 2296,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-474-0.png",
+      "contentHash": "8e3174c28c21977fac7ef1c8fc76e4592ef5ba8d91c463ef3dfb10c977e4d255",
+      "byteLen": 6397,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-474-2.png",
+      "contentHash": "ed30faf8a727a4f3faa7f4063d50bf7401981d1e015abbb397d85779584e3ce3",
+      "byteLen": 5020,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-0.png",
+      "contentHash": "4528d606467b7af4e4efdc36640aad10e349a4a5a8f212190c390e47f1260f23",
+      "byteLen": 1154,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-1.png",
+      "contentHash": "d96b5396ed8ce3c4ea8f85782f13b215437356ca8a2afd75f8c3ebb3101e38f5",
+      "byteLen": 1037,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-14.png",
+      "contentHash": "be33fb00a710104582d8595f57f442e964e5f1f1a3fdbe36454786d9ef5b3ff7",
+      "byteLen": 319,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-15.png",
+      "contentHash": "58803c8146bf17476197d1ccffc6ead9eb8f0ac4211e1ba40d4798902e8e6b1a",
+      "byteLen": 448,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-2.png",
+      "contentHash": "ef029251d66061de0671a798a1412df160d4fa6971880be0fa2a76d0e30d1e21",
+      "byteLen": 1386,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-6.png",
+      "contentHash": "1ac9ff53f7788812acd8537e7c3c848c96130d6bc8c4ff1d3fa25e168fdcedae",
+      "byteLen": 1201,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-67-8.png",
+      "contentHash": "db52424d81a131e09d80a30a28fd6236c848cd3b8562d847b69ee5f1c867e121",
+      "byteLen": 309,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-71-0.png",
+      "contentHash": "fcd1a19e353381d9e2c38367f32df91b46f9be87108c613d7555500cf7b2911c",
+      "byteLen": 3948,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-71-2.png",
+      "contentHash": "85bf913fbd24d80ce50afe106e01f505e3288e50d3a2f212557c177d6b33343c",
+      "byteLen": 3429,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-12.png",
+      "contentHash": "ae70f08cd49eec64d1c727571065160ad836488c93773e7c7d224cbe4981956e",
+      "byteLen": 391,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-13.png",
+      "contentHash": "d3356cea577dfc760498678be9162047ba9517548c221fe6cb3571fd7e8e25cc",
+      "byteLen": 569,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-14.png",
+      "contentHash": "64265eb8448beac8240a157a2d1e78432215807e59a350cb381530742ec9c030",
+      "byteLen": 894,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-2.png",
+      "contentHash": "95555de1918b1bebceb98d7d913defaac5fcc583ce37ce759da299340f260894",
+      "byteLen": 1216,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-90-3.png",
+      "contentHash": "5ea2f5170721704aff092ad5119410393165f8e730efd46f1b0dc049e313f3eb",
+      "byteLen": 2249,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-10.png",
+      "contentHash": "dba5102c4c1465d11e2ce1155d89fde47b4768f67b3ffdf627280d4202489431",
+      "byteLen": 3537,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-11.png",
+      "contentHash": "d23fd47c494d77e83bdd06ef344a8d59e46775cd47e6def827b5a9c310965ef5",
+      "byteLen": 2072,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-3.png",
+      "contentHash": "29c13f06166d1ed2a051006449f07ff1006283df5da63a234c9cd467d74caf0d",
+      "byteLen": 2830,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-5.png",
+      "contentHash": "28d0f7b34348da448fac5f34ae562d7d427d90bcb3a45aa8f79bff55e7871689",
+      "byteLen": 1548,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-7.png",
+      "contentHash": "dbe08591fb5610ef8f55d56fe0369cd0d287ad30d082b4f901fb7367b96e2816",
+      "byteLen": 1994,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-92-8.png",
+      "contentHash": "3f3c7935b2c5ea45df6e20104e423ca6e3d3a4fb40505f36d0d7b033b473f74a",
+      "byteLen": 3302,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-93-0.png",
+      "contentHash": "59c10bd81f4cdfc5c3f219505d53607f797f4efa52367535de5a4735c3b2313a",
+      "byteLen": 550,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-93-10.png",
+      "contentHash": "9f86bb7a9f71b9003be78c41bcfbaa89ca37a2eb2340f892d871a6ddb4a567da",
+      "byteLen": 1972,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-93-4.png",
+      "contentHash": "6a6a07b8d2ac1fad3b684ddd832cb3eee2533eb12110e551f2ed6e9a42825cc7",
+      "byteLen": 1227,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-93-5.png",
+      "contentHash": "af1685d875c09cfb6290d72347c72590661fe70c17315c17d50225a10044eb96",
+      "byteLen": 169,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-93-6.png",
+      "contentHash": "d015298b279b2e7daeba50082792ea0b89fe9a329093953393b06f12a6cb924d",
+      "byteLen": 5689,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-93-7.png",
+      "contentHash": "0e08edc80832b337104f83212ca4ebe0a2afd165a62c0f71dc8d681194cccda6",
+      "byteLen": 1230,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-93-8.png",
+      "contentHash": "adf3488baf0dd7965c7e157df588cfa32891e508124574ef7629105552f543e4",
+      "byteLen": 375,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-95-0.png",
+      "contentHash": "11908b842ccf4867cdd23d736fc1ee3f011236cb5eaea04059e9ad4f69e2ddc0",
+      "byteLen": 4389,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-blood-0-atlas.png",
+      "contentHash": "939e98d382d2ed3028cecf14a2dd3abf39a8ac89b8f6d270164c4837f2b48c0c",
+      "byteLen": 2824,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-blood-1-atlas.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-blood-2-atlas.png",
+      "contentHash": "34251af6cbe56e83c00032fee9fef3a87aabe51839ed1cd1f4d5798c5d79a161",
+      "byteLen": 391,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/effects/effect-sparkle-magic-atlas.png",
+      "contentHash": "356ea79ec4078d0cd4a3ddeebff987ef79cb012076a3b71f36a959f9fcc36a20",
+      "byteLen": 2465,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/fonts/font-classic-0003-atlas.png",
+      "contentHash": "0b4ecb2ac56683ac4eeee614b109d3327328aa1e1ec3914e369eb9845291e581",
+      "byteLen": 2376,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/authored/inventory-grid-slot-slate-v1.png",
+      "contentHash": "f19aca28a45f24c61cc55af1ee2be864a742ffcdb5f8f7fd46e4cd55b643a7b3",
+      "byteLen": 1970798,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/authored/inventory-skin-panel-slate-v1.png",
+      "contentHash": "a54e0ca6bcc5f9ec2df87cb967365b844f0f9a7572150005a7eddcd1d448805c",
+      "byteLen": 2387369,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/authored/inventory-titlebar-slate-v1.png",
+      "contentHash": "80d2fe6b0c7f9fb089d3d2ca6fb6a0ec053331bb1874ceb94c3dad8341d584d2",
+      "byteLen": 1671134,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-chrome-main.png",
+      "contentHash": "2f587e1597475b606d24a3dcafec155c85b4d5485db3336a24b32ebf897cb233",
+      "byteLen": 9484,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-vital-fatigue.png",
+      "contentHash": "844f73ab04722a176ee69cc4c0cec0acccd012f0c01856649dca96b25cc88634",
+      "byteLen": 226,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-vital-health.png",
+      "contentHash": "d8ea5b3f369cc05c33d20ac5022eeb0711bedaac6afc7b97bfaba5956666d859",
+      "byteLen": 230,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/hud-vital-magicka.png",
+      "contentHash": "602ea19d376f6ab701bddd4a9e1d0d2fd097bad36f9c59b735e41b316d8ca52e",
+      "byteLen": 229,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-arrow.png",
+      "contentHash": "cb9f449c1fe00eb3de638827d1179d76c354efb3c4aaeeaf60bf2e4e5834266d",
+      "byteLen": 369,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-buckler.png",
+      "contentHash": "6637cd45341c80a840865f2d77024fb0028d90ac6b0d9c0a00629d7fff844daa",
+      "byteLen": 1299,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-gold-piece.png",
+      "contentHash": "fdf8435e0a6b2df47abf89f24005056646a658e746928866cc263cad9806643b",
+      "byteLen": 395,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-battle-axe.png",
+      "contentHash": "c5e54f650acbbc9b14753923c1da99b81eea9cd7b2e32f2738f6ccb78ba84eb1",
+      "byteLen": 583,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-boots.png",
+      "contentHash": "ed5dac4b1610c9df2e27691df8bf6212772bc5009f2d8766f12a24aa3e314378",
+      "byteLen": 1045,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-broadsword.png",
+      "contentHash": "ec5ea5b512b61134b70b8d0316a6ec4d34b4eef77c67160151f87f0217956eb2",
+      "byteLen": 884,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-claymore.png",
+      "contentHash": "4fb318a47008c14585c4112ddebf3f9e905f977acdd082d64e84b659093cc653",
+      "byteLen": 1198,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-cuirass.png",
+      "contentHash": "e15add29e1024495bfe21bb76b44d411a158666438a13b54e0dc2f43142a6527",
+      "byteLen": 918,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-dagger.png",
+      "contentHash": "0800ac3518abf1cfd04ff320d8a6442f3c4fd4829f4b111cb2bd2975e86b1e82",
+      "byteLen": 439,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-dai-katana.png",
+      "contentHash": "84dfc50bb236f16c2a1cc5096aa27315068130da37eafa00d6093e3977f41655",
+      "byteLen": 1108,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-flail.png",
+      "contentHash": "cada73184ece07806fca91d9b6652349d0984ffbe8f5850c14fdda856ebc034a",
+      "byteLen": 1108,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-gauntlets.png",
+      "contentHash": "d11dc752d0dce47332a89a1eed78c7077a0694aa94912ed77c25499c712d3bbd",
+      "byteLen": 698,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-greaves.png",
+      "contentHash": "4a4da50b9d8050df85b0201bd1cde28d21b639e57d100d2a063375a31bbbbe10",
+      "byteLen": 903,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-helm.png",
+      "contentHash": "d140862a3cf9e3324cc8f87148ebd792c63ab36bfaea8effc9d8ae40e474a3ff",
+      "byteLen": 543,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-katana.png",
+      "contentHash": "281383b6f9de5153834fe194c6f1ede9f71d00a6a166bad620e20ec05bd48fd0",
+      "byteLen": 407,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-left-pauldron.png",
+      "contentHash": "455fb7cc586340e08a6ab44881fd8f220dcaa8e8a900e7e05d4a5bb77b7e75b3",
+      "byteLen": 738,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-long-bow.png",
+      "contentHash": "30f922c85c14ad05e1cefd01aa349da2babe6a6067610b840ab0905a1810c894",
+      "byteLen": 570,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-longsword.png",
+      "contentHash": "174482cd1d03ffc2cf35af862d35fdeae2795286a09536287cff0cc51d064736",
+      "byteLen": 630,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-mace.png",
+      "contentHash": "342dc17ec3e38bfc1a9f44230dc9325877720352b12085795eb5dd5f41e837f9",
+      "byteLen": 601,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-right-pauldron.png",
+      "contentHash": "bb2a5feb800f3dfde58d59d0c656d55136d083c459faf28219f53ea70d59d9a0",
+      "byteLen": 485,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-saber.png",
+      "contentHash": "6f8354537028fb747f40036215e048045adfb13a9e5cd70a415b1fa7883504c6",
+      "byteLen": 663,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-short-bow.png",
+      "contentHash": "3ec6ddec0691ddfa9548def7840449bd4882b3d8f07fda3c1a1ed197ecc45370",
+      "byteLen": 465,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-shortsword.png",
+      "contentHash": "1eecaa294c4d24b4580d331fea2675a4ecbe07be613b90293291b483fbf13e9a",
+      "byteLen": 583,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-staff.png",
+      "contentHash": "4a0f554d6b9c0457a9ecc1358d7c40b30bbee66d4fea3687cb7fd1359e4ab09c",
+      "byteLen": 1180,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-tanto.png",
+      "contentHash": "7ce75bbf0934cf906d613355d60d6ce34c5701629e4fba85e781f7228dfe042b",
+      "byteLen": 203,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-wakazashi.png",
+      "contentHash": "8d1b4d930bc167eb70a872ecd078a5a11a46a7a95d9408dc9ab8c8ef80721aa9",
+      "byteLen": 290,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-war-axe.png",
+      "contentHash": "c31d72b3682e3b365f95c6f52b02dc821cda3c138cb8e341f791a8bbdd538259",
+      "byteLen": 979,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-iron-warhammer.png",
+      "contentHash": "8311337f61c7046b66e3787239fcd0499323d33c1c3a51a7578862b3d827f46f",
+      "byteLen": 1048,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-kite-shield.png",
+      "contentHash": "4a8f426efb381dd35bdebc97dbc5af603e2193c60f0f7ca9bc6ea005a5169e3d",
+      "byteLen": 2038,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-round-shield.png",
+      "contentHash": "a2387bda301b9f301e39b863e8db362fcce4a299b641db52c6cbad85cf58b662",
+      "byteLen": 1767,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/inventory-icons/inventory-icon-tower-shield.png",
+      "contentHash": "fc3880adee522189498dbf116f52d4d2542b1222ca6507ad8cfb95650bcaf041",
+      "byteLen": 2457,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-character-sheet-chrome.png",
+      "contentHash": "10b005fc1385cd2612ead1dfd0bf79374e9b8a2ca7c4731ca1b83305330de818",
+      "byteLen": 35236,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-inventory-chrome.png",
+      "contentHash": "24b3fd3f6c5e7ade04ff18d79e623aa4247853878b15dfc7d79ad744c1526cd9",
+      "byteLen": 25725,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "normalized.json",
+      "contentHash": "83140f53a69e9b361ac7732c0351831f348df90b3960f6d3a94a8a7fb87ed6d0",
+      "byteLen": 7719833,
+      "dependsOnPaths": [
+        "media/classic/manifest.json",
+        "media/dungeon/manifest.json",
+        "resources/privateer-s-hold/catalog.json",
+        "spatial/privateer-s-hold/collision-navigation.json",
+        "spatial/privateer-s-hold/static-mesh.json"
+      ]
+    },
+    {
+      "relativePath": "resources/privateer-s-hold/catalog.json",
+      "contentHash": "a348b0fd239384ee20f8400f5678e86035392a47555d5290bd51b681402c8be1",
+      "byteLen": 115316,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/collision-navigation.json",
+      "contentHash": "f518ddc49fc49c16990475b5c407fbfdf6785bb907a256f4df06a59359817a63",
+      "byteLen": 3639830,
+      "dependsOnPaths": [
+        "spatial/privateer-s-hold/static-mesh.json"
+      ]
+    },
+    {
+      "relativePath": "spatial/privateer-s-hold/static-mesh.json",
+      "contentHash": "f763d4bb4a314a32787e148c93104621391e8456ef923bec622241c102260c7e",
+      "byteLen": 2616231,
+      "dependsOnPaths": []
+    }
+  ]
+}

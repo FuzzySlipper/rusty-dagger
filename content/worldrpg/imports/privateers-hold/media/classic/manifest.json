@@ -1,0 +1,6453 @@
+{
+  "schemaVersion": 1,
+  "media": {
+    "resources": [
+      {
+        "id": "audio.melee.dagger.swing",
+        "kind": "audio",
+        "relativePath": "media/audio/audio-melee-dagger-swing.wav",
+        "contentDigest": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
+        "byteLength": 1331,
+        "mimeType": "audio/wav",
+        "sourceWidth": 0,
+        "sourceHeight": 0,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "audio.melee.hit.1",
+        "kind": "audio",
+        "relativePath": "media/audio/audio-melee-hit-1.wav",
+        "contentDigest": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
+        "byteLength": 2173,
+        "mimeType": "audio/wav",
+        "sourceWidth": 0,
+        "sourceHeight": 0,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "audio.melee.hit.2",
+        "kind": "audio",
+        "relativePath": "media/audio/audio-melee-hit-2.wav",
+        "contentDigest": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
+        "byteLength": 2460,
+        "mimeType": "audio/wav",
+        "sourceWidth": 0,
+        "sourceHeight": 0,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "audio.melee.hit.3",
+        "kind": "audio",
+        "relativePath": "media/audio/audio-melee-hit-3.wav",
+        "contentDigest": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
+        "byteLength": 2921,
+        "mimeType": "audio/wav",
+        "sourceWidth": 0,
+        "sourceHeight": 0,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "audio.melee.hit.4",
+        "kind": "audio",
+        "relativePath": "media/audio/audio-melee-hit-4.wav",
+        "contentDigest": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
+        "byteLength": 2670,
+        "mimeType": "audio/wav",
+        "sourceWidth": 0,
+        "sourceHeight": 0,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "audio.melee.hit.5",
+        "kind": "audio",
+        "relativePath": "media/audio/audio-melee-hit-5.wav",
+        "contentDigest": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
+        "byteLength": 3557,
+        "mimeType": "audio/wav",
+        "sourceWidth": 0,
+        "sourceHeight": 0,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "effect.blood.0",
+        "kind": "effectSprite",
+        "relativePath": "media/effects/effect-blood-0-atlas.png",
+        "contentDigest": "939e98d382d2ed3028cecf14a2dd3abf39a8ac89b8f6d270164c4837f2b48c0c",
+        "byteLength": 2824,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 57,
+        "atlasWidth": 320,
+        "atlasHeight": 57,
+        "frames": [
+          {
+            "id": "effect.blood.0/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 64,
+            "height": 57,
+            "sourceWidth": 64,
+            "sourceHeight": 57,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.0/01",
+            "frameIndex": 1,
+            "x": 64,
+            "y": 0,
+            "width": 64,
+            "height": 57,
+            "sourceWidth": 64,
+            "sourceHeight": 57,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.0/02",
+            "frameIndex": 2,
+            "x": 128,
+            "y": 0,
+            "width": 64,
+            "height": 57,
+            "sourceWidth": 64,
+            "sourceHeight": 57,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.0/03",
+            "frameIndex": 3,
+            "x": 192,
+            "y": 0,
+            "width": 64,
+            "height": 57,
+            "sourceWidth": 64,
+            "sourceHeight": 57,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.0/04",
+            "frameIndex": 4,
+            "x": 256,
+            "y": 0,
+            "width": 64,
+            "height": 57,
+            "sourceWidth": 64,
+            "sourceHeight": 57,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": 10,
+        "loop": false,
+        "sequence": null
+      },
+      {
+        "id": "effect.blood.1",
+        "kind": "effectSprite",
+        "relativePath": "media/effects/effect-blood-1-atlas.png",
+        "contentDigest": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+        "byteLength": 2582,
+        "mimeType": "image/png",
+        "sourceWidth": 86,
+        "sourceHeight": 36,
+        "atlasWidth": 86,
+        "atlasHeight": 36,
+        "frames": [
+          {
+            "id": "effect.blood.1/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 86,
+            "height": 36,
+            "sourceWidth": 86,
+            "sourceHeight": 36,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": 10,
+        "loop": false,
+        "sequence": null
+      },
+      {
+        "id": "effect.blood.2",
+        "kind": "effectSprite",
+        "relativePath": "media/effects/effect-blood-2-atlas.png",
+        "contentDigest": "34251af6cbe56e83c00032fee9fef3a87aabe51839ed1cd1f4d5798c5d79a161",
+        "byteLength": 391,
+        "mimeType": "image/png",
+        "sourceWidth": 32,
+        "sourceHeight": 31,
+        "atlasWidth": 160,
+        "atlasHeight": 31,
+        "frames": [
+          {
+            "id": "effect.blood.2/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 32,
+            "height": 31,
+            "sourceWidth": 32,
+            "sourceHeight": 31,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.2/01",
+            "frameIndex": 1,
+            "x": 32,
+            "y": 0,
+            "width": 32,
+            "height": 31,
+            "sourceWidth": 32,
+            "sourceHeight": 31,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.2/02",
+            "frameIndex": 2,
+            "x": 64,
+            "y": 0,
+            "width": 32,
+            "height": 31,
+            "sourceWidth": 32,
+            "sourceHeight": 31,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.2/03",
+            "frameIndex": 3,
+            "x": 96,
+            "y": 0,
+            "width": 32,
+            "height": 31,
+            "sourceWidth": 32,
+            "sourceHeight": 31,
+            "mirrored": false
+          },
+          {
+            "id": "effect.blood.2/04",
+            "frameIndex": 4,
+            "x": 128,
+            "y": 0,
+            "width": 32,
+            "height": 31,
+            "sourceWidth": 32,
+            "sourceHeight": 31,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": 10,
+        "loop": false,
+        "sequence": null
+      },
+      {
+        "id": "effect.sparkle.magic",
+        "kind": "effectSprite",
+        "relativePath": "media/effects/effect-sparkle-magic-atlas.png",
+        "contentDigest": "356ea79ec4078d0cd4a3ddeebff987ef79cb012076a3b71f36a959f9fcc36a20",
+        "byteLength": 2465,
+        "mimeType": "image/png",
+        "sourceWidth": 47,
+        "sourceHeight": 50,
+        "atlasWidth": 940,
+        "atlasHeight": 50,
+        "frames": [
+          {
+            "id": "effect.sparkle.magic/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/01",
+            "frameIndex": 1,
+            "x": 47,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/02",
+            "frameIndex": 2,
+            "x": 94,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/03",
+            "frameIndex": 3,
+            "x": 141,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/04",
+            "frameIndex": 4,
+            "x": 188,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/05",
+            "frameIndex": 5,
+            "x": 235,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/06",
+            "frameIndex": 6,
+            "x": 282,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/07",
+            "frameIndex": 7,
+            "x": 329,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/08",
+            "frameIndex": 8,
+            "x": 376,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/09",
+            "frameIndex": 9,
+            "x": 423,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/10",
+            "frameIndex": 10,
+            "x": 470,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/11",
+            "frameIndex": 11,
+            "x": 517,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/12",
+            "frameIndex": 12,
+            "x": 564,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/13",
+            "frameIndex": 13,
+            "x": 611,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/14",
+            "frameIndex": 14,
+            "x": 658,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/15",
+            "frameIndex": 15,
+            "x": 705,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/16",
+            "frameIndex": 16,
+            "x": 752,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/17",
+            "frameIndex": 17,
+            "x": 799,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/18",
+            "frameIndex": 18,
+            "x": 846,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          },
+          {
+            "id": "effect.sparkle.magic/19",
+            "frameIndex": 19,
+            "x": 893,
+            "y": 0,
+            "width": 47,
+            "height": 50,
+            "sourceWidth": 47,
+            "sourceHeight": 50,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": 10,
+        "loop": false,
+        "sequence": null
+      },
+      {
+        "id": "font.classic.0003",
+        "kind": "font",
+        "relativePath": "media/fonts/font-classic-0003-atlas.png",
+        "contentDigest": "0b4ecb2ac56683ac4eeee614b109d3327328aa1e1ec3914e369eb9845291e581",
+        "byteLength": 2376,
+        "mimeType": "image/png",
+        "sourceWidth": 16,
+        "sourceHeight": 16,
+        "atlasWidth": 256,
+        "atlasHeight": 240,
+        "frames": [
+          {
+            "id": "font.classic.0003/000",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/001",
+            "frameIndex": 1,
+            "x": 16,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/002",
+            "frameIndex": 2,
+            "x": 32,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/003",
+            "frameIndex": 3,
+            "x": 48,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/004",
+            "frameIndex": 4,
+            "x": 64,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/005",
+            "frameIndex": 5,
+            "x": 80,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/006",
+            "frameIndex": 6,
+            "x": 96,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/007",
+            "frameIndex": 7,
+            "x": 112,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/008",
+            "frameIndex": 8,
+            "x": 128,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/009",
+            "frameIndex": 9,
+            "x": 144,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/010",
+            "frameIndex": 10,
+            "x": 160,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/011",
+            "frameIndex": 11,
+            "x": 176,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/012",
+            "frameIndex": 12,
+            "x": 192,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/013",
+            "frameIndex": 13,
+            "x": 208,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/014",
+            "frameIndex": 14,
+            "x": 224,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/015",
+            "frameIndex": 15,
+            "x": 240,
+            "y": 0,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/016",
+            "frameIndex": 16,
+            "x": 0,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/017",
+            "frameIndex": 17,
+            "x": 16,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/018",
+            "frameIndex": 18,
+            "x": 32,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/019",
+            "frameIndex": 19,
+            "x": 48,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/020",
+            "frameIndex": 20,
+            "x": 64,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/021",
+            "frameIndex": 21,
+            "x": 80,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/022",
+            "frameIndex": 22,
+            "x": 96,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/023",
+            "frameIndex": 23,
+            "x": 112,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/024",
+            "frameIndex": 24,
+            "x": 128,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/025",
+            "frameIndex": 25,
+            "x": 144,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/026",
+            "frameIndex": 26,
+            "x": 160,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/027",
+            "frameIndex": 27,
+            "x": 176,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/028",
+            "frameIndex": 28,
+            "x": 192,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/029",
+            "frameIndex": 29,
+            "x": 208,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/030",
+            "frameIndex": 30,
+            "x": 224,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/031",
+            "frameIndex": 31,
+            "x": 240,
+            "y": 16,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/032",
+            "frameIndex": 32,
+            "x": 0,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/033",
+            "frameIndex": 33,
+            "x": 16,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/034",
+            "frameIndex": 34,
+            "x": 32,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/035",
+            "frameIndex": 35,
+            "x": 48,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/036",
+            "frameIndex": 36,
+            "x": 64,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/037",
+            "frameIndex": 37,
+            "x": 80,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/038",
+            "frameIndex": 38,
+            "x": 96,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/039",
+            "frameIndex": 39,
+            "x": 112,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/040",
+            "frameIndex": 40,
+            "x": 128,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/041",
+            "frameIndex": 41,
+            "x": 144,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/042",
+            "frameIndex": 42,
+            "x": 160,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/043",
+            "frameIndex": 43,
+            "x": 176,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/044",
+            "frameIndex": 44,
+            "x": 192,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/045",
+            "frameIndex": 45,
+            "x": 208,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/046",
+            "frameIndex": 46,
+            "x": 224,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/047",
+            "frameIndex": 47,
+            "x": 240,
+            "y": 32,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/048",
+            "frameIndex": 48,
+            "x": 0,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/049",
+            "frameIndex": 49,
+            "x": 16,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/050",
+            "frameIndex": 50,
+            "x": 32,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/051",
+            "frameIndex": 51,
+            "x": 48,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/052",
+            "frameIndex": 52,
+            "x": 64,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/053",
+            "frameIndex": 53,
+            "x": 80,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/054",
+            "frameIndex": 54,
+            "x": 96,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/055",
+            "frameIndex": 55,
+            "x": 112,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/056",
+            "frameIndex": 56,
+            "x": 128,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/057",
+            "frameIndex": 57,
+            "x": 144,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/058",
+            "frameIndex": 58,
+            "x": 160,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/059",
+            "frameIndex": 59,
+            "x": 176,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/060",
+            "frameIndex": 60,
+            "x": 192,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/061",
+            "frameIndex": 61,
+            "x": 208,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/062",
+            "frameIndex": 62,
+            "x": 224,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/063",
+            "frameIndex": 63,
+            "x": 240,
+            "y": 48,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/064",
+            "frameIndex": 64,
+            "x": 0,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/065",
+            "frameIndex": 65,
+            "x": 16,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/066",
+            "frameIndex": 66,
+            "x": 32,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/067",
+            "frameIndex": 67,
+            "x": 48,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/068",
+            "frameIndex": 68,
+            "x": 64,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/069",
+            "frameIndex": 69,
+            "x": 80,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/070",
+            "frameIndex": 70,
+            "x": 96,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/071",
+            "frameIndex": 71,
+            "x": 112,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/072",
+            "frameIndex": 72,
+            "x": 128,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/073",
+            "frameIndex": 73,
+            "x": 144,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/074",
+            "frameIndex": 74,
+            "x": 160,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/075",
+            "frameIndex": 75,
+            "x": 176,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/076",
+            "frameIndex": 76,
+            "x": 192,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/077",
+            "frameIndex": 77,
+            "x": 208,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/078",
+            "frameIndex": 78,
+            "x": 224,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/079",
+            "frameIndex": 79,
+            "x": 240,
+            "y": 64,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/080",
+            "frameIndex": 80,
+            "x": 0,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/081",
+            "frameIndex": 81,
+            "x": 16,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/082",
+            "frameIndex": 82,
+            "x": 32,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/083",
+            "frameIndex": 83,
+            "x": 48,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/084",
+            "frameIndex": 84,
+            "x": 64,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/085",
+            "frameIndex": 85,
+            "x": 80,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/086",
+            "frameIndex": 86,
+            "x": 96,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/087",
+            "frameIndex": 87,
+            "x": 112,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/088",
+            "frameIndex": 88,
+            "x": 128,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/089",
+            "frameIndex": 89,
+            "x": 144,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/090",
+            "frameIndex": 90,
+            "x": 160,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/091",
+            "frameIndex": 91,
+            "x": 176,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/092",
+            "frameIndex": 92,
+            "x": 192,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/093",
+            "frameIndex": 93,
+            "x": 208,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/094",
+            "frameIndex": 94,
+            "x": 224,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/095",
+            "frameIndex": 95,
+            "x": 240,
+            "y": 80,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/096",
+            "frameIndex": 96,
+            "x": 0,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/097",
+            "frameIndex": 97,
+            "x": 16,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/098",
+            "frameIndex": 98,
+            "x": 32,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/099",
+            "frameIndex": 99,
+            "x": 48,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/100",
+            "frameIndex": 100,
+            "x": 64,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/101",
+            "frameIndex": 101,
+            "x": 80,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/102",
+            "frameIndex": 102,
+            "x": 96,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/103",
+            "frameIndex": 103,
+            "x": 112,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/104",
+            "frameIndex": 104,
+            "x": 128,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/105",
+            "frameIndex": 105,
+            "x": 144,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/106",
+            "frameIndex": 106,
+            "x": 160,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/107",
+            "frameIndex": 107,
+            "x": 176,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/108",
+            "frameIndex": 108,
+            "x": 192,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/109",
+            "frameIndex": 109,
+            "x": 208,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/110",
+            "frameIndex": 110,
+            "x": 224,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/111",
+            "frameIndex": 111,
+            "x": 240,
+            "y": 96,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/112",
+            "frameIndex": 112,
+            "x": 0,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/113",
+            "frameIndex": 113,
+            "x": 16,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/114",
+            "frameIndex": 114,
+            "x": 32,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/115",
+            "frameIndex": 115,
+            "x": 48,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/116",
+            "frameIndex": 116,
+            "x": 64,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/117",
+            "frameIndex": 117,
+            "x": 80,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/118",
+            "frameIndex": 118,
+            "x": 96,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/119",
+            "frameIndex": 119,
+            "x": 112,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/120",
+            "frameIndex": 120,
+            "x": 128,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/121",
+            "frameIndex": 121,
+            "x": 144,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/122",
+            "frameIndex": 122,
+            "x": 160,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/123",
+            "frameIndex": 123,
+            "x": 176,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/124",
+            "frameIndex": 124,
+            "x": 192,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/125",
+            "frameIndex": 125,
+            "x": 208,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/126",
+            "frameIndex": 126,
+            "x": 224,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/127",
+            "frameIndex": 127,
+            "x": 240,
+            "y": 112,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/128",
+            "frameIndex": 128,
+            "x": 0,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/129",
+            "frameIndex": 129,
+            "x": 16,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/130",
+            "frameIndex": 130,
+            "x": 32,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/131",
+            "frameIndex": 131,
+            "x": 48,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/132",
+            "frameIndex": 132,
+            "x": 64,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/133",
+            "frameIndex": 133,
+            "x": 80,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/134",
+            "frameIndex": 134,
+            "x": 96,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/135",
+            "frameIndex": 135,
+            "x": 112,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/136",
+            "frameIndex": 136,
+            "x": 128,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/137",
+            "frameIndex": 137,
+            "x": 144,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/138",
+            "frameIndex": 138,
+            "x": 160,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/139",
+            "frameIndex": 139,
+            "x": 176,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/140",
+            "frameIndex": 140,
+            "x": 192,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/141",
+            "frameIndex": 141,
+            "x": 208,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/142",
+            "frameIndex": 142,
+            "x": 224,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/143",
+            "frameIndex": 143,
+            "x": 240,
+            "y": 128,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/144",
+            "frameIndex": 144,
+            "x": 0,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/145",
+            "frameIndex": 145,
+            "x": 16,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/146",
+            "frameIndex": 146,
+            "x": 32,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/147",
+            "frameIndex": 147,
+            "x": 48,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/148",
+            "frameIndex": 148,
+            "x": 64,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/149",
+            "frameIndex": 149,
+            "x": 80,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/150",
+            "frameIndex": 150,
+            "x": 96,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/151",
+            "frameIndex": 151,
+            "x": 112,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/152",
+            "frameIndex": 152,
+            "x": 128,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/153",
+            "frameIndex": 153,
+            "x": 144,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/154",
+            "frameIndex": 154,
+            "x": 160,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/155",
+            "frameIndex": 155,
+            "x": 176,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/156",
+            "frameIndex": 156,
+            "x": 192,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/157",
+            "frameIndex": 157,
+            "x": 208,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/158",
+            "frameIndex": 158,
+            "x": 224,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/159",
+            "frameIndex": 159,
+            "x": 240,
+            "y": 144,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/160",
+            "frameIndex": 160,
+            "x": 0,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/161",
+            "frameIndex": 161,
+            "x": 16,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/162",
+            "frameIndex": 162,
+            "x": 32,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/163",
+            "frameIndex": 163,
+            "x": 48,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/164",
+            "frameIndex": 164,
+            "x": 64,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/165",
+            "frameIndex": 165,
+            "x": 80,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/166",
+            "frameIndex": 166,
+            "x": 96,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/167",
+            "frameIndex": 167,
+            "x": 112,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/168",
+            "frameIndex": 168,
+            "x": 128,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/169",
+            "frameIndex": 169,
+            "x": 144,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/170",
+            "frameIndex": 170,
+            "x": 160,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/171",
+            "frameIndex": 171,
+            "x": 176,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/172",
+            "frameIndex": 172,
+            "x": 192,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/173",
+            "frameIndex": 173,
+            "x": 208,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/174",
+            "frameIndex": 174,
+            "x": 224,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/175",
+            "frameIndex": 175,
+            "x": 240,
+            "y": 160,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/176",
+            "frameIndex": 176,
+            "x": 0,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/177",
+            "frameIndex": 177,
+            "x": 16,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/178",
+            "frameIndex": 178,
+            "x": 32,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/179",
+            "frameIndex": 179,
+            "x": 48,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/180",
+            "frameIndex": 180,
+            "x": 64,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/181",
+            "frameIndex": 181,
+            "x": 80,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/182",
+            "frameIndex": 182,
+            "x": 96,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/183",
+            "frameIndex": 183,
+            "x": 112,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/184",
+            "frameIndex": 184,
+            "x": 128,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/185",
+            "frameIndex": 185,
+            "x": 144,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/186",
+            "frameIndex": 186,
+            "x": 160,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/187",
+            "frameIndex": 187,
+            "x": 176,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/188",
+            "frameIndex": 188,
+            "x": 192,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/189",
+            "frameIndex": 189,
+            "x": 208,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/190",
+            "frameIndex": 190,
+            "x": 224,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/191",
+            "frameIndex": 191,
+            "x": 240,
+            "y": 176,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/192",
+            "frameIndex": 192,
+            "x": 0,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/193",
+            "frameIndex": 193,
+            "x": 16,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/194",
+            "frameIndex": 194,
+            "x": 32,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/195",
+            "frameIndex": 195,
+            "x": 48,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/196",
+            "frameIndex": 196,
+            "x": 64,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/197",
+            "frameIndex": 197,
+            "x": 80,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/198",
+            "frameIndex": 198,
+            "x": 96,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/199",
+            "frameIndex": 199,
+            "x": 112,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/200",
+            "frameIndex": 200,
+            "x": 128,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/201",
+            "frameIndex": 201,
+            "x": 144,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/202",
+            "frameIndex": 202,
+            "x": 160,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/203",
+            "frameIndex": 203,
+            "x": 176,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/204",
+            "frameIndex": 204,
+            "x": 192,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/205",
+            "frameIndex": 205,
+            "x": 208,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/206",
+            "frameIndex": 206,
+            "x": 224,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/207",
+            "frameIndex": 207,
+            "x": 240,
+            "y": 192,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/208",
+            "frameIndex": 208,
+            "x": 0,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/209",
+            "frameIndex": 209,
+            "x": 16,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/210",
+            "frameIndex": 210,
+            "x": 32,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/211",
+            "frameIndex": 211,
+            "x": 48,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/212",
+            "frameIndex": 212,
+            "x": 64,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/213",
+            "frameIndex": 213,
+            "x": 80,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/214",
+            "frameIndex": 214,
+            "x": 96,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/215",
+            "frameIndex": 215,
+            "x": 112,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/216",
+            "frameIndex": 216,
+            "x": 128,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/217",
+            "frameIndex": 217,
+            "x": 144,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/218",
+            "frameIndex": 218,
+            "x": 160,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/219",
+            "frameIndex": 219,
+            "x": 176,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/220",
+            "frameIndex": 220,
+            "x": 192,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/221",
+            "frameIndex": 221,
+            "x": 208,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/222",
+            "frameIndex": 222,
+            "x": 224,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/223",
+            "frameIndex": 223,
+            "x": 240,
+            "y": 208,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/224",
+            "frameIndex": 224,
+            "x": 0,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/225",
+            "frameIndex": 225,
+            "x": 16,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/226",
+            "frameIndex": 226,
+            "x": 32,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/227",
+            "frameIndex": 227,
+            "x": 48,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/228",
+            "frameIndex": 228,
+            "x": 64,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/229",
+            "frameIndex": 229,
+            "x": 80,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/230",
+            "frameIndex": 230,
+            "x": 96,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/231",
+            "frameIndex": 231,
+            "x": 112,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/232",
+            "frameIndex": 232,
+            "x": 128,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/233",
+            "frameIndex": 233,
+            "x": 144,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/234",
+            "frameIndex": 234,
+            "x": 160,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/235",
+            "frameIndex": 235,
+            "x": 176,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/236",
+            "frameIndex": 236,
+            "x": 192,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/237",
+            "frameIndex": 237,
+            "x": 208,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/238",
+            "frameIndex": 238,
+            "x": 224,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          },
+          {
+            "id": "font.classic.0003/239",
+            "frameIndex": 239,
+            "x": 240,
+            "y": 224,
+            "width": 16,
+            "height": 16,
+            "sourceWidth": 16,
+            "sourceHeight": 16,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "hud.chrome.main",
+        "kind": "userInterface",
+        "relativePath": "media/ui/hud-chrome-main.png",
+        "contentDigest": "2f587e1597475b606d24a3dcafec155c85b4d5485db3336a24b32ebf897cb233",
+        "byteLength": 9484,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 46,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "hud.vital.fatigue",
+        "kind": "userInterface",
+        "relativePath": "media/ui/hud-vital-fatigue.png",
+        "contentDigest": "844f73ab04722a176ee69cc4c0cec0acccd012f0c01856649dca96b25cc88634",
+        "byteLength": 226,
+        "mimeType": "image/png",
+        "sourceWidth": 4,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "hud.vital.health",
+        "kind": "userInterface",
+        "relativePath": "media/ui/hud-vital-health.png",
+        "contentDigest": "d8ea5b3f369cc05c33d20ac5022eeb0711bedaac6afc7b97bfaba5956666d859",
+        "byteLength": 230,
+        "mimeType": "image/png",
+        "sourceWidth": 4,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "hud.vital.magicka",
+        "kind": "userInterface",
+        "relativePath": "media/ui/hud-vital-magicka.png",
+        "contentDigest": "602ea19d376f6ab701bddd4a9e1d0d2fd097bad36f9c59b735e41b316d8ca52e",
+        "byteLength": 229,
+        "mimeType": "image/png",
+        "sourceWidth": 4,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.arrow",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-arrow.png",
+        "contentDigest": "cb9f449c1fe00eb3de638827d1179d76c354efb3c4aaeeaf60bf2e4e5834266d",
+        "byteLength": 369,
+        "mimeType": "image/png",
+        "sourceWidth": 49,
+        "sourceHeight": 10,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.buckler",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-buckler.png",
+        "contentDigest": "6637cd45341c80a840865f2d77024fb0028d90ac6b0d9c0a00629d7fff844daa",
+        "byteLength": 1299,
+        "mimeType": "image/png",
+        "sourceWidth": 36,
+        "sourceHeight": 42,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.gold-piece",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-gold-piece.png",
+        "contentDigest": "fdf8435e0a6b2df47abf89f24005056646a658e746928866cc263cad9806643b",
+        "byteLength": 395,
+        "mimeType": "image/png",
+        "sourceWidth": 39,
+        "sourceHeight": 14,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-battle-axe",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-battle-axe.png",
+        "contentDigest": "c5e54f650acbbc9b14753923c1da99b81eea9cd7b2e32f2738f6ccb78ba84eb1",
+        "byteLength": 583,
+        "mimeType": "image/png",
+        "sourceWidth": 47,
+        "sourceHeight": 43,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-boots",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-boots.png",
+        "contentDigest": "ed5dac4b1610c9df2e27691df8bf6212772bc5009f2d8766f12a24aa3e314378",
+        "byteLength": 1045,
+        "mimeType": "image/png",
+        "sourceWidth": 60,
+        "sourceHeight": 47,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-broadsword",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-broadsword.png",
+        "contentDigest": "ec5ea5b512b61134b70b8d0316a6ec4d34b4eef77c67160151f87f0217956eb2",
+        "byteLength": 884,
+        "mimeType": "image/png",
+        "sourceWidth": 98,
+        "sourceHeight": 44,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-claymore",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-claymore.png",
+        "contentDigest": "4fb318a47008c14585c4112ddebf3f9e905f977acdd082d64e84b659093cc653",
+        "byteLength": 1198,
+        "mimeType": "image/png",
+        "sourceWidth": 81,
+        "sourceHeight": 114,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-cuirass",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-cuirass.png",
+        "contentDigest": "e15add29e1024495bfe21bb76b44d411a158666438a13b54e0dc2f43142a6527",
+        "byteLength": 918,
+        "mimeType": "image/png",
+        "sourceWidth": 36,
+        "sourceHeight": 54,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-dagger",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-dagger.png",
+        "contentDigest": "0800ac3518abf1cfd04ff320d8a6442f3c4fd4829f4b111cb2bd2975e86b1e82",
+        "byteLength": 439,
+        "mimeType": "image/png",
+        "sourceWidth": 56,
+        "sourceHeight": 17,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-dai-katana",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-dai-katana.png",
+        "contentDigest": "84dfc50bb236f16c2a1cc5096aa27315068130da37eafa00d6093e3977f41655",
+        "byteLength": 1108,
+        "mimeType": "image/png",
+        "sourceWidth": 80,
+        "sourceHeight": 107,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-flail",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-flail.png",
+        "contentDigest": "cada73184ece07806fca91d9b6652349d0984ffbe8f5850c14fdda856ebc034a",
+        "byteLength": 1108,
+        "mimeType": "image/png",
+        "sourceWidth": 107,
+        "sourceHeight": 91,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-gauntlets",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-gauntlets.png",
+        "contentDigest": "d11dc752d0dce47332a89a1eed78c7077a0694aa94912ed77c25499c712d3bbd",
+        "byteLength": 698,
+        "mimeType": "image/png",
+        "sourceWidth": 61,
+        "sourceHeight": 27,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-greaves",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-greaves.png",
+        "contentDigest": "4a4da50b9d8050df85b0201bd1cde28d21b639e57d100d2a063375a31bbbbe10",
+        "byteLength": 903,
+        "mimeType": "image/png",
+        "sourceWidth": 38,
+        "sourceHeight": 47,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-helm",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-helm.png",
+        "contentDigest": "d140862a3cf9e3324cc8f87148ebd792c63ab36bfaea8effc9d8ae40e474a3ff",
+        "byteLength": 543,
+        "mimeType": "image/png",
+        "sourceWidth": 42,
+        "sourceHeight": 37,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-katana",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-katana.png",
+        "contentDigest": "281383b6f9de5153834fe194c6f1ede9f71d00a6a166bad620e20ec05bd48fd0",
+        "byteLength": 407,
+        "mimeType": "image/png",
+        "sourceWidth": 37,
+        "sourceHeight": 30,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-left-pauldron",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-left-pauldron.png",
+        "contentDigest": "455fb7cc586340e08a6ab44881fd8f220dcaa8e8a900e7e05d4a5bb77b7e75b3",
+        "byteLength": 738,
+        "mimeType": "image/png",
+        "sourceWidth": 30,
+        "sourceHeight": 52,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-long-bow",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-long-bow.png",
+        "contentDigest": "30f922c85c14ad05e1cefd01aa349da2babe6a6067610b840ab0905a1810c894",
+        "byteLength": 570,
+        "mimeType": "image/png",
+        "sourceWidth": 112,
+        "sourceHeight": 71,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-longsword",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-longsword.png",
+        "contentDigest": "174482cd1d03ffc2cf35af862d35fdeae2795286a09536287cff0cc51d064736",
+        "byteLength": 630,
+        "mimeType": "image/png",
+        "sourceWidth": 88,
+        "sourceHeight": 29,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-mace",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-mace.png",
+        "contentDigest": "342dc17ec3e38bfc1a9f44230dc9325877720352b12085795eb5dd5f41e837f9",
+        "byteLength": 601,
+        "mimeType": "image/png",
+        "sourceWidth": 82,
+        "sourceHeight": 27,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-right-pauldron",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-right-pauldron.png",
+        "contentDigest": "bb2a5feb800f3dfde58d59d0c656d55136d083c459faf28219f53ea70d59d9a0",
+        "byteLength": 485,
+        "mimeType": "image/png",
+        "sourceWidth": 26,
+        "sourceHeight": 53,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-saber",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-saber.png",
+        "contentDigest": "6f8354537028fb747f40036215e048045adfb13a9e5cd70a415b1fa7883504c6",
+        "byteLength": 663,
+        "mimeType": "image/png",
+        "sourceWidth": 84,
+        "sourceHeight": 22,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-short-bow",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-short-bow.png",
+        "contentDigest": "3ec6ddec0691ddfa9548def7840449bd4882b3d8f07fda3c1a1ed197ecc45370",
+        "byteLength": 465,
+        "mimeType": "image/png",
+        "sourceWidth": 86,
+        "sourceHeight": 47,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-shortsword",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-shortsword.png",
+        "contentDigest": "1eecaa294c4d24b4580d331fea2675a4ecbe07be613b90293291b483fbf13e9a",
+        "byteLength": 583,
+        "mimeType": "image/png",
+        "sourceWidth": 75,
+        "sourceHeight": 20,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-staff",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-staff.png",
+        "contentDigest": "4a0f554d6b9c0457a9ecc1358d7c40b30bbee66d4fea3687cb7fd1359e4ab09c",
+        "byteLength": 1180,
+        "mimeType": "image/png",
+        "sourceWidth": 102,
+        "sourceHeight": 141,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-tanto",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-tanto.png",
+        "contentDigest": "7ce75bbf0934cf906d613355d60d6ce34c5701629e4fba85e781f7228dfe042b",
+        "byteLength": 203,
+        "mimeType": "image/png",
+        "sourceWidth": 27,
+        "sourceHeight": 8,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-wakazashi",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-wakazashi.png",
+        "contentDigest": "8d1b4d930bc167eb70a872ecd078a5a11a46a7a95d9408dc9ab8c8ef80721aa9",
+        "byteLength": 290,
+        "mimeType": "image/png",
+        "sourceWidth": 56,
+        "sourceHeight": 14,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-war-axe",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-war-axe.png",
+        "contentDigest": "c31d72b3682e3b365f95c6f52b02dc821cda3c138cb8e341f791a8bbdd538259",
+        "byteLength": 979,
+        "mimeType": "image/png",
+        "sourceWidth": 112,
+        "sourceHeight": 41,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.iron-warhammer",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-iron-warhammer.png",
+        "contentDigest": "8311337f61c7046b66e3787239fcd0499323d33c1c3a51a7578862b3d827f46f",
+        "byteLength": 1048,
+        "mimeType": "image/png",
+        "sourceWidth": 111,
+        "sourceHeight": 40,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.kite-shield",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-kite-shield.png",
+        "contentDigest": "4a8f426efb381dd35bdebc97dbc5af603e2193c60f0f7ca9bc6ea005a5169e3d",
+        "byteLength": 2038,
+        "mimeType": "image/png",
+        "sourceWidth": 48,
+        "sourceHeight": 67,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.round-shield",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-round-shield.png",
+        "contentDigest": "a2387bda301b9f301e39b863e8db362fcce4a299b641db52c6cbad85cf58b662",
+        "byteLength": 1767,
+        "mimeType": "image/png",
+        "sourceWidth": 49,
+        "sourceHeight": 63,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.icon.tower-shield",
+        "kind": "userInterface",
+        "relativePath": "media/ui/inventory-icons/inventory-icon-tower-shield.png",
+        "contentDigest": "fc3880adee522189498dbf116f52d4d2542b1222ca6507ad8cfb95650bcaf041",
+        "byteLength": 2457,
+        "mimeType": "image/png",
+        "sourceWidth": 58,
+        "sourceHeight": 112,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.skin.grid-slot-slate.v1",
+        "kind": "userInterface",
+        "relativePath": "media/ui/authored/inventory-grid-slot-slate-v1.png",
+        "contentDigest": "f19aca28a45f24c61cc55af1ee2be864a742ffcdb5f8f7fd46e4cd55b643a7b3",
+        "byteLength": 1970798,
+        "mimeType": "image/png",
+        "sourceWidth": 1254,
+        "sourceHeight": 1254,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.skin.panel-slate.v1",
+        "kind": "userInterface",
+        "relativePath": "media/ui/authored/inventory-skin-panel-slate-v1.png",
+        "contentDigest": "a54e0ca6bcc5f9ec2df87cb967365b844f0f9a7572150005a7eddcd1d448805c",
+        "byteLength": 2387369,
+        "mimeType": "image/png",
+        "sourceWidth": 1254,
+        "sourceHeight": 1254,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "inventory.skin.titlebar-slate.v1",
+        "kind": "userInterface",
+        "relativePath": "media/ui/authored/inventory-titlebar-slate-v1.png",
+        "contentDigest": "80d2fe6b0c7f9fb089d3d2ca6fb6a0ec053331bb1874ceb94c3dad8341d584d2",
+        "byteLength": 1671134,
+        "mimeType": "image/png",
+        "sourceWidth": 1983,
+        "sourceHeight": 793,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "weapon.dagger.steel",
+        "kind": "weaponSprite",
+        "relativePath": "media/combat/weapon-dagger-steel-atlas.png",
+        "contentDigest": "d8b5c9659660acf879d2a5b37ae0f60e2c061c3d0861f9fd9c35db30b4b9ecdc",
+        "byteLength": 147440,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 3840,
+        "atlasHeight": 600,
+        "frames": [
+          {
+            "id": "weapon.dagger.steel/00",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/01",
+            "frameIndex": 1,
+            "x": 320,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/02",
+            "frameIndex": 2,
+            "x": 640,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/03",
+            "frameIndex": 3,
+            "x": 960,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/04",
+            "frameIndex": 4,
+            "x": 1280,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/05",
+            "frameIndex": 5,
+            "x": 1600,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/06",
+            "frameIndex": 6,
+            "x": 1920,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/07",
+            "frameIndex": 7,
+            "x": 2240,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/08",
+            "frameIndex": 8,
+            "x": 2560,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/09",
+            "frameIndex": 9,
+            "x": 2880,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/10",
+            "frameIndex": 10,
+            "x": 3200,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/11",
+            "frameIndex": 11,
+            "x": 3520,
+            "y": 0,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/12",
+            "frameIndex": 12,
+            "x": 0,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/13",
+            "frameIndex": 13,
+            "x": 320,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/14",
+            "frameIndex": 14,
+            "x": 640,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/15",
+            "frameIndex": 15,
+            "x": 960,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/16",
+            "frameIndex": 16,
+            "x": 1280,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/17",
+            "frameIndex": 17,
+            "x": 1600,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/18",
+            "frameIndex": 18,
+            "x": 1920,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/19",
+            "frameIndex": 19,
+            "x": 2240,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/20",
+            "frameIndex": 20,
+            "x": 2560,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/21",
+            "frameIndex": 21,
+            "x": 2880,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/22",
+            "frameIndex": 22,
+            "x": 3200,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/23",
+            "frameIndex": 23,
+            "x": 3520,
+            "y": 200,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/24",
+            "frameIndex": 24,
+            "x": 0,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/25",
+            "frameIndex": 25,
+            "x": 320,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/26",
+            "frameIndex": 26,
+            "x": 640,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/27",
+            "frameIndex": 27,
+            "x": 960,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/28",
+            "frameIndex": 28,
+            "x": 1280,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/29",
+            "frameIndex": 29,
+            "x": 1600,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          },
+          {
+            "id": "weapon.dagger.steel/30",
+            "frameIndex": 30,
+            "x": 1920,
+            "y": 400,
+            "width": 320,
+            "height": 200,
+            "sourceWidth": 320,
+            "sourceHeight": 200,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "window.character-sheet.chrome",
+        "kind": "userInterface",
+        "relativePath": "media/ui/window-character-sheet-chrome.png",
+        "contentDigest": "10b005fc1385cd2612ead1dfd0bf79374e9b8a2ca7c4731ca1b83305330de818",
+        "byteLength": 35236,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      },
+      {
+        "id": "window.inventory.chrome",
+        "kind": "userInterface",
+        "relativePath": "media/ui/window-inventory-chrome.png",
+        "contentDigest": "24b3fd3f6c5e7ade04ff18d79e623aa4247853878b15dfc7d79ad744c1526cd9",
+        "byteLength": 25725,
+        "mimeType": "image/png",
+        "sourceWidth": 320,
+        "sourceHeight": 200,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null
+      }
+    ]
+  },
+  "weaponActions": [
+    {
+      "action": "idle",
+      "sourceRecordOrdinal": 0,
+      "frameStart": 0,
+      "frameCount": 1,
+      "alignment": "right",
+      "screenOffset": 0.04,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": true
+      },
+      "sourceXOffset": 230,
+      "sourceYOffset": 57
+    },
+    {
+      "action": "strikeDown",
+      "sourceRecordOrdinal": 1,
+      "frameStart": 1,
+      "frameCount": 5,
+      "alignment": "right",
+      "screenOffset": 0,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      },
+      "sourceXOffset": 158,
+      "sourceYOffset": 0
+    },
+    {
+      "action": "strikeDownLeft",
+      "sourceRecordOrdinal": 2,
+      "frameStart": 6,
+      "frameCount": 5,
+      "alignment": "right",
+      "screenOffset": 0,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      },
+      "sourceXOffset": 24,
+      "sourceYOffset": 0
+    },
+    {
+      "action": "strikeLeft",
+      "sourceRecordOrdinal": 3,
+      "frameStart": 11,
+      "frameCount": 5,
+      "alignment": "right",
+      "screenOffset": 0,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      },
+      "sourceXOffset": 9,
+      "sourceYOffset": 75
+    },
+    {
+      "action": "strikeRight",
+      "sourceRecordOrdinal": 4,
+      "frameStart": 16,
+      "frameCount": 5,
+      "alignment": "left",
+      "screenOffset": 0,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      },
+      "sourceXOffset": 0,
+      "sourceYOffset": 74
+    },
+    {
+      "action": "strikeDownRight",
+      "sourceRecordOrdinal": 5,
+      "frameStart": 21,
+      "frameCount": 5,
+      "alignment": "left",
+      "screenOffset": 0,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      },
+      "sourceXOffset": 0,
+      "sourceYOffset": 0
+    },
+    {
+      "action": "strikeUp",
+      "sourceRecordOrdinal": 6,
+      "frameStart": 26,
+      "frameCount": 5,
+      "alignment": "right",
+      "screenOffset": 0,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      },
+      "sourceXOffset": 108,
+      "sourceYOffset": 80
+    }
+  ],
+  "effects": [
+    {
+      "effect": "blood0",
+      "mediaId": "effect.blood.0",
+      "sourceRecordOrdinal": 0,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      }
+    },
+    {
+      "effect": "blood1",
+      "mediaId": "effect.blood.1",
+      "sourceRecordOrdinal": 1,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      }
+    },
+    {
+      "effect": "blood2",
+      "mediaId": "effect.blood.2",
+      "sourceRecordOrdinal": 2,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      }
+    },
+    {
+      "effect": "magicSparkle",
+      "mediaId": "effect.sparkle.magic",
+      "sourceRecordOrdinal": 3,
+      "timing": {
+        "framesPerSecond": 10,
+        "loop": false
+      }
+    }
+  ],
+  "audio": [
+    {
+      "clip": "swing",
+      "mediaId": "audio.melee.dagger.swing",
+      "sourceRecordOrdinal": 106,
+      "sourceNumericId": 374,
+      "sampleRate": 11025
+    },
+    {
+      "clip": "hit1",
+      "mediaId": "audio.melee.hit.1",
+      "sourceRecordOrdinal": 108,
+      "sourceNumericId": 378,
+      "sampleRate": 11025
+    },
+    {
+      "clip": "hit2",
+      "mediaId": "audio.melee.hit.2",
+      "sourceRecordOrdinal": 109,
+      "sourceNumericId": 379,
+      "sampleRate": 11025
+    },
+    {
+      "clip": "hit3",
+      "mediaId": "audio.melee.hit.3",
+      "sourceRecordOrdinal": 110,
+      "sourceNumericId": 380,
+      "sampleRate": 11025
+    },
+    {
+      "clip": "hit4",
+      "mediaId": "audio.melee.hit.4",
+      "sourceRecordOrdinal": 111,
+      "sourceNumericId": 381,
+      "sampleRate": 11025
+    },
+    {
+      "clip": "hit5",
+      "mediaId": "audio.melee.hit.5",
+      "sourceRecordOrdinal": 112,
+      "sourceNumericId": 382,
+      "sampleRate": 11025
+    }
+  ],
+  "uiImages": [
+    {
+      "image": "hudChromeMain",
+      "mediaId": "hud.chrome.main",
+      "sourceFile": "MAIN00I0.IMG",
+      "sourceXOffset": 0,
+      "sourceYOffset": 154,
+      "isHeaderless": false
+    },
+    {
+      "image": "hudVitalHealth",
+      "mediaId": "hud.vital.health",
+      "sourceFile": "MAIN03I0.IMG",
+      "sourceXOffset": 49,
+      "sourceYOffset": 161,
+      "isHeaderless": false
+    },
+    {
+      "image": "hudVitalFatigue",
+      "mediaId": "hud.vital.fatigue",
+      "sourceFile": "MAIN04I0.IMG",
+      "sourceXOffset": 57,
+      "sourceYOffset": 161,
+      "isHeaderless": false
+    },
+    {
+      "image": "hudVitalMagicka",
+      "mediaId": "hud.vital.magicka",
+      "sourceFile": "MAIN05I0.IMG",
+      "sourceXOffset": 65,
+      "sourceYOffset": 161,
+      "isHeaderless": false
+    },
+    {
+      "image": "inventoryChrome",
+      "mediaId": "window.inventory.chrome",
+      "sourceFile": "INVE00I0.IMG",
+      "sourceXOffset": 0,
+      "sourceYOffset": 0,
+      "isHeaderless": true
+    },
+    {
+      "image": "characterSheetChrome",
+      "mediaId": "window.character-sheet.chrome",
+      "sourceFile": "INFO00I0.IMG",
+      "sourceXOffset": 0,
+      "sourceYOffset": 0,
+      "isHeaderless": true
+    }
+  ],
+  "inventoryIcons": [
+    {
+      "itemId": "arrow",
+      "mediaId": "inventory.icon.arrow",
+      "textureArchive": 207,
+      "sourceRecordOrdinal": 16
+    },
+    {
+      "itemId": "buckler",
+      "mediaId": "inventory.icon.buckler",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 33
+    },
+    {
+      "itemId": "gold-piece",
+      "mediaId": "inventory.icon.gold-piece",
+      "textureArchive": 216,
+      "sourceRecordOrdinal": 1
+    },
+    {
+      "itemId": "iron-battle-axe",
+      "mediaId": "inventory.icon.iron-battle-axe",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 0
+    },
+    {
+      "itemId": "iron-boots",
+      "mediaId": "inventory.icon.iron-boots",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 0
+    },
+    {
+      "itemId": "iron-broadsword",
+      "mediaId": "inventory.icon.iron-broadsword",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 2
+    },
+    {
+      "itemId": "iron-claymore",
+      "mediaId": "inventory.icon.iron-claymore",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 4
+    },
+    {
+      "itemId": "iron-cuirass",
+      "mediaId": "inventory.icon.iron-cuirass",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 3
+    },
+    {
+      "itemId": "iron-dagger",
+      "mediaId": "inventory.icon.iron-dagger",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 5
+    },
+    {
+      "itemId": "iron-dai-katana",
+      "mediaId": "inventory.icon.iron-dai-katana",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 7
+    },
+    {
+      "itemId": "iron-flail",
+      "mediaId": "inventory.icon.iron-flail",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 8
+    },
+    {
+      "itemId": "iron-gauntlets",
+      "mediaId": "inventory.icon.iron-gauntlets",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 8
+    },
+    {
+      "itemId": "iron-greaves",
+      "mediaId": "inventory.icon.iron-greaves",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 10
+    },
+    {
+      "itemId": "iron-helm",
+      "mediaId": "inventory.icon.iron-helm",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 27
+    },
+    {
+      "itemId": "iron-katana",
+      "mediaId": "inventory.icon.iron-katana",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 10
+    },
+    {
+      "itemId": "iron-left-pauldron",
+      "mediaId": "inventory.icon.iron-left-pauldron",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 17
+    },
+    {
+      "itemId": "iron-long-bow",
+      "mediaId": "inventory.icon.iron-long-bow",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 11
+    },
+    {
+      "itemId": "iron-longsword",
+      "mediaId": "inventory.icon.iron-longsword",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 12
+    },
+    {
+      "itemId": "iron-mace",
+      "mediaId": "inventory.icon.iron-mace",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 14
+    },
+    {
+      "itemId": "iron-right-pauldron",
+      "mediaId": "inventory.icon.iron-right-pauldron",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 22
+    },
+    {
+      "itemId": "iron-saber",
+      "mediaId": "inventory.icon.iron-saber",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 17
+    },
+    {
+      "itemId": "iron-short-bow",
+      "mediaId": "inventory.icon.iron-short-bow",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 16
+    },
+    {
+      "itemId": "iron-shortsword",
+      "mediaId": "inventory.icon.iron-shortsword",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 19
+    },
+    {
+      "itemId": "iron-staff",
+      "mediaId": "inventory.icon.iron-staff",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 21
+    },
+    {
+      "itemId": "iron-tanto",
+      "mediaId": "inventory.icon.iron-tanto",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 22
+    },
+    {
+      "itemId": "iron-wakazashi",
+      "mediaId": "inventory.icon.iron-wakazashi",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 26
+    },
+    {
+      "itemId": "iron-war-axe",
+      "mediaId": "inventory.icon.iron-war-axe",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 24
+    },
+    {
+      "itemId": "iron-warhammer",
+      "mediaId": "inventory.icon.iron-warhammer",
+      "textureArchive": 234,
+      "sourceRecordOrdinal": 25
+    },
+    {
+      "itemId": "kite-shield",
+      "mediaId": "inventory.icon.kite-shield",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 35
+    },
+    {
+      "itemId": "round-shield",
+      "mediaId": "inventory.icon.round-shield",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 34
+    },
+    {
+      "itemId": "tower-shield",
+      "mediaId": "inventory.icon.tower-shield",
+      "textureArchive": 245,
+      "sourceRecordOrdinal": 36
+    }
+  ],
+  "font": {
+    "mediaId": "font.classic.0003",
+    "fixedWidth": 5,
+    "fixedHeight": 7,
+    "glyphs": [
+      {
+        "glyphIndex": 0,
+        "x": 0,
+        "y": 0,
+        "advance": 1,
+        "sourceDataOffset": 964
+      },
+      {
+        "glyphIndex": 1,
+        "x": 16,
+        "y": 0,
+        "advance": 4,
+        "sourceDataOffset": 996
+      },
+      {
+        "glyphIndex": 2,
+        "x": 32,
+        "y": 0,
+        "advance": 5,
+        "sourceDataOffset": 1028
+      },
+      {
+        "glyphIndex": 3,
+        "x": 48,
+        "y": 0,
+        "advance": 3,
+        "sourceDataOffset": 1060
+      },
+      {
+        "glyphIndex": 4,
+        "x": 64,
+        "y": 0,
+        "advance": 4,
+        "sourceDataOffset": 1092
+      },
+      {
+        "glyphIndex": 5,
+        "x": 80,
+        "y": 0,
+        "advance": 4,
+        "sourceDataOffset": 1124
+      },
+      {
+        "glyphIndex": 6,
+        "x": 96,
+        "y": 0,
+        "advance": 2,
+        "sourceDataOffset": 1156
+      },
+      {
+        "glyphIndex": 7,
+        "x": 112,
+        "y": 0,
+        "advance": 3,
+        "sourceDataOffset": 1188
+      },
+      {
+        "glyphIndex": 8,
+        "x": 128,
+        "y": 0,
+        "advance": 3,
+        "sourceDataOffset": 1220
+      },
+      {
+        "glyphIndex": 9,
+        "x": 144,
+        "y": 0,
+        "advance": 4,
+        "sourceDataOffset": 1252
+      },
+      {
+        "glyphIndex": 10,
+        "x": 160,
+        "y": 0,
+        "advance": 5,
+        "sourceDataOffset": 1284
+      },
+      {
+        "glyphIndex": 11,
+        "x": 176,
+        "y": 0,
+        "advance": 2,
+        "sourceDataOffset": 1316
+      },
+      {
+        "glyphIndex": 12,
+        "x": 192,
+        "y": 0,
+        "advance": 4,
+        "sourceDataOffset": 1348
+      },
+      {
+        "glyphIndex": 13,
+        "x": 208,
+        "y": 0,
+        "advance": 2,
+        "sourceDataOffset": 1380
+      },
+      {
+        "glyphIndex": 14,
+        "x": 224,
+        "y": 0,
+        "advance": 4,
+        "sourceDataOffset": 1412
+      },
+      {
+        "glyphIndex": 15,
+        "x": 240,
+        "y": 0,
+        "advance": 4,
+        "sourceDataOffset": 1444
+      },
+      {
+        "glyphIndex": 16,
+        "x": 0,
+        "y": 16,
+        "advance": 3,
+        "sourceDataOffset": 1476
+      },
+      {
+        "glyphIndex": 17,
+        "x": 16,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1508
+      },
+      {
+        "glyphIndex": 18,
+        "x": 32,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1540
+      },
+      {
+        "glyphIndex": 19,
+        "x": 48,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1572
+      },
+      {
+        "glyphIndex": 20,
+        "x": 64,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1604
+      },
+      {
+        "glyphIndex": 21,
+        "x": 80,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1636
+      },
+      {
+        "glyphIndex": 22,
+        "x": 96,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1668
+      },
+      {
+        "glyphIndex": 23,
+        "x": 112,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1700
+      },
+      {
+        "glyphIndex": 24,
+        "x": 128,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1732
+      },
+      {
+        "glyphIndex": 25,
+        "x": 144,
+        "y": 16,
+        "advance": 1,
+        "sourceDataOffset": 1764
+      },
+      {
+        "glyphIndex": 26,
+        "x": 160,
+        "y": 16,
+        "advance": 2,
+        "sourceDataOffset": 1796
+      },
+      {
+        "glyphIndex": 27,
+        "x": 176,
+        "y": 16,
+        "advance": 3,
+        "sourceDataOffset": 1828
+      },
+      {
+        "glyphIndex": 28,
+        "x": 192,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1860
+      },
+      {
+        "glyphIndex": 29,
+        "x": 208,
+        "y": 16,
+        "advance": 3,
+        "sourceDataOffset": 1892
+      },
+      {
+        "glyphIndex": 30,
+        "x": 224,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1924
+      },
+      {
+        "glyphIndex": 31,
+        "x": 240,
+        "y": 16,
+        "advance": 4,
+        "sourceDataOffset": 1956
+      },
+      {
+        "glyphIndex": 32,
+        "x": 0,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 1988
+      },
+      {
+        "glyphIndex": 33,
+        "x": 16,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2020
+      },
+      {
+        "glyphIndex": 34,
+        "x": 32,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2052
+      },
+      {
+        "glyphIndex": 35,
+        "x": 48,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2084
+      },
+      {
+        "glyphIndex": 36,
+        "x": 64,
+        "y": 32,
+        "advance": 3,
+        "sourceDataOffset": 2116
+      },
+      {
+        "glyphIndex": 37,
+        "x": 80,
+        "y": 32,
+        "advance": 3,
+        "sourceDataOffset": 2148
+      },
+      {
+        "glyphIndex": 38,
+        "x": 96,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2180
+      },
+      {
+        "glyphIndex": 39,
+        "x": 112,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2212
+      },
+      {
+        "glyphIndex": 40,
+        "x": 128,
+        "y": 32,
+        "advance": 1,
+        "sourceDataOffset": 2244
+      },
+      {
+        "glyphIndex": 41,
+        "x": 144,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2276
+      },
+      {
+        "glyphIndex": 42,
+        "x": 160,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2308
+      },
+      {
+        "glyphIndex": 43,
+        "x": 176,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2340
+      },
+      {
+        "glyphIndex": 44,
+        "x": 192,
+        "y": 32,
+        "advance": 5,
+        "sourceDataOffset": 2372
+      },
+      {
+        "glyphIndex": 45,
+        "x": 208,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2404
+      },
+      {
+        "glyphIndex": 46,
+        "x": 224,
+        "y": 32,
+        "advance": 5,
+        "sourceDataOffset": 2436
+      },
+      {
+        "glyphIndex": 47,
+        "x": 240,
+        "y": 32,
+        "advance": 4,
+        "sourceDataOffset": 2468
+      },
+      {
+        "glyphIndex": 48,
+        "x": 0,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2500
+      },
+      {
+        "glyphIndex": 49,
+        "x": 16,
+        "y": 48,
+        "advance": 4,
+        "sourceDataOffset": 2532
+      },
+      {
+        "glyphIndex": 50,
+        "x": 32,
+        "y": 48,
+        "advance": 4,
+        "sourceDataOffset": 2564
+      },
+      {
+        "glyphIndex": 51,
+        "x": 48,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2596
+      },
+      {
+        "glyphIndex": 52,
+        "x": 64,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2628
+      },
+      {
+        "glyphIndex": 53,
+        "x": 80,
+        "y": 48,
+        "advance": 4,
+        "sourceDataOffset": 2660
+      },
+      {
+        "glyphIndex": 54,
+        "x": 96,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2692
+      },
+      {
+        "glyphIndex": 55,
+        "x": 112,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2724
+      },
+      {
+        "glyphIndex": 56,
+        "x": 128,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2756
+      },
+      {
+        "glyphIndex": 57,
+        "x": 144,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2788
+      },
+      {
+        "glyphIndex": 58,
+        "x": 160,
+        "y": 48,
+        "advance": 3,
+        "sourceDataOffset": 2820
+      },
+      {
+        "glyphIndex": 59,
+        "x": 176,
+        "y": 48,
+        "advance": 4,
+        "sourceDataOffset": 2852
+      },
+      {
+        "glyphIndex": 60,
+        "x": 192,
+        "y": 48,
+        "advance": 3,
+        "sourceDataOffset": 2884
+      },
+      {
+        "glyphIndex": 61,
+        "x": 208,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2916
+      },
+      {
+        "glyphIndex": 62,
+        "x": 224,
+        "y": 48,
+        "advance": 5,
+        "sourceDataOffset": 2948
+      },
+      {
+        "glyphIndex": 63,
+        "x": 240,
+        "y": 48,
+        "advance": 3,
+        "sourceDataOffset": 2980
+      },
+      {
+        "glyphIndex": 64,
+        "x": 0,
+        "y": 64,
+        "advance": 5,
+        "sourceDataOffset": 3012
+      },
+      {
+        "glyphIndex": 65,
+        "x": 16,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3044
+      },
+      {
+        "glyphIndex": 66,
+        "x": 32,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3076
+      },
+      {
+        "glyphIndex": 67,
+        "x": 48,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3108
+      },
+      {
+        "glyphIndex": 68,
+        "x": 64,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3140
+      },
+      {
+        "glyphIndex": 69,
+        "x": 80,
+        "y": 64,
+        "advance": 3,
+        "sourceDataOffset": 3172
+      },
+      {
+        "glyphIndex": 70,
+        "x": 96,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3204
+      },
+      {
+        "glyphIndex": 71,
+        "x": 112,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3236
+      },
+      {
+        "glyphIndex": 72,
+        "x": 128,
+        "y": 64,
+        "advance": 2,
+        "sourceDataOffset": 3268
+      },
+      {
+        "glyphIndex": 73,
+        "x": 144,
+        "y": 64,
+        "advance": 3,
+        "sourceDataOffset": 3300
+      },
+      {
+        "glyphIndex": 74,
+        "x": 160,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3332
+      },
+      {
+        "glyphIndex": 75,
+        "x": 176,
+        "y": 64,
+        "advance": 1,
+        "sourceDataOffset": 3364
+      },
+      {
+        "glyphIndex": 76,
+        "x": 192,
+        "y": 64,
+        "advance": 5,
+        "sourceDataOffset": 3396
+      },
+      {
+        "glyphIndex": 77,
+        "x": 208,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3428
+      },
+      {
+        "glyphIndex": 78,
+        "x": 224,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3460
+      },
+      {
+        "glyphIndex": 79,
+        "x": 240,
+        "y": 64,
+        "advance": 4,
+        "sourceDataOffset": 3492
+      },
+      {
+        "glyphIndex": 80,
+        "x": 0,
+        "y": 80,
+        "advance": 5,
+        "sourceDataOffset": 3524
+      },
+      {
+        "glyphIndex": 81,
+        "x": 16,
+        "y": 80,
+        "advance": 3,
+        "sourceDataOffset": 3556
+      },
+      {
+        "glyphIndex": 82,
+        "x": 32,
+        "y": 80,
+        "advance": 4,
+        "sourceDataOffset": 3588
+      },
+      {
+        "glyphIndex": 83,
+        "x": 48,
+        "y": 80,
+        "advance": 3,
+        "sourceDataOffset": 3620
+      },
+      {
+        "glyphIndex": 84,
+        "x": 64,
+        "y": 80,
+        "advance": 4,
+        "sourceDataOffset": 3652
+      },
+      {
+        "glyphIndex": 85,
+        "x": 80,
+        "y": 80,
+        "advance": 4,
+        "sourceDataOffset": 3684
+      },
+      {
+        "glyphIndex": 86,
+        "x": 96,
+        "y": 80,
+        "advance": 5,
+        "sourceDataOffset": 3716
+      },
+      {
+        "glyphIndex": 87,
+        "x": 112,
+        "y": 80,
+        "advance": 4,
+        "sourceDataOffset": 3748
+      },
+      {
+        "glyphIndex": 88,
+        "x": 128,
+        "y": 80,
+        "advance": 4,
+        "sourceDataOffset": 3780
+      },
+      {
+        "glyphIndex": 89,
+        "x": 144,
+        "y": 80,
+        "advance": 4,
+        "sourceDataOffset": 3812
+      },
+      {
+        "glyphIndex": 90,
+        "x": 160,
+        "y": 80,
+        "advance": 3,
+        "sourceDataOffset": 3844
+      },
+      {
+        "glyphIndex": 91,
+        "x": 176,
+        "y": 80,
+        "advance": 1,
+        "sourceDataOffset": 3876
+      },
+      {
+        "glyphIndex": 92,
+        "x": 192,
+        "y": 80,
+        "advance": 3,
+        "sourceDataOffset": 3908
+      },
+      {
+        "glyphIndex": 93,
+        "x": 208,
+        "y": 80,
+        "advance": 6,
+        "sourceDataOffset": 3940
+      },
+      {
+        "glyphIndex": 94,
+        "x": 224,
+        "y": 80,
+        "advance": 5,
+        "sourceDataOffset": 3972
+      },
+      {
+        "glyphIndex": 95,
+        "x": 240,
+        "y": 80,
+        "advance": 4,
+        "sourceDataOffset": 4004
+      },
+      {
+        "glyphIndex": 96,
+        "x": 0,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4036
+      },
+      {
+        "glyphIndex": 97,
+        "x": 16,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4068
+      },
+      {
+        "glyphIndex": 98,
+        "x": 32,
+        "y": 96,
+        "advance": 5,
+        "sourceDataOffset": 4100
+      },
+      {
+        "glyphIndex": 99,
+        "x": 48,
+        "y": 96,
+        "advance": 5,
+        "sourceDataOffset": 4132
+      },
+      {
+        "glyphIndex": 100,
+        "x": 64,
+        "y": 96,
+        "advance": 5,
+        "sourceDataOffset": 4164
+      },
+      {
+        "glyphIndex": 101,
+        "x": 80,
+        "y": 96,
+        "advance": 5,
+        "sourceDataOffset": 4196
+      },
+      {
+        "glyphIndex": 102,
+        "x": 96,
+        "y": 96,
+        "advance": 5,
+        "sourceDataOffset": 4228
+      },
+      {
+        "glyphIndex": 103,
+        "x": 112,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4260
+      },
+      {
+        "glyphIndex": 104,
+        "x": 128,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4292
+      },
+      {
+        "glyphIndex": 105,
+        "x": 144,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4324
+      },
+      {
+        "glyphIndex": 106,
+        "x": 160,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4356
+      },
+      {
+        "glyphIndex": 107,
+        "x": 176,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4388
+      },
+      {
+        "glyphIndex": 108,
+        "x": 192,
+        "y": 96,
+        "advance": 3,
+        "sourceDataOffset": 4420
+      },
+      {
+        "glyphIndex": 109,
+        "x": 208,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4452
+      },
+      {
+        "glyphIndex": 110,
+        "x": 224,
+        "y": 96,
+        "advance": 4,
+        "sourceDataOffset": 4484
+      },
+      {
+        "glyphIndex": 111,
+        "x": 240,
+        "y": 96,
+        "advance": 3,
+        "sourceDataOffset": 4516
+      },
+      {
+        "glyphIndex": 112,
+        "x": 0,
+        "y": 112,
+        "advance": 7,
+        "sourceDataOffset": 4548
+      },
+      {
+        "glyphIndex": 113,
+        "x": 16,
+        "y": 112,
+        "advance": 6,
+        "sourceDataOffset": 4580
+      },
+      {
+        "glyphIndex": 114,
+        "x": 32,
+        "y": 112,
+        "advance": 4,
+        "sourceDataOffset": 4612
+      },
+      {
+        "glyphIndex": 115,
+        "x": 48,
+        "y": 112,
+        "advance": 4,
+        "sourceDataOffset": 4644
+      },
+      {
+        "glyphIndex": 116,
+        "x": 64,
+        "y": 112,
+        "advance": 4,
+        "sourceDataOffset": 4676
+      },
+      {
+        "glyphIndex": 117,
+        "x": 80,
+        "y": 112,
+        "advance": 4,
+        "sourceDataOffset": 4708
+      },
+      {
+        "glyphIndex": 118,
+        "x": 96,
+        "y": 112,
+        "advance": 4,
+        "sourceDataOffset": 4740
+      },
+      {
+        "glyphIndex": 119,
+        "x": 112,
+        "y": 112,
+        "advance": 4,
+        "sourceDataOffset": 4772
+      },
+      {
+        "glyphIndex": 120,
+        "x": 128,
+        "y": 112,
+        "advance": 5,
+        "sourceDataOffset": 4804
+      },
+      {
+        "glyphIndex": 121,
+        "x": 144,
+        "y": 112,
+        "advance": 5,
+        "sourceDataOffset": 4836
+      },
+      {
+        "glyphIndex": 122,
+        "x": 160,
+        "y": 112,
+        "advance": 5,
+        "sourceDataOffset": 4868
+      },
+      {
+        "glyphIndex": 123,
+        "x": 176,
+        "y": 112,
+        "advance": 6,
+        "sourceDataOffset": 4900
+      },
+      {
+        "glyphIndex": 124,
+        "x": 192,
+        "y": 112,
+        "advance": 7,
+        "sourceDataOffset": 4932
+      },
+      {
+        "glyphIndex": 125,
+        "x": 208,
+        "y": 112,
+        "advance": 5,
+        "sourceDataOffset": 4964
+      },
+      {
+        "glyphIndex": 126,
+        "x": 224,
+        "y": 112,
+        "advance": 7,
+        "sourceDataOffset": 4996
+      },
+      {
+        "glyphIndex": 127,
+        "x": 240,
+        "y": 112,
+        "advance": 5,
+        "sourceDataOffset": 5028
+      },
+      {
+        "glyphIndex": 128,
+        "x": 0,
+        "y": 128,
+        "advance": 3,
+        "sourceDataOffset": 5060
+      },
+      {
+        "glyphIndex": 129,
+        "x": 16,
+        "y": 128,
+        "advance": 4,
+        "sourceDataOffset": 5092
+      },
+      {
+        "glyphIndex": 130,
+        "x": 32,
+        "y": 128,
+        "advance": 4,
+        "sourceDataOffset": 5124
+      },
+      {
+        "glyphIndex": 131,
+        "x": 48,
+        "y": 128,
+        "advance": 5,
+        "sourceDataOffset": 5156
+      },
+      {
+        "glyphIndex": 132,
+        "x": 64,
+        "y": 128,
+        "advance": 5,
+        "sourceDataOffset": 5188
+      },
+      {
+        "glyphIndex": 133,
+        "x": 80,
+        "y": 128,
+        "advance": 5,
+        "sourceDataOffset": 5220
+      },
+      {
+        "glyphIndex": 134,
+        "x": 96,
+        "y": 128,
+        "advance": 4,
+        "sourceDataOffset": 5252
+      },
+      {
+        "glyphIndex": 135,
+        "x": 112,
+        "y": 128,
+        "advance": 4,
+        "sourceDataOffset": 5284
+      },
+      {
+        "glyphIndex": 136,
+        "x": 128,
+        "y": 128,
+        "advance": 6,
+        "sourceDataOffset": 5316
+      },
+      {
+        "glyphIndex": 137,
+        "x": 144,
+        "y": 128,
+        "advance": 6,
+        "sourceDataOffset": 5348
+      },
+      {
+        "glyphIndex": 138,
+        "x": 160,
+        "y": 128,
+        "advance": 9,
+        "sourceDataOffset": 5380
+      },
+      {
+        "glyphIndex": 139,
+        "x": 176,
+        "y": 128,
+        "advance": 8,
+        "sourceDataOffset": 5412
+      },
+      {
+        "glyphIndex": 140,
+        "x": 192,
+        "y": 128,
+        "advance": 3,
+        "sourceDataOffset": 5444
+      },
+      {
+        "glyphIndex": 141,
+        "x": 208,
+        "y": 128,
+        "advance": 6,
+        "sourceDataOffset": 5476
+      },
+      {
+        "glyphIndex": 142,
+        "x": 224,
+        "y": 128,
+        "advance": 6,
+        "sourceDataOffset": 5508
+      },
+      {
+        "glyphIndex": 143,
+        "x": 240,
+        "y": 128,
+        "advance": 5,
+        "sourceDataOffset": 5540
+      },
+      {
+        "glyphIndex": 144,
+        "x": 0,
+        "y": 144,
+        "advance": 7,
+        "sourceDataOffset": 5572
+      },
+      {
+        "glyphIndex": 145,
+        "x": 16,
+        "y": 144,
+        "advance": 6,
+        "sourceDataOffset": 5604
+      },
+      {
+        "glyphIndex": 146,
+        "x": 32,
+        "y": 144,
+        "advance": 4,
+        "sourceDataOffset": 5636
+      },
+      {
+        "glyphIndex": 147,
+        "x": 48,
+        "y": 144,
+        "advance": 4,
+        "sourceDataOffset": 5668
+      },
+      {
+        "glyphIndex": 148,
+        "x": 64,
+        "y": 144,
+        "advance": 4,
+        "sourceDataOffset": 5700
+      },
+      {
+        "glyphIndex": 149,
+        "x": 80,
+        "y": 144,
+        "advance": 4,
+        "sourceDataOffset": 5732
+      },
+      {
+        "glyphIndex": 150,
+        "x": 96,
+        "y": 144,
+        "advance": 4,
+        "sourceDataOffset": 5764
+      },
+      {
+        "glyphIndex": 151,
+        "x": 112,
+        "y": 144,
+        "advance": 8,
+        "sourceDataOffset": 5796
+      },
+      {
+        "glyphIndex": 152,
+        "x": 128,
+        "y": 144,
+        "advance": 5,
+        "sourceDataOffset": 5828
+      },
+      {
+        "glyphIndex": 153,
+        "x": 144,
+        "y": 144,
+        "advance": 5,
+        "sourceDataOffset": 5860
+      },
+      {
+        "glyphIndex": 154,
+        "x": 160,
+        "y": 144,
+        "advance": 5,
+        "sourceDataOffset": 5892
+      },
+      {
+        "glyphIndex": 155,
+        "x": 176,
+        "y": 144,
+        "advance": 5,
+        "sourceDataOffset": 5924
+      },
+      {
+        "glyphIndex": 156,
+        "x": 192,
+        "y": 144,
+        "advance": 5,
+        "sourceDataOffset": 5956
+      },
+      {
+        "glyphIndex": 157,
+        "x": 208,
+        "y": 144,
+        "advance": 5,
+        "sourceDataOffset": 5988
+      },
+      {
+        "glyphIndex": 158,
+        "x": 224,
+        "y": 144,
+        "advance": 4,
+        "sourceDataOffset": 6020
+      },
+      {
+        "glyphIndex": 159,
+        "x": 240,
+        "y": 144,
+        "advance": 4,
+        "sourceDataOffset": 6052
+      },
+      {
+        "glyphIndex": 160,
+        "x": 0,
+        "y": 160,
+        "advance": 7,
+        "sourceDataOffset": 6084
+      },
+      {
+        "glyphIndex": 161,
+        "x": 16,
+        "y": 160,
+        "advance": 7,
+        "sourceDataOffset": 6116
+      },
+      {
+        "glyphIndex": 162,
+        "x": 32,
+        "y": 160,
+        "advance": 4,
+        "sourceDataOffset": 6148
+      },
+      {
+        "glyphIndex": 163,
+        "x": 48,
+        "y": 160,
+        "advance": 6,
+        "sourceDataOffset": 6180
+      },
+      {
+        "glyphIndex": 164,
+        "x": 64,
+        "y": 160,
+        "advance": 6,
+        "sourceDataOffset": 6212
+      },
+      {
+        "glyphIndex": 165,
+        "x": 80,
+        "y": 160,
+        "advance": 5,
+        "sourceDataOffset": 6244
+      },
+      {
+        "glyphIndex": 166,
+        "x": 96,
+        "y": 160,
+        "advance": 5,
+        "sourceDataOffset": 6276
+      },
+      {
+        "glyphIndex": 167,
+        "x": 112,
+        "y": 160,
+        "advance": 5,
+        "sourceDataOffset": 6308
+      },
+      {
+        "glyphIndex": 168,
+        "x": 128,
+        "y": 160,
+        "advance": 5,
+        "sourceDataOffset": 6340
+      },
+      {
+        "glyphIndex": 169,
+        "x": 144,
+        "y": 160,
+        "advance": 7,
+        "sourceDataOffset": 6372
+      },
+      {
+        "glyphIndex": 170,
+        "x": 160,
+        "y": 160,
+        "advance": 7,
+        "sourceDataOffset": 6404
+      },
+      {
+        "glyphIndex": 171,
+        "x": 176,
+        "y": 160,
+        "advance": 5,
+        "sourceDataOffset": 6436
+      },
+      {
+        "glyphIndex": 172,
+        "x": 192,
+        "y": 160,
+        "advance": 8,
+        "sourceDataOffset": 6468
+      },
+      {
+        "glyphIndex": 173,
+        "x": 208,
+        "y": 160,
+        "advance": 7,
+        "sourceDataOffset": 6500
+      },
+      {
+        "glyphIndex": 174,
+        "x": 224,
+        "y": 160,
+        "advance": 7,
+        "sourceDataOffset": 6532
+      },
+      {
+        "glyphIndex": 175,
+        "x": 240,
+        "y": 160,
+        "advance": 16,
+        "sourceDataOffset": 6564
+      },
+      {
+        "glyphIndex": 176,
+        "x": 0,
+        "y": 176,
+        "advance": 4,
+        "sourceDataOffset": 6596
+      },
+      {
+        "glyphIndex": 177,
+        "x": 16,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6628
+      },
+      {
+        "glyphIndex": 178,
+        "x": 32,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6660
+      },
+      {
+        "glyphIndex": 179,
+        "x": 48,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6692
+      },
+      {
+        "glyphIndex": 180,
+        "x": 64,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6724
+      },
+      {
+        "glyphIndex": 181,
+        "x": 80,
+        "y": 176,
+        "advance": 2,
+        "sourceDataOffset": 6756
+      },
+      {
+        "glyphIndex": 182,
+        "x": 96,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6788
+      },
+      {
+        "glyphIndex": 183,
+        "x": 112,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6820
+      },
+      {
+        "glyphIndex": 184,
+        "x": 128,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6852
+      },
+      {
+        "glyphIndex": 185,
+        "x": 144,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6884
+      },
+      {
+        "glyphIndex": 186,
+        "x": 160,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6916
+      },
+      {
+        "glyphIndex": 187,
+        "x": 176,
+        "y": 176,
+        "advance": 3,
+        "sourceDataOffset": 6948
+      },
+      {
+        "glyphIndex": 188,
+        "x": 192,
+        "y": 176,
+        "advance": 1,
+        "sourceDataOffset": 6980
+      },
+      {
+        "glyphIndex": 189,
+        "x": 208,
+        "y": 176,
+        "advance": 2,
+        "sourceDataOffset": 7012
+      },
+      {
+        "glyphIndex": 190,
+        "x": 224,
+        "y": 176,
+        "advance": 4,
+        "sourceDataOffset": 7044
+      },
+      {
+        "glyphIndex": 191,
+        "x": 240,
+        "y": 176,
+        "advance": 5,
+        "sourceDataOffset": 7076
+      },
+      {
+        "glyphIndex": 192,
+        "x": 0,
+        "y": 192,
+        "advance": 6,
+        "sourceDataOffset": 7108
+      },
+      {
+        "glyphIndex": 193,
+        "x": 16,
+        "y": 192,
+        "advance": 5,
+        "sourceDataOffset": 7140
+      },
+      {
+        "glyphIndex": 194,
+        "x": 32,
+        "y": 192,
+        "advance": 7,
+        "sourceDataOffset": 7172
+      },
+      {
+        "glyphIndex": 195,
+        "x": 48,
+        "y": 192,
+        "advance": 6,
+        "sourceDataOffset": 7204
+      },
+      {
+        "glyphIndex": 196,
+        "x": 64,
+        "y": 192,
+        "advance": 5,
+        "sourceDataOffset": 7236
+      },
+      {
+        "glyphIndex": 197,
+        "x": 80,
+        "y": 192,
+        "advance": 7,
+        "sourceDataOffset": 7268
+      },
+      {
+        "glyphIndex": 198,
+        "x": 96,
+        "y": 192,
+        "advance": 6,
+        "sourceDataOffset": 7300
+      },
+      {
+        "glyphIndex": 199,
+        "x": 112,
+        "y": 192,
+        "advance": 7,
+        "sourceDataOffset": 7332
+      },
+      {
+        "glyphIndex": 200,
+        "x": 128,
+        "y": 192,
+        "advance": 7,
+        "sourceDataOffset": 7364
+      },
+      {
+        "glyphIndex": 201,
+        "x": 144,
+        "y": 192,
+        "advance": 8,
+        "sourceDataOffset": 7396
+      },
+      {
+        "glyphIndex": 202,
+        "x": 160,
+        "y": 192,
+        "advance": 5,
+        "sourceDataOffset": 7428
+      },
+      {
+        "glyphIndex": 203,
+        "x": 176,
+        "y": 192,
+        "advance": 9,
+        "sourceDataOffset": 7460
+      },
+      {
+        "glyphIndex": 204,
+        "x": 192,
+        "y": 192,
+        "advance": 8,
+        "sourceDataOffset": 7492
+      },
+      {
+        "glyphIndex": 205,
+        "x": 208,
+        "y": 192,
+        "advance": 4,
+        "sourceDataOffset": 7524
+      },
+      {
+        "glyphIndex": 206,
+        "x": 224,
+        "y": 192,
+        "advance": 7,
+        "sourceDataOffset": 7556
+      },
+      {
+        "glyphIndex": 207,
+        "x": 240,
+        "y": 192,
+        "advance": 6,
+        "sourceDataOffset": 7588
+      },
+      {
+        "glyphIndex": 208,
+        "x": 0,
+        "y": 208,
+        "advance": 5,
+        "sourceDataOffset": 7620
+      },
+      {
+        "glyphIndex": 209,
+        "x": 16,
+        "y": 208,
+        "advance": 3,
+        "sourceDataOffset": 7652
+      },
+      {
+        "glyphIndex": 210,
+        "x": 32,
+        "y": 208,
+        "advance": 4,
+        "sourceDataOffset": 7684
+      },
+      {
+        "glyphIndex": 211,
+        "x": 48,
+        "y": 208,
+        "advance": 5,
+        "sourceDataOffset": 7716
+      },
+      {
+        "glyphIndex": 212,
+        "x": 64,
+        "y": 208,
+        "advance": 6,
+        "sourceDataOffset": 7748
+      },
+      {
+        "glyphIndex": 213,
+        "x": 80,
+        "y": 208,
+        "advance": 5,
+        "sourceDataOffset": 7780
+      },
+      {
+        "glyphIndex": 214,
+        "x": 96,
+        "y": 208,
+        "advance": 9,
+        "sourceDataOffset": 7812
+      },
+      {
+        "glyphIndex": 215,
+        "x": 112,
+        "y": 208,
+        "advance": 4,
+        "sourceDataOffset": 7844
+      },
+      {
+        "glyphIndex": 216,
+        "x": 128,
+        "y": 208,
+        "advance": 4,
+        "sourceDataOffset": 7876
+      },
+      {
+        "glyphIndex": 217,
+        "x": 144,
+        "y": 208,
+        "advance": 1,
+        "sourceDataOffset": 7908
+      },
+      {
+        "glyphIndex": 218,
+        "x": 160,
+        "y": 208,
+        "advance": 12,
+        "sourceDataOffset": 7940
+      },
+      {
+        "glyphIndex": 219,
+        "x": 176,
+        "y": 208,
+        "advance": 4,
+        "sourceDataOffset": 7972
+      },
+      {
+        "glyphIndex": 220,
+        "x": 192,
+        "y": 208,
+        "advance": 4,
+        "sourceDataOffset": 8004
+      },
+      {
+        "glyphIndex": 221,
+        "x": 208,
+        "y": 208,
+        "advance": 3,
+        "sourceDataOffset": 8036
+      },
+      {
+        "glyphIndex": 222,
+        "x": 224,
+        "y": 208,
+        "advance": 0,
+        "sourceDataOffset": 8068
+      },
+      {
+        "glyphIndex": 223,
+        "x": 240,
+        "y": 208,
+        "advance": 0,
+        "sourceDataOffset": 8100
+      },
+      {
+        "glyphIndex": 224,
+        "x": 0,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8132
+      },
+      {
+        "glyphIndex": 225,
+        "x": 16,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8164
+      },
+      {
+        "glyphIndex": 226,
+        "x": 32,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8196
+      },
+      {
+        "glyphIndex": 227,
+        "x": 48,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8228
+      },
+      {
+        "glyphIndex": 228,
+        "x": 64,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8260
+      },
+      {
+        "glyphIndex": 229,
+        "x": 80,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8292
+      },
+      {
+        "glyphIndex": 230,
+        "x": 96,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8324
+      },
+      {
+        "glyphIndex": 231,
+        "x": 112,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8356
+      },
+      {
+        "glyphIndex": 232,
+        "x": 128,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8388
+      },
+      {
+        "glyphIndex": 233,
+        "x": 144,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8420
+      },
+      {
+        "glyphIndex": 234,
+        "x": 160,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8452
+      },
+      {
+        "glyphIndex": 235,
+        "x": 176,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8484
+      },
+      {
+        "glyphIndex": 236,
+        "x": 192,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8516
+      },
+      {
+        "glyphIndex": 237,
+        "x": 208,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8548
+      },
+      {
+        "glyphIndex": 238,
+        "x": 224,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8580
+      },
+      {
+        "glyphIndex": 239,
+        "x": 240,
+        "y": 224,
+        "advance": 0,
+        "sourceDataOffset": 8612
+      }
+    ]
+  },
+  "authoredUiAssets": [
+    {
+      "id": "inventory.skin.grid-slot-slate.v1",
+      "relativePath": "media/ui/authored/inventory-grid-slot-slate-v1.png",
+      "sourceLabel": "ui-original/inventory-grid-slot-slate-v1.png",
+      "generator": "gpt-image-2",
+      "prompt": "Create one standalone square empty inventory slot with no text, letters, icons, logos, or item art. Recessed charcoal slate interior, worn muted antique-brass bevel, corner rivets, and slight moss-green oxidation; readable DOM item name and quantity overlays it. Original hand-painted pixel-art-era UI chrome, not copied from any game."
+    },
+    {
+      "id": "inventory.skin.panel-slate.v1",
+      "relativePath": "media/ui/authored/inventory-skin-panel-slate-v1.png",
+      "sourceLabel": "ui-original/inventory-panel-slate-v1.png",
+      "generator": "gpt-image-1.5",
+      "prompt": "Create one original, seamless, tileable 2D fantasy inventory panel texture for a dark retro computer RPG. Square 1024x1024. Materials: charcoal slate stone, muted warm brass flecks, faint mossy green oxidation, subtle hand-painted pixel-art-era texture but not copied from any game. Low contrast so readable DOM text can sit above it. No frames, no UI controls, no text, no icons, no logos, no characters, no known game assets. Seamless edges in both directions."
+    },
+    {
+      "id": "inventory.skin.titlebar-slate.v1",
+      "relativePath": "media/ui/authored/inventory-titlebar-slate-v1.png",
+      "sourceLabel": "ui-original/inventory-titlebar-slate-v1.png",
+      "generator": "gpt-image-2",
+      "prompt": "Create a standalone wide dark retro fantasy RPG title-bar panel with no text, letters, icons, logos, or item art. Aged charcoal slate center, muted antique-brass edge bands, rivets, and slight moss-green oxidation; readable cream DOM heading text overlays the center. Original hand-painted pixel-art-era UI chrome, not copied from any game."
+    }
+  ]
+}

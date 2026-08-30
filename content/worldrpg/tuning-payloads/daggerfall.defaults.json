@@ -15,7 +15,6 @@
   "spatial": {
     "collisionVoxelSize": 0.5,
     "collisionChunkSize": 32,
-    "navigationCellSize": 0.5,
     "navigationChunkSize": 32,
     "navigationMaximumStepCells": 2
   },

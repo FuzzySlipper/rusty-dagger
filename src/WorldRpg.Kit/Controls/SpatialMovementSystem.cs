@@ -6,14 +6,18 @@ namespace WorldRpg.Kit.Controls;
 public sealed class SpatialMovementSystem : IDisposable
 {
     private readonly ISpatialService _spatial;
+    private readonly ContentReference _content;
     private readonly SpatialTuning _tuning;
     private readonly CharacterControllerConfig _controller;
     private readonly SpatialSession _session;
     private ulong _movementSequence;
     private bool _disposed;
 
-    public SpatialMovementSystem(ISpatialService spatial, SpatialSceneInputs inputs, SpatialTuning tuning)
+    public SpatialMovementSystem(ISpatialService spatial, IContentService content, SpatialContentArtifact inputs, SpatialTuning tuning)
     {
+        ArgumentNullException.ThrowIfNull(spatial);
+        ArgumentNullException.ThrowIfNull(content);
+        ArgumentNullException.ThrowIfNull(inputs);
         _spatial = spatial;
         _tuning = tuning;
         _controller = spatial.DefaultCharacterControllerConfig();
@@ -23,14 +27,38 @@ public sealed class SpatialMovementSystem : IDisposable
             VoxelSurfaceMode.GreedyCubes));
         try
         {
-            if (inputs.CollisionVertices.Length != 0)
+            ContentReference resolved = content.ResolveReference(new ContentResolveRequest(inputs.Path, inputs.Sha256));
+            try
             {
-                var asset = new StaticMeshAsset(1, 0, checked((uint)inputs.CollisionVertices.Length), 0, checked((uint)inputs.CollisionTriangles.Length));
-                var instance = new StaticMeshInstance(1, 1, IdentityTransform());
-                spatial.ReplaceCollision(new CollisionReplaceRequest(session, new[] { asset }, inputs.CollisionVertices, inputs.CollisionTriangles, new[] { instance }));
+                ReadOnlyMemory<ContentReferenceInfo> references = content.ReadReferenceInfo(resolved);
+                if (references.Length != 1 || references.Span[0].Path != inputs.Path || references.Span[0].Sha256 != inputs.Sha256)
+                {
+                    throw new InvalidOperationException("Resolved spatial artifact does not retain its expected content identity.");
+                }
+
+                SpatialContentArtifactReplaceReceipt receipt = spatial.ReplaceContentArtifact(new SpatialContentArtifactReplaceRequest(
+                    session,
+                    resolved,
+                    inputs.NavigationGridId,
+                    tuning.NavigationChunkSize,
+                    tuning.NavigationMaximumStepCells));
+                SpatialContentArtifactReadout readback = spatial.ReadContentArtifact(new SpatialContentArtifactReadRequest(session));
+                if (!readback.Present
+                    || readback.ContentReferenceValue != resolved.Handle.Value
+                    || readback.ContentSha256 != inputs.Sha256
+                    || readback.CollisionRevision != receipt.CollisionRevisionAfter
+                    || readback.NavigationRevision != receipt.NavigationRevision
+                    || readback.CollisionVertexCount != receipt.CollisionVertexCount
+                    || readback.CollisionTriangleCount != receipt.CollisionTriangleCount
+                    || readback.NavigationCellCount != receipt.NavigationCellCount)
+                {
+                    throw new InvalidOperationException("Engine spatial artifact readback did not match the admitted content replacement.");
+                }
+
+                _content = resolved;
+                resolved = null!;
             }
-            if (inputs.NavigationCells.Length != 0)
-                spatial.ReplaceNavigation(new NavigationReplaceRequest(session, new PlanarNavConfig(1, tuning.NavigationCellSize, tuning.NavigationChunkSize, tuning.NavigationMaximumStepCells), inputs.NavigationCells));
+            finally { resolved?.Dispose(); }
             _session = session;
         }
         catch { session.Dispose(); throw; }
@@ -63,19 +91,16 @@ public sealed class SpatialMovementSystem : IDisposable
     public void Dispose()
     {
         if (_disposed) return;
-        _session.Dispose();
         _disposed = true;
+        List<Exception>? failures = null;
+        try { _session.Dispose(); }
+        catch (Exception exception) { failures = [exception]; }
+        try { _content.Dispose(); }
+        catch (Exception exception) { (failures ??= []).Add(exception); }
+        if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
-    private static Transform IdentityTransform() => new(Vector3.Zero, Quaternion.Identity, Vector3.One);
-
 }
 
-/// <summary>Ruleset-adapted spatial data; the Kit never reads source formats or content names.</summary>
-public sealed record SpatialSceneInputs(
-    ReadOnlyMemory<Vector3> CollisionVertices,
-    ReadOnlyMemory<Triangle> CollisionTriangles,
-    ReadOnlyMemory<PlanarNavCell> NavigationCells)
-{
-    public static readonly SpatialSceneInputs Empty = new(ReadOnlyMemory<Vector3>.Empty, ReadOnlyMemory<Triangle>.Empty, ReadOnlyMemory<PlanarNavCell>.Empty);
-}
+/// <summary>Ruleset-provided identity for one Engine-admitted spatial artifact; the Kit never reads its format.</summary>
+public sealed record SpatialContentArtifact(string Path, ContentSha256 Sha256, ulong NavigationGridId);

@@ -26,6 +26,7 @@ public sealed record DungeonMediaManifestSidecar(
 public sealed record DungeonMaterialMediaManifest(
     string TextureResourceId,
     string MaterialResourceId,
+    uint MaterialSlot,
     ushort TextureArchive,
     ushort TextureRecord,
     int Width,
@@ -147,7 +148,7 @@ public sealed record Arena2MediaBundlePublication(
         document.Validate();
         dungeon.SpatialPublication.ValidateAgainst(document);
 
-        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(dungeonMedia);
+        DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(dungeon.SpatialPublication, dungeonMedia);
         ClassicMediaManifestSidecar classicSidecar = CreateClassicSidecar(classicMedia);
         byte[] dungeonSidecarBytes = SerializeSidecar(dungeonSidecar);
         byte[] classicSidecarBytes = SerializeSidecar(classicSidecar);
@@ -216,7 +217,28 @@ public sealed record Arena2MediaBundlePublication(
             sources.Values.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
     }
 
-    private static DungeonMediaManifestSidecar CreateDungeonSidecar(Arena2DungeonMediaPublication publication) => new(
+    private static DungeonMediaManifestSidecar CreateDungeonSidecar(DungeonSpatialPublication spatial, Arena2DungeonMediaPublication publication)
+    {
+        ArgumentNullException.ThrowIfNull(spatial);
+        ArgumentNullException.ThrowIfNull(publication);
+        Dictionary<string, uint> slotByMaterial = spatial.MaterialSlots
+            .ToDictionary(binding => binding.MaterialResourceId, binding => binding.Slot, StringComparer.Ordinal);
+        if (slotByMaterial.Count != spatial.MaterialSlots.Count)
+        {
+            throw new InvalidOperationException("Spatial publication has duplicate material-slot resource IDs.");
+        }
+
+        string[] generatedMaterials = publication.MaterialTextures
+            .Select(media => media.MaterialResourceId)
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToArray();
+        if (generatedMaterials.Distinct(StringComparer.Ordinal).Count() != generatedMaterials.Length
+            || !generatedMaterials.SequenceEqual(slotByMaterial.Keys.OrderBy(id => id, StringComparer.Ordinal), StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException("Dungeon media materials must exactly match the static-mesh material-slot publication.");
+        }
+
+        return new(
         DungeonMediaManifestSidecar.CurrentSchemaVersion,
         CanonicalizeMedia(publication.MediaManifest),
         publication.MaterialTextures
@@ -224,6 +246,7 @@ public sealed record Arena2MediaBundlePublication(
             .Select(media => new DungeonMaterialMediaManifest(
                 media.TextureResourceId,
                 media.MaterialResourceId,
+                slotByMaterial[media.MaterialResourceId],
                 media.TextureArchive,
                 media.TextureRecord,
                 media.Width,
@@ -267,6 +290,7 @@ public sealed record Arena2MediaBundlePublication(
                         media.Corpse.Descriptor.Id),
                 media.Descriptor.Id))
             .ToArray());
+    }
 
     private static ClassicMediaManifestSidecar CreateClassicSidecar(Arena2ClassicMediaPublication publication) => new(
         ClassicMediaManifestSidecar.CurrentSchemaVersion,

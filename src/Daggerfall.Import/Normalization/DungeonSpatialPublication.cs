@@ -46,6 +46,13 @@ public sealed class GeneratedSpatialArtifact
 }
 
 /// <summary>
+/// One static-mesh material binding. The slot is published from the same mesh
+/// assembly that writes the Engine static-mesh artifact; runtime consumers must
+/// not derive it by parsing that artifact or repeating its ordering rule.
+/// </summary>
+public sealed record DungeonMaterialSlot(string MaterialResourceId, uint Slot);
+
+/// <summary>
 /// Deterministic spatial closure for one normalized location.  The static mesh
 /// is shaped exactly for Engine's content-backed static-mesh admission while
 /// collision and navigation remain purpose-neutral offline facts.
@@ -53,7 +60,8 @@ public sealed class GeneratedSpatialArtifact
 public sealed record DungeonSpatialPublication(
     GeneratedSpatialArtifact StaticMesh,
     GeneratedSpatialArtifact CollisionNavigation,
-    GeneratedSpatialArtifact ResourceCatalog)
+    GeneratedSpatialArtifact ResourceCatalog,
+    IReadOnlyList<DungeonMaterialSlot> MaterialSlots)
 {
     public IReadOnlyList<GeneratedSpatialArtifact> Artifacts => [StaticMesh, CollisionNavigation, ResourceCatalog];
 
@@ -113,13 +121,24 @@ public sealed record DungeonSpatialPublication(
             }
         }
 
-        byte[] staticMesh = StaticMeshJson.Serialize(visualMeshAssetId, bounds, worldMeshes);
+        MeshAssembly assembly = MeshAssembly.Create(worldMeshes);
+        DungeonMaterialSlot[] materialSlots = assembly.MaterialSlots
+            .Select(binding => new DungeonMaterialSlot(binding.Material, checked((uint)binding.Slot)))
+            .ToArray();
+        if (materialSlots.Length != materialSlots.Select(binding => binding.MaterialResourceId).Distinct(StringComparer.Ordinal).Count()
+            || materialSlots.Length != materialSlots.Select(binding => binding.Slot).Distinct().Count())
+        {
+            throw new InvalidOperationException("Generated static-mesh material slots must be unique by resource and slot.");
+        }
+
+        byte[] staticMesh = StaticMeshJson.Serialize(visualMeshAssetId, bounds, assembly);
         byte[] collisionNavigation = CollisionNavigationJson.Serialize(staticMeshArtifactId, bounds, worldMeshes, navigation);
         byte[] resourceCatalog = ResourceCatalogJson.Serialize(resources);
         return new(
             new GeneratedSpatialArtifact(staticMeshArtifactId, staticMeshRelativePath, staticMesh, []),
             new GeneratedSpatialArtifact(collisionNavigationArtifactId, collisionNavigationRelativePath, collisionNavigation, [staticMeshArtifactId]),
-            new GeneratedSpatialArtifact(resourceCatalogArtifactId, resourceCatalogRelativePath, resourceCatalog, []));
+            new GeneratedSpatialArtifact(resourceCatalogArtifactId, resourceCatalogRelativePath, resourceCatalog, []),
+            Array.AsReadOnly(materialSlots));
     }
 
     public void ValidateAgainst(NormalizedImportDocument document)
@@ -313,10 +332,9 @@ public static class OfflineNavigationDeriver
 
 internal static class StaticMeshJson
 {
-    public static byte[] Serialize(string asset, NormalizedBounds bounds, IReadOnlyList<NormalizedMesh> meshes)
+    public static byte[] Serialize(string asset, NormalizedBounds bounds, MeshAssembly assembly)
     {
-        ArgumentNullException.ThrowIfNull(meshes);
-        MeshAssembly assembly = MeshAssembly.Create(meshes);
+        ArgumentNullException.ThrowIfNull(assembly);
         using MemoryStream stream = new();
         using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Indented = true }))
         {

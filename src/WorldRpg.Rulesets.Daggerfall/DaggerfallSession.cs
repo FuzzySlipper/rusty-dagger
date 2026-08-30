@@ -109,7 +109,7 @@ internal sealed class DaggerfallSession : IGameSession
             State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState(), inventory, equipmentCoordinator);
             Presentation = new PresentationState("Ready");
             _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
-            _spatial = new SpatialMovementSystem(engine.Spatial, inputs.ToSpatialScene(), tuning.Spatial);
+            _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
@@ -119,7 +119,7 @@ internal sealed class DaggerfallSession : IGameSession
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);
-            _appearance = new PrivateersHoldAppearance(engine.Appearance, inputs);
+            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Appearance, inputs);
             partiallyConstructed.Add(_appearance);
         }
         catch (Exception constructionFailure)

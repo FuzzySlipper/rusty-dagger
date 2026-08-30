@@ -21,7 +21,7 @@ internal sealed record DaggerfallTuning(
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true),
-        new SpatialTuning(.5, 32, .5, 32, 2),
+        new SpatialTuning(.5, 32, 32, 2),
         new DaggerfallCombatTuning(5, .75d),
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d));
 
@@ -53,7 +53,6 @@ internal sealed record DaggerfallTuning(
             new SpatialTuning(
                 spatial.GetProperty("collisionVoxelSize").GetDouble(),
                 checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
-                spatial.GetProperty("navigationCellSize").GetDouble(),
                 checked((uint)spatial.GetProperty("navigationChunkSize").GetInt32()),
                 checked((uint)spatial.GetProperty("navigationMaximumStepCells").GetInt32())),
             new DaggerfallCombatTuning(
