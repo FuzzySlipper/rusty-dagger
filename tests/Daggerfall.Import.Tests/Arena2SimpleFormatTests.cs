@@ -24,6 +24,25 @@ public sealed class Arena2SimpleFormatTests
     }
 
     [Fact]
+    public void NumericBsaDuplicateIdsRetainOrdinalRecordsAndResolveToFirstDirectoryEntry()
+    {
+        BsaArchive archive = BsaArchive.Parse(
+            CreateNumericBsa((42U, [1]), (42U, [2, 3]), (7U, [4])),
+            "duplicate-numeric-fixture");
+
+        Assert.Equal(3, archive.Records.Count);
+        Assert.True(archive.TryGetByOrdinal(0, out BsaRecord? first));
+        Assert.True(archive.TryGetByOrdinal(1, out BsaRecord? second));
+        Assert.Equal(42U, first!.NumericId);
+        Assert.Equal(42U, second!.NumericId);
+        Assert.Equal([1], archive.GetPayload(first).ToArray());
+        Assert.Equal([2, 3], archive.GetPayload(second).ToArray());
+
+        Assert.True(archive.TryGetByNumericId(42, out BsaRecord? resolved));
+        Assert.Same(first, resolved);
+    }
+
+    [Fact]
     public void BsaMalformedHeadersAndPayloadBoundariesFailWithTypedErrors()
     {
         Arena2FormatException header = Assert.Throws<Arena2FormatException>(() => BsaArchive.Parse([], "truncated-bsa"));
