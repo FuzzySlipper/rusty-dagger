@@ -39,11 +39,22 @@ public sealed class ArchitectureLawTests
     [Fact]
     public void Project_references_follow_the_worldrpg_dependency_graph()
     {
+        AssertProjectReferences("Daggerfall.Import", []);
         AssertProjectReferences("WorldRpg.Kit", ["Rusty.Engine"]);
         AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["Rusty.Engine", "WorldRpg.Kit"]);
         AssertProjectReferences("WorldRpg.Host", ["Rusty.Engine", "WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
         AssertProjectReferences("RustyDagger.NativeProduct", ["Rusty.Engine", "Rusty.Engine.ProductGenerator", "WorldRpg.Host"]);
         AssertProjectReferences("WorldRpg.Rulesets.Canary.Tests", ["WorldRpg.Host", "WorldRpg.Kit"]);
+    }
+
+    [Fact]
+    public void Offline_importer_is_not_a_runtime_dependency()
+    {
+        XDocument importer = XDocument.Load(ProjectFile("Daggerfall.Import"));
+        Assert.Empty(importer.Descendants("PackageReference"));
+
+        foreach (string project in ActiveRuntimeProjects())
+            Assert.DoesNotContain("Daggerfall.Import", File.ReadAllText(ProjectFile(project)), StringComparison.Ordinal);
     }
 
     [Fact]

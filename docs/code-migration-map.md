@@ -2,9 +2,10 @@
 
 **Status:** living ownership inventory; the #7436 project graph, #7323 normalized Daggerfall content packs, #7324's first accepted Daggerfall melee/consequences slice, #7325's Dagger-owned browser wiring, and #7524's cohesive managed Engine SDK adoption are implemented. Engine #7545/#7546 have landed, #7325 has current packaged-product browser evidence, and campaign #7322 is closed.
 
-**Snapshot:** 2026-08-29, #7322 closed; #7533 is active and #7534 is the
-current donor-ledger slice. This snapshot accounts for the complete tracked
-legacy source graph before implementation slices change or delete it.
+**Snapshot:** 2026-08-29, #7322 closed; #7533 is active, #7534's donor ledger
+is complete, and #7535 has established the safe offline C# Arena2 decoder
+project. This snapshot continues to account for the complete tracked legacy
+source graph before later slices delete it.
 
 ## Authority and reading order
 
@@ -28,9 +29,9 @@ The compact rule is:
 `WorldRpg.Kit`, `WorldRpg.Host`, `WorldRpg.Rulesets.Daggerfall`, and
 `RustyDagger.NativeProduct` are active projects. Loaded bundles, content packs,
 tuning, the boundary canary, and the cohesive managed Engine SDK migration are
-implemented. `Daggerfall.Import` remains
-the owner of source conversion/provenance work; do not imply it landed merely
-because the normalized runtime seam now exists.
+implemented. `Daggerfall.Import` now contains the #7535 checked Arena2 source
+decoder and differential-fixture foundation; normalized asset/spatial output,
+hashing, and provenance publication remain #7536 work.
 
 The current #7441 Daggerfall integration consumes Engine `ProductUpdate.Facts` directly:
 only running realtime batches with a finite positive `FixedDeltaSeconds` advance
@@ -52,7 +53,7 @@ definitions and policy.
 | `WorldRpg.Host` | Product lifecycle, explicit built-in ruleset/default selection, and session construction. Explicit multi-bundle selection and durable save identity are #7542. | Daggerfall formulas, actor meaning, Arena2 files, or Privateer's Hold IDs. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, rules, formulas, policies, current content interpretation, presentation, and mutable session state. | Engine machinery and importer source formats. |
 | Content packs (target) | Authored actors, items, world/location/quest data, assets, placements, and non-encounter scenario state. | Arbitrary executable C# behavior or encounter grouping/activation metadata. |
-| `Daggerfall.Import` (target) | Arena2/DFUnity formats, source paths/records, conversion quirks, provenance, and differential validation. | Runtime session or Host composition. |
+| `Daggerfall.Import` | Offline Arena2/DFUnity formats, source records, conversion quirks, provenance, and differential validation. #7535 supplies checked decoders; #7536 adds normalized output publication. | Runtime session, Engine host composition, or gameplay policy. |
 | `RustyDagger.NativeProduct` | Handwritten product-type selection plus generated NativeAOT ABI/lifecycle/service/export output. | Product logic. |
 | `src/ui` | DOM projection and semantic action presentation. | Gameplay state or world rendering. |
 
@@ -102,6 +103,8 @@ Engine reimplementation, browser authority, a fake proof, or a parallel host.
 | `AssemblyInfo.cs` | Exact friend access for `WorldRpg.Rulesets.Daggerfall.Tests`. |
 | `src/WorldRpg.Host/WorldRpg.Host.csproj`, `WorldRpgProduct.cs` | Safe Host project. It gates lifecycle and one Engine-admitted update, resolves the explicit built-in default ruleset, and delegates through `IGameSession`; it does not construct `DaggerfallSession`. |
 | `src/RustyDagger.NativeProduct/RustyDagger.NativeProduct.csproj`, `NativeProduct.cs` | NativeAOT composition project. Its handwritten file has only the Engine product attribute selecting `WorldRpgProduct`; generated output remains under ignored `obj/`. |
+| `src/Daggerfall.Import/**` | Standalone safe `net10.0` offline library with no Engine/product/package dependencies. #7535 ports bounded BSA, ARCH3D, MAPS, PAK, RDB, TEXTURE, CIF, IMG, FNT, palette, SND, classic conversion RNG/texture tables, source-only mobile metadata, and coordinate/UV/rotation/block/winding transforms. It accepts caller-supplied bytes, returns typed source facts, and owns no filesystem orchestration, runtime entities, renderer, audio playback, encounters, or gameplay randomness. |
+| `tests/Daggerfall.Import.Tests/**` | Focused generated-byte differential and malformed-input fixtures for #7535. Local copyrighted Arena2 files remain optional developer evidence and are never required or committed. |
 | `tests/WorldRpg.Kit.Tests/*`, `tests/WorldRpg.Rulesets.Daggerfall.Tests/*` | Focused Kit mechanism and Daggerfall policy suites, including Host lifecycle/update/disposal coverage. |
 | `src/ui/*`, `src/scripts/*`, `scripts/verify.sh` | DOM UI and build/launch/verification paths updated to the new NativeProduct project; UI renders the Daggerfall semantic projection plus the exact resolved generic composition identity and only claims declared semantic input. `run-product.sh` declares `attack=digital` through the Engine host; no gameplay authority or browser bridge is added. |
 | `src/browser-bundle/**`, `src/**/bin/**`, `src/**/obj/**`, `tests/**/bin/**`, `tests/**/obj/**` | Generated output; never authority or handwritten source. |
@@ -213,7 +216,7 @@ quietly retain a product behavior to keep a legacy test or tool passing.
 | Donor files (coverage) | Useful semantic evidence | Disposition and truthful destination | Dependency / deletion proof |
 | --- | --- | --- | --- |
 | `Cargo.toml`, `Cargo.lock`, `crates/{arena2,dagger-import,dagger-rpg,dagger-runtime,dagger-studio-adapter}/Cargo.toml` (7 Cargo graph files) | Workspace membership, legacy dependency topology, command names, and only the source-family boundaries below. | **Reject** the Rust workspace/package topology. C# projects and the Engine-managed SDK are the active product; no Cargo analogue is created. | #7544 deletes these only after every row below is adopted, adapted, deferred with retained content/provenance, or rejected. `Cargo.lock` has no semantic destination. |
-| `crates/arena2/src/{arch3d,bsa,cif,dfrandom,fnt,img,lib,maps,mobile,pak,palette,rdb,snd,test_fixtures,texture,texture_table}.rs`, `crates/arena2/examples/dump-texture.rs` (17) | Read-only Arena2 container/record decoding; palette, image, font, sound, dungeon/mobile/texture transforms; deterministic random and differential fixtures. `mobile.rs` supplies directional-sprite and classic frame-layout meaning. | **Adapt** selected checked decoders and conversion quirks into offline safe C# **`Daggerfall.Import`**. Keep source-format names, byte checks, and provenance there, never in Kit/Host/runtime. | #7535 first records per-format acceptance and differential fixtures. Delete Rust decoder files only once equivalent importer evidence reads the same fixtures or explicitly rejects an unused format. |
+| `crates/arena2/src/{arch3d,bsa,cif,dfrandom,fnt,img,lib,maps,mobile,pak,palette,rdb,snd,test_fixtures,texture,texture_table}.rs`, `crates/arena2/examples/dump-texture.rs` (17) | Read-only Arena2 container/record decoding; palette, image, font, sound, dungeon/mobile/texture transforms; deterministic random and differential fixtures. `mobile.rs` supplies source archive/frame-layout meaning plus runtime behavior that is deliberately split out. | **Adapted by #7535** into safe offline C# **`Daggerfall.Import`** checked decoders, source transforms, source-only mobile metadata, and 51 focused fixtures. Runtime orientation/playback/attack selection remains rejected here and routes to later ruleset/presentation work. Keep source-format names, byte checks, and provenance in Import, never Kit/Host/runtime. | #7535 replacement proof is the standalone dependency graph plus focused generated-byte/malformed fixtures; no raw Arena2 input is committed. #7536 must consume these decoders for normalized outputs before the Rust decoder files and example CLI are deleted in #7544. |
 | `crates/dagger-import/src/{combat_assets,dungeon,glb,main,meshjson,png,ui_assets}.rs`, `crates/dagger-import/src/bin/dagger-validate-sprites.rs` (8) | Conversion of source geometry, decoded images, sprite/UI/combat manifests, GLB/normalized mesh output, hashes, and sprite validation. | **Adapt** normalized asset/spatial import and provenance to **`Daggerfall.Import`**; retain normalized content packs/assets, not Rust executables or source-shaped runtime readers. | #7536 depends on #7535’s decoders. Its output must identify source/hash/converter and drive current content through Engine Content/Appearance rather than a local renderer. The validation binary becomes importer differential evidence or is deleted. |
 | `crates/dagger-rpg/src/lib.rs`, `crates/dagger-rpg/src/resolution/{compile,composed,eval,loot,mechanics,mod,model,policy,progression}.rs`, `crates/dagger-rpg/tests/resolution.rs` (11) | Daggerfall catalog validation, authored IDs, formulas, action/loot/progression policy, and acceptance vectors. It also embodies a Rust compiler/evaluator/program grammar and named encounter grouping compilation. | **Adapt** individually useful Daggerfall formulas, catalogs, and acceptance examples into loaded content, typed tuning, and compiled **`WorldRpg.Rulesets.Daggerfall`** policy over Engine Mechanics. **Reject** the evaluator, structural-program runtime, generic command shape, and all encounter compilation/grouping. | #7537 owns content/catalog admission; #7538 owns formula/policy translation. Retain only semantic fixture cases that still express a chosen rule; replace C#/Engine integration proof; delete topology tests and encounter cases. |
 | `crates/dagger-runtime/src/{animation,combat_assets,directional,lib,navgrid,patrol,player,project,runtime}.rs`, `crates/dagger-runtime/src/bin/{dagger-derive-route,dagger-gameplay-check,dagger-navgrid,dagger-sprite-frames,dagger-walkthrough}.rs` (14) | Project reading, directional/sprite frame meaning, authored combat asset validation, navigation evidence, player/control semantics, patrol experiments, and command-line diagnostic vectors. Animation is a useful *semantic* frame-layout/timing donor, not a replacement renderer or clock. | **Adapt** reusable controls/actor/spatial coordination only into **WorldRpg.Kit** where ownership is uncertain; put Daggerfall timing/asset meaning in the ruleset/content/tuning. Use Engine Look, Spatial, Appearance, Animation, Audio, Content and admitted update. **Reject** the Rust aggregate runtime, local loop/clock, renderer diffs, patrol/encounter runtime, and command topology. | #7539 establishes Kit/Engine routing; #7540 is future target acquisition only after verified Engine queries; #7541 ports behavior/presentation semantics. Each binary is deleted after its useful vector is a C# importer/ruleset fixture or explicitly obsolete. |
@@ -278,7 +281,7 @@ and removed.
 | Donor family | Planned disposition | Task |
 | --- | --- | --- |
 | Entire Rust/`gameplay/` corpus and coupled metadata | Establish the file/concept ledger, replacement evidence, deliberate deviations, and deletion proof before changing behavior. | #7534 |
-| `crates/arena2` | Port checked source decoders, transforms, quirks, and differential fixtures to safe offline C# `Daggerfall.Import`. | #7535 |
+| `crates/arena2` | Checked source decoders, transforms, quirks, source-only mobile metadata, and differential fixtures are implemented in safe offline C# `Daggerfall.Import`; normalized output consumption follows in #7536. | #7535 |
 | `crates/dagger-import` and source-shaped spatial/resource adapters | Produce normalized assets, spatial artifacts, manifests, hashes, and provenance for runtime packs; retire runtime parsing of legacy project schemas. | #7536 |
 | `gameplay` stats, actors, monsters, items, equipment, loot, and presentation references | Load authored values from versioned content packs, put adjustable policy in typed tuning, and keep Daggerfall identities/interpretation in the ruleset. The separate named encounter catalog is rejected rather than migrated. | #7537 |
 | `gameplay` expressions/programs and `dagger-rpg` formulas/resolution | Adapt useful formulas, actions, progression, and loot to named compiled C# policy over managed Engine services; reject the evaluator, structural-program runtime, and replacement DSL. | #7538 |
@@ -323,12 +326,13 @@ and stops only the affected slice.
   the ordinary packaged product with one Engine canvas, the resolved composition,
   pre-pointer-lock Attack, Engine-arbitrated pointer lock, and visible W movement
   driven by the Dagger-owned C# player pose and Engine camera.
-- **#7533:** active complete-source migration campaign. **#7534 is in progress**
-  and inventories every donor; #7535-#7543 migrate or reject coherent semantic
-  families; #7544 removes the fully dispositioned Rust/`gameplay/` graph and
-  certifies the C#-only product. Named encounter scaffolding is a campaign-wide
-  rejection, while #7543 preserves the sprite viewer/editor over shared Engine
-  mechanisms.
+- **#7533:** active complete-source migration campaign. **#7534 is complete**
+  and inventories every donor. **#7535 has implemented** the standalone safe
+  Arena2 decoder/test foundation; #7536-#7543 migrate or reject the remaining
+  coherent semantic families; #7544 removes the fully dispositioned
+  Rust/`gameplay/` graph and certifies the C#-only product. Named encounter
+  scaffolding is a campaign-wide rejection, while #7543 preserves the sprite
+  viewer/editor over shared Engine mechanisms.
 
 Campaign #7322 is **closed**. Follow-up work is dependency-ordered under #7533
 rather than left as an unowned inventory.
