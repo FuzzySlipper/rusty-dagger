@@ -414,8 +414,8 @@
     },
     {
       "relativePath": "media/dungeon/actors/mobile-0.png",
-      "contentHash": "85598b76838bd24b52c65d5896a8b41c03e6514364a717acec6b07b341a5aa6b",
-      "byteLen": 130724,
+      "contentHash": "35b922ae021e9b6d01202371a8a31bc6195d1a4a5e1ba2cd336acc233fda3cb4",
+      "byteLen": 125760,
       "dependsOnPaths": []
     },
     {
@@ -426,14 +426,14 @@
     },
     {
       "relativePath": "media/dungeon/actors/mobile-138.png",
-      "contentHash": "d8fec08b20c14f899314c400ff4bf6705ccae5513829e55d939efd811962657e",
-      "byteLen": 268631,
+      "contentHash": "d65975ffc94432a60b8486a2590378617f2c627e4c61640244e2fd69517f7dc3",
+      "byteLen": 257814,
       "dependsOnPaths": []
     },
     {
       "relativePath": "media/dungeon/actors/mobile-141.png",
-      "contentHash": "5c173befcedbe3793e53cbed59dfebcbe806110b146cddf612ead2c94eebeee6",
-      "byteLen": 280009,
+      "contentHash": "1702d3a17c5628774817527af44405b90a9aefc56182e4929349079e8be9a978",
+      "byteLen": 266087,
       "dependsOnPaths": []
     },
     {
@@ -444,8 +444,8 @@
     },
     {
       "relativePath": "media/dungeon/actors/mobile-15.png",
-      "contentHash": "be101e1a618b6bbaa1836ede4fe3d9331af7e334d86e1a5a83528097a724ed87",
-      "byteLen": 296932,
+      "contentHash": "0c3694d3adec3245eafe2a1fc7b2f0c3652aa1234cc3bf71b7e045dc96cae1bd",
+      "byteLen": 287963,
       "dependsOnPaths": []
     },
     {
@@ -456,8 +456,8 @@
     },
     {
       "relativePath": "media/dungeon/actors/mobile-7.png",
-      "contentHash": "718f9381cd0b96fe681bf9c864f2aa0b9485c1af68e6e6c059911a2f700c6643",
-      "byteLen": 356158,
+      "contentHash": "6699ffb7d22dd3bc98d31ec44b4fbc0ab6990f00ffffea2b5bc0e35cf18b1fd3",
+      "byteLen": 341741,
       "dependsOnPaths": []
     },
     {
@@ -660,8 +660,8 @@
     },
     {
       "relativePath": "media/dungeon/manifest.json",
-      "contentHash": "28cfa9b5692d296b311af867579d4108a576bfb48a707de64dd91871f160404d",
-      "byteLen": 850770,
+      "contentHash": "9f4cd9b80cdf9ab0dcbaa69aebe84c4f7918008f2228c18e3d137a748a6d7132",
+      "byteLen": 810991,
       "dependsOnPaths": [
         "media/dungeon/actors/mobile-0-corpse.png",
         "media/dungeon/actors/mobile-0.png",
