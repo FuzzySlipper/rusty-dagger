@@ -23,9 +23,10 @@ internal sealed class CombatModule
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
+    private readonly DaggerfallMeleeTargetingModule _targeting;
     private readonly Dictionary<(ulong Generation, long Attacker), ulong> _readyAtStep = [];
 
-    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity)
+    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallMeleeTargetingModule targeting)
     {
         _random = random;
         _actors = actors;
@@ -34,11 +35,33 @@ internal sealed class CombatModule
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
         _actions = definitions.Actions;
         _definitions = definitionsByEntity;
+        _targeting = targeting ?? throw new ArgumentNullException(nameof(targeting));
     }
 
-    internal void TryPlayerMelee(PlayerControlState playerControl, FactBuffer<IProductFact> facts)
+    internal DaggerfallMeleeTargetingEvidence? LastMeleeTargeting => _targeting.LastEvidence;
+
+    internal void TryPlayerMelee(PlayerControlState playerControl, LookReceipt look, ulong generation, ulong simulationStep, double fixedDeltaSeconds, FactBuffer<IProductFact> facts)
     {
-        facts.Append(new AttackRejectedFact(playerControl.Position is null ? AttackRejection.MissingPlayerPosition : AttackRejection.NoTargetInReach));
+        ArgumentNullException.ThrowIfNull(playerControl);
+        ArgumentNullException.ThrowIfNull(facts);
+        if (playerControl.Position is null)
+        {
+            _targeting.ClearEvidence();
+            facts.Append(new AttackRejectedFact(AttackRejection.MissingPlayerPosition));
+            return;
+        }
+        double? actionReach = _definitions.TryGetValue(PlayerId, out DaggerfallActorDefinition? player)
+            && player.ActionId is { } actionId
+            && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? action)
+            ? action.Reach
+            : null;
+        long? target = _targeting.Select(playerControl, look, actionReach);
+        if (target is not long targetId)
+        {
+            facts.Append(new AttackRejectedFact(AttackRejection.NoTargetInReach));
+            return;
+        }
+        ResolveExplicit(new ExplicitMeleeRequest(PlayerId, targetId, generation, simulationStep, fixedDeltaSeconds), facts);
     }
 
     internal void ResolveExplicit(ExplicitMeleeRequest request, FactBuffer<IProductFact> facts)

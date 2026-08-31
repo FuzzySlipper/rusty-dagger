@@ -28,5 +28,9 @@
     "fieldOfViewYDegrees": 65.0,
     "nearPlane": 0.1,
     "farPlane": 100.0
+  },
+  "meleeTargeting": {
+    "maximumDistance": 2.25,
+    "minimumFacingCosine": 0.5
   }
 }

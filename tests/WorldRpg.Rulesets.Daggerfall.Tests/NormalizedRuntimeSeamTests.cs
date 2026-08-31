@@ -2,7 +2,10 @@ using System.Numerics;
 using System.Reflection;
 using System.Text;
 using Rusty.Engine;
+using Rusty.Engine.Entities;
+using Rusty.Engine.Mechanics;
 using WorldRpg.Host;
+using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -166,6 +169,8 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(.25f, controller.Radius);
         Assert.Equal(1f, controller.RecoveryMaximumDistance);
         Assert.Equal(.75f, controller.MaximumStepHeight);
+        Assert.Equal(2.25d, tuning.MeleeTargeting.MaximumDistance);
+        Assert.Equal(.5d, tuning.MeleeTargeting.MinimumFacingCosine);
     }
 
     [Fact]
@@ -394,6 +399,127 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.True(session.State.Actors.All[2000].Mechanics.ReadTrack(Rusty.Engine.Mechanics.TrackId.Parse("health")).Current.Raw < healthBefore);
     }
 
+    [Fact]
+    public void Ordinary_attack_uses_the_engine_visibility_receipt_then_the_shared_explicit_melee_policy()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        long healthBefore = session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        session.Update(AttackUpdate());
+
+        DaggerfallMeleeTargetingEvidence evidence = Assert.IsType<DaggerfallMeleeTargetingEvidence>(session.LastMeleeTargeting);
+        Assert.Equal(2000, evidence.SelectedTargetId);
+        Assert.Equal(perception.Requests.Single(), evidence.Request);
+        Assert.Equal((ulong)1, evidence.Request.Observers.Span[0].Entity);
+        Assert.Equal(2.25d, evidence.Request.Observers.Span[0].MaximumDistance);
+        Assert.Equal(.5d, evidence.Request.Observers.Span[0].MinimumFacingCosine);
+        Assert.Equal(1, evidence.Receipt.Pairs.Length);
+        Assert.True(session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw < healthBefore);
+    }
+
+    [Fact]
+    public void Daggerfall_target_selection_accepts_engine_inclusive_boundaries_and_rejects_other_engine_classifications()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        session.Update(AttackUpdate());
+        Assert.Equal(2000, session.LastMeleeTargeting?.SelectedTargetId);
+
+        foreach (PerceptionPairKind rejected in new[] { PerceptionPairKind.FacingRejected, PerceptionPairKind.Occluded })
+        {
+            perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, rejected, 1d));
+            session.Update(AttackUpdate());
+            Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
+        }
+
+        perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 1, 1, 1, 1, 0, 0, 0);
+        session.Update(AttackUpdate());
+        Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
+        Assert.Equal(1U, session.LastMeleeTargeting?.Receipt.DistanceRejects);
+    }
+
+    [Fact]
+    public void Daggerfall_target_selection_excludes_defeated_and_stale_product_actors_and_uses_a_stable_tie_break()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            perception.Receipt = Receipt(
+                new PerceptionPair(1, 2007, 1d, .8d, PerceptionPairKind.Visible, 1d),
+                new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d),
+                new PerceptionPair(1, 2008, .5d, .8d, PerceptionPairKind.Visible, 1d));
+            session.Update(AttackUpdate());
+            Assert.Equal(2008, session.LastMeleeTargeting?.SelectedTargetId);
+
+            perception.Receipt = Receipt(
+                new PerceptionPair(1, 2007, 1d, .8d, PerceptionPairKind.Visible, 1d),
+                new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
+            session.Update(AttackUpdate());
+            Assert.Equal(2000, session.LastMeleeTargeting?.SelectedTargetId);
+
+            session.State.Actors.All[2008].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
+            perception.Receipt = Receipt(new PerceptionPair(1, 2008, .5d, .8d, PerceptionPairKind.Visible, 1d));
+            session.Update(AttackUpdate());
+            Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
+        }
+
+        using SpatialMovementSystem movement = new(spatial.Service, content, new SpatialContentArtifact(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256, inputs.SpatialArtifact.NavigationGridId), DaggerfallTuning.Defaults.Spatial);
+        ActorMechanicsState playerMechanics = new(new EntityId(1), [], []);
+        ActorMechanicsState staleMechanics = new(new EntityId(2001), [], []);
+        using ActorsState actors = new(new PlayerActorState(playerMechanics, "health"), [new ActorState(2000, staleMechanics, new WorldPoint(0f, 0f, 1f), "health")]);
+        DaggerfallMeleeTargetingModule targeting = new(
+            perception.Service,
+            movement,
+            actors,
+            new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("skeletal-warrior")) },
+            DaggerfallTuning.Defaults.MeleeTargeting);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
+        long? stale = targeting.Select(
+            new PlayerControlState(new WorldPoint(0f, 0f, 0f), 0f, 0f),
+            new LookReceipt(default, default, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY),
+            2.25d);
+        Assert.Null(stale);
+        Assert.Empty(perception.Requests.Last().Targets.Span.ToArray());
+    }
+
+    private static ProductUpdateState AttackUpdate()
+    {
+        ProductUpdateState update = new(.125f);
+        update.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"));
+        return update;
+    }
+
+    private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
+
     private static PrivateersHoldInputs ReadInputs(string root)
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
@@ -587,6 +713,29 @@ public sealed class NormalizedRuntimeSeamTests
         }
     }
 
+    private class PerceptionFake : DispatchProxy
+    {
+        internal IPerceptionService Service { get; private set; } = null!;
+        internal List<PerceptionQueryRequest> Requests { get; } = [];
+        internal PerceptionReadoutLeaseReceipt Receipt { get; set; }
+
+        internal static PerceptionFake Create()
+        {
+            IPerceptionService service = DispatchProxy.Create<IPerceptionService, PerceptionFake>();
+            PerceptionFake proxy = (PerceptionFake)(object)service;
+            proxy.Service = service;
+            return proxy;
+        }
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            if (method?.Name != nameof(IPerceptionService.QueryVisibility)) throw new NotSupportedException(method?.Name);
+            PerceptionQueryRequest request = (PerceptionQueryRequest)arguments![0]!;
+            Requests.Add(request);
+            return Receipt;
+        }
+    }
+
     private class EngineContextFake : DispatchProxy
     {
         internal IEngineContext Context { get; private set; } = null!;
@@ -595,11 +744,12 @@ public sealed class NormalizedRuntimeSeamTests
         private ISpatialService spatial = null!;
         private IAppearanceService appearance = null!;
         private ILookService look = null!;
+        private IPerceptionService perception = null!;
         private ICameraViewService camera = null!;
         private IRandomService random = null!;
         private IUiService ui = null!;
 
-        internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IAppearanceService appearance)
+        internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IAppearanceService appearance, IPerceptionService? perception = null)
         {
             IEngineContext context = DispatchProxy.Create<IEngineContext, EngineContextFake>();
             EngineContextFake fake = (EngineContextFake)(object)context;
@@ -608,6 +758,7 @@ public sealed class NormalizedRuntimeSeamTests
             fake.spatial = spatial;
             fake.appearance = appearance;
             fake.look = ServiceProxy<ILookService, LookServiceFake>.Create();
+            fake.perception = perception ?? PerceptionFake.Create().Service;
             fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
             fake.random = ServiceProxy<IRandomService, RandomServiceFake>.Create();
             fake.ui = UiServiceFake.Create(fake);
@@ -620,6 +771,7 @@ public sealed class NormalizedRuntimeSeamTests
             "get_Spatial" => spatial,
             "get_Appearance" => appearance,
             "get_Look" => look,
+            "get_Perception" => perception,
             "get_CameraView" => camera,
             "get_Random" => random,
             "get_Ui" => ui,

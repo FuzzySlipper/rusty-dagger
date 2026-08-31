@@ -114,7 +114,8 @@ internal sealed class DaggerfallSession : IGameSession
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
-            _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored);
+            DaggerfallMeleeTargetingModule targeting = new(engine.Perception, _spatial, State.Actors, authored, tuning.MeleeTargeting);
+            _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored, targeting);
             _rewards = new DaggerfallRewardReactions(
                 State.Inventory,
                 State.Progression,
@@ -171,12 +172,14 @@ internal sealed class DaggerfallSession : IGameSession
         // One admitted update owns one input slice. Later catch-up steps derive
         // only committed held keyboard/mapped-direction intent; direct axes,
         // direct digital movement, pointer deltas, and semantic actions do not replay.
-        Update(firstStep);
+        Update(firstStep, facts.Generation, facts.SimulationStep);
         for (uint step = 1; step < facts.AdmittedStepCount; step++)
-            Update(new ProductUpdateState(deltaSeconds));
+            Update(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
     }
 
-    internal void Update(ProductUpdateState update)
+    internal void Update(ProductUpdateState update) => Update(update, 0, 0);
+
+    private void Update(ProductUpdateState update, ulong generation, ulong simulationStep)
     {
         PreparedPlayerInput input = _input.Prepare(State.PlayerControl, update);
         _input.EnsureCommittable(input, State.PlayerControl);
@@ -191,7 +194,7 @@ internal sealed class DaggerfallSession : IGameSession
         }
         else _input.Commit(input, State.PlayerControl, update);
         _camera.Update(State.PlayerControl);
-        if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, _facts);
+        if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl), generation, simulationStep, update.DeltaSeconds, _facts);
         _facts.Deliver(React);
         PublishPresentation();
     }
@@ -257,6 +260,8 @@ internal sealed class DaggerfallSession : IGameSession
         _facts.Deliver(React);
         PublishPresentation();
     }
+
+    internal DaggerfallMeleeTargetingEvidence? LastMeleeTargeting => _combat.LastMeleeTargeting;
 
     private DaggerfallVitalValues InitialVitals(DaggerfallActorDefinition definition, long entityId)
     {

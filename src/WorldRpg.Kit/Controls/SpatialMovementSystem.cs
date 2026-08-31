@@ -48,6 +48,16 @@ public sealed class SpatialMovementSystem : IDisposable
     private readonly SpatialSession _session;
     private bool _disposed;
 
+    /// <summary>The Engine-owned scene session that other named Engine services may query during this system's lifetime.</summary>
+    public SpatialSession Session
+    {
+        get
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+            return _session;
+        }
+    }
+
     public SpatialMovementSystem(ISpatialService spatial, IContentService content, SpatialContentArtifact inputs, SpatialTuning tuning)
     {
         ArgumentNullException.ThrowIfNull(spatial);
