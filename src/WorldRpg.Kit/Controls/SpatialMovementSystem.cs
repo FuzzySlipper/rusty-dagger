@@ -44,8 +44,10 @@ public sealed class SpatialMovementSystem : IDisposable
     private readonly ISpatialService _spatial;
     private readonly ContentReference _content;
     private readonly SpatialTuning _tuning;
-    private readonly CharacterControllerConfig _controller;
+    private CharacterControllerConfig _controller;
     private readonly SpatialSession _session;
+    private ulong? _latestGeneration;
+    private CharacterContinuationCheckpoint? _restoredCheckpoint;
     private bool _disposed;
 
     /// <summary>The Engine-owned scene session that other named Engine services may query during this system's lifetime.</summary>
@@ -156,7 +158,10 @@ public sealed class SpatialMovementSystem : IDisposable
     {
         if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
         ArgumentNullException.ThrowIfNull(step);
-        return _spatial.ProposeCharacterStep(step.ConsumeBy(this));
+        CharacterStepReceipt receipt = _spatial.ProposeCharacterStep(step.ConsumeBy(this));
+        _latestGeneration = receipt.Generation;
+        _restoredCheckpoint = null;
+        return receipt;
     }
 
     /// <summary>Convenience path for callers that have no separate staged input interpreter.</summary>
@@ -167,6 +172,36 @@ public sealed class SpatialMovementSystem : IDisposable
         PreparedSpatialStep? prepared = PrepareCore(player, update, update.PlanarIntent, player.YawRadians, environment ?? CharacterStepEnvironment.Empty);
         if (prepared is { } step) player.Apply(Propose(step));
     }
+
+    /// <summary>Captures the Engine-owned continuation only at a completed proposal boundary.</summary>
+    public CharacterContinuationCheckpoint CaptureContinuation()
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        if (_restoredCheckpoint is { } restored) return restored;
+        if (_latestGeneration is not ulong generation)
+            throw new InvalidOperationException("The spatial character has no completed proposal checkpoint.");
+        return _spatial.CaptureCharacterContinuation(new CharacterContinuationCaptureRequest(_session, generation));
+    }
+
+    /// <summary>Restores an Engine-validated continuation into this otherwise fresh canonical session.</summary>
+    public CharacterContinuationRestoreReceipt RestoreContinuation(CharacterContinuationCheckpoint checkpoint)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        if (_latestGeneration is not null)
+            throw new InvalidOperationException("Spatial continuation can only be restored before the first proposal.");
+        CharacterContinuationRestoreReceipt receipt = _spatial.RestoreCharacterContinuation(
+            new CharacterContinuationRestoreRequest(_session, checkpoint));
+        // Restore admission validates the full checkpoint but does not create
+        // an Engine receipt in the fresh target session.  Keep the detached
+        // checkpoint for an immediate re-save; use its config for the next
+        // proposal so continuation compatibility remains explicit.
+        _controller = checkpoint.Config;
+        _restoredCheckpoint = checkpoint;
+        return receipt;
+    }
+
+    /// <summary>True when either an admitted receipt or a restored detached checkpoint can be saved.</summary>
+    public bool HasContinuation => !_disposed && (_latestGeneration is not null || _restoredCheckpoint is not null);
 
     public void Dispose()
     {

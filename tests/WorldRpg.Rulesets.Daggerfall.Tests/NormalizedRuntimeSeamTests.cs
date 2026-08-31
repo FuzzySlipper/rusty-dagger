@@ -7,6 +7,7 @@ using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Host;
+using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
@@ -104,6 +105,27 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(new WorldPoint(3f, 2f, 3f), player.Position);
         Assert.True(player.Motion.Grounded);
         Assert.True(player.Ground.Present);
+    }
+
+    [Fact]
+    public void Restored_spatial_continuation_can_be_captured_again_before_its_next_step()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake source = SpatialFake.Create(Hash, releases);
+        SpatialFake resumed = SpatialFake.Create(Hash, releases);
+        SpatialTuning tuning = new(.5, 32, 32, 2);
+        PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);
+        using SpatialMovementSystem first = new(source.Service, content, new SpatialContentArtifact("spatial/hold.json", Hash, 7), tuning);
+        first.Step(player, new ProductUpdateState(.125f));
+        CharacterContinuationCheckpoint checkpoint = first.CaptureContinuation();
+
+        using SpatialMovementSystem second = new(resumed.Service, content, new SpatialContentArtifact("spatial/hold.json", Hash, 7), tuning);
+        CharacterContinuationRestoreReceipt receipt = second.RestoreContinuation(checkpoint);
+
+        Assert.Equal(checkpoint.SourceGeneration, receipt.SourceGeneration);
+        Assert.True(second.HasContinuation);
+        Assert.Equal(checkpoint, second.CaptureContinuation());
     }
 
     [Fact]
@@ -1085,6 +1107,158 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Daggerfall_save_before_first_step_uses_an_explicit_no_checkpoint_branch()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Decode(session.CaptureSave());
+
+        Assert.Null(saved.Continuation);
+        Assert.NotEmpty(saved.Inventory.UniqueItems);
+        Assert.NotEmpty(saved.Inventory.Stacks);
+        Assert.Equal(session.State.Actors.All.Count, saved.Actors.Length);
+    }
+
+    [Fact]
+    public void Daggerfall_save_after_a_step_serializes_the_engine_continuation_checkpoint()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.Update(new ProductUpdateState(.125f));
+
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Decode(session.CaptureSave());
+
+        Assert.NotNull(saved.Continuation);
+        Assert.Equal(1UL, saved.Continuation!.Checkpoint.SourceGeneration);
+    }
+
+    [Fact]
+    public void Restored_daggerfall_session_reuses_the_checkpoint_for_an_immediate_resave_without_initial_loadout_duplication()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload payload;
+        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            original.Update(new ProductUpdateState(.125f));
+            payload = original.CaptureSave();
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Decode(payload));
+
+        DaggerfallSavePayload immediate = DaggerfallSavePayload.Decode(resumed.CaptureSave());
+
+        Assert.Equal(DaggerfallSavePayload.Decode(payload).Continuation, immediate.Continuation);
+        DaggerfallInventorySave originalInventory = DaggerfallSavePayload.Decode(payload).Inventory;
+        Assert.Equal(originalInventory.Stacks, immediate.Inventory.Stacks);
+        Assert.Equal(originalInventory.UniqueItems, immediate.Inventory.UniqueItems);
+        Assert.Equal(originalInventory.Equipment, immediate.Inventory.Equipment);
+        Assert.Equal(0, resumedSpatial.StepCalls);
+    }
+
+    [Fact]
+    public void Restored_combat_cooldown_is_relative_to_the_resumed_host_timeline_not_the_saved_generation()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload payload;
+        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            original.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 77, 400, .125));
+            payload = original.CaptureSave();
+        }
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Decode(payload));
+        long before = resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+
+        resumed.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 2, 1, .125));
+
+        Assert.Equal(before, resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+    }
+
+    [Fact]
+    public void Restore_payload_rejects_unknown_inventory_and_non_defeated_corpse_before_session_construction()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallSavePayload saved;
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+            saved = DaggerfallSavePayload.Decode(session.CaptureSave());
+
+        DaggerfallSavePayload badInventory = saved with
+        {
+            Inventory = saved.Inventory with { Stacks = [new DaggerfallStackSave("not-an-item", 1)] },
+        };
+        DaggerfallSavePayload badCorpse = saved with
+        {
+            Corpses = [new DaggerfallCorpseSave(2000, 1, false, true, [], [])],
+        };
+        DaggerfallSavePayload badPitch = saved with { Player = saved.Player with { PitchRadians = 2f } };
+        DaggerfallSavePayload badHealth = saved with { Player = saved.Player with { Health = long.MaxValue } };
+        DaggerfallSavePayload badProgression = saved with { Level = 2 };
+        DaggerfallSavePayload collidingUnique = saved with
+        {
+            Inventory = saved.Inventory with
+            {
+                UniqueItems = [new DaggerfallUniqueSave(saved.Inventory.UniqueItems[0].ItemId, 1)],
+                Equipment = saved.Inventory.Equipment.Select(value => value with { ItemEntityId = 1 }).ToArray(),
+            },
+        };
+        DaggerfallSavePayload missingStableReservation = saved with { ReservedUniqueItemEntityIds = saved.ReservedUniqueItemEntityIds.Where(value => value != 1).ToArray() };
+
+        Assert.Throws<ArgumentException>(() => badInventory.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badCorpse.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badPitch.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badHealth.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badProgression.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => collidingUnique.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => missingStableReservation.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+    }
+
+    [Fact]
     public void Ordinary_attack_uses_the_engine_visibility_receipt_then_the_shared_explicit_melee_policy()
     {
         string root = RepositoryRoot();
@@ -1641,6 +1815,8 @@ public sealed class NormalizedRuntimeSeamTests
             nameof(ISpatialService.ReplaceContentArtifact) => Replace((SpatialContentArtifactReplaceRequest)arguments![0]!),
             nameof(ISpatialService.ReadContentArtifact) => Read(),
             nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
+            nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
+            nameof(ISpatialService.RestoreCharacterContinuation) => Restore((CharacterContinuationRestoreRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
 
@@ -1684,11 +1860,22 @@ public sealed class NormalizedRuntimeSeamTests
             StepRequests.Add(request);
             return default(CharacterStepReceipt) with
             {
+                Generation = checked((ulong)StepCalls),
                 Transform = new Transform(request.Position + new Vector3(1f, 0f, 0f), Quaternion.Identity, Vector3.One),
                 Motion = request.Motion with { Grounded = true, LastCommandSequence = request.Command.Sequence },
                 Ground = default(CharacterGround) with { Present = true },
             };
         }
+
+        private CharacterContinuationCheckpoint Capture(CharacterContinuationCaptureRequest request)
+        {
+            if (request.ExpectedGeneration != checked((ulong)StepCalls)) throw new InvalidOperationException("Stale checkpoint generation.");
+            CharacterMotion motion = StepRequests.Last().Motion with { LastCommandSequence = StepRequests.Last().Command.Sequence };
+            return new CharacterContinuationCheckpoint(1, request.ExpectedGeneration, 1, 1, 1, RepresentativeValidConfig, motion);
+        }
+
+        private static CharacterContinuationRestoreReceipt Restore(CharacterContinuationRestoreRequest request) =>
+            new(request.Checkpoint.SourceGeneration, request.Checkpoint.Motion);
     }
 
     private class LookRecorder : DispatchProxy

@@ -65,6 +65,34 @@ internal sealed class DaggerfallCorpseLootModule
     internal CorpseLootEvidence? LastEvidence { get; private set; }
     internal CorpseLootCommitEvidence? LastCommit { get; private set; }
 
+    /// <summary>Recreates durable corpse ownership and current Engine contents without re-running loot policy.</summary>
+    internal void Restore(IReadOnlyList<DaggerfallCorpseSave> saved)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        if (_corpses.Count != 0) throw new InvalidOperationException("Corpse state can only be restored into a fresh session.");
+        foreach (DaggerfallCorpseSave value in saved.OrderBy(corpse => corpse.ActorId))
+        {
+            value.Validate();
+            if (!_actors.TryGet(value.ActorId, out ActorState? actor) || !actor.IsDefeated)
+                throw new ArgumentException($"Saved corpse '{value.ActorId}' does not correspond to a defeated authored actor.", nameof(saved));
+            EntityId owner = new(checked((ulong)value.ActorId));
+            CorpseContainer corpse = new(value.ActorId, owner, value.OriginatingSequence, [], value.IsRegistered, value.IsRegistered, value.IsInteractable);
+            if (value.IsRegistered)
+            {
+                _containers.RegisterOwner(owner);
+                List<InventoryContainerSeed> seeds = value.Stacks
+                    .Select(stack => new InventoryContainerSeed(new InventoryItemId(stack.ItemId), stack.Quantity))
+                    .Concat(value.UniqueItems.Select(unique => new InventoryContainerSeed(
+                        new InventoryItemId(unique.ItemId),
+                        UniqueIdentity: $"daggerfall.restore.corpse.{value.ActorId}.{unique.EntityId}",
+                        UniqueEntityId: unique.EntityId)))
+                    .ToList();
+                if (seeds.Count > 0) _containers.Seed(owner, seeds);
+            }
+            _corpses.Add(value.ActorId, corpse);
+        }
+    }
+
     /// <summary>
     /// Creates and seeds a corpse-owned Engine inventory exactly once. This is
     /// idempotent reconciliation, not FactBuffer rollback: actor Mechanics has
