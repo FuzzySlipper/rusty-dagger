@@ -9,6 +9,7 @@ internal sealed record DaggerfallTuning(
     FirstPersonCameraTuning Camera,
     DaggerfallMeleeTargetingTuning MeleeTargeting,
     DaggerfallEnemyBehaviorTuning EnemyBehavior,
+    DaggerfallLootInteractionTuning LootInteraction,
     DaggerfallPresentationAudioTuning PresentationAudio)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
@@ -24,6 +25,7 @@ internal sealed record DaggerfallTuning(
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
         new DaggerfallMeleeTargetingTuning(2.25d, .5d),
         new DaggerfallEnemyBehaviorTuning(12d, .5d, 1.25d, 3f, 32),
+        new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F));
 
     internal DaggerfallTuning Validate() => this with
@@ -33,6 +35,7 @@ internal sealed record DaggerfallTuning(
         Camera = Camera.Validate(),
         MeleeTargeting = MeleeTargeting.Validate(),
         EnemyBehavior = EnemyBehavior.Validate(),
+        LootInteraction = LootInteraction.Validate(),
         PresentationAudio = PresentationAudio.Validate(),
     };
 
@@ -45,6 +48,7 @@ internal sealed record DaggerfallTuning(
         JsonElement camera = root.GetProperty("camera");
         JsonElement meleeTargeting = root.GetProperty("meleeTargeting");
         JsonElement enemyBehavior = root.GetProperty("enemyBehavior");
+        JsonElement lootInteraction = root.GetProperty("lootInteraction");
         JsonElement presentationAudio = root.GetProperty("presentationAudio");
         return new DaggerfallTuning(
             new PlayerControlTuning(
@@ -75,6 +79,9 @@ internal sealed record DaggerfallTuning(
                 enemyBehavior.GetProperty("attackReach").GetDouble(),
                 enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
                 checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32())),
+            new DaggerfallLootInteractionTuning(
+                lootInteraction.GetProperty("maximumDistance").GetDouble(),
+                lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),
             new DaggerfallPresentationAudioTuning(
                 presentationAudio.GetProperty("volume").GetSingle(),
                 presentationAudio.GetProperty("pitch").GetSingle(),
@@ -91,6 +98,17 @@ internal sealed record DaggerfallTuning(
         StrafeSpeed: controller.GetProperty("strafeSpeed").GetSingle(),
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
+}
+
+/// <summary>Ruleset-tunable Engine visibility query bounds for explicit corpse looting.</summary>
+internal sealed record DaggerfallLootInteractionTuning(double MaximumDistance, double MinimumFacingCosine)
+{
+    internal DaggerfallLootInteractionTuning Validate()
+    {
+        if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
+        if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
+        return this;
+    }
 }
 
 /// <summary>Ruleset policy for visibility-led enemy chase and attack decisions.</summary>

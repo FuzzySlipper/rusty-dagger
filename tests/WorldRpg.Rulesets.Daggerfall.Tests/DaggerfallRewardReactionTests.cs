@@ -19,6 +19,15 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 public sealed class DaggerfallRewardReactionTests
 {
     [Fact]
+    public void Generated_unique_loot_allocator_skips_composed_entity_reservations()
+    {
+        DaggerfallUniqueItemAllocator allocator = new(1_000, [1_000, 1_001]);
+
+        Assert.Equal(1_002UL, allocator.Allocate());
+        Assert.Equal(1_003UL, allocator.Allocate());
+    }
+
+    [Fact]
     public void Daggerfall_actor_construction_uses_one_engine_pair_for_health_only()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
@@ -53,26 +62,13 @@ public sealed class DaggerfallRewardReactionTests
         MechanicsInventoryCoordinator inventory = new(world, owner, managed);
         ProgressionState progression = new();
         DaggerfallRewardReactions reactions = new(
-            inventory,
             progression,
             CreatePlayerMechanics(player),
             player,
             RandomMinimums(),
-            actors,
-            definitions,
-            new DaggerfallUniqueItemAllocator(1000));
+            actors);
         ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3);
         FactBuffer<IProductFact> facts = new();
-
-        // Table T's first supported weapon is intentionally absent. The
-        // candidate fails before publication, so progression remains untouched.
-        Assert.Throws<InvalidOperationException>(() => reactions.React(death, facts));
-        Assert.Equal(0, progression.Experience);
-        Assert.Empty(inventory.Read().Stacks);
-        Assert.Empty(inventory.Read().UniqueItems);
-
-        foreach (DaggerfallItemDefinition item in definitions.Items.Values.Where(item => item.Weapon is not null || item.Armor is not null || item.Shield is not null))
-            managed.TryAdd(new KitInventoryItemId(item.Id.Value), ToManaged(item));
 
         reactions.React(death, facts);
         reactions.React(death, facts);
@@ -81,7 +77,7 @@ public sealed class DaggerfallRewardReactionTests
         List<IProductFact> delivered = [];
         facts.Deliver(delivered.Add);
         Assert.Single(delivered.OfType<ExperienceAwardedFact>());
-        Assert.NotEmpty(delivered.OfType<LootAwardedFact>());
+        Assert.Empty(delivered.OfType<LootAwardedFact>());
     }
 
     [Fact]
@@ -97,14 +93,11 @@ public sealed class DaggerfallRewardReactionTests
         MechanicsInventoryCoordinator inventory = new(world, owner, new Dictionary<KitInventoryItemId, EngineItemDefinition>());
         ProgressionState progression = new();
         DaggerfallRewardReactions reactions = new(
-            inventory,
             progression,
             CreatePlayerMechanics(player),
             player,
             RandomMinimums(),
-            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
-            definitions,
-            new DaggerfallUniqueItemAllocator(1000));
+            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief });
 
         reactions.React(new ActorDiedFact(9000, 777, 5, 2, 3), new FactBuffer<IProductFact>());
 
@@ -173,7 +166,7 @@ public sealed class DaggerfallRewardReactionTests
     }
 
     [Fact]
-    public void Stale_health_candidate_after_loot_publication_retries_without_duplicate_loot_or_facts()
+    public void Reward_progression_remains_exactly_once_when_loot_is_deferred_to_the_corpse_container()
     {
         DaggerfallDefinitions definitions = LoadDefinitions();
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
@@ -181,54 +174,28 @@ public sealed class DaggerfallRewardReactionTests
         {
             Rewards = new DaggerfallRewardPolicy(500),
         };
-        EntityId owner = new(DaggerfallActorIdentity.PlayerEntityId);
-        InventoryWorld world = new();
-        world.RegisterInventory(new InventoryState(owner));
-        world.RegisterEquipment(new EquipmentState(owner));
-        Dictionary<KitInventoryItemId, EngineItemDefinition> managed = definitions.Items.Values.ToDictionary(
-            item => new KitInventoryItemId(item.Id.Value),
-            ToManaged);
-        MechanicsInventoryCoordinator inventory = new(world, owner, managed);
         ActorMechanicsState mechanics = CreatePlayerMechanics(player);
         ProgressionState progression = new();
-        (IRandomService random, StaleAfterLootRandomProxy recorder) = StaleAfterLootRandom(mechanics);
+        (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom(4);
         DaggerfallRewardReactions reactions = new(
-            inventory,
             progression,
             mechanics,
             player,
             random,
-            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
-            definitions,
-            new DaggerfallUniqueItemAllocator(1000));
+            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief });
         ActorDiedFact death = new(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3);
         FactBuffer<IProductFact> facts = new();
 
-        Assert.Throws<MechanicsException>(() => reactions.React(death, facts));
-        InventoryView afterLoot = inventory.Read();
-        Assert.True(afterLoot.Stacks.Count + afterLoot.UniqueItems.Count > 0);
-        Assert.Equal(0, progression.Experience);
-        Assert.Equal(1, progression.Level);
-        Assert.Empty(mechanics.ReadStatTrack(TrackId.Parse("health")).Sources);
-        Assert.Equal(80, mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
-        int lootCallsAfterFailure = recorder.LootCalls;
-        Assert.True(lootCallsAfterFailure > 0);
-        List<IProductFact> afterFailureFacts = [];
-        facts.Deliver(afterFailureFacts.Add);
-        Assert.Empty(afterFailureFacts);
-
         reactions.React(death, facts);
-        InventoryView afterRetry = inventory.Read();
-        Assert.Equal(afterLoot.Stacks, afterRetry.Stacks);
-        Assert.Equal(afterLoot.UniqueItems, afterRetry.UniqueItems);
-        Assert.Equal(lootCallsAfterFailure, recorder.LootCalls);
+        reactions.React(death, facts);
         Assert.Equal(500, progression.Experience);
         Assert.Equal(2, progression.Level);
         Assert.Single(mechanics.ReadStatTrack(TrackId.Parse("health")).Sources);
         List<IProductFact> delivered = [];
         facts.Deliver(delivered.Add);
         Assert.Single(delivered.OfType<ExperienceAwardedFact>());
-        Assert.NotEmpty(delivered.OfType<LootAwardedFact>());
+        Assert.Empty(delivered.OfType<LootAwardedFact>());
+        Assert.Equal(["player.level-up.2.hp-roll"], recorder.Requests.Select(request => request.Key));
 
         reactions.React(death, facts);
         List<IProductFact> duplicateDelivery = [];
@@ -252,14 +219,11 @@ public sealed class DaggerfallRewardReactionTests
         progression.AdvanceTo(int.MaxValue, 1);
         (IRandomService random, RecordingRandomProxy recorder) = RecordingRandom();
         DaggerfallRewardReactions reactions = new(
-            inventory,
             progression,
             mechanics,
             player,
             random,
-            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief },
-            definitions,
-            new DaggerfallUniqueItemAllocator(1000));
+            new Dictionary<long, DaggerfallActorDefinition> { [9000] = thief });
         FactBuffer<IProductFact> facts = new();
 
         Assert.Throws<OverflowException>(() => reactions.React(new ActorDiedFact(9000, DaggerfallActorIdentity.PlayerEntityId, 5, 2, 3), facts));
@@ -310,14 +274,11 @@ public sealed class DaggerfallRewardReactionTests
         world.RegisterInventory(new InventoryState(owner));
         world.RegisterEquipment(new EquipmentState(owner));
         return new DaggerfallRewardReactions(
-            new MechanicsInventoryCoordinator(world, owner, new Dictionary<KitInventoryItemId, EngineItemDefinition>()),
             progression,
             mechanics,
             player,
             random,
-            actors,
-            definitions,
-            new DaggerfallUniqueItemAllocator(1000));
+            actors);
     }
 
     private static ActorMechanicsState CreatePlayerMechanics(DaggerfallActorDefinition player, int healthCurrent = 100)
