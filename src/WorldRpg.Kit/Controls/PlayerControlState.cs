@@ -46,6 +46,15 @@ public sealed class PlayerControlState(WorldPoint? position, float yawRadians, f
         Motion = receipt.Motion;
         Ground = receipt.Ground;
     }
+
+    /// <summary>Installs a restored Engine continuation before any new proposal. Ground is deliberately rebuilt by the next Engine receipt.</summary>
+    public void Restore(WorldPoint position, CharacterMotion motion)
+    {
+        position.Validate();
+        Position = position;
+        Motion = motion;
+        Ground = default;
+    }
 }
 
 public sealed record PlayerControlTuning(

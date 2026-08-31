@@ -25,6 +25,7 @@ internal sealed class CombatModule
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
     private readonly DaggerfallMeleeTargetingModule _targeting;
     private readonly Dictionary<(ulong Generation, long Attacker), ulong> _readyAtStep = [];
+    private readonly Dictionary<long, ulong> _restoredRemainingCooldowns = [];
 
     internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallMeleeTargetingModule targeting)
     {
@@ -39,6 +40,44 @@ internal sealed class CombatModule
     }
 
     internal DaggerfallMeleeTargetingEvidence? LastMeleeTargeting => _targeting.LastEvidence;
+    /// <summary>Converts active generation-bound cooldowns to remaining admitted steps for durable save data.</summary>
+    internal IReadOnlyList<CombatCooldown> CaptureCooldowns(ulong? generation, ulong? simulationStep)
+    {
+        Dictionary<long, ulong> values = new(_restoredRemainingCooldowns);
+        if (generation is ulong currentGeneration && simulationStep is ulong currentStep)
+        {
+            foreach ((ulong readyGeneration, long attacker) in _readyAtStep.Keys)
+            {
+                if (readyGeneration != currentGeneration) continue;
+                ulong readyAt = _readyAtStep[(readyGeneration, attacker)];
+                if (readyAt > currentStep) values[attacker] = readyAt - currentStep;
+            }
+        }
+        return values.OrderBy(value => value.Key).Select(value => new CombatCooldown(value.Key, value.Value)).ToArray();
+    }
+
+    /// <summary>Installs durable cooldown policy state into a freshly composed combat module.</summary>
+    internal void RestoreCooldowns(IEnumerable<CombatCooldown> cooldowns)
+    {
+        ArgumentNullException.ThrowIfNull(cooldowns);
+        if (_readyAtStep.Count != 0 || _restoredRemainingCooldowns.Count != 0) throw new InvalidOperationException("Combat readiness can only be restored into a fresh session.");
+        foreach (CombatCooldown value in cooldowns)
+        {
+            if (value.AttackerId <= 0 || value.RemainingSteps == 0)
+                throw new ArgumentException("Saved combat readiness is invalid.", nameof(cooldowns));
+            if (!_definitions.ContainsKey(value.AttackerId) || !_restoredRemainingCooldowns.TryAdd(value.AttackerId, value.RemainingSteps))
+                throw new ArgumentException("Saved combat readiness is duplicated or refers to an unknown attacker.", nameof(cooldowns));
+        }
+    }
+
+    /// <summary>Anchors restored relative cooldowns to the first resumed Engine-admitted simulation step.</summary>
+    internal void ObserveTimeline(ulong generation, ulong simulationStep)
+    {
+        if (_restoredRemainingCooldowns.Count == 0) return;
+        foreach ((long attacker, ulong remaining) in _restoredRemainingCooldowns)
+            _readyAtStep[(generation, attacker)] = checked(simulationStep + remaining);
+        _restoredRemainingCooldowns.Clear();
+    }
 
     internal void TryPlayerMelee(PlayerControlState playerControl, LookReceipt look, ulong generation, ulong simulationStep, double fixedDeltaSeconds, FactBuffer<IProductFact> facts)
     {
@@ -189,3 +228,5 @@ internal sealed class CombatModule
     private void LatchCooldown(ExplicitMeleeRequest request, DaggerfallAttackDefinition attack) => _readyAtStep[(request.Generation, request.AttackerId)] = checked(request.SimulationStep + RequiredSteps(attack.CooldownSeconds, request.FixedDeltaSeconds));
     private readonly record struct Combatant(long Id, ActorMechanicsState Mechanics, DaggerfallActorDefinition Definition);
 }
+
+internal readonly record struct CombatCooldown(long AttackerId, ulong RemainingSteps);

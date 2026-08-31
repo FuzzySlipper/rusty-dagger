@@ -32,6 +32,28 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, Ac
         _awarded.Add(fact.ActorId);
     }
 
+    /// <summary>Rebuilds the deterministic level-up source family before restored current tracks are applied.</summary>
+    internal void RestoreProgression(int experience, int level)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(experience);
+        ArgumentOutOfRangeException.ThrowIfLessThan(level, 1);
+        progression.AdvanceTo(experience, level);
+        if (level == 1) return;
+
+        int endurance = checked((int)playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value.Raw);
+        ExactStatTrackState health = playerMechanics.ReadStatTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value));
+        List<ExactSource> sources = health.Sources.ToList();
+        for (int restoredLevel = 2; restoredLevel <= level; restoredLevel++)
+        {
+            int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, restoredLevel);
+            ExactSource source = DaggerfallLevelUpHealthSource.Create(playerMechanics.Entity, restoredLevel, gain);
+            if (sources.All(existing => existing.Identity != source.Identity)) sources.Add(source);
+        }
+        ExactStatTrackChangeCandidate candidate = health.PrepareSourceChange(
+            health.Base, sources, ExactStatTrackCurrentPolicy.PreserveDistanceFromMaximum, health.Revision);
+        candidate.Publish();
+    }
+
     private ProgressionAwardPlan? PlanProgression(long defeatedActorId, DaggerfallActorDefinition defeated)
     {
         if (defeated.Rewards.ExperienceReward <= 0 || _experienceAwarded.Contains(defeatedActorId)) return null;
@@ -42,23 +64,11 @@ internal sealed class DaggerfallRewardReactions(ProgressionState progression, Ac
         if (nextLevel == progression.Level)
             return new ProgressionAwardPlan(nextExperience, nextLevel, null);
 
-        int hitPointsPerLevel = playerDefinition.HitPointsPerLevel
-            ?? throw new InvalidOperationException("The Daggerfall player definition must provide hitPointsPerLevel.");
         int endurance = checked((int)playerMechanics.ReadStat(StatId.Parse(DaggerfallMechanicsIds.Endurance.Value)).Value.Raw);
-        (int minimum, int maximum) = DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(hitPointsPerLevel, DaggerfallFormulaPolicy.Experimental);
         List<ExactSource> expectedSources = [];
         for (int level = checked(progression.Level + 1); ; level++)
         {
-            long rollRaw = random.DrawKeyed(new KeyedRngRequest(
-                CombatRandomKey.Seed,
-                CombatRandomKey.PlayerScope,
-                $"player.level-up.{level}.hp-roll",
-                minimum,
-                maximum)).Value;
-            int roll = checked((int)rollRaw);
-            if (roll < minimum || roll > maximum)
-                throw new MechanicsException($"Daggerfall level-up roll for level {level} was outside [{minimum}, {maximum}].");
-            int gain = DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, endurance, DaggerfallFormulaPolicy.Experimental);
+            int gain = DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, level);
             expectedSources.Add(DaggerfallLevelUpHealthSource.Create(playerMechanics.Entity, level, gain));
             if (level == nextLevel) break;
         }
@@ -131,6 +141,26 @@ internal static class DaggerfallLevelUpHealthSource
                 new ExactStatContribution.Add(new ExactValue(gain)))]);
     }
 
+    /// <summary>One keyed, ruleset-owned level-up gain shared by restore validation and source reconstruction.</summary>
+    internal static int RollGain(IRandomService random, DaggerfallActorDefinition playerDefinition, int endurance, int level)
+    {
+        ArgumentNullException.ThrowIfNull(random);
+        ArgumentNullException.ThrowIfNull(playerDefinition);
+        if (level < 2) throw new ArgumentOutOfRangeException(nameof(level));
+        int hitPointsPerLevel = playerDefinition.HitPointsPerLevel
+            ?? throw new InvalidOperationException("The Daggerfall player definition must provide hitPointsPerLevel.");
+        (int minimum, int maximum) = DaggerfallFormulaPolicy.HitPointsPerLevelRollBounds(hitPointsPerLevel, DaggerfallFormulaPolicy.Experimental);
+        int roll = checked((int)random.DrawKeyed(new KeyedRngRequest(
+            CombatRandomKey.Seed,
+            CombatRandomKey.PlayerScope,
+            $"player.level-up.{level}.hp-roll",
+            minimum,
+            maximum)).Value);
+        if (roll < minimum || roll > maximum)
+            throw new MechanicsException($"Daggerfall level-up roll for level {level} was outside [{minimum}, {maximum}].");
+        return DaggerfallFormulaPolicy.HitPointsPerLevelUp(roll, endurance, DaggerfallFormulaPolicy.Experimental);
+    }
+
     internal static bool Matches(ExactSource actual, ExactSource expected) =>
         actual.Identity == expected.Identity
         && actual.Definition == expected.Definition
@@ -153,6 +183,19 @@ internal sealed class DaggerfallUniqueItemAllocator(ulong firstEntityId, IEnumer
     internal const ulong DefaultFirstEntityId = 1_000_000_000_000UL;
     private ulong _next = firstEntityId;
     private readonly HashSet<ulong> _reserved = (reserved ?? []).ToHashSet();
+
+    internal ulong NextEntityId => _next;
+    internal IReadOnlyCollection<ulong> ReservedEntityIds => _reserved;
+
+    internal static DaggerfallUniqueItemAllocator Restore(ulong nextEntityId, IEnumerable<ulong> reserved)
+    {
+        ArgumentOutOfRangeException.ThrowIfZero(nextEntityId);
+        ArgumentNullException.ThrowIfNull(reserved);
+        ulong[] values = reserved.ToArray();
+        if (values.Any(value => value == 0) || values.Distinct().Count() != values.Length)
+            throw new ArgumentException("Unique item reservations must be non-zero and distinct.", nameof(reserved));
+        return new DaggerfallUniqueItemAllocator(nextEntityId, values);
+    }
 
     internal ulong Allocate()
     {
