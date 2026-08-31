@@ -13,6 +13,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal static class PrivateersHoldContent
 {
     private const int SchemaVersion = 1;
+    private const float EngineViewmodelLocalCoordinateLimit = 16F;
 
     internal static PrivateersHoldInputs Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
@@ -79,7 +80,9 @@ internal static class PrivateersHoldContent
             artifacts,
             definitions,
             diagnostics);
-        IReadOnlyList<NormalizedAudioClip> audio = ReadClassicAudio(files.GetExactlyOne(classicMediaPath), publicationRoot, artifacts, diagnostics);
+        (IReadOnlyList<NormalizedAudioClip> audio, NormalizedClassicPresentation classicPresentation) = ReadClassicPresentation(
+            files, files.GetExactlyOne(classicMediaPath), publicationRoot, artifacts, diagnostics);
+        classicPresentation = ReadClassicSelection(root, classicPresentation, definitions, diagnostics);
         Dictionary<long, NormalizedActorSprite> actorSprites = [];
         foreach (AuthoredActor actor in actors.Values)
         {
@@ -106,7 +109,8 @@ internal static class PrivateersHoldContent
             start.Look,
             materials,
             new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites),
-            audio);
+            audio,
+            classicPresentation);
     }
 
     private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
@@ -385,44 +389,250 @@ internal static class PrivateersHoldContent
 
     private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
 
-    private static IReadOnlyList<NormalizedAudioClip> ReadClassicAudio(byte[]? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
+    private static (IReadOnlyList<NormalizedAudioClip> Audio, NormalizedClassicPresentation Presentation) ReadClassicPresentation(AdmittedFiles files, byte[]? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
     {
-        if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return []; }
+        if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return ([], NormalizedClassicPresentation.Empty); }
         try
         {
             using JsonDocument document = JsonDocument.Parse(bytes);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "classic media manifest", diagnostics);
-            Dictionary<string, (string Path, ContentSha256 Hash)> resources = [];
+            DaggerfallBaseContent.RejectDuplicateProperties(root, "classic media manifest", diagnostics);
+            if (DaggerfallBaseContent.Integer(root, "schemaVersion", diagnostics) != 1) diagnostics.Add("Classic media manifest schemaVersion must be 1.");
+            Dictionary<string, ClassicMediaResource> resources = [];
             JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "classic media", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(media, "classic media", diagnostics);
             foreach (JsonElement value in DaggerfallBaseContent.Array(media, "resources", diagnostics))
             {
                 JsonElement resource = DaggerfallBaseContent.Object(value, "classic media resource", diagnostics);
-                if (DaggerfallBaseContent.Text(resource, "kind", diagnostics) != "audio") continue;
+                DaggerfallBaseContent.RejectDuplicateProperties(resource, "classic media resource", diagnostics);
                 string id = DaggerfallBaseContent.Text(resource, "id", diagnostics);
-                string path = $"{publicationRoot.TrimEnd('/')}/{DaggerfallBaseContent.Text(resource, "relativePath", diagnostics)}";
+                string kind = DaggerfallBaseContent.Text(resource, "kind", diagnostics);
+                string relativePath = DaggerfallBaseContent.Text(resource, "relativePath", diagnostics);
+                string path = $"{publicationRoot.TrimEnd('/')}/{relativePath}";
                 ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(resource, "contentDigest", diagnostics), diagnostics);
                 if (!artifacts.TryGetValue(path, out ContentSha256 artifact) || artifact != hash) diagnostics.Add($"Generated classic audio '{id}' does not agree with the import manifest.");
-                if (!resources.TryAdd(id, (path, hash))) diagnostics.Add($"Generated classic media repeats audio '{id}'.");
+                long byteLength = Long(resource, "byteLength", diagnostics);
+                string mimeType = DaggerfallBaseContent.Text(resource, "mimeType", diagnostics);
+                int sourceWidth = DaggerfallBaseContent.Integer(resource, "sourceWidth", diagnostics);
+                int sourceHeight = DaggerfallBaseContent.Integer(resource, "sourceHeight", diagnostics);
+                int atlasWidth = DaggerfallBaseContent.Integer(resource, "atlasWidth", diagnostics);
+                int atlasHeight = DaggerfallBaseContent.Integer(resource, "atlasHeight", diagnostics);
+                if (!ValidLogicalId(id) || !ValidLogicalPath(relativePath) || !KnownClassicMediaKind(kind) || byteLength <= 0 || string.IsNullOrWhiteSpace(mimeType) || sourceWidth < 0 || sourceHeight < 0
+                    || atlasWidth < 0 || atlasHeight < 0 || files.GetExactlyOne(path) is not byte[] artifactBytes || artifactBytes.LongLength != byteLength)
+                    diagnostics.Add($"Classic media descriptor '{id}' does not match the canonical importer contract.");
+                List<NormalizedAtlasFrame> frames = [];
+                foreach (JsonElement frameValue in DaggerfallBaseContent.Array(resource, "frames", diagnostics))
+                {
+                    JsonElement frame = DaggerfallBaseContent.Object(frameValue, "classic atlas frame", diagnostics);
+                    DaggerfallBaseContent.RejectDuplicateProperties(frame, "classic atlas frame", diagnostics);
+                    string frameId = DaggerfallBaseContent.Text(frame, "id", diagnostics);
+                    int frameIndex = DaggerfallBaseContent.Integer(frame, "frameIndex", diagnostics);
+                    int x = DaggerfallBaseContent.Integer(frame, "x", diagnostics);
+                    int y = DaggerfallBaseContent.Integer(frame, "y", diagnostics);
+                    int width = DaggerfallBaseContent.Integer(frame, "width", diagnostics);
+                    int height = DaggerfallBaseContent.Integer(frame, "height", diagnostics);
+                    int frameSourceWidth = DaggerfallBaseContent.Integer(frame, "sourceWidth", diagnostics);
+                    int frameSourceHeight = DaggerfallBaseContent.Integer(frame, "sourceHeight", diagnostics);
+                    if (!ValidLogicalId(frameId) || frameIndex < 0 || atlasWidth <= 0 || atlasHeight <= 0 || width <= 0 || height <= 0 || frameSourceWidth <= 0 || frameSourceHeight <= 0 || x < 0 || y < 0 || (long)x + width > atlasWidth || (long)y + height > atlasHeight)
+                        diagnostics.Add($"Classic media resource '{id}' has an atlas frame outside its declared bounds.");
+                    frames.Add(new NormalizedAtlasFrame(checked((uint)Math.Max(frameIndex, 0)), x, y, width, height));
+                }
+                if ((frames.Count == 0 && (atlasWidth != 0 || atlasHeight != 0)) || (frames.Count != 0 && (atlasWidth <= 0 || atlasHeight <= 0))
+                    || frames.Count > 4096 || !frames.Select(frame => frame.Id).SequenceEqual(Enumerable.Range(0, frames.Count).Select(index => (uint)index)))
+                    diagnostics.Add($"Classic media resource '{id}' must use canonical contiguous frame indexes and atlas dimensions.");
+                Vector2 pivot = OptionalClassicVector2(resource, "pivot", new Vector2(.5F, .5F), $"Classic media resource '{id}' pivot", diagnostics);
+                Vector2 displaySize = OptionalClassicVector2(resource, "displaySize", DerivedDisplaySize(frames), $"Classic media resource '{id}' displaySize", diagnostics, positive: true, normalized: false);
+                float? framesPerSecond = OptionalSingle(resource, "framesPerSecond", diagnostics);
+                bool? loop = OptionalBoolean(resource, "loop", diagnostics);
+                IReadOnlyList<int> sequence = OptionalSequence(resource, frames, diagnostics);
+                if (!resources.TryAdd(id, new ClassicMediaResource(id, kind, path, hash, atlasWidth, atlasHeight, Array.AsReadOnly(frames.ToArray()), pivot, displaySize, framesPerSecond, loop, sequence))) diagnostics.Add($"Generated classic media repeats resource '{id}'.");
             }
             List<NormalizedAudioClip> audio = [];
             foreach (JsonElement value in DaggerfallBaseContent.Array(root, "audio", diagnostics))
             {
                 JsonElement clip = DaggerfallBaseContent.Object(value, "classic audio mapping", diagnostics);
+                DaggerfallBaseContent.RejectDuplicateProperties(clip, "classic audio mapping", diagnostics);
                 string id = DaggerfallBaseContent.Text(clip, "clip", diagnostics);
                 string mediaId = DaggerfallBaseContent.Text(clip, "mediaId", diagnostics);
-                if (!resources.TryGetValue(mediaId, out (string Path, ContentSha256 Hash) resource)) diagnostics.Add($"Classic audio mapping '{id}' refers to missing audio media '{mediaId}'.");
+                if (!resources.TryGetValue(mediaId, out ClassicMediaResource? resource) || resource.Kind != "audio") diagnostics.Add($"Classic audio mapping '{id}' refers to missing audio media '{mediaId}'.");
                 else if (audio.Any(item => item.Id == id)) diagnostics.Add($"Classic media repeats audio mapping '{id}'.");
                 else audio.Add(new NormalizedAudioClip(id, resource.Path, resource.Hash));
             }
             try { OrderedHitCues(audio); }
             catch (InvalidOperationException exception) { diagnostics.Add(exception.Message); }
-            return Array.AsReadOnly(audio.ToArray());
+            NormalizedClassicWeapon? weapon = ReadClassicWeapon(root, resources, diagnostics);
+            IReadOnlyList<NormalizedClassicEffect> effects = ReadClassicEffects(root, resources, diagnostics);
+            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapon, effects));
         }
         catch (JsonException exception)
         {
             diagnostics.Add($"Generated classic media manifest is not valid JSON: {exception.Message}");
-            return [];
+            return ([], NormalizedClassicPresentation.Empty);
         }
+    }
+
+    private static NormalizedClassicWeapon? ReadClassicWeapon(JsonElement root, IReadOnlyDictionary<string, ClassicMediaResource> resources, DaggerfallContentDiagnostics diagnostics)
+    {
+        ClassicMediaResource[] weaponResources = resources.Values.Where(candidate => candidate.Kind == "weaponSprite").ToArray();
+        if (weaponResources.Length != 1) diagnostics.Add("Classic media must publish exactly one weaponSprite resource.");
+        ClassicMediaResource? resource = weaponResources.Length == 1 ? weaponResources[0] : null;
+        Dictionary<string, NormalizedClassicWeaponAction> actions = new(StringComparer.Ordinal);
+        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "weaponActions", diagnostics))
+        {
+            JsonElement action = DaggerfallBaseContent.Object(value, "classic weapon action", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(action, "classic weapon action", diagnostics);
+            string name = DaggerfallBaseContent.Text(action, "action", diagnostics);
+            int sourceRecordOrdinal = DaggerfallBaseContent.Integer(action, "sourceRecordOrdinal", diagnostics);
+            int start = DaggerfallBaseContent.Integer(action, "frameStart", diagnostics);
+            int count = DaggerfallBaseContent.Integer(action, "frameCount", diagnostics);
+            string alignment = DaggerfallBaseContent.Text(action, "alignment", diagnostics);
+            float offset = DaggerfallBaseContent.Number(action, "screenOffset", diagnostics);
+            JsonElement timing = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(action, "timing", diagnostics), "classic weapon action timing", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(timing, "classic weapon action timing", diagnostics);
+            float fps = DaggerfallBaseContent.Property(timing, "framesPerSecond", diagnostics).TryGetSingle(out float parsedFps) ? parsedFps : 0F;
+            JsonElement loop = DaggerfallBaseContent.Property(timing, "loop", diagnostics);
+            bool loops = loop.ValueKind == JsonValueKind.True;
+            if (loop.ValueKind is not (JsonValueKind.True or JsonValueKind.False) || !float.IsFinite(fps) || fps <= 0F || start < 0 || count <= 0 || !float.IsFinite(offset) || alignment is not ("left" or "right"))
+                diagnostics.Add($"Classic weapon action '{name}' has invalid framing, timing, or alignment.");
+            short sourceXOffset = checked((short)DaggerfallBaseContent.Integer(action, "sourceXOffset", diagnostics));
+            short sourceYOffset = checked((short)DaggerfallBaseContent.Integer(action, "sourceYOffset", diagnostics));
+            if (resource is not null && (start < 0 || count <= 0 || (long)start + count > resource.Frames.Count)) diagnostics.Add($"Classic weapon action '{name}' is outside weaponSprite frame bounds.");
+            if (!actions.TryAdd(name, new NormalizedClassicWeaponAction(name, sourceRecordOrdinal, start, count, alignment, offset, fps, loops, sourceXOffset, sourceYOffset))) diagnostics.Add($"Classic weapon actions repeat '{name}'.");
+        }
+        string[] expected = ["idle", "strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
+        if (actions.Count != expected.Length || expected.Any(name => !actions.ContainsKey(name))) diagnostics.Add("Classic weapon actions must provide the complete authored dagger action family.");
+        foreach ((int ordinal, string expectedName) in expected.Select((value, index) => (index, value)))
+            if (actions.TryGetValue(expectedName, out NormalizedClassicWeaponAction? action) && action.SourceRecordOrdinal != ordinal) diagnostics.Add($"Classic weapon action '{expectedName}' must retain source record ordinal {ordinal}.");
+        if (resource is not null)
+        {
+            if (!resource.Frames.Select(frame => frame.Id).Order().SequenceEqual(Enumerable.Range(0, resource.Frames.Count).Select(index => (uint)index))) diagnostics.Add("Classic weaponSprite frames must use contiguous canonical frame indexes.");
+            HashSet<int> covered = [];
+            foreach (NormalizedClassicWeaponAction action in actions.Values)
+            {
+                long end = (long)action.FrameStart + action.FrameCount;
+                if (action.FrameStart < 0 || action.FrameCount <= 0 || end > resource.Frames.Count) continue;
+                for (int frame = action.FrameStart; frame < (int)end; frame++) if (!covered.Add(frame)) diagnostics.Add("Classic weapon action ranges must not overlap.");
+            }
+            if (!covered.SetEquals(Enumerable.Range(0, resource.Frames.Count))) diagnostics.Add("Classic weapon action ranges must cover every canonical weapon frame.");
+        }
+        return resource is null ? null : new NormalizedClassicWeapon(resource.Id, resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Pivot, resource.DisplaySize, resource.Sequence, new ReadOnlyDictionary<string, NormalizedClassicWeaponAction>(actions));
+    }
+
+    private static IReadOnlyList<NormalizedClassicEffect> ReadClassicEffects(JsonElement root, IReadOnlyDictionary<string, ClassicMediaResource> resources, DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<string, NormalizedClassicEffect> effects = new(StringComparer.Ordinal);
+        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "effects", diagnostics))
+        {
+            JsonElement effect = DaggerfallBaseContent.Object(value, "classic effect", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(effect, "classic effect", diagnostics);
+            string name = DaggerfallBaseContent.Text(effect, "effect", diagnostics);
+            string mediaId = DaggerfallBaseContent.Text(effect, "mediaId", diagnostics);
+            int sourceRecordOrdinal = DaggerfallBaseContent.Integer(effect, "sourceRecordOrdinal", diagnostics);
+            JsonElement timing = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(effect, "timing", diagnostics), "classic effect timing", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(timing, "classic effect timing", diagnostics);
+            float fps = DaggerfallBaseContent.Property(timing, "framesPerSecond", diagnostics).TryGetSingle(out float parsedFps) ? parsedFps : 0F;
+            JsonElement loop = DaggerfallBaseContent.Property(timing, "loop", diagnostics);
+            bool loops = loop.ValueKind == JsonValueKind.True;
+            if (!resources.TryGetValue(mediaId, out ClassicMediaResource? resource) || resource.Kind != "effectSprite" || resource.Frames.Count == 0 || !float.IsFinite(fps) || fps <= 0F || loop.ValueKind is not (JsonValueKind.True or JsonValueKind.False)
+                || resource.FramesPerSecond != fps || resource.Loop != loops)
+            {
+                diagnostics.Add($"Classic effect '{name}' refers to invalid effectSprite media or timing.");
+                continue;
+            }
+            if (!effects.TryAdd(name, new NormalizedClassicEffect(name, sourceRecordOrdinal, resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Pivot, resource.DisplaySize, resource.Sequence, fps, loops))) diagnostics.Add($"Classic effects repeat '{name}'.");
+        }
+        string[] expected = ["blood0", "blood1", "blood2", "magicSparkle"];
+        if (effects.Count != expected.Length || expected.Any(name => !effects.ContainsKey(name))) diagnostics.Add("Classic effects must provide blood0..blood2 and magicSparkle exactly once.");
+        foreach ((int ordinal, string expectedName) in expected.Select((value, index) => (index, value)))
+            if (effects.TryGetValue(expectedName, out NormalizedClassicEffect? effect) && effect.SourceRecordOrdinal != ordinal) diagnostics.Add($"Classic effect '{expectedName}' must retain source record ordinal {ordinal}.");
+        return Array.AsReadOnly(effects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal).ToArray());
+    }
+
+    private static NormalizedClassicPresentation ReadClassicSelection(JsonElement root, NormalizedClassicPresentation classic, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("classicPresentation", out JsonElement value) || value.ValueKind == JsonValueKind.Null) return classic;
+        JsonElement presentation = DaggerfallBaseContent.Object(value, "classicPresentation", diagnostics);
+        DaggerfallBaseContent.RejectDuplicateProperties(presentation, "classicPresentation", diagnostics);
+        Dictionary<string, string> mappings = new(StringComparer.Ordinal);
+        foreach (JsonElement entry in DaggerfallBaseContent.Array(presentation, "weaponVisuals", diagnostics))
+        {
+            JsonElement mapping = DaggerfallBaseContent.Object(entry, "classic weapon visual", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(mapping, "classic weapon visual", diagnostics);
+            string itemId = DaggerfallBaseContent.Text(mapping, "itemId", diagnostics);
+            string resource = DaggerfallBaseContent.Text(mapping, "resource", diagnostics);
+            if (classic.Weapon is null || resource != classic.Weapon.ResourceId) diagnostics.Add($"Classic weapon visual '{itemId}' does not select the admitted weaponSprite resource.");
+            if (!mappings.TryAdd(itemId, resource)) diagnostics.Add($"Classic weapon visuals repeat item '{itemId}'.");
+        }
+        if (mappings.Count != 1 || !mappings.TryGetValue("iron-dagger", out string? mappedResource) || mappedResource != "weapon.dagger.steel"
+            || !definitions.Items.TryGetValue(new DaggerfallItemId("iron-dagger"), out DaggerfallItemDefinition? dagger)
+            || dagger.Weapon is not { Material: "iron", Skill: "short-blade" })
+            diagnostics.Add("Classic dagger viewmodel compatibility is restricted to the admitted iron-dagger bridge.");
+        ClassicViewmodelStyle? viewmodel = null;
+        if (mappings.Count > 0)
+        {
+            JsonElement style = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(presentation, "viewmodel", diagnostics), "classic viewmodel", diagnostics);
+            DaggerfallBaseContent.RejectDuplicateProperties(style, "classic viewmodel", diagnostics);
+            WorldPoint position = Point(DaggerfallBaseContent.Property(style, "position", diagnostics), "classic viewmodel.position", diagnostics);
+            Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(style, "pivot", diagnostics), "classic viewmodel.pivot", diagnostics);
+            Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(style, "worldSize", diagnostics), "classic viewmodel.worldSize", diagnostics);
+            int renderOrder = DaggerfallBaseContent.Integer(style, "renderOrder", diagnostics);
+            if (MathF.Abs(position.X) > EngineViewmodelLocalCoordinateLimit || MathF.Abs(position.Y) > EngineViewmodelLocalCoordinateLimit || MathF.Abs(position.Z) > EngineViewmodelLocalCoordinateLimit)
+                diagnostics.Add($"Classic viewmodel position must remain within Engine local +/-{EngineViewmodelLocalCoordinateLimit} bounds.");
+            if (pivot.X is < 0F or > 1F || pivot.Y is < 0F or > 1F) diagnostics.Add("Classic viewmodel pivot must be normalized within [0,1].");
+            if (size.X <= 0F || size.Y <= 0F) diagnostics.Add("Classic viewmodel worldSize must be positive.");
+            viewmodel = new ClassicViewmodelStyle(position, pivot, size, renderOrder);
+        }
+        return classic with { CompatibleItemVisuals = new ReadOnlyDictionary<string, string>(mappings), Viewmodel = viewmodel };
+    }
+
+    private static Vector2 OptionalClassicVector2(JsonElement objectValue, string property, Vector2 fallback, string name, DaggerfallContentDiagnostics diagnostics, bool positive = false, bool normalized = true)
+    {
+        if (!objectValue.TryGetProperty(property, out JsonElement value) || value.ValueKind == JsonValueKind.Null) return fallback;
+        Vector2 parsed = GeneratedVector2(value, name, diagnostics);
+        if (normalized && (parsed.X is < 0F or > 1F || parsed.Y is < 0F or > 1F)) diagnostics.Add($"'{name}' must be normalized within [0,1].");
+        if (positive && (parsed.X <= 0F || parsed.Y <= 0F)) diagnostics.Add($"'{name}' must be positive.");
+        return parsed;
+    }
+
+    private static Vector2 DerivedDisplaySize(IReadOnlyList<NormalizedAtlasFrame> frames)
+    {
+        NormalizedAtlasFrame? canonicalFrame = frames.SingleOrDefault(frame => frame.Id == 0);
+        if (canonicalFrame is null || canonicalFrame.Width <= 0 || canonicalFrame.Height <= 0) return Vector2.One;
+        float largest = Math.Max(canonicalFrame.Width, canonicalFrame.Height);
+        return new(canonicalFrame.Width / largest, canonicalFrame.Height / largest);
+    }
+
+    // Mirrors Daggerfall.Import NormalizedImportDocument's descriptor admission
+    // without making the runtime ruleset depend on the offline importer assembly.
+    private static bool ValidLogicalId(string value) => !string.IsNullOrWhiteSpace(value) && !value.Any(char.IsWhiteSpace);
+    private static bool ValidLogicalPath(string value) => !string.IsNullOrWhiteSpace(value) && !value.StartsWith("/", StringComparison.Ordinal) && !value.StartsWith('\\') && !value.Contains('\\') && !value.Split('/').Any(segment => segment is "." or ".." or "");
+    private static bool KnownClassicMediaKind(string value) => value is "texture" or "billboard" or "enemySprite" or "weaponSprite" or "effectSprite" or "audio" or "userInterface" or "font";
+
+    private static float? OptionalSingle(JsonElement objectValue, string property, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!objectValue.TryGetProperty(property, out JsonElement value) || value.ValueKind == JsonValueKind.Null) return null;
+        if (!value.TryGetSingle(out float parsed) || !float.IsFinite(parsed) || parsed <= 0F) { diagnostics.Add($"'{property}' must be a positive finite number when present."); return null; }
+        return parsed;
+    }
+
+    private static bool? OptionalBoolean(JsonElement objectValue, string property, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!objectValue.TryGetProperty(property, out JsonElement value) || value.ValueKind == JsonValueKind.Null) return null;
+        if (value.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) { diagnostics.Add($"'{property}' must be a boolean when present."); return null; }
+        return value.GetBoolean();
+    }
+
+    private static IReadOnlyList<int> OptionalSequence(JsonElement objectValue, IReadOnlyList<NormalizedAtlasFrame> frames, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!objectValue.TryGetProperty("sequence", out JsonElement value) || value.ValueKind == JsonValueKind.Null) return Array.AsReadOnly(frames.Select(frame => checked((int)frame.Id)).ToArray());
+        List<int> result = [];
+        foreach (JsonElement item in DaggerfallBaseContent.Array(objectValue, "sequence", diagnostics))
+        {
+            if (!item.TryGetInt32(out int index) || index < 0 || !frames.Any(frame => frame.Id == index)) diagnostics.Add("Classic media sequence must refer to regenerated frame indexes.");
+            else result.Add(index);
+        }
+        if (result.Count == 0) diagnostics.Add("Classic media sequence cannot be empty when present.");
+        return Array.AsReadOnly(result.ToArray());
     }
 
     /// <summary>Defines the Daggerfall hit-cue family carried by normalized classic audio mappings.</summary>
@@ -579,6 +789,21 @@ internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Fr
 }
 internal sealed record NormalizedAttackSequence(int Chance, IReadOnlyList<int> SourceFrames);
 internal sealed record NormalizedAudioClip(string Id, string Path, ContentSha256 Sha256);
+internal sealed record NormalizedClassicWeaponAction(string Name, int SourceRecordOrdinal, int FrameStart, int FrameCount, string Alignment, float ScreenOffset, float FramesPerSecond, bool Loops, short SourceXOffset, short SourceYOffset);
+internal sealed record NormalizedClassicWeapon(string ResourceId, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, IReadOnlyDictionary<string, NormalizedClassicWeaponAction> Actions);
+internal sealed record NormalizedClassicEffect(string Name, int SourceRecordOrdinal, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, float FramesPerSecond, bool Loops);
+internal sealed record NormalizedClassicPresentation(NormalizedClassicWeapon? Weapon, IReadOnlyList<NormalizedClassicEffect> Effects)
+{
+    internal static NormalizedClassicPresentation Empty { get; } = new(null, Array.Empty<NormalizedClassicEffect>());
+    internal IReadOnlyDictionary<string, string> CompatibleItemVisuals { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+    internal ClassicViewmodelStyle? Viewmodel { get; init; }
+    internal bool TryEffect(string name, out NormalizedClassicEffect? effect)
+    {
+        effect = Effects.FirstOrDefault(candidate => candidate.Name == name);
+        return effect is not null;
+    }
+}
+internal sealed record ClassicViewmodelStyle(WorldPoint Position, Vector2 Pivot, Vector2 Size, int RenderOrder);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {
     internal IReadOnlyDictionary<string, NormalizedSpriteState> States { get; init; } = new ReadOnlyDictionary<string, NormalizedSpriteState>(new Dictionary<string, NormalizedSpriteState>());
@@ -587,7 +812,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal IReadOnlyList<NormalizedAttackSequence> AttackSequences { get; init; } = Array.Empty<NormalizedAttackSequence>();
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -597,6 +822,7 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     internal IReadOnlyList<NormalizedMaterial> Materials { get; } = Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray());
     internal IReadOnlyDictionary<long, NormalizedActorSprite> ActorSprites { get; } = new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites.ToDictionary());
     internal IReadOnlyList<NormalizedAudioClip> Audio { get; } = Array.AsReadOnly((audio ?? []).ToArray());
+    internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
 }
 
 internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictionary<long, AuthoredActor> actors)
@@ -605,3 +831,4 @@ internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictiona
     internal IReadOnlyDictionary<long, AuthoredActor> Actors { get; } = new ReadOnlyDictionary<long, AuthoredActor>(actors.ToDictionary());
 }
 internal sealed record AuthoredActor(long EntityId, DaggerfallActorId ActorId, WorldPoint Position);
+internal sealed record ClassicMediaResource(string Id, string Kind, string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, float? FramesPerSecond, bool? Loop, IReadOnlyList<int> Sequence);

@@ -6,6 +6,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Inventory;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -13,12 +14,21 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 internal sealed class PrivateersHoldAppearance : IDisposable
 {
     private readonly IAppearanceService appearance;
+    private readonly IContentService content;
     private readonly IAudioService? audio;
     private readonly IRandomService? random;
     private readonly DaggerfallPresentationAudioTuning audioTuning;
     private readonly Dictionary<string, AudioClipHandle> audioClips = new(StringComparer.Ordinal);
     private readonly IReadOnlyList<string> hitCues;
+    private readonly IReadOnlyDictionary<string, NormalizedClassicEffect> classicEffects;
+    private readonly NormalizedClassicPresentation classicPresentation;
+    // Engine seals render-resource selection once Product.Create finishes.
+    // Classic effects and the optional weapon remain lazy visual instances, but
+    // their normalized texture handles must be admitted with the initial closure.
+    private readonly Dictionary<string, RenderResourceInfo> classicTextures = new(StringComparer.Ordinal);
     private readonly Dictionary<long, ActorVisual> actors = [];
+    private readonly List<EffectVisual> effects = [];
+    private ViewmodelVisual? viewmodel;
     private readonly HashSet<PresentationEventIdentity> deliveredEvents = [];
     private readonly List<SpriteAtlas> atlases = [];
     private readonly List<Material> materials = [];
@@ -34,10 +44,13 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         ArgumentNullException.ThrowIfNull(appearance);
         ArgumentNullException.ThrowIfNull(inputs);
         this.appearance = appearance;
+        this.content = content;
         this.audio = audio;
         this.random = random;
         this.audioTuning = (audioTuning ?? DaggerfallTuning.Defaults.PresentationAudio).Validate();
         hitCues = inputs.Audio.Count == 0 ? [] : PrivateersHoldContent.OrderedHitCues(inputs.Audio);
+        classicPresentation = inputs.ClassicPresentation;
+        classicEffects = inputs.ClassicPresentation.Effects.ToDictionary(effect => effect.Name, StringComparer.Ordinal);
         worldAppearance = inputs.WorldAppearance;
         try
         {
@@ -55,6 +68,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 ActorVisual visual = CreateActorVisual(content, entityId, sprite);
                 actors.Add(entityId, visual);
             }
+            AdmitClassicTextures();
             foreach (NormalizedAudioClip clip in inputs.Audio)
             {
                 VerifyContent(content, new ContentArtifact(clip.Path, clip.Sha256));
@@ -64,6 +78,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         catch { Dispose(); throw; }
     }
 
+    /// <summary>Publishes authored local viewmodel placement; Engine owns camera-relative rebasing and orientation.</summary>
     internal void Publish(ActorsState actors)
     {
         if (disposed) return;
@@ -74,6 +89,12 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             if (!this.actors.TryGetValue(actor.EntityId, out ActorVisual? visual)) continue;
             Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
             if (chosen is not null) facts.Add(new AppearanceFact(checked((ulong)actor.EntityId), new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen, true, RenderLayer.Scene));
+        }
+        foreach (EffectVisual effect in effects)
+            facts.Add(new AppearanceFact(effect.EntityId, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
+        if (viewmodel is { } weapon)
+        {
+            facts.Add(new AppearanceFact(weapon.EntityId, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
         }
         appearance.PublishSnapshot([.. facts]);
     }
@@ -127,9 +148,10 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         priorRetired.AddRange(nextRetired);
         nextRetired.Clear();
     }
-    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray());
+    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray());
     internal void Restore(PresentationCheckpoint checkpoint)
     {
+        DisposeRetiredIntermediates(checkpoint);
         deliveredEvents.Clear();
         deliveredEvents.UnionWith(checkpoint.Events);
         foreach ((long id, ActorSnapshot snapshot) in checkpoint.Actors)
@@ -141,12 +163,22 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             if (visual.Live is { } currentLive && !ReferenceEquals(currentLive, snapshot.Live)) currentLive.Dispose();
             snapshot.Apply(visual);
         }
+        if (viewmodel is { } currentWeapon && !ReferenceEquals(currentWeapon, checkpoint.Viewmodel?.Visual)) currentWeapon.Dispose();
+        else if (viewmodel is { } retainedWeapon && checkpoint.Viewmodel is { } weaponSnapshot && !ReferenceEquals(retainedWeapon.Playback, weaponSnapshot.Playback)) retainedWeapon.Playback?.Dispose();
+        viewmodel = checkpoint.Viewmodel?.Visual;
+        checkpoint.Viewmodel?.Apply(viewmodel!);
+        foreach (EffectVisual effect in effects.Where(current => checkpoint.Effects.All(snapshot => !ReferenceEquals(snapshot.Visual, current))).ToArray()) effect.Dispose();
+        effects.Clear();
+        foreach (EffectSnapshot snapshot in checkpoint.Effects) { snapshot.Apply(); effects.Add(snapshot.Visual); }
         priorRetired.Clear(); priorRetired.AddRange(checkpoint.PriorRetired);
         nextRetired.Clear(); nextRetired.AddRange(checkpoint.NextRetired);
     }
 
     /// <summary>Interprets Daggerfall combat facts while Engine owns playback timing and frame staging.</summary>
-    internal void React(IProductFact fact)
+    internal void React(IProductFact fact) => React(fact, null);
+
+    /// <summary>Interprets facts with the current authoritative actor state; presentation keeps no position mirror.</summary>
+    internal void React(IProductFact fact, ActorsState? actorState)
     {
         if (disposed) return;
         switch (fact)
@@ -156,6 +188,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 if (deliveredEvents.Contains(hitEvent)) break;
                 StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
                 StartState(hit.TargetId, "hurt", null);
+                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && actorState is not null) SpawnBlood(hit, hitEvent, actorState);
+                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId) StartWeaponStrike(hitEvent);
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId) Emit("swing", hitEvent, 0);
                 deliveredEvents.Add(hitEvent);
                 break;
@@ -164,6 +198,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 if (deliveredEvents.Contains(missEvent)) break;
                 StartAttack(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, missEvent);
                 if (miss.AttackerId == DaggerfallActorIdentity.PlayerEntityId) Emit("swing", missEvent, 0);
+                if (miss.AttackerId == DaggerfallActorIdentity.PlayerEntityId) StartWeaponStrike(missEvent);
                 deliveredEvents.Add(missEvent);
                 break;
             case ActorDiedFact died:
@@ -174,6 +209,20 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 else if (transition.Current == EnemyBehaviorState.Chase) EnsureRestState(transition.ActorId, "move");
                 break;
         }
+    }
+
+    /// <summary>Reads the Engine-backed equipment projection; only an authored exact mapping may reveal the classic art.</summary>
+    internal void UpdateRightHandEquipment(EquipmentRead equipment)
+    {
+        ArgumentNullException.ThrowIfNull(equipment);
+        string? itemId = equipment.TryGet(new EquipmentSlotId("right-hand"), out UniqueInventoryItem item) ? item.Definition.Value : null;
+        bool compatible = itemId is not null
+            && classicPresentation.Weapon is { } weapon
+            && classicPresentation.CompatibleItemVisuals.TryGetValue(itemId, out string? resource)
+            && resource == weapon.ResourceId
+            && classicPresentation.Viewmodel is not null;
+        if (compatible && viewmodel is null) CreateViewmodel();
+        else if (!compatible && viewmodel is not null) RetireViewmodel();
     }
 
     /// <summary>Called exactly once from the outer Product.Update, never from a private catch-up step.</summary>
@@ -203,6 +252,27 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             else if (receipt.Advanced) visual.CompletedOuterUpdate = true;
             visual.LastOuterUpdate = identity;
         }
+        foreach (EffectVisual effect in effects.ToArray())
+        {
+            if (effect.LastOuterUpdate == identity) continue;
+            SpritePlaybackAdvanceLeaseReceipt receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(effect.Playback));
+            if (receipt.Readout.Completed)
+            {
+                if (effect.CompletedOuterUpdate) { effects.Remove(effect); Retire(effect); }
+                else if (receipt.Advanced) effect.CompletedOuterUpdate = true;
+            }
+            effect.LastOuterUpdate = identity;
+        }
+        if (viewmodel is { } weapon && weapon.Playback is { } weaponPlayback && weapon.LastOuterUpdate != identity)
+        {
+            SpritePlaybackAdvanceLeaseReceipt receipt = appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(weaponPlayback));
+            if (weapon.Strike && receipt.Readout.Completed)
+            {
+                if (weapon.CompletedOuterUpdate) StartWeaponAction("idle");
+                else if (receipt.Advanced) weapon.CompletedOuterUpdate = true;
+            }
+            weapon.LastOuterUpdate = identity;
+        }
     }
 
     public void Dispose()
@@ -213,6 +283,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         try { appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty); }
         catch (Exception exception) { failures = [exception]; }
         foreach (ActorVisual visual in actors.Values.Reverse()) visual.Dispose(ref failures);
+        foreach (EffectVisual effect in effects.AsEnumerable().Reverse()) effect.Dispose(ref failures);
+        effects.Clear();
+        if (viewmodel is { } weapon) { viewmodel = null; weapon.Dispose(ref failures); }
         foreach (IDisposable value in nextRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         foreach (IDisposable value in priorRetired.AsEnumerable().Reverse()) Dispose(value, ref failures);
         nextRetired.Clear(); priorRetired.Clear();
@@ -230,6 +303,46 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         using ContentReference reference = content.ResolveReference(new ContentResolveRequest(artifact.Path, artifact.Sha256));
         ReadOnlyMemory<ContentReferenceInfo> info = content.ReadReferenceInfo(reference);
         if (info.Length != 1 || info.Span[0].Path != artifact.Path || info.Span[0].Sha256 != artifact.Sha256) throw new InvalidOperationException($"Engine content did not preserve identity for '{artifact.Path}'.");
+    }
+
+    private void AdmitClassicTextures()
+    {
+        foreach (NormalizedClassicEffect effect in classicEffects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal))
+            AdmitClassicTexture(new ContentArtifact(effect.TexturePath, effect.TextureSha256));
+        if (classicPresentation.Weapon is { } weapon)
+            AdmitClassicTexture(new ContentArtifact(weapon.TexturePath, weapon.TextureSha256));
+    }
+
+    private void AdmitClassicTexture(ContentArtifact artifact)
+    {
+        VerifyContent(content, artifact);
+        RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(artifact.Path));
+        if (!classicTextures.TryAdd(artifact.Path, texture))
+            throw new InvalidOperationException($"Classic presentation repeats normalized texture path '{artifact.Path}'.");
+    }
+
+    private void DisposeRetiredIntermediates(PresentationCheckpoint checkpoint)
+    {
+        HashSet<IDisposable> checkpointOwned = new(ReferenceEqualityComparer.Instance);
+        foreach (ActorSnapshot actor in checkpoint.Actors.Values)
+        {
+            if (actor.Live is not null) checkpointOwned.Add(actor.Live);
+            if (actor.Playback is not null) checkpointOwned.Add(actor.Playback);
+        }
+        if (checkpoint.Viewmodel is { } weapon)
+        {
+            checkpointOwned.Add(weapon.Visual);
+            if (weapon.Playback is not null) checkpointOwned.Add(weapon.Playback);
+        }
+        foreach (EffectSnapshot effect in checkpoint.Effects) checkpointOwned.Add(effect.Visual);
+        foreach (IDisposable value in checkpoint.PriorRetired) checkpointOwned.Add(value);
+        foreach (IDisposable value in checkpoint.NextRetired) checkpointOwned.Add(value);
+
+        HashSet<IDisposable> released = new(ReferenceEqualityComparer.Instance);
+        foreach (IDisposable value in priorRetired.Concat(nextRetired))
+        {
+            if (!checkpointOwned.Contains(value) && released.Add(value)) value.Dispose();
+        }
     }
 
     private static void Dispose(IDisposable value, ref List<Exception>? failures)
@@ -282,6 +395,142 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         string hitCue = SelectHitCue(presentationEvent);
         visual.ActiveAttack = new ActiveAttackPresentation(presentationEvent, hitCue);
         if (presentationEvent.Outcome == "hit" && !selected.SourceFrames.Contains(-1)) Emit(hitCue, presentationEvent, 0);
+    }
+
+    private void SpawnBlood(AttackHitFact hit, PresentationEventIdentity identity, ActorsState actors)
+    {
+        if (!actors.All.TryGetValue(hit.TargetId, out ActorState? target)) return;
+        WorldPoint position = target.Position;
+        string[] names = ["blood0", "blood1", "blood2"];
+        int ordinal = random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(
+            CombatRandomKey.Seed,
+            "daggerfall.media.blood-effect.v1",
+            CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, 43),
+            0,
+            names.Length - 1)).Value);
+        // Classic media belongs to presentation policy; the combat fact already
+        // owns applied damage. A retry is stopped by deliveredEvents above.
+        // These resources are reconstructed from the admitted normalized pack.
+        // Missing content deliberately means no invented replacement effect.
+        // The effect is world-positioned at the fact's truthful target state.
+        // (A future spell fact can select magicSparkle independently.)
+        //
+        // The selected resource is resolved through the stored normalized input
+        // at construction-time via the effect catalog injected below.
+        SpawnEffect(names[ordinal], position, identity);
+    }
+
+    private void SpawnEffect(string name, WorldPoint position, PresentationEventIdentity identity)
+    {
+        if (!classicEffects.TryGetValue(name, out NormalizedClassicEffect? effect)) return;
+        SpriteAtlas? atlas = null;
+        Appearance? visual = null;
+        SpritePlayback? playback = null;
+        try
+        {
+            VerifyContent(content, new ContentArtifact(effect.TexturePath, effect.TextureSha256));
+            RenderResourceInfo texture = classicTextures[effect.TexturePath];
+            SpriteAtlasFrame[] frames = effect.Frames.Select(frame => new SpriteAtlasFrame(frame.Id,
+                new Vector2((float)frame.X / effect.AtlasWidth, (float)frame.Y / effect.AtlasHeight),
+                new Vector2((float)(frame.X + frame.Width) / effect.AtlasWidth, (float)(frame.Y + frame.Height) / effect.AtlasHeight),
+                true, new Vector2(frame.Width, frame.Height))).ToArray();
+            atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
+            uint initialFrame = effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).First();
+            visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
+            SpritePlaybackFrame[] playbackFrames = effect.Sequence.Select(index => new SpritePlaybackFrame(effect.Frames.Single(frame => frame.Id == index).Id, 1d / effect.FramesPerSecond)).ToArray();
+            playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), effect.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
+            appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(playback, SpritePlaybackControl.Start));
+            effects.Add(new EffectVisual(EffectEntityId(identity, name), position, atlas, visual, playback));
+        }
+        catch
+        {
+            playback?.Dispose();
+            visual?.Dispose();
+            atlas?.Dispose();
+            throw;
+        }
+    }
+
+    private void CreateViewmodel()
+    {
+        NormalizedClassicWeapon weapon = classicPresentation.Weapon ?? throw new InvalidOperationException("No admitted classic weapon sprite is available.");
+        ClassicViewmodelStyle style = classicPresentation.Viewmodel ?? throw new InvalidOperationException("No authored classic viewmodel style is available.");
+        SpriteAtlas? atlas = null;
+        Appearance? visual = null;
+        try
+        {
+            VerifyContent(content, new ContentArtifact(weapon.TexturePath, weapon.TextureSha256));
+            RenderResourceInfo texture = classicTextures[weapon.TexturePath];
+            SpriteAtlasFrame[] frames = weapon.Frames.Select(frame => new SpriteAtlasFrame(frame.Id,
+                new Vector2((float)frame.X / weapon.AtlasWidth, (float)frame.Y / weapon.AtlasHeight),
+                new Vector2((float)(frame.X + frame.Width) / weapon.AtlasWidth, (float)(frame.Y + frame.Height) / weapon.AtlasHeight),
+                true, new Vector2(frame.Width, frame.Height))).ToArray();
+            atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
+            visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, style.Pivot, style.Size, BillboardMode.None, SpriteSizeMode.World, style.RenderOrder, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
+            viewmodel = new ViewmodelVisual(AtlasEntityId(weapon.ResourceId), new Transform(style.Position.ToVector(), Quaternion.Identity, Vector3.One), atlas, visual);
+            StartWeaponAction("idle");
+        }
+        catch
+        {
+            visual?.Dispose();
+            atlas?.Dispose();
+            viewmodel = null;
+            throw;
+        }
+    }
+
+    private void StartWeaponStrike(PresentationEventIdentity identity)
+    {
+        if (viewmodel is null) return;
+        string[] choices = ["strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
+        int selected = random is null ? 0 : checked((int)random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, "daggerfall.media.weapon-strike.v1", CombatRandomKey.For(identity.Generation, identity.SimulationStep, identity.Attacker, identity.Target, 44), 0, choices.Length - 1)).Value);
+        StartWeaponAction(choices[selected]);
+    }
+
+    private void StartWeaponAction(string name)
+    {
+        if (viewmodel is null || classicPresentation.Weapon is not { } weapon || !weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? action)) return;
+        SpritePlayback? staged = null;
+        try
+        {
+            SpritePlaybackFrame[] frames = Enumerable.Range(action.FrameStart, action.FrameCount)
+                .Select(index => new SpritePlaybackFrame(weapon.Frames.Single(frame => frame.Id == index).Id, 1d / action.FramesPerSecond)).ToArray();
+            staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, Array.Empty<SpritePlaybackMarker>(), action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
+            appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
+            SpritePlayback? old = viewmodel.Playback;
+            viewmodel.Playback = staged;
+            // The importer already placed each fixed 320x200 weapon frame from
+            // alignment and screenOffset. Engine owns camera-relative rebasing;
+            // Daggerfall retains this authored local transform unchanged.
+            viewmodel.Strike = name != "idle";
+            viewmodel.CompletedOuterUpdate = false;
+            viewmodel.LastOuterUpdate = null;
+            if (old is not null) Retire(old);
+        }
+        catch { staged?.Dispose(); throw; }
+    }
+
+    private void RetireViewmodel()
+    {
+        if (viewmodel is not { } weapon) return;
+        viewmodel = null;
+        Retire(weapon);
+    }
+
+    private static ulong AtlasEntityId(string resourceId)
+    {
+        ulong hash = 14695981039346656037UL;
+        foreach (char value in resourceId) hash = (hash ^ value) * 1099511628211UL;
+        return hash == 0 ? 1UL : hash;
+    }
+
+    private static ulong EffectEntityId(PresentationEventIdentity identity, string name)
+    {
+        // Product entity ids are positive; this is presentation-only identity
+        // derived solely from the already idempotent authoritative combat fact.
+        ulong hash = 14695981039346656037UL;
+        foreach (char value in $"{identity.Generation}:{identity.SimulationStep}:{identity.Attacker}:{identity.Target}:{name}") hash = (hash ^ value) * 1099511628211UL;
+        return hash == 0 ? 1UL : hash;
     }
 
     private NormalizedAttackSequence SelectAttack(IReadOnlyList<NormalizedAttackSequence> sequences, ulong generation, ulong step, long attacker, long target)
@@ -417,13 +666,70 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
     }
 
+    internal sealed class EffectVisual(ulong entityId, WorldPoint position, SpriteAtlas atlas, Appearance appearance, SpritePlayback playback) : IDisposable
+    {
+        internal ulong EntityId { get; } = entityId;
+        internal WorldPoint Position { get; } = position;
+        internal SpriteAtlas Atlas { get; } = atlas;
+        internal Appearance Appearance { get; } = appearance;
+        internal SpritePlayback Playback { get; } = playback;
+        internal bool CompletedOuterUpdate { get; set; }
+        internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
+        internal void Dispose(ref List<Exception>? failures)
+        {
+            PrivateersHoldAppearance.Dispose(Playback, ref failures);
+            PrivateersHoldAppearance.Dispose(Appearance, ref failures);
+            PrivateersHoldAppearance.Dispose(Atlas, ref failures);
+        }
+        public void Dispose()
+        {
+            List<Exception>? failures = null;
+            Dispose(ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        }
+    }
+
+    internal sealed class ViewmodelVisual(ulong entityId, Transform transform, SpriteAtlas atlas, Appearance appearance) : IDisposable
+    {
+        internal ulong EntityId { get; } = entityId;
+        internal Transform Transform { get; set; } = transform;
+        internal SpriteAtlas Atlas { get; } = atlas;
+        internal Appearance Appearance { get; } = appearance;
+        internal SpritePlayback? Playback { get; set; }
+        internal bool Strike { get; set; }
+        internal bool CompletedOuterUpdate { get; set; }
+        internal AppearanceOuterUpdate? LastOuterUpdate { get; set; }
+        internal void Dispose(ref List<Exception>? failures)
+        {
+            if (Playback is { } playback) PrivateersHoldAppearance.Dispose(playback, ref failures);
+            PrivateersHoldAppearance.Dispose(Appearance, ref failures);
+            PrivateersHoldAppearance.Dispose(Atlas, ref failures);
+        }
+        public void Dispose()
+        {
+            List<Exception>? failures = null;
+            Dispose(ref failures);
+            if (failures is { Count: > 0 }) throw new AggregateException(failures);
+        }
+    }
+
     internal readonly record struct PresentationEventIdentity(ulong Generation, ulong SimulationStep, long Attacker, long Target, string Outcome);
     internal readonly record struct AppearanceOuterUpdate(ulong Generation, ulong ControlRevision, ulong SimulationStep, uint AdmittedStepCount);
-    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired);
+    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired);
     internal sealed record ActorSnapshot(Appearance? Live, SpritePlayback? Playback, string State, bool Defeated, bool Completed, ulong Marker, uint PlaybackFrame, NormalizedSpriteState? ActiveState, IReadOnlyList<int> SourceFrames, int Orientation, ActiveAttackPresentation? ActiveAttack, AppearanceOuterUpdate? LastOuterUpdate)
     {
         internal static ActorSnapshot From(ActorVisual visual) => new(visual.Live, visual.Playback, visual.State, visual.Defeated, visual.CompletedOuterUpdate, visual.LastMarkerCrossing, visual.LastPlaybackFrameIndex, visual.ActiveState, visual.SourceFrameIndices, visual.Orientation, visual.ActiveAttack, visual.LastOuterUpdate);
         internal void Apply(ActorVisual visual) { visual.Live = Live; visual.Playback = Playback; visual.State = State; visual.Defeated = Defeated; visual.CompletedOuterUpdate = Completed; visual.LastMarkerCrossing = Marker; visual.LastPlaybackFrameIndex = PlaybackFrame; visual.ActiveState = ActiveState; visual.SourceFrameIndices = SourceFrames; visual.Orientation = Orientation; visual.ActiveAttack = ActiveAttack; visual.LastOuterUpdate = LastOuterUpdate; }
+    }
+    internal sealed record ViewmodelSnapshot(ViewmodelVisual Visual, SpritePlayback? Playback, Transform Transform, bool Strike, bool Completed, AppearanceOuterUpdate? LastOuterUpdate)
+    {
+        internal static ViewmodelSnapshot? From(ViewmodelVisual? visual) => visual is null ? null : new(visual, visual.Playback, visual.Transform, visual.Strike, visual.CompletedOuterUpdate, visual.LastOuterUpdate);
+        internal void Apply(ViewmodelVisual visual) { visual.Playback = Playback; visual.Transform = Transform; visual.Strike = Strike; visual.CompletedOuterUpdate = Completed; visual.LastOuterUpdate = LastOuterUpdate; }
+    }
+    internal sealed record EffectSnapshot(EffectVisual Visual, bool Completed, AppearanceOuterUpdate? LastOuterUpdate)
+    {
+        internal static EffectSnapshot From(EffectVisual visual) => new(visual, visual.CompletedOuterUpdate, visual.LastOuterUpdate);
+        internal void Apply() { Visual.CompletedOuterUpdate = Completed; Visual.LastOuterUpdate = LastOuterUpdate; }
     }
     internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, string HitCue);
 }

@@ -1,6 +1,20 @@
 {
   "schemaVersion": 1,
   "ruleset": "daggerfall",
+  "classicPresentation": {
+    "weaponVisuals": [
+      {
+        "itemId": "iron-dagger",
+        "resource": "weapon.dagger.steel"
+      }
+    ],
+    "viewmodel": {
+      "position": [0.28, -0.22, -0.75],
+      "pivot": { "x": 0.5, "y": 0.5 },
+      "worldSize": { "x": 1.6, "y": 1.0 },
+      "renderOrder": 0
+    }
+  },
   "startingState": {
     "position": [
       28.375,

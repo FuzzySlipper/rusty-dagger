@@ -664,6 +664,45 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Classic_textures_are_admitted_during_construction_and_rollback_releases_all_noncheckpoint_intermediates()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        NormalizedClassicPresentation weapon = ClassicWeapon();
+        NormalizedClassicPresentation classic = new(weapon.Weapon, ClassicEffects().Effects)
+        {
+            CompatibleItemVisuals = weapon.CompatibleItemVisuals,
+            Viewmodel = weapon.Viewmodel,
+        };
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
+        int constructionResourceRequests = appearance.OpenResourceRequests.Count;
+        appearance.RejectLateResourceOpen = true;
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        SpritePlayback actorPlayback = Visual(presentation).Playback!;
+        SpritePlayback viewmodelPlayback = Viewmodel(presentation).Playback!;
+        presentation.BeginAdmittedUpdate();
+        PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
+        presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1, false, 2, 3));
+        presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 2, false, 2, 3));
+        using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
+        presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 3, false, 2, 3), actors);
+        presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 4, false, 2, 3), actors);
+
+        presentation.Restore(checkpoint);
+
+        Assert.Equal(constructionResourceRequests, appearance.OpenResourceRequests.Count);
+        SpritePlaybackHandle[] discarded = appearance.CreatedPlaybacks
+            .Where(playback => !ReferenceEquals(playback, actorPlayback) && !ReferenceEquals(playback, viewmodelPlayback))
+            .Select(playback => playback.Handle)
+            .OrderBy(handle => handle.Value)
+            .ToArray();
+        Assert.Equal(discarded, appearance.DisposedPlaybackHandles.OrderBy(handle => handle.Value).ToArray());
+        Assert.Empty(appearance.OpenResourceRequests.Skip(constructionResourceRequests));
+    }
+
+    [Fact]
     public void Retired_playback_is_lagged_to_next_update_and_engine_rollback_keeps_it_retryable()
     {
         List<string> releases = [];
@@ -772,6 +811,92 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Classic_blood_effect_is_keyed_to_the_player_hit_and_retires_after_its_final_frame()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicEffects()));
+        WorldPoint targetPosition = new(7F, 2F, -3F);
+        using ActorsState actors = ActorsAt(new WorldPoint(1F, 1F, 1F));
+        presentation.Publish(actors);
+        actors.All[12].ApplyPose(new ActorPose(targetPosition, 0F));
+        AttackHitFact hit = new(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 0, false, 5, 8);
+
+        presentation.React(hit, actors);
+        presentation.React(hit, actors);
+
+        Assert.Equal(2, appearance.PlaybackRequests.Count);
+        Assert.Equal(1, EffectCount(presentation));
+        Assert.Equal(targetPosition, Effect(presentation).Position);
+        appearance.AdvanceReceipts.Enqueue(default);
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 1, true), true));
+        presentation.Advance(OuterUpdate(1));
+        Assert.Equal(1, EffectCount(presentation));
+        appearance.AdvanceReceipts.Enqueue(default);
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 2, true), true));
+        presentation.Advance(OuterUpdate(2));
+        Assert.Equal(0, EffectCount(presentation));
+    }
+
+    [Fact]
+    public void Compatible_right_hand_creates_a_viewmodel_and_uses_one_shot_strike_playback()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+
+        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
+        Assert.Single(appearance.PlaybackRequests);
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        Assert.Equal(2, appearance.PlaybackRequests.Count);
+        presentation.Publish(EmptyActors());
+        Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+
+        AttackMissedFact miss = new(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1, false, 3, 4);
+        presentation.React(miss);
+        presentation.React(miss);
+        Assert.Equal(3, appearance.PlaybackRequests.Count);
+        appearance.AdvanceReceipts.Enqueue(default);
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 1, true), true));
+        presentation.Advance(OuterUpdate(1));
+        appearance.AdvanceReceipts.Enqueue(default);
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(default, new SpritePlaybackReadout(0, 0, SpritePlaybackState.Completed, 0D, 0, 2, true), true));
+        presentation.Advance(OuterUpdate(2));
+        Assert.Equal(4, appearance.PlaybackRequests.Count);
+
+        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
+        presentation.Publish(EmptyActors());
+        Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+    }
+
+    [Fact]
+    public void Viewmodel_publishes_its_authored_bounded_local_transform_and_restores_it_exactly()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicWeapon()));
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        using ActorsState actors = EmptyActors();
+
+        presentation.Publish(actors);
+        AppearanceFact first = Assert.Single(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+        Assert.Equal(new Vector3(.2F, -.2F, -.7F), first.Transform.Translation);
+        Assert.Equal(Quaternion.Identity, first.Transform.Rotation);
+        Assert.All([first.Transform.Translation.X, first.Transform.Translation.Y, first.Transform.Translation.Z], coordinate => Assert.InRange(coordinate, -16F, 16F));
+        PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
+        presentation.Publish(actors);
+        Assert.Equal(first.Transform, Assert.Single(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel).Transform);
+
+        presentation.Restore(checkpoint);
+        Assert.Equal(first.Transform, Viewmodel(presentation).Transform);
+    }
+
+    [Fact]
     public void Normalized_media_rejects_invalid_sector_loop_and_per_sector_attack_index()
     {
         string root = RepositoryRoot();
@@ -808,6 +933,33 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Normalized_classic_sidecar_rejects_noncanonical_schema_source_records_ranges_frames_effects_and_descriptors()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["schemaVersion"] = 2), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponActions"]!.AsArray()[0]!["sourceRecordOrdinal"] = 6), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponActions"]!.AsArray()[1]!["frameStart"] = 0), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponActions"]!.AsArray()[0]!["frameCount"] = int.MaxValue), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["frames"]!.AsArray()[0]!["frameIndex"] = 4), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
+        {
+            JsonObject frame = WeaponResource(media)["frames"]!.AsArray()[0]!.AsObject();
+            frame["x"] = 1;
+            frame["width"] = int.MaxValue;
+        }), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["sourceRecordOrdinal"] = 3), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["effects"]!.AsArray()[0]!["timing"]!["framesPerSecond"] = 12), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => EffectResource(media, "effect.blood.0")["frames"]!.AsArray()[0]!["frameIndex"] = 1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["byteLength"] = 1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["mimeType"] = ""), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["sourceWidth"] = -1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["relativePath"] = "../weapon.png"), payload, definitions));
+    }
+
+    [Fact]
     public void Host_admits_one_realtime_update_and_releases_the_normalized_session_owners()
     {
         string root = RepositoryRoot();
@@ -823,6 +975,8 @@ public sealed class NormalizedRuntimeSeamTests
             if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
         }
         foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
+        foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
+        if (inputs.ClassicPresentation.Weapon is { } weapon) content.Add(weapon.TexturePath, weapon.TextureSha256);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -1070,6 +1224,8 @@ public sealed class NormalizedRuntimeSeamTests
             if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
         }
         foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
+        foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
+        if (inputs.ClassicPresentation.Weapon is { } weapon) content.Add(weapon.TexturePath, weapon.TextureSha256);
     }
 
     private static ContentFake MediaContent(List<string> releases)
@@ -1083,10 +1239,14 @@ public sealed class NormalizedRuntimeSeamTests
         content.Add("audio/hit3.wav", Hash);
         content.Add("audio/hit4.wav", Hash);
         content.Add("audio/hit5.wav", Hash);
+        content.Add("effect/blood0.png", Hash);
+        content.Add("effect/blood1.png", Hash);
+        content.Add("effect/blood2.png", Hash);
+        content.Add("effect/sparkle.png", Hash);
         return content;
     }
 
-    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null)
+    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -1136,7 +1296,27 @@ public sealed class NormalizedRuntimeSeamTests
                 new NormalizedAudioClip("hit3", "audio/hit3.wav", Hash),
                 new NormalizedAudioClip("hit4", "audio/hit4.wav", Hash),
                 new NormalizedAudioClip("hit5", "audio/hit5.wav", Hash),
-            ]);
+            ],
+            classic);
+    }
+
+    private static NormalizedClassicPresentation ClassicEffects()
+    {
+        IReadOnlyList<NormalizedAtlasFrame> frames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8)];
+        NormalizedClassicEffect Effect(string name, int sourceRecordOrdinal, string path) => new(name, sourceRecordOrdinal, path, Hash, 8, 8, frames, new Vector2(.5F, .5F), Vector2.One, [0], 10F, false);
+        return new NormalizedClassicPresentation(null, [Effect("blood0", 0, "effect/blood0.png"), Effect("blood1", 1, "effect/blood1.png"), Effect("blood2", 2, "effect/blood2.png"), Effect("magicSparkle", 3, "effect/sparkle.png")]);
+    }
+
+    private static NormalizedClassicPresentation ClassicWeapon()
+    {
+        IReadOnlyList<NormalizedAtlasFrame> frames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8)];
+        string[] names = ["idle", "strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
+        IReadOnlyDictionary<string, NormalizedClassicWeaponAction> actions = names.Select((name, sourceRecordOrdinal) => new NormalizedClassicWeaponAction(name, sourceRecordOrdinal, 0, 1, "right", name == "idle" ? .1F : .4F, 10F, name == "idle", 0, 0)).ToDictionary(action => action.Name);
+        return new NormalizedClassicPresentation(new NormalizedClassicWeapon("weapon.dagger.steel", "weapon/dagger.png", Hash, 8, 8, frames, new Vector2(.5F, .5F), Vector2.One, [0], actions), [])
+        {
+            CompatibleItemVisuals = new Dictionary<string, string> { ["iron-dagger"] = "weapon.dagger.steel" },
+            Viewmodel = new ClassicViewmodelStyle(new WorldPoint(.2F, -.2F, -.7F), new Vector2(.5F, .5F), Vector2.One, 0),
+        };
     }
 
     private static PrivateersHoldAppearance.ActorVisual Visual(PrivateersHoldAppearance presentation)
@@ -1146,6 +1326,11 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     private static ActorsState EmptyActors() => new(new PlayerActorState(new ActorMechanicsState(new EntityId(99), [], []), "health"), []);
+    private static WorldRpg.Kit.Inventory.EquipmentRead RightHand(string itemId) => new([new WorldRpg.Kit.Inventory.EquipmentAssignment(new WorldRpg.Kit.Inventory.EquipmentSlotId("right-hand"), new WorldRpg.Kit.Inventory.UniqueInventoryItem(1, new WorldRpg.Kit.Inventory.InventoryItemId(itemId)))], 1, 1);
+    private static ActorsState ActorsAt(WorldPoint point) => new(new PlayerActorState(new ActorMechanicsState(new EntityId(99), [], []), "health"), [new ActorState(12, new ActorMechanicsState(new EntityId(12), [], []), point, "health")]);
+    private static int EffectCount(PrivateersHoldAppearance presentation) => ((List<PrivateersHoldAppearance.EffectVisual>)typeof(PrivateersHoldAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!).Count;
+    private static PrivateersHoldAppearance.EffectVisual Effect(PrivateersHoldAppearance presentation) => Assert.Single((List<PrivateersHoldAppearance.EffectVisual>)typeof(PrivateersHoldAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!);
+    private static PrivateersHoldAppearance.ViewmodelVisual Viewmodel(PrivateersHoldAppearance presentation) => Assert.IsType<PrivateersHoldAppearance.ViewmodelVisual>(typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
     private static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
 
@@ -1154,6 +1339,14 @@ public sealed class NormalizedRuntimeSeamTests
         .SelectMany(actor => actor["states"]!.AsArray())
         .Select(value => value!.AsObject())
         .First(state => state["state"]!.GetValue<string>() == name);
+
+    private static JsonObject WeaponResource(JsonObject media) => media["media"]!["resources"]!.AsArray()
+        .Select(value => value!.AsObject())
+        .Single(resource => resource["kind"]!.GetValue<string>() == "weaponSprite");
+
+    private static JsonObject EffectResource(JsonObject media, string id) => media["media"]!["resources"]!.AsArray()
+        .Select(value => value!.AsObject())
+        .Single(resource => resource["id"]!.GetValue<string>() == id);
 
     private static ProductContent MutateDungeonMedia(string repositoryRoot, Action<JsonObject> mutate)
     {
@@ -1551,12 +1744,14 @@ public sealed class NormalizedRuntimeSeamTests
 
     private sealed class AppearanceFake(List<string> releases) : IAppearanceService
     {
+        internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
         internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
         internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
         internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
         internal List<SpritePlaybackCreateRequest> PlaybackRequests { get; } = [];
         internal List<SpritePlaybackControlRequest> ControlRequests { get; } = [];
         internal List<SpritePlaybackAdvanceRequest> AdvanceRequests { get; } = [];
+        internal List<AppearanceFact[]> Snapshots { get; } = [];
         internal List<SpriteFrameUpdateRequest> SetFrameRequests { get; } = [];
         internal List<SpritePlayback> CreatedPlaybacks { get; } = [];
         internal Queue<SpritePlaybackAdvanceLeaseReceipt> AdvanceReceipts { get; } = [];
@@ -1569,13 +1764,19 @@ public sealed class NormalizedRuntimeSeamTests
         internal int FailSpritePlaybackCreateAt { get; set; }
         internal int FailSpritePlaybackControlAt { get; set; }
         internal int FailPublishAt { get; set; }
+        internal bool RejectLateResourceOpen { get; set; }
         internal int PublishCalls { get; private set; }
         internal ulong LastCrossingSequence { get; private set; }
         private readonly List<Action> pendingPlaybackCommits = [];
         private readonly List<Action> pendingPlaybackRollbacks = [];
         private ulong nextHandle = 1;
 
-        public RenderResourceInfo OpenResource(RenderResourceRequest request) => new(new RenderResourceHandle(1), default, 0);
+        public RenderResourceInfo OpenResource(RenderResourceRequest request)
+        {
+            if (RejectLateResourceOpen) throw new InvalidOperationException("Render resource selection is sealed after product creation.");
+            OpenResourceRequests.Add(request);
+            return new(new RenderResourceHandle(checked((ulong)OpenResourceRequests.Count)), default, 0);
+        }
         public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => releases.Add("material"));
         public void UpdateMaterial(MaterialUpdateRequest request) { }
         public Material ReplaceMaterial(MaterialUpdateRequest request) => CreateMaterial(request.Replacement);
@@ -1634,6 +1835,7 @@ public sealed class NormalizedRuntimeSeamTests
         public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values)
         {
             PublishCalls++;
+            Snapshots.Add(values.ToArray());
             if (FailPublishAt == PublishCalls) throw new InvalidOperationException("Injected presentation publish failure.");
         }
         public Light CreateLight(LightRequest request) => new(new LightHandle(1), () => { });
