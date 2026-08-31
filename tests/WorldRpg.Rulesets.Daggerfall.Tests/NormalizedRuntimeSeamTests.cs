@@ -636,6 +636,17 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Actor_atlas_frames_do_not_override_normalized_world_geometry()
+    {
+        List<string> releases = [];
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(MediaContent(releases), appearance, MediaInputs());
+
+        Assert.All(appearance.AtlasRequests.Single().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
+        Assert.Equal(Vector2.One, appearance.SpriteRequests.Single().Size);
+    }
+
+    [Fact]
     public void Presentation_checkpoint_restores_prior_playback_and_event_delivery_after_snapshot_failure()
     {
         List<string> releases = [];
@@ -661,6 +672,28 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.NotSame(staged, Visual(presentation).Playback);
         Assert.Equal(2, audio.Emits.Count);
         Assert.Equal(audio.Emits[0].SignalId, audio.Emits[1].SignalId);
+    }
+
+    [Fact]
+    public void Presentation_rollback_detaches_a_published_new_effect_before_disposing_its_appearance()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases) { RejectDisposeOfRetainedAppearance = true };
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: ClassicEffects()));
+        using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
+        presentation.Publish(actors);
+        presentation.BeginAdmittedUpdate();
+        PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
+        presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1, false, 2, 3), actors);
+        Appearance effectAppearance = Effect(presentation).Appearance;
+        appearance.FailPublishAt = appearance.PublishCalls + 1;
+
+        Assert.Throws<InvalidOperationException>(() => presentation.Publish(actors));
+        presentation.Restore(checkpoint);
+
+        Assert.DoesNotContain(appearance.RetainedAppearances, retained => ReferenceEquals(retained, effectAppearance));
+        Assert.Equal(1, appearance.DisposedAppearances);
     }
 
     [Fact]
@@ -852,6 +885,8 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Single(appearance.PlaybackRequests);
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
         Assert.Equal(2, appearance.PlaybackRequests.Count);
+        Assert.All(appearance.AtlasRequests.Last().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
+        Assert.Equal(Vector2.One, appearance.SpriteRequests.Last().Size);
         presentation.Publish(EmptyActors());
         Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
 
@@ -870,6 +905,26 @@ public sealed class NormalizedRuntimeSeamTests
         presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
         presentation.Publish(EmptyActors());
         Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+    }
+
+    [Fact]
+    public void Classic_effect_atlas_frames_do_not_override_varied_authored_display_geometry()
+    {
+        Vector2[] expectedSizes = [new(.25F, .5F), new(.75F, .3F), new(.4F, .9F)];
+        for (int ordinal = 0; ordinal < expectedSizes.Length; ordinal++)
+        {
+            List<string> releases = [];
+            ContentFake content = MediaContent(releases);
+            AppearanceFake appearance = new(releases);
+            NormalizedClassicPresentation classic = ClassicEffects(expectedSizes);
+            using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: classic), random: KeyedRandomFake.Create(ordinal).Service);
+            using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
+
+            presentation.React(new AttackHitFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, ordinal, false, 2, 3), actors);
+
+            Assert.All(appearance.AtlasRequests.Last().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
+            Assert.Equal(expectedSizes[ordinal], appearance.SpriteRequests.Last().Size);
+        }
     }
 
     [Fact]
@@ -1300,10 +1355,11 @@ public sealed class NormalizedRuntimeSeamTests
             classic);
     }
 
-    private static NormalizedClassicPresentation ClassicEffects()
+    private static NormalizedClassicPresentation ClassicEffects(IReadOnlyList<Vector2>? bloodDisplaySizes = null)
     {
         IReadOnlyList<NormalizedAtlasFrame> frames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8)];
-        NormalizedClassicEffect Effect(string name, int sourceRecordOrdinal, string path) => new(name, sourceRecordOrdinal, path, Hash, 8, 8, frames, new Vector2(.5F, .5F), Vector2.One, [0], 10F, false);
+        Vector2 Size(int sourceRecordOrdinal) => sourceRecordOrdinal < 3 && bloodDisplaySizes is { Count: 3 } ? bloodDisplaySizes[sourceRecordOrdinal] : Vector2.One;
+        NormalizedClassicEffect Effect(string name, int sourceRecordOrdinal, string path) => new(name, sourceRecordOrdinal, path, Hash, 8, 8, frames, new Vector2(.5F, .5F), Size(sourceRecordOrdinal), [0], 10F, false);
         return new NormalizedClassicPresentation(null, [Effect("blood0", 0, "effect/blood0.png"), Effect("blood1", 1, "effect/blood1.png"), Effect("blood2", 2, "effect/blood2.png"), Effect("magicSparkle", 3, "effect/sparkle.png")]);
     }
 
@@ -1765,10 +1821,13 @@ public sealed class NormalizedRuntimeSeamTests
         internal int FailSpritePlaybackControlAt { get; set; }
         internal int FailPublishAt { get; set; }
         internal bool RejectLateResourceOpen { get; set; }
+        internal bool RejectDisposeOfRetainedAppearance { get; set; }
         internal int PublishCalls { get; private set; }
         internal ulong LastCrossingSequence { get; private set; }
+        internal IReadOnlyCollection<Appearance> RetainedAppearances => retainedAppearances;
         private readonly List<Action> pendingPlaybackCommits = [];
         private readonly List<Action> pendingPlaybackRollbacks = [];
+        private readonly HashSet<Appearance> retainedAppearances = new(ReferenceEqualityComparer.Instance);
         private ulong nextHandle = 1;
 
         public RenderResourceInfo OpenResource(RenderResourceRequest request)
@@ -1836,6 +1895,8 @@ public sealed class NormalizedRuntimeSeamTests
         {
             PublishCalls++;
             Snapshots.Add(values.ToArray());
+            retainedAppearances.Clear();
+            foreach (AppearanceFact value in values) retainedAppearances.Add(value.Appearance);
             if (FailPublishAt == PublishCalls) throw new InvalidOperationException("Injected presentation publish failure.");
         }
         public Light CreateLight(LightRequest request) => new(new LightHandle(1), () => { });
@@ -1847,7 +1908,14 @@ public sealed class NormalizedRuntimeSeamTests
         private Appearance CreateAppearance()
         {
             CreatedAppearances++;
-            return new(new AppearanceHandle(nextHandle++), () => { DisposedAppearances++; releases.Add("appearance"); });
+            Appearance value = null!;
+            value = new(new AppearanceHandle(nextHandle++), () =>
+            {
+                if (RejectDisposeOfRetainedAppearance && retainedAppearances.Contains(value)) throw new InvalidOperationException("CSHARP_APPEARANCE_IN_USE");
+                DisposedAppearances++;
+                releases.Add("appearance");
+            });
+            return value;
         }
         internal void CommitPendingPlaybackReleases()
         {
