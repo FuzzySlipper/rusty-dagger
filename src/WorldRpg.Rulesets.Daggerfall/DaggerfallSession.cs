@@ -256,13 +256,15 @@ internal sealed class DaggerfallSession : IGameSession
     private void React(IProductFact fact)
     {
         if (fact is ActorDiedFact died) _rewards.React(died, _facts);
-        _appearance.React(fact);
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        _appearance.React(fact, State.Actors);
         _outcomes.React(fact);
     }
 
     private void PublishPresentation()
     {
         _hud.Publish(State.Actors.Player, State.Progression, Presentation);
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
     }
