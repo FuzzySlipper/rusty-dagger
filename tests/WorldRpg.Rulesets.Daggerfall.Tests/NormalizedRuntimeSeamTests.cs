@@ -36,6 +36,274 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Rejected_controller_config_does_not_create_a_session_or_admit_content()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake spatial = SpatialFake.Create(Hash, releases);
+        spatial.RejectConfigValidation = true;
+
+        Assert.Throws<InvalidOperationException>(() => new SpatialMovementSystem(spatial.Service, content, new SpatialContentArtifact("spatial/hold.json", Hash, 7), new SpatialTuning(.5, 32, 32, 2)));
+
+        Assert.Equal(1, spatial.ConfigValidationCalls);
+        Assert.Equal(0, spatial.CreateSessionCalls);
+        Assert.Equal(0, content.ResolveCalls);
+    }
+
+    [Fact]
+    public void Spatial_system_layers_only_ruleset_controller_overrides_and_persists_the_engine_receipt()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake spatial = SpatialFake.Create(Hash, releases);
+        SpatialTuning tuning = new(.5, 32, 32, 2, new CharacterControllerTuning(
+            StandingHeight: 1.8f,
+            Radius: .25f,
+            ForwardSpeed: 3.5f,
+            BackwardSpeed: 3.5f,
+            StrafeSpeed: 3.5f,
+            RecoveryMaximumDistance: 1f,
+            MaximumStepHeight: .75f));
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), .25f, 0f);
+
+        using (SpatialMovementSystem system = new(spatial.Service, content, new SpatialContentArtifact("spatial/hold.json", Hash, 7), tuning))
+        {
+            system.Step(player, new ProductUpdateState(1f / 60f) { PlanarIntent = new Vector2(1f, 0f) });
+            system.Step(player, new ProductUpdateState(1f / 60f) { PlanarIntent = new Vector2(0f, 1f) });
+        }
+
+        CharacterStepRequest first = spatial.StepRequests[0];
+        CharacterControllerConfig config = first.Config;
+        Assert.Equal(1.8f, config.Shape.StandingHeight);
+        Assert.Equal(.25f, config.Shape.Radius);
+        Assert.Equal(3.5f, config.Ground.ForwardSpeed);
+        Assert.Equal(3.5f, config.Ground.BackwardSpeed);
+        Assert.Equal(3.5f, config.Ground.StrafeSpeed);
+        Assert.Equal(1f, config.Recovery.MaximumDistance);
+        Assert.Equal(.75f, config.Surface.MaximumStepHeight);
+        Assert.Equal(spatial.RepresentativeValidConfig.Shape.CrouchedHeight, config.Shape.CrouchedHeight);
+        Assert.Equal(spatial.RepresentativeValidConfig.Ground.Acceleration, config.Ground.Acceleration);
+        Assert.Equal(spatial.RepresentativeValidConfig.Recovery.MaximumSpeed, config.Recovery.MaximumSpeed);
+        Assert.Equal(spatial.RepresentativeValidConfig.Surface.FloorSnapDistance, config.Surface.FloorSnapDistance);
+        Assert.Equal(1, spatial.ConfigValidationCalls);
+        Assert.Equal(2, spatial.CommandValidationCalls);
+        Assert.Equal([1UL, 2UL], spatial.StepRequests.Select(request => request.Command.Sequence));
+        Assert.Equal(.25f, first.Command.HeadingYawRadians);
+        Assert.Equal(new Vector2(1f, 0f), first.Command.PlanarIntent);
+        Assert.Equal(new WorldPoint(3f, 2f, 3f), player.Position);
+        Assert.True(player.Motion.Grounded);
+        Assert.True(player.Ground.Present);
+    }
+
+    [Fact]
+    public void Zero_controller_overrides_are_layered_then_left_for_engine_validation()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake spatial = SpatialFake.Create(Hash, releases);
+        SpatialTuning tuning = new(.5, 32, 32, 2, new CharacterControllerTuning(
+            ForwardSpeed: 0f,
+            BackwardSpeed: 0f,
+            StrafeSpeed: 0f,
+            RecoveryMaximumDistance: 0f,
+            MaximumStepHeight: 0f));
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f);
+
+        using (SpatialMovementSystem system = new(spatial.Service, content, new SpatialContentArtifact("spatial/hold.json", Hash, 7), tuning))
+            system.Step(player, new ProductUpdateState(1f / 60f));
+
+        CharacterControllerConfig config = Assert.Single(spatial.StepRequests).Config;
+        Assert.Equal(0f, config.Ground.ForwardSpeed);
+        Assert.Equal(0f, config.Ground.BackwardSpeed);
+        Assert.Equal(0f, config.Ground.StrafeSpeed);
+        Assert.Equal(0f, config.Recovery.MaximumDistance);
+        Assert.Equal(0f, config.Surface.MaximumStepHeight);
+        Assert.Equal(1, spatial.ConfigValidationCalls);
+    }
+
+    [Fact]
+    public void Prepared_spatial_steps_are_owner_bound_stale_checked_and_single_use()
+    {
+        List<string> releases = [];
+        ContentFake firstContent = new("spatial/hold.json", Hash, releases);
+        ContentFake secondContent = new("spatial/hold.json", Hash, releases);
+        SpatialFake firstSpatial = SpatialFake.Create(Hash, releases);
+        SpatialFake secondSpatial = SpatialFake.Create(Hash, releases);
+        PlayerInputSystem input = new(DaggerfallTuning.Defaults.PlayerControl, LookRecorder.Create().Service, DaggerfallInput.Controls, DaggerfallInput.Bindings);
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f);
+        ProductUpdateState update = new(1f / 60f);
+
+        using SpatialMovementSystem first = new(firstSpatial.Service, firstContent, new SpatialContentArtifact("spatial/hold.json", Hash, 7), new SpatialTuning(.5, 32, 32, 2));
+        using SpatialMovementSystem second = new(secondSpatial.Service, secondContent, new SpatialContentArtifact("spatial/hold.json", Hash, 7), new SpatialTuning(.5, 32, 32, 2));
+        PreparedSpatialStep foreign = Assert.IsType<PreparedSpatialStep>(first.Prepare(player, update, input.Prepare(player, update), CharacterStepEnvironment.Empty));
+
+        Assert.Throws<InvalidOperationException>(() => second.Propose(foreign));
+        Assert.Equal(0, firstSpatial.StepCalls);
+        Assert.Equal(0, secondSpatial.StepCalls);
+
+        player.MoveTo(new Vector3(2f, 2f, 3f));
+        Assert.Throws<InvalidOperationException>(() => first.Propose(foreign));
+        Assert.Equal(0, firstSpatial.StepCalls);
+
+        PreparedSpatialStep accepted = Assert.IsType<PreparedSpatialStep>(first.Prepare(player, update, input.Prepare(player, update), CharacterStepEnvironment.Empty));
+        first.Propose(accepted);
+        Assert.Equal(1, firstSpatial.StepCalls);
+        Assert.Throws<InvalidOperationException>(() => first.Propose(accepted));
+        Assert.Equal(1, firstSpatial.StepCalls);
+    }
+
+    [Fact]
+    public void Daggerfall_tuning_exposes_its_controller_values_in_loaded_payloads()
+    {
+        string root = RepositoryRoot();
+        DaggerfallTuning tuning = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")));
+        CharacterControllerTuning controller = Assert.IsType<CharacterControllerTuning>(tuning.Spatial.CharacterController);
+
+        Assert.Equal(3.5f, controller.ForwardSpeed);
+        Assert.Equal(3.5f, controller.BackwardSpeed);
+        Assert.Equal(3.5f, controller.StrafeSpeed);
+        Assert.Equal(1.8f, controller.StandingHeight);
+        Assert.Equal(.25f, controller.Radius);
+        Assert.Equal(1f, controller.RecoveryMaximumDistance);
+        Assert.Equal(.75f, controller.MaximumStepHeight);
+    }
+
+    [Fact]
+    public void Realtime_substeps_reuse_postlook_held_movement_with_one_sequence_each()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        float expectedYaw = inputs.InitialLook.YawRadians + .25f;
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ProductInputEvent[] input =
+        [
+            Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW),
+            Input(InputEventKind.PointerDelta, x: .25f, y: -.5f),
+        ];
+
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), input);
+        }
+
+        Assert.Equal([1UL, 2UL, 3UL], spatial.StepRequests.Select(request => request.Command.Sequence));
+        Assert.All(spatial.StepRequests, request =>
+        {
+            Assert.Equal(new Vector2(0f, 1f), request.Command.PlanarIntent);
+            Assert.Equal(expectedYaw, request.Command.HeadingYawRadians);
+            Assert.Equal(1f / 60f, request.Command.StepSeconds);
+        });
+    }
+
+    [Fact]
+    public void Direct_axis_is_first_substep_only_while_held_input_continues()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectAxis, x: .5f, y: .75f, intent: "move")]);
+        }
+
+        Assert.Equal(new Vector2(.5f, .75f), spatial.StepRequests[0].Command.PlanarIntent);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[1].Command.PlanarIntent);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[2].Command.PlanarIntent);
+    }
+
+    [Fact]
+    public void Direct_digital_movement_is_first_substep_only()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 3, 1, 1, 1, 60, 3, 0, 1d / 60d), [Input(InputEventKind.DirectDigital, x: 1f, intent: "move")]);
+        }
+
+        Assert.Equal(new Vector2(0f, 1f), spatial.StepRequests[0].Command.PlanarIntent);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[1].Command.PlanarIntent);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[2].Command.PlanarIntent);
+    }
+
+    [Fact]
+    public void Rejected_command_leaves_the_entire_staged_slice_uncommitted()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        WorldPoint? positionBefore = session.State.PlayerControl.Position;
+        CharacterMotion motionBefore = session.State.PlayerControl.Motion;
+        CharacterGround groundBefore = session.State.PlayerControl.Ground;
+        float yawBefore = session.State.PlayerControl.YawRadians;
+        float pitchBefore = session.State.PlayerControl.PitchRadians;
+        spatial.RejectCommandValidation = true;
+
+        Assert.Throws<InvalidOperationException>(() => session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
+        [
+            Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW),
+            Input(InputEventKind.PointerDelta, x: .25f, y: -.5f),
+            Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"),
+        ]));
+
+        Assert.Equal(1, spatial.CommandValidationCalls);
+        Assert.Equal(0, spatial.StepCalls);
+        Assert.Equal(positionBefore, session.State.PlayerControl.Position);
+        Assert.Equal(motionBefore, session.State.PlayerControl.Motion);
+        Assert.Equal(groundBefore, session.State.PlayerControl.Ground);
+        Assert.Equal(yawBefore, session.State.PlayerControl.YawRadians);
+        Assert.Equal(pitchBefore, session.State.PlayerControl.PitchRadians);
+        spatial.RejectCommandValidation = false;
+        session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 2, 1, 1, 2, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
+        Assert.Equal(Vector2.Zero, spatial.StepRequests.Single().Command.PlanarIntent);
+        Assert.Equal(1UL, spatial.StepRequests.Single().Command.Sequence);
+    }
+
+    [Fact]
+    public void Call_local_support_and_obstacles_are_forwarded_without_a_product_registry()
+    {
+        List<string> releases = [];
+        ContentFake content = new("spatial/hold.json", Hash, releases);
+        SpatialFake spatial = SpatialFake.Create(Hash, releases);
+        PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f) { Motion = default(CharacterMotion) with { LastCommandSequence = 41 } };
+        Transform transform = new(Vector3.One, Quaternion.Identity, Vector3.One);
+        CharacterSupport support = new(true, CharacterSupportLifecycle.Active, 99, transform);
+        CharacterObstacle obstacle = new(100, transform, new Vector3(-1f), Vector3.One, true, Vector3.Zero, Vector3.Zero);
+
+        using (SpatialMovementSystem system = new(spatial.Service, content, new SpatialContentArtifact("spatial/hold.json", Hash, 7), new SpatialTuning(.5, 32, 32, 2)))
+            system.Step(player, new ProductUpdateState(1f / 60f), new CharacterStepEnvironment(support, new[] { obstacle }));
+
+        CharacterStepRequest request = Assert.Single(spatial.StepRequests);
+        Assert.Equal(support, request.Support);
+        Assert.Equal([obstacle], request.Obstacles.ToArray());
+        Assert.Equal(42UL, request.Command.Sequence);
+    }
+
+    [Fact]
     public void Appearance_uses_normalized_material_slots_and_atlases_then_releases_dependents_in_order()
     {
         List<string> releases = [];
@@ -85,7 +353,7 @@ public sealed class NormalizedRuntimeSeamTests
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input)))
         {
             product.Start();
-            ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, .125);
+            ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
             Assert.Equal(ProductUpdateResult.None, product.Update(new ProductUpdate(facts, ReadOnlySpan<ProductInputEvent>.Empty)));
             Assert.Equal(1, spatial.StepCalls);
             product.Shutdown();
@@ -178,6 +446,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         public ContentReference ResolveReference(ContentResolveRequest request)
         {
+            ResolveCalls++;
             if (!values.TryGetValue(request.Path, out ContentSha256 known) || known != request.Sha256) throw new InvalidOperationException("Unexpected content reference.");
             ulong value = nextHandle++;
             references.Add(value, new KeyValuePair<string, ContentSha256>(request.Path, known));
@@ -191,6 +460,7 @@ public sealed class NormalizedRuntimeSeamTests
         }
 
         public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request) => ReadOnlyMemory<byte>.Empty;
+        internal int ResolveCalls { get; private set; }
     }
 
     private class SpatialFake : DispatchProxy
@@ -200,8 +470,28 @@ public sealed class NormalizedRuntimeSeamTests
         internal ISpatialService Service { get; private set; } = null!;
         internal int ReplaceCalls { get; private set; }
         internal int ReadCalls { get; private set; }
+        internal int CreateSessionCalls { get; private set; }
         internal int StepCalls { get; private set; }
+        internal int ConfigValidationCalls { get; private set; }
+        internal int CommandValidationCalls { get; private set; }
+        internal bool RejectConfigValidation { get; set; }
+        internal bool RejectCommandValidation { get; set; }
         internal SpatialContentArtifactReplaceRequest? LastRequest { get; private set; }
+        internal List<CharacterStepRequest> StepRequests { get; } = [];
+        // Representative fixture only: Engine owns the actual default and validity contract.
+        internal CharacterControllerConfig RepresentativeValidConfig { get; } = default(CharacterControllerConfig) with
+        {
+            Shape = new CharacterShapeConfig(2.2f, 1.3f, .45f, .03f, .02f),
+            Ground = new CharacterGroundConfig(6f, 5f, 4f, 31f, 42f, 7f, 3f, 2f),
+            Air = new CharacterAirConfig(4f, 10f, 1f, 4f, 1f, 0f),
+            Vertical = new CharacterVerticalConfig(18f, 48f, 46f, 6f, .4f),
+            Jump = new CharacterJumpConfig(.2f, .15f, 0f, false),
+            Surface = new CharacterSurfaceConfig(.9f, .02f, 16f, 9f, .35f, .04f, .2f, 8f, .2f),
+            Recovery = new CharacterRecoveryConfig(.7f, 18f, .002f, .003f),
+            Platform = new CharacterPlatformConfig(true, true, true, .8f, 0f, .03f),
+            ExternalMotion = new CharacterExternalMotionConfig(1f, 0f, 40f, 70f, 1f, 400f),
+            Solver = new CharacterSolverConfig(4, 7, 3, 24, 1, 8f, 48),
+        };
 
         internal static SpatialFake Create(ContentSha256 contentHash, List<string> releaseLog)
         {
@@ -215,8 +505,10 @@ public sealed class NormalizedRuntimeSeamTests
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
-            nameof(ISpatialService.CreateSession) => new SpatialSession(new SpatialSessionHandle(1), () => releases.Add("session")),
-            nameof(ISpatialService.DefaultCharacterControllerConfig) => default(CharacterControllerConfig),
+            nameof(ISpatialService.CreateSession) => CreateSession(),
+            nameof(ISpatialService.DefaultCharacterControllerConfig) => RepresentativeValidConfig,
+            nameof(ISpatialService.ValidateCharacterControllerConfig) => ValidateConfig((CharacterControllerConfig)arguments![0]!),
+            nameof(ISpatialService.ValidateCharacterControllerCommand) => ValidateCommand((CharacterControllerValidationRequest)arguments![0]!),
             nameof(ISpatialService.ReplaceContentArtifact) => Replace((SpatialContentArtifactReplaceRequest)arguments![0]!),
             nameof(ISpatialService.ReadContentArtifact) => Read(),
             nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
@@ -230,6 +522,26 @@ public sealed class NormalizedRuntimeSeamTests
             return new(request.Content.Handle.Value, hash, 1, 2, 3, 4, 5, 6, 7, 8);
         }
 
+        private SpatialSession CreateSession()
+        {
+            CreateSessionCalls++;
+            return new SpatialSession(new SpatialSessionHandle(1), () => releases.Add("session"));
+        }
+
+        private object? ValidateConfig(CharacterControllerConfig config)
+        {
+            ConfigValidationCalls++;
+            if (RejectConfigValidation) throw new InvalidOperationException("Rejected controller configuration.");
+            return null;
+        }
+
+        private object? ValidateCommand(CharacterControllerValidationRequest request)
+        {
+            CommandValidationCalls++;
+            if (RejectCommandValidation) throw new InvalidOperationException("Rejected controller command.");
+            return null;
+        }
+
         private SpatialContentArtifactReadout Read()
         {
             ReadCalls++;
@@ -240,7 +552,13 @@ public sealed class NormalizedRuntimeSeamTests
         private CharacterStepReceipt Step(CharacterStepRequest request)
         {
             StepCalls++;
-            return default(CharacterStepReceipt) with { Transform = new Transform(request.Position, Quaternion.Identity, Vector3.One), Motion = request.Motion };
+            StepRequests.Add(request);
+            return default(CharacterStepReceipt) with
+            {
+                Transform = new Transform(request.Position + new Vector3(1f, 0f, 0f), Quaternion.Identity, Vector3.One),
+                Motion = request.Motion with { Grounded = true, LastCommandSequence = request.Command.Sequence },
+                Ground = default(CharacterGround) with { Present = true },
+            };
         }
     }
 
@@ -257,6 +575,7 @@ public sealed class NormalizedRuntimeSeamTests
         }
         protected override object? Invoke(MethodInfo? method, object?[]? arguments)
         {
+            if (method?.Name == nameof(ILookService.Diagnose)) return LookDiagnostic.Accepted;
             if (method?.Name == nameof(ILookService.Integrate))
             {
                 LookRequest request = (LookRequest)arguments![0]!;

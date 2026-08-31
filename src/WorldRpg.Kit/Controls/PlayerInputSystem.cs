@@ -5,6 +5,8 @@ namespace WorldRpg.Kit.Controls;
 
 public readonly record struct InputActionId(string Value);
 
+internal enum MovementDirection { Forward, Backward, Left, Right }
+
 /// <summary>A ruleset-owned binding from an Engine semantic intent to a typed action handle.</summary>
 public sealed record InputActionBinding(InputActionId Action, ReadOnlyMemory<byte> Intent);
 
@@ -24,85 +26,194 @@ public sealed record PlayerControlBindings(
     KeyboardControl Right,
     DirectionalMovementBindings? DirectionalIntents = null);
 
-public sealed class PlayerInputSystem(PlayerControlTuning tuning, ILookService look, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null)
+/// <summary>A fully diagnosed input interpretation that has not changed persistent product state.</summary>
+public sealed class PreparedPlayerInput
+{
+    private readonly PlayerInputSystem _owner;
+    private readonly HashSet<KeyboardControl> _held;
+    private readonly HashSet<MovementDirection> _mappedDirections;
+    private readonly HashSet<InputActionId> _actions;
+    private readonly PlayerControlState _player;
+    private readonly ulong _ownerRevision;
+    private readonly float _startingYawRadians;
+    private readonly float _startingPitchRadians;
+
+    private bool _consumed;
+
+    internal PreparedPlayerInput(PlayerInputSystem owner, PlayerControlState player, ulong ownerRevision, float startingYawRadians, float startingPitchRadians, HashSet<KeyboardControl> held, HashSet<MovementDirection> mappedDirections, HashSet<InputActionId> actions, Vector2 planarIntent, float yawRadians, float pitchRadians)
+    {
+        _owner = owner;
+        _player = player;
+        _ownerRevision = ownerRevision;
+        _startingYawRadians = startingYawRadians;
+        _startingPitchRadians = startingPitchRadians;
+        _held = held;
+        _mappedDirections = mappedDirections;
+        _actions = actions;
+        PlanarIntent = planarIntent;
+        YawRadians = yawRadians;
+        PitchRadians = pitchRadians;
+    }
+
+    public Vector2 PlanarIntent { get; }
+    public float YawRadians { get; }
+    public float PitchRadians { get; }
+
+    internal void EnsureCommittableBy(PlayerInputSystem owner, PlayerControlState player)
+    {
+        if (!ReferenceEquals(_owner, owner)) throw new InvalidOperationException("Prepared input belongs to a different input system.");
+        if (!ReferenceEquals(_player, player)) throw new InvalidOperationException("Prepared input belongs to a different player state.");
+        if (_ownerRevision != owner.Revision) throw new InvalidOperationException("Prepared input is stale relative to input interpreter state.");
+        if (player.YawRadians != _startingYawRadians || player.PitchRadians != _startingPitchRadians) throw new InvalidOperationException("Prepared input is stale relative to player look state.");
+        if (_consumed) throw new InvalidOperationException("Prepared input was already consumed.");
+    }
+
+    internal void CommitTo(PlayerInputSystem owner, HashSet<KeyboardControl> held, HashSet<MovementDirection> mappedDirections, ProductUpdateState update, PlayerControlState player)
+    {
+        EnsureCommittableBy(owner, player);
+        _consumed = true;
+        held.Clear();
+        held.UnionWith(_held);
+        mappedDirections.Clear();
+        mappedDirections.UnionWith(_mappedDirections);
+        player.YawRadians = YawRadians;
+        player.PitchRadians = PitchRadians;
+        update.PlanarIntent = PlanarIntent;
+        foreach (InputActionId action in _actions) update.Request(action);
+    }
+}
+
+public sealed class PlayerInputSystem
 {
     private readonly HashSet<KeyboardControl> _held = [];
     private readonly HashSet<MovementDirection> _mappedDirections = [];
-    private readonly PlayerControlBindings _controls = controls ?? throw new ArgumentNullException(nameof(controls));
-    private readonly InputActionBinding[] _bindings = bindings?.ToArray() ?? [];
+    private readonly PlayerControlTuning _tuning;
+    private readonly ILookService _look;
+    private readonly PlayerControlBindings _controls;
+    private readonly InputActionBinding[] _bindings;
+    private ulong _revision;
 
-    public void Apply(PlayerControlState player, ProductUpdateState update)
+    internal ulong Revision => _revision;
+
+    public PlayerInputSystem(PlayerControlTuning tuning, ILookService look, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null)
     {
+        _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
+        _look = look ?? throw new ArgumentNullException(nameof(look));
+        _controls = controls ?? throw new ArgumentNullException(nameof(controls));
+        _bindings = bindings?.ToArray() ?? [];
+    }
+
+    /// <summary>Interprets one admitted input slice without changing held state, player state, or semantic actions.</summary>
+    public PreparedPlayerInput Prepare(PlayerControlState player, ProductUpdateState update)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(update);
+        player.ValidateForInput();
+        update.Validate();
+        foreach (ProductInputEvent input in update.Inputs) Validate(input);
+
+        HashSet<KeyboardControl> held = new(_held);
+        HashSet<MovementDirection> mappedDirections = new(_mappedDirections);
+        HashSet<InputActionId> actions = [];
+        Vector2 planarIntent = update.PlanarIntent;
+        float startingYawRadians = player.YawRadians;
+        float startingPitchRadians = player.PitchRadians;
+        float yawRadians = startingYawRadians;
+        float pitchRadians = startingPitchRadians;
+
         foreach (ProductInputEvent input in update.Inputs)
         {
             if (input.Kind == InputEventKind.Clear)
             {
-                _held.Clear();
-                _mappedDirections.Clear();
-                update.PlanarIntent = default;
+                held.Clear();
+                mappedDirections.Clear();
+                planarIntent = default;
             }
             else if (input.Kind == InputEventKind.PointerDelta)
             {
-                LookReceipt receipt = look.Integrate(new LookRequest(new LookState(player.YawRadians, player.PitchRadians), new Vector2(input.X, input.Y), LookConfiguration()));
-                player.YawRadians = receipt.After.YawRadians;
-                player.PitchRadians = receipt.After.PitchRadians;
+                LookRequest request = new(new LookState(yawRadians, pitchRadians), new Vector2(input.X, input.Y), LookConfiguration());
+                LookDiagnostic diagnostic = _look.Diagnose(request);
+                if (diagnostic != LookDiagnostic.Accepted) throw new InvalidOperationException($"Engine look request rejected: {diagnostic}.");
+                LookReceipt receipt = _look.Integrate(request);
+                yawRadians = receipt.After.YawRadians;
+                pitchRadians = receipt.After.PitchRadians;
             }
             else if (input.Kind == InputEventKind.DirectDigital || input.Kind == InputEventKind.MappedDigital)
             {
-                ApplyDigitalIntent(input, update);
+                ApplyDigitalIntent(input, mappedDirections, actions, ref planarIntent);
             }
             else if (input.Kind == InputEventKind.DirectAxis || input.Kind == InputEventKind.MappedAxis)
             {
-                ApplyAxisIntent(input, update);
+                ApplyAxisIntent(input, actions, ref planarIntent);
             }
             else if (input.Kind == InputEventKind.Key && IsMovementKey(input.Keyboard))
             {
-                if (input.Edge is InputEdge.Pressed or InputEdge.Held) _held.Add(input.Keyboard);
+                if (input.Edge is InputEdge.Pressed or InputEdge.Held) held.Add(input.Keyboard);
                 else if (input.Edge == InputEdge.Released)
                 {
-                    _held.Remove(input.Keyboard);
-                    ReleaseMappedDirection(input.Keyboard);
+                    held.Remove(input.Keyboard);
+                    ReleaseMappedDirection(input.Keyboard, mappedDirections);
                 }
             }
         }
-        if (update.PlanarIntent == Vector2.Zero)
-            update.PlanarIntent = new(
-                (IsActive(MovementDirection.Right, _controls.Right) ? 1f : 0f) - (IsActive(MovementDirection.Left, _controls.Left) ? 1f : 0f),
-                (IsActive(MovementDirection.Forward, _controls.Forward) ? 1f : 0f) - (IsActive(MovementDirection.Backward, _controls.Backward) ? 1f : 0f));
+
+        if (planarIntent == Vector2.Zero)
+            planarIntent = PlanarIntent(held, mappedDirections);
+        return new PreparedPlayerInput(this, player, _revision, startingYawRadians, startingPitchRadians, held, mappedDirections, actions, planarIntent, yawRadians, pitchRadians);
     }
+
+    /// <summary>Commits an already prepared candidate after the enclosing spatial proposal has succeeded.</summary>
+    public void Commit(PreparedPlayerInput candidate, PlayerControlState player, ProductUpdateState update)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(update);
+        candidate.CommitTo(this, _held, _mappedDirections, update, player);
+        AdvanceRevision();
+    }
+
+    /// <summary>Rejects a foreign, stale, or consumed candidate before another owner attempts a dependent Engine proposal.</summary>
+    public void EnsureCommittable(PreparedPlayerInput candidate, PlayerControlState player)
+    {
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(player);
+        candidate.EnsureCommittableBy(this, player);
+    }
+
+    /// <summary>Convenience path for callers that do not need to coordinate an Engine character proposal.</summary>
+    public void Apply(PlayerControlState player, ProductUpdateState update) => Commit(Prepare(player, update), player, update);
+
+    private void AdvanceRevision() => _revision = checked(_revision + 1);
 
     private bool IsMovementKey(KeyboardControl key) => key == _controls.Forward || key == _controls.Backward || key == _controls.Left || key == _controls.Right;
 
-    private void ApplyDigitalIntent(ProductInputEvent input, ProductUpdateState update)
+    private void ApplyDigitalIntent(ProductInputEvent input, HashSet<MovementDirection> mappedDirections, HashSet<InputActionId> actions, ref Vector2 planarIntent)
     {
         ReadOnlySpan<byte> intent = input.Intent.Span;
         if (input.Kind == InputEventKind.MappedDigital && TryGetDirectionalIntent(intent, out MovementDirection direction))
         {
-            if (input.Edge == InputEdge.Released || input.X <= 0f) _mappedDirections.Remove(direction);
-            else _mappedDirections.Add(direction);
+            if (input.Edge == InputEdge.Released || input.X <= 0f) mappedDirections.Remove(direction);
+            else mappedDirections.Add(direction);
         }
         else if (IsMovementIntent(intent))
         {
-            update.PlanarIntent = input.X > 0f ? new Vector2(0f, 1f) : Vector2.Zero;
+            planarIntent = input.X > 0f ? new Vector2(0f, 1f) : Vector2.Zero;
         }
-        CaptureSemanticAction(input, update);
+        CaptureSemanticAction(input, actions);
     }
 
-    private void ApplyAxisIntent(ProductInputEvent input, ProductUpdateState update)
+    private void ApplyAxisIntent(ProductInputEvent input, HashSet<InputActionId> actions, ref Vector2 planarIntent)
     {
         ReadOnlySpan<byte> intent = input.Intent.Span;
-        if (IsMovementIntent(intent))
-        {
-            update.PlanarIntent = new Vector2(input.X, input.Y);
-        }
-        CaptureSemanticAction(input, update);
+        if (IsMovementIntent(intent)) planarIntent = new Vector2(input.X, input.Y);
+        CaptureSemanticAction(input, actions);
     }
 
-    private void CaptureSemanticAction(ProductInputEvent input, ProductUpdateState update)
+    private void CaptureSemanticAction(ProductInputEvent input, HashSet<InputActionId> actions)
     {
         if (input.X <= 0f || !IsActionActivation(input)) return;
         foreach (InputActionBinding binding in _bindings)
-            if (input.Intent.Span.SequenceEqual(binding.Intent.Span)) update.Request(binding.Action);
+            if (input.Intent.Span.SequenceEqual(binding.Intent.Span)) actions.Add(binding.Action);
     }
 
     private static bool IsActionActivation(ProductInputEvent input) =>
@@ -130,36 +241,59 @@ public sealed class PlayerInputSystem(PlayerControlTuning tuning, ILookService l
         return false;
     }
 
-    private bool IsActive(MovementDirection direction, KeyboardControl key) => _mappedDirections.Contains(direction) || _held.Contains(key);
+    private Vector2 PlanarIntent(IReadOnlySet<KeyboardControl> held, IReadOnlySet<MovementDirection> mappedDirections) => new(
+        (IsActive(MovementDirection.Right, _controls.Right, held, mappedDirections) ? 1f : 0f) - (IsActive(MovementDirection.Left, _controls.Left, held, mappedDirections) ? 1f : 0f),
+        (IsActive(MovementDirection.Forward, _controls.Forward, held, mappedDirections) ? 1f : 0f) - (IsActive(MovementDirection.Backward, _controls.Backward, held, mappedDirections) ? 1f : 0f));
 
-    private void ReleaseMappedDirection(KeyboardControl key)
+    private static bool IsActive(MovementDirection direction, KeyboardControl key, IReadOnlySet<KeyboardControl> held, IReadOnlySet<MovementDirection> mappedDirections) => mappedDirections.Contains(direction) || held.Contains(key);
+
+    private void ReleaseMappedDirection(KeyboardControl key, HashSet<MovementDirection> mappedDirections)
     {
-        if (key == _controls.Forward) _mappedDirections.Remove(MovementDirection.Forward);
-        else if (key == _controls.Backward) _mappedDirections.Remove(MovementDirection.Backward);
-        else if (key == _controls.Left) _mappedDirections.Remove(MovementDirection.Left);
-        else if (key == _controls.Right) _mappedDirections.Remove(MovementDirection.Right);
+        if (key == _controls.Forward) mappedDirections.Remove(MovementDirection.Forward);
+        else if (key == _controls.Backward) mappedDirections.Remove(MovementDirection.Backward);
+        else if (key == _controls.Left) mappedDirections.Remove(MovementDirection.Left);
+        else if (key == _controls.Right) mappedDirections.Remove(MovementDirection.Right);
     }
 
-    private enum MovementDirection { Forward, Backward, Left, Right }
-
     private LookConfig LookConfiguration() => new(
-        tuning.LookSensitivity,
-        tuning.LookSensitivity,
-        tuning.PitchMinimumRadians,
-        tuning.PitchMaximumRadians,
-        tuning.MaximumLookDeltaRadians,
-        tuning.InvertHorizontal,
-        tuning.InvertVertical,
-        tuning.WrapYaw);
+        _tuning.LookSensitivity,
+        _tuning.LookSensitivity,
+        _tuning.PitchMinimumRadians,
+        _tuning.PitchMaximumRadians,
+        _tuning.MaximumLookDeltaRadians,
+        _tuning.InvertHorizontal,
+        _tuning.InvertVertical,
+        _tuning.WrapYaw);
+
+    private static void Validate(ProductInputEvent input)
+    {
+        if (!float.IsFinite(input.X)) throw new ArgumentOutOfRangeException(nameof(input.X));
+        if (!float.IsFinite(input.Y)) throw new ArgumentOutOfRangeException(nameof(input.Y));
+    }
 }
 
 public sealed class ProductUpdateState(float deltaSeconds)
 {
     public float DeltaSeconds { get; } = deltaSeconds;
     public List<ProductInputEvent> Inputs { get; } = [];
-    public Vector2 PlanarIntent { get; set; }
+    public Vector2 PlanarIntent
+    {
+        get => _planarIntent;
+        set
+        {
+            if (!float.IsFinite(value.X) || !float.IsFinite(value.Y)) throw new ArgumentOutOfRangeException(nameof(value));
+            _planarIntent = value;
+        }
+    }
     public void Add(ProductInputEvent input) => Inputs.Add(input);
     public void Request(InputActionId action) => _actions.Add(action);
     public bool IsRequested(InputActionId action) => _actions.Contains(action);
+    internal void Validate()
+    {
+        if (!float.IsFinite(DeltaSeconds) || DeltaSeconds <= 0f) throw new ArgumentOutOfRangeException(nameof(DeltaSeconds));
+        if (!float.IsFinite(PlanarIntent.X) || !float.IsFinite(PlanarIntent.Y)) throw new ArgumentOutOfRangeException(nameof(PlanarIntent));
+    }
+
+    private Vector2 _planarIntent;
     private readonly HashSet<InputActionId> _actions = [];
 }

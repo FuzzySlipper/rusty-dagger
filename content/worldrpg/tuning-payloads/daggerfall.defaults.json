@@ -12,7 +12,16 @@
     "collisionVoxelSize": 0.5,
     "collisionChunkSize": 32,
     "navigationChunkSize": 32,
-    "navigationMaximumStepCells": 2
+    "navigationMaximumStepCells": 2,
+    "characterController": {
+      "standingHeight": 1.8,
+      "radius": 0.25,
+      "forwardSpeed": 3.5,
+      "backwardSpeed": 3.5,
+      "strafeSpeed": 3.5,
+      "recoveryMaximumDistance": 1.0,
+      "maximumStepHeight": 0.75
+    }
   },
   "camera": {
     "eyeHeight": 0.75,
