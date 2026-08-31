@@ -1,6 +1,42 @@
 using System.Numerics;
 using Rusty.Engine;
+
 namespace WorldRpg.Kit.Controls;
+
+/// <summary>Call-local facts supplied for one proposal; the Engine does not retain product support or obstacle ownership.</summary>
+public readonly record struct CharacterStepEnvironment(CharacterSupport Support, ReadOnlyMemory<CharacterObstacle> Obstacles)
+{
+    public static CharacterStepEnvironment Empty { get; } = new(default, ReadOnlyMemory<CharacterObstacle>.Empty);
+}
+
+/// <summary>An Engine-validated, owner-bound character proposal that can be submitted once.</summary>
+public sealed class PreparedSpatialStep
+{
+    private readonly SpatialMovementSystem _owner;
+    private readonly PlayerControlState _player;
+    private readonly WorldPoint _position;
+    private readonly CharacterMotion _motion;
+    private readonly CharacterStepRequest _request;
+    private bool _consumed;
+
+    internal PreparedSpatialStep(SpatialMovementSystem owner, PlayerControlState player, WorldPoint position, CharacterMotion motion, CharacterStepRequest request)
+    {
+        _owner = owner;
+        _player = player;
+        _position = position;
+        _motion = motion;
+        _request = request;
+    }
+
+    internal CharacterStepRequest ConsumeBy(SpatialMovementSystem owner)
+    {
+        if (!ReferenceEquals(_owner, owner)) throw new InvalidOperationException("Prepared spatial step belongs to a different spatial system.");
+        if (_consumed) throw new InvalidOperationException("Prepared spatial step was already consumed.");
+        if (_player.Position != _position || _player.Motion != _motion) throw new InvalidOperationException("Prepared spatial step is stale relative to player continuation state.");
+        _consumed = true;
+        return _request;
+    }
+}
 
 /// <summary>Owns one Engine spatial session and persistent character continuation.</summary>
 public sealed class SpatialMovementSystem : IDisposable
@@ -10,7 +46,6 @@ public sealed class SpatialMovementSystem : IDisposable
     private readonly SpatialTuning _tuning;
     private readonly CharacterControllerConfig _controller;
     private readonly SpatialSession _session;
-    private ulong _movementSequence;
     private bool _disposed;
 
     public SpatialMovementSystem(ISpatialService spatial, IContentService content, SpatialContentArtifact inputs, SpatialTuning tuning)
@@ -18,9 +53,12 @@ public sealed class SpatialMovementSystem : IDisposable
         ArgumentNullException.ThrowIfNull(spatial);
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(inputs);
+        tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         _spatial = spatial;
         _tuning = tuning;
-        _controller = spatial.DefaultCharacterControllerConfig();
+        CharacterControllerConfig defaults = spatial.DefaultCharacterControllerConfig();
+        _controller = (tuning.CharacterController ?? new CharacterControllerTuning()).ApplyTo(defaults);
+        _spatial.ValidateCharacterControllerConfig(_controller);
         SpatialSession session = spatial.CreateSession(new SpatialSessionConfig(
             tuning.CollisionVoxelSize,
             tuning.CollisionChunkSize,
@@ -64,28 +102,60 @@ public sealed class SpatialMovementSystem : IDisposable
         catch { session.Dispose(); throw; }
     }
 
-    public void Step(PlayerControlState player, ProductUpdateState update)
+    /// <summary>Builds and Engine-validates a command without changing product continuation state.</summary>
+    public PreparedSpatialStep? Prepare(PlayerControlState player, ProductUpdateState update, PreparedPlayerInput input, CharacterStepEnvironment environment)
     {
-        if (_disposed || player.Position is not WorldPoint position) return;
-        var receipt = _spatial.ProposeCharacterStep(new CharacterStepRequest(
+        ArgumentNullException.ThrowIfNull(input);
+        return PrepareCore(player, update, input.PlanarIntent, input.YawRadians, environment);
+    }
+
+    private PreparedSpatialStep? PrepareCore(PlayerControlState player, ProductUpdateState update, Vector2 planarIntent, float yawRadians, CharacterStepEnvironment environment)
+    {
+        if (_disposed) return null;
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(update);
+        player.ValidateForInput();
+        update.Validate();
+        if (player.Position is not WorldPoint position) return null;
+
+        ulong sequence = checked(player.Motion.LastCommandSequence + 1);
+        CharacterControllerCommand command = new(
+            planarIntent,
+            yawRadians,
+            JumpPressed: false,
+            JumpHeld: false,
+            CrouchRequested: false,
+            ExternalVelocity: Vector3.Zero,
+            ExternalImpulse: Vector3.Zero,
+            update.DeltaSeconds,
+            sequence);
+        _spatial.ValidateCharacterControllerCommand(new CharacterControllerValidationRequest(_controller, command));
+        CharacterStepRequest request = new(
             _session,
             position.ToVector(),
             player.Motion,
-            default,
-            ReadOnlyMemory<CharacterObstacle>.Empty,
+            environment.Support,
+            environment.Obstacles,
             _controller,
-            new CharacterControllerCommand(
-                update.PlanarIntent,
-                player.YawRadians,
-                JumpPressed: false,
-                JumpHeld: false,
-                CrouchRequested: false,
-                ExternalVelocity: Vector3.Zero,
-                ExternalImpulse: Vector3.Zero,
-                update.DeltaSeconds,
-                ++_movementSequence)));
-        player.MoveTo(receipt.Transform.Translation);
-        player.Motion = receipt.Motion;
+            command);
+        return new PreparedSpatialStep(this, player, position, player.Motion, request);
+    }
+
+    /// <summary>Submits an already validated candidate. Receipt application remains caller-controlled until this returns.</summary>
+    public CharacterStepReceipt Propose(PreparedSpatialStep step)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(SpatialMovementSystem));
+        ArgumentNullException.ThrowIfNull(step);
+        return _spatial.ProposeCharacterStep(step.ConsumeBy(this));
+    }
+
+    /// <summary>Convenience path for callers that have no separate staged input interpreter.</summary>
+    public void Step(PlayerControlState player, ProductUpdateState update, CharacterStepEnvironment? environment = null)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        ArgumentNullException.ThrowIfNull(update);
+        PreparedSpatialStep? prepared = PrepareCore(player, update, update.PlanarIntent, player.YawRadians, environment ?? CharacterStepEnvironment.Empty);
+        if (prepared is { } step) player.Apply(Propose(step));
     }
 
     public void Dispose()
@@ -99,7 +169,6 @@ public sealed class SpatialMovementSystem : IDisposable
         catch (Exception exception) { (failures ??= []).Add(exception); }
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
-
 }
 
 /// <summary>Ruleset-provided identity for one Engine-admitted spatial artifact; the Kit never reads its format.</summary>

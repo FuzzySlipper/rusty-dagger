@@ -168,17 +168,28 @@ internal sealed class DaggerfallSession : IGameSession
         ProductUpdateState firstStep = new(deltaSeconds);
         foreach (ProductInputEvent inputEvent in input) firstStep.Add(inputEvent);
 
-        // One admitted update owns one input slice. Apply it to the first step,
-        // then preserve held intent without replaying one-shot actions.
+        // One admitted update owns one input slice. Later catch-up steps derive
+        // only committed held keyboard/mapped-direction intent; direct axes,
+        // direct digital movement, pointer deltas, and semantic actions do not replay.
         Update(firstStep);
         for (uint step = 1; step < facts.AdmittedStepCount; step++)
-            Update(new ProductUpdateState(deltaSeconds) { PlanarIntent = firstStep.PlanarIntent });
+            Update(new ProductUpdateState(deltaSeconds));
     }
 
     internal void Update(ProductUpdateState update)
     {
-        _input.Apply(State.PlayerControl, update);
-        _spatial.Step(State.PlayerControl, update);
+        PreparedPlayerInput input = _input.Prepare(State.PlayerControl, update);
+        _input.EnsureCommittable(input, State.PlayerControl);
+        // Daggerfall presently has no authored dynamic support or obstacle facts.
+        // The generic Kit environment remains call-local and is resubmitted per proposal.
+        PreparedSpatialStep? step = _spatial.Prepare(State.PlayerControl, update, input, CharacterStepEnvironment.Empty);
+        if (step is { } prepared)
+        {
+            CharacterStepReceipt receipt = _spatial.Propose(prepared);
+            _input.Commit(input, State.PlayerControl, update);
+            State.PlayerControl.Apply(receipt);
+        }
+        else _input.Commit(input, State.PlayerControl, update);
         _camera.Update(State.PlayerControl);
         if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, _facts);
         _facts.Deliver(React);
