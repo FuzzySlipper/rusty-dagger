@@ -34,6 +34,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly List<Material> materials = [];
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
+    private AppearanceFact[] lastPublishedSnapshot = [];
     private Appearance? world;
     private readonly AuthoredWorldAppearance worldAppearance;
     private bool disposed;
@@ -96,7 +97,11 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         {
             facts.Add(new AppearanceFact(weapon.EntityId, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
         }
-        appearance.PublishSnapshot([.. facts]);
+        AppearanceFact[] snapshot = [.. facts];
+        // Record before publication: an Engine callback may stage this exact
+        // snapshot and then report a later failure in the same admitted update.
+        lastPublishedSnapshot = snapshot;
+        appearance.PublishSnapshot(snapshot);
     }
 
     /// <summary>
@@ -148,9 +153,15 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         priorRetired.AddRange(nextRetired);
         nextRetired.Clear();
     }
-    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray());
+    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray(), lastPublishedSnapshot.ToArray());
     internal void Restore(PresentationCheckpoint checkpoint)
     {
+        // A failing update may already have staged a snapshot containing
+        // discarded effect/viewmodel appearances. Restore the checkpoint's
+        // Engine-visible snapshot before releasing any discarded wrappers.
+        // That ordering keeps Engine ownership and managed disposal coherent.
+        appearance.PublishSnapshot(checkpoint.PublishedSnapshot.ToArray());
+        lastPublishedSnapshot = checkpoint.PublishedSnapshot.ToArray();
         DisposeRetiredIntermediates(checkpoint);
         deliveredEvents.Clear();
         deliveredEvents.UnionWith(checkpoint.Events);
@@ -380,7 +391,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         VerifyContent(content, new ContentArtifact(sprite.TexturePath, sprite.TextureSha256));
         RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(sprite.TexturePath));
-        SpriteAtlasFrame[] frames = sprite.Frames.Select(frame => new SpriteAtlasFrame(frame.Id, new Vector2((float)frame.X / sprite.AtlasWidth, (float)frame.Y / sprite.AtlasHeight), new Vector2((float)(frame.X + frame.Width) / sprite.AtlasWidth, (float)(frame.Y + frame.Height) / sprite.AtlasHeight), true, new Vector2(frame.Width, frame.Height))).ToArray();
+        SpriteAtlasFrame[] frames = sprite.Frames.Select(frame => new SpriteAtlasFrame(frame.Id, new Vector2((float)frame.X / sprite.AtlasWidth, (float)frame.Y / sprite.AtlasHeight), new Vector2((float)(frame.X + frame.Width) / sprite.AtlasWidth, (float)(frame.Y + frame.Height) / sprite.AtlasHeight), false, Vector2.Zero)).ToArray();
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
         atlases.Add(atlas);
         Appearance value = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
@@ -433,7 +444,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             SpriteAtlasFrame[] frames = effect.Frames.Select(frame => new SpriteAtlasFrame(frame.Id,
                 new Vector2((float)frame.X / effect.AtlasWidth, (float)frame.Y / effect.AtlasHeight),
                 new Vector2((float)(frame.X + frame.Width) / effect.AtlasWidth, (float)(frame.Y + frame.Height) / effect.AtlasHeight),
-                true, new Vector2(frame.Width, frame.Height))).ToArray();
+                false, Vector2.Zero)).ToArray();
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
             uint initialFrame = effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).First();
             visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
@@ -464,7 +475,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             SpriteAtlasFrame[] frames = weapon.Frames.Select(frame => new SpriteAtlasFrame(frame.Id,
                 new Vector2((float)frame.X / weapon.AtlasWidth, (float)frame.Y / weapon.AtlasHeight),
                 new Vector2((float)(frame.X + frame.Width) / weapon.AtlasWidth, (float)(frame.Y + frame.Height) / weapon.AtlasHeight),
-                true, new Vector2(frame.Width, frame.Height))).ToArray();
+                false, Vector2.Zero)).ToArray();
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
             visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, style.Pivot, style.Size, BillboardMode.None, SpriteSizeMode.World, style.RenderOrder, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
             viewmodel = new ViewmodelVisual(AtlasEntityId(weapon.ResourceId), new Transform(style.Position.ToVector(), Quaternion.Identity, Vector3.One), atlas, visual);
@@ -715,7 +726,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     internal readonly record struct PresentationEventIdentity(ulong Generation, ulong SimulationStep, long Attacker, long Target, string Outcome);
     internal readonly record struct AppearanceOuterUpdate(ulong Generation, ulong ControlRevision, ulong SimulationStep, uint AdmittedStepCount);
-    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired);
+    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired, IReadOnlyList<AppearanceFact> PublishedSnapshot);
     internal sealed record ActorSnapshot(Appearance? Live, SpritePlayback? Playback, string State, bool Defeated, bool Completed, ulong Marker, uint PlaybackFrame, NormalizedSpriteState? ActiveState, IReadOnlyList<int> SourceFrames, int Orientation, ActiveAttackPresentation? ActiveAttack, AppearanceOuterUpdate? LastOuterUpdate)
     {
         internal static ActorSnapshot From(ActorVisual visual) => new(visual.Live, visual.Playback, visual.State, visual.Defeated, visual.CompletedOuterUpdate, visual.LastMarkerCrossing, visual.LastPlaybackFrameIndex, visual.ActiveState, visual.SourceFrameIndices, visual.Orientation, visual.ActiveAttack, visual.LastOuterUpdate);
