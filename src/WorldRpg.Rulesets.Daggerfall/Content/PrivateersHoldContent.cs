@@ -61,12 +61,15 @@ internal static class PrivateersHoldContent
         string spatialPath = Prefix("spatial/privateer-s-hold/collision-navigation.json");
         string meshPath = Prefix("spatial/privateer-s-hold/static-mesh.json");
         string mediaPath = Prefix("media/dungeon/manifest.json");
+        string classicMediaPath = Prefix("media/classic/manifest.json");
         ContentSha256 spatialHash = RequireArtifact(artifacts, spatialPath, diagnostics);
         ContentSha256 meshHash = RequireArtifact(artifacts, meshPath, diagnostics);
         ContentSha256 mediaHash = RequireArtifact(artifacts, mediaPath, diagnostics);
+        ContentSha256 classicMediaHash = RequireArtifact(artifacts, classicMediaPath, diagnostics);
         VerifyAdmittedArtifact(files, spatialPath, spatialHash, diagnostics);
         VerifyAdmittedArtifact(files, meshPath, meshHash, diagnostics);
         VerifyAdmittedArtifact(files, mediaPath, mediaHash, diagnostics);
+        VerifyAdmittedArtifact(files, classicMediaPath, classicMediaHash, diagnostics);
         ulong gridId = UnsignedInteger(world, "navigationGridId", diagnostics);
         AuthoredWorldAppearance worldAppearance = ReadWorldAppearance(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(world, "appearance", diagnostics), "world.appearance", diagnostics), diagnostics);
         Dictionary<long, AuthoredActor> actors = ReadNormalizedPlacements(root, definitions, diagnostics);
@@ -76,6 +79,7 @@ internal static class PrivateersHoldContent
             artifacts,
             definitions,
             diagnostics);
+        IReadOnlyList<NormalizedAudioClip> audio = ReadClassicAudio(files.GetExactlyOne(classicMediaPath), publicationRoot, artifacts, diagnostics);
         Dictionary<long, NormalizedActorSprite> actorSprites = [];
         foreach (AuthoredActor actor in actors.Values)
         {
@@ -91,7 +95,7 @@ internal static class PrivateersHoldContent
                 diagnostics.Add($"Placement '{actor.EntityId}' has no generated actor media for Daggerfall mobile '{definition.MobileId}'.");
                 continue;
             }
-            actorSprites.Add(actor.EntityId, sprite);
+            actorSprites.Add(actor.EntityId, ResolveActorPresentation(actor, definition, sprite, diagnostics));
         }
 
         return new PrivateersHoldInputs(
@@ -101,7 +105,8 @@ internal static class PrivateersHoldContent
             worldAppearance,
             start.Look,
             materials,
-            new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites));
+            new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites),
+            audio);
     }
 
     private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
@@ -246,7 +251,18 @@ internal static class PrivateersHoldContent
                 Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(actor, "pivot", diagnostics), "actor.pivot", diagnostics);
                 Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(actor, "worldSize", diagnostics), "actor.worldSize", diagnostics);
                 if (size.X <= 0 || size.Y <= 0) diagnostics.Add($"Generated actor mobile '{mobileId}' has a non-positive world size.");
-                if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, texture.Frames, texture.Frames[0].Id, pivot, size))) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
+                IReadOnlyDictionary<string, NormalizedSpriteState> states = ReadActorStates(actor, texture, mobileId, diagnostics);
+                string? preferredRestState = DaggerfallBaseContent.OptionalText(actor, "preferredRestState", diagnostics);
+                if (preferredRestState is not null && !states.ContainsKey(preferredRestState)) diagnostics.Add($"Generated actor mobile '{mobileId}' preferredRestState '{preferredRestState}' is not a published state.");
+                IReadOnlyList<NormalizedAttackSequence> attacks = ReadAttackSequences(actor, states, mobileId, diagnostics);
+                NormalizedActorSprite? corpse = ReadCorpse(actor, resources, publicationRoot, artifacts, mobileId, diagnostics);
+                if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, texture.Frames, texture.Frames[0].Id, pivot, size)
+                {
+                    States = states,
+                    PreferredRestState = preferredRestState,
+                    AttackSequences = attacks,
+                    Corpse = corpse,
+                })) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
             }
             return (Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray()), new ReadOnlyDictionary<int, NormalizedActorSprite>(sprites));
         }
@@ -257,7 +273,176 @@ internal static class PrivateersHoldContent
         }
     }
 
+    private static NormalizedActorSprite ResolveActorPresentation(AuthoredActor actor, DaggerfallActorDefinition definition, NormalizedActorSprite sprite, DaggerfallContentDiagnostics diagnostics)
+    {
+        DaggerfallActorPresentationDefinition presentation = definition.Presentation;
+        if (presentation.PreferredRestState is not null && !sprite.States.ContainsKey(presentation.PreferredRestState))
+        {
+            diagnostics.Add($"Actor '{actor.ActorId.Value}' preferredRestState '{presentation.PreferredRestState}' is not published by its normalized media.");
+        }
+        foreach (string state in presentation.EffectiveFramesPerSecond.Keys)
+        {
+            if (!sprite.States.ContainsKey(state)) diagnostics.Add($"Actor '{actor.ActorId.Value}' effective playback override '{state}' is not published by its normalized media.");
+        }
+
+        IReadOnlyDictionary<string, NormalizedSpriteState> states = new ReadOnlyDictionary<string, NormalizedSpriteState>(sprite.States.ToDictionary(
+            pair => pair.Key,
+            pair => presentation.EffectiveFramesPerSecond.TryGetValue(pair.Key, out float overrideFramesPerSecond)
+                ? pair.Value with { EffectiveFramesPerSecond = overrideFramesPerSecond }
+                : pair.Value,
+            StringComparer.Ordinal));
+        return sprite with
+        {
+            PreferredRestState = presentation.PreferredRestState ?? sprite.PreferredRestState,
+            States = states,
+        };
+    }
+
+    private static IReadOnlyDictionary<string, NormalizedSpriteState> ReadActorStates(JsonElement actor, MediaResource texture, int mobileId, DaggerfallContentDiagnostics diagnostics)
+    {
+        Dictionary<string, NormalizedSpriteState> result = new(StringComparer.Ordinal);
+        foreach (JsonElement value in DaggerfallBaseContent.Array(actor, "states", diagnostics))
+        {
+            JsonElement state = DaggerfallBaseContent.Object(value, "actor state", diagnostics);
+            string name = DaggerfallBaseContent.Text(state, "state", diagnostics);
+            JsonElement playback = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(state, "playback", diagnostics), "actor state playback", diagnostics);
+            float fps = DaggerfallBaseContent.Property(playback, "framesPerSecond", diagnostics).TryGetSingle(out float parsedFps) ? parsedFps : 0F;
+            JsonElement loopsValue = DaggerfallBaseContent.Property(playback, "loops", diagnostics);
+            bool loops = loopsValue.ValueKind == JsonValueKind.True;
+            if (loopsValue.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' loops must be a JSON boolean.");
+            Dictionary<int, List<uint>> sectors = [];
+            foreach (JsonElement frameValue in DaggerfallBaseContent.Array(state, "frames", diagnostics))
+            {
+                JsonElement frame = DaggerfallBaseContent.Object(frameValue, "actor state frame", diagnostics);
+                int orientation = DaggerfallBaseContent.Integer(frame, "orientation", diagnostics);
+                if (orientation is < 0 or > 7) diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has orientation outside 0..7.");
+                JsonElement atlas = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(frame, "atlasFrame", diagnostics), "actor state atlas frame", diagnostics);
+                uint frameId = checked((uint)DaggerfallBaseContent.Integer(atlas, "frameIndex", diagnostics));
+                (sectors.TryGetValue(orientation, out List<uint>? sector) ? sector : sectors[orientation] = []).Add(frameId);
+            }
+            IReadOnlyDictionary<int, IReadOnlyList<uint>> orientations = new ReadOnlyDictionary<int, IReadOnlyList<uint>>(sectors.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.ToArray())));
+            IReadOnlyList<uint> frames = orientations.TryGetValue(0, out IReadOnlyList<uint>? forward) ? forward : orientations.Values.FirstOrDefault() ?? [];
+            bool completeSectors = orientations.Count == 8
+                && Enumerable.Range(0, 8).All(orientations.ContainsKey);
+            bool equalSectorFrames = completeSectors
+                && orientations.Values.Select(sequence => sequence.Count).Distinct().Count() == 1;
+            if (!completeSectors || !equalSectorFrames)
+                diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' must provide eight equally-sized directional sectors.");
+            if (!float.IsFinite(fps) || fps <= 0F || frames.Count == 0 || orientations.Values.Any(sequence => sequence.Any(frame => !texture.Frames.Any(atlas => atlas.Id == frame))))
+                diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has invalid playback frames.");
+            if (!result.TryAdd(name, new NormalizedSpriteState(name, frames, fps, loops) { Orientations = orientations })) diagnostics.Add($"Generated actor mobile '{mobileId}' repeats state '{name}'.");
+        }
+        if (result.Count == 0) diagnostics.Add($"Generated actor mobile '{mobileId}' has no playable states.");
+        return new ReadOnlyDictionary<string, NormalizedSpriteState>(result);
+    }
+
+    private static IReadOnlyList<NormalizedAttackSequence> ReadAttackSequences(JsonElement actor, IReadOnlyDictionary<string, NormalizedSpriteState> states, int mobileId, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<NormalizedAttackSequence> sequences = [];
+        if (!actor.TryGetProperty("sourceAttackSequence", out JsonElement source) || source.ValueKind != JsonValueKind.Object) return sequences;
+        if (!states.TryGetValue("primaryAttack", out NormalizedSpriteState? attack))
+        {
+            diagnostics.Add($"Generated actor mobile '{mobileId}' declares an attack sequence without a primaryAttack state.");
+            return sequences;
+        }
+        List<int> primary = DaggerfallBaseContent.Array(source, "primaryFrames", diagnostics).Select(value => value.TryGetInt32(out int frame) ? frame : int.MinValue).ToList();
+        AddAttack(primary, 100, attack, mobileId, diagnostics, sequences);
+        foreach (JsonElement alternate in DaggerfallBaseContent.Array(source, "alternates", diagnostics))
+        {
+            JsonElement value = DaggerfallBaseContent.Object(alternate, "attack alternate", diagnostics);
+            int chance = DaggerfallBaseContent.Integer(value, "chance", diagnostics);
+            List<int> frames = DaggerfallBaseContent.Array(value, "frames", diagnostics).Select(frame => frame.TryGetInt32(out int parsed) ? parsed : int.MinValue).ToList();
+            AddAttack(frames, chance, attack, mobileId, diagnostics, sequences);
+        }
+        return Array.AsReadOnly(sequences.ToArray());
+    }
+
+    private static void AddAttack(IReadOnlyList<int> source, int chance, NormalizedSpriteState state, int mobileId, DaggerfallContentDiagnostics diagnostics, List<NormalizedAttackSequence> target)
+    {
+        if (chance is < 1 or > 100 || source.Count == 0 || source[^1] == -1 || state.Orientations.Values.Any(orientation => source.Any(frame => frame < -1 || frame >= orientation.Count)))
+        {
+            diagnostics.Add($"Generated actor mobile '{mobileId}' has an invalid attack sequence.");
+            return;
+        }
+        target.Add(new NormalizedAttackSequence(chance, source));
+    }
+
+    private static NormalizedActorSprite? ReadCorpse(JsonElement actor, IReadOnlyDictionary<string, MediaResource> resources, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, int mobileId, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!actor.TryGetProperty("corpse", out JsonElement corpse) || corpse.ValueKind == JsonValueKind.Null) return null;
+        JsonElement value = DaggerfallBaseContent.Object(corpse, "actor corpse", diagnostics);
+        string mediaId = DaggerfallBaseContent.Text(value, "mediaId", diagnostics);
+        if (!resources.TryGetValue(mediaId, out MediaResource? resource) || resource.Frames.Count == 0)
+        {
+            diagnostics.Add($"Generated actor mobile '{mobileId}' refers to missing corpse media '{mediaId}'.");
+            return null;
+        }
+        Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(value, "pivot", diagnostics), "actor.corpse.pivot", diagnostics);
+        Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(value, "worldSize", diagnostics), "actor.corpse.worldSize", diagnostics);
+        if (size.X <= 0 || size.Y <= 0) diagnostics.Add($"Generated actor mobile '{mobileId}' has a non-positive corpse world size.");
+        return new NormalizedActorSprite(resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Frames[0].Id, pivot, size);
+    }
+
     private sealed record MediaResource(string Path, ContentSha256 Hash, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames);
+
+    private static IReadOnlyList<NormalizedAudioClip> ReadClassicAudio(byte[]? bytes, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (bytes is null) { diagnostics.Add("Generated classic media manifest is unavailable."); return []; }
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(bytes);
+            JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "classic media manifest", diagnostics);
+            Dictionary<string, (string Path, ContentSha256 Hash)> resources = [];
+            JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "classic media", diagnostics);
+            foreach (JsonElement value in DaggerfallBaseContent.Array(media, "resources", diagnostics))
+            {
+                JsonElement resource = DaggerfallBaseContent.Object(value, "classic media resource", diagnostics);
+                if (DaggerfallBaseContent.Text(resource, "kind", diagnostics) != "audio") continue;
+                string id = DaggerfallBaseContent.Text(resource, "id", diagnostics);
+                string path = $"{publicationRoot.TrimEnd('/')}/{DaggerfallBaseContent.Text(resource, "relativePath", diagnostics)}";
+                ContentSha256 hash = ContentHash(DaggerfallBaseContent.Text(resource, "contentDigest", diagnostics), diagnostics);
+                if (!artifacts.TryGetValue(path, out ContentSha256 artifact) || artifact != hash) diagnostics.Add($"Generated classic audio '{id}' does not agree with the import manifest.");
+                if (!resources.TryAdd(id, (path, hash))) diagnostics.Add($"Generated classic media repeats audio '{id}'.");
+            }
+            List<NormalizedAudioClip> audio = [];
+            foreach (JsonElement value in DaggerfallBaseContent.Array(root, "audio", diagnostics))
+            {
+                JsonElement clip = DaggerfallBaseContent.Object(value, "classic audio mapping", diagnostics);
+                string id = DaggerfallBaseContent.Text(clip, "clip", diagnostics);
+                string mediaId = DaggerfallBaseContent.Text(clip, "mediaId", diagnostics);
+                if (!resources.TryGetValue(mediaId, out (string Path, ContentSha256 Hash) resource)) diagnostics.Add($"Classic audio mapping '{id}' refers to missing audio media '{mediaId}'.");
+                else if (audio.Any(item => item.Id == id)) diagnostics.Add($"Classic media repeats audio mapping '{id}'.");
+                else audio.Add(new NormalizedAudioClip(id, resource.Path, resource.Hash));
+            }
+            try { OrderedHitCues(audio); }
+            catch (InvalidOperationException exception) { diagnostics.Add(exception.Message); }
+            return Array.AsReadOnly(audio.ToArray());
+        }
+        catch (JsonException exception)
+        {
+            diagnostics.Add($"Generated classic media manifest is not valid JSON: {exception.Message}");
+            return [];
+        }
+    }
+
+    /// <summary>Defines the Daggerfall hit-cue family carried by normalized classic audio mappings.</summary>
+    internal static IReadOnlyList<string> OrderedHitCues(IReadOnlyList<NormalizedAudioClip> audio)
+    {
+        List<(int Ordinal, string Id)> parsed = [];
+        foreach (NormalizedAudioClip clip in audio)
+        {
+            if (!clip.Id.StartsWith("hit", StringComparison.Ordinal)) continue;
+            if (!int.TryParse(clip.Id.AsSpan(3), out int ordinal) || ordinal <= 0 || clip.Id != $"hit{ordinal}")
+                throw new InvalidOperationException("Daggerfall hit cue IDs must be hit followed by a positive ordinal.");
+            parsed.Add((ordinal, clip.Id));
+        }
+        parsed.Sort((left, right) => left.Ordinal.CompareTo(right.Ordinal));
+        if (parsed.Count == 0
+            || parsed.Select((item, index) => item.Ordinal == index + 1).Any(valid => !valid)
+            || parsed.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count() != parsed.Count)
+            throw new InvalidOperationException("Daggerfall normalized audio must provide contiguous hit1..hitN cues.");
+        return Array.AsReadOnly(parsed.Select(item => item.Id).ToArray());
+    }
 
     private static Vector2 GeneratedVector2(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {
@@ -378,8 +563,31 @@ internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, 
 internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
 internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256);
 internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height);
-internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size);
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites)
+internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Frames, float FramesPerSecond, bool Loops)
+{
+    /// <summary>Ruleset-authored effective playback rate; defaults to the normalized import rate.</summary>
+    internal float EffectiveFramesPerSecond { get; init; } = FramesPerSecond;
+    /// <summary>All normalized directional sectors; callers must supply an explicit heading before selecting one.</summary>
+    internal IReadOnlyDictionary<int, IReadOnlyList<uint>> Orientations { get; init; } = new ReadOnlyDictionary<int, IReadOnlyList<uint>>(new Dictionary<int, IReadOnlyList<uint>>());
+    internal IReadOnlyList<uint> SelectOrientation(int sector)
+    {
+        if (Orientations.Count == 0) return Frames;
+        return Orientations.TryGetValue(sector, out IReadOnlyList<uint>? exact)
+            ? exact
+            : throw new InvalidOperationException($"Normalized Daggerfall sprite state '{Name}' lacks directional sector '{sector}'.");
+    }
+}
+internal sealed record NormalizedAttackSequence(int Chance, IReadOnlyList<int> SourceFrames);
+internal sealed record NormalizedAudioClip(string Id, string Path, ContentSha256 Sha256);
+internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
+{
+    internal IReadOnlyDictionary<string, NormalizedSpriteState> States { get; init; } = new ReadOnlyDictionary<string, NormalizedSpriteState>(new Dictionary<string, NormalizedSpriteState>());
+    /// <summary>Resolved Daggerfall rest-state policy. Null preserves the generic idle-then-move fallback.</summary>
+    internal string? PreferredRestState { get; init; }
+    internal IReadOnlyList<NormalizedAttackSequence> AttackSequences { get; init; } = Array.Empty<NormalizedAttackSequence>();
+    internal NormalizedActorSprite? Corpse { get; init; }
+}
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -388,6 +596,7 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     internal PlayerInitialLook InitialLook { get; } = initialLook;
     internal IReadOnlyList<NormalizedMaterial> Materials { get; } = Array.AsReadOnly(materials.OrderBy(material => material.Slot).ToArray());
     internal IReadOnlyDictionary<long, NormalizedActorSprite> ActorSprites { get; } = new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites.ToDictionary());
+    internal IReadOnlyList<NormalizedAudioClip> Audio { get; } = Array.AsReadOnly((audio ?? []).ToArray());
 }
 
 internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictionary<long, AuthoredActor> actors)

@@ -205,6 +205,9 @@
         "maximum": 16
       },
       "mobileId": 0,
+      "presentation": {
+        "preferredRestState": "ratIdle"
+      },
       "level": 1,
       "xpReward": 50,
       "weight": 2,
@@ -250,6 +253,12 @@
         "maximum": 18
       },
       "mobileId": 1,
+      "presentation": {
+        "preferredRestState": "move",
+        "effectiveFramesPerSecond": {
+          "move": 10
+        }
+      },
       "level": 2,
       "xpReward": 100,
       "weight": 40,
@@ -349,6 +358,12 @@
         "maximum": 26
       },
       "mobileId": 3,
+      "presentation": {
+        "preferredRestState": "move",
+        "effectiveFramesPerSecond": {
+          "move": 10
+        }
+      },
       "level": 3,
       "xpReward": 150,
       "weight": 80,

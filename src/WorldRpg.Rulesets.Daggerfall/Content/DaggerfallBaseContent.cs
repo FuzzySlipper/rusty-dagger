@@ -61,7 +61,7 @@ internal static class DaggerfallBaseContent
         Add("vocabulary", string.Join(',', definitions.Vocabulary.Attributes.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.Skills.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.Tracks.Select(id => id.Value)), string.Join(',', definitions.Vocabulary.ArmorParts), string.Join(',', definitions.Vocabulary.Progression.Select(id => id.Value)));
         foreach (DaggerfallActorDefinition actor in definitions.Actors.Values.OrderBy(actor => actor.Id.Value))
         {
-            Add("actor", actor.Id.Value, actor.Kind, actor.MobileId, actor.HitPointsPerLevel, actor.Armor, actor.Rewards.ExperienceReward, actor.Team, actor.MinimumMaterial, actor.LootTableKey, actor.Level, actor.Weight, actor.ActionId, actor.Health.Minimum, actor.Health.Maximum);
+            Add("actor", actor.Id.Value, actor.Kind, actor.MobileId, actor.HitPointsPerLevel, actor.Armor, actor.Rewards.ExperienceReward, actor.Team, actor.MinimumMaterial, actor.LootTableKey, actor.Level, actor.Weight, actor.ActionId, actor.Health.Minimum, actor.Health.Maximum, actor.Presentation.PreferredRestState, string.Join(',', actor.Presentation.EffectiveFramesPerSecond.OrderBy(pair => pair.Key).Select(pair => $"{pair.Key}={FingerprintField(pair.Value)}")));
             Add("actor-stats", actor.Id.Value, string.Join(',', actor.Stats.Values.OrderBy(pair => pair.Key.Value).Select(pair => $"{pair.Key.Value}={FingerprintField(pair.Value)}")));
             Add("attacks", actor.Id.Value, string.Join(',', actor.Attacks.Select(range => $"{FingerprintField(range.MinimumDamage)}-{FingerprintField(range.MaximumDamage)}")));
             Add("loadout", actor.Id.Value, string.Join(',', actor.Loadout.Select(entry => $"{entry.ItemId.Value}:{FingerprintField(entry.Quantity)}:{FingerprintField(entry.UniqueEntityId)}:{entry.EquipSlot?.Value}")));
@@ -98,12 +98,47 @@ internal static class DaggerfallBaseContent
             if (armor is < -MaximumAuthoredArmor or > MaximumAuthoredArmor) diagnostics.Add($"Actor '{id.Value}' armor is outside the supported range.");
             if (mobileId is < 0 or > 100_000) diagnostics.Add($"Actor '{id.Value}' mobileId is outside the supported range.");
             if (actionId is not null && !actions.ContainsKey(actionId)) diagnostics.Add($"Actor '{id.Value}' refers to missing action '{actionId}'.");
-            DaggerfallActorDefinition definition = new(id, Text(actor, "kind", diagnostics), stats, health, new(DaggerfallMechanicsIds.Health, id.Value == "player" ? DaggerfallMechanicsIds.Stamina : null), rewards, armor, mobileId, OptionalInteger(actor, "hitPointsPerLevel", diagnostics), attacks, OptionalText(actor, "team", diagnostics), OptionalText(actor, "minMetalToHit", diagnostics), OptionalText(actor, "lootTableKey", diagnostics), OptionalInteger(actor, "level", diagnostics), OptionalInteger(actor, "weight", diagnostics), actionId, ReadLoadout(actor, items, diagnostics));
+            DaggerfallActorPresentationDefinition presentation = ReadActorPresentation(actor, id, diagnostics);
+            DaggerfallActorDefinition definition = new(id, Text(actor, "kind", diagnostics), stats, health, new(DaggerfallMechanicsIds.Health, id.Value == "player" ? DaggerfallMechanicsIds.Stamina : null), rewards, armor, mobileId, OptionalInteger(actor, "hitPointsPerLevel", diagnostics), attacks, OptionalText(actor, "team", diagnostics), OptionalText(actor, "minMetalToHit", diagnostics), OptionalText(actor, "lootTableKey", diagnostics), OptionalInteger(actor, "level", diagnostics), OptionalInteger(actor, "weight", diagnostics), actionId, ReadLoadout(actor, items, diagnostics), presentation);
             if (!actors.TryAdd(id, definition)) diagnostics.Add($"Duplicate actor definition '{id.Value}'.");
         }
         if (actors.Count == 0) diagnostics.Add("Base payload must define at least one actor.");
         return actors;
     }
+
+    private static DaggerfallActorPresentationDefinition ReadActorPresentation(JsonElement actor, DaggerfallActorId actorId, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!actor.TryGetProperty("presentation", out JsonElement value) || value.ValueKind == JsonValueKind.Null) return DaggerfallActorPresentationDefinition.None;
+
+        JsonElement presentation = Object(value, "actor.presentation", diagnostics);
+        RejectDuplicateProperties(presentation, "actor.presentation", diagnostics);
+        string? preferredRestState = OptionalText(presentation, "preferredRestState", diagnostics);
+        if (preferredRestState is not null && !ValidPresentationStateId(preferredRestState)) diagnostics.Add($"Actor '{actorId.Value}' preferredRestState must be a non-empty state identifier.");
+
+        Dictionary<string, float> effectiveFramesPerSecond = new(StringComparer.Ordinal);
+        if (presentation.TryGetProperty("effectiveFramesPerSecond", out JsonElement overridesValue) && overridesValue.ValueKind != JsonValueKind.Null)
+        {
+            JsonElement overrides = Object(overridesValue, "actor.presentation.effectiveFramesPerSecond", diagnostics);
+            RejectDuplicateProperties(overrides, "actor.presentation.effectiveFramesPerSecond", diagnostics);
+            if (overrides.ValueKind == JsonValueKind.Object)
+            {
+                foreach (JsonProperty entry in overrides.EnumerateObject())
+                {
+                    float framesPerSecond = entry.Value.ValueKind == JsonValueKind.Number && entry.Value.TryGetSingle(out float parsed) ? parsed : 0F;
+                    if (!ValidPresentationStateId(entry.Name) || !float.IsFinite(framesPerSecond) || framesPerSecond <= 0F)
+                    {
+                        diagnostics.Add($"Actor '{actorId.Value}' effective playback override '{entry.Name}' must use a non-empty state identifier and a finite positive framesPerSecond.");
+                        continue;
+                    }
+                    if (!effectiveFramesPerSecond.TryAdd(entry.Name, framesPerSecond)) diagnostics.Add($"Actor '{actorId.Value}' repeats effective playback override '{entry.Name}'.");
+                }
+            }
+        }
+
+        return new(preferredRestState, new ReadOnlyDictionary<string, float>(effectiveFramesPerSecond));
+    }
+
+    private static bool ValidPresentationStateId(string value) => !string.IsNullOrWhiteSpace(value);
 
     private static DaggerfallStatBases ReadStats(JsonElement actor, DaggerfallVocabulary vocabulary, DaggerfallContentDiagnostics diagnostics)
     {

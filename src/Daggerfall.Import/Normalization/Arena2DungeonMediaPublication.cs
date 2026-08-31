@@ -432,6 +432,7 @@ public sealed record DungeonActorSpriteMedia(
     string ActorResourceId,
     Arena2MobileId MobileId,
     string SourceName,
+    DungeonActorSpriteState PreferredRestState,
     DungeonActorAttackSequenceSource SourceAttackSequence,
     string SpriteResourceId,
     NormalizedVector2 Pivot,
@@ -636,7 +637,7 @@ public sealed record Arena2DungeonMediaPublication(
             TextureArchive archive = archives[selection.Source.TextureArchive.Value];
             List<ActorFrameDraft> sourceFrames = [];
             List<StateDraft> states = [];
-            foreach ((DungeonActorSpriteState state, Arena2MobileFrameGroup group, DungeonSpritePlaybackSource sourcePlayback) in ActorStates())
+            foreach ((DungeonActorSpriteState state, Arena2MobileFrameGroup group, DungeonSpritePlaybackSource sourcePlayback) in ActorStates(selection.Source))
             {
                 IReadOnlyList<Arena2MobileFrameRecord> orientations = MobileSourceMetadata.GetFrameRecords(group);
                 if (!HasAllSourceRecords(archive, orientations))
@@ -685,7 +686,12 @@ public sealed record Arena2DungeonMediaPublication(
                     }
                 }
 
-                states.Add(new(state, sourcePlayback, frameStart, framesPerOrientation ?? throw new InvalidOperationException("An actor state requires eight source orientations.")));
+                states.Add(new(
+                    state,
+                    sourcePlayback,
+                    selection.Source.Animation.EffectiveFramesPerSecond(group),
+                    frameStart,
+                    framesPerOrientation ?? throw new InvalidOperationException("An actor state requires eight source orientations.")));
             }
 
             EnforceFrameQuota(sourceFrames.Count, quotas, selection.ActorResourceId);
@@ -708,17 +714,20 @@ public sealed record Arena2DungeonMediaPublication(
                 frame.Decoded.MirrorHorizontally,
                 atlas.Frames[index],
                 ScaleWorldSize(frame.WorldSize, atlas.Frames[index]))).ToArray();
-            DungeonActorSpriteStateLayout[] stateLayouts = states.Select(state => new DungeonActorSpriteStateLayout(
-                state.State,
-                state.SourcePlayback,
-                state.SourcePlayback,
-                state.FrameStart,
-                state.FramesPerOrientation,
-                layouts.Skip(state.FrameStart).Take(checked(8 * state.FramesPerOrientation)).ToArray())).ToArray();
+            ActorStateDraft[] stateLayouts = states.Select(state => new ActorStateDraft(
+                new DungeonActorSpriteStateLayout(
+                    state.State,
+                    state.SourcePlayback,
+                    state.SourcePlayback,
+                    state.FrameStart,
+                    state.FramesPerOrientation,
+                    layouts.Skip(state.FrameStart).Take(checked(8 * state.FramesPerOrientation)).ToArray()),
+                state.SourceEffectiveFramesPerSecond)).ToArray();
             CorpseDraft? corpse = BuildCorpse(selection.Source, archives, palette, quotas, generated);
             drafts.Add(new(
                 selection.ActorResourceId,
                 selection.Source,
+                ToSpriteState(selection.Source.Animation.PreferredRestGroup),
                 ToAttackSequenceSource(selection.Source.AttackSequence),
                 spriteResourceId,
                 MedianSourceWorldSize(layouts),
@@ -779,11 +788,14 @@ public sealed record Arena2DungeonMediaPublication(
             ToPublicationArtifact(artifact));
     }
 
-    private static IEnumerable<(DungeonActorSpriteState State, Arena2MobileFrameGroup Group, DungeonSpritePlaybackSource Playback)> ActorStates()
+    private static IEnumerable<(DungeonActorSpriteState State, Arena2MobileFrameGroup Group, DungeonSpritePlaybackSource Playback)> ActorStates(Arena2MobileSource source)
     {
         yield return (DungeonActorSpriteState.Move, Arena2MobileFrameGroup.Move, SourceMovePlayback);
-        yield return (DungeonActorSpriteState.Idle, Arena2MobileFrameGroup.Idle, SourceIdlePlayback);
-        yield return (DungeonActorSpriteState.RatIdle, Arena2MobileFrameGroup.RatIdle, SourceIdlePlayback);
+        if (source.Animation.PreferredRestGroup is Arena2MobileFrameGroup.Idle or Arena2MobileFrameGroup.RatIdle)
+        {
+            yield return (ToSpriteState(source.Animation.PreferredRestGroup), source.Animation.PreferredRestGroup, SourceIdlePlayback);
+        }
+
         yield return (DungeonActorSpriteState.PrimaryAttack, Arena2MobileFrameGroup.PrimaryAttack, SourcePrimaryAttackPlayback);
         yield return (DungeonActorSpriteState.Hurt, Arena2MobileFrameGroup.Hurt, SourceHurtPlayback);
     }
@@ -835,11 +847,20 @@ public sealed record Arena2DungeonMediaPublication(
         return result;
     }
 
+    private static DungeonActorSpriteState ToSpriteState(Arena2MobileFrameGroup group) => group switch
+    {
+        Arena2MobileFrameGroup.Move => DungeonActorSpriteState.Move,
+        Arena2MobileFrameGroup.Idle => DungeonActorSpriteState.Idle,
+        Arena2MobileFrameGroup.RatIdle => DungeonActorSpriteState.RatIdle,
+        _ => throw new ArgumentOutOfRangeException(nameof(group), group, "A preferred mobile rest group must map to a playable sprite state."),
+    };
+
     private static DungeonSpritePlaybackSource ResolvePlayback(
         DungeonSpritePlaybackSource source,
+        float? sourceEffectiveFramesPerSecond,
         NormalizedMediaDescriptor descriptor,
         float profileFramesPerSecond) => new(
-            descriptor.FramesPerSecond ?? profileFramesPerSecond,
+            descriptor.FramesPerSecond ?? sourceEffectiveFramesPerSecond ?? profileFramesPerSecond,
             descriptor.Loop ?? source.Loops);
 
     private static NormalizedVector2 ResolveWorldSize(
@@ -1007,7 +1028,14 @@ public sealed record Arena2DungeonMediaPublication(
         Arena2RecordWorldSize WorldSize,
         DecodedSpriteFrame Decoded);
 
-    private sealed record StateDraft(DungeonActorSpriteState State, DungeonSpritePlaybackSource SourcePlayback, int FrameStart, int FramesPerOrientation);
+    private sealed record StateDraft(
+        DungeonActorSpriteState State,
+        DungeonSpritePlaybackSource SourcePlayback,
+        float? SourceEffectiveFramesPerSecond,
+        int FrameStart,
+        int FramesPerOrientation);
+
+    private sealed record ActorStateDraft(DungeonActorSpriteStateLayout Layout, float? SourceEffectiveFramesPerSecond);
 
     private sealed record MaterialDraft(
         string Id,
@@ -1046,7 +1074,7 @@ public sealed record Arena2DungeonMediaPublication(
             descriptor.Pivot ?? profile.BillboardPivot,
             ResolveWorldSize(SourceWorldSize, descriptor, profile.BillboardWorldScale),
             SourcePlayback,
-            SourcePlayback is null ? null : ResolvePlayback(SourcePlayback, descriptor, profile.BillboardFramesPerSecond),
+            SourcePlayback is null ? null : ResolvePlayback(SourcePlayback, null, descriptor, profile.BillboardFramesPerSecond),
             Frames,
             Artifact,
             descriptor);
@@ -1055,10 +1083,11 @@ public sealed record Arena2DungeonMediaPublication(
     private sealed record ActorDraft(
         string ActorResourceId,
         Arena2MobileSource Source,
+        DungeonActorSpriteState PreferredRestState,
         DungeonActorAttackSequenceSource SourceAttackSequence,
         string SpriteResourceId,
         NormalizedVector2 SourceWorldSize,
-        IReadOnlyList<DungeonActorSpriteStateLayout> States,
+        IReadOnlyList<ActorStateDraft> States,
         CorpseDraft? Corpse,
         ImportPublicationArtifact Artifact)
     {
@@ -1076,14 +1105,24 @@ public sealed record Arena2DungeonMediaPublication(
                     Corpse.Frame,
                     Corpse.Artifact,
                     descriptors[Corpse.SpriteResourceId]);
-            DungeonActorSpriteStateLayout[] states = States.Select(state => state with
+            DungeonActorSpriteStateLayout[] states = States.Select(state => state.Layout with
             {
-                Playback = ResolvePlayback(state.SourcePlayback, descriptor, profile.FramesPerSecondFor(state.State)),
+                Playback = ResolvePlayback(
+                    state.Layout.SourcePlayback,
+                    state.SourceEffectiveFramesPerSecond,
+                    descriptor,
+                    profile.FramesPerSecondFor(state.Layout.State)),
             }).ToArray();
+            if (!states.Any(state => state.State == PreferredRestState))
+            {
+                throw new InvalidOperationException($"Actor '{ActorResourceId}' does not publish its preferred rest state '{PreferredRestState}'.");
+            }
+
             return new(
                 ActorResourceId,
                 Source.Id,
                 Source.SourceName,
+                PreferredRestState,
                 SourceAttackSequence,
                 SpriteResourceId,
                 descriptor.Pivot ?? profile.ActorPivot,

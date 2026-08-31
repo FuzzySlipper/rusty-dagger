@@ -4,6 +4,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
@@ -26,7 +27,9 @@ internal sealed class DaggerfallSession : IGameSession
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
     private readonly CombatModule _combat;
+    private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly FactBuffer<IProductFact> _facts = new();
+    private FactBuffer<IProductFact>.FactTransaction? _outerFacts;
     private readonly DaggerfallRewardReactions _rewards;
     private readonly DaggerfallOutcomePresentation _outcomes;
     private readonly DaggerfallHudProjection _hud;
@@ -116,6 +119,13 @@ internal sealed class DaggerfallSession : IGameSession
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
             DaggerfallMeleeTargetingModule targeting = new(engine.Perception, _spatial, State.Actors, authored, tuning.MeleeTargeting);
             _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored, targeting);
+            _enemyBehavior = new DaggerfallEnemyBehaviorModule(
+                engine.Perception,
+                _spatial,
+                new ActorNavigationCoordinator(engine.Spatial, _spatial.Session),
+                State.Actors,
+                _combat,
+                tuning.EnemyBehavior);
             _rewards = new DaggerfallRewardReactions(
                 State.Inventory,
                 State.Progression,
@@ -128,7 +138,7 @@ internal sealed class DaggerfallSession : IGameSession
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);
-            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Appearance, inputs);
+            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Appearance, inputs, engine.Audio, tuning.PresentationAudio, _random);
             partiallyConstructed.Add(_appearance);
         }
         catch (Exception constructionFailure)
@@ -147,8 +157,33 @@ internal sealed class DaggerfallSession : IGameSession
 
     public ProductUpdateResult Update(ProductUpdate update)
     {
+        _appearance.BeginAdmittedUpdate();
+        PrivateersHoldAppearance.PresentationCheckpoint mediaCheckpoint = _appearance.Checkpoint();
+        _outerFacts = _facts.BeginTransaction();
+        try
+        {
         Update(update.Facts, update.Input);
+        // Sprite playback consumes the Engine-bound outer update identity.  It
+        // must not run for each private catch-up simulation step above.
+        if (update.Facts.LifecycleState == ProductLifecycleState.Running
+            && update.Facts.Mode == ProductUpdateMode.Realtime
+            && update.Facts.AdmittedStepCount > 0)
+        {
+            _appearance.Advance(update.Facts);
+            PublishPresentation();
+        }
+        _appearance.CompleteAdmittedUpdate();
+        _outerFacts.Commit();
+        _outerFacts = null;
         return ProductUpdateResult.None;
+        }
+        catch
+        {
+            _appearance.Restore(mediaCheckpoint);
+            _outerFacts?.Rollback();
+            _outerFacts = null;
+            throw;
+        }
     }
 
     internal void Update(ProductUpdateFacts facts, ReadOnlySpan<ProductInputEvent> input)
@@ -194,8 +229,9 @@ internal sealed class DaggerfallSession : IGameSession
         }
         else _input.Commit(input, State.PlayerControl, update);
         _camera.Update(State.PlayerControl);
+        _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl), generation, simulationStep, update.DeltaSeconds, _facts);
-        _facts.Deliver(React);
+        DeliverFacts();
         PublishPresentation();
     }
 
@@ -220,12 +256,14 @@ internal sealed class DaggerfallSession : IGameSession
     private void React(IProductFact fact)
     {
         if (fact is ActorDiedFact died) _rewards.React(died, _facts);
+        _appearance.React(fact);
         _outcomes.React(fact);
     }
 
     private void PublishPresentation()
     {
         _hud.Publish(State.Actors.Player, State.Progression, Presentation);
+        _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
     }
 
@@ -257,11 +295,18 @@ internal sealed class DaggerfallSession : IGameSession
     internal void ResolveExplicitMelee(ExplicitMeleeRequest request)
     {
         _combat.ResolveExplicit(request, _facts);
-        _facts.Deliver(React);
+        DeliverFacts();
         PublishPresentation();
     }
 
     internal DaggerfallMeleeTargetingEvidence? LastMeleeTargeting => _combat.LastMeleeTargeting;
+
+    private void DeliverFacts()
+    {
+        if (_outerFacts is { } transaction) transaction.Deliver(React);
+        else _facts.Deliver(React);
+    }
+    internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
 
     private DaggerfallVitalValues InitialVitals(DaggerfallActorDefinition definition, long entityId)
     {

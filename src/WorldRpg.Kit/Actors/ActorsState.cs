@@ -41,13 +41,59 @@ public sealed class PlayerActorState(ActorMechanicsState mechanics, string defea
     public void Dispose() => Mechanics.Dispose();
 }
 
-public sealed class ActorState(long entityId, ActorMechanicsState mechanics, WorldPoint position, string defeatTrack) : IDisposable
+/// <summary>
+/// Authoritative actor placement. Heading follows the Engine world convention:
+/// zero faces negative Z and positive yaw turns toward positive X.
+/// </summary>
+public readonly record struct ActorPose
 {
-    private readonly string _defeatTrack = defeatTrack;
+    public ActorPose(WorldPoint position, float headingYawRadians)
+    {
+        position.Validate();
+        if (!float.IsFinite(headingYawRadians))
+        {
+            throw new ArgumentOutOfRangeException(nameof(headingYawRadians));
+        }
 
-    public long EntityId { get; } = entityId;
-    public ActorMechanicsState Mechanics { get; } = mechanics;
-    public WorldPoint Position { get; } = position;
+        Position = position;
+        HeadingYawRadians = headingYawRadians;
+    }
+
+    public WorldPoint Position { get; }
+    public float HeadingYawRadians { get; }
+}
+
+public sealed class ActorState : IDisposable
+{
+    private readonly string _defeatTrack;
+
+    public ActorState(long entityId, ActorMechanicsState mechanics, WorldPoint position, string defeatTrack)
+        : this(entityId, mechanics, new ActorPose(position, 0f), defeatTrack)
+    {
+    }
+
+    public ActorState(long entityId, ActorMechanicsState mechanics, ActorPose pose, string defeatTrack)
+    {
+        ArgumentNullException.ThrowIfNull(mechanics);
+        ArgumentException.ThrowIfNullOrWhiteSpace(defeatTrack);
+        EntityId = entityId;
+        Mechanics = mechanics;
+        Pose = pose;
+        _defeatTrack = defeatTrack;
+    }
+
+    public long EntityId { get; }
+    public ActorMechanicsState Mechanics { get; }
+    public ActorPose Pose { get; private set; }
+    /// <summary>Compatibility accessor for callers which only require placement.</summary>
+    public WorldPoint Position => Pose.Position;
+    /// <summary>Compatibility accessor for callers which use the actor's yaw heading.</summary>
+    public float Heading => Pose.HeadingYawRadians;
+    public float HeadingYawRadians => Pose.HeadingYawRadians;
+
+    /// <summary>Applies an already Engine-admitted pose; navigation and policy stay outside actor lifetime ownership.</summary>
+    public void ApplyPose(ActorPose pose) => Pose = pose;
+
     public bool IsDefeated
     {
         get

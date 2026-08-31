@@ -32,5 +32,18 @@
   "meleeTargeting": {
     "maximumDistance": 2.25,
     "minimumFacingCosine": 0.5
+  },
+  "enemyBehavior": {
+    "detectionDistance": 12.0,
+    "minimumFacingCosine": 0.5,
+    "attackReach": 1.25,
+    "chaseSpeedUnitsPerSecond": 3.0,
+    "navigationMaximumVisited": 32
+  },
+  "presentationAudio": {
+    "volume": 1.0,
+    "pitch": 1.0,
+    "spatialBlend": 0.0,
+    "attenuation": 1.0
   }
 }
