@@ -56,9 +56,15 @@ internal sealed record DaggerfallAttackRange(int MinimumDamage, int MaximumDamag
 internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds, string? Material = null, int DamageBonus = 0);
 internal sealed record DaggerfallRewardPolicy(int ExperienceReward);
 internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
-internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout)
+internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation)
 {
     internal DaggerfallVitalValues PlayerInitialVitals => DaggerfallVitalValues.Player(Stats);
+}
+
+/// <summary>Authored Daggerfall presentation policy layered over normalized imported actor media.</summary>
+internal sealed record DaggerfallActorPresentationDefinition(string? PreferredRestState, IReadOnlyDictionary<string, float> EffectiveFramesPerSecond)
+{
+    internal static DaggerfallActorPresentationDefinition None { get; } = new(null, new ReadOnlyDictionary<string, float>(new Dictionary<string, float>()));
 }
 
 internal sealed record DaggerfallWeaponDefinition(int MinimumDamage, int MaximumDamage, string Material, string Skill, string Handedness, int Value, int Weight);

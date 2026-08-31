@@ -117,7 +117,7 @@ internal sealed class CombatModule
         if (roll > chance)
         {
             LatchCooldown(request, attack);
-            facts.Append(new AttackMissedFact(attacker.Id, target.Id, roll, chance, enemyAttack));
+            facts.Append(new AttackMissedFact(attacker.Id, target.Id, roll, chance, enemyAttack, request.Generation, request.SimulationStep));
             return;
         }
 
@@ -141,7 +141,7 @@ internal sealed class CombatModule
         // Daggerfall owns the policy; the managed track owns its bounds and mutation invariants.
         LatchCooldown(request, attack);
         int applied = checked((int)(change.Before.Raw - change.After.Raw));
-        facts.Append(new AttackHitFact(attacker.Id, target.Id, applied, body, enemyAttack));
+        facts.Append(new AttackHitFact(attacker.Id, target.Id, applied, body, enemyAttack, request.Generation, request.SimulationStep));
         if (applied > 0) facts.Append(new ActorDamagedFact(target.Id, applied));
         bool defeated = change.After <= change.Bounds.Minimum;
         if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(target.Id, attacker.Id, applied, request.Generation, request.SimulationStep));

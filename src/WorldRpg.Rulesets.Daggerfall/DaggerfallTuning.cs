@@ -7,7 +7,9 @@ internal sealed record DaggerfallTuning(
     PlayerControlTuning PlayerControl,
     SpatialTuning Spatial,
     FirstPersonCameraTuning Camera,
-    DaggerfallMeleeTargetingTuning MeleeTargeting)
+    DaggerfallMeleeTargetingTuning MeleeTargeting,
+    DaggerfallEnemyBehaviorTuning EnemyBehavior,
+    DaggerfallPresentationAudioTuning PresentationAudio)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true),
@@ -20,7 +22,9 @@ internal sealed record DaggerfallTuning(
             RecoveryMaximumDistance: 1f,
             MaximumStepHeight: .75f)),
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
-        new DaggerfallMeleeTargetingTuning(2.25d, .5d));
+        new DaggerfallMeleeTargetingTuning(2.25d, .5d),
+        new DaggerfallEnemyBehaviorTuning(12d, .5d, 1.25d, 3f, 32),
+        new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F));
 
     internal DaggerfallTuning Validate() => this with
     {
@@ -28,6 +32,8 @@ internal sealed record DaggerfallTuning(
         Spatial = Spatial.Validate(),
         Camera = Camera.Validate(),
         MeleeTargeting = MeleeTargeting.Validate(),
+        EnemyBehavior = EnemyBehavior.Validate(),
+        PresentationAudio = PresentationAudio.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -38,6 +44,8 @@ internal sealed record DaggerfallTuning(
         JsonElement spatial = root.GetProperty("spatial");
         JsonElement camera = root.GetProperty("camera");
         JsonElement meleeTargeting = root.GetProperty("meleeTargeting");
+        JsonElement enemyBehavior = root.GetProperty("enemyBehavior");
+        JsonElement presentationAudio = root.GetProperty("presentationAudio");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -60,7 +68,18 @@ internal sealed record DaggerfallTuning(
                 camera.GetProperty("farPlane").GetDouble()),
             new DaggerfallMeleeTargetingTuning(
                 meleeTargeting.GetProperty("maximumDistance").GetDouble(),
-                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble()))
+                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble()),
+            new DaggerfallEnemyBehaviorTuning(
+                enemyBehavior.GetProperty("detectionDistance").GetDouble(),
+                enemyBehavior.GetProperty("minimumFacingCosine").GetDouble(),
+                enemyBehavior.GetProperty("attackReach").GetDouble(),
+                enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
+                checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32())),
+            new DaggerfallPresentationAudioTuning(
+                presentationAudio.GetProperty("volume").GetSingle(),
+                presentationAudio.GetProperty("pitch").GetSingle(),
+                presentationAudio.GetProperty("spatialBlend").GetSingle(),
+                presentationAudio.GetProperty("attenuation").GetSingle()))
             .Validate();
     }
 
@@ -74,6 +93,25 @@ internal sealed record DaggerfallTuning(
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
 }
 
+/// <summary>Ruleset policy for visibility-led enemy chase and attack decisions.</summary>
+internal sealed record DaggerfallEnemyBehaviorTuning(
+    double DetectionDistance,
+    double MinimumFacingCosine,
+    double AttackReach,
+    float ChaseSpeedUnitsPerSecond,
+    uint NavigationMaximumVisited)
+{
+    internal DaggerfallEnemyBehaviorTuning Validate()
+    {
+        if (!double.IsFinite(DetectionDistance) || DetectionDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(DetectionDistance));
+        if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
+        if (!double.IsFinite(AttackReach) || AttackReach <= 0d || AttackReach > DetectionDistance) throw new ArgumentOutOfRangeException(nameof(AttackReach));
+        if (!float.IsFinite(ChaseSpeedUnitsPerSecond) || ChaseSpeedUnitsPerSecond <= 0f) throw new ArgumentOutOfRangeException(nameof(ChaseSpeedUnitsPerSecond));
+        if (NavigationMaximumVisited == 0) throw new ArgumentOutOfRangeException(nameof(NavigationMaximumVisited));
+        return this;
+    }
+}
+
 /// <summary>Ruleset-tunable query bounds for ordinary Daggerfall player melee.</summary>
 internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine)
 {
@@ -81,6 +119,19 @@ internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, do
     {
         if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
         if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
+        return this;
+    }
+}
+
+/// <summary>Ruleset-authored descriptor values for one-shot classic presentation audio.</summary>
+internal sealed record DaggerfallPresentationAudioTuning(float Volume, float Pitch, float SpatialBlend, float Attenuation)
+{
+    internal DaggerfallPresentationAudioTuning Validate()
+    {
+        if (!float.IsFinite(Volume) || Volume < 0F) throw new ArgumentOutOfRangeException(nameof(Volume));
+        if (!float.IsFinite(Pitch) || Pitch <= 0F) throw new ArgumentOutOfRangeException(nameof(Pitch));
+        if (!float.IsFinite(SpatialBlend) || SpatialBlend is < 0F or > 1F) throw new ArgumentOutOfRangeException(nameof(SpatialBlend));
+        if (!float.IsFinite(Attenuation) || Attenuation <= 0F) throw new ArgumentOutOfRangeException(nameof(Attenuation));
         return this;
     }
 }

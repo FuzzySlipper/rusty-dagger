@@ -1,6 +1,8 @@
 using System.Numerics;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
@@ -9,7 +11,9 @@ using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
@@ -341,6 +345,469 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Normalized_actor_states_preserve_all_directional_sectors_and_select_an_explicit_sector()
+    {
+        PrivateersHoldInputs inputs = ReadInputs(RepositoryRoot());
+        NormalizedSpriteState state = inputs.ActorSprites.Values
+            .SelectMany(sprite => sprite.States.Values)
+            .First(value => value.Orientations.Count == 8);
+
+        Assert.Equal(Enumerable.Range(0, 8), state.Orientations.Keys.OrderBy(key => key));
+        foreach ((int sector, IReadOnlyList<uint> frames) in state.Orientations)
+        {
+            Assert.NotEmpty(frames);
+            Assert.Equal(frames, state.SelectOrientation(sector));
+        }
+
+        NormalizedSpriteState sparse = new("idle", [10], 8F, true)
+        {
+            Orientations = new Dictionary<int, IReadOnlyList<uint>>
+            {
+                [0] = [10],
+                [4] = [40],
+            },
+        };
+        Assert.Equal([40u], sparse.SelectOrientation(4));
+        Assert.Throws<InvalidOperationException>(() => sparse.SelectOrientation(1));
+    }
+
+    [Fact]
+    public void Authored_actor_presentation_resolves_rest_state_and_effective_playback_without_mobile_specific_runtime_policy()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        string scenario = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+
+        PrivateersHoldInputs ratInputs = PrivateersHoldContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario), definitions);
+        NormalizedActorSprite rat = SpriteFor(ratInputs, "rat");
+        Assert.Equal("ratIdle", rat.PreferredRestState);
+
+        PrivateersHoldInputs impInputs = PrivateersHoldContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"imp\"", StringComparison.Ordinal)), definitions);
+        Assert.Equal("move", SpriteFor(impInputs, "imp").PreferredRestState);
+        Assert.Equal(10F, SpriteFor(impInputs, "imp").States["move"].EffectiveFramesPerSecond);
+        Assert.DoesNotContain("idle", SpriteFor(impInputs, "imp").States.Keys);
+
+        PrivateersHoldInputs batInputs = PrivateersHoldContent.Read(ImportContent(root), Encoding.UTF8.GetBytes(scenario.Replace("\"actor\": \"rat\"", "\"actor\": \"giant-bat\"", StringComparison.Ordinal)), definitions);
+        Assert.Equal("move", SpriteFor(batInputs, "giant-bat").PreferredRestState);
+        Assert.Equal(10F, SpriteFor(batInputs, "giant-bat").States["move"].EffectiveFramesPerSecond);
+        Assert.DoesNotContain("idle", SpriteFor(batInputs, "giant-bat").States.Keys);
+
+        NormalizedActorSprite ordinary = SpriteFor(ratInputs, "skeletal-warrior");
+        Assert.Null(ordinary.PreferredRestState);
+        Assert.All(ordinary.States.Values, state => Assert.Equal(state.FramesPerSecond, state.EffectiveFramesPerSecond));
+    }
+
+    [Fact]
+    public void Normalized_media_parses_an_imported_preferred_rest_state_and_rejects_unknown_presentation_states()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        byte[] scenario = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+
+        ProductContent withImportedPreference = MutateDungeonMedia(root, media => media["actors"]!.AsArray()
+            .Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "idle");
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(withImportedPreference, scenario, definitions);
+        Assert.Equal("idle", SpriteFor(inputs, "skeletal-warrior").PreferredRestState);
+
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
+            MutateDungeonMedia(root, media => media["actors"]!.AsArray().Single(value => value!["mobileId"]!.GetValue<int>() == 15)!["preferredRestState"] = "missingState"),
+            scenario,
+            definitions));
+
+        DaggerfallDefinitions unknownAuthoredState = DaggerfallBaseContent.Read(Encoding.UTF8.GetBytes(File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")).Replace("\"preferredRestState\": \"ratIdle\"", "\"preferredRestState\": \"missingState\"", StringComparison.Ordinal)));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(ImportContent(root), scenario, unknownAuthoredState));
+    }
+
+    [Fact]
+    public void Directional_sprite_sectors_follow_actor_heading_with_classic_octant_boundaries()
+    {
+        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(0f, 0f, -1f));
+        Assert.Equal(4, PrivateersHoldAppearance.RelativeSector(0f, 0f, 1f));
+        Assert.Equal(6, PrivateersHoldAppearance.RelativeSector(0f, 1f, 0f));
+        Assert.Equal(2, PrivateersHoldAppearance.RelativeSector(0f, -1f, 0f));
+        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(MathF.PI / 2f, 1f, 0f));
+        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(0f, 0f, 0f));
+
+        float twentyTwo = 22f * MathF.PI / 180f;
+        float twentyThree = 23f * MathF.PI / 180f;
+        float halfSector = MathF.PI / 8f;
+        Assert.Equal(0, PrivateersHoldAppearance.RelativeSector(0f, MathF.Sin(twentyTwo), -MathF.Cos(twentyTwo)));
+        Assert.Equal(7, PrivateersHoldAppearance.RelativeSector(0f, MathF.Sin(halfSector), -MathF.Cos(halfSector)));
+        Assert.Equal(1, PrivateersHoldAppearance.RelativeSector(0f, -MathF.Sin(halfSector), -MathF.Cos(halfSector)));
+        Assert.Equal(7, PrivateersHoldAppearance.RelativeSector(0f, MathF.Sin(twentyThree), -MathF.Cos(twentyThree)));
+        Assert.Equal(1, PrivateersHoldAppearance.RelativeSector(0f, -MathF.Sin(twentyThree), -MathF.Cos(twentyThree)));
+    }
+
+    [Fact]
+    public void Enemy_idle_transition_returns_to_the_authored_preferred_rest_state()
+    {
+        List<string> releases = [];
+        using PrivateersHoldAppearance presentation = new(MediaContent(releases), new AppearanceFake(releases), MediaInputs(preferredRestState: "ratIdle"));
+
+        presentation.React(new EnemyBehaviorTransitionFact(11, EnemyBehaviorState.Idle, EnemyBehaviorState.Chase, 1, 1));
+        Assert.Equal("move", Visual(presentation).State);
+        presentation.React(new EnemyBehaviorTransitionFact(11, EnemyBehaviorState.Chase, EnemyBehaviorState.Idle, 1, 2));
+
+        Assert.Equal("ratIdle", Visual(presentation).State);
+    }
+
+    [Fact]
+    public void Direction_change_maps_the_current_idle_and_attack_frame_without_recreating_playback()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(directional: true));
+        using ActorsState actors = new(
+            new PlayerActorState(new ActorMechanicsState(new EntityId(99), [], []), "health"),
+            [new ActorState(11, new ActorMechanicsState(new EntityId(11), [], []), new ActorPose(new WorldPoint(0f, 0f, 0f), 0f), "health")]);
+
+        presentation.UpdateDirections(actors, new WorldPoint(0f, 0f, -1f));
+        Assert.Equal(0u, appearance.SetFrameRequests.Last().FrameId);
+        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 1, 1));
+        int playbackCount = appearance.PlaybackRequests.Count;
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
+            new SpritePlaybackReadout(2, 0, SpritePlaybackState.Playing, 0d, 0, 1, false),
+            true));
+        presentation.Advance(OuterUpdate(1));
+        presentation.UpdateDirections(actors, new WorldPoint(1f, 0f, 0f));
+
+        Assert.Equal(playbackCount, appearance.PlaybackRequests.Count);
+        Assert.Equal(3u, appearance.SetFrameRequests.Last().FrameId);
+    }
+
+    [Fact]
+    public void Attack_alternate_selection_is_keyed_by_stable_event_identity_and_respects_authored_weights()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        KeyedRandomFake random = KeyedRandomFake.Create(40);
+        PrivateersHoldInputs favoredAlternate = MediaInputs(primaryChance: 60);
+
+        using (PrivateersHoldAppearance first = new(content, appearance, favoredAlternate, random: random.Service))
+        {
+            first.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+            SpritePlaybackCreateRequest selected = appearance.PlaybackRequests.Last();
+            Assert.Equal([3u], selected.Frames.Span.ToArray().Select(frame => frame.FrameId));
+
+            int beforeDuplicate = appearance.PlaybackRequests.Count;
+            first.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+            Assert.Equal(beforeDuplicate, appearance.PlaybackRequests.Count);
+        }
+
+        AppearanceFake secondAppearance = new(releases);
+        using (PrivateersHoldAppearance second = new(content, secondAppearance, MediaInputs(primaryChance: 20), random: KeyedRandomFake.Create(40).Service))
+        {
+            second.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+            Assert.Equal([2u], secondAppearance.PlaybackRequests.Last().Frames.Span.ToArray().Select(frame => frame.FrameId));
+        }
+
+        Assert.Equal("daggerfall.media.attack-alternate.v1", random.Requests[0].Scope);
+        Assert.Equal("daggerfall.media.hit-cue.v1", random.Requests[1].Scope);
+    }
+
+    [Fact]
+    public void Marker_crossings_are_consumed_once_without_emitting_a_second_combat_presentation()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
+            true));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
+            true));
+
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
+        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 3, 4));
+        int playbacksBefore = appearance.PlaybackRequests.Count;
+        int audioBefore = audio.Emits.Count;
+
+        presentation.Advance(OuterUpdate(1));
+        presentation.Advance(OuterUpdate(2));
+
+        Assert.Equal(playbacksBefore, appearance.PlaybackRequests.Count);
+        // The Daggerfall marker may produce a presentation sound, but a duplicate
+        // Engine crossing must not replay it or cause any gameplay mutation.
+        Assert.Equal(audioBefore + 1, audio.Emits.Count);
+        FieldInfo actorsField = typeof(PrivateersHoldAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        System.Collections.IDictionary visuals = (System.Collections.IDictionary)actorsField.GetValue(presentation)!;
+        object visual = visuals[11L]!;
+        FieldInfo crossingField = visual.GetType().GetField("<LastMarkerCrossing>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        ulong consumed = (ulong)crossingField.GetValue(visual)!;
+        Assert.Equal((ulong)1, consumed);
+    }
+
+    [Fact]
+    public void Duplicate_attack_delivery_does_not_restart_playback_or_duplicate_tuned_audio()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        DaggerfallPresentationAudioTuning tuning = new(.25F, 1.5F, .75F, 12F);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service, tuning);
+        AttackHitFact hit = new(11, 12, 1, 0, false, 7, 9);
+
+        presentation.React(hit);
+        int playbackCount = appearance.PlaybackRequests.Count;
+        presentation.React(hit);
+
+        Assert.Equal(playbackCount, appearance.PlaybackRequests.Count);
+        AudioEmitRequest emitted = Assert.Single(audio.Emits);
+        Assert.Equal(.25F, emitted.Descriptor.Volume);
+        Assert.Equal(1.5F, emitted.Descriptor.Pitch);
+        Assert.Equal(.75F, emitted.Descriptor.SpatialBlend);
+        Assert.Equal(12F, emitted.Descriptor.Attenuation);
+        Assert.True(float.IsFinite(emitted.Descriptor.Attenuation));
+        Assert.True(emitted.Descriptor.Attenuation > 0F);
+    }
+
+    [Fact]
+    public void Completed_one_shot_returns_to_rest_on_the_next_distinct_outer_update_even_when_engine_does_not_advance()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs());
+        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+        int beforeCompletion = appearance.PlaybackRequests.Count;
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
+            new SpritePlaybackReadout(2, 0, SpritePlaybackState.Completed, 0D, 0, 1, true),
+            true));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
+            new SpritePlaybackReadout(2, 0, SpritePlaybackState.Completed, 0D, 0, 2, true),
+            false));
+
+        presentation.Advance(OuterUpdate(1));
+        Assert.Equal(beforeCompletion, appearance.PlaybackRequests.Count);
+
+        presentation.Advance(OuterUpdate(2));
+        Assert.Equal(beforeCompletion + 1, appearance.PlaybackRequests.Count);
+        Assert.Equal([0u], appearance.PlaybackRequests.Last().Frames.Span.ToArray().Select(frame => frame.FrameId));
+        int advancesAfterRest = appearance.AdvanceRequests.Count;
+
+        presentation.Advance(OuterUpdate(2));
+        Assert.Equal(advancesAfterRest, appearance.AdvanceRequests.Count);
+        Assert.Equal(beforeCompletion + 1, appearance.PlaybackRequests.Count);
+    }
+
+    [Fact]
+    public void Appearance_failures_release_staged_handles_and_keep_the_previous_playback_live()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake constructionFailure = new(releases) { FailSpritePlaybackCreateAt = 1 };
+        Assert.Throws<InvalidOperationException>(() => new PrivateersHoldAppearance(content, constructionFailure, MediaInputs()));
+        Assert.Equal(constructionFailure.CreatedAtlases, constructionFailure.DisposedAtlases);
+        Assert.Equal(constructionFailure.CreatedAppearances, constructionFailure.DisposedAppearances);
+
+        AppearanceFake replacementFailure = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, replacementFailure, MediaInputs());
+        SpritePlaybackHandle original = Assert.Single(replacementFailure.CreatedPlaybacks).Handle;
+        replacementFailure.FailSpritePlaybackControlAt = replacementFailure.ControlRequests.Count + 1;
+        Assert.Throws<InvalidOperationException>(() => presentation.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9)));
+
+        presentation.Advance(OuterUpdate(1));
+        Assert.Equal(original, Assert.Single(replacementFailure.AdvanceRequests).Playback.Handle);
+        Assert.Equal(1, replacementFailure.DisposedPlaybacks);
+    }
+
+    [Fact]
+    public void Trailing_attack_marker_is_rejected_before_engine_playback_creation()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        PrivateersHoldInputs inputs = MediaInputs(primaryFrames: [0, -1]);
+        using PrivateersHoldAppearance presentation = new(content, appearance, inputs);
+        int before = appearance.PlaybackRequests.Count;
+
+        Assert.Throws<InvalidOperationException>(() => presentation.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9)));
+        Assert.Equal(before, appearance.PlaybackRequests.Count);
+    }
+
+    [Fact]
+    public void Presentation_checkpoint_restores_prior_playback_and_event_delivery_after_snapshot_failure()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
+        SpritePlayback original = Visual(presentation).Playback!;
+        AttackHitFact hit = new(11, 12, 1, 0, false, 17, 23);
+
+        presentation.BeginAdmittedUpdate();
+        PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
+        presentation.React(hit);
+        SpritePlayback staged = Visual(presentation).Playback!;
+        appearance.FailPublishAt = appearance.PublishCalls + 1;
+        using ActorsState actors = EmptyActors();
+        Assert.Throws<InvalidOperationException>(() => presentation.Publish(actors));
+
+        presentation.Restore(checkpoint);
+        Assert.Same(original, Visual(presentation).Playback);
+        presentation.React(hit);
+        Assert.NotSame(original, Visual(presentation).Playback);
+        Assert.NotSame(staged, Visual(presentation).Playback);
+        Assert.Equal(2, audio.Emits.Count);
+        Assert.Equal(audio.Emits[0].SignalId, audio.Emits[1].SignalId);
+    }
+
+    [Fact]
+    public void Retired_playback_is_lagged_to_next_update_and_engine_rollback_keeps_it_retryable()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs());
+        SpritePlayback original = Visual(presentation).Playback!;
+        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 1, 2));
+
+        Assert.Equal(0, appearance.DisposedPlaybacks);
+        presentation.BeginAdmittedUpdate();
+        Assert.Equal(1, appearance.DisposedPlaybacks);
+        appearance.RollbackPendingPlaybackReleases();
+
+        presentation.BeginAdmittedUpdate();
+        Assert.Equal(2, appearance.DisposedPlaybacks);
+        Assert.Equal(original.Handle, appearance.DisposedPlaybackHandles[0]);
+        Assert.Equal(original.Handle, appearance.DisposedPlaybackHandles[1]);
+        appearance.CommitPendingPlaybackReleases();
+        presentation.CompleteAdmittedUpdate();
+    }
+
+    [Fact]
+    public void Non_advanced_receipts_cannot_consume_markers_or_complete_a_one_shot()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 2, 3));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
+            false));
+
+        presentation.Advance(OuterUpdate(1));
+
+        PrivateersHoldAppearance.ActorVisual visual = Visual(presentation);
+        Assert.Equal((ulong)0, visual.LastMarkerCrossing);
+        Assert.False(visual.CompletedOuterUpdate);
+        Assert.Empty(audio.Emits);
+    }
+
+    [Fact]
+    public void Missed_attack_markers_never_emit_hit_variants()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        presentation.React(new AttackMissedFact(11, 12, 1, 1, false, 2, 3));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
+            true));
+
+        presentation.Advance(OuterUpdate(1));
+
+        Assert.DoesNotContain(audio.Emits, emitted => emitted.SignalId.Contains("hit", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Hit_variant_is_keyed_by_event_identity_and_can_select_beyond_the_first_classic_hit_clip()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AttackHitFact hit = new(11, 12, 1, 0, false, 8, 13);
+        AudioRecorder firstAudio = AudioRecorder.Create();
+        AppearanceFake firstAppearance = new(releases);
+        using (PrivateersHoldAppearance first = new(content, firstAppearance, MediaInputs(includeAlternate: false), firstAudio.Service, random: KeyedRandomFake.Create(5).Service))
+        {
+            first.React(hit);
+            AudioEmitRequest emitted = Assert.Single(firstAudio.Emits);
+            Assert.Equal((ulong)6, emitted.Descriptor.Clip.Value);
+        }
+
+        AudioRecorder secondAudio = AudioRecorder.Create();
+        using (PrivateersHoldAppearance second = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false), secondAudio.Service, random: KeyedRandomFake.Create(5).Service))
+        {
+            second.React(hit);
+        }
+
+        Assert.Equal(firstAudio.Emits.Single().SignalId, secondAudio.Emits.Single().SignalId);
+        Assert.Equal(firstAudio.Emits.Single().Descriptor.Clip, secondAudio.Emits.Single().Descriptor.Clip);
+    }
+
+    [Fact]
+    public void Hit_variant_selection_uses_the_authored_contiguous_catalog_cardinality()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        IReadOnlyList<NormalizedAudioClip> authoredAudio =
+        [
+            new NormalizedAudioClip("swing", "audio/swing.wav", Hash),
+            new NormalizedAudioClip("hit1", "audio/hit.wav", Hash),
+            new NormalizedAudioClip("hit2", "audio/hit2.wav", Hash),
+        ];
+
+        using PrivateersHoldAppearance presentation = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false, audio: authoredAudio), audio.Service, random: KeyedRandomFake.Create(2).Service);
+        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 8, 13));
+
+        Assert.Equal((ulong)3, Assert.Single(audio.Emits).Descriptor.Clip.Value);
+    }
+
+    [Fact]
+    public void Normalized_media_rejects_invalid_sector_loop_and_per_sector_attack_index()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["frames"]!.AsArray()[0]!["orientation"] = 8), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateDungeonMedia(root, media => FirstActorState(media, "idle")["playback"]!["loops"] = "true"), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateDungeonMedia(root, media =>
+        {
+            JsonArray frames = FirstActorState(media, "primaryAttack")["frames"]!.AsArray();
+            JsonNode frame = frames.Last(value => value!["orientation"]!.GetValue<int>() == 7)!;
+            frames.Remove(frame);
+        }), payload, definitions));
+    }
+
+    [Fact]
+    public void Normalized_classic_audio_requires_a_contiguous_canonical_hit_cue_family()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
+
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
+        {
+            JsonArray audio = media["audio"]!.AsArray();
+            audio.Single(value => value!["clip"]!.GetValue<string>() == "hit2")!.AsObject()["clip"] = "hit3";
+        }), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
+        {
+            JsonArray audio = media["audio"]!.AsArray();
+            audio.Remove(audio.Single(value => value!["clip"]!.GetValue<string>() == "hit2"));
+        }), payload, definitions));
+    }
+
+    [Fact]
     public void Host_admits_one_realtime_update_and_releases_the_normalized_session_owners()
     {
         string root = RepositoryRoot();
@@ -350,7 +817,12 @@ public sealed class NormalizedRuntimeSeamTests
         content.Add(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256);
         content.Add(inputs.StaticMesh.Path, inputs.StaticMesh.Sha256);
         foreach (NormalizedMaterial material in inputs.Materials) content.Add(material.TexturePath, material.TextureSha256);
-        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values) content.Add(sprite.TexturePath, sprite.TextureSha256);
+        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values)
+        {
+            content.Add(sprite.TexturePath, sprite.TextureSha256);
+            if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
+        }
+        foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -419,12 +891,51 @@ public sealed class NormalizedRuntimeSeamTests
 
         DaggerfallMeleeTargetingEvidence evidence = Assert.IsType<DaggerfallMeleeTargetingEvidence>(session.LastMeleeTargeting);
         Assert.Equal(2000, evidence.SelectedTargetId);
-        Assert.Equal(perception.Requests.Single(), evidence.Request);
+        Assert.Equal(perception.Requests.Last(), evidence.Request);
+        Assert.True(perception.Requests.Count > 1);
         Assert.Equal((ulong)1, evidence.Request.Observers.Span[0].Entity);
         Assert.Equal(2.25d, evidence.Request.Observers.Span[0].MaximumDistance);
         Assert.Equal(.5d, evidence.Request.Observers.Span[0].MinimumFacingCosine);
         Assert.Equal(1, evidence.Receipt.Pairs.Length);
         Assert.True(session.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw < healthBefore);
+    }
+
+    [Fact]
+    public void Enemy_behavior_uses_engine_visibility_then_shared_combat_and_transitions_without_replaying_damage()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        session.Update(new ProductUpdateState(.125f));
+        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        long healthAfterAttack = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        Assert.True(healthAfterAttack < healthBefore);
+
+        session.Update(new ProductUpdateState(.125f));
+        Assert.Equal(healthAfterAttack, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
+        session.Update(new ProductUpdateState(.125f));
+        Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Occluded, 0d));
+        session.Update(new ProductUpdateState(.125f));
+        Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
+
+        ActorState rat = session.State.Actors.All[2000];
+        rat.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(-999), ExactTrackSetPolicy.ClampToBounds);
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        session.Update(new ProductUpdateState(.125f));
+        Assert.Equal(EnemyBehaviorState.Dead, session.LastEnemyBehavior[2000].State);
     }
 
     [Fact]
@@ -526,6 +1037,8 @@ public sealed class NormalizedRuntimeSeamTests
         return PrivateersHoldContent.Read(ImportContent(root), File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
     }
 
+    private static NormalizedActorSprite SpriteFor(PrivateersHoldInputs inputs, string actorId) => inputs.ActorSprites.First(pair => inputs.Project.Actors[pair.Key].ActorId.Value == actorId).Value;
+
     private static ProductContent ImportContent(string root) => ContentAt(root, "worldrpg/imports/privateers-hold");
 
     private static ProductContent FullContent(string root) => ContentAt(root, "worldrpg");
@@ -551,7 +1064,141 @@ public sealed class NormalizedRuntimeSeamTests
         content.Add(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256);
         content.Add(inputs.StaticMesh.Path, inputs.StaticMesh.Sha256);
         foreach (NormalizedMaterial material in inputs.Materials) content.Add(material.TexturePath, material.TextureSha256);
-        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values) content.Add(sprite.TexturePath, sprite.TextureSha256);
+        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values)
+        {
+            content.Add(sprite.TexturePath, sprite.TextureSha256);
+            if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
+        }
+        foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
+    }
+
+    private static ContentFake MediaContent(List<string> releases)
+    {
+        ContentFake content = new(releases);
+        content.Add("mesh/hold.json", Hash);
+        content.Add("sprite/enemy.png", Hash);
+        content.Add("audio/swing.wav", Hash);
+        content.Add("audio/hit.wav", Hash);
+        content.Add("audio/hit2.wav", Hash);
+        content.Add("audio/hit3.wav", Hash);
+        content.Add("audio/hit4.wav", Hash);
+        content.Add("audio/hit5.wav", Hash);
+        return content;
+    }
+
+    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null)
+    {
+        NormalizedSpriteState idle = new("idle", [0], 10F, true)
+        {
+            Orientations = directional
+                ? Enumerable.Range(0, 8).ToDictionary(sector => sector, sector => (IReadOnlyList<uint>)(sector == 6 ? [1] : [0]))
+                : new Dictionary<int, IReadOnlyList<uint>>(),
+        };
+        NormalizedSpriteState move = new("move", [0], 10F, true);
+        NormalizedSpriteState hurt = new("hurt", [1], 10F, false);
+        NormalizedSpriteState attack = new("primaryAttack", [2, 3], 10F, false)
+        {
+            Orientations = directional
+                ? Enumerable.Range(0, 8).ToDictionary(sector => sector, sector => (IReadOnlyList<uint>)(sector == 6 ? [3, 2] : [2, 3]))
+                : new Dictionary<int, IReadOnlyList<uint>>(),
+        };
+        Dictionary<string, NormalizedSpriteState> states = new()
+        {
+            [idle.Name] = idle,
+            [move.Name] = move,
+            [hurt.Name] = hurt,
+            [attack.Name] = attack,
+        };
+        if (preferredRestState is not null && !states.ContainsKey(preferredRestState)) states.Add(preferredRestState, new(preferredRestState, [0], 10F, true));
+        NormalizedActorSprite sprite = new("sprite/enemy.png", Hash, 32, 32,
+            [new NormalizedAtlasFrame(0, 0, 0, 8, 8), new NormalizedAtlasFrame(1, 8, 0, 8, 8), new NormalizedAtlasFrame(2, 16, 0, 8, 8), new NormalizedAtlasFrame(3, 24, 0, 8, 8)],
+            0, new Vector2(.5F, 0F), Vector2.One)
+        {
+            States = states,
+            PreferredRestState = preferredRestState,
+            AttackSequences = includeAlternate
+                ? [new NormalizedAttackSequence(100 - primaryChance, primaryFrames ?? [0]), new NormalizedAttackSequence(primaryChance, [1])]
+                : [new NormalizedAttackSequence(100, primaryFrames ?? [0])],
+        };
+        return new PrivateersHoldInputs(
+            new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),
+            new SpatialContentArtifact("spatial/hold.json", Hash, 1),
+            new ContentArtifact("mesh/hold.json", Hash),
+            new AuthoredWorldAppearance(new Color(1, 1, 1, 1), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), true, RenderLayer.Scene),
+            new PlayerInitialLook(0, 0),
+            [],
+            new Dictionary<long, NormalizedActorSprite> { [11] = sprite },
+            audio ??
+            [
+                new NormalizedAudioClip("swing", "audio/swing.wav", Hash),
+                new NormalizedAudioClip("hit1", "audio/hit.wav", Hash),
+                new NormalizedAudioClip("hit2", "audio/hit2.wav", Hash),
+                new NormalizedAudioClip("hit3", "audio/hit3.wav", Hash),
+                new NormalizedAudioClip("hit4", "audio/hit4.wav", Hash),
+                new NormalizedAudioClip("hit5", "audio/hit5.wav", Hash),
+            ]);
+    }
+
+    private static PrivateersHoldAppearance.ActorVisual Visual(PrivateersHoldAppearance presentation)
+    {
+        FieldInfo field = typeof(PrivateersHoldAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        return ((Dictionary<long, PrivateersHoldAppearance.ActorVisual>)field.GetValue(presentation)!)[11];
+    }
+
+    private static ActorsState EmptyActors() => new(new PlayerActorState(new ActorMechanicsState(new EntityId(99), [], []), "health"), []);
+
+    private static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
+
+    private static JsonObject FirstActorState(JsonObject media, string name) => media["actors"]!.AsArray()
+        .Select(value => value!.AsObject())
+        .SelectMany(actor => actor["states"]!.AsArray())
+        .Select(value => value!.AsObject())
+        .First(state => state["state"]!.GetValue<string>() == name);
+
+    private static ProductContent MutateDungeonMedia(string repositoryRoot, Action<JsonObject> mutate)
+    {
+        string contentRoot = Path.Combine(repositoryRoot, "content");
+        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports/privateers-hold"), "*", SearchOption.AllDirectories)
+            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
+            .ToArray();
+        int mediaIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("media/dungeon/manifest.json", StringComparison.Ordinal));
+        int importsIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("import-manifest.json", StringComparison.Ordinal));
+        Assert.True(mediaIndex >= 0 && importsIndex >= 0);
+
+        JsonObject media = JsonNode.Parse(files[mediaIndex].Bytes.Span)!.AsObject();
+        mutate(media);
+        byte[] mediaBytes = Encoding.UTF8.GetBytes(media.ToJsonString());
+        files[mediaIndex] = new ProductContentFile(files[mediaIndex].Path, mediaBytes);
+
+        JsonObject imports = JsonNode.Parse(files[importsIndex].Bytes.Span)!.AsObject();
+        JsonObject artifact = imports["artifacts"]!.AsArray().Select(value => value!.AsObject())
+            .Single(value => value["relativePath"]!.GetValue<string>() == "media/dungeon/manifest.json");
+        artifact["contentHash"] = Convert.ToHexString(SHA256.HashData(mediaBytes));
+        files[importsIndex] = new ProductContentFile(files[importsIndex].Path, Encoding.UTF8.GetBytes(imports.ToJsonString()));
+        return new ProductContent(files);
+    }
+
+    private static ProductContent MutateClassicMedia(string repositoryRoot, Action<JsonObject> mutate)
+    {
+        string contentRoot = Path.Combine(repositoryRoot, "content");
+        ProductContentFile[] files = Directory.GetFiles(Path.Combine(contentRoot, "worldrpg/imports/privateers-hold"), "*", SearchOption.AllDirectories)
+            .Select(path => new ProductContentFile(Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), File.ReadAllBytes(path)))
+            .ToArray();
+        int mediaIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("media/classic/manifest.json", StringComparison.Ordinal));
+        int importsIndex = Array.FindIndex(files, file => Encoding.UTF8.GetString(file.Path.Span).EndsWith("import-manifest.json", StringComparison.Ordinal));
+        Assert.True(mediaIndex >= 0 && importsIndex >= 0);
+
+        JsonObject media = JsonNode.Parse(files[mediaIndex].Bytes.Span)!.AsObject();
+        mutate(media);
+        byte[] mediaBytes = Encoding.UTF8.GetBytes(media.ToJsonString());
+        files[mediaIndex] = new ProductContentFile(files[mediaIndex].Path, mediaBytes);
+
+        JsonObject imports = JsonNode.Parse(files[importsIndex].Bytes.Span)!.AsObject();
+        JsonObject artifact = imports["artifacts"]!.AsArray().Select(value => value!.AsObject())
+            .Single(value => value["relativePath"]!.GetValue<string>() == "media/classic/manifest.json");
+        artifact["contentHash"] = Convert.ToHexString(SHA256.HashData(mediaBytes));
+        files[importsIndex] = new ProductContentFile(files[importsIndex].Path, Encoding.UTF8.GetBytes(imports.ToJsonString()));
+        return new ProductContent(files);
     }
 
     private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl keyboard = KeyboardControl.None, float x = 0F, float y = 0F, InputPhase phase = InputPhase.None, string intent = "") => new(kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, keyboard, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
@@ -746,6 +1393,7 @@ public sealed class NormalizedRuntimeSeamTests
         private ILookService look = null!;
         private IPerceptionService perception = null!;
         private ICameraViewService camera = null!;
+        private IAudioService audio = null!;
         private IRandomService random = null!;
         private IUiService ui = null!;
 
@@ -760,6 +1408,7 @@ public sealed class NormalizedRuntimeSeamTests
             fake.look = ServiceProxy<ILookService, LookServiceFake>.Create();
             fake.perception = perception ?? PerceptionFake.Create().Service;
             fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
+            fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
             fake.random = ServiceProxy<IRandomService, RandomServiceFake>.Create();
             fake.ui = UiServiceFake.Create(fake);
             return fake;
@@ -773,6 +1422,7 @@ public sealed class NormalizedRuntimeSeamTests
             "get_Look" => look,
             "get_Perception" => perception,
             "get_CameraView" => camera,
+            "get_Audio" => audio,
             "get_Random" => random,
             "get_Ui" => ui,
             _ => throw new NotSupportedException(method?.Name),
@@ -809,6 +1459,16 @@ public sealed class NormalizedRuntimeSeamTests
                 : throw new NotSupportedException(method?.Name);
         }
 
+        private class AudioServiceFake : DispatchProxy
+        {
+            protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+            {
+                nameof(IAudioService.OpenClip) => new AudioClipHandle(1),
+                nameof(IAudioService.Emit) => new AudioSignalHandle(1),
+                _ => throw new NotSupportedException(method?.Name),
+            };
+        }
+
         private class UiServiceFake : DispatchProxy
         {
             private EngineContextFake owner = null!;
@@ -837,11 +1497,83 @@ public sealed class NormalizedRuntimeSeamTests
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => throw new NotSupportedException(method?.Name);
     }
 
+    private class KeyedRandomFake : DispatchProxy
+    {
+        internal IRandomService Service { get; private set; } = null!;
+        internal List<KeyedRngRequest> Requests { get; } = [];
+        private long value;
+
+        internal static KeyedRandomFake Create(long returnedValue)
+        {
+            IRandomService service = DispatchProxy.Create<IRandomService, KeyedRandomFake>();
+            KeyedRandomFake fake = (KeyedRandomFake)(object)service;
+            fake.Service = service;
+            fake.value = returnedValue;
+            return fake;
+        }
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
+        {
+            if (method?.Name != nameof(IRandomService.DrawKeyed)) throw new NotSupportedException(method?.Name);
+            KeyedRngRequest request = (KeyedRngRequest)arguments![0]!;
+            Requests.Add(request);
+            return new KeyedRngReceipt(Math.Clamp(value, request.Minimum, request.Maximum));
+        }
+    }
+
+    private class AudioRecorder : DispatchProxy
+    {
+        internal IAudioService Service { get; private set; } = null!;
+        internal List<AudioEmitRequest> Emits { get; } = [];
+        private ulong nextHandle = 1;
+
+        internal static AudioRecorder Create()
+        {
+            IAudioService service = DispatchProxy.Create<IAudioService, AudioRecorder>();
+            AudioRecorder recorder = (AudioRecorder)(object)service;
+            recorder.Service = service;
+            return recorder;
+        }
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
+        {
+            nameof(IAudioService.OpenClip) => new AudioClipHandle(nextHandle++),
+            nameof(IAudioService.Emit) => Emit((AudioEmitRequest)arguments![0]!),
+            _ => throw new NotSupportedException(method?.Name),
+        };
+
+        private AudioSignalHandle Emit(AudioEmitRequest request)
+        {
+            Emits.Add(request);
+            return new AudioSignalHandle(nextHandle++);
+        }
+    }
+
     private sealed class AppearanceFake(List<string> releases) : IAppearanceService
     {
         internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];
         internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
         internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
+        internal List<SpritePlaybackCreateRequest> PlaybackRequests { get; } = [];
+        internal List<SpritePlaybackControlRequest> ControlRequests { get; } = [];
+        internal List<SpritePlaybackAdvanceRequest> AdvanceRequests { get; } = [];
+        internal List<SpriteFrameUpdateRequest> SetFrameRequests { get; } = [];
+        internal List<SpritePlayback> CreatedPlaybacks { get; } = [];
+        internal Queue<SpritePlaybackAdvanceLeaseReceipt> AdvanceReceipts { get; } = [];
+        internal int CreatedAtlases { get; private set; }
+        internal int DisposedAtlases { get; private set; }
+        internal int CreatedAppearances { get; private set; }
+        internal int DisposedAppearances { get; private set; }
+        internal int DisposedPlaybacks { get; private set; }
+        internal List<SpritePlaybackHandle> DisposedPlaybackHandles { get; } = [];
+        internal int FailSpritePlaybackCreateAt { get; set; }
+        internal int FailSpritePlaybackControlAt { get; set; }
+        internal int FailPublishAt { get; set; }
+        internal int PublishCalls { get; private set; }
+        internal ulong LastCrossingSequence { get; private set; }
+        private readonly List<Action> pendingPlaybackCommits = [];
+        private readonly List<Action> pendingPlaybackRollbacks = [];
+        private ulong nextHandle = 1;
 
         public RenderResourceInfo OpenResource(RenderResourceRequest request) => new(new RenderResourceHandle(1), default, 0);
         public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => releases.Add("material"));
@@ -856,19 +1588,77 @@ public sealed class NormalizedRuntimeSeamTests
         public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => StaticMeshBindings.AddRange(request.Bindings.ToArray());
         public Appearance CreateSprite(SpriteAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => CreateAppearance();
-        public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request) { AtlasRequests.Add(request); return new(new SpriteAtlasHandle(1), () => releases.Add("atlas")); }
+        public SpriteAtlas CreateSpriteAtlas(SpriteAtlasCreateRequest request)
+        {
+            AtlasRequests.Add(request);
+            CreatedAtlases++;
+            return new(new SpriteAtlasHandle(nextHandle++), () => { DisposedAtlases++; releases.Add("atlas"); });
+        }
         public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest request) { SpriteRequests.Add(request); return CreateAppearance(); }
         public Appearance ReplaceSpriteFromAtlas(SpriteFromAtlasReplaceRequest request) => CreateAppearance();
-        public void SetSpriteFrame(SpriteFrameUpdateRequest request) { }
+        public void SetSpriteFrame(SpriteFrameUpdateRequest request) => SetFrameRequests.Add(request);
         public SpriteReadout ReadSprite(Appearance appearance) => default;
-        public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values) { }
+        public SpritePlayback CreateSpritePlayback(SpritePlaybackCreateRequest request)
+        {
+            PlaybackRequests.Add(request);
+            if (FailSpritePlaybackCreateAt == PlaybackRequests.Count) throw new InvalidOperationException("Injected sprite playback create failure.");
+            SpritePlaybackHandle handle = new(nextHandle++);
+            SpritePlayback playback = new(handle, () =>
+            {
+                DisposedPlaybacks++;
+                DisposedPlaybackHandles.Add(handle);
+                releases.Add("playback");
+            }, static () => false, (commit, rollback) =>
+            {
+                pendingPlaybackCommits.Add(commit);
+                pendingPlaybackRollbacks.Add(rollback);
+            });
+            CreatedPlaybacks.Add(playback);
+            return playback;
+        }
+        public SpritePlaybackReadout ControlSpritePlayback(SpritePlaybackControlRequest request)
+        {
+            ControlRequests.Add(request);
+            if (FailSpritePlaybackControlAt == ControlRequests.Count) throw new InvalidOperationException("Injected sprite playback control failure.");
+            return default;
+        }
+        public SpritePlaybackAdvanceLeaseReceipt AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request)
+        {
+            AdvanceRequests.Add(request);
+            SpritePlaybackAdvanceLeaseReceipt receipt = AdvanceReceipts.Count == 0 ? default : AdvanceReceipts.Dequeue();
+            foreach (SpritePlaybackMarkerCrossing crossing in receipt.Crossings.Span) LastCrossingSequence = Math.Max(LastCrossingSequence, crossing.CrossingSequence);
+            return receipt;
+        }
+        public SpritePlaybackSample SampleSpritePlayback(SpritePlaybackSampleRequest request) => default;
+        public SpritePlaybackReadout ReadSpritePlayback(SpritePlayback playback) => default;
+        public void PublishSnapshot(ReadOnlySpan<AppearanceFact> values)
+        {
+            PublishCalls++;
+            if (FailPublishAt == PublishCalls) throw new InvalidOperationException("Injected presentation publish failure.");
+        }
         public Light CreateLight(LightRequest request) => new(new LightHandle(1), () => { });
         public void UpdateLight(LightUpdateRequest request) { }
         public Light ReplaceLight(LightUpdateRequest request) => NewLight(request.Replacement);
         public LightReadout ReadLight(Light light) => default;
         public PresentationReadout ReadPresentation() => default;
 
-        private Appearance CreateAppearance() => new(new AppearanceHandle(1), () => releases.Add("appearance"));
+        private Appearance CreateAppearance()
+        {
+            CreatedAppearances++;
+            return new(new AppearanceHandle(nextHandle++), () => { DisposedAppearances++; releases.Add("appearance"); });
+        }
+        internal void CommitPendingPlaybackReleases()
+        {
+            foreach (Action commit in pendingPlaybackCommits) commit();
+            pendingPlaybackCommits.Clear();
+            pendingPlaybackRollbacks.Clear();
+        }
+        internal void RollbackPendingPlaybackReleases()
+        {
+            foreach (Action rollback in pendingPlaybackRollbacks) rollback();
+            pendingPlaybackCommits.Clear();
+            pendingPlaybackRollbacks.Clear();
+        }
         private static Light NewLight(LightRequest request) => new(new LightHandle(1), () => { });
     }
 }

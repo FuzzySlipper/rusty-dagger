@@ -25,6 +25,10 @@ internal static class CombatRandomKey
     internal const int HitSalt = 1;
     internal const int DamageSalt = 2;
     internal const int BodySalt = 3;
+    internal const string MediaAttackAlternateScope = "daggerfall.media.attack-alternate.v1";
+    internal const int MediaAttackAlternateSalt = 41;
+    internal const string MediaHitCueScope = "daggerfall.media.hit-cue.v1";
+    internal const int MediaHitCueSalt = 42;
 
     internal static string For(ulong generation, ulong step, long attacker, long target, int salt) => $"generation:{generation}:step:{step}:attacker:{attacker}:target:{target}:salt:{salt}";
     internal static string InitialHealth(long entityId, string actor) => $"spawn:actor:{entityId}:{actor}:health";

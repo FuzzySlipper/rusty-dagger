@@ -91,9 +91,12 @@ public static class MobileSourceMetadata
     {
         ImmutableArray<Arena2MobileSource> sources =
         [
-            CreateMobile(0, "Rat", 255, new(new(401), 1), Attack([0, 1, 2, DamageBeatMarker, 3, 4, 5])),
-            CreateMobile(1, "Imp", 256, null, Attack([0, 1, 2, DamageBeatMarker, 3, 1])),
-            CreateMobile(3, "GiantBat", 258, null, Attack([0, 1, DamageBeatMarker, 2, 3])),
+            CreateMobile(0, "Rat", 255, new(new(401), 1), Attack([0, 1, 2, DamageBeatMarker, 3, 4, 5]),
+                new(Arena2MobileFrameGroup.RatIdle)),
+            CreateMobile(1, "Imp", 256, null, Attack([0, 1, 2, DamageBeatMarker, 3, 1]),
+                new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F)),
+            CreateMobile(3, "GiantBat", 258, null, Attack([0, 1, DamageBeatMarker, 2, 3]),
+                new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F)),
             CreateMobile(4, "GrizzlyBear", 259, null, Attack([0, 1, 2, DamageBeatMarker, 3, 0])),
             CreateMobile(7, "Orc", 262, null, Attack([0, 1, 2, DamageBeatMarker, 3, 4, DamageBeatMarker, 5, 0], Alternate(50, [4, DamageBeatMarker, 5, 0]))),
             CreateMobile(15, "SkeletalWarrior", 270, new(new(306), 1), Attack([0, 1, 2, 3, DamageBeatMarker, 4, 5])),
@@ -113,9 +116,15 @@ public static class MobileSourceMetadata
         return sources;
     }
 
-    private static Arena2MobileSource CreateMobile(byte id, string sourceName, ushort textureArchive, Arena2MobileCorpseSource? corpse, Arena2MobileAttackSequence attackSequence)
+    private static Arena2MobileSource CreateMobile(
+        byte id,
+        string sourceName,
+        ushort textureArchive,
+        Arena2MobileCorpseSource? corpse,
+        Arena2MobileAttackSequence attackSequence,
+        Arena2MobileAnimationSource? animation = null)
     {
-        return new(new(id), sourceName, new(textureArchive), corpse, attackSequence);
+        return new(new(id), sourceName, new(textureArchive), corpse, attackSequence, animation ?? Arena2MobileAnimationSource.Ordinary);
     }
 
     private static Arena2MobileAttackSequence Attack(sbyte[] primaryFrames, params Arena2MobileAttackAlternate[] alternates)
@@ -202,13 +211,22 @@ public readonly record struct Arena2MobileAttackAlternate(byte Chance, Immutable
 /// <summary>One supported source mobile and its immutable archive metadata.</summary>
 public sealed class Arena2MobileSource
 {
-    internal Arena2MobileSource(Arena2MobileId id, string sourceName, Arena2TextureArchiveId textureArchive, Arena2MobileCorpseSource? corpse, Arena2MobileAttackSequence attackSequence)
+    internal Arena2MobileSource(
+        Arena2MobileId id,
+        string sourceName,
+        Arena2TextureArchiveId textureArchive,
+        Arena2MobileCorpseSource? corpse,
+        Arena2MobileAttackSequence attackSequence,
+        Arena2MobileAnimationSource animation)
     {
         Id = id;
         SourceName = sourceName;
         TextureArchive = textureArchive;
         Corpse = corpse;
         AttackSequence = attackSequence;
+        ArgumentNullException.ThrowIfNull(animation);
+        animation.Validate();
+        Animation = animation;
     }
 
     /// <summary>Classic mobile ID.</summary>
@@ -225,6 +243,49 @@ public sealed class Arena2MobileSource
 
     /// <summary>Uninterpreted classic attack record-frame metadata.</summary>
     public Arena2MobileAttackSequence AttackSequence { get; }
+
+    /// <summary>
+    /// Source-backed rest selection and effective animation cadence. This
+    /// preserves archive playback separately from the classic mobile behavior
+    /// that selects a rest group or fly cadence.
+    /// </summary>
+    public Arena2MobileAnimationSource Animation { get; }
+}
+
+/// <summary>
+/// Pinned classic mobile animation semantics adopted from Daggerfall Unity's
+/// EnemyBasics behavior. Values here retain source/game facts for offline
+/// normalization; the runtime only consumes the emitted normalized result.
+/// </summary>
+public sealed record Arena2MobileAnimationSource(
+    Arena2MobileFrameGroup PreferredRestGroup,
+    float? MoveFramesPerSecond = null)
+{
+    public static Arena2MobileAnimationSource Ordinary { get; } = new(Arena2MobileFrameGroup.Idle);
+
+    public void Validate()
+    {
+        if (PreferredRestGroup is not (Arena2MobileFrameGroup.Move or Arena2MobileFrameGroup.Idle or Arena2MobileFrameGroup.RatIdle))
+        {
+            throw new ArgumentOutOfRangeException(nameof(PreferredRestGroup), "A mobile preferred rest group must be a mobile or idle source group.");
+        }
+
+        ValidateFramesPerSecond(MoveFramesPerSecond, nameof(MoveFramesPerSecond));
+    }
+
+    public float? EffectiveFramesPerSecond(Arena2MobileFrameGroup group) => group switch
+    {
+        Arena2MobileFrameGroup.Move => MoveFramesPerSecond,
+        _ => null,
+    };
+
+    private static void ValidateFramesPerSecond(float? value, string name)
+    {
+        if (value is <= 0F || (value is not null && !float.IsFinite(value.Value)))
+        {
+            throw new ArgumentOutOfRangeException(name, "An effective mobile frame rate must be finite and positive.");
+        }
+    }
 }
 
 /// <summary>Named source record ranges; these are not runtime animation states.</summary>

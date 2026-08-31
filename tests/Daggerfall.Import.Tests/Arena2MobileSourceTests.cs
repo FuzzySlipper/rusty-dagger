@@ -23,6 +23,29 @@ public sealed class Arena2MobileSourceTests
     }
 
     [Fact]
+    public void MobileAnimationMetadataPreservesPreferredRestAndFlyingCadence()
+    {
+        Assert.True(MobileSourceMetadata.TryGet(new(0), out Arena2MobileSource? rat));
+        Assert.Equal(Arena2MobileFrameGroup.RatIdle, rat.Animation.PreferredRestGroup);
+        Assert.Null(rat.Animation.EffectiveFramesPerSecond(Arena2MobileFrameGroup.Move));
+        Assert.Null(rat.Animation.EffectiveFramesPerSecond(Arena2MobileFrameGroup.Idle));
+
+        Assert.True(MobileSourceMetadata.TryGet(new(1), out Arena2MobileSource? imp));
+        Assert.True(MobileSourceMetadata.TryGet(new(3), out Arena2MobileSource? giantBat));
+        foreach (Arena2MobileSource flying in new[] { imp, giantBat })
+        {
+            Assert.Equal(Arena2MobileFrameGroup.Move, flying.Animation.PreferredRestGroup);
+            Assert.Equal(10F, flying.Animation.EffectiveFramesPerSecond(Arena2MobileFrameGroup.Move));
+            Assert.Null(flying.Animation.EffectiveFramesPerSecond(Arena2MobileFrameGroup.Idle));
+        }
+
+        Assert.True(MobileSourceMetadata.TryGet(new(7), out Arena2MobileSource? orc));
+        Assert.Equal(Arena2MobileFrameGroup.Idle, orc.Animation.PreferredRestGroup);
+        Assert.Null(orc.Animation.EffectiveFramesPerSecond(Arena2MobileFrameGroup.Move));
+        Assert.Null(orc.Animation.EffectiveFramesPerSecond(Arena2MobileFrameGroup.Idle));
+    }
+
+    [Fact]
     public void UnknownMobileIdRemainsAbsentFromTheSourceTable()
     {
         Assert.False(MobileSourceMetadata.TryGet(new(42), out Arena2MobileSource? source));

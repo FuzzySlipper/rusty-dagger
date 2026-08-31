@@ -35,6 +35,7 @@ public sealed class FirstPersonCameraSystem : IDisposable
 
     private readonly ICameraViewService _cameraView;
     private readonly Camera _camera;
+    private readonly PlayerControlState _player;
     private readonly FirstPersonCameraTuning _tuning;
     private bool _disposed;
 
@@ -44,12 +45,13 @@ public sealed class FirstPersonCameraSystem : IDisposable
         FirstPersonCameraTuning tuning)
     {
         _cameraView = cameraView ?? throw new ArgumentNullException(nameof(cameraView));
+        _player = player ?? throw new ArgumentNullException(nameof(player));
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
 
         Camera? camera = null;
         try
         {
-            camera = _cameraView.CreateCamera(Descriptor(player));
+            camera = _cameraView.CreateCamera(Descriptor(_player));
             _cameraView.SetActiveCamera(camera);
             _camera = camera;
         }
@@ -63,8 +65,16 @@ public sealed class FirstPersonCameraSystem : IDisposable
     public void Update(PlayerControlState player)
     {
         if (_disposed) return;
-        _cameraView.UpdateCamera(new CameraUpdateRequest(_camera, Descriptor(player)));
+        if (!ReferenceEquals(_player, player))
+        {
+            throw new InvalidOperationException("A first-person camera remains bound to its constructed player control state.");
+        }
+
+        _cameraView.UpdateCamera(new CameraUpdateRequest(_camera, Descriptor(_player)));
     }
+
+    /// <summary>The derived eye point submitted to the Engine camera descriptor.</summary>
+    public WorldPoint Viewpoint => ViewpointFor(_player);
 
     public void Dispose()
     {
@@ -82,10 +92,10 @@ public sealed class FirstPersonCameraSystem : IDisposable
 
     private CameraDescriptor Descriptor(PlayerControlState player)
     {
-        WorldPoint position = player.Position ?? throw new InvalidOperationException("A first-person camera requires a player position.");
+        WorldPoint viewpoint = ViewpointFor(player);
         return new CameraDescriptor(
             new CameraPose(
-                position.ToVector() + (Vector3.UnitY * _tuning.EyeHeight),
+                viewpoint.ToVector(),
                 player.PitchRadians * RadiansToDegrees,
                 player.YawRadians * RadiansToDegrees),
             CameraBasisMode.Derived,
@@ -97,5 +107,11 @@ public sealed class FirstPersonCameraSystem : IDisposable
                 _tuning.NearPlane,
                 _tuning.FarPlane),
             FullViewport);
+    }
+
+    private WorldPoint ViewpointFor(PlayerControlState player)
+    {
+        WorldPoint position = player.Position ?? throw new InvalidOperationException("A first-person camera requires a player position.");
+        return WorldPoint.From(position.ToVector() + (Vector3.UnitY * _tuning.EyeHeight));
     }
 }

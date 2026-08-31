@@ -42,6 +42,11 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal(2, definitions.Actions["thief-strike"].MinimumDamage);
         Assert.Equal(8, definitions.Actions["thief-strike"].MaximumDamage);
         Assert.Equal(80, definitions.LootTables["T"].MaximumGold);
+        Assert.Equal("ratIdle", definitions.RequireActor(new DaggerfallActorId("rat")).Presentation.PreferredRestState);
+        Assert.Equal("move", definitions.RequireActor(new DaggerfallActorId("imp")).Presentation.PreferredRestState);
+        Assert.Equal(10F, definitions.RequireActor(new DaggerfallActorId("imp")).Presentation.EffectiveFramesPerSecond["move"]);
+        Assert.Equal("move", definitions.RequireActor(new DaggerfallActorId("giant-bat")).Presentation.PreferredRestState);
+        Assert.Equal(10F, definitions.RequireActor(new DaggerfallActorId("giant-bat")).Presentation.EffectiveFramesPerSecond["move"]);
     }
 
     [Fact]
@@ -80,6 +85,17 @@ public sealed class DaggerfallCatalogContentTests
         string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace("\"id\": \"rat\"", "\"id\": \"rát\"", StringComparison.Ordinal))));
+    }
+
+    [Theory]
+    [InlineData("\"preferredRestState\": \"ratIdle\"", "\"preferredRestState\": \"\"")]
+    [InlineData("\"move\": 10", "\"move\": 0")]
+    [InlineData("\"move\": 10", "\"move\": \"fast\"")]
+    public void RejectsMalformedActorPresentationDefinitions(string before, string after)
+    {
+        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.Replace(before, after, StringComparison.Ordinal))));
     }
 
     [Fact]

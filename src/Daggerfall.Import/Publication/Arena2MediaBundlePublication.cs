@@ -60,6 +60,7 @@ public sealed record DungeonActorMediaManifest(
     string ActorResourceId,
     byte MobileId,
     string SourceName,
+    DungeonActorSpriteState PreferredRestState,
     DungeonActorAttackSequenceSource SourceAttackSequence,
     string SpriteResourceId,
     NormalizedVector2 Pivot,
@@ -272,6 +273,7 @@ public sealed record Arena2MediaBundlePublication(
                 media.ActorResourceId,
                 media.MobileId.Value,
                 media.SourceName,
+                media.PreferredRestState,
                 media.SourceAttackSequence,
                 media.SpriteResourceId,
                 media.Pivot,
@@ -398,6 +400,12 @@ public sealed record Arena2MediaBundlePublication(
             if (actor.States.Select(state => state.State).Distinct().Count() != actor.States.Count)
             {
                 throw new InvalidOperationException("Dungeon actor media contains duplicate source states.");
+            }
+
+            if (!Enum.IsDefined(actor.PreferredRestState)
+                || !actor.States.Any(state => state.State == actor.PreferredRestState))
+            {
+                throw new InvalidOperationException("Dungeon actor media must publish its declared preferred rest state.");
             }
 
             foreach (DungeonActorSpriteStateLayout state in actor.States)

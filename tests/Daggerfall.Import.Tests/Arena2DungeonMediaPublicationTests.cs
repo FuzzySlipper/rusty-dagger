@@ -38,9 +38,9 @@ public sealed class Arena2DungeonMediaPublicationTests
         Assert.Equal("actor/mobile-0", actor.ActorResourceId);
         Assert.Equal((byte)0, actor.MobileId.Value);
         Assert.Equal("Rat", actor.SourceName);
+        Assert.Equal(DungeonActorSpriteState.RatIdle, actor.PreferredRestState);
         Assert.Collection(actor.States,
             state => AssertState(state, DungeonActorSpriteState.Move, 6F, true),
-            state => AssertState(state, DungeonActorSpriteState.Idle, 4F, true),
             state => AssertState(state, DungeonActorSpriteState.RatIdle, 4F, true),
             state => AssertState(state, DungeonActorSpriteState.PrimaryAttack, 10F, false),
             state => AssertState(state, DungeonActorSpriteState.Hurt, 4F, false));
@@ -51,6 +51,40 @@ public sealed class Arena2DungeonMediaPublicationTests
         Assert.NotNull(actor.Corpse.Descriptor);
         Assert.All(first.Artifacts, artifact => Assert.DoesNotContain("PAL.PAL", artifact.RelativePath, StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain("encounter", string.Join('|', first.Artifacts.Select(artifact => artifact.RelativePath)), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void EmitsPreferredRestAndEffectiveFlyingPlaybackWithoutChangingSourceCadence()
+    {
+        DungeonActorSpriteMedia rat = Assert.Single(Arena2DungeonMediaPublication.Create(CreateRequest()).Actors);
+        Assert.Equal(DungeonActorSpriteState.RatIdle, rat.PreferredRestState);
+        AssertState(rat.States.Single(state => state.State == DungeonActorSpriteState.Move), DungeonActorSpriteState.Move, 6F, true);
+        AssertState(rat.States.Single(state => state.State == DungeonActorSpriteState.RatIdle), DungeonActorSpriteState.RatIdle, 4F, true);
+
+        foreach ((byte mobileId, ushort archive) in new[] { ((byte)1, (ushort)256), ((byte)3, (ushort)258) })
+        {
+            DungeonActorSpriteMedia flying = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(mobileId, archive)).Actors);
+            Assert.Equal(DungeonActorSpriteState.Move, flying.PreferredRestState);
+            AssertPlayback(flying.States.Single(state => state.State == DungeonActorSpriteState.Move), 6F, 10F);
+            Assert.DoesNotContain(flying.States, state => state.State == DungeonActorSpriteState.Idle);
+        }
+
+        DungeonActorSpriteMedia ordinary = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(7, 262)).Actors);
+        Assert.Equal(DungeonActorSpriteState.Idle, ordinary.PreferredRestState);
+        AssertPlayback(ordinary.States.Single(state => state.State == DungeonActorSpriteState.Move), 6F, 6F);
+        AssertPlayback(ordinary.States.Single(state => state.State == DungeonActorSpriteState.Idle), 4F, 4F);
+    }
+
+    [Fact]
+    public void RejectsAnActorWhosePreferredRestStateWasNotPublished()
+    {
+        Arena2DungeonMediaSource[] sources = CreateSources();
+        Replace(sources, "TEXTURE.255", CreateTextureArchive(15));
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(
+            Arena2DungeonMediaRequest.Create(CreateDungeon(), new Arena2DungeonMediaSourceSet(sources))));
+
+        Assert.Contains("preferred rest state", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -157,8 +191,36 @@ public sealed class Arena2DungeonMediaPublicationTests
         Assert.All(layout.Frames, frame => Assert.True(frame.AtlasFrame.Width > 0 && frame.AtlasFrame.Height > 0));
     }
 
+    private static void AssertPlayback(DungeonActorSpriteStateLayout layout, float sourceFramesPerSecond, float effectiveFramesPerSecond)
+    {
+        Assert.Equal(sourceFramesPerSecond, layout.SourcePlayback.FramesPerSecond);
+        Assert.Equal(effectiveFramesPerSecond, layout.Playback.FramesPerSecond);
+    }
+
     private static Arena2DungeonMediaRequest CreateRequest(bool reverseSources = false) =>
         Arena2DungeonMediaRequest.Create(CreateDungeon(), new Arena2DungeonMediaSourceSet(reverseSources ? CreateSources().Reverse() : CreateSources()));
+
+    private static Arena2DungeonMediaRequest CreateActorRequest(byte mobileId, ushort archive)
+    {
+        NormalizedImportDocument document = CreateDungeon();
+        string actorId = $"actor/mobile-{mobileId}";
+        document = document with
+        {
+            Resources = document.Resources.Select(resource => resource.Id == "actor/mobile-0"
+                ? resource with { Id = actorId }
+                : resource).ToArray(),
+            World = document.World with
+            {
+                Actors = [new NormalizedActorPlacement("actor/fixture", actorId, new NormalizedVector3(0, 0, 0))],
+            },
+        };
+        return Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(
+        [
+            new Arena2DungeonMediaSource("arena2/PAL.PAL", CreatePalette()),
+            new Arena2DungeonMediaSource("arena2/TEXTURE.002", CreateTextureArchive(2)),
+            new Arena2DungeonMediaSource($"arena2/TEXTURE.{archive:000}", CreateTextureArchive(20)),
+        ]));
+    }
 
     private static Arena2DungeonMediaSource[] CreateSources() =>
     [
