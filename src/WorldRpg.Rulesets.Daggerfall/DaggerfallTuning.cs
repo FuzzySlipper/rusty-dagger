@@ -6,7 +6,8 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed record DaggerfallTuning(
     PlayerControlTuning PlayerControl,
     SpatialTuning Spatial,
-    FirstPersonCameraTuning Camera)
+    FirstPersonCameraTuning Camera,
+    DaggerfallMeleeTargetingTuning MeleeTargeting)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true),
@@ -18,13 +19,15 @@ internal sealed record DaggerfallTuning(
             StrafeSpeed: 3.5f,
             RecoveryMaximumDistance: 1f,
             MaximumStepHeight: .75f)),
-        new FirstPersonCameraTuning(.75f, 65d, .1d, 100d));
+        new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
+        new DaggerfallMeleeTargetingTuning(2.25d, .5d));
 
     internal DaggerfallTuning Validate() => this with
     {
         PlayerControl = PlayerControl.Validate(),
         Spatial = Spatial.Validate(),
         Camera = Camera.Validate(),
+        MeleeTargeting = MeleeTargeting.Validate(),
     };
 
     internal static DaggerfallTuning Read(ReadOnlySpan<byte> payload)
@@ -34,6 +37,7 @@ internal sealed record DaggerfallTuning(
         JsonElement controls = root.GetProperty("playerControl");
         JsonElement spatial = root.GetProperty("spatial");
         JsonElement camera = root.GetProperty("camera");
+        JsonElement meleeTargeting = root.GetProperty("meleeTargeting");
         return new DaggerfallTuning(
             new PlayerControlTuning(
                 controls.GetProperty("lookSensitivity").GetSingle(),
@@ -53,7 +57,10 @@ internal sealed record DaggerfallTuning(
                 camera.GetProperty("eyeHeight").GetSingle(),
                 camera.GetProperty("fieldOfViewYDegrees").GetDouble(),
                 camera.GetProperty("nearPlane").GetDouble(),
-                camera.GetProperty("farPlane").GetDouble()))
+                camera.GetProperty("farPlane").GetDouble()),
+            new DaggerfallMeleeTargetingTuning(
+                meleeTargeting.GetProperty("maximumDistance").GetDouble(),
+                meleeTargeting.GetProperty("minimumFacingCosine").GetDouble()))
             .Validate();
     }
 
@@ -65,6 +72,17 @@ internal sealed record DaggerfallTuning(
         StrafeSpeed: controller.GetProperty("strafeSpeed").GetSingle(),
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
+}
+
+/// <summary>Ruleset-tunable query bounds for ordinary Daggerfall player melee.</summary>
+internal sealed record DaggerfallMeleeTargetingTuning(double MaximumDistance, double MinimumFacingCosine)
+{
+    internal DaggerfallMeleeTargetingTuning Validate()
+    {
+        if (!double.IsFinite(MaximumDistance) || MaximumDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(MaximumDistance));
+        if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
+        return this;
+    }
 }
 
 internal readonly record struct PlayerInitialLook(float YawRadians, float PitchRadians)

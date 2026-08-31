@@ -180,6 +180,17 @@ public sealed class PlayerInputSystem
         candidate.EnsureCommittableBy(this, player);
     }
 
+    /// <summary>Resolves the Engine-owned current view basis from committed product look state without changing it.</summary>
+    public LookReceipt ResolveCurrentLook(PlayerControlState player)
+    {
+        ArgumentNullException.ThrowIfNull(player);
+        player.ValidateForInput();
+        LookRequest request = new(new LookState(player.YawRadians, player.PitchRadians), Vector2.Zero, LookConfiguration());
+        LookDiagnostic diagnostic = _look.Diagnose(request);
+        if (diagnostic != LookDiagnostic.Accepted) throw new InvalidOperationException($"Engine look request rejected: {diagnostic}.");
+        return _look.Integrate(request);
+    }
+
     /// <summary>Convenience path for callers that do not need to coordinate an Engine character proposal.</summary>
     public void Apply(PlayerControlState player, ProductUpdateState update) => Commit(Prepare(player, update), player, update);
 
