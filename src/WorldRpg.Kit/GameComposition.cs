@@ -79,6 +79,7 @@ public sealed class ResolvedGameComposition
 public sealed class ResolvedCompositionIdentity
 {
     private readonly IReadOnlyList<ContentPackId> _contentPacks;
+    private readonly IReadOnlyList<ResolvedContentPackIdentity> _contentPackIdentities;
 
     internal ResolvedCompositionIdentity(GameBundle bundle, IEnumerable<ContentPack> contentPacks, TuningProfile tuning, string fingerprint, string contentFingerprint, string tuningFingerprint)
     {
@@ -86,22 +87,91 @@ public sealed class ResolvedCompositionIdentity
         ArgumentNullException.ThrowIfNull(contentPacks);
         ArgumentNullException.ThrowIfNull(tuning);
         Bundle = bundle.Id;
+        BundleSchemaVersion = bundle.SchemaVersion;
+        BundleVersion = bundle.Version;
         Ruleset = bundle.Ruleset;
-        _contentPacks = Array.AsReadOnly(contentPacks.Select(pack => pack.Id).ToArray());
+        _contentPackIdentities = Array.AsReadOnly(contentPacks.Select(pack => new ResolvedContentPackIdentity(pack.Id, pack.SchemaVersion, pack.Version)).ToArray());
+        _contentPacks = Array.AsReadOnly(_contentPackIdentities.Select(pack => pack.Id).ToArray());
         Tuning = tuning.Id;
+        TuningSchemaVersion = tuning.SchemaVersion;
+        TuningVersion = tuning.Version;
         Fingerprint = fingerprint;
         ContentFingerprint = contentFingerprint;
         TuningFingerprint = tuningFingerprint;
     }
 
     public GameBundleId Bundle { get; }
+    public int BundleSchemaVersion { get; }
+    public int BundleVersion { get; }
     public RulesetId Ruleset { get; }
     public IReadOnlyList<ContentPackId> ContentPacks => _contentPacks;
+    public IReadOnlyList<ResolvedContentPackIdentity> ContentPackIdentities => _contentPackIdentities;
     public TuningProfileId Tuning { get; }
+    public int TuningSchemaVersion { get; }
+    public int TuningVersion { get; }
     public string Fingerprint { get; }
     public string ContentFingerprint { get; }
     public string TuningFingerprint { get; }
 }
+
+/// <summary>Typed durable identity fields for a resolved bundle. They are kept separate from a save payload so compatibility is checked before ruleset state is decoded.</summary>
+public readonly record struct ResolvedBundleIdentity(GameBundleId Id, int SchemaVersion, int Version);
+public readonly record struct ResolvedContentPackIdentity(ContentPackId Id, int SchemaVersion, int Version);
+public readonly record struct ResolvedTuningIdentity(TuningProfileId Id, int SchemaVersion, int Version);
+
+/// <summary>Ruleset-neutral durable identity copied from the selected composition.</summary>
+public sealed class SaveCompositionIdentity
+{
+    private readonly ResolvedContentPackIdentity[] _contentPacks;
+
+    public SaveCompositionIdentity(ResolvedCompositionIdentity value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        Bundle = new ResolvedBundleIdentity(value.Bundle, value.BundleSchemaVersion, value.BundleVersion);
+        Ruleset = value.Ruleset;
+        _contentPacks = value.ContentPackIdentities.ToArray();
+        Tuning = new ResolvedTuningIdentity(value.Tuning, value.TuningSchemaVersion, value.TuningVersion);
+        Fingerprint = value.Fingerprint;
+        ContentFingerprint = value.ContentFingerprint;
+        TuningFingerprint = value.TuningFingerprint;
+    }
+
+    public SaveCompositionIdentity(ResolvedBundleIdentity bundle, RulesetId ruleset, IEnumerable<ResolvedContentPackIdentity> contentPacks, ResolvedTuningIdentity tuning, string fingerprint, string contentFingerprint, string tuningFingerprint)
+    {
+        ArgumentNullException.ThrowIfNull(contentPacks);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fingerprint);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentFingerprint);
+        ArgumentException.ThrowIfNullOrWhiteSpace(tuningFingerprint);
+        Bundle = bundle; Ruleset = ruleset; _contentPacks = contentPacks.ToArray(); Tuning = tuning;
+        Fingerprint = fingerprint; ContentFingerprint = contentFingerprint; TuningFingerprint = tuningFingerprint;
+    }
+
+    public ResolvedBundleIdentity Bundle { get; }
+    public RulesetId Ruleset { get; }
+    public IReadOnlyList<ResolvedContentPackIdentity> ContentPacks => Array.AsReadOnly(_contentPacks.ToArray());
+    public ResolvedTuningIdentity Tuning { get; }
+    public string Fingerprint { get; }
+    public string ContentFingerprint { get; }
+    public string TuningFingerprint { get; }
+
+    public static SaveCompositionIdentity From(ResolvedCompositionIdentity value) => new(value);
+
+    public IReadOnlyList<SaveCompatibilityDiagnostic> CheckCompatible(ResolvedCompositionIdentity current)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        List<SaveCompatibilityDiagnostic> diagnostics = [];
+        if (Bundle != new ResolvedBundleIdentity(current.Bundle, current.BundleSchemaVersion, current.BundleVersion)) diagnostics.Add(new("bundle", "The saved bundle identity or version does not match the selected bundle."));
+        if (Ruleset != current.Ruleset) diagnostics.Add(new("ruleset", "The saved ruleset identity does not match the selected ruleset."));
+        if (Tuning != new ResolvedTuningIdentity(current.Tuning, current.TuningSchemaVersion, current.TuningVersion)) diagnostics.Add(new("tuning", "The saved tuning identity or version does not match the selected tuning."));
+        if (!_contentPacks.SequenceEqual(current.ContentPackIdentities)) diagnostics.Add(new("content-packs", "The saved ordered content-pack identities or versions do not match the selected content packs."));
+        if (!string.Equals(Fingerprint, current.Fingerprint, StringComparison.Ordinal)) diagnostics.Add(new("fingerprint", "The saved composition fingerprint does not match the selected composition."));
+        if (!string.Equals(ContentFingerprint, current.ContentFingerprint, StringComparison.Ordinal)) diagnostics.Add(new("content-fingerprint", "The saved content fingerprint does not match the selected content."));
+        if (!string.Equals(TuningFingerprint, current.TuningFingerprint, StringComparison.Ordinal)) diagnostics.Add(new("tuning-fingerprint", "The saved tuning fingerprint does not match the selected tuning."));
+        return Array.AsReadOnly(diagnostics.ToArray());
+    }
+}
+
+public sealed record SaveCompatibilityDiagnostic(string Code, string Message);
 
 public sealed record CompositionDiagnostic(string Code, string Message);
 public sealed class GameCompositionResolution
@@ -283,3 +353,42 @@ public sealed class GameSessionContext(IEngineContext engine, ResolvedGameCompos
 }
 public interface IGameRuleset { RulesetId Id { get; } IGameSession CreateSession(GameSessionContext context); }
 public interface IGameSession : IDisposable { void PublishInitial(); ProductUpdateResult Update(ProductUpdate update); }
+
+/// <summary>Opaque ruleset-owned save bytes plus the ruleset schema that interprets them.</summary>
+public sealed class RulesetSavePayload
+{
+    private readonly byte[] _bytes;
+    public RulesetSavePayload(RulesetId ruleset, uint schemaVersion, ReadOnlySpan<byte> bytes)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ruleset.Value);
+        ArgumentOutOfRangeException.ThrowIfZero(schemaVersion);
+        Ruleset = ruleset; SchemaVersion = schemaVersion; _bytes = bytes.ToArray();
+    }
+    public RulesetId Ruleset { get; }
+    public uint SchemaVersion { get; }
+    public ReadOnlyMemory<byte> Bytes => _bytes.ToArray();
+}
+
+/// <summary>Ruleset-neutral envelope persisted by the Host; only the ruleset interprets Payload.</summary>
+public sealed class GameSaveEnvelope
+{
+    public GameSaveEnvelope(SaveCompositionIdentity composition, RulesetSavePayload payload)
+    {
+        Composition = composition ?? throw new ArgumentNullException(nameof(composition));
+        Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+    }
+    public SaveCompositionIdentity Composition { get; }
+    public RulesetSavePayload Payload { get; }
+}
+
+/// <summary>Optional compiled-ruleset persistence seam. A resume payload is supplied only after Host compatibility admission.</summary>
+public interface ISaveableGameRuleset : IGameRuleset
+{
+    IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved);
+}
+
+/// <summary>Optional session seam for capturing only ruleset-owned durable meaning.</summary>
+public interface ISaveableGameSession : IGameSession
+{
+    RulesetSavePayload CaptureSave();
+}

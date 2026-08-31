@@ -28,6 +28,11 @@ public sealed class GameCompositionTests
         Assert.Equal("test", composition.Identity.Ruleset.Value);
         Assert.Equal(["test.base", "test.world"], composition.Identity.ContentPacks.Select(pack => pack.Value));
         Assert.Equal("test.tuning", composition.Identity.Tuning.Value);
+        Assert.Equal(1, composition.Identity.BundleSchemaVersion);
+        Assert.Equal(1, composition.Identity.BundleVersion);
+        Assert.Equal([("test.base", 1, 1), ("test.world", 1, 1)], composition.Identity.ContentPackIdentities.Select(pack => (pack.Id.Value, pack.SchemaVersion, pack.Version)));
+        Assert.Equal(1, composition.Identity.TuningSchemaVersion);
+        Assert.Equal(1, composition.Identity.TuningVersion);
         Assert.Equal(composition.Fingerprint, composition.Identity.Fingerprint);
         Assert.Equal(composition.ContentFingerprint, composition.Identity.ContentFingerprint);
         Assert.Equal(composition.TuningFingerprint, composition.Identity.TuningFingerprint);
@@ -38,6 +43,31 @@ public sealed class GameCompositionTests
         Assert.Matches("^[0-9a-f]{64}$", composition.Fingerprint);
         Assert.Matches("^[0-9a-f]{64}$", composition.ContentFingerprint);
         Assert.Matches("^[0-9a-f]{64}$", composition.TuningFingerprint);
+    }
+
+    [Fact]
+    public void Save_identity_rejects_changed_bundle_pack_and_tuning_versions_before_session_construction()
+    {
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(Content(
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.base","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
+            ("worldrpg/content-packs/test.base.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.base","version":1,"ruleset":"test","dependencies":[],"payload":"payload/base.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
+            ("payload/base.json", "base"), ("payload/tuning.json", "tuning")), new GameBundleId("test.bundle")).RequireComposition();
+
+        SaveCompositionIdentity saved = new(
+            new ResolvedBundleIdentity(composition.Identity.Bundle, composition.Identity.BundleSchemaVersion, 2),
+            composition.Identity.Ruleset,
+            [new ResolvedContentPackIdentity(new ContentPackId("test.base"), 1, 2)],
+            new ResolvedTuningIdentity(composition.Identity.Tuning, composition.Identity.TuningSchemaVersion, 2),
+            composition.Identity.Fingerprint,
+            composition.Identity.ContentFingerprint,
+            composition.Identity.TuningFingerprint);
+
+        IReadOnlyList<SaveCompatibilityDiagnostic> diagnostics = saved.CheckCompatible(composition.Identity);
+
+        Assert.Contains(diagnostics, value => value.Code == "bundle");
+        Assert.Contains(diagnostics, value => value.Code == "content-packs");
+        Assert.Contains(diagnostics, value => value.Code == "tuning");
     }
 
     [Theory]
