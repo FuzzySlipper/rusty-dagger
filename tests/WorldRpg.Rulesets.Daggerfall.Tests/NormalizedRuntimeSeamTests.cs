@@ -397,7 +397,7 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.DoesNotContain("idle", SpriteFor(batInputs, "giant-bat").States.Keys);
 
         NormalizedActorSprite ordinary = SpriteFor(ratInputs, "skeletal-warrior");
-        Assert.Null(ordinary.PreferredRestState);
+        Assert.Equal("idle", ordinary.PreferredRestState);
         Assert.All(ordinary.States.Values, state => Assert.Equal(state.FramesPerSecond, state.EffectiveFramesPerSecond));
     }
 
