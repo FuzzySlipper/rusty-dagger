@@ -304,6 +304,27 @@ and removed.
 | `dagger-studio-adapter`, HTTP server, stale Angular app, and gameplay package authoring | Preserve only useful diagnostics, provenance, thin DOM presentation, supported C# import/authoring behavior, and the sprite viewer/editor (atlas/frame inspection and manifest editing). Reject and retire the old topology and UI-side render/animation authority. | #7543 |
 | Remaining `.rs`, `gameplay/`, Cargo, retired scripts/config/apps | Delete only after replacements and provenance are proven; certify the clean C#/NativeAOT product. Authored/imported content remains. | #7544 |
 
+### #7541 enemy behavior and presentation disposition
+
+`dagger-runtime` directional, animation, combat-asset, and patrol experiments
+were adapted only as semantic evidence. Engine Perception, navigation evaluation,
+sprite atlas/playback, Appearance, Audio, Random, CameraView, and admitted update
+identity own the reusable mechanisms. WorldRpg.Kit owns generic actor navigation
+coordination and owner-aware Mechanics inventory-container transactions.
+Daggerfall owns Idle/Chase/Attack/Dead policy, directional/action selection,
+timings and audio mappings, classic weapon/effect interpretation, corpse meaning,
+loot generation, interaction reach/facing policy, and deterministic selection.
+
+Daggerfall Unity `EnemyDeath` and `PlayerActivate` were adapted as the corpse
+interaction donor: any defeated enemy can leave a persistent corpse marker,
+player-credit XP remains separate, nonempty contents live in an Engine inventory,
+and one explicit Engine-visible interaction transfers them atomically. Empty
+corpses can be searched once and then become inert without removing their marker.
+Live enemy-inventory transfer is deferred because the current actor model has no
+enemy inventory to transfer. Unity object/physics/UI topology, the Rust patrol
+aggregate, encounters and activation groups, local raycasts, immediate auto-loot,
+and presentation-owned damage were rejected.
+
 The dependency shape keeps the importer, catalogs/rules, and Kit/Engine world
 lanes independently reviewable, then converges through targeting/behavior,
 Host state, retired-surface removal, and final cleanup. Each implementation
