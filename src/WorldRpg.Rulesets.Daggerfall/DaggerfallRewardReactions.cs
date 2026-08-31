@@ -5,19 +5,16 @@ using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Facts;
-using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Daggerfall-owned reward policy for defeated authored actors.</summary>
-internal sealed class DaggerfallRewardReactions(MechanicsInventoryCoordinator inventory, ProgressionState progression, ActorMechanicsState playerMechanics, DaggerfallActorDefinition playerDefinition, IRandomService random, IReadOnlyDictionary<long, DaggerfallActorDefinition> actors, DaggerfallDefinitions definitions, DaggerfallUniqueItemAllocator uniqueItems)
+internal sealed class DaggerfallRewardReactions(ProgressionState progression, ActorMechanicsState playerMechanics, DaggerfallActorDefinition playerDefinition, IRandomService random, IReadOnlyDictionary<long, DaggerfallActorDefinition> actors)
 {
     private readonly HashSet<long> _awarded = [];
     private readonly HashSet<long> _experienceAwarded = [];
-    private readonly HashSet<long> _lootAwarded = [];
-    private readonly Dictionary<long, IReadOnlyList<LootAwardedFact>> _pendingLootFacts = [];
 
     internal void React(ActorDiedFact fact, FactBuffer<IProductFact> facts)
     {
@@ -25,35 +22,6 @@ internal sealed class DaggerfallRewardReactions(MechanicsInventoryCoordinator in
         if (_awarded.Contains(fact.ActorId) || !actors.TryGetValue(fact.ActorId, out DaggerfallActorDefinition? actor)) return;
 
         ProgressionAwardPlan? progressionPlan = PlanProgression(fact.ActorId, actor);
-        if (actor.LootTableKey is { } tableKey && !_lootAwarded.Contains(fact.ActorId))
-        {
-            DaggerfallLootResult loot = DaggerfallLootPolicy.Generate(
-                definitions,
-                tableKey,
-                progressionPlan?.NextLevel ?? progression.Level,
-                (id, minimum, maximum) => checked((int)random.DrawKeyed(new KeyedRngRequest(
-                    LootRandomKey.Seed,
-                    LootRandomKey.Scope,
-                    LootRandomKey.For(fact.OriginatingGeneration, fact.OriginatingSequence, fact.ActorId, id),
-                    minimum,
-                    maximum)).Value));
-            List<InventoryAtomicGrant> grants = [];
-            List<LootAwardedFact> pendingFacts = [];
-            foreach (DaggerfallLootDrop drop in loot.Drops)
-            {
-                DaggerfallItemDefinition item = definitions.Items[new DaggerfallItemId(drop.ItemId)];
-                grants.Add(item.IsFungible
-                    ? new InventoryAtomicGrant(new InventoryItemId(drop.ItemId), checked((ulong)drop.Quantity))
-                    : new InventoryAtomicGrant(
-                        new InventoryItemId(drop.ItemId),
-                        Identity: $"daggerfall.loot.a{fact.ActorId}.g{fact.OriginatingGeneration}.s{fact.OriginatingSequence}.{grants.Count}",
-                        EntityId: uniqueItems.Allocate()));
-                pendingFacts.Add(new LootAwardedFact(fact.ActorId, drop.ItemId, drop.Quantity, fact.OriginatingSequence));
-            }
-            if (grants.Count > 0) inventory.GrantAtomic(grants);
-            _lootAwarded.Add(fact.ActorId);
-            _pendingLootFacts.Add(fact.ActorId, pendingFacts);
-        }
         if (progressionPlan is not null)
         {
             progressionPlan.HealthCandidate?.Publish();
@@ -61,8 +29,6 @@ internal sealed class DaggerfallRewardReactions(MechanicsInventoryCoordinator in
             facts.Append(new ExperienceAwardedFact(fact.ActorId, actor.Rewards.ExperienceReward));
             _experienceAwarded.Add(fact.ActorId);
         }
-        if (_pendingLootFacts.Remove(fact.ActorId, out IReadOnlyList<LootAwardedFact>? pendingLoot))
-            foreach (LootAwardedFact lootFact in pendingLoot) facts.Append(lootFact);
         _awarded.Add(fact.ActorId);
     }
 
@@ -182,14 +148,22 @@ internal static class LootRandomKey
 }
 
 /// <summary>Session-owned monotonic allocator for generated unique loot entities.</summary>
-internal sealed class DaggerfallUniqueItemAllocator(ulong firstEntityId)
+internal sealed class DaggerfallUniqueItemAllocator(ulong firstEntityId, IEnumerable<ulong>? reserved = null)
 {
     internal const ulong DefaultFirstEntityId = 1_000_000_000_000UL;
     private ulong _next = firstEntityId;
+    private readonly HashSet<ulong> _reserved = (reserved ?? []).ToHashSet();
 
     internal ulong Allocate()
     {
+        while (_reserved.Contains(_next))
+        {
+            if (_next == ulong.MaxValue) throw new InvalidOperationException("The Daggerfall loot entity range is exhausted.");
+            _next++;
+        }
         if (_next == 0 || _next == ulong.MaxValue) throw new InvalidOperationException("The Daggerfall loot entity range is exhausted.");
-        return _next++;
+        ulong allocated = _next++;
+        _reserved.Add(allocated);
+        return allocated;
     }
 }

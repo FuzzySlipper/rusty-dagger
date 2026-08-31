@@ -40,6 +40,10 @@
     "chaseSpeedUnitsPerSecond": 3.0,
     "navigationMaximumVisited": 32
   },
+  "lootInteraction": {
+    "maximumDistance": 2.25,
+    "minimumFacingCosine": 0.5
+  },
   "presentationAudio": {
     "volume": 1.0,
     "pitch": 1.0,

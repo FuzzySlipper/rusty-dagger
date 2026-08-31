@@ -9,11 +9,15 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Host;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Facts;
+using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
@@ -1110,6 +1114,101 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Corpse_loot_uses_engine_visibility_and_transfers_to_the_player_only_after_explicit_interaction()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.ToDictionary(
+            item => new InventoryItemId(item.Id.Value),
+            item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
+        InventoryWorld world = new();
+        EntityId playerOwner = new(1);
+        world.RegisterInventory(new InventoryState(playerOwner));
+        MechanicsInventoryContainerCoordinator containers = new(world, items);
+        using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using ActorsState actors = new(
+            new PlayerActorState(new ActorMechanicsState(playerOwner, [], []), "health"),
+            [new ActorState(2000, DefeatedMechanics(2000), new WorldPoint(0f, 0f, 1f), "health")]);
+        DaggerfallCorpseLootModule loot = new(
+            perception.Service, movement, containers, playerOwner, actors,
+            new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("thief")) },
+            definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction);
+        // Corpse policy is independent of player XP credit.
+        ActorDiedFact death = new(2000, 77, 3, 2, 3);
+        loot.Create(death);
+        Assert.True(loot.Corpses[2000].IsInteractable);
+        Assert.Empty(containers.Read(playerOwner).Stacks);
+
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Occluded, 0d));
+        Assert.Null(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
+        Assert.True(loot.Corpses[2000].IsInteractable);
+
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
+        Assert.False(pending.IsEmpty);
+        FactBuffer<IProductFact> facts = new();
+        Assert.Equal(CorpseLootCommitResult.Committed, loot.TryCommitLoot(pending, facts));
+        Assert.False(loot.Corpses[2000].IsInteractable);
+        Assert.NotEmpty(containers.Read(playerOwner).Stacks);
+        List<IProductFact> delivered = [];
+        facts.Deliver(delivered.Add);
+        Assert.NotEmpty(delivered.OfType<LootAwardedFact>());
+        Assert.Single(delivered.OfType<CorpseLootedFact>());
+        Assert.Equal(2.25d, loot.LastEvidence?.Request.Observers.Span[0].MaximumDistance);
+        Assert.Equal(.5d, loot.LastEvidence?.Request.Observers.Span[0].MinimumFacingCosine);
+        Assert.Null(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
+    }
+
+    [Fact]
+    public void Empty_corpse_is_explicitly_searchable_once_without_an_engine_inventory_owner()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.ToDictionary(
+            item => new InventoryItemId(item.Id.Value),
+            item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
+        InventoryWorld world = new();
+        EntityId playerOwner = new(1);
+        world.RegisterInventory(new InventoryState(playerOwner));
+        MechanicsInventoryContainerCoordinator containers = new(world, items);
+        using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        using ActorsState actors = new(
+            new PlayerActorState(new ActorMechanicsState(playerOwner, [], []), "health"),
+            [new ActorState(2000, DefeatedMechanics(2000), new WorldPoint(0f, 0f, 1f), "health")]);
+        DaggerfallCorpseLootModule loot = new(
+            perception.Service, movement, containers, playerOwner, actors,
+            new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("rat")) },
+            definitions, RandomMinimum.Create(), new DaggerfallUniqueItemAllocator(1_000), new ProgressionState(), DaggerfallTuning.Defaults.LootInteraction);
+        loot.Create(new ActorDiedFact(2000, 77, 3, 2, 3));
+        Assert.True(loot.Corpses[2000].IsInteractable);
+        Assert.False(loot.Corpses[2000].IsRegistered);
+        Assert.Equal([playerOwner], world.InventoryOwners);
+
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
+        PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
+        Assert.True(pending.IsEmpty);
+        FactBuffer<IProductFact> facts = new();
+        Assert.Equal(CorpseLootCommitResult.Committed, loot.TryCommitLoot(pending, facts));
+        Assert.False(loot.Corpses[2000].IsInteractable);
+        List<IProductFact> delivered = [];
+        facts.Deliver(delivered.Add);
+        Assert.Single(delivered.OfType<CorpseSearchedEmptyFact>());
+        Assert.Null(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
+    }
+
+    [Fact]
     public void Enemy_behavior_uses_engine_visibility_then_shared_combat_and_transitions_without_replaying_damage()
     {
         string root = RepositoryRoot();
@@ -1236,6 +1335,14 @@ public sealed class NormalizedRuntimeSeamTests
         ProductUpdateState update = new(.125f);
         update.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "attack"));
         return update;
+    }
+
+    private static LookReceipt ForwardLook() => new(default, default, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);
+
+    private static ActorMechanicsState DefeatedMechanics(ulong entityId)
+    {
+        ExactTrackDefinition health = new(TrackId.Parse("health"), ExactValue.Zero, new ExactTrackMaximum.Fixed(new ExactValue(100)));
+        return new ActorMechanicsState(new EntityId(entityId), [], [new ExactTrack(health, ExactValue.Zero)]);
     }
 
     private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
@@ -1607,6 +1714,22 @@ public sealed class NormalizedRuntimeSeamTests
             }
             return default(LookReceipt);
         }
+    }
+
+    private class RandomMinimum : DispatchProxy
+    {
+        internal IRandomService Service { get; private set; } = null!;
+
+        internal static IRandomService Create()
+        {
+            IRandomService service = DispatchProxy.Create<IRandomService, RandomMinimum>();
+            ((RandomMinimum)(object)service).Service = service;
+            return service;
+        }
+
+        protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name == nameof(IRandomService.DrawKeyed)
+            ? new KeyedRngReceipt(((KeyedRngRequest)arguments![0]!).Minimum)
+            : throw new NotSupportedException(method?.Name);
     }
 
     private class PerceptionFake : DispatchProxy

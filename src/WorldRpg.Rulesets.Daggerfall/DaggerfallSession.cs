@@ -5,6 +5,7 @@ using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
+using WorldRpg.Rulesets.Daggerfall.Modules.Loot;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
@@ -28,6 +29,8 @@ internal sealed class DaggerfallSession : IGameSession
     private readonly FirstPersonCameraSystem _camera;
     private readonly CombatModule _combat;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
+    private readonly DaggerfallCorpseLootModule _corpseLoot;
+    private PendingCorpseLoot? _pendingLoot;
     private readonly FactBuffer<IProductFact> _facts = new();
     private FactBuffer<IProductFact>.FactTransaction? _outerFacts;
     private readonly DaggerfallRewardReactions _rewards;
@@ -65,6 +68,7 @@ internal sealed class DaggerfallSession : IGameSession
             inventoryWorld.RegisterInventory(new InventoryState(playerEntity));
             inventoryWorld.RegisterEquipment(new EquipmentState(playerEntity));
             MechanicsInventoryCoordinator inventory = new(inventoryWorld, playerEntity, itemDefinitions);
+            MechanicsInventoryContainerCoordinator containers = new(inventoryWorld, itemDefinitions);
             MechanicsEquipmentCoordinator equipmentCoordinator = new(inventoryWorld, playerEntity, itemDefinitions, equipmentSlots);
             partiallyConstructed.Add(equipmentCoordinator);
             foreach (DaggerfallLoadoutEntry entry in playerDefinition.Loadout.Where(entry => definitions.Items[entry.ItemId].IsFungible))
@@ -127,14 +131,23 @@ internal sealed class DaggerfallSession : IGameSession
                 _combat,
                 tuning.EnemyBehavior);
             _rewards = new DaggerfallRewardReactions(
-                State.Inventory,
                 State.Progression,
                 State.Actors.Player.Mechanics,
                 playerDefinition,
                 _random,
+                authored);
+            _corpseLoot = new DaggerfallCorpseLootModule(
+                engine.Perception,
+                _spatial,
+                containers,
+                playerEntity,
+                State.Actors,
                 authored,
                 definitions,
-                new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId));
+                _random,
+                new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, InitialReservedEntityIds(inputs, playerDefinition.Loadout)),
+                State.Progression,
+                tuning.LootInteraction);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);
@@ -160,6 +173,7 @@ internal sealed class DaggerfallSession : IGameSession
         _appearance.BeginAdmittedUpdate();
         PrivateersHoldAppearance.PresentationCheckpoint mediaCheckpoint = _appearance.Checkpoint();
         _outerFacts = _facts.BeginTransaction();
+        PendingCorpseLoot? committedBoundaryLoot;
         try
         {
         Update(update.Facts, update.Input);
@@ -173,17 +187,32 @@ internal sealed class DaggerfallSession : IGameSession
             PublishPresentation();
         }
         _appearance.CompleteAdmittedUpdate();
-        _outerFacts.Commit();
+        FactBuffer<IProductFact>.FactTransaction transaction = _outerFacts;
         _outerFacts = null;
-        return ProductUpdateResult.None;
+        transaction.Commit();
+        committedBoundaryLoot = _pendingLoot;
+        _pendingLoot = null;
         }
-        catch
+        catch (Exception failure)
         {
-            _appearance.Restore(mediaCheckpoint);
-            _outerFacts?.Rollback();
+            _pendingLoot = null;
+            FactBuffer<IProductFact>.FactTransaction? transaction = _outerFacts;
             _outerFacts = null;
-            throw;
+            List<Exception> failures = [failure];
+            try { transaction?.Rollback(); }
+            catch (Exception rollbackFailure) { failures.Add(rollbackFailure); }
+            try { _appearance.Restore(mediaCheckpoint); }
+            catch (Exception restoreFailure) { failures.Add(restoreFailure); }
+            if (failures.Count == 1) throw;
+            throw new AggregateException(failures);
         }
+
+        if (committedBoundaryLoot is { } pending)
+        {
+            if (_corpseLoot.TryCommitLoot(pending, _facts) == CorpseLootCommitResult.Rejected)
+                Presentation.SetOutcome("Cannot loot corpse right now");
+        }
+        return ProductUpdateResult.None;
     }
 
     internal void Update(ProductUpdateFacts facts, ReadOnlySpan<ProductInputEvent> input)
@@ -230,7 +259,9 @@ internal sealed class DaggerfallSession : IGameSession
         else _input.Commit(input, State.PlayerControl, update);
         _camera.Update(State.PlayerControl);
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
-        if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl), generation, simulationStep, update.DeltaSeconds, _facts);
+        LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
+        if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
+        if (update.IsRequested(DaggerfallInput.Interact)) _pendingLoot ??= _corpseLoot.PrepareLoot(State.PlayerControl, currentLook);
         DeliverFacts();
         PublishPresentation();
     }
@@ -255,7 +286,11 @@ internal sealed class DaggerfallSession : IGameSession
 
     private void React(IProductFact fact)
     {
-        if (fact is ActorDiedFact died) _rewards.React(died, _facts);
+        if (fact is ActorDiedFact died)
+        {
+            _corpseLoot.Create(died);
+            _rewards.React(died, _facts);
+        }
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.React(fact, State.Actors);
         _outcomes.React(fact);
@@ -309,6 +344,9 @@ internal sealed class DaggerfallSession : IGameSession
         else _facts.Deliver(React);
     }
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
+    internal CorpseLootEvidence? LastCorpseLoot => _corpseLoot.LastEvidence;
+    internal CorpseLootCommitEvidence? LastCorpseLootCommit => _corpseLoot.LastCommit;
+    internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpseLoot.Corpses;
 
     private DaggerfallVitalValues InitialVitals(DaggerfallActorDefinition definition, long entityId)
     {
@@ -329,11 +367,20 @@ internal sealed class DaggerfallSession : IGameSession
             if (item.UniqueEntityId is ulong entityId && !ids.Add(entityId))
                 throw new InvalidOperationException($"Initial Mechanics entity id '{entityId}' collides with another player, placement, or item entity.");
     }
+
+    private static IEnumerable<ulong> InitialReservedEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
+    {
+        yield return PlayerMechanicsEntityId;
+        foreach (AuthoredActor actor in inputs.Project.Actors.Values) yield return checked((ulong)actor.EntityId);
+        foreach (DaggerfallLoadoutEntry item in loadout)
+            if (item.UniqueEntityId is ulong entityId) yield return entityId;
+    }
 }
 
 internal static class DaggerfallInput
 {
     internal static readonly InputActionId Attack = new("daggerfall.attack");
+    internal static readonly InputActionId Interact = new("daggerfall.interact");
     internal static readonly PlayerControlBindings Controls = new(
         ["move"u8.ToArray(), "movement"u8.ToArray()],
         KeyboardControl.KeyW,
@@ -341,5 +388,8 @@ internal static class DaggerfallInput
         KeyboardControl.KeyA,
         KeyboardControl.KeyD,
         new DirectionalMovementBindings("move.forward"u8.ToArray(), "move.backward"u8.ToArray(), "move.left"u8.ToArray(), "move.right"u8.ToArray()));
-    internal static readonly IReadOnlyList<InputActionBinding> Bindings = [new(Attack, "attack"u8.ToArray())];
+    internal static readonly IReadOnlyList<InputActionBinding> Bindings = [
+        new(Attack, "attack"u8.ToArray()),
+        new(Interact, "interact"u8.ToArray()),
+    ];
 }
