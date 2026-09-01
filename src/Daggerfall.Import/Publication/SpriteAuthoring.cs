@@ -600,21 +600,26 @@ public static class SpritePublicationReader
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    public static SpritePublicationSnapshot Read(string publicationDirectory)
+    /// <summary>
+    /// Reads an already-admitted generated publication.  The source stays an
+    /// Import-level value so callers can obtain its bytes from an Engine
+    /// content snapshot without giving Import an Engine dependency.
+    /// </summary>
+    public static SpritePublicationSnapshot Read(IReadOnlyList<SpritePublicationFile> files)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(publicationDirectory);
-        byte[] manifestBytes = ReadRequired(publicationDirectory, ImportPublicationManifestSerializer.ManifestRelativePath);
-        CanonicalImportManifest manifest = Deserialize<CanonicalImportManifest>(manifestBytes, "publication manifest");
-        byte[] dungeonBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath);
-        byte[] classicBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
-        DungeonMediaManifestSidecar dungeon = Deserialize<DungeonMediaManifestSidecar>(dungeonBytes, "dungeon sprite sidecar");
-        ClassicMediaManifestSidecar classic = Deserialize<ClassicMediaManifestSidecar>(classicBytes, "classic sprite sidecar");
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source = Index(files);
+        ReadOnlyMemory<byte> manifestBytes = Require(source, ImportPublicationManifestSerializer.ManifestRelativePath);
+        CanonicalImportManifest manifest = Deserialize<CanonicalImportManifest>(manifestBytes.Span, "publication manifest");
+        ReadOnlyMemory<byte> dungeonBytes = Require(source, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath);
+        ReadOnlyMemory<byte> classicBytes = Require(source, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
+        DungeonMediaManifestSidecar dungeon = Deserialize<DungeonMediaManifestSidecar>(dungeonBytes.Span, "dungeon sprite sidecar");
+        ClassicMediaManifestSidecar classic = Deserialize<ClassicMediaManifestSidecar>(classicBytes.Span, "classic sprite sidecar");
         SpriteInspectionCatalog catalog;
         try
         {
             manifest.Validate();
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes);
-            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes.Span);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes.Span);
             catalog = SpriteInspectionCatalogBuilder.Create(manifest, dungeon, classic);
         }
         catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
@@ -622,8 +627,45 @@ public static class SpritePublicationReader
             throw new FormatException("The sprite publication metadata violates the canonical contract.", exception);
         }
 
-        VerifyMediaArtifacts(publicationDirectory, [.. dungeon.Media.Resources, .. classic.Media.Resources]);
+        VerifyMediaArtifacts(source, [.. dungeon.Media.Resources, .. classic.Media.Resources]);
         return new(catalog, SpriteAuthoringBasis.Compute(manifest, catalog), manifest);
+    }
+
+    /// <summary>
+    /// Reads a generated publication from the filesystem for offline Import
+    /// tooling. Runtime consumers should instead pass the Engine-admitted
+    /// file snapshot to <see cref="Read(IReadOnlyList{SpritePublicationFile})"/>.
+    /// </summary>
+    public static SpritePublicationSnapshot Read(string publicationDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(publicationDirectory);
+        byte[] manifestBytes = ReadRequired(publicationDirectory, ImportPublicationManifestSerializer.ManifestRelativePath);
+        byte[] dungeonBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath);
+        byte[] classicBytes = ReadRequired(publicationDirectory, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
+        CanonicalImportManifest manifest = Deserialize<CanonicalImportManifest>(manifestBytes, "publication manifest");
+        DungeonMediaManifestSidecar dungeon = Deserialize<DungeonMediaManifestSidecar>(dungeonBytes, "dungeon sprite sidecar");
+        ClassicMediaManifestSidecar classic = Deserialize<ClassicMediaManifestSidecar>(classicBytes, "classic sprite sidecar");
+        try
+        {
+            manifest.Validate();
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.DungeonMediaManifestRelativePath, dungeonBytes);
+            ValidateManifestArtifact(manifest, Arena2MediaBundlePublication.ClassicMediaManifestRelativePath, classicBytes);
+            _ = SpriteInspectionCatalogBuilder.Create(manifest, dungeon, classic);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException or OverflowException)
+        {
+            throw new FormatException("The sprite publication metadata violates the canonical contract.", exception);
+        }
+        string[] paths = [
+            ImportPublicationManifestSerializer.ManifestRelativePath,
+            Arena2MediaBundlePublication.DungeonMediaManifestRelativePath,
+            Arena2MediaBundlePublication.ClassicMediaManifestRelativePath,
+            .. dungeon.Media.Resources.Select(resource => resource.RelativePath),
+            .. classic.Media.Resources.Select(resource => resource.RelativePath),
+        ];
+        return Read(paths.Distinct(StringComparer.Ordinal)
+            .Select(path => new SpritePublicationFile(path, ReadRequired(publicationDirectory, path)))
+            .ToArray());
     }
 
     /// <summary>Builds the same authoring identity from an in-memory generated plan before publication.</summary>
@@ -685,7 +727,42 @@ public static class SpritePublicationReader
         }
     }
 
-    private static void VerifyMediaArtifacts(string root, IReadOnlyList<NormalizedMediaDescriptor> descriptors)
+    private static IReadOnlyDictionary<string, ReadOnlyMemory<byte>> Index(IReadOnlyList<SpritePublicationFile> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        Dictionary<string, ReadOnlyMemory<byte>> source = new(StringComparer.Ordinal);
+        try
+        {
+            foreach (SpritePublicationFile file in files)
+            {
+                ArgumentNullException.ThrowIfNull(file);
+                NormalizedImportDocument.RequireLogicalPath(file.RelativePath, nameof(file.RelativePath));
+                if (!source.TryAdd(file.RelativePath, file.Bytes))
+                {
+                    throw new FormatException($"The admitted sprite publication contains duplicate path '{file.RelativePath}'.");
+                }
+            }
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException)
+        {
+            throw new FormatException("The admitted sprite publication contains an invalid path.", exception);
+        }
+
+        return source;
+    }
+
+    private static ReadOnlyMemory<byte> Require(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source, string relativePath)
+    {
+        if (!source.TryGetValue(relativePath, out ReadOnlyMemory<byte> bytes)
+            || bytes.Length is <= 0 or > MaximumSidecarBytes)
+        {
+            throw new FormatException($"Required sprite publication file '{relativePath}' is missing or outside its byte quota.");
+        }
+
+        return bytes;
+    }
+
+    private static void VerifyMediaArtifacts(IReadOnlyDictionary<string, ReadOnlyMemory<byte>> source, IReadOnlyList<NormalizedMediaDescriptor> descriptors)
     {
         long total = 0;
         foreach (NormalizedMediaDescriptor descriptor in descriptors)
@@ -695,26 +772,26 @@ public static class SpritePublicationReader
                 throw new FormatException("Sprite publication media exceeds the explicit artifact verification quota.");
             }
 
-            string path = SpriteAuthoredOverlayStore.ResolveRelativePath(root, descriptor.RelativePath);
-            FileInfo file = new(path);
-            if (!file.Exists || file.Length != descriptor.ByteLength)
+            if (!source.TryGetValue(descriptor.RelativePath, out ReadOnlyMemory<byte> bytes)
+                || bytes.Length != descriptor.ByteLength)
             {
                 throw new FormatException($"Published media artifact '{descriptor.RelativePath}' is missing or has the wrong length.");
             }
 
-            byte[] bytes = File.ReadAllBytes(path);
-            if (bytes.LongLength != file.Length)
-            {
-                throw new IOException($"Published media artifact '{descriptor.RelativePath}' changed while it was being read.");
-            }
-
-            if (ContentDigest.Compute(bytes) != descriptor.ContentDigest)
+            if (ContentDigest.Compute(bytes.Span) != descriptor.ContentDigest)
             {
                 throw new FormatException($"Published media artifact '{descriptor.RelativePath}' does not match its descriptor digest.");
             }
         }
     }
 }
+
+/// <summary>
+/// One immutable relative-path/byte entry from an admitted generated
+/// publication.  It is deliberately Engine-neutral so Import remains usable
+/// by offline tooling and by Engine-backed product hosts alike.
+/// </summary>
+public sealed record SpritePublicationFile(string RelativePath, ReadOnlyMemory<byte> Bytes);
 
 /// <summary>One validated inspection catalog and the digest that guards its authored overlay.</summary>
 public sealed record SpritePublicationSnapshot(SpriteInspectionCatalog Catalog, ContentDigest AuthoringBasisDigest, CanonicalImportManifest Manifest);

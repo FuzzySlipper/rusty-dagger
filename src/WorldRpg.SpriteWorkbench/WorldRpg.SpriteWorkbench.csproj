@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <!-- The Engine ProductGenerator emits the CoreCLR bind export; handwritten workbench code remains safe. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- ProductGenerator emits callback-table fields assigned by the Engine binder. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+    <EngineRoot Condition="'$(EngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../rusty-engine'))</EngineRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
+    <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
+    <ProjectReference Include="$(EngineRoot)/csharp/Rusty.Engine/Rusty.Engine.csproj" />
+    <ProjectReference Include="$(EngineRoot)/csharp/Rusty.Engine.ProductGenerator/Rusty.Engine.ProductGenerator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>

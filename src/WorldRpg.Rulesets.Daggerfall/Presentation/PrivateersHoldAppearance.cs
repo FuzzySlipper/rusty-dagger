@@ -7,6 +7,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Inventory;
+using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
@@ -391,7 +392,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         VerifyContent(content, new ContentArtifact(sprite.TexturePath, sprite.TextureSha256));
         RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(sprite.TexturePath));
-        SpriteAtlasFrame[] frames = sprite.Frames.Select(frame => new SpriteAtlasFrame(frame.Id, new Vector2((float)frame.X / sprite.AtlasWidth, (float)frame.Y / sprite.AtlasHeight), new Vector2((float)(frame.X + frame.Width) / sprite.AtlasWidth, (float)(frame.Y + frame.Height) / sprite.AtlasHeight), false, Vector2.Zero)).ToArray();
+        SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight,
+            sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
         atlases.Add(atlas);
         Appearance value = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, sprite.InitialFrameId, sprite.Pivot, sprite.Size, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
@@ -441,14 +443,12 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         {
             VerifyContent(content, new ContentArtifact(effect.TexturePath, effect.TextureSha256));
             RenderResourceInfo texture = classicTextures[effect.TexturePath];
-            SpriteAtlasFrame[] frames = effect.Frames.Select(frame => new SpriteAtlasFrame(frame.Id,
-                new Vector2((float)frame.X / effect.AtlasWidth, (float)frame.Y / effect.AtlasHeight),
-                new Vector2((float)(frame.X + frame.Width) / effect.AtlasWidth, (float)(frame.Y + frame.Height) / effect.AtlasHeight),
-                false, Vector2.Zero)).ToArray();
+            SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(effect.AtlasWidth, effect.AtlasHeight,
+                effect.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
             uint initialFrame = effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).First();
             visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, initialFrame, effect.Pivot, effect.DisplaySize, BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
-            SpritePlaybackFrame[] playbackFrames = effect.Sequence.Select(index => new SpritePlaybackFrame(effect.Frames.Single(frame => frame.Id == index).Id, 1d / effect.FramesPerSecond)).ToArray();
+            SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).ToArray(), effect.FramesPerSecond);
             playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), effect.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(playback, SpritePlaybackControl.Start));
             effects.Add(new EffectVisual(EffectEntityId(identity, name), position, atlas, visual, playback));
@@ -472,10 +472,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         {
             VerifyContent(content, new ContentArtifact(weapon.TexturePath, weapon.TextureSha256));
             RenderResourceInfo texture = classicTextures[weapon.TexturePath];
-            SpriteAtlasFrame[] frames = weapon.Frames.Select(frame => new SpriteAtlasFrame(frame.Id,
-                new Vector2((float)frame.X / weapon.AtlasWidth, (float)frame.Y / weapon.AtlasHeight),
-                new Vector2((float)(frame.X + frame.Width) / weapon.AtlasWidth, (float)(frame.Y + frame.Height) / weapon.AtlasHeight),
-                false, Vector2.Zero)).ToArray();
+            SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(weapon.AtlasWidth, weapon.AtlasHeight,
+                weapon.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
             visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, style.Pivot, style.Size, BillboardMode.None, SpriteSizeMode.World, style.RenderOrder, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
             viewmodel = new ViewmodelVisual(AtlasEntityId(weapon.ResourceId), new Transform(style.Position.ToVector(), Quaternion.Identity, Vector3.One), atlas, visual);
@@ -504,8 +502,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         SpritePlayback? staged = null;
         try
         {
-            SpritePlaybackFrame[] frames = Enumerable.Range(action.FrameStart, action.FrameCount)
-                .Select(index => new SpritePlaybackFrame(weapon.Frames.Single(frame => frame.Id == index).Id, 1d / action.FramesPerSecond)).ToArray();
+            SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames(Enumerable.Range(action.FrameStart, action.FrameCount)
+                .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), action.FramesPerSecond);
             staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, Array.Empty<SpritePlaybackMarker>(), action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
@@ -573,24 +571,19 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         if (visual.Live is null || !visual.Sprite.States.TryGetValue(stateName, out NormalizedSpriteState? state)) return;
         IReadOnlyList<int> source = attack?.SourceFrames ?? Enumerable.Range(0, state.SelectOrientation(0).Count).ToArray();
-        List<SpritePlaybackFrame> frames = [];
-        List<SpritePlaybackMarker> markers = [];
         List<int> sourceFrameIndices = [];
-        double duration = 1d / state.EffectiveFramesPerSecond;
+        List<SpritePlaybackStep> playbackSteps = [];
         for (int index = 0; index < source.Count; index++)
         {
             int value = source[index];
-            if (value == -1) { markers.Add(new SpritePlaybackMarker(checked((ulong)index + 1), checked((uint)frames.Count))); continue; }
+            if (value == -1) { playbackSteps.Add(new SpritePlaybackStep(null)); continue; }
             IReadOnlyList<uint> canonical = state.SelectOrientation(0);
             if (value < 0 || value >= canonical.Count) throw new InvalidOperationException("Normalized Daggerfall playback source index is outside the selected orientation.");
-            frames.Add(new SpritePlaybackFrame(canonical[value], duration));
+            playbackSteps.Add(new SpritePlaybackStep(canonical[value]));
             sourceFrameIndices.Add(value);
         }
-        // A marker needs a following visible frame.  Engine owns crossing
-        // timing; Daggerfall merely preserves its semantic position.
-        if (frames.Count == 0 || markers.Any(marker => marker.FrameIndex >= frames.Count))
-            throw new InvalidOperationException("Normalized Daggerfall playback cannot end with a marker without a following visible frame.");
-        SpritePlayback staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual.Live, visual.Atlas, frames.ToArray(), markers.ToArray(), state.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
+        SpritePlaybackPlan playbackPlan = SpriteAtlasAdapter.ToPlaybackPlan(playbackSteps, state.EffectiveFramesPerSecond);
+        SpritePlayback staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual.Live, visual.Atlas, playbackPlan.Frames, playbackPlan.Markers, state.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
         try { appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start)); }
         catch { staged.Dispose(); throw; }
         SpritePlayback? previous = visual.Playback;

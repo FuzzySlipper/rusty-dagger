@@ -130,6 +130,13 @@ public sealed class WorldRpgProduct : IEngineProduct
         _session.PublishInitial();
     }
 
+    /// <summary>Republishes the current session projection when the Engine attaches a new presentation client.</summary>
+    public void Attach()
+    {
+        if (_shutdown) return;
+        _session.PublishInitial();
+    }
+
     public void Pause() { if (_started && !_shutdown) _paused = true; }
     public void Resume() { if (_started && !_shutdown) _paused = false; }
 

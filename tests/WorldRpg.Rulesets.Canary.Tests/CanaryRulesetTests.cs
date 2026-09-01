@@ -32,6 +32,27 @@ public sealed class CanaryRulesetTests
     }
 
     [Fact]
+    public void Host_attach_republishes_the_current_session_without_restarting_or_after_shutdown()
+    {
+        CanaryRuleset ruleset = new();
+        ProductCreateContext context = new(EngineContextDouble.Create(), CanaryContent(), EmptyInputConfiguration());
+        WorldRpgProduct product = new(context, ruleset, CanaryRuleset.Bundle);
+        CanarySession session = Assert.IsType<CanarySession>(ruleset.CreatedSession);
+
+        product.Start();
+        product.Attach();
+
+        Assert.Equal(3, session.InitialPublishCount);
+        Assert.False(session.IsDisposed);
+
+        product.Shutdown();
+        product.Attach();
+
+        Assert.Equal(3, session.InitialPublishCount);
+        Assert.True(session.IsDisposed);
+    }
+
+    [Fact]
     public void Scenario_stays_deliberately_incompatible_with_the_reference_ruleset()
     {
         CanaryScenario scenario = CanaryScenario.SingleRoom;
