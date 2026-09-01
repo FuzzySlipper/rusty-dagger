@@ -12,10 +12,6 @@ public sealed class Arena2MediaBundlePublicationTests
     public void CreatesCanonicalMediaSidecarsAndACompleteDependencyClosure()
     {
         Arena2MediaBundlePublication first = CreateBundle(reverseClassicActions: false);
-        Arena2MediaBundlePublication second = CreateBundle(reverseClassicActions: true);
-
-        Assert.Equal(first.Plan.Artifacts.Select(artifact => artifact.RelativePath), second.Plan.Artifacts.Select(artifact => artifact.RelativePath));
-        Assert.Equal(first.Plan.Artifacts.Select(artifact => artifact.Bytes.ToArray()), second.Plan.Artifacts.Select(artifact => artifact.Bytes.ToArray()));
         Assert.Equal(2, first.Document.Provenance.Sources.Count);
         Assert.Equal(first.Document.Provenance.Sources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).Select(source => source.SourcePath), first.Document.Provenance.Sources.Select(source => source.SourcePath));
 
@@ -135,6 +131,24 @@ public sealed class Arena2MediaBundlePublicationTests
     }
 
     [Fact]
+    public void RejectsReorderedClassicWeaponActionsAndEffectsWithArbitrarySourceRecords()
+    {
+        Arena2ClassicMediaPublication classic = CreateClassicMedia();
+        Assert.Throws<InvalidOperationException>(() => CreateBundle(reverseClassicActions: true));
+
+        ClassicEffectManifest effect = classic.Effects.First();
+        Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
+            CreateDungeon(),
+            CreateDungeonMedia(),
+            classic with
+            {
+                Effects = classic.Effects.Select(value => value.Effect == effect.Effect
+                    ? value with { SourceRecordOrdinal = 99 }
+                    : value).ToArray(),
+            }));
+    }
+
+    [Fact]
     public void RejectsEffectTimingOrLoopThatDisagreesWithCanonicalDescriptor()
     {
         Arena2ClassicMediaPublication classic = CreateClassicMedia();
@@ -167,6 +181,28 @@ public sealed class Arena2MediaBundlePublicationTests
             CreateDungeon(),
             CreateDungeonMedia(),
             classic with { MediaManifest = descriptorWithChangedTiming }));
+    }
+
+    [Fact]
+    public void AcceptsAConsistentEffectTimingOverlayInTheFullPublicationBundle()
+    {
+        Arena2ClassicMediaPublication classic = CreateClassicMedia();
+        string effectId = classic.Effects.First().MediaId;
+        NormalizedMediaManifest media = new(classic.MediaManifest.Resources.Select(resource => resource.Id == effectId
+            ? resource with { FramesPerSecond = 7F, Loop = true }
+            : resource).ToArray());
+        Arena2MediaBundlePublication publication = Arena2MediaBundlePublication.Create(
+            CreateDungeon(),
+            CreateDungeonMedia(),
+            classic with
+            {
+                MediaManifest = media,
+                Effects = classic.Effects.Select(effect => effect.MediaId == effectId
+                    ? effect with { Timing = new ClassicSpriteTiming(7F, true) }
+                    : effect).ToArray(),
+            });
+
+        Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
     }
 
     private static Arena2MediaBundlePublication CreateBundle(bool reverseClassicActions)

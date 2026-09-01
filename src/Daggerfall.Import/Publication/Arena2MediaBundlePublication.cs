@@ -117,6 +117,11 @@ public sealed record Arena2MediaBundlePublication(
             [ClassicDaggerWeaponAction.StrikeUp] = 6,
         };
 
+    internal static int ExpectedWeaponActionSourceRecordOrdinal(ClassicDaggerWeaponAction action) =>
+        WeaponActionSourceRecords.TryGetValue(action, out int sourceRecord)
+            ? sourceRecord
+            : throw new ArgumentOutOfRangeException(nameof(action), "The weapon action is not part of the fixed classic source closure.");
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -151,6 +156,7 @@ public sealed record Arena2MediaBundlePublication(
 
         DungeonMediaManifestSidecar dungeonSidecar = CreateDungeonSidecar(dungeon.SpatialPublication, dungeonMedia);
         ClassicMediaManifestSidecar classicSidecar = CreateClassicSidecar(classicMedia);
+        ValidatePersistedSidecars(dungeonSidecar, classicSidecar);
         byte[] dungeonSidecarBytes = SerializeSidecar(dungeonSidecar);
         byte[] classicSidecarBytes = SerializeSidecar(classicSidecar);
 
@@ -184,6 +190,345 @@ public sealed record Arena2MediaBundlePublication(
             normalizedDependencies));
 
         return new(document, ImportPublicationPlan.Create(mergedProvenance, artifacts));
+    }
+
+    /// <summary>
+    /// Validates the two generated media sidecars before any consumer projects
+    /// them. This is the canonical persisted-sidecar boundary; inspection and
+    /// authoring tools must call it rather than growing their own partial view.
+    /// </summary>
+    public static void ValidatePersistedSidecars(DungeonMediaManifestSidecar dungeon, ClassicMediaManifestSidecar classic)
+    {
+        try
+        {
+            ArgumentNullException.ThrowIfNull(dungeon);
+            ArgumentNullException.ThrowIfNull(classic);
+            if (dungeon.SchemaVersion != DungeonMediaManifestSidecar.CurrentSchemaVersion
+                || classic.SchemaVersion != ClassicMediaManifestSidecar.CurrentSchemaVersion)
+            {
+                throw new InvalidOperationException("A persisted media sidecar schema version is not supported.");
+            }
+
+            IReadOnlyDictionary<string, NormalizedMediaDescriptor> dungeonMedia = ValidatePersistedMedia(dungeon.Media, "dungeon");
+            IReadOnlyDictionary<string, NormalizedMediaDescriptor> classicMedia = ValidatePersistedMedia(classic.Media, "classic");
+            ValidatePersistedDungeonSidecar(dungeon, dungeonMedia);
+            ValidatePersistedClassicSidecar(classic, classicMedia);
+        }
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or NullReferenceException)
+        {
+            throw new FormatException("The persisted media sidecars violate the canonical publication contract.", exception);
+        }
+    }
+
+    private static IReadOnlyDictionary<string, NormalizedMediaDescriptor> ValidatePersistedMedia(NormalizedMediaManifest manifest, string family)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(manifest.Resources);
+        if (manifest.Resources.Count == 0 || manifest.Resources.Any(resource => resource is null)
+            || manifest.Resources.Select(resource => resource.Id).Distinct(StringComparer.Ordinal).Count() != manifest.Resources.Count
+            || manifest.Resources.Select(resource => resource.RelativePath).Distinct(StringComparer.Ordinal).Count() != manifest.Resources.Count)
+        {
+            throw new InvalidOperationException($"Persisted {family} media must contain unique non-null descriptors and paths.");
+        }
+
+        foreach (NormalizedMediaDescriptor resource in manifest.Resources)
+        {
+            NormalizedImportDocument.RequireLogicalId(resource.Id, nameof(resource.Id));
+            NormalizedImportDocument.RequireLogicalPath(resource.RelativePath, nameof(resource.RelativePath));
+            resource.ContentDigest.Validate();
+            if (!Enum.IsDefined(resource.Kind) || string.IsNullOrWhiteSpace(resource.MimeType) || resource.ByteLength <= 0
+                || resource.SourceWidth < 0 || resource.SourceHeight < 0 || resource.AtlasWidth < 0 || resource.AtlasHeight < 0
+                || resource.Frames is null || resource.Frames.Count == 0 && (resource.AtlasWidth != 0 || resource.AtlasHeight != 0)
+                || resource.Frames.Count != 0 && (resource.AtlasWidth <= 0 || resource.AtlasHeight <= 0)
+                || resource.Frames.Select(frame => frame.Id).Distinct(StringComparer.Ordinal).Count() != resource.Frames.Count
+                || resource.Frames.Select(frame => frame.FrameIndex).Distinct().Count() != resource.Frames.Count
+                || resource.Frames.OrderBy(frame => frame.FrameIndex).Select((frame, index) => frame.FrameIndex != index).Any(value => value)
+                || resource.Frames.Any(frame => frame is null || string.IsNullOrWhiteSpace(frame.Id) || frame.FrameIndex < 0 || frame.X < 0 || frame.Y < 0
+                    || frame.Width <= 0 || frame.Height <= 0 || frame.SourceWidth <= 0 || frame.SourceHeight <= 0
+                    || (long)frame.X + frame.Width > resource.AtlasWidth || (long)frame.Y + frame.Height > resource.AtlasHeight))
+            {
+                throw new InvalidOperationException($"Persisted {family} descriptor '{resource.Id}' is invalid.");
+            }
+
+            if (resource.DisplayName is not null && (string.IsNullOrWhiteSpace(resource.DisplayName) || resource.DisplayName.Any(char.IsControl)))
+            {
+                throw new InvalidOperationException($"Persisted {family} descriptor '{resource.Id}' has an invalid display name.");
+            }
+
+            resource.Pivot?.Validate(nameof(resource.Pivot));
+            resource.DisplaySize?.Validate(nameof(resource.DisplaySize));
+            if (resource.DisplaySize is { X: <= 0F } or { Y: <= 0F }
+                || resource.FramesPerSecond is <= 0F || resource.FramesPerSecond is { } rate && !float.IsFinite(rate)
+                || resource.Sequence is { Count: 0 } || resource.Sequence?.Any(index => index < 0 || index >= resource.Frames.Count) == true)
+            {
+                throw new InvalidOperationException($"Persisted {family} descriptor '{resource.Id}' has invalid authored presentation values.");
+            }
+        }
+
+        return manifest.Resources.ToDictionary(resource => resource.Id, StringComparer.Ordinal);
+    }
+
+    private static void ValidatePersistedDungeonSidecar(DungeonMediaManifestSidecar sidecar, IReadOnlyDictionary<string, NormalizedMediaDescriptor> media)
+    {
+        ArgumentNullException.ThrowIfNull(sidecar.Materials);
+        ArgumentNullException.ThrowIfNull(sidecar.Billboards);
+        ArgumentNullException.ThrowIfNull(sidecar.Actors);
+        if (sidecar.Materials.Any(value => value is null) || sidecar.Billboards.Any(value => value is null) || sidecar.Actors.Any(value => value is null)
+            || sidecar.Materials.Select(value => value.TextureResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Materials.Count
+            || sidecar.Materials.Select(value => value.MaterialResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Materials.Count
+            || sidecar.Materials.Select(value => value.MaterialSlot).Distinct().Count() != sidecar.Materials.Count
+            || sidecar.Billboards.Select(value => value.SpriteResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Billboards.Count
+            || sidecar.Actors.Select(value => value.ActorResourceId).Distinct(StringComparer.Ordinal).Count() != sidecar.Actors.Count
+            || sidecar.Actors.Select(value => value.MobileId).Distinct().Count() != sidecar.Actors.Count)
+        {
+            throw new InvalidOperationException("Persisted dungeon sidecar identifiers must be unique.");
+        }
+
+        foreach (DungeonMaterialMediaManifest material in sidecar.Materials)
+        {
+            NormalizedImportDocument.RequireLogicalId(material.TextureResourceId, nameof(material.TextureResourceId));
+            NormalizedImportDocument.RequireLogicalId(material.MaterialResourceId, nameof(material.MaterialResourceId));
+            NormalizedMediaDescriptor descriptor = RequirePersistedDescriptor(media, material.MediaId, NormalizedMediaKind.Texture, "dungeon material");
+            if (material.Width <= 0 || material.Height <= 0 || descriptor.SourceWidth != material.Width || descriptor.SourceHeight != material.Height)
+            {
+                throw new InvalidOperationException("Persisted dungeon material dimensions do not match the generated descriptor.");
+            }
+        }
+
+        foreach (DungeonBillboardMediaManifest billboard in sidecar.Billboards)
+        {
+            NormalizedImportDocument.RequireLogicalId(billboard.SpriteResourceId, nameof(billboard.SpriteResourceId));
+            NormalizedMediaDescriptor descriptor = RequirePersistedDescriptor(media, billboard.MediaId, NormalizedMediaKind.Billboard, "dungeon billboard");
+            ValidatePersistedSpriteFrames(descriptor, billboard.Frames, "dungeon billboard");
+            billboard.Pivot.Validate(nameof(billboard.Pivot));
+            billboard.WorldSize.Validate(nameof(billboard.WorldSize));
+            if (billboard.WorldSize.X <= 0F || billboard.WorldSize.Y <= 0F)
+            {
+                throw new InvalidOperationException("Persisted dungeon billboard world size must be positive.");
+            }
+
+            billboard.SourcePlayback?.Validate();
+            billboard.Playback?.Validate();
+            if (descriptor.Pivot is not null && descriptor.Pivot != billboard.Pivot
+                || descriptor.DisplaySize is not null && descriptor.DisplaySize != billboard.WorldSize
+                || descriptor.FramesPerSecond is not null && (billboard.Playback is null || descriptor.FramesPerSecond != billboard.Playback.FramesPerSecond)
+                || descriptor.Loop is not null && (billboard.Playback is null || descriptor.Loop != billboard.Playback.Loops))
+            {
+                throw new InvalidOperationException("Persisted dungeon billboard presentation disagrees with its generated descriptor.");
+            }
+        }
+
+        string[] directProjectedMediaIds = [.. sidecar.Billboards.Select(billboard => billboard.MediaId), .. sidecar.Actors.Select(actor => actor.MediaId)];
+        if (directProjectedMediaIds.Distinct(StringComparer.Ordinal).Count() != directProjectedMediaIds.Length)
+        {
+            throw new InvalidOperationException("Persisted sprite projections cannot share a media ID.");
+        }
+
+        HashSet<string> projectedMediaIds = [.. directProjectedMediaIds];
+        foreach (DungeonActorMediaManifest actor in sidecar.Actors)
+        {
+            NormalizedImportDocument.RequireLogicalId(actor.ActorResourceId, nameof(actor.ActorResourceId));
+            NormalizedImportDocument.RequireLogicalId(actor.SpriteResourceId, nameof(actor.SpriteResourceId));
+            if (string.IsNullOrWhiteSpace(actor.SourceName) || !Enum.IsDefined(actor.PreferredRestState) || actor.States is null || actor.States.Count == 0)
+            {
+                throw new InvalidOperationException("Persisted dungeon actor metadata is incomplete.");
+            }
+
+            ArgumentNullException.ThrowIfNull(actor.SourceAttackSequence);
+            actor.SourceAttackSequence.Validate();
+            NormalizedMediaDescriptor descriptor = RequirePersistedDescriptor(media, actor.MediaId, NormalizedMediaKind.EnemySprite, "dungeon actor");
+            ValidatePersistedSpriteFrames(descriptor, actor.States.SelectMany(state => state.Frames).ToArray(), "dungeon actor");
+            actor.Pivot.Validate(nameof(actor.Pivot));
+            actor.WorldSize.Validate(nameof(actor.WorldSize));
+            actor.SourceWorldSize.Validate(nameof(actor.SourceWorldSize));
+            if (actor.WorldSize.X <= 0F || actor.WorldSize.Y <= 0F || actor.SourceWorldSize.X <= 0F || actor.SourceWorldSize.Y <= 0F
+                || actor.States.Any(state => state is null) || actor.States.Select(state => state.State).Distinct().Count() != actor.States.Count
+                || !actor.States.Any(state => state.State == actor.PreferredRestState))
+            {
+                throw new InvalidOperationException("Persisted dungeon actor state or display facts are invalid.");
+            }
+
+            foreach (DungeonActorSpriteStateLayout state in actor.States)
+            {
+                if (state.FramesPerOrientation > int.MaxValue / 8)
+                {
+                    throw new InvalidOperationException("Persisted dungeon actor state frame count exceeds the supported range.");
+                }
+
+                state.Validate();
+                ValidateStateRange(state);
+                if (descriptor.FramesPerSecond is not null && state.Playback.FramesPerSecond != descriptor.FramesPerSecond
+                    || descriptor.Loop is not null && state.Playback.Loops != descriptor.Loop)
+                {
+                    throw new InvalidOperationException("Persisted dungeon actor state timing disagrees with its descriptor.");
+                }
+            }
+
+            if (descriptor.Pivot is not null && descriptor.Pivot != actor.Pivot
+                || descriptor.DisplaySize is not null && descriptor.DisplaySize != actor.WorldSize)
+            {
+                throw new InvalidOperationException("Persisted dungeon actor presentation disagrees with its descriptor.");
+            }
+
+            if (actor.Corpse is not null)
+            {
+                if (!projectedMediaIds.Add(actor.Corpse.MediaId))
+                {
+                    throw new InvalidOperationException("Persisted sprite projections cannot share a media ID.");
+                }
+
+                NormalizedMediaDescriptor corpse = RequirePersistedDescriptor(media, actor.Corpse.MediaId, NormalizedMediaKind.EnemySprite, "dungeon corpse");
+                ValidatePersistedSpriteFrames(corpse, [actor.Corpse.Frame], "dungeon corpse");
+                actor.Corpse.Pivot.Validate(nameof(actor.Corpse.Pivot));
+                actor.Corpse.WorldSize.Validate(nameof(actor.Corpse.WorldSize));
+                actor.Corpse.SourceWorldSize.Validate(nameof(actor.Corpse.SourceWorldSize));
+                if (corpse.Pivot is not null && corpse.Pivot != actor.Corpse.Pivot
+                    || corpse.DisplaySize is not null && corpse.DisplaySize != actor.Corpse.WorldSize)
+                {
+                    throw new InvalidOperationException("Persisted dungeon corpse presentation disagrees with its descriptor.");
+                }
+            }
+        }
+    }
+
+    private static void ValidatePersistedClassicSidecar(ClassicMediaManifestSidecar sidecar, IReadOnlyDictionary<string, NormalizedMediaDescriptor> media)
+    {
+        ArgumentNullException.ThrowIfNull(sidecar.WeaponActions);
+        ArgumentNullException.ThrowIfNull(sidecar.Effects);
+        NormalizedMediaDescriptor weapon = media.Values.SingleOrDefault(resource => resource.Kind == NormalizedMediaKind.WeaponSprite)
+            ?? throw new InvalidOperationException("Persisted classic media has no weapon descriptor.");
+        if (media.Values.Count(resource => resource.Kind == NormalizedMediaKind.WeaponSprite) != 1)
+        {
+            throw new InvalidOperationException("Persisted classic media has multiple weapon descriptors.");
+        }
+
+        if (weapon.Frames.Count == 0)
+        {
+            throw new InvalidOperationException("Persisted classic weapon metadata requires regenerated frames.");
+        }
+
+        ClassicDaggerWeaponAction[] actions = Enum.GetValues<ClassicDaggerWeaponAction>();
+        if (sidecar.WeaponActions.Any(action => action is null) || sidecar.WeaponActions.Count != actions.Length
+            || !sidecar.WeaponActions.Select(action => action.Action).SequenceEqual(actions))
+        {
+            throw new InvalidOperationException("Persisted classic weapon actions must contain the exact canonical action set.");
+        }
+
+        HashSet<int> coveredFrames = [];
+        int expectedFrameStart = 0;
+        foreach (ClassicWeaponActionManifest action in sidecar.WeaponActions)
+        {
+            action.Validate(weapon.Frames.Count);
+            if (action.FrameStart != expectedFrameStart)
+            {
+                throw new InvalidOperationException("Persisted classic weapon actions must retain the canonical ordered frame ranges.");
+            }
+            if (action.SourceRecordOrdinal != ExpectedWeaponActionSourceRecordOrdinal(action.Action))
+            {
+                throw new InvalidOperationException("Persisted classic weapon actions have noncanonical source records.");
+            }
+
+            foreach (int frame in Enumerable.Range(action.FrameStart, action.FrameCount))
+            {
+                if (!coveredFrames.Add(frame))
+                {
+                    throw new InvalidOperationException("Persisted classic weapon actions overlap.");
+                }
+            }
+
+            expectedFrameStart = checked(expectedFrameStart + action.FrameCount);
+        }
+
+        if (!coveredFrames.SetEquals(weapon.Frames.Select(frame => frame.FrameIndex)))
+        {
+            throw new InvalidOperationException("Persisted classic weapon actions do not cover the generated atlas.");
+        }
+
+        ValidateEffectProjections(sidecar.Effects, media);
+        ArgumentNullException.ThrowIfNull(sidecar.Audio);
+        ArgumentNullException.ThrowIfNull(sidecar.UiImages);
+        ArgumentNullException.ThrowIfNull(sidecar.InventoryIcons);
+        ArgumentNullException.ThrowIfNull(sidecar.Font);
+        ArgumentNullException.ThrowIfNull(sidecar.AuthoredUiAssets);
+        if (sidecar.Audio.Any(audio => audio is null) || sidecar.UiImages.Any(image => image is null) || sidecar.InventoryIcons.Any(icon => icon is null)
+            || sidecar.AuthoredUiAssets.Any(asset => asset is null))
+        {
+            throw new InvalidOperationException("Persisted classic sidecar lists cannot contain null entries.");
+        }
+
+        foreach (ClassicAudioManifest audio in sidecar.Audio)
+        {
+            audio.Validate();
+            RequirePersistedDescriptor(media, audio.MediaId, NormalizedMediaKind.Audio, "classic audio");
+        }
+
+        foreach (ClassicUiImageManifest image in sidecar.UiImages)
+        {
+            image.Validate();
+            RequirePersistedDescriptor(media, image.MediaId, NormalizedMediaKind.UserInterface, "classic UI image");
+        }
+
+        foreach (ClassicInventoryIconManifest icon in sidecar.InventoryIcons)
+        {
+            icon.Validate();
+            RequirePersistedDescriptor(media, icon.MediaId, NormalizedMediaKind.UserInterface, "classic inventory icon");
+        }
+
+        sidecar.Font.Validate();
+        RequirePersistedDescriptor(media, sidecar.Font.MediaId, NormalizedMediaKind.Font, "classic font");
+        if (sidecar.AuthoredUiAssets.Select(asset => asset.Id).Distinct(StringComparer.Ordinal).Count() != sidecar.AuthoredUiAssets.Count
+            || sidecar.AuthoredUiAssets.Select(asset => asset.RelativePath).Distinct(StringComparer.Ordinal).Count() != sidecar.AuthoredUiAssets.Count)
+        {
+            throw new InvalidOperationException("Persisted classic authored UI assets must have unique IDs and paths.");
+        }
+
+        foreach (ClassicAuthoredUiAssetManifest asset in sidecar.AuthoredUiAssets)
+        {
+            NormalizedImportDocument.RequireLogicalId(asset.Id, nameof(asset.Id));
+            NormalizedImportDocument.RequireLogicalPath(asset.RelativePath, nameof(asset.RelativePath));
+            NormalizedImportDocument.RequireLogicalPath(asset.SourceLabel, nameof(asset.SourceLabel));
+            if (string.IsNullOrWhiteSpace(asset.Generator) || string.IsNullOrWhiteSpace(asset.Prompt))
+            {
+                throw new InvalidOperationException("Persisted classic authored UI metadata is incomplete.");
+            }
+
+            NormalizedMediaDescriptor descriptor = RequirePersistedDescriptor(media, asset.Id, NormalizedMediaKind.UserInterface, "classic authored UI");
+            if (!StringComparer.Ordinal.Equals(descriptor.RelativePath, asset.RelativePath))
+            {
+                throw new InvalidOperationException("Persisted classic authored UI metadata does not match its descriptor path.");
+            }
+        }
+    }
+
+    private static NormalizedMediaDescriptor RequirePersistedDescriptor(IReadOnlyDictionary<string, NormalizedMediaDescriptor> media, string id, NormalizedMediaKind kind, string subject)
+    {
+        NormalizedImportDocument.RequireLogicalId(id, nameof(id));
+        if (!media.TryGetValue(id, out NormalizedMediaDescriptor? descriptor) || descriptor.Kind != kind)
+        {
+            throw new InvalidOperationException($"Persisted {subject} identifies an unknown or incompatible media descriptor '{id}'.");
+        }
+
+        return descriptor;
+    }
+
+    private static void ValidatePersistedSpriteFrames(NormalizedMediaDescriptor descriptor, IReadOnlyList<DungeonMediaFrameLayout> layouts, string subject)
+    {
+        ArgumentNullException.ThrowIfNull(layouts);
+        if (descriptor.Frames.Count == 0 || layouts.Count != descriptor.Frames.Count || layouts.Any(layout => layout is null)
+            || layouts.Select(layout => layout.AtlasFrameIndex).Distinct().Count() != layouts.Count)
+        {
+            throw new InvalidOperationException($"Persisted {subject} frame layouts do not cover the generated descriptor exactly.");
+        }
+
+        Dictionary<int, NormalizedAtlasFrame> frames = descriptor.Frames.ToDictionary(frame => frame.FrameIndex);
+        foreach (DungeonMediaFrameLayout layout in layouts)
+        {
+            layout.Validate();
+            if (!frames.TryGetValue(layout.AtlasFrameIndex, out NormalizedAtlasFrame? frame) || frame != layout.AtlasFrame)
+            {
+                throw new InvalidOperationException($"Persisted {subject} frame layout differs from generated atlas metadata.");
+            }
+        }
     }
 
     private static ImportProvenance MergeProvenance(ImportProvenance dungeon, IReadOnlyList<LogicalSourceRecord> classicSources)
@@ -466,12 +811,13 @@ public sealed record Arena2MediaBundlePublication(
 
         ClassicDaggerWeaponAction[] expectedWeaponActions = Enum.GetValues<ClassicDaggerWeaponAction>();
         if (publication.WeaponActions.Count != expectedWeaponActions.Length
-            || !publication.WeaponActions.Select(action => action.Action).Order().SequenceEqual(expectedWeaponActions))
+            || !publication.WeaponActions.Select(action => action.Action).SequenceEqual(expectedWeaponActions))
         {
             throw new InvalidOperationException("Classic weapon metadata must contain the exact fixed dagger action set.");
         }
 
         HashSet<int> coveredWeaponFrames = [];
+        int expectedWeaponFrameStart = 0;
         foreach (ClassicWeaponActionManifest action in publication.WeaponActions)
         {
             try
@@ -483,7 +829,12 @@ public sealed record Arena2MediaBundlePublication(
                 throw new InvalidOperationException("Classic weapon metadata is invalid.", exception);
             }
 
-            if (action.SourceRecordOrdinal != WeaponActionSourceRecords[action.Action])
+            if (action.FrameStart != expectedWeaponFrameStart)
+            {
+                throw new InvalidOperationException("Classic weapon action ranges must retain canonical action order.");
+            }
+
+            if (action.SourceRecordOrdinal != ExpectedWeaponActionSourceRecordOrdinal(action.Action))
             {
                 throw new InvalidOperationException("Classic weapon action source records must retain their fixed Daggerfall positions.");
             }
@@ -495,6 +846,8 @@ public sealed record Arena2MediaBundlePublication(
                     throw new InvalidOperationException("Classic weapon action ranges overlap in the canonical weapon descriptor.");
                 }
             }
+
+            expectedWeaponFrameStart = checked(expectedWeaponFrameStart + action.FrameCount);
         }
 
         if (!coveredWeaponFrames.SetEquals(weapon.Frames.Select(frame => frame.FrameIndex)))
@@ -764,8 +1117,14 @@ public sealed record Arena2MediaBundlePublication(
                 throw new InvalidOperationException("Classic effect metadata is invalid.", exception);
             }
 
+            if (effect.SourceRecordOrdinal != Arena2ClassicMediaPublication.ExpectedEffectSourceRecordOrdinal(effect.Effect))
+            {
+                throw new InvalidOperationException("Classic effect metadata must retain its fixed TEXTURE.380 source record.");
+            }
+
             if (!media.TryGetValue(effect.MediaId, out NormalizedMediaDescriptor? descriptor)
                 || descriptor.Kind != NormalizedMediaKind.EffectSprite
+                || descriptor.Frames.Count == 0
                 || descriptor.FramesPerSecond != effect.Timing.FramesPerSecond
                 || descriptor.Loop != effect.Timing.Loop)
             {
