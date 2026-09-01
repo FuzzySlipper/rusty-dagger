@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "comment": "Hand-authored display names for derived sprite content. dagger-import consults this overlay when naming exported files: billboards are named billboard-<name>.png when a nickname exists, billboard-<archive>-<record>.png otherwise. Keys are \"<archive>.<record>\" from the classic texture archives. Edit freely; unknown entries are simply unused, missing entries fall back to numeric slugs.",
+  "comment": "Historical hand-authored display-name evidence retained from the retired importer. It is not consumed by the active product or importer and is not runtime authority. Keys are \"<archive>.<record>\" from the classic texture archives.",
   "billboards": {
     "203.5": "pillar-fluted",
     "203.6": "pillar-plain",

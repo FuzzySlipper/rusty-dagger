@@ -18,13 +18,10 @@ public readonly record struct Arena2Triangle(int First, int Second, int Third);
 /// <summary>
 /// Pure Arena2 source-unit conversions used before artifact normalization.
 ///
-/// Provenance: <c>crates/arena2/src/lib.rs</c> preserves Daggerfall Unity's
-/// <c>MeshReader.GlobalScale</c>, <c>Arch3dFile.pointDivisor</c>,
-/// <c>textureDivisor</c>, <c>BlocksFile.RotationDivisor</c>, and
-/// <c>RDBLayout.RDBSide</c>. The former Rust dungeon importer applies the
-/// same conversions in <c>crates/dagger-import/src/dungeon.rs</c>. These
-/// helpers deliberately stop before mesh generation, Engine projection, and
-/// ruleset interpretation.
+/// Provenance: migrated Arena2 and Daggerfall Unity importer semantics preserve
+/// the source format's global scale, mesh-point and texture divisors, block
+/// rotation divisor, and RDB block side. These helpers deliberately stop before
+/// mesh generation, Engine projection, and ruleset interpretation.
 /// </summary>
 public static class Arena2SourceTransform
 {
