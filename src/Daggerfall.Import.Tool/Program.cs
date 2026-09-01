@@ -16,6 +16,11 @@ internal static class Program
     {
         try
         {
+            if (args.Length != 0 && args[0].StartsWith("sprite-", StringComparison.Ordinal))
+            {
+                return RunSpriteCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = BuildPlan(options);
             switch (options.Command)
@@ -40,7 +45,107 @@ internal static class Program
         }
     }
 
+    private static int RunSpriteCommand(IReadOnlyList<string> args)
+    {
+        SpriteToolOptions options = SpriteToolOptions.Parse(args);
+        if (options.Command == SpriteToolCommand.OverlayDiscard)
+        {
+            Console.WriteLine(SpriteAuthoredOverlayStore.Discard(options.PublicationDirectory, options.AuthoringDirectory!, options.OverlayPath!)
+                ? "sprite overlay moved to its .discarded recovery path"
+                : "sprite overlay was not present");
+            return 0;
+        }
+
+        SpritePublicationSnapshot publication = SpritePublicationReader.Read(options.PublicationDirectory);
+        switch (options.Command)
+        {
+            case SpriteToolCommand.List:
+            {
+                IEnumerable<SpriteInspectionEntry> entries = publication.Catalog.Entries;
+                if (options.Kind is not null)
+                {
+                    entries = entries.Where(entry => entry.Kind == options.Kind.Value);
+                }
+
+                PrintJson(entries.OrderBy(entry => entry.Id, StringComparer.Ordinal).ToArray());
+                return 0;
+            }
+            case SpriteToolCommand.Show:
+                PrintJson(publication.Catalog.Require(options.Id!));
+                return 0;
+            case SpriteToolCommand.OverlayValidate:
+            {
+                SpriteAuthoredOverlayStore.ValidateRootSeparation(options.PublicationDirectory, options.AuthoringDirectory!);
+                SpriteAuthoredOverlayDocument overlay = ReadOverlay(options.AuthoringDirectory!, options.OverlayPath!);
+                SpriteAuthoredOverlayStore.Validate(overlay, publication.Catalog, publication.AuthoringBasisDigest);
+                Console.WriteLine("sprite overlay is valid");
+                return 0;
+            }
+            case SpriteToolCommand.OverlayWrite:
+            {
+                SpriteAuthoredOverlayDocument overlay = ReadExternalOverlay(options.InputPath!);
+                SpriteAuthoredOverlayStore.Write(options.PublicationDirectory, options.AuthoringDirectory!, options.OverlayPath!, overlay, publication.Catalog, publication.AuthoringBasisDigest);
+                Console.WriteLine("sprite overlay written; later regeneration may pass this typed document through SpriteAuthoredOverlayStore.ToMediaOverlays.");
+                return 0;
+            }
+            default:
+                throw new InvalidOperationException("The sprite command is not known.");
+        }
+    }
+
+    private static SpriteAuthoredOverlayDocument ReadOverlay(string authoringDirectory, string relativePath)
+    {
+        string path = SpriteAuthoredOverlayStore.ResolveRelativePath(authoringDirectory, relativePath);
+        return ReadExternalOverlay(path);
+    }
+
+    private static SpriteAuthoredOverlayDocument ReadExternalOverlay(string path)
+    {
+        FileInfo file = new(Path.GetFullPath(path));
+        if (!file.Exists || file.Length is <= 0 or > 1024 * 1024)
+        {
+            throw new FormatException("The sprite overlay input is missing or outside its byte quota.");
+        }
+
+        byte[] bytes = File.ReadAllBytes(file.FullName);
+        if (bytes.LongLength != file.Length)
+        {
+            throw new IOException("The sprite overlay input changed while it was being read.");
+        }
+
+        return SpriteAuthoredOverlayStore.Read(bytes);
+    }
+
+    private static readonly JsonSerializerOptions SpriteJsonOptions = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
+
+    private static void PrintJson<T>(T value) => Console.WriteLine(JsonSerializer.Serialize(value, SpriteJsonOptions));
+
     private static ImportPublicationPlan BuildPlan(ToolOptions options)
+    {
+        if (options.SpriteAuthoringDirectory is null)
+        {
+            return BuildPlanCore(options, [], []);
+        }
+
+        SpriteAuthoredOverlayStore.ValidateRootSeparation(options.OutputDirectory, options.SpriteAuthoringDirectory);
+        ImportPublicationPlan currentInputs = BuildPlanCore(options, [], []);
+        SpritePublicationSnapshot current = SpritePublicationReader.FromPlan(currentInputs);
+        SpriteAuthoredOverlayDocument overlay = ReadOverlay(options.SpriteAuthoringDirectory, options.SpriteOverlayPath!);
+        IReadOnlyList<AuthoredMediaOverlay> values = SpriteAuthoredOverlayStore.ToMediaOverlays(overlay, current.Catalog, current.AuthoringBasisDigest);
+
+        HashSet<string> dungeonIds = current.Catalog.Entries
+            .Where(entry => entry.Kind is SpriteInspectionKind.DungeonBillboard or SpriteInspectionKind.DungeonActor or SpriteInspectionKind.DungeonCorpse)
+            .Select(entry => entry.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        return BuildPlanCore(options, values.Where(value => dungeonIds.Contains(value.Id)).ToArray(), values.Where(value => !dungeonIds.Contains(value.Id)).ToArray());
+    }
+
+    private static ImportPublicationPlan BuildPlanCore(ToolOptions options, IReadOnlyList<AuthoredMediaOverlay> dungeonOverlays, IReadOnlyList<AuthoredMediaOverlay> classicOverlays)
     {
         AdmittedArena2Sources sources = new(options.Arena2Directory);
         LoadRequiredDungeonSources(sources);
@@ -58,10 +163,10 @@ internal static class Program
                 DungeonNormalizationResult result = DungeonNormalizer.Normalize(request);
 
                 Arena2DungeonMediaPublication dungeonMedia = Arena2DungeonMediaPublication.Create(
-                    Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)));
+                    Arena2DungeonMediaRequest.Create(result.Document, new Arena2DungeonMediaSourceSet(sources.DungeonMediaSources)) with { AuthoredOverlays = dungeonOverlays });
                 Arena2ClassicMediaPublication classicMedia = Arena2ClassicMediaPublication.Create(
                     sources.ClassicMediaInputs,
-                    options.ClassicMediaProfile,
+                    options.ClassicMediaProfile with { AuthoredOverlays = classicOverlays },
                     new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes));
                 return Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia).Plan;
             }
@@ -373,6 +478,101 @@ internal static class Program
         VerifyRealData,
     }
 
+    private enum SpriteToolCommand
+    {
+        List,
+        Show,
+        OverlayValidate,
+        OverlayWrite,
+        OverlayDiscard,
+    }
+
+    private sealed record SpriteToolOptions(
+        SpriteToolCommand Command,
+        string PublicationDirectory,
+        string? AuthoringDirectory,
+        string? Id,
+        string? OverlayPath,
+        string? InputPath,
+        SpriteInspectionKind? Kind)
+    {
+        public static SpriteToolOptions Parse(IReadOnlyList<string> args)
+        {
+            if (args.Count == 0)
+            {
+                throw new ArgumentException(Usage());
+            }
+
+            SpriteToolCommand command = args[0] switch
+            {
+                "sprite-list" => SpriteToolCommand.List,
+                "sprite-show" => SpriteToolCommand.Show,
+                "sprite-overlay-validate" => SpriteToolCommand.OverlayValidate,
+                "sprite-overlay-write" => SpriteToolCommand.OverlayWrite,
+                "sprite-overlay-discard" => SpriteToolCommand.OverlayDiscard,
+                _ => throw new ArgumentException(Usage()),
+            };
+            Dictionary<string, string> values = [];
+            for (int index = 1; index < args.Count; index += 2)
+            {
+                if (index + 1 >= args.Count || !args[index].StartsWith("--", StringComparison.Ordinal) || !values.TryAdd(args[index], args[index + 1]))
+                {
+                    throw new ArgumentException(Usage());
+                }
+            }
+
+            values.TryGetValue("--publication", out string? publication);
+            if (string.IsNullOrWhiteSpace(publication))
+            {
+                throw new ArgumentException(Usage());
+            }
+
+            string[] required = command switch
+            {
+                SpriteToolCommand.List => ["--publication"],
+                SpriteToolCommand.Show => ["--publication", "--id"],
+                SpriteToolCommand.OverlayValidate => ["--publication", "--authoring", "--overlay"],
+                SpriteToolCommand.OverlayWrite => ["--publication", "--authoring", "--overlay", "--input"],
+                SpriteToolCommand.OverlayDiscard => ["--publication", "--authoring", "--overlay"],
+                _ => throw new InvalidOperationException(),
+            };
+            bool listWithKind = command == SpriteToolCommand.List && values.ContainsKey("--kind");
+            if (values.Count != required.Length + (listWithKind ? 1 : 0) || required.Any(key => !values.ContainsKey(key)))
+            {
+                throw new ArgumentException(Usage());
+            }
+
+            SpriteInspectionKind? kind = null;
+            if (listWithKind && (!Enum.TryParse(values["--kind"], ignoreCase: true, out SpriteInspectionKind parsedKind) || !Enum.IsDefined(parsedKind)))
+            {
+                throw new ArgumentException("--kind must name a known sprite inspection kind.");
+            }
+            else if (listWithKind)
+            {
+                kind = Enum.Parse<SpriteInspectionKind>(values["--kind"], ignoreCase: true);
+            }
+
+            if (values.TryGetValue("--overlay", out string? overlay))
+            {
+                SpriteAuthoredOverlayStore.ValidateOverlayRelativePath(overlay);
+            }
+
+            if (values.TryGetValue("--id", out string? id) && (string.IsNullOrWhiteSpace(id) || id.Any(char.IsWhiteSpace)))
+            {
+                throw new ArgumentException("--id must be a non-empty whitespace-free logical ID.");
+            }
+
+            if (values.TryGetValue("--authoring", out string? authoring) && string.IsNullOrWhiteSpace(authoring))
+            {
+                throw new ArgumentException("--authoring must name a non-empty source directory.");
+            }
+
+            return new(command, Path.GetFullPath(publication), authoring is null ? null : Path.GetFullPath(authoring), values.GetValueOrDefault("--id"), values.GetValueOrDefault("--overlay"), values.GetValueOrDefault("--input"), kind);
+        }
+
+        private static string Usage() => "usage: daggerfall-import-tool sprite-list --publication GENERATED_DIR [--kind KIND] | sprite-show --publication GENERATED_DIR --id ID | sprite-overlay-validate --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json | sprite-overlay-write --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json --input FILE | sprite-overlay-discard --publication GENERATED_DIR --authoring SOURCE_DIR --overlay sprites/RELATIVE.json";
+    }
+
     private sealed class AdmittedArena2Sources
     {
         private readonly string arena2Directory;
@@ -499,7 +699,9 @@ internal static class Program
         int Region,
         string Location,
         DungeonTextureTableMode TextureTableMode,
-        Arena2ClassicMediaProfile ClassicMediaProfile)
+        Arena2ClassicMediaProfile ClassicMediaProfile,
+        string? SpriteAuthoringDirectory,
+        string? SpriteOverlayPath)
     {
         public static ToolOptions Parse(IReadOnlyList<string> args)
         {
@@ -524,7 +726,14 @@ internal static class Program
                 }
             }
 
-            EnsureExactKeys(values, ["--arena2", "--output", "--region", "--location", "--texture-table", "--ui-authored-assets", "--ui-original"]);
+            string[] required = ["--arena2", "--output", "--region", "--location", "--texture-table", "--ui-authored-assets", "--ui-original"];
+            bool hasSpriteAuthoring = values.ContainsKey("--sprite-authoring") || values.ContainsKey("--sprite-overlay");
+            if (hasSpriteAuthoring && (!values.ContainsKey("--sprite-authoring") || !values.ContainsKey("--sprite-overlay")))
+            {
+                throw new ArgumentException("--sprite-authoring and --sprite-overlay must be supplied together.");
+            }
+
+            EnsureExactKeys(values, hasSpriteAuthoring ? [.. required, "--sprite-authoring", "--sprite-overlay"] : required);
             if (!int.TryParse(values["--region"], NumberStyles.None, CultureInfo.InvariantCulture, out int region) || region is < 0 or > 999)
             {
                 throw new ArgumentException("--region must be an integer in 0..999.");
@@ -541,6 +750,13 @@ internal static class Program
                 "default" => DungeonTextureTableMode.Default,
                 _ => throw new ArgumentException("--texture-table must be classic or default."),
             };
+            string? spriteAuthoring = hasSpriteAuthoring ? Path.GetFullPath(values["--sprite-authoring"]) : null;
+            string? spriteOverlay = hasSpriteAuthoring ? values["--sprite-overlay"] : null;
+            if (spriteAuthoring is not null)
+            {
+                SpriteAuthoredOverlayStore.ValidateOverlayRelativePath(spriteOverlay!);
+            }
+
             return new(
                 command,
                 Path.GetFullPath(values["--arena2"]),
@@ -548,7 +764,9 @@ internal static class Program
                 region,
                 values["--location"],
                 table,
-                LoadClassicMediaProfile(values["--ui-authored-assets"], values["--ui-original"]));
+                LoadClassicMediaProfile(values["--ui-authored-assets"], values["--ui-original"]),
+                spriteAuthoring,
+                spriteOverlay);
         }
 
         private static void EnsureExactKeys(IReadOnlyDictionary<string, string> values, IReadOnlyList<string> keys)
@@ -559,6 +777,6 @@ internal static class Program
             }
         }
 
-        private static string Usage() => "usage: daggerfall-import-tool <plan|write|verify-real-data> --arena2 DIR --output DIR --region 0..999 --location NAME --texture-table classic|default --ui-authored-assets FILE --ui-original DIR";
+        private static string Usage() => "usage: daggerfall-import-tool <plan|write|verify-real-data> --arena2 DIR --output DIR --region 0..999 --location NAME --texture-table classic|default --ui-authored-assets FILE --ui-original DIR [--sprite-authoring SOURCE_DIR --sprite-overlay sprites/RELATIVE.json]";
     }
 }

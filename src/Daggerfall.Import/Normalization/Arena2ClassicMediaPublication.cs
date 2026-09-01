@@ -60,7 +60,8 @@ public sealed record Arena2ClassicMediaProfile(
     string? FontMediaId = null,
     IReadOnlyList<ClassicMediaPresentation>? Presentation = null,
     ClassicAuthoredUiManifestInput? AuthoredUiManifest = null,
-    IReadOnlyList<ClassicAuthoredUiAsset>? AuthoredUiAssets = null);
+    IReadOnlyList<ClassicAuthoredUiAsset>? AuthoredUiAssets = null,
+    IReadOnlyList<AuthoredMediaOverlay>? AuthoredOverlays = null);
 
 /// <summary>Adjustable visual and timing handles for one fixed dagger action record.</summary>
 public sealed record ClassicWeaponActionPresentation(
@@ -338,6 +339,11 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicEffect.MagicSparkle, "effect.sparkle.magic", 3),
     ];
 
+    /// <summary>Returns the fixed TEXTURE.380 record retained by an effect's canonical source identity.</summary>
+    internal static int ExpectedEffectSourceRecordOrdinal(ClassicEffect effect) => EffectSources
+        .SingleOrDefault(source => source.Effect == effect)?.SourceRecordOrdinal
+        ?? throw new ArgumentOutOfRangeException(nameof(effect), "The effect is not part of the fixed classic source closure.");
+
     private static readonly AudioSource[] AudioSources =
     [
         new(ClassicDaggerAudioClip.Swing, "audio.melee.dagger.swing", 106),
@@ -395,7 +401,7 @@ public sealed record Arena2ClassicMediaPublication(
             throw new ArgumentOutOfRangeException(nameof(options), "The classic dagger atlas needs at least a 320px atlas dimension.");
         }
 
-        ResolvedProfile resolved = ResolveProfile(profile);
+        ResolvedProfile resolved = ApplyAuthoredEffectTiming(ResolveProfile(profile), profile.AuthoredOverlays);
         SourceBytes source = SourceBytes.From(inputs, effectiveOptions.MaximumSourceBytes);
         Arena2Palette artPalette = PaletteDecoder.Decode(source.ArtPalette, "arena2/ART_PAL.COL");
         Arena2Palette palette = PaletteDecoder.Decode(source.Palette, "arena2/PAL.PAL");
@@ -418,7 +424,7 @@ public sealed record Arena2ClassicMediaPublication(
 
         NormalizedMediaManifest mediaManifest = MediaManifestNormalizer.Normalize(
             generated,
-            BuildOverlays(resolved),
+            BuildOverlays(resolved, profile.AuthoredOverlays),
             effectiveOptions.MaximumArtifactBytes);
         ImportPublicationArtifact[] artifacts = generated
             .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
@@ -679,7 +685,7 @@ public sealed record Arena2ClassicMediaPublication(
         return artifacts;
     }
 
-    private static IReadOnlyList<AuthoredMediaOverlay> BuildOverlays(ResolvedProfile profile)
+    private static IReadOnlyList<AuthoredMediaOverlay> BuildOverlays(ResolvedProfile profile, IReadOnlyList<AuthoredMediaOverlay>? authoredOverlays)
     {
         IReadOnlyDictionary<string, ClassicMediaPresentation> visual = profile.Presentation;
         List<AuthoredMediaOverlay> overlays = [];
@@ -710,7 +716,85 @@ public sealed record Arena2ClassicMediaPublication(
                 presentation.Sequence));
         }
 
+        if (authoredOverlays is not null)
+        {
+            Dictionary<string, AuthoredMediaOverlay> byId = overlays.ToDictionary(overlay => overlay.Id, StringComparer.Ordinal);
+            foreach (AuthoredMediaOverlay overlay in authoredOverlays)
+            {
+                ArgumentNullException.ThrowIfNull(overlay);
+                if (!overlay.IsAuthored)
+                {
+                    throw new ArgumentException("External classic media overlays must be authored values.", nameof(authoredOverlays));
+                }
+                if (byId.TryGetValue(overlay.Id, out AuthoredMediaOverlay? existing))
+                {
+                    byId[overlay.Id] = existing with
+                    {
+                        DisplayName = overlay.DisplayName ?? existing.DisplayName,
+                        Pivot = overlay.Pivot ?? existing.Pivot,
+                        DisplaySize = overlay.DisplaySize ?? existing.DisplaySize,
+                        FramesPerSecond = overlay.FramesPerSecond ?? existing.FramesPerSecond,
+                        Loop = overlay.Loop ?? existing.Loop,
+                        Sequence = overlay.Sequence ?? existing.Sequence,
+                    };
+                }
+                else
+                {
+                    byId.Add(overlay.Id, overlay);
+                }
+            }
+
+            return byId.Values.OrderBy(overlay => overlay.Id, StringComparer.Ordinal).ToArray();
+        }
+
         return overlays;
+    }
+
+    private static ResolvedProfile ApplyAuthoredEffectTiming(ResolvedProfile profile, IReadOnlyList<AuthoredMediaOverlay>? authoredOverlays)
+    {
+        if (authoredOverlays is null)
+        {
+            return profile;
+        }
+
+        Dictionary<ClassicEffect, ClassicEffectPresentation> effects = profile.Effects.ToDictionary(pair => pair.Key, pair => pair.Value);
+        foreach (AuthoredMediaOverlay overlay in authoredOverlays)
+        {
+            ArgumentNullException.ThrowIfNull(overlay);
+            if (!overlay.IsAuthored)
+            {
+                throw new ArgumentException("External classic media overlays must be authored values.", nameof(authoredOverlays));
+            }
+
+            if (StringComparer.Ordinal.Equals(overlay.Id, profile.WeaponMediaId)
+                && (overlay.FramesPerSecond is not null || overlay.Loop is not null || overlay.Sequence is not null))
+            {
+                throw new ArgumentException("Classic weapon timing and sequence are action-specific and cannot be supplied as resource-wide overlays.", nameof(authoredOverlays));
+            }
+
+            ClassicEffectPresentation[] matched = effects.Values
+                .Where(effect => StringComparer.Ordinal.Equals(effect.MediaId, overlay.Id))
+                .ToArray();
+            if (matched.Length == 0 || (overlay.FramesPerSecond is null && overlay.Loop is null))
+            {
+                continue;
+            }
+
+            ClassicSpriteTiming current = matched[0].Timing;
+            if (matched.Any(effect => effect.Timing != current))
+            {
+                throw new ArgumentException("A shared classic effect media resource must have compatible timings before a resource-wide timing overlay can be applied.", nameof(authoredOverlays));
+            }
+
+            ClassicSpriteTiming updated = new(overlay.FramesPerSecond ?? current.FramesPerSecond, overlay.Loop ?? current.Loop);
+            updated.Validate();
+            foreach (ClassicEffectPresentation effect in matched)
+            {
+                effects[effect.Effect] = effect with { Timing = updated };
+            }
+        }
+
+        return profile with { Effects = effects };
     }
 
     private static IReadOnlyList<LogicalSourceRecord> MergeSources(

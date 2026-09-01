@@ -70,6 +70,61 @@ public sealed class Arena2ClassicMediaPublicationTests
     }
 
     [Fact]
+    public void ReappliesTypedSpriteOverlayDuringNormalClassicRegeneration()
+    {
+        Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(CreateInputs());
+        string effectId = baseline.Effects.Single(effect => effect.Effect == ClassicEffect.Blood0).MediaId;
+        Arena2ClassicMediaProfile profile = new(AuthoredOverlays:
+        [
+            new AuthoredMediaOverlay(effectId, true, DisplayName: "Authored blood", Pivot: new(0.25F, 0.75F), Sequence: [0]),
+        ]);
+
+        Arena2ClassicMediaPublication regenerated = Arena2ClassicMediaPublication.Create(CreateInputs(), profile);
+        NormalizedMediaDescriptor effect = regenerated.MediaManifest.Resources.Single(resource => resource.Id == effectId);
+        Assert.Equal("Authored blood", effect.DisplayName);
+        Assert.Equal(new NormalizedVector2(0.25F, 0.75F), effect.Pivot);
+        Assert.Equal(10F, effect.FramesPerSecond);
+        Assert.False(effect.Loop);
+        Assert.Equal([0], effect.Sequence);
+    }
+
+    [Fact]
+    public void ReappliesEffectTimingOverlayToBothDescriptorAndCanonicalEffectManifest()
+    {
+        Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(CreateInputs());
+        string effectId = baseline.Effects.Single(effect => effect.Effect == ClassicEffect.Blood0).MediaId;
+
+        Arena2ClassicMediaPublication regenerated = Arena2ClassicMediaPublication.Create(CreateInputs(), new Arena2ClassicMediaProfile(AuthoredOverlays:
+        [
+            new AuthoredMediaOverlay(effectId, true, FramesPerSecond: 7F, Loop: true),
+        ]));
+
+        NormalizedMediaDescriptor descriptor = regenerated.MediaManifest.Resources.Single(resource => resource.Id == effectId);
+        ClassicEffectManifest effect = regenerated.Effects.Single(value => value.MediaId == effectId);
+        Assert.Equal(7F, descriptor.FramesPerSecond);
+        Assert.True(descriptor.Loop);
+        Assert.Equal(7F, effect.Timing.FramesPerSecond);
+        Assert.True(effect.Timing.Loop);
+    }
+
+    [Fact]
+    public void RejectsUnownedExternalClassicOverlayAndResourceWideWeaponTiming()
+    {
+        Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(CreateInputs());
+        string effectId = baseline.Effects.Single(effect => effect.Effect == ClassicEffect.Blood0).MediaId;
+        string weaponId = baseline.MediaManifest.Resources.Single(resource => resource.Kind == NormalizedMediaKind.WeaponSprite).Id;
+
+        Assert.Throws<ArgumentException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), new Arena2ClassicMediaProfile(AuthoredOverlays:
+        [
+            new AuthoredMediaOverlay(effectId, false, DisplayName: "Unowned"),
+        ])));
+        Assert.Throws<ArgumentException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), new Arena2ClassicMediaProfile(AuthoredOverlays:
+        [
+            new AuthoredMediaOverlay(weaponId, true, FramesPerSecond: 7F),
+        ])));
+    }
+
+    [Fact]
     public void ProfileOwnsAdjustablePresentationAndAdmittedUiInventoryMappings()
     {
         Arena2ClassicMediaInputs inputs = CreateInputs();
