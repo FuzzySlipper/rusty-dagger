@@ -1,0 +1,5 @@
+{
+  "publicationSeparationRoot": "/absolute/path/to/generated-publication",
+  "authoringRoot": "/absolute/path/to/separate-authored-sources",
+  "overlayPath": "sprites/overlays.json"
+}

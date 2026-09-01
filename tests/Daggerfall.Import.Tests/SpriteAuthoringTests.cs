@@ -281,6 +281,30 @@ public sealed class SpriteAuthoringTests
 
             SpritePublicationSnapshot snapshot = SpritePublicationReader.Read(root);
             Assert.Equal(4, snapshot.Catalog.Entries.Count);
+            SpritePublicationFile[] admitted = ReadAdmittedFiles(root);
+            Assert.Equal(snapshot.AuthoringBasisDigest, SpritePublicationReader.Read(admitted).AuthoringBasisDigest);
+
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read(admitted
+                .Where(file => file.RelativePath != ImportPublicationManifestSerializer.ManifestRelativePath).ToArray()));
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read(admitted
+                .Where(file => file.RelativePath != Arena2MediaBundlePublication.DungeonMediaManifestRelativePath).ToArray()));
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read(admitted
+                .Where(file => file.RelativePath != "media/dungeon/actor.png").ToArray()));
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read([.. admitted, admitted[0]]));
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read(admitted.Select(file =>
+                file.RelativePath == ImportPublicationManifestSerializer.ManifestRelativePath
+                    ? file with { Bytes = "tampered-manifest"u8.ToArray() }
+                    : file).ToArray()));
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read(admitted.Select(file =>
+                file.RelativePath == Arena2MediaBundlePublication.DungeonMediaManifestRelativePath
+                    ? file with { Bytes = file.Bytes.ToArray().Append((byte)' ').ToArray() }
+                    : file).ToArray()));
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read(admitted.Select(file =>
+                file.RelativePath == "media/dungeon/actor.png"
+                    ? file with { Bytes = "bad"u8.ToArray() }
+                    : file).ToArray()));
+            Assert.Throws<FormatException>(() => SpritePublicationReader.Read([.. admitted, new SpritePublicationFile("../outside.json", "x"u8.ToArray())]));
+
             string actorPath = Path.Combine(root, "media", "dungeon", "actor.png");
             File.Delete(actorPath);
             Assert.Throws<FormatException>(() => SpritePublicationReader.Read(root));
@@ -362,6 +386,11 @@ public sealed class SpriteAuthoringTests
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllBytes(path, bytes);
     }
+
+    private static SpritePublicationFile[] ReadAdmittedFiles(string root) => Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+        .Select(path => new SpritePublicationFile(Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/'), File.ReadAllBytes(path)))
+        .OrderBy(file => file.RelativePath, StringComparer.Ordinal)
+        .ToArray();
 
     private sealed record Fixture(CanonicalImportManifest Manifest, DungeonMediaManifestSidecar Dungeon, ClassicMediaManifestSidecar Classic, ContentDigest ActorDigest, ContentDigest BillboardDigest, ContentDigest WeaponDigest, ContentDigest EffectDigest, ContentDigest FontDigest);
 }

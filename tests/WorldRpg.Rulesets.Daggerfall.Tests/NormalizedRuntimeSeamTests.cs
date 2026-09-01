@@ -2192,6 +2192,7 @@ public sealed class NormalizedRuntimeSeamTests
             if (FailSpritePlaybackControlAt == ControlRequests.Count) throw new InvalidOperationException("Injected sprite playback control failure.");
             return default;
         }
+        public SpritePlaybackReadout SelectSpritePlaybackFrame(SpritePlaybackFrameSelectionRequest request) => default;
         public SpritePlaybackAdvanceLeaseReceipt AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request)
         {
             AdvanceRequests.Add(request);
