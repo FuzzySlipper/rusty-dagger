@@ -109,9 +109,11 @@ formulas, authored values, naming, and intended behavior. Translate that meaning
 into clear C# product modules and services; do not port its package,
 materialization, evaluator, or authority topology.
 
-The root Rust crates, Angular application, HTTP server, Studio adapter, and old
-verification graph are inactive donor material. They are not a parallel product
-path or default acceptance gate for current work.
+The remaining root Rust crates and old verification graph are inactive donor
+material. The former Angular application, HTTP server, and Studio adapter were
+retired after their supported diagnostics and sprite-authoring workflows moved
+to C# Import, the Engine-backed sprite workbench, and thin DOM projections.
+None is a parallel product path or default acceptance gate for current work.
 
 Daggerfall/Arena2 data remains operator-supplied. Preserve existing attribution
 and provenance when adapting content.
