@@ -1,7 +1,0 @@
-[package]
-name = "arena2"
-version.workspace = true
-edition.workspace = true
-description = "Read-only parsers for Elder Scrolls II: Daggerfall (Arena2) data files, ported from Daggerfall Unity semantics"
-
-[dependencies]

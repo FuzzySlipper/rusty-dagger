@@ -23,7 +23,7 @@ Ownership:
 - WorldRpg.Rulesets.Daggerfall owns all Daggerfall-specific semantics, formulas,
   identities, policies, presentation meaning, and content interpretation.
 - Content packs own authored definitions, assets, worlds, placements, quests,
-  encounters, and scenario state.
+  and scenario state.
 - Daggerfall.Import owns Arena2 and Daggerfall Unity source knowledge.
 - RustyDagger.NativeProduct is the thin NativeAOT and Engine boundary; its ABI
   and service output are generated.
@@ -102,21 +102,15 @@ Run the product only when the current task needs live behavior. Focused C#
 compilation or NativeAOT publication is normally enough for organization and
 boundary work.
 
-## Donor material
+## Content and migration boundary
 
-The TypeScript under `gameplay/` remains valuable evidence for catalogs,
-formulas, authored values, naming, and intended behavior. Translate that meaning
-into clear C# product modules and services; do not port its package,
-materialization, evaluator, or authority topology.
+The product is C#-only. Useful donor semantics have been translated into loaded
+content, typed tuning, `Daggerfall.Import`, and compiled Daggerfall ruleset
+policy; the former Rust workspace, TypeScript gameplay evaluator, and encounter
+demonstration topology are not present as fallback paths.
 
-The remaining root Rust crates and old verification graph are inactive donor
-material. The former Angular application, HTTP server, and Studio adapter were
-retired after their supported diagnostics and sprite-authoring workflows moved
-to C# Import, the Engine-backed sprite workbench, and thin DOM projections.
-None is a parallel product path or default acceptance gate for current work.
-
-Daggerfall/Arena2 data remains operator-supplied. Preserve existing attribution
-and provenance when adapting content.
+Daggerfall/Arena2 source data remains operator-supplied. Preserve the checked
+in imported/authored assets, attribution, and provenance when adapting content.
 
 ## Guidance
 
