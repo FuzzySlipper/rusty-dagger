@@ -4,7 +4,9 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
 
+npm ci
 dotnet restore src/WorldRpg.Host/WorldRpg.Host.csproj
+dotnet restore tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no-restore
 dotnet build src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj --configuration Release
 dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj --no-restore
