@@ -11,9 +11,9 @@ authoring_root=$(cd "$2" && pwd)
 overlay_path=$3
 port=$4
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-runtime_pack=${RUSTY_DAGGER_RUNTIME_PACK:-"$repo_root/.runtime/runtime-pack-cabba0f"}
+runtime_pack="$repo_root/.runtime/runtime-pack"
 if [[ ! -f "$publication_root/import-manifest.json" || ! -d "$authoring_root" || ! "$overlay_path" =~ ^sprites/.+\.json$ || ! "$port" =~ ^[0-9]+$ || ! -x "$runtime_pack/bin/rusty" ]]; then
-  echo "publication must be a generated import root; authoring must exist; overlay is sprites/*.json; port is numeric; and RUSTY_DAGGER_RUNTIME_PACK must name the installed matched runtime pack." >&2
+  echo "publication must be a generated import root; authoring must exist; overlay is sprites/*.json; port is numeric; and the verified Engine runtime pack must be installed." >&2
   exit 2
 fi
 

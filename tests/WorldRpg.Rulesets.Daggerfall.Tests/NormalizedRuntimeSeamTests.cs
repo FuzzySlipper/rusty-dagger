@@ -1445,7 +1445,7 @@ public sealed class NormalizedRuntimeSeamTests
             Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
         }
 
-        perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 1, 1, 1, 1, 0, 0, 0);
+        perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 1, 1, 1, 1, 0, 0, 0);
         session.Update(AttackUpdate());
         Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
         Assert.Equal(1U, session.LastMeleeTargeting?.Receipt.DistanceRejects);
@@ -1519,7 +1519,7 @@ public sealed class NormalizedRuntimeSeamTests
         return new ActorMechanicsState(new EntityId(entityId), [], [new ExactTrack(health, ExactValue.Zero)]);
     }
 
-    private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
+    private static PerceptionReadoutLeaseReceipt Receipt(params PerceptionPair[] pairs) => new(pairs, ReadOnlyMemory<PerceptionAggregate>.Empty, checked((uint)pairs.Length), false, 0, 1, 1, checked((uint)pairs.Length), checked((ulong)pairs.Length), 0, 0, 0, 0);
 
     private static PrivateersHoldInputs ReadInputs(string root)
     {
@@ -2147,6 +2147,7 @@ public sealed class NormalizedRuntimeSeamTests
             return new(new RenderResourceHandle(checked((ulong)OpenResourceRequests.Count)), default, 0);
         }
         public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => releases.Add("material"));
+        public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
         public void UpdateMaterial(MaterialUpdateRequest request) { }
         public Material ReplaceMaterial(MaterialUpdateRequest request) => CreateMaterial(request.Replacement);
         public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance();

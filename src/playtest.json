@@ -1,7 +1,7 @@
 {
   "project": "rusty-dagger-worldrpg",
   "serve": {
-    "command": "./.runtime/runtime-pack-cabba0f/bin/rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --runtime ./.runtime/runtime-pack-cabba0f --bind-host {host} --port {port}",
+    "command": "./.runtime/runtime-pack/bin/rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --runtime ./.runtime/runtime-pack --bind-host {host} --port {port}",
     "preferredPort": 0,
     "healthUrl": "/",
     "readyText": "Rusty Product",
