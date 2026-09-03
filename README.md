@@ -85,18 +85,27 @@ host merely to finish a task.
 ## Develop and verify the current product
 
 The checked product consumes immutable `Rusty.Engine` package
-`0.1.0-dev.cabba0f` from the installed `.runtime/sdk-feed` and the matched
-`.runtime/runtime-pack-cabba0f`. Those ignored artifacts are supplied by
-release/install tooling; this repository neither builds them nor copies an
-Engine checkout into product sources.
+`0.1.0-dev.6323c46b3cd4` from the installed `.runtime/sdk-feed` and the
+matched `.runtime/runtime-pack`. Start a clean checkout with the pinned,
+noninteractive pair install; it validates the release checksum, payloads, ABI,
+package version, and Engine source revision before atomically replacing the
+whole ignored pair.
+
+```bash
+./scripts/install-engine-pair.sh
+```
+
+This follows the operational runbook
+`rusty-engine/downstream-csharp-sdk-runbook`. The repository neither builds
+the pair nor copies an Engine checkout into product sources.
 
 Ordinary edit-run development is CoreCLR through the packaged host:
 
 ```bash
 npm ci
-./.runtime/runtime-pack-cabba0f/bin/rusty dev \
+./.runtime/runtime-pack/bin/rusty dev \
   --project ./src/WorldRpg.Host/WorldRpg.Host.csproj \
-  --runtime ./.runtime/runtime-pack-cabba0f
+  --runtime ./.runtime/runtime-pack
 ```
 
 The Host declares the semantic `attack=digital` intent and Engine-owned held
@@ -132,13 +141,13 @@ in imported/authored assets, attribution, and provenance when adapting content.
 
 ## Guidance and proof
 
-Repository-specific instructions are in `AGENTS.md`. The shared practical brief
-for downstream C# products lives in Den at the stable handle
-`rusty-engine/downstream-csharp-agent-brief`. Its text is intentionally updated
-in place while the Engine path matures.
+Repository-specific instructions are in `AGENTS.md`. For setup, compilation,
+and running, use the stable Den runbook
+`rusty-engine/downstream-csharp-sdk-runbook`; the older
+`rusty-engine/downstream-csharp-agent-brief` remains the ownership reference.
 
-Run `./scripts/verify.sh` from a clean checkout for pinned UI dependency
-installation, focused package restore/build, architecture,
-CoreCLR staging, and explicit NativeAOT fidelity proof. Hosted CI is not
+Run `./scripts/verify.sh` after installation for pair verification, pinned UI
+dependency installation, focused package restore/build, architecture, CoreCLR
+staging, and explicit NativeAOT fidelity proof. Hosted CI is not
 declared until immutable Engine artifacts are published for clean runners; do
 not replace it with a cloned Engine checkout or downstream provider build.

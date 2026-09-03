@@ -19,12 +19,13 @@ public sealed class SpriteWorkbenchUiBoundaryTests
     }
 
     [Fact]
-    public void Bundle_generation_uses_the_engine_owned_local_runtime_route_asset()
+    public void Product_ui_compilation_runs_before_sdk_composition_without_local_runtime_assets()
     {
-        string source = File.ReadAllText(Path.GetFullPath("../../../../../src/scripts/build-sprite-workbench-ui.mjs", AppContext.BaseDirectory));
+        string source = File.ReadAllText(Path.GetFullPath("../../../../../src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj", AppContext.BaseDirectory));
 
-        Assert.Contains("PRODUCT_BROWSER_LOCAL_RUNTIME_BASE_PATH", source, StringComparison.Ordinal);
-        Assert.Contains("runtime-adapter.js", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("\"/__rusty/product/runtime/\"", source, StringComparison.Ordinal);
+        Assert.Contains("<RustyEngineProductUiRoot>", source, StringComparison.Ordinal);
+        Assert.Contains("BeforeTargets=\"GenerateRustyEngineProductComposition\"", source, StringComparison.Ordinal);
+        Assert.DoesNotContain("runtime-adapter", source, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("browser-bundle", source, StringComparison.OrdinalIgnoreCase);
     }
 }

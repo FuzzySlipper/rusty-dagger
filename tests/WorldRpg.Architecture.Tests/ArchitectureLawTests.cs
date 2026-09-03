@@ -46,6 +46,7 @@ public sealed class ArchitectureLawTests
         AssertProjectReferences("WorldRpg.Rulesets.Canary.Tests", ["WorldRpg.Host", "WorldRpg.Kit"]);
 
         foreach (string project in ActiveRuntimeProjects()) AssertPackageReference(project, "Rusty.Engine");
+        AssertPackageReference("WorldRpg.SpriteWorkbench", "Rusty.Engine");
     }
 
     [Fact]
@@ -138,6 +139,12 @@ public sealed class ArchitectureLawTests
         Assert.Contains(expected, actual);
         Assert.DoesNotContain(document.Descendants("ProjectReference"), reference =>
             ((string?)reference.Attribute("Include"))?.Contains("rusty-engine", StringComparison.OrdinalIgnoreCase) == true);
+
+        Assert.Equal(
+            "$(RustyEnginePackageVersion)",
+            document.Descendants("PackageReference")
+                .Single(reference => (string?)reference.Attribute("Include") == expected)
+                .Attribute("Version")?.Value);
     }
 
     private static string ProjectFile(string project) => project.EndsWith(".Tests", StringComparison.Ordinal)

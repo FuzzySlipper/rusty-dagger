@@ -13,8 +13,10 @@ shape is:
 > **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
 
 The shared `[doc: rusty-engine/downstream-csharp-agent-brief]` governs the
-safe C# / Engine boundary. Rulesets are compiled into the SDK-generated product
-composition;
+safe C# / Engine ownership boundary. The current
+`[doc: rusty-engine/downstream-csharp-sdk-runbook]` governs acquiring,
+verifying, compiling, and running the exact published SDK/runtime pair.
+Rulesets are compiled into the SDK-generated product composition;
 content packs, tuning profiles, and bundles are loaded. A missing safe Engine
 contract is an upstream request and an honest stop, never a downstream Rust,
 browser, or local-Engine substitute.
@@ -47,7 +49,9 @@ operator material and are not committed.
 
 `src/playtest.json`, the package-backed CoreCLR launcher, focused C# test
 projects, and the SDK-hosted sprite workbench remain the current proof and
-operator surfaces. The installed `.runtime` SDK feed/runtime pack and generated
+operator surfaces. `scripts/install-engine-pair.sh` atomically installs the
+pinned complete SDK/runtime pair beneath `.runtime`; the installed SDK
+feed/runtime pack and generated
 `bin/**`/`obj/**` output are not handwritten authority; no Engine browser bundle,
 NativeProduct bridge, or Cargo host is retained in this repository.
 
