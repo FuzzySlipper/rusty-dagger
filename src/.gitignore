@@ -4,9 +4,6 @@ WorldRpg.Rulesets.Daggerfall/bin/
 WorldRpg.Rulesets.Daggerfall/obj/
 WorldRpg.Host/bin/
 WorldRpg.Host/obj/
-RustyDagger.NativeProduct/bin/
-RustyDagger.NativeProduct/obj/
-browser-bundle/
-native/
-native-*/
-out-*/
+ui/generated/
+sprite-ui/generated/
+WorldRpg.SpriteWorkbench/workbench-content/

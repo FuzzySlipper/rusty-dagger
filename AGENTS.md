@@ -31,9 +31,10 @@ report the failed read rather than reconstructing direction from source or Git.
 
 **Implemented today:** `src/WorldRpg.Kit/` contains the safe composition
 contract and reusable world-RPG mechanisms, while `src/WorldRpg.Rulesets.Daggerfall/` owns Daggerfall policy and session composition,
-`src/WorldRpg.Host/` owns product lifecycle and built-in selection, and
-`src/RustyDagger.NativeProduct/` is the thin NativeAOT boundary. The ruleset's
-current `Modules/` placement is a migration fact rather than an architecture boundary.
+`src/WorldRpg.Host/` owns product lifecycle, built-in selection, and the one
+ordinary product entry. The immutable `Rusty.Engine` SDK generates CoreCLR and
+NativeAOT composition beneath ignored `obj` output. The ruleset's current
+`Modules/` placement is a migration fact rather than an architecture boundary.
 
 **Ordered target:** #7435 → #7441 → #7436 → #7437 → #7438 → #7323 → #7324 → #7325.
 
@@ -46,12 +47,12 @@ graph; #7437 exercises Kit through an intentionally incompatible composition.
 | `WorldRpg.Kit` | Reusable and reasonably uncertain world-RPG mechanisms: typed IDs, compiled ruleset/session contracts, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, and thin Engine-backed inventory coordination. Bundle/content-pack/tuning resolution is #7438 work. It is not a universal RPG framework. |
 | `WorldRpg.Host` | Current reference-product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher selection and diagnostics expand later. It may select Daggerfall, never interpret Daggerfall rules or source files. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior, and Daggerfall session composition. |
-| `RustyDagger.NativeProduct` | The microscopic NativeAOT/Engine integration assembly. Handwritten code selects the Host product type; generated output supplies ABI, lifecycle adaptation, services, handles, and exports. |
+| `WorldRpg.Host` product metadata | The one explicit product type and bundle declaration. The SDK generates ABI, lifecycle adaptation, services, handles, and both loader compositions beneath `obj`; there is no checked NativeProduct assembly. |
 | `Daggerfall.Import` | Offline Arena2 and Daggerfall Unity knowledge, source formats, conversion quirks, provenance, and differential validation. Runtime code consumes normalized packs, not source-shaped data. |
 | Content packs | Authored actors, items, worlds, placements, encounters, quests, assets, and scenario state interpreted by a ruleset. |
 | TypeScript UI | Thin DOM presentation of Engine-delivered projections and semantic actions. It owns neither gameplay state nor game-world rendering. |
 
-Rulesets are **compiled** into the NativeAOT product. Content packs, typed tuning
+Rulesets are **compiled** into the SDK-generated product composition. Content packs, typed tuning
 profiles, and game bundles are **loaded**. Adding code-bearing ruleset semantics
 requires a product rebuild; changing valid content/tuning does not. Do not add
 runtime assembly loading, reflection discovery, `Assembly.Load`, service
@@ -127,11 +128,15 @@ timer, thread, browser authority, ECS, scheduler, service locator, or renderer.
 and behavior. Root Rust crates, Angular, the HTTP server, Studio adapter, old
 scripts, and their gates are inactive donor material. Preserve useful semantics;
 do not revive their runtime/evaluator/package/transport/authority topology.
-`src/browser-bundle/` and generated NativeAOT output are assembled output, not
-another product runtime or an authority source.
+The installed runtime pack owns the browser shell, renderer, transport, and
+host. SDK-generated CoreCLR/NativeAOT composition is ignored `obj` output, not
+another product runtime or an authority source. Do not recreate the former
+`src/browser-bundle/` assembly path.
 
-Use only focused generation, safe compilation, NativeAOT publication, or direct
-exercise required by the current task. Do not run retired Rust/Angular/broad
-browser/packaging gates unless the task explicitly calls for them. Keep this
-file and the README factual and compact; the migration map records current and
-target ownership in detail.
+Use the packaged SDK and matched runtime pack for focused safe compilation and
+CoreCLR staging. `rusty dev` is ordinary development; NativeAOT is an explicit
+fidelity/release target. `--engine-source` is available only as an explicit
+Engine-contributor override, never a downstream default. Do not run retired
+Rust/Angular/broad browser/packaging gates unless the task explicitly calls for
+them. Keep this file and the README factual and compact; the migration map
+records current and target ownership in detail.

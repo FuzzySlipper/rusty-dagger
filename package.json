@@ -1,0 +1,7 @@
+{
+  "name": "rusty-dagger-product-ui",
+  "private": true,
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}

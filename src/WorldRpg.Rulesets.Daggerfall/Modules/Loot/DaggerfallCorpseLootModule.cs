@@ -8,6 +8,7 @@ using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Loot;
@@ -166,7 +167,10 @@ internal sealed class DaggerfallCorpseLootModule
             _spatial.Session,
             new PerceptionObserver[] { new((ulong)DaggerfallActorIdentity.PlayerEntityId, position.ToVector(), look.Forward, _tuning.MaximumDistance, _tuning.MinimumFacingCosine, 1d) },
             eligible.Select(corpse => new PerceptionTarget((ulong)corpse.ActorId, _actors.All[corpse.ActorId].Position.ToVector())).ToArray(),
-            ReadOnlyMemory<SpatialEntityCollider>.Empty);
+            ReadOnlyMemory<SpatialEntityCollider>.Empty,
+            DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity,
+            DaggerfallPerceptionQueryDefaults.FirstPairCursor,
+            DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize);
         PerceptionReadoutLeaseReceipt receipt = _perception.QueryVisibility(request);
         long? selected = receipt.Pairs.ToArray()
             .Where(pair => pair.Observer == (ulong)DaggerfallActorIdentity.PlayerEntityId

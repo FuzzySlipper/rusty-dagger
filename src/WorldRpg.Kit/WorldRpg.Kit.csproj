@@ -8,10 +8,11 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <EngineRoot Condition="'$(EngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../rusty-engine'))</EngineRoot>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="$(EngineRoot)/csharp/Rusty.Engine/Rusty.Engine.csproj" />
+    <PackageReference Include="Rusty.Engine" Version="0.1.0-dev.cabba0f">
+      <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
+    </PackageReference>
   </ItemGroup>
 </Project>

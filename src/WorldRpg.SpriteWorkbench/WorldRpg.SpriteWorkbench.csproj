@@ -7,19 +7,34 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <!-- The Engine ProductGenerator emits the CoreCLR bind export; handwritten workbench code remains safe. -->
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- ProductGenerator emits callback-table fields assigned by the Engine binder. -->
-    <NoWarn>$(NoWarn);CS0649</NoWarn>
-    <EngineRoot Condition="'$(EngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../rusty-engine'))</EngineRoot>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- The workbench remains an ordinary safe C# product. The SDK generates
+         CoreCLR and NativeAOT composition below obj for its explicit tooling
+         run; this project never carries a checked bootstrap. -->
+    <RustyEngineProductEntryType>WorldRpg.SpriteWorkbench.SpriteWorkbenchProduct</RustyEngineProductEntryType>
+    <RustyEngineProductId>worldrpg-sprite-workbench</RustyEngineProductId>
+    <RustyEngineProductTitle>WorldRpg Sprite Workbench</RustyEngineProductTitle>
+    <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui/generated'))</RustyEngineProductUiRoot>
+    <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)workbench-content'))</RustyEngineProductContentRoot>
+    <RustyEngineProductUiEntry>workbench.js</RustyEngineProductUiEntry>
+    <RustyEngineProductUiProjectionStream>worldrpg.sprite-workbench</RustyEngineProductUiProjectionStream>
+    <RustyEngineProductUiProjectionContract>worldrpg.sprite-workbench.snapshot.v1</RustyEngineProductUiProjectionContract>
+    <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
+    <RustyEngineProductFixedStepHz>60</RustyEngineProductFixedStepHz>
+    <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
+    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../sprite-ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)workbench-content'))</RustyEngineWatchPaths>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Daggerfall.Import/Daggerfall.Import.csproj" />
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
-    <ProjectReference Include="$(EngineRoot)/csharp/Rusty.Engine/Rusty.Engine.csproj" />
-    <ProjectReference Include="$(EngineRoot)/csharp/Rusty.Engine.ProductGenerator/Rusty.Engine.ProductGenerator.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false" />
+    <PackageReference Include="Rusty.Engine" Version="0.1.0-dev.cabba0f">
+      <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
+    </PackageReference>
+    <RustyEngineProductInputIntent Include="sprite-workbench" Value="payload:worldrpg.sprite-workbench.intent.v1" />
   </ItemGroup>
+
+  <Target Name="BuildSpriteWorkbenchProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
+    <MakeDir Directories="$(RustyEngineProductUiRoot)" />
+    <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --project &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --noEmit false --outDir &quot;$(RustyEngineProductUiRoot)&quot;" />
+  </Target>
 </Project>

@@ -13,7 +13,8 @@ shape is:
 > **Engine guarantees. Kit shapes. Ruleset decides. Bundle assembles. Host launches.**
 
 The shared `[doc: rusty-engine/downstream-csharp-agent-brief]` governs the
-safe C# / Engine boundary. Rulesets are compiled into the NativeAOT product;
+safe C# / Engine boundary. Rulesets are compiled into the SDK-generated product
+composition;
 content packs, tuning profiles, and bundles are loaded. A missing safe Engine
 contract is an upstream request and an honest stop, never a downstream Rust,
 browser, or local-Engine substitute.
@@ -24,10 +25,9 @@ browser, or local-Engine substitute.
 | --- | --- |
 | Rusty Engine | Admitted host lifecycle and update, input, rendering/resources, spatial mechanisms, and published service families. |
 | `WorldRpg.Kit` | Typed composition and reusable or placement-uncertain world-RPG mechanisms, including Engine-backed controls, actor lifetime, spatial stepping, bounded facts, progression, UI values, and inventory/equipment coordination. |
-| `WorldRpg.Host` | Product lifecycle, explicit built-in ruleset/default selection, and session construction. |
+| `WorldRpg.Host` | Ordinary product entry, lifecycle, explicit built-in ruleset/default selection, and session construction. The immutable SDK generates CoreCLR and NativeAOT composition beneath ignored `obj` output. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack/reward policy, content interpretation, presentation meaning, save behavior, and session composition. |
 | `Daggerfall.Import` and `.Tool` | Offline Arena2/DFUnity decoding, normalized import/publication, provenance, and differential validation. It has no runtime entity, renderer, scheduler, or encounter authority. |
-| `RustyDagger.NativeProduct` | The microscopic NativeAOT product-type selection boundary; Engine supplies generated ABI/lifecycle/service output. |
 | `src/ui` and `src/sprite-ui` | Thin DOM rendering of Engine-delivered projections and semantic actions. The sprite workbench uses Engine content, appearance, and playback rather than a UI renderer or timer. |
 | `content/worldrpg/**` | Versioned Daggerfall packs, tuning, bundle selection, normalized Privateer's Hold publication, hashes, and source provenance. |
 
@@ -45,10 +45,11 @@ preserved as content evidence; they do not restore the removed Rust or
 TypeScript runtime topology. Local copyrighted Arena2 inputs are optional
 operator material and are not committed.
 
-`src/playtest.json`, the NativeAOT launch scripts, focused C# test projects,
-and the Engine-hosted sprite workbench remain the current proof and operator
-surfaces. Generated `src/browser-bundle/**`, `bin/**`, and `obj/**` output is
-not handwritten authority.
+`src/playtest.json`, the package-backed CoreCLR launcher, focused C# test
+projects, and the SDK-hosted sprite workbench remain the current proof and
+operator surfaces. The installed `.runtime` SDK feed/runtime pack and generated
+`bin/**`/`obj/**` output are not handwritten authority; no Engine browser bundle,
+NativeProduct bridge, or Cargo host is retained in this repository.
 
 ## Legacy disposition ledger
 
@@ -59,8 +60,8 @@ not handwritten authority.
 | TypeScript `gameplay/**` catalogs and authoring | **Adapted or rejected, then deleted.** | Selected authored records are loaded WorldRpg content and selected rules are compiled Daggerfall policy. The package envelope, evaluator, expression/program grammar, materializer, and TypeScript build were rejected. |
 | Generated `dagger-core` package | **Rejected and deleted.** | It was output for the retired evaluator, not a runtime content contract. |
 | Encounter catalog, schemas, gallery, grouping, scheduler, and data | **Rejected and deleted.** | They were a former combat demonstration scaffold, not Daggerfall world, AI, targeting, or content-pack vocabulary. Future combat proof requires its own design task. |
-| Studio adapter, HTTP server, Angular product shell, and old browser assertions | **Adapted then retired.** | Import provenance tooling and `WorldRpg.SpriteWorkbench` preserve the useful diagnostics and sprite inspection/animation/save workflow through Engine services. No protocol, renderer, animator, or browser authority survives. |
-| Cargo workspace, lockfile, crate manifests, and root package topology | **Rejected and deleted.** | The C# project graph plus Engine-managed SDK is the sole product implementation path. |
+| Studio adapter, HTTP server, Angular product shell, old browser assertions, and source-coupled Engine browser assembly | **Adapted then retired.** | Import provenance tooling and `WorldRpg.SpriteWorkbench` preserve the useful diagnostics and sprite inspection/animation/save workflow through Engine services. The packaged runtime pack owns browser shell, renderer, and transport. |
+| Cargo workspace, lockfile, crate manifests, checked NativeProduct bridge, and root package topology | **Rejected and deleted.** | The C# project graph plus immutable Engine SDK is the sole product implementation path. CoreCLR is ordinary development; NativeAOT is an explicit fidelity/release target. |
 
 ### Removed source accounting
 
@@ -79,7 +80,8 @@ classification.
 
 ## Focused verification
 
-Use only proof that exercises the current C# product boundary: focused C#
-build/test projects, the UI build, NativeAOT publication, and a direct browser
-exercise when the owning task requires visible behavior. Do not run deleted
-Cargo, Angular, TypeScript gameplay, Studio, HTTP, or legacy packaging gates.
+Use only proof that exercises the current C# product boundary: package-backed
+build/test projects, SDK-owned CoreCLR staging, the explicit NativeAOT target,
+and a direct browser exercise when the owning task requires visible behavior.
+Do not run deleted Cargo, Angular, TypeScript gameplay, Studio, HTTP, or legacy
+browser/package assembly gates.

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "repository": "FuzzySlipper/rusty-dagger",
-  "requiredChecks": ["ci"],
+  "requiredChecks": [],
   "localVerification": [
     "./scripts/verify.sh"
   ],
-  "notes": "Managed reviews require the active C# product CI: safe build, focused tests, DOM UI build, and NativeAOT publish. Add gates only when an active product concern requires them."
+  "notes": "Managed reviews use the package-backed local verification: focused safe build and architecture check, CoreCLR product staging, and the opt-in NativeAOT fidelity target. No hosted check is declared until immutable Engine artifact publication is available to clean CI runners; never restore the old adjacent-source checkout or provider build as a substitute."
 }
