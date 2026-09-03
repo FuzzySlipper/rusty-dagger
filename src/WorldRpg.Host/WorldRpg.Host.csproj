@@ -8,12 +8,44 @@
     <AnalysisLevel>latest</AnalysisLevel>
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-    <EngineRoot Condition="'$(EngineRoot)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../../rusty-engine'))</EngineRoot>
+    <!-- The immutable SDK owns generated CoreCLR and NativeAOT composition
+         below obj. This ordinary product project remains the one entry root. -->
+    <RustyEngineProductEntryType>WorldRpg.Host.WorldRpgProduct</RustyEngineProductEntryType>
+    <RustyEngineProductId>rusty-dagger-worldrpg</RustyEngineProductId>
+    <RustyEngineProductTitle>Rusty Dagger / WorldRpg</RustyEngineProductTitle>
+    <RustyEngineProductUiRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui/generated'))</RustyEngineProductUiRoot>
+    <RustyEngineProductContentRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineProductContentRoot>
+    <RustyEngineProductUiEntry>main.js</RustyEngineProductUiEntry>
+    <RustyEngineProductUiProjectionStream>dagger.hud</RustyEngineProductUiProjectionStream>
+    <RustyEngineProductUiProjectionContract>dagger.ui.snapshot.v1</RustyEngineProductUiProjectionContract>
+    <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
+    <RustyEngineProductFixedStepHz>60</RustyEngineProductFixedStepHz>
+    <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
+    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="../WorldRpg.Kit/WorldRpg.Kit.csproj" />
     <ProjectReference Include="../WorldRpg.Rulesets.Daggerfall/WorldRpg.Rulesets.Daggerfall.csproj" />
-    <ProjectReference Include="$(EngineRoot)/csharp/Rusty.Engine/Rusty.Engine.csproj" />
+    <PackageReference Include="Rusty.Engine" Version="0.1.0-dev.cabba0f">
+      <ExcludeAssets Condition="'$(RustyEngineUseSourceDevelopment)' == 'true'">compile;runtime</ExcludeAssets>
+    </PackageReference>
+    <RustyEngineProductInputIntent Include="move.forward" Value="digital" />
+    <RustyEngineProductInputIntent Include="move.left" Value="digital" />
+    <RustyEngineProductInputIntent Include="move.backward" Value="digital" />
+    <RustyEngineProductInputIntent Include="move.right" Value="digital" />
+    <RustyEngineProductInputIntent Include="attack" Value="digital" />
+    <RustyEngineProductInputMapping Include="move.forward.key-w" Intent="move.forward" Trigger="key:key-w:held" />
+    <RustyEngineProductInputMapping Include="move.left.key-a" Intent="move.left" Trigger="key:key-a:held" />
+    <RustyEngineProductInputMapping Include="move.backward.key-s" Intent="move.backward" Trigger="key:key-s:held" />
+    <RustyEngineProductInputMapping Include="move.right.key-d" Intent="move.right" Trigger="key:key-d:held" />
   </ItemGroup>
+
+  <!-- TypeScript builds only the product-owned DOM companion. The runtime
+       pack provides the browser shell, renderer, and transport. -->
+  <Target Name="BuildWorldRpgProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
+    <MakeDir Directories="$(RustyEngineProductUiRoot)" />
+    <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(MSBuildThisFileDirectory)../ui/main.ts&quot;" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../ui/styles.css" DestinationFolder="$(RustyEngineProductUiRoot)" />
+  </Target>
 </Project>

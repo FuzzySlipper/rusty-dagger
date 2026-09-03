@@ -1,6 +1,11 @@
 /local
+/.runtime/
+/node_modules/
 /GeneratedInputs
 __pycache__/
 /AGENTS.md
+src/ui/generated/
+src/sprite-ui/generated/
+src/WorldRpg.SpriteWorkbench/workbench-content/
 **/bin/
 **/obj/

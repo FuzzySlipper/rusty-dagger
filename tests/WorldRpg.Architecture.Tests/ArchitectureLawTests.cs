@@ -40,11 +40,12 @@ public sealed class ArchitectureLawTests
     public void Project_references_follow_the_worldrpg_dependency_graph()
     {
         AssertProjectReferences("Daggerfall.Import", []);
-        AssertProjectReferences("WorldRpg.Kit", ["Rusty.Engine"]);
-        AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["Rusty.Engine", "WorldRpg.Kit"]);
-        AssertProjectReferences("WorldRpg.Host", ["Rusty.Engine", "WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
-        AssertProjectReferences("RustyDagger.NativeProduct", ["Rusty.Engine", "Rusty.Engine.ProductGenerator", "WorldRpg.Host"]);
+        AssertProjectReferences("WorldRpg.Kit", []);
+        AssertProjectReferences("WorldRpg.Rulesets.Daggerfall", ["WorldRpg.Kit"]);
+        AssertProjectReferences("WorldRpg.Host", ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall"]);
         AssertProjectReferences("WorldRpg.Rulesets.Canary.Tests", ["WorldRpg.Host", "WorldRpg.Kit"]);
+
+        foreach (string project in ActiveRuntimeProjects()) AssertPackageReference(project, "Rusty.Engine");
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public sealed class ArchitectureLawTests
     }
 
     private static IEnumerable<string> ActiveRuntimeProjects() =>
-    ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Host", "RustyDagger.NativeProduct"];
+    ["WorldRpg.Kit", "WorldRpg.Rulesets.Daggerfall", "WorldRpg.Host"];
 
     private static void AssertProjectReferences(string project, IReadOnlyList<string> expected)
     {
@@ -124,13 +125,26 @@ public sealed class ArchitectureLawTests
         return fileName;
     }
 
+    private static void AssertPackageReference(string project, string expected)
+    {
+        XDocument document = XDocument.Load(ProjectFile(project));
+        string[] actual = document.Descendants("PackageReference")
+            .Select(reference => (string?)reference.Attribute("Include"))
+            .OfType<string>()
+            .Where(include => !string.IsNullOrWhiteSpace(include))
+            .OrderBy(include => include, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.Contains(expected, actual);
+        Assert.DoesNotContain(document.Descendants("ProjectReference"), reference =>
+            ((string?)reference.Attribute("Include"))?.Contains("rusty-engine", StringComparison.OrdinalIgnoreCase) == true);
+    }
+
     private static string ProjectFile(string project) => project.EndsWith(".Tests", StringComparison.Ordinal)
         ? Path.Combine(RepositoryRoot, "tests", project, $"{project}.csproj")
         : Path.Combine(RepositoryRoot, "src", project, $"{project}.csproj");
 
-    private static string SourceDirectory(string project) => project == "RustyDagger.NativeProduct"
-        ? Path.Combine(RepositoryRoot, "src", project)
-        : project.EndsWith(".Tests", StringComparison.Ordinal)
+    private static string SourceDirectory(string project) => project.EndsWith(".Tests", StringComparison.Ordinal)
             ? Path.Combine(RepositoryRoot, "tests", project)
             : Path.Combine(RepositoryRoot, "src", project);
 

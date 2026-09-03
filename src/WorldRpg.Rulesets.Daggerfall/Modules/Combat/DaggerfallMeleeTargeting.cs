@@ -2,6 +2,7 @@ using Rusty.Engine;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Modules;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 
@@ -72,7 +73,10 @@ internal sealed class DaggerfallMeleeTargetingModule
             _spatial.Session,
             observers,
             targets,
-            ReadOnlyMemory<SpatialEntityCollider>.Empty);
+            ReadOnlyMemory<SpatialEntityCollider>.Empty,
+            DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity,
+            DaggerfallPerceptionQueryDefaults.FirstPairCursor,
+            DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize);
         PerceptionReadoutLeaseReceipt receipt = _perception.QueryVisibility(request);
         long? selected = receipt.Pairs.ToArray()
             .Where(pair => pair.Observer == (ulong)PlayerId

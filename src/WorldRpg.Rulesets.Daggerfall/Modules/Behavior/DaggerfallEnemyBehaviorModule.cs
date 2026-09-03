@@ -6,6 +6,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Rulesets.Daggerfall.Modules;
 using WorldRpg.Rulesets.Daggerfall.Content;
 
 namespace WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
@@ -125,7 +126,10 @@ internal sealed class DaggerfallEnemyBehaviorModule
             _spatial.Session,
             new[] { new PerceptionObserver(checked((ulong)actor.EntityId), actor.Position.ToVector(), forward, _tuning.DetectionDistance, _tuning.MinimumFacingCosine, 1d) },
             new[] { new PerceptionTarget((ulong)DaggerfallActorIdentity.PlayerEntityId, player.ToVector()) },
-            ReadOnlyMemory<SpatialEntityCollider>.Empty));
+            ReadOnlyMemory<SpatialEntityCollider>.Empty,
+            DaggerfallPerceptionQueryDefaults.AnyProjectionIdentity,
+            DaggerfallPerceptionQueryDefaults.FirstPairCursor,
+            DaggerfallPerceptionQueryDefaults.CompleteQueryPageSize));
     }
 
     private static EnemyBehaviorState ToState(ulong value) => value switch

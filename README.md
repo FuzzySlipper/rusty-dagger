@@ -25,8 +25,8 @@ Ownership:
 - Content packs own authored definitions, assets, worlds, placements, quests,
   and scenario state.
 - Daggerfall.Import owns Arena2 and Daggerfall Unity source knowledge.
-- RustyDagger.NativeProduct is the thin NativeAOT and Engine boundary; its ABI
-  and service output are generated.
+- `WorldRpg.Host` is the ordinary product entry. The packaged SDK generates
+  CoreCLR and NativeAOT composition beneath ignored `obj` output.
 
 Code-bearing rulesets are compiled into the product. Content packs, validated
 typed tuning profiles, and game bundles are loaded at runtime. Do not introduce
@@ -82,25 +82,42 @@ is a narrow upstream Engine request and an honest stop. Do not recreate Engine
 machinery in C#, TypeScript, downstream Rust, a fake proof path, or a parallel
 host merely to finish a task.
 
-## Run the current product
+## Develop and verify the current product
 
-The active build and launch command is:
+The checked product consumes immutable `Rusty.Engine` package
+`0.1.0-dev.cabba0f` from the installed `.runtime/sdk-feed` and the matched
+`.runtime/runtime-pack-cabba0f`. Those ignored artifacts are supplied by
+release/install tooling; this repository neither builds them nor copies an
+Engine checkout into product sources.
+
+Ordinary edit-run development is CoreCLR through the packaged host:
 
 ```bash
-src/scripts/run-product.sh
+./.runtime/runtime-pack-cabba0f/bin/rusty dev \
+  --project ./src/WorldRpg.Host/WorldRpg.Host.csproj \
+  --runtime ./.runtime/runtime-pack-cabba0f
 ```
 
-It builds the DOM UI, publishes `RustyDagger.NativeProduct` as a NativeAOT shared
-library, and launches it through the adjacent Rusty Engine C# product host. The
-current scripts assume the sibling Engine checkout at `/home/dev/rusty-engine`
-and intentionally track that checkout forward rather than pinning an early SDK
-shape. The host declares the semantic `attack=digital` intent and Engine-owned
-held WASD mappings for the four `move.*` digital intents; the DOM attack control
-only claims that declared intent and renders the product projection.
+The Host declares the semantic `attack=digital` intent and Engine-owned held
+WASD mappings for `move.*`; the DOM attack control only claims that declared
+intent and renders the `dagger.hud` projection. The SDK compiles the
+product-owned DOM UI and atomically stages the loose Product bundle. The
+runtime pack owns the host, browser shell, renderer, and browser transport.
 
-Run the product only when the current task needs live behavior. Focused C#
-compilation or NativeAOT publication is normally enough for organization and
-boundary work.
+NativeAOT is a separate fidelity/release check, not the edit-run loop:
+
+```bash
+dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:VerifyRustyEngineAot
+```
+
+Engine contributors may use `rusty dev --engine-source /absolute/rusty-engine`.
+That explicit opt-in supplies source references and a source runtime pack;
+normal downstream builds never discover an adjacent checkout.
+
+`WorldRpg.SpriteWorkbench` remains a package-backed product tool. Its launcher
+stages its operator-selected publication into ignored workbench content, then
+runs the same `rusty dev` workflow; it no longer assembles a browser host or
+calls Cargo directly.
 
 ## Content and migration boundary
 
@@ -112,9 +129,14 @@ demonstration topology are not present as fallback paths.
 Daggerfall/Arena2 source data remains operator-supplied. Preserve the checked
 in imported/authored assets, attribution, and provenance when adapting content.
 
-## Guidance
+## Guidance and proof
 
 Repository-specific instructions are in `AGENTS.md`. The shared practical brief
 for downstream C# products lives in Den at the stable handle
 `rusty-engine/downstream-csharp-agent-brief`. Its text is intentionally updated
 in place while the Engine path matures.
+
+Run `./scripts/verify.sh` for focused package restore/build, architecture,
+CoreCLR staging, and explicit NativeAOT fidelity proof. Hosted CI is not
+declared until immutable Engine artifacts are published for clean runners; do
+not replace it with a cloned Engine checkout or downstream provider build.
