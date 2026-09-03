@@ -93,6 +93,7 @@ Engine checkout into product sources.
 Ordinary edit-run development is CoreCLR through the packaged host:
 
 ```bash
+npm ci
 ./.runtime/runtime-pack-cabba0f/bin/rusty dev \
   --project ./src/WorldRpg.Host/WorldRpg.Host.csproj \
   --runtime ./.runtime/runtime-pack-cabba0f
@@ -136,7 +137,8 @@ for downstream C# products lives in Den at the stable handle
 `rusty-engine/downstream-csharp-agent-brief`. Its text is intentionally updated
 in place while the Engine path matures.
 
-Run `./scripts/verify.sh` for focused package restore/build, architecture,
+Run `./scripts/verify.sh` from a clean checkout for pinned UI dependency
+installation, focused package restore/build, architecture,
 CoreCLR staging, and explicit NativeAOT fidelity proof. Hosted CI is not
 declared until immutable Engine artifacts are published for clean runners; do
 not replace it with a cloned Engine checkout or downstream provider build.
