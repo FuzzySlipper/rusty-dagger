@@ -27,7 +27,7 @@ interface CompositionIdentity {
 export function mountProductUi(root: HTMLElement, context: ProductUiContext): { dispose(): void } {
   const stylesheet = document.createElement('link');
   stylesheet.rel = 'stylesheet';
-  stylesheet.href = './ui/styles.css';
+  stylesheet.href = new URL('./styles.css', import.meta.url).href;
   document.head.append(stylesheet);
 
   const shell = document.createElement('section');
