@@ -61,7 +61,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
 
     public SpriteWorkbenchSnapshot Snapshot()
     {
-        SpritePlaybackReadout? playback = CurrentPlayback() is { } active ? engine.Appearance.ReadSpritePlayback(active) : null;
+        SpritePlaybackReadout? playback = CurrentPlayback() is { } active ? engine.Graphics.ReadSpritePlayback(active) : null;
         return new(publication.Catalog.Entries, selectedId, selectedSequence, selectedOrientation, playback, pendingEdit, running);
     }
 
@@ -104,18 +104,18 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         {
             if (stepRequested)
             {
-                SpritePlaybackState state = engine.Appearance.ReadSpritePlayback(playback).State;
+                SpritePlaybackState state = engine.Graphics.ReadSpritePlayback(playback).State;
                 if (state == SpritePlaybackState.Stopped)
-                    engine.Appearance.ControlSpritePlayback(new(playback, SpritePlaybackControl.Start));
+                    engine.Graphics.ControlSpritePlayback(new(playback, SpritePlaybackControl.Start));
                 else if (state == SpritePlaybackState.Paused)
-                    engine.Appearance.ControlSpritePlayback(new(playback, SpritePlaybackControl.Resume));
+                    engine.Graphics.ControlSpritePlayback(new(playback, SpritePlaybackControl.Resume));
             }
-            SpritePlaybackAdvanceLeaseReceipt receipt = engine.Appearance.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(playback));
+            SpritePlaybackAdvanceLeaseReceipt receipt = engine.Graphics.AdvanceSpritePlayback(new SpritePlaybackAdvanceRequest(playback));
             // A one-shot can complete during this admitted advance.  Completion is
             // already a coherent terminal Engine state, so do not issue an invalid
             // or misleading Pause after it.
             if (stepRequested && !receipt.Readout.Completed)
-                engine.Appearance.ControlSpritePlayback(new(playback, SpritePlaybackControl.Pause));
+                engine.Graphics.ControlSpritePlayback(new(playback, SpritePlaybackControl.Pause));
             stepRequested = false;
         }
         PublishState();
@@ -152,10 +152,10 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         // previously visible Engine playback or local selection state.
         PreviewSequence selected = preview.ResolveSequence(intent.Sequence, requestedOrientation);
         if (selected.FrameIds.Length == 0) throw new InvalidOperationException("The selected sprite sequence has no frames.");
-        if (CurrentPlayback() is { } prior && engine.Appearance.ReadSpritePlayback(prior).State != SpritePlaybackState.Stopped)
-            engine.Appearance.ControlSpritePlayback(new(prior, SpritePlaybackControl.Stop));
-        engine.Appearance.ControlSpritePlayback(new(selected.Playback!, SpritePlaybackControl.Restart));
-        engine.Appearance.ControlSpritePlayback(new(selected.Playback!, SpritePlaybackControl.Pause));
+        if (CurrentPlayback() is { } prior && engine.Graphics.ReadSpritePlayback(prior).State != SpritePlaybackState.Stopped)
+            engine.Graphics.ControlSpritePlayback(new(prior, SpritePlaybackControl.Stop));
+        engine.Graphics.ControlSpritePlayback(new(selected.Playback!, SpritePlaybackControl.Restart));
+        engine.Graphics.ControlSpritePlayback(new(selected.Playback!, SpritePlaybackControl.Pause));
         selectedId = preview.Entry.Id;
         selectedOrientation = requestedOrientation;
         selectedSequence = selected.Name;
@@ -172,16 +172,16 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             throw new ArgumentOutOfRangeException(nameof(intent.SequenceFrameIndex), "The selected sequence entry is outside the active playback sequence.");
         uint sequenceIndex = checked((uint)intent.SequenceFrameIndex.Value);
         SpritePlayback playback = sequence.Playback ?? throw new InvalidOperationException("The selected Engine playback is unavailable.");
-        if (engine.Appearance.ReadSpritePlayback(playback).State == SpritePlaybackState.Playing)
-            engine.Appearance.ControlSpritePlayback(new(playback, SpritePlaybackControl.Pause));
-        engine.Appearance.SelectSpritePlaybackFrame(new(playback, sequenceIndex));
+        if (engine.Graphics.ReadSpritePlayback(playback).State == SpritePlaybackState.Playing)
+            engine.Graphics.ControlSpritePlayback(new(playback, SpritePlaybackControl.Pause));
+        engine.Graphics.SelectSpritePlaybackFrame(new(playback, sequenceIndex));
         running = false;
     }
 
     private void Control(SpritePlaybackControl control, bool shouldRun)
     {
         SpritePlayback playback = RequirePlayback();
-        engine.Appearance.ControlSpritePlayback(new(playback, control));
+        engine.Graphics.ControlSpritePlayback(new(playback, control));
         running = shouldRun;
     }
 
@@ -189,9 +189,9 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     {
         if (CurrentPlayback() is { } playback)
         {
-            SpritePlaybackState state = engine.Appearance.ReadSpritePlayback(playback).State;
+            SpritePlaybackState state = engine.Graphics.ReadSpritePlayback(playback).State;
             if (control == SpritePlaybackControl.Pause && state == SpritePlaybackState.Playing || control == SpritePlaybackControl.Resume && state == SpritePlaybackState.Paused || control == SpritePlaybackControl.Restart)
-                engine.Appearance.ControlSpritePlayback(new(playback, control));
+                engine.Graphics.ControlSpritePlayback(new(playback, control));
         }
         running = shouldRun;
     }
@@ -199,7 +199,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     private void Sample(SpriteWorkbenchIntent intent)
     {
         if (intent.ElapsedSeconds is not { } elapsed || !double.IsFinite(elapsed) || elapsed < 0D) throw new ArgumentOutOfRangeException(nameof(intent.ElapsedSeconds));
-        engine.Appearance.SampleSpritePlayback(new(RequirePlayback(), elapsed));
+        engine.Graphics.SampleSpritePlayback(new(RequirePlayback(), elapsed));
     }
 
     private void Edit(SpriteWorkbenchIntent intent)
@@ -240,19 +240,19 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     private Preview CreatePreview(SpriteInspectionEntry entry)
     {
         VerifyAdmittedContent(entry);
-        RenderResourceInfo resource = engine.Appearance.OpenResource(new(entry.Closure.RelativePath));
-        SpriteAtlas atlas = engine.Appearance.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(entry.Atlas.Width, entry.Atlas.Height,
+        RenderResourceInfo resource = engine.Graphics.OpenResource(new(entry.Closure.RelativePath));
+        SpriteAtlas atlas = engine.Graphics.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(entry.Atlas.Width, entry.Atlas.Height,
             entry.Frames.Select(frame => new WorldRpg.Kit.Presentation.NormalizedSpriteFrame(checked((uint)frame.FrameIndex), frame.X, frame.Y, frame.Width, frame.Height)).ToArray())));
         Appearance? appearance = null;
         List<SpritePlayback> playbacks = [];
         try
         {
             uint initial = checked((uint)entry.Frames.First().FrameIndex);
-            appearance = engine.Appearance.CreateSpriteFromAtlas(new(atlas, initial, ToVector(entry.AuthoredValues.Pivot), ToVector(entry.AuthoredValues.DisplaySize, Vector2.One), BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
+            appearance = engine.Graphics.CreateSpriteFromAtlas(new(atlas, initial, ToVector(entry.AuthoredValues.Pivot), ToVector(entry.AuthoredValues.DisplaySize, Vector2.One), BillboardMode.Cylindrical, SpriteSizeMode.World, 0, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
             List<PreviewSequence> sequences = BuildSequences(entry);
             foreach (PreviewSequence sequence in sequences)
             {
-                SpritePlayback playback = engine.Appearance.CreateSpritePlayback(new(appearance, atlas,
+                SpritePlayback playback = engine.Graphics.CreateSpritePlayback(new(appearance, atlas,
                     SpriteAtlasAdapter.ToPlaybackFrames(sequence.FrameIds, sequence.FramesPerSecond), Array.Empty<SpritePlaybackMarker>(),
                     sequence.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1D));
                 playbacks.Add(playback);
@@ -318,7 +318,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             ("frameCount", builder.Number(entry.Frames.Count)),
             ("stateCount", builder.Number(entry.States.Count)),
             ("actionCount", builder.Number(entry.Actions.Count)))).ToArray();
-        SpritePlaybackReadout? playback = CurrentPlayback() is { } active ? engine.Appearance.ReadSpritePlayback(active) : null;
+        SpritePlaybackReadout? playback = CurrentPlayback() is { } active ? engine.Graphics.ReadSpritePlayback(active) : null;
         Preview? preview = selectedId is not null && previews.TryGetValue(selectedId, out Preview? found) ? found : null;
         uint? selected = preview is null ? null : BuildSelectedProjection(builder, preview, playback);
         uint root = builder.Object(
@@ -345,15 +345,15 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     private void PublishAppearanceSnapshot()
     {
         AppearanceFact[] snapshot = selectedId is not null && previews.TryGetValue(selectedId, out Preview? preview)
-            ? [new AppearanceFact(configuration.PreviewPlacement.EntityId, configuration.PreviewPlacement.ToTransform(), preview.Appearance,
+            ? [new AppearanceFact(configuration.PreviewPlacement.EntityId, false, 0, configuration.PreviewPlacement.ToTransform(), preview.Appearance,
                 configuration.PreviewPlacement.Visible, configuration.PreviewPlacement.Layer)]
             : [];
-        engine.Appearance.PublishSnapshot(snapshot);
+        engine.Graphics.PublishSnapshot(snapshot);
     }
 
     private void TryPublishEmptySnapshot(ICollection<Exception> failures)
     {
-        try { engine.Appearance.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty); }
+        try { engine.Graphics.PublishSnapshot(ReadOnlySpan<AppearanceFact>.Empty); }
         catch (Exception error) { failures.Add(error); }
     }
 

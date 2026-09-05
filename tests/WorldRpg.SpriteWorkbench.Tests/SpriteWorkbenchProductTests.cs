@@ -596,14 +596,14 @@ public sealed class SpriteWorkbenchProductTests
         }
     }
 
-    private sealed class AppearanceFake : IAppearanceService
+    private sealed class AppearanceFake : IGraphicsService
     {
         private readonly HarnessOptions options;
         private ulong nextHandle = 1;
         private readonly Dictionary<ulong, PlaybackState> playbacks = [];
         private readonly Dictionary<ulong, uint> appearanceFrames = [];
         private readonly HashSet<Appearance> retainedAppearances = new(ReferenceEqualityComparer.Instance);
-        internal IAppearanceService Service => this;
+        internal IGraphicsService Service => this;
         internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
         internal List<SpriteAtlasCreateRequest> AtlasRequests { get; } = [];
         internal List<SpriteFromAtlasRequest> SpriteRequests { get; } = [];
@@ -856,10 +856,10 @@ public sealed class SpriteWorkbenchProductTests
     private class EngineContextFake : DispatchProxy
     {
         private IContentService content = null!;
-        private IAppearanceService appearance = null!;
+        private IGraphicsService appearance = null!;
         private IUiService ui = null!;
 
-        internal static IEngineContext Create(IContentService content, IAppearanceService appearance, IUiService ui)
+        internal static IEngineContext Create(IContentService content, IGraphicsService appearance, IUiService ui)
         {
             IEngineContext service = DispatchProxy.Create<IEngineContext, EngineContextFake>();
             EngineContextFake fake = (EngineContextFake)(object)service;
@@ -872,7 +872,7 @@ public sealed class SpriteWorkbenchProductTests
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
             "get_Content" => content,
-            "get_Appearance" => appearance,
+            "get_Graphics" => appearance,
             "get_Ui" => ui,
             _ => throw new NotSupportedException(method?.Name),
         };

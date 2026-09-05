@@ -12,23 +12,23 @@ pair_source_revision=$(sed -n 's|.*<RustyEnginePairSourceRevision>\([^<]*\)</Rus
 pair_archive="rusty-engine-csharp-pair-${pair_version}-linux-x64.tar.gz"
 pair_release_tag="csharp-sdk-v${pair_version}"
 pair_url="https://github.com/FuzzySlipper/rusty-engine/releases/download/${pair_release_tag}/${pair_archive}"
-pair_checksum=b7624fa77d99171b7ab4e2b40a760e13939ce990f75606cfd1335fd6e98cce87
+pair_checksum=10882f79c360f28faaa5c4366c354b7b3a3f0fd3e135747afc556fa01858b44b
 runtime_root="$repo_root/.runtime"
+runtime_pack="$runtime_root/runtime-pack"
+sdk_feed="$runtime_root/sdk-feed"
 temporary_root=$(mktemp -d "${TMPDIR:-/tmp}/rusty-dagger-engine-pair.XXXXXX")
 staged_root=""
-backup_root=""
-installed=false
+staged_runtime=""
+backup_runtime=""
+runtime_installed=false
 
 cleanup() {
   [[ -z "$temporary_root" ]] || rm -rf -- "$temporary_root"
   [[ -z "$staged_root" || ! -e "$staged_root" ]] || rm -rf -- "$staged_root"
+  [[ -z "$staged_runtime" || ! -e "$staged_runtime" ]] || rm -rf -- "$staged_runtime"
 
-  if [[ -n "$backup_root" && -e "$backup_root" ]]; then
-    if [[ "$installed" == true ]]; then
-      rm -rf -- "$backup_root"
-    elif [[ ! -e "$runtime_root" ]]; then
-      mv -- "$backup_root" "$runtime_root"
-    fi
+  if [[ "$runtime_installed" == false && -n "$backup_runtime" && -e "$backup_runtime" && ! -e "$runtime_pack" ]]; then
+    mv -- "$backup_runtime" "$runtime_pack"
   fi
 }
 trap cleanup EXIT INT TERM
@@ -80,14 +80,50 @@ rm -rf -- "$staged_root"
 cp -a -- "$pair_root" "$staged_root"
 "$staged_root/verify-pair.sh" --directory "$staged_root"
 
-if [[ -e "$runtime_root" ]]; then
-  backup_root=$(mktemp -d "$repo_root/.runtime.previous.XXXXXX")
-  rmdir -- "$backup_root"
-  mv -- "$runtime_root" "$backup_root"
+mkdir -p -- "$sdk_feed"
+package_source="$staged_root/sdk-feed/Rusty.Engine.${pair_version}.nupkg"
+package_target="$sdk_feed/Rusty.Engine.${pair_version}.nupkg"
+if [[ -e "$package_target" ]]; then
+  [[ $(sha256sum "$package_source" | awk '{print $1}') == $(sha256sum "$package_target" | awk '{print $1}') ]] || {
+    echo "Refusing to overwrite a different pinned SDK package at $package_target." >&2
+    exit 1
+  }
+else
+  staged_package="$sdk_feed/.Rusty.Engine.${pair_version}.incoming.$$"
+  cp -- "$package_source" "$staged_package"
+  mv -- "$staged_package" "$package_target"
 fi
 
-mv -- "$staged_root" "$runtime_root"
-staged_root=""
-installed=true
+staged_runtime=$(mktemp -d "$runtime_root/.runtime-pack.install.XXXXXX")
+rmdir -- "$staged_runtime"
+cp -a -- "$staged_root/runtime-pack" "$staged_runtime"
 
-echo "Installed verified Rusty Engine C# pair ${pair_version} at $runtime_root"
+if [[ -e "$runtime_pack" ]]; then
+  [[ -f "$runtime_pack/runtime-manifest.json" ]] || {
+    echo "Refusing to replace a runtime-pack without runtime-manifest.json." >&2
+    exit 1
+  }
+  current_revision=$(jq -r '.sourceRevision // "unknown"' "$runtime_pack/runtime-manifest.json")
+  if [[ "$current_revision" == "$pair_source_revision" ]]; then
+    rm -rf -- "$staged_runtime"
+    staged_runtime=""
+  else
+    backup_runtime=$(mktemp -d "$runtime_root/.runtime-pack.previous.XXXXXX")
+    rmdir -- "$backup_runtime"
+    mv -- "$runtime_pack" "$backup_runtime"
+  fi
+fi
+
+if [[ -n "$staged_runtime" ]]; then
+  mv -- "$staged_runtime" "$runtime_pack"
+  staged_runtime=""
+fi
+runtime_installed=true
+
+cp -- "$staged_root/pair-manifest.json" "$runtime_root/.pair-manifest.incoming.$$"
+mv -- "$runtime_root/.pair-manifest.incoming.$$" "$runtime_root/pair-manifest.json"
+cp -- "$staged_root/verify-pair.sh" "$runtime_root/.verify-pair.incoming.$$"
+chmod +x "$runtime_root/.verify-pair.incoming.$$"
+mv -- "$runtime_root/.verify-pair.incoming.$$" "$runtime_root/verify-pair.sh"
+
+echo "Installed verified Rusty Engine C# pair ${pair_version}; preserved $runtime_root persistence and retained the prior runtime pack when replaced."
