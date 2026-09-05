@@ -61,7 +61,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             foreach (NormalizedMaterial material in inputs.Materials)
             {
                 VerifyContent(content, new ContentArtifact(material.TexturePath, material.TextureSha256));
-                RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(material.TexturePath));
+                RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(material.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
                 materials.Add(appearance.CreateMaterial(new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture.Handle, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false)));
             }
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(world, inputs.Materials.Select((material, index) => new MeshMaterialBinding(material.Slot, materials[index])).ToArray()));
