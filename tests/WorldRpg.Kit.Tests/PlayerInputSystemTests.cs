@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Reflection;
 using Rusty.Engine;
 using WorldRpg.Kit.Controls;
 using Xunit;
@@ -12,7 +11,7 @@ public sealed class PlayerInputSystemTests
     public void Movement_uses_ruleset_supplied_intents_and_keys()
     {
         PlayerControlBindings controls = new(["stride"u8.ToArray()], KeyboardControl.KeyI, KeyboardControl.KeyK, KeyboardControl.KeyJ, KeyboardControl.KeyL);
-        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, controls);
+        PlayerInputSystem input = new(TestTuning(), controls);
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
 
         ProductUpdateState semantic = new(1f);
@@ -39,7 +38,7 @@ public sealed class PlayerInputSystemTests
     [InlineData("go.right", 1f, 0f)]
     public void Mapped_digital_directional_intents_use_ruleset_bindings(string intent, float expectedX, float expectedY)
     {
-        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, DirectionalControls());
+        PlayerInputSystem input = new(TestTuning(), DirectionalControls());
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
         ProductUpdateState update = new(1f);
         update.Add(Input(InputEventKind.MappedDigital, InputEdge.Pressed, x: 1f, phase: InputPhase.Pressed, intent: intent));
@@ -52,7 +51,7 @@ public sealed class PlayerInputSystemTests
     [Fact]
     public void Mapped_digital_directions_persist_aggregate_and_clear()
     {
-        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, DirectionalControls());
+        PlayerInputSystem input = new(TestTuning(), DirectionalControls());
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
 
         ProductUpdateState simultaneous = new(1f);
@@ -85,28 +84,22 @@ public sealed class PlayerInputSystemTests
     [Fact]
     public void Look_configuration_comes_from_tuning()
     {
-        LookDouble look = LookDouble.Create();
-        PlayerInputSystem input = new(new PlayerControlTuning(.01f, -.5f, .5f, 1f, InvertHorizontal: true, InvertVertical: true, WrapYaw: false), look.Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
+        PlayerInputSystem input = new(new PlayerControlTuning(.01f, -.5f, .5f, 1f, InvertHorizontal: true, InvertVertical: true, WrapYaw: false), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: .25f, pitchRadians: -.25f);
         ProductUpdateState update = new(1f);
         update.Add(Input(InputEventKind.PointerDelta, x: .125f, y: -.25f));
 
         input.Apply(player, update);
 
-        Assert.NotNull(look.LastRequest);
-        LookConfig configuration = look.LastRequest.Value.Config;
-        Assert.Equal(.01f, configuration.HorizontalRadiansPerUnit);
-        Assert.Equal(.01f, configuration.VerticalRadiansPerUnit);
-        Assert.True(configuration.InvertHorizontal);
-        Assert.True(configuration.InvertVertical);
-        Assert.False(configuration.WrapYaw);
+        Assert.Equal(.24875f, player.YawRadians);
+        Assert.Equal(-.2475f, player.PitchRadians);
     }
 
     [Fact]
     public void Direct_ui_digital_claims_activate_actions_without_turning_unedged_or_held_input_into_actions()
     {
         InputActionId action = new("test.activate");
-        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
+        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
 
         ProductUpdateState nativeDirectClaim = new(1f);
@@ -133,9 +126,8 @@ public sealed class PlayerInputSystemTests
     [Fact]
     public void Nonfinite_input_is_rejected_before_look_or_actions_mutate_state()
     {
-        LookDouble look = LookDouble.Create();
         InputActionId action = new("test.activate");
-        PlayerInputSystem input = new(TestTuning(), look.Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
+        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: .25f, pitchRadians: -.25f);
         ProductUpdateState update = new(1f);
         update.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
@@ -143,24 +135,21 @@ public sealed class PlayerInputSystemTests
 
         Assert.Throws<ArgumentOutOfRangeException>(() => input.Apply(player, update));
 
-        Assert.Null(look.LastRequest);
         Assert.False(update.IsRequested(action));
         Assert.Equal(.25f, player.YawRadians);
         Assert.Equal(-.25f, player.PitchRadians);
     }
 
     [Fact]
-    public void Rejected_look_diagnosis_leaves_prepared_input_uncommitted()
+    public void Out_of_limit_look_diagnosis_leaves_prepared_input_uncommitted()
     {
-        LookDouble look = LookDouble.Create();
-        look.Diagnostic = LookDiagnostic.InvalidCommand;
         InputActionId action = new("test.activate");
-        PlayerInputSystem input = new(TestTuning(), look.Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
+        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), .25f, -.25f);
         ProductUpdateState update = new(1f);
         update.Add(Input(InputEventKind.Key, InputEdge.Pressed, key: KeyboardControl.KeyW));
         update.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
-        update.Add(Input(InputEventKind.PointerDelta, x: .1f, y: .2f));
+        update.Add(Input(InputEventKind.PointerDelta, x: 200f, y: .2f));
 
         Assert.Throws<InvalidOperationException>(() => input.Apply(player, update));
 
@@ -168,7 +157,6 @@ public sealed class PlayerInputSystemTests
         Assert.Equal(-.25f, player.PitchRadians);
         Assert.Equal(Vector2.Zero, update.PlanarIntent);
         Assert.False(update.IsRequested(action));
-        look.Diagnostic = LookDiagnostic.Accepted;
         ProductUpdateState afterRejection = new(1f);
         input.Apply(player, afterRejection);
         Assert.Equal(Vector2.Zero, afterRejection.PlanarIntent);
@@ -178,8 +166,8 @@ public sealed class PlayerInputSystemTests
     public void Prepared_input_is_owner_bound_and_single_use()
     {
         InputActionId action = new("test.activate");
-        PlayerInputSystem first = new(TestTuning(), LookDouble.Create().Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
-        PlayerInputSystem second = new(TestTuning(), LookDouble.Create().Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
+        PlayerInputSystem first = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
+        PlayerInputSystem second = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
         ProductUpdateState preparedFor = new(1f);
         preparedFor.Add(Input(InputEventKind.Key, InputEdge.Pressed, key: KeyboardControl.KeyW));
@@ -204,7 +192,7 @@ public sealed class PlayerInputSystemTests
     public void Prepared_input_rejects_an_out_of_order_commit()
     {
         InputActionId action = new("test.activate");
-        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
+        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD), [new InputActionBinding(action, "activate"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), 0f, 0f);
         ProductUpdateState firstUpdate = new(1f);
         firstUpdate.Add(Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: "activate"));
@@ -225,7 +213,7 @@ public sealed class PlayerInputSystemTests
     [Fact]
     public void Prepared_input_rejects_a_changed_or_different_source_player_before_commit()
     {
-        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
+        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
         PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), .25f, -.25f);
         ProductUpdateState update = new(1f);
         PreparedPlayerInput candidate = input.Prepare(player, update);
@@ -248,7 +236,7 @@ public sealed class PlayerInputSystemTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerControlTuning(invalid, -.5f, .5f, 1f, false, false, true).Validate());
         Assert.Throws<ArgumentOutOfRangeException>(() => new CharacterControllerTuning(Radius: invalid).Validate());
 
-        PlayerInputSystem input = new(TestTuning(), LookDouble.Create().Service, new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
+        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
         Assert.Throws<ArgumentOutOfRangeException>(() => input.Apply(new PlayerControlState(new WorldPoint(0f, 0f, 0f), 0f, 0f), new ProductUpdateState(invalid)));
     }
 
@@ -265,30 +253,4 @@ public sealed class PlayerInputSystemTests
         KeyboardControl.KeyD,
         new DirectionalMovementBindings("go.forward"u8.ToArray(), "go.backward"u8.ToArray(), "go.left"u8.ToArray(), "go.right"u8.ToArray()));
 
-    private class LookDouble : DispatchProxy
-    {
-        internal ILookService Service { get; private set; } = null!;
-        internal LookRequest? LastRequest { get; private set; }
-        internal LookDiagnostic Diagnostic { get; set; } = LookDiagnostic.Accepted;
-        internal static LookDouble Create()
-        {
-            ILookService service = DispatchProxy.Create<ILookService, LookDouble>();
-            LookDouble proxy = (LookDouble)(object)service;
-            proxy.Service = service;
-            return proxy;
-        }
-
-        protected override object? Invoke(MethodInfo? method, object?[]? args)
-        {
-            if (method?.Name == nameof(ILookService.Diagnose))
-            {
-                LastRequest = (LookRequest)args![0]!;
-                return Diagnostic;
-            }
-            if (method?.Name != nameof(ILookService.Integrate)) throw new NotSupportedException(method?.Name);
-            LookRequest request = (LookRequest)args![0]!;
-            LastRequest = request;
-            return new LookReceipt(request.State, request.State, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);
-        }
-    }
 }

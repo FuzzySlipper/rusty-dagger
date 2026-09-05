@@ -123,7 +123,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             ActorsState actors = new(player, actorStates);
             State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState(), inventory, equipmentCoordinator, containers);
             Presentation = new PresentationState("Ready");
-            _input = new PlayerInputSystem(tuning.PlayerControl, engine.Look, DaggerfallInput.Controls, DaggerfallInput.Bindings);
+            _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
@@ -162,7 +162,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);
-            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Appearance, inputs, engine.Audio, tuning.PresentationAudio, _random);
+            _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random);
             partiallyConstructed.Add(_appearance);
             if (saved is not null) ApplySave(saved, playerDefinition);
         }

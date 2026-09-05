@@ -162,7 +162,7 @@ public sealed class NormalizedRuntimeSeamTests
         ContentFake secondContent = new("spatial/hold.json", Hash, releases);
         SpatialFake firstSpatial = SpatialFake.Create(Hash, releases);
         SpatialFake secondSpatial = SpatialFake.Create(Hash, releases);
-        PlayerInputSystem input = new(DaggerfallTuning.Defaults.PlayerControl, LookRecorder.Create().Service, DaggerfallInput.Controls, DaggerfallInput.Bindings);
+        PlayerInputSystem input = new(DaggerfallTuning.Defaults.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings);
         PlayerControlState player = new(new WorldPoint(1f, 2f, 3f), 0f, 0f);
         ProductUpdateState update = new(1f / 60f);
 
@@ -209,7 +209,10 @@ public sealed class NormalizedRuntimeSeamTests
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         PrivateersHoldInputs inputs = ReadInputs(root);
-        float expectedYaw = inputs.InitialLook.YawRadians + .25f;
+        // The authored start pose is π. With yaw wrapping enabled, the
+        // admitted positive pointer delta crosses into [-π, π), rather than
+        // leaving the product with an unbounded yaw accumulator.
+        float expectedYaw = -MathF.PI + (.25f * DaggerfallTuning.Defaults.PlayerControl.LookSensitivity);
         List<string> releases = [];
         ContentFake content = new(releases);
         PopulateContent(content, inputs);
@@ -1078,10 +1081,9 @@ public sealed class NormalizedRuntimeSeamTests
     [Fact]
     public void Typed_input_and_explicit_combat_remain_product_semantic_above_the_normalized_engine_seams()
     {
-        LookRecorder look = LookRecorder.Create();
         InputActionId attack = new("test.attack");
         PlayerControlBindings controls = new(["move"u8.ToArray()], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD, new DirectionalMovementBindings("forward"u8.ToArray(), "backward"u8.ToArray(), "left"u8.ToArray(), "right"u8.ToArray()));
-        PlayerInputSystem input = new(DaggerfallTuning.Defaults.PlayerControl, look.Service, controls, [new InputActionBinding(attack, "attack"u8.ToArray())]);
+        PlayerInputSystem input = new(DaggerfallTuning.Defaults.PlayerControl, controls, [new InputActionBinding(attack, "attack"u8.ToArray())]);
         PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);
         ProductUpdateState update = new(.125F);
         update.Add(Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW));
@@ -1090,7 +1092,8 @@ public sealed class NormalizedRuntimeSeamTests
         input.Apply(player, update);
         Assert.Equal(new Vector2(0, 1), update.PlanarIntent);
         Assert.True(update.IsRequested(attack));
-        Assert.Equal(new Vector2(.25F, -.5F), look.LastDelta);
+        Assert.Equal(.25f * DaggerfallTuning.Defaults.PlayerControl.LookSensitivity, player.YawRadians, precision: 6);
+        Assert.Equal(-.5f * DaggerfallTuning.Defaults.PlayerControl.LookSensitivity, player.PitchRadians, precision: 6);
 
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
@@ -1878,31 +1881,6 @@ public sealed class NormalizedRuntimeSeamTests
             new(request.Checkpoint.SourceGeneration, request.Checkpoint.Motion);
     }
 
-    private class LookRecorder : DispatchProxy
-    {
-        internal ILookService Service { get; private set; } = null!;
-        internal Vector2 LastDelta { get; private set; }
-        internal static LookRecorder Create()
-        {
-            ILookService service = DispatchProxy.Create<ILookService, LookRecorder>();
-            LookRecorder proxy = (LookRecorder)(object)service;
-            proxy.Service = service;
-            return proxy;
-        }
-        protected override object? Invoke(MethodInfo? method, object?[]? arguments)
-        {
-            if (method?.Name == nameof(ILookService.Diagnose)) return LookDiagnostic.Accepted;
-            if (method?.Name == nameof(ILookService.Integrate))
-            {
-                LookRequest request = (LookRequest)arguments![0]!;
-                LastDelta = request.Delta;
-                LookState after = new(request.State.YawRadians + request.Delta.X, request.State.PitchRadians + request.Delta.Y);
-                return new LookReceipt(request.State, after, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);
-            }
-            return default(LookReceipt);
-        }
-    }
-
     private class RandomMinimum : DispatchProxy
     {
         internal IRandomService Service { get; private set; } = null!;
@@ -1948,15 +1926,14 @@ public sealed class NormalizedRuntimeSeamTests
         internal int UiOpenCalls { get; private set; }
         private IContentService content = null!;
         private ISpatialService spatial = null!;
-        private IAppearanceService appearance = null!;
-        private ILookService look = null!;
+        private IGraphicsService appearance = null!;
         private IPerceptionService perception = null!;
         private ICameraViewService camera = null!;
         private IAudioService audio = null!;
         private IRandomService random = null!;
         private IUiService ui = null!;
 
-        internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IAppearanceService appearance, IPerceptionService? perception = null)
+        internal static EngineContextFake Create(IContentService content, ISpatialService spatial, IGraphicsService appearance, IPerceptionService? perception = null)
         {
             IEngineContext context = DispatchProxy.Create<IEngineContext, EngineContextFake>();
             EngineContextFake fake = (EngineContextFake)(object)context;
@@ -1964,7 +1941,6 @@ public sealed class NormalizedRuntimeSeamTests
             fake.content = content;
             fake.spatial = spatial;
             fake.appearance = appearance;
-            fake.look = ServiceProxy<ILookService, LookServiceFake>.Create();
             fake.perception = perception ?? PerceptionFake.Create().Service;
             fake.camera = ServiceProxy<ICameraViewService, CameraServiceFake>.Create();
             fake.audio = ServiceProxy<IAudioService, AudioServiceFake>.Create();
@@ -1977,8 +1953,7 @@ public sealed class NormalizedRuntimeSeamTests
         {
             "get_Content" => content,
             "get_Spatial" => spatial,
-            "get_Appearance" => appearance,
-            "get_Look" => look,
+            "get_Graphics" => appearance,
             "get_Perception" => perception,
             "get_CameraView" => camera,
             "get_Audio" => audio,
@@ -1986,19 +1961,6 @@ public sealed class NormalizedRuntimeSeamTests
             "get_Ui" => ui,
             _ => throw new NotSupportedException(method?.Name),
         };
-
-        private class LookServiceFake : DispatchProxy
-        {
-            protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
-            {
-                nameof(ILookService.Integrate) => Integrate((LookRequest)arguments![0]!),
-                nameof(ILookService.Reset) => default(LookReceipt),
-                nameof(ILookService.Rebase) => default(LookReceipt),
-                nameof(ILookService.Diagnose) => default(LookDiagnostic),
-                _ => throw new NotSupportedException(method?.Name),
-            };
-            private static LookReceipt Integrate(LookRequest request) => new(request.State, new LookState(request.State.YawRadians + request.Delta.X, request.State.PitchRadians + request.Delta.Y), Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY);
-        }
 
         private class CameraServiceFake : DispatchProxy
         {
@@ -2108,7 +2070,7 @@ public sealed class NormalizedRuntimeSeamTests
         }
     }
 
-    private sealed class AppearanceFake(List<string> releases) : IAppearanceService
+    private sealed class AppearanceFake(List<string> releases) : IGraphicsService
     {
         internal List<RenderResourceRequest> OpenResourceRequests { get; } = [];
         internal List<MeshMaterialBinding> StaticMeshBindings { get; } = [];

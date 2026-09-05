@@ -88,17 +88,15 @@ public sealed class PlayerInputSystem
     private readonly HashSet<KeyboardControl> _held = [];
     private readonly HashSet<MovementDirection> _mappedDirections = [];
     private readonly PlayerControlTuning _tuning;
-    private readonly ILookService _look;
     private readonly PlayerControlBindings _controls;
     private readonly InputActionBinding[] _bindings;
     private ulong _revision;
 
     internal ulong Revision => _revision;
 
-    public PlayerInputSystem(PlayerControlTuning tuning, ILookService look, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null)
+    public PlayerInputSystem(PlayerControlTuning tuning, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null)
     {
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
-        _look = look ?? throw new ArgumentNullException(nameof(look));
         _controls = controls ?? throw new ArgumentNullException(nameof(controls));
         _bindings = bindings?.ToArray() ?? [];
     }
@@ -132,9 +130,9 @@ public sealed class PlayerInputSystem
             else if (input.Kind == InputEventKind.PointerDelta)
             {
                 LookRequest request = new(new LookState(yawRadians, pitchRadians), new Vector2(input.X, input.Y), LookConfiguration());
-                LookDiagnostic diagnostic = _look.Diagnose(request);
-                if (diagnostic != LookDiagnostic.Accepted) throw new InvalidOperationException($"Engine look request rejected: {diagnostic}.");
-                LookReceipt receipt = _look.Integrate(request);
+                LookDiagnostic diagnostic = Look.Diagnose(request);
+                if (diagnostic != LookDiagnostic.Accepted) throw new InvalidOperationException($"Look request rejected: {diagnostic}.");
+                LookReceipt receipt = Look.Integrate(request);
                 yawRadians = receipt.After.YawRadians;
                 pitchRadians = receipt.After.PitchRadians;
             }
@@ -180,15 +178,15 @@ public sealed class PlayerInputSystem
         candidate.EnsureCommittableBy(this, player);
     }
 
-    /// <summary>Resolves the Engine-owned current view basis from committed product look state without changing it.</summary>
+    /// <summary>Resolves the current view basis from committed product look state without changing it.</summary>
     public LookReceipt ResolveCurrentLook(PlayerControlState player)
     {
         ArgumentNullException.ThrowIfNull(player);
         player.ValidateForInput();
         LookRequest request = new(new LookState(player.YawRadians, player.PitchRadians), Vector2.Zero, LookConfiguration());
-        LookDiagnostic diagnostic = _look.Diagnose(request);
-        if (diagnostic != LookDiagnostic.Accepted) throw new InvalidOperationException($"Engine look request rejected: {diagnostic}.");
-        return _look.Integrate(request);
+        LookDiagnostic diagnostic = Look.Diagnose(request);
+        if (diagnostic != LookDiagnostic.Accepted) throw new InvalidOperationException($"Look request rejected: {diagnostic}.");
+        return Look.Integrate(request);
     }
 
     /// <summary>Convenience path for callers that do not need to coordinate an Engine character proposal.</summary>

@@ -14,7 +14,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 /// <summary>Publishes the normalized Privateer's Hold visual closure through Engine-owned resources and sprite atlases.</summary>
 internal sealed class PrivateersHoldAppearance : IDisposable
 {
-    private readonly IAppearanceService appearance;
+    private readonly IGraphicsService appearance;
     private readonly IContentService content;
     private readonly IAudioService? audio;
     private readonly IRandomService? random;
@@ -40,7 +40,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly AuthoredWorldAppearance worldAppearance;
     private bool disposed;
 
-    internal PrivateersHoldAppearance(IContentService content, IAppearanceService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null)
+    internal PrivateersHoldAppearance(IContentService content, IGraphicsService appearance, PrivateersHoldInputs inputs, IAudioService? audio = null, DaggerfallPresentationAudioTuning? audioTuning = null, IRandomService? random = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(appearance);
@@ -85,18 +85,18 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         if (disposed) return;
         List<AppearanceFact> facts = [];
-        if (world is { } staticWorld) facts.Add(new AppearanceFact(1, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
+        if (world is { } staticWorld) facts.Add(new AppearanceFact(1, false, 0, worldAppearance.Transform, staticWorld, worldAppearance.Visible, worldAppearance.Layer));
         foreach (ActorState actor in actors.All.Values)
         {
             if (!this.actors.TryGetValue(actor.EntityId, out ActorVisual? visual)) continue;
             Appearance? chosen = actor.IsDefeated ? visual.Corpse : visual.Live;
-            if (chosen is not null) facts.Add(new AppearanceFact(checked((ulong)actor.EntityId), new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen, true, RenderLayer.Scene));
+            if (chosen is not null) facts.Add(new AppearanceFact(checked((ulong)actor.EntityId), false, 0, new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), chosen, true, RenderLayer.Scene));
         }
         foreach (EffectVisual effect in effects)
-            facts.Add(new AppearanceFact(effect.EntityId, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
+            facts.Add(new AppearanceFact(effect.EntityId, false, 0, new Transform(effect.Position.ToVector(), Quaternion.Identity, Vector3.One), effect.Appearance, true, RenderLayer.Scene));
         if (viewmodel is { } weapon)
         {
-            facts.Add(new AppearanceFact(weapon.EntityId, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
+            facts.Add(new AppearanceFact(weapon.EntityId, false, 0, weapon.Transform, weapon.Appearance, true, RenderLayer.Viewmodel));
         }
         AppearanceFact[] snapshot = [.. facts];
         // Record before publication: an Engine callback may stage this exact
