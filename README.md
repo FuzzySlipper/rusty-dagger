@@ -85,7 +85,7 @@ host merely to finish a task.
 ## Develop and verify the current product
 
 The checked product consumes immutable `Rusty.Engine` package
-`0.1.0-dev.21535b1b51ae` from the installed `.runtime/sdk-feed` and the
+`0.1.0-dev.b00dc79562b9` from the installed `.runtime/sdk-feed` and the
 matched `.runtime/runtime-pack`. Start a clean checkout with the pinned,
 noninteractive pair install; it validates the release checksum, payloads, ABI,
 package version, and Engine source revision before atomically replacing the
