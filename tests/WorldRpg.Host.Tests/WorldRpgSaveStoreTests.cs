@@ -23,7 +23,10 @@ public sealed class WorldRpgSaveStoreTests
         Assert.Equal(first.Revision, loaded.Revision);
         Assert.Equal("test", loaded.State!.Payload.Ruleset.Value);
         Assert.Equal([1, 2, 3], loaded.State.Payload.Bytes.ToArray());
-        Assert.Throws<InvalidOperationException>(() => store.Save("slot", saved, PersistenceRevisionGuard.Exact, first.Revision + 1));
+        PersistenceSaveReceipt conflict = store.Save("slot", saved, PersistenceRevisionGuard.Exact, first.Revision + 1);
+        Assert.Equal(PersistenceSaveOutcome.RevisionConflict, conflict.Outcome);
+        Assert.Equal(first.Revision, conflict.Revision);
+        Assert.Equal(first.Revision, store.Load("slot").Revision);
     }
 
     [Fact]
@@ -176,7 +179,7 @@ public sealed class WorldRpgSaveStoreTests
             bool present = _values.TryGetValue(key, out Entry? existing);
             if ((request.RevisionGuard == PersistenceRevisionGuard.Absent && present)
                 || (request.RevisionGuard == PersistenceRevisionGuard.Exact && (!present || existing!.Revision != request.ExpectedRevision)))
-                throw new InvalidOperationException("The persistence revision guard rejected the save.");
+                return new PersistenceSaveReceipt(PersistenceSaveOutcome.RevisionConflict, existing?.Revision ?? 0, existing?.SchemaVersion ?? 0);
             ulong revision = present ? checked(existing!.Revision + 1) : 1;
             _values[key] = new(request.SchemaVersion, revision, request.Payload.ToArray());
             return new PersistenceSaveReceipt(revision, request.SchemaVersion);
