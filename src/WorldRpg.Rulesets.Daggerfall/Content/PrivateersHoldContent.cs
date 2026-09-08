@@ -254,13 +254,14 @@ internal static class PrivateersHoldContent
                 if (texture.Frames.Count == 0) { diagnostics.Add($"Generated actor mobile '{mobileId}' has no atlas frames."); continue; }
                 Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(actor, "pivot", diagnostics), "actor.pivot", diagnostics);
                 Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(actor, "worldSize", diagnostics), "actor.worldSize", diagnostics);
-                if (size.X <= 0 || size.Y <= 0) diagnostics.Add($"Generated actor mobile '{mobileId}' has a non-positive world size.");
-                IReadOnlyDictionary<string, NormalizedSpriteState> states = ReadActorStates(actor, texture, mobileId, diagnostics);
+                Vector2 sourceSize = GeneratedVector2(DaggerfallBaseContent.Property(actor, "sourceWorldSize", diagnostics), "actor.sourceWorldSize", diagnostics);
+                if (!PositiveFinite(size) || !PositiveFinite(sourceSize)) diagnostics.Add($"Generated actor mobile '{mobileId}' has a non-positive world size.");
+                (IReadOnlyDictionary<string, NormalizedSpriteState> states, IReadOnlyList<NormalizedAtlasFrame> frames) = ReadActorStates(actor, texture, size, sourceSize, mobileId, diagnostics);
                 string? preferredRestState = DaggerfallBaseContent.OptionalText(actor, "preferredRestState", diagnostics);
                 if (preferredRestState is not null && !states.ContainsKey(preferredRestState)) diagnostics.Add($"Generated actor mobile '{mobileId}' preferredRestState '{preferredRestState}' is not a published state.");
                 IReadOnlyList<NormalizedAttackSequence> attacks = ReadAttackSequences(actor, states, mobileId, diagnostics);
                 NormalizedActorSprite? corpse = ReadCorpse(actor, resources, publicationRoot, artifacts, mobileId, diagnostics);
-                if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, texture.Frames, texture.Frames[0].Id, pivot, size)
+                if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, frames, texture.Frames[0].Id, pivot, size)
                 {
                     States = states,
                     PreferredRestState = preferredRestState,
@@ -302,9 +303,10 @@ internal static class PrivateersHoldContent
         };
     }
 
-    private static IReadOnlyDictionary<string, NormalizedSpriteState> ReadActorStates(JsonElement actor, MediaResource texture, int mobileId, DaggerfallContentDiagnostics diagnostics)
+    private static (IReadOnlyDictionary<string, NormalizedSpriteState> States, IReadOnlyList<NormalizedAtlasFrame> Frames) ReadActorStates(JsonElement actor, MediaResource texture, Vector2 worldSize, Vector2 sourceWorldSize, int mobileId, DaggerfallContentDiagnostics diagnostics)
     {
         Dictionary<string, NormalizedSpriteState> result = new(StringComparer.Ordinal);
+        Dictionary<uint, Vector2> displaySizes = [];
         foreach (JsonElement value in DaggerfallBaseContent.Array(actor, "states", diagnostics))
         {
             JsonElement state = DaggerfallBaseContent.Object(value, "actor state", diagnostics);
@@ -322,6 +324,13 @@ internal static class PrivateersHoldContent
                 if (orientation is < 0 or > 7) diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has orientation outside 0..7.");
                 JsonElement atlas = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(frame, "atlasFrame", diagnostics), "actor state atlas frame", diagnostics);
                 uint frameId = checked((uint)DaggerfallBaseContent.Integer(atlas, "frameIndex", diagnostics));
+                Vector2 frameSourceWorldSize = GeneratedVector2(DaggerfallBaseContent.Property(frame, "sourceWorldSize", diagnostics), "actor state frame sourceWorldSize", diagnostics);
+                if (!PositiveFinite(frameSourceWorldSize)) diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has a non-positive frame sourceWorldSize.");
+                Vector2 displaySize = PositiveFinite(worldSize) && PositiveFinite(sourceWorldSize) && PositiveFinite(frameSourceWorldSize)
+                    ? new Vector2(frameSourceWorldSize.X * worldSize.X / sourceWorldSize.X, frameSourceWorldSize.Y * worldSize.Y / sourceWorldSize.Y)
+                    : default;
+                if (!PositiveFinite(displaySize)) diagnostics.Add($"Generated actor mobile '{mobileId}' state '{name}' has an invalid scaled frame display size.");
+                if (!displaySizes.TryAdd(frameId, displaySize)) diagnostics.Add($"Generated actor mobile '{mobileId}' has an ambiguous sourceWorldSize mapping for atlas frame '{frameId}'.");
                 (sectors.TryGetValue(orientation, out List<uint>? sector) ? sector : sectors[orientation] = []).Add(frameId);
             }
             IReadOnlyDictionary<int, IReadOnlyList<uint>> orientations = new ReadOnlyDictionary<int, IReadOnlyList<uint>>(sectors.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<uint>)Array.AsReadOnly(pair.Value.ToArray())));
@@ -337,7 +346,13 @@ internal static class PrivateersHoldContent
             if (!result.TryAdd(name, new NormalizedSpriteState(name, frames, fps, loops) { Orientations = orientations })) diagnostics.Add($"Generated actor mobile '{mobileId}' repeats state '{name}'.");
         }
         if (result.Count == 0) diagnostics.Add($"Generated actor mobile '{mobileId}' has no playable states.");
-        return new ReadOnlyDictionary<string, NormalizedSpriteState>(result);
+        if (displaySizes.Count != texture.Frames.Count || texture.Frames.Any(frame => !displaySizes.ContainsKey(frame.Id)))
+            diagnostics.Add($"Generated actor mobile '{mobileId}' must map every atlas frame to one unambiguous sourceWorldSize.");
+        IReadOnlyList<NormalizedAtlasFrame> normalizedFrames = Array.AsReadOnly(texture.Frames.Select(frame =>
+            displaySizes.TryGetValue(frame.Id, out Vector2 displaySize)
+                ? frame with { DisplaySize = displaySize }
+                : frame).ToArray());
+        return (new ReadOnlyDictionary<string, NormalizedSpriteState>(result), normalizedFrames);
     }
 
     private static IReadOnlyList<NormalizedAttackSequence> ReadAttackSequences(JsonElement actor, IReadOnlyDictionary<string, NormalizedSpriteState> states, int mobileId, DaggerfallContentDiagnostics diagnostics)
@@ -679,6 +694,9 @@ internal static class PrivateersHoldContent
         return new(horizontal, vertical);
     }
 
+    private static bool PositiveFinite(Vector2 value) =>
+        float.IsFinite(value.X) && float.IsFinite(value.Y) && value.X > 0F && value.Y > 0F;
+
     private static ScenarioStart ReadStart(JsonElement value, DaggerfallContentDiagnostics diagnostics)
     {
         WorldPoint position = Point(DaggerfallBaseContent.Property(value, "position", diagnostics), "startingState.position", diagnostics);
@@ -781,7 +799,7 @@ internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look
 internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, bool Visible, RenderLayer Layer);
 internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
 internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256);
-internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height);
+internal sealed record NormalizedAtlasFrame(uint Id, int X, int Y, int Width, int Height, Vector2? DisplaySize = null);
 internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Frames, float FramesPerSecond, bool Loops)
 {
     /// <summary>Ruleset-authored effective playback rate; defaults to the normalized import rate.</summary>

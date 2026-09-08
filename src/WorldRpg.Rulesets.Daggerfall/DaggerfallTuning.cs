@@ -79,7 +79,9 @@ internal sealed record DaggerfallTuning(
                 enemyBehavior.GetProperty("minimumFacingCosine").GetDouble(),
                 enemyBehavior.GetProperty("attackReach").GetDouble(),
                 enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
-                checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32())),
+                checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32()),
+                enemyBehavior.TryGetProperty("spawnGroundProbeLift", out JsonElement lift) ? lift.GetSingle() : Defaults.EnemyBehavior.SpawnGroundProbeLift,
+                enemyBehavior.TryGetProperty("spawnGroundProbeDistance", out JsonElement distance) ? distance.GetDouble() : Defaults.EnemyBehavior.SpawnGroundProbeDistance),
             new DaggerfallLootInteractionTuning(
                 lootInteraction.GetProperty("maximumDistance").GetDouble(),
                 lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),
@@ -118,7 +120,9 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
     double MinimumFacingCosine,
     double AttackReach,
     float ChaseSpeedUnitsPerSecond,
-    uint NavigationMaximumVisited)
+    uint NavigationMaximumVisited,
+    float SpawnGroundProbeLift = .2f,
+    double SpawnGroundProbeDistance = 3d)
 {
     internal DaggerfallEnemyBehaviorTuning Validate()
     {
@@ -126,6 +130,8 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
         if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
         if (!double.IsFinite(AttackReach) || AttackReach <= 0d || AttackReach > DetectionDistance) throw new ArgumentOutOfRangeException(nameof(AttackReach));
         if (!float.IsFinite(ChaseSpeedUnitsPerSecond) || ChaseSpeedUnitsPerSecond <= 0f) throw new ArgumentOutOfRangeException(nameof(ChaseSpeedUnitsPerSecond));
+        if (!float.IsFinite(SpawnGroundProbeLift) || SpawnGroundProbeLift < 0f) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeLift));
+        if (!double.IsFinite(SpawnGroundProbeDistance) || SpawnGroundProbeDistance <= SpawnGroundProbeLift) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeDistance));
         if (NavigationMaximumVisited == 0) throw new ArgumentOutOfRangeException(nameof(NavigationMaximumVisited));
         return this;
     }

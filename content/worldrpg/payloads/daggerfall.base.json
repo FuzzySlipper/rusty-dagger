@@ -135,6 +135,7 @@
     },
     {
       "id": "thief",
+      "groundOnSpawn": true,
       "kind": "enemy-class",
       "attributes": {
         "strength": 45,
@@ -174,6 +175,7 @@
     },
     {
       "id": "archer",
+      "groundOnSpawn": true,
       "kind": "enemy-class",
       "attributes": {
         "strength": 55,
@@ -212,6 +214,7 @@
     },
     {
       "id": "rat",
+      "groundOnSpawn": true,
       "kind": "monster",
       "attributes": {
         "strength": 40,
@@ -562,6 +565,7 @@
     },
     {
       "id": "orc",
+      "groundOnSpawn": true,
       "kind": "monster",
       "attributes": {
         "strength": 90,
@@ -939,6 +943,7 @@
     },
     {
       "id": "skeletal-warrior",
+      "groundOnSpawn": true,
       "kind": "monster",
       "attributes": {
         "strength": 50,

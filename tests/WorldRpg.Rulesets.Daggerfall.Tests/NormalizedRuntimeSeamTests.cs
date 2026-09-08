@@ -29,6 +29,33 @@ public sealed class NormalizedRuntimeSeamTests
     private static readonly ContentSha256 Hash = new(1, 2, 3, 4);
 
     [Fact]
+    public void Grounded_spawns_use_engine_floor_hits_while_flying_markers_keep_their_height()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        spatial.FloorHit = request => new SpatialHit { Present = true, Point = request.Origin - Vector3.UnitY, Normal = Vector3.UnitY };
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        foreach (AuthoredActor source in inputs.Project.Actors.Values)
+        {
+            WorldPoint actual = session.State.Actors.All[source.EntityId].Position;
+            bool grounded = definitions.Actors[source.ActorId].GroundOnSpawn;
+            Assert.Equal(source.Position.Y + (grounded ? DaggerfallTuning.Defaults.EnemyBehavior.SpawnGroundProbeLift - 1f : 0f), actual.Y, precision: 4);
+            Assert.Equal(source.Position.X, actual.X);
+            Assert.Equal(source.Position.Z, actual.Z);
+        }
+        Assert.Equal(inputs.Project.Actors.Values.Count(actor => definitions.Actors[actor.ActorId].GroundOnSpawn), spatial.FloorProbes.Count);
+        Assert.All(spatial.FloorProbes, request => Assert.Equal(-Vector3.UnitY, request.Direction));
+    }
+
+    [Fact]
     public void Every_authored_enemy_has_a_live_appearance_at_its_world_position()
     {
         string root = RepositoryRoot();
@@ -691,13 +718,22 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Actor_atlas_frames_do_not_override_normalized_world_geometry()
+    public void Actor_atlas_frames_preserve_normalized_per_crop_world_geometry()
     {
         List<string> releases = [];
         AppearanceFake appearance = new(releases);
-        using PrivateersHoldAppearance presentation = new(MediaContent(releases), appearance, MediaInputs());
+        IReadOnlyList<NormalizedAtlasFrame> crops =
+        [
+            new NormalizedAtlasFrame(0, 0, 0, 4, 8, new Vector2(1.5F, 3F)),
+            new NormalizedAtlasFrame(1, 4, 0, 6, 12, new Vector2(2.25F, 4.5F)),
+            new NormalizedAtlasFrame(2, 10, 0, 10, 5, new Vector2(3.75F, 1.875F)),
+            new NormalizedAtlasFrame(3, 20, 0, 12, 16, new Vector2(4.5F, 6F)),
+        ];
+        using PrivateersHoldAppearance presentation = new(MediaContent(releases), appearance, MediaInputs(actorFrames: crops));
 
-        Assert.All(appearance.AtlasRequests.Single().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
+        SpriteAtlasFrame[] frames = appearance.AtlasRequests.Single().Frames.Span.ToArray();
+        Assert.All(frames, frame => Assert.True(frame.HasSize));
+        Assert.Equal(crops.Select(crop => crop.DisplaySize), frames.Select(frame => (Vector2?)frame.Size));
         Assert.Equal(Vector2.One, appearance.SpriteRequests.Single().Size);
     }
 
@@ -1700,7 +1736,7 @@ public sealed class NormalizedRuntimeSeamTests
         return content;
     }
 
-    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null)
+    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -1725,7 +1761,7 @@ public sealed class NormalizedRuntimeSeamTests
         };
         if (preferredRestState is not null && !states.ContainsKey(preferredRestState)) states.Add(preferredRestState, new(preferredRestState, [0], 10F, true));
         NormalizedActorSprite sprite = new("sprite/enemy.png", Hash, 32, 32,
-            [new NormalizedAtlasFrame(0, 0, 0, 8, 8), new NormalizedAtlasFrame(1, 8, 0, 8, 8), new NormalizedAtlasFrame(2, 16, 0, 8, 8), new NormalizedAtlasFrame(3, 24, 0, 8, 8)],
+            actorFrames ?? [new NormalizedAtlasFrame(0, 0, 0, 8, 8), new NormalizedAtlasFrame(1, 8, 0, 8, 8), new NormalizedAtlasFrame(2, 16, 0, 8, 8), new NormalizedAtlasFrame(3, 24, 0, 8, 8)],
             0, new Vector2(.5F, 0F), Vector2.One)
         {
             States = states,
@@ -1886,6 +1922,9 @@ public sealed class NormalizedRuntimeSeamTests
 
     private class SpatialFake : DispatchProxy
     {
+        internal Func<SpatialRaycastRequest, SpatialHit> FloorHit { get; set; } = _ => default;
+        internal List<SpatialRaycastRequest> FloorProbes { get; } = [];
+        private SpatialHit ProbeFloor(SpatialRaycastRequest request) { FloorProbes.Add(request); return FloorHit(request); }
         private ContentSha256 hash = Hash;
         private List<string> releases = null!;
         internal ISpatialService Service { get; private set; } = null!;
@@ -1928,6 +1967,7 @@ public sealed class NormalizedRuntimeSeamTests
         {
             nameof(ISpatialService.CreateSession) => CreateSession(),
             nameof(ISpatialService.DefaultCharacterControllerConfig) => RepresentativeValidConfig,
+            nameof(ISpatialService.CastRay) => ProbeFloor((SpatialRaycastRequest)arguments![0]!),
             nameof(ISpatialService.ValidateCharacterControllerConfig) => ValidateConfig((CharacterControllerConfig)arguments![0]!),
             nameof(ISpatialService.ValidateCharacterControllerCommand) => ValidateCommand((CharacterControllerValidationRequest)arguments![0]!),
             nameof(ISpatialService.ReplaceContentArtifact) => Replace((SpatialContentArtifactReplaceRequest)arguments![0]!),
