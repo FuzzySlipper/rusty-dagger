@@ -36,6 +36,8 @@
     <RustyEngineProductInputIntent Include="move.right" Value="digital" />
     <RustyEngineProductInputIntent Include="dagger.ui" Value="payload:dagger.ui.action.v1" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
+    <RustyEngineProductInputMapping Include="attack.primary" Intent="attack" Trigger="pointer-button:primary:pressed" />
+    <RustyEngineProductInputMapping Include="attack.key-v" Intent="attack" Trigger="key:key-v:pressed" />
     <RustyEngineProductInputIntent Include="interact" Value="digital" />
     <RustyEngineProductInputMapping Include="interact.key-f" Intent="interact" Trigger="key:key-f:pressed" />
     <RustyEngineProductInputMapping Include="move.forward.key-w" Intent="move.forward" Trigger="key:key-w:held" />

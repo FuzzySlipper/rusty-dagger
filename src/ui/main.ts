@@ -87,15 +87,13 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <section class="dagger-tools" hidden><p>Sprite Workbench is a separate authoring application. Start it from the repository terminal:</p><pre>bash src/scripts/run-sprite-workbench.sh</pre><p>Edits save to authoring/sprites/privateers-hold.json.</p><a class="dagger-workbench-link" target="_blank" rel="noopener">Open Sprite Workbench ↗</a></section>
       <button data-action="back">Back to menu</button>
       </div>
-    </dialog>
-    <button class="dagger-attack" type="button">Attack</button>`;
+    </dialog>`;
   root.append(shell);
 
   const title = shell.querySelector<HTMLElement>('.dagger-title strong')!;
   const outcome = shell.querySelector<HTMLParagraphElement>('.dagger-outcome')!;
   const vitals = shell.querySelector<HTMLElement>('.dagger-vitals')!;
   const composition = shell.querySelector<HTMLDListElement>('.dagger-composition dl')!;
-  const attack = shell.querySelector<HTMLButtonElement>('.dagger-attack')!;
   const claim = (action: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action },
   });
@@ -116,7 +114,6 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'loot-close', container: currentLoot.container },
     });
   };
-  const onAttack = (): void => { if (!menu.open) claim('attack'); };
   const menu = shell.querySelector<HTMLDialogElement>('dialog')!;
   const menuTitle = shell.querySelector<HTMLElement>('#dagger-menu-title')!;
   const home = shell.querySelector<HTMLElement>('.dagger-menu-home')!;
@@ -245,7 +242,6 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   menu.addEventListener('click', onMenuClick);
   menuToggle.addEventListener('click', openMenu);
   document.addEventListener('keydown', onKeyDown, true);
-  attack.addEventListener('click', onAttack);
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
@@ -282,7 +278,6 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     menu.removeEventListener('click', onMenuClick);
     menuToggle.removeEventListener('click', openMenu);
     if (menu.open) menu.close();
-    attack.removeEventListener('click', onAttack);
     stylesheet.remove();
     inventoryStylesheet.remove();
     characterStylesheet.remove();
