@@ -124,14 +124,30 @@ Engine contributors may use `rusty dev --engine-source /absolute/rusty-engine`.
 That explicit opt-in supplies source references and a source runtime pack;
 normal downstream builds never discover an adjacent checkout.
 
-`WorldRpg.SpriteWorkbench` remains a package-backed product tool. Its launcher
-stages its operator-selected publication into ignored workbench content, then
-runs the same `rusty dev` workflow; it no longer assembles a browser host or
-calls Cargo directly. Launch it with an existing writable authoring directory:
+`WorldRpg.SpriteWorkbench` is a separate package-backed authoring product. The
+**Sprite animation tool** menu entry gives its launch command and opens port 4175:
+
+```sh
+bash src/scripts/run-sprite-workbench.sh
+```
+
+The default uses Privateer's Hold and saves to `authoring/sprites/privateers-hold.json`.
+To select another publication, writable authoring root, overlay, or port:
 
 ```sh
 bash src/scripts/run-sprite-workbench.sh content/worldrpg/imports/privateers-hold /absolute/authoring-directory sprites/privateers-hold.json 4175
 ```
+
+The tool shows the Engine preview alongside atlas/frame inspection, a draggable
+pivot, directional review, frame rectangles, and resource/per-animation timing.
+Apply updates the preview; Save persists the typed overlay; Discard restores the
+saved preview. Reopening applies saved edits. Import regeneration consumes them
+with `--sprite-authoring authoring --sprite-overlay sprites/privateers-hold.json`
+on the existing import `write` command; generated media stays separate from authored files.
+
+The **Engine debug console** menu entry mounts the upstream console. Start the
+host with `--live-debug` (the repository development service already does).
+Escape closes the console to the menu, then returns to gameplay.
 
 In the game, **Escape** opens the menu; Escape in a submenu returns to the menu
 before returning to play. The menu releases gameplay controls but does not pause

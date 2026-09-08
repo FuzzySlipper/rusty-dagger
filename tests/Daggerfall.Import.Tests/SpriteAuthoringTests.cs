@@ -46,7 +46,7 @@ public sealed class SpriteAuthoringTests
     }
 
     [Fact]
-    public void RejectsStaleUnknownAndGeneratedLayoutOverlayInput()
+    public void RejectsStaleUnknownAndInvalidAuthoredSpriteOverlayInput()
     {
         Fixture fixture = CreateFixture();
         SpriteInspectionCatalog catalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
@@ -63,6 +63,12 @@ public sealed class SpriteAuthoringTests
             new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, digest, [new("sprite.actor", Sequence: [8])]), catalog, digest));
         Assert.Throws<FormatException>(() => SpriteAuthoredOverlayStore.Validate(
             new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, digest, [new("sprite.weapon", FramesPerSecond: 7F)]), catalog, digest));
+        Assert.Throws<FormatException>(() => SpriteAuthoredOverlayStore.Validate(
+            new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, digest, [new("sprite.actor", FrameRects: [new(0, 99, 0, 1, 1)])]), catalog, digest));
+        Assert.Throws<FormatException>(() => SpriteAuthoredOverlayStore.Validate(
+            new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, digest, [new("sprite.actor", StateTimings: [new("Missing", 7F)])]), catalog, digest));
+        Assert.Throws<FormatException>(() => SpriteAuthoredOverlayStore.Validate(
+            new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, digest, [new("sprite.actor", ActionTimings: [new("primary-attack-source", 7F)])]), catalog, digest));
         Assert.Throws<ArgumentOutOfRangeException>(() => SpriteAuthoredOverlayStore.Validate(
             new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, digest, [new("sprite.actor", DisplaySize: new(float.NaN, 1F))]), catalog, digest));
     }
@@ -136,6 +142,35 @@ public sealed class SpriteAuthoringTests
     }
 
     [Fact]
+    public void PreservesFrameAndPlaybackEditsAcrossAuthoringBasisValidation()
+    {
+        Fixture fixture = CreateFixture();
+        SpriteInspectionCatalog catalog = SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, fixture.Classic);
+        ContentDigest basis = SpriteAuthoringBasis.Compute(fixture.Manifest, catalog);
+        SpriteAuthoredOverlay overlay = new(
+            "sprite.actor",
+            FrameRects: [new(0, 1, 0, 1, 1)],
+            StateTimings: [new("Move", 9F, false)]);
+        SpriteInspectionEntry applied = SpriteAuthoredOverlayApplicator.Apply(catalog.Require(overlay.Id), overlay);
+        SpriteInspectionCatalog reopened = catalog with
+        {
+            Entries = catalog.Entries.Select(entry => entry.Id == overlay.Id ? applied : entry).ToArray(),
+        };
+        SpriteAuthoredOverlayDocument document = new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, basis, [overlay]);
+
+        Assert.Equal(1, applied.Frames[0].X);
+        Assert.Equal(1, applied.Frames[0].Width);
+        Assert.Equal(9F, Assert.Single(applied.States).FramesPerSecond);
+        Assert.False(Assert.Single(applied.States).Loops);
+        SpriteInspectionAction sourceOnlyAttack = Assert.Single(applied.Actions);
+        Assert.Null(sourceOnlyAttack.FramesPerSecond);
+        Assert.Null(sourceOnlyAttack.Loops);
+        ContentDigest reopenedBasis = SpriteAuthoringBasis.Compute(fixture.Manifest, reopened);
+        Assert.Equal(basis, reopenedBasis);
+        SpriteAuthoredOverlayStore.Validate(document, reopened, reopenedBasis);
+    }
+
+    [Fact]
     public void IncludesClassicSourceRecordsAndWeaponRangesInAuthoringBasis()
     {
         Fixture fixture = CreateFixture();
@@ -169,7 +204,8 @@ public sealed class SpriteAuthoringTests
         SpriteAuthoredOverlayDocument document = new(
             SpriteAuthoredOverlayDocument.CurrentSchemaVersion,
             digest,
-            [new("sprite.actor", DisplayName: "Rat", Pivot: new(0.5F, 0F), FramesPerSecond: 5F, Loop: true, Sequence: [0, 1])]);
+            [new("sprite.actor", DisplayName: "Rat", Pivot: new(0.5F, 0F), FramesPerSecond: 5F, Loop: true, Sequence: [0, 1],
+                FrameRects: [new(0, 1, 0, 1, 1)], StateTimings: [new("Move", 7F, false)])]);
         string generatedRoot = Path.Combine(Path.GetTempPath(), $"sprite-generated-{Guid.NewGuid():N}");
         string authoringRoot = Path.Combine(Path.GetTempPath(), $"sprite-authoring-{Guid.NewGuid():N}");
         try
@@ -188,6 +224,11 @@ public sealed class SpriteAuthoringTests
             Assert.Equal(expected.FramesPerSecond, actual.FramesPerSecond);
             Assert.Equal(expected.Loop, actual.Loop);
             Assert.Equal(expected.Sequence, actual.Sequence);
+            Assert.Equal(expected.FrameRects, actual.FrameRects);
+            Assert.Equal(expected.StateTimings, actual.StateTimings);
+            AuthoredMediaOverlay regeneratedInput = Assert.Single(SpriteAuthoredOverlayStore.ToMediaOverlays(read, catalog, digest));
+            Assert.Equal(expected.FrameRects?.Select(rect => new AuthoredMediaFrameRect(rect.FrameIndex, rect.X, rect.Y, rect.Width, rect.Height)), regeneratedInput.FrameRects);
+            Assert.Equal(expected.StateTimings?.Select(timing => new AuthoredMediaStateTiming(timing.Name, timing.FramesPerSecond, timing.Loop)), regeneratedInput.StateTimings);
 
             Assert.False(File.Exists(Path.Combine(generatedRoot, "sprites", "sprite-overlays.json")));
             Assert.Throws<ArgumentException>(() => SpriteAuthoredOverlayStore.Write(generatedRoot, generatedRoot, "sprites/sprite-overlays.json", document, catalog, digest));

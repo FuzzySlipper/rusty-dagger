@@ -35,6 +35,11 @@
 
   <Target Name="BuildSpriteWorkbenchProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
     <MakeDir Directories="$(RustyEngineProductUiRoot)" />
+    <ItemGroup>
+      <WorkbenchAtlas Include="$(RustyEngineProductContentRoot)/**/*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WorkbenchAtlas)" DestinationFiles="@(WorkbenchAtlas->'$(RustyEngineProductUiRoot)/atlas/%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="../sprite-ui/workbench.css" DestinationFolder="$(RustyEngineProductUiRoot)" Condition="Exists('../sprite-ui/workbench.css')" />
     <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --project &quot;$(MSBuildThisFileDirectory)../sprite-ui/tsconfig.json&quot; --noEmit false --outDir &quot;$(RustyEngineProductUiRoot)&quot;" />
   </Target>
 </Project>

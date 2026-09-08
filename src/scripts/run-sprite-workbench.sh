@@ -31,4 +31,5 @@ node -e 'const fs = require("node:fs"); fs.writeFileSync(process.argv[1], JSON.s
 exec "$runtime_pack/bin/rusty" dev \
   --project "$repo_root/src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj" \
   --runtime "$runtime_pack" \
+  --bind-host "${RUSTY_WORKBENCH_BIND_HOST:-0.0.0.0}" \
   --port "$port"

@@ -203,7 +203,7 @@ public sealed class SpriteWorkbenchProductTests
         Assert.Equal(selectedHandle, selected.Appearance.Handle);
         Assert.Equal(RenderLayer.Viewmodel, selected.Layer);
         Assert.True(selected.Visible);
-        Assert.Equal(new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), selected.Transform);
+        Assert.Equal(new Transform(new Vector3(0, 0, -4), Quaternion.Identity, Vector3.One), selected.Transform);
         Assert.Equal(appearancesBeforeSelection, harness.Appearance.CreatedAppearances);
 
         harness.Send("step", id: "sprite.actor");
@@ -333,6 +333,35 @@ public sealed class SpriteWorkbenchProductTests
         SpriteAuthoredOverlay overlay = Assert.Single(saved.Overlays);
         Assert.Equal("Merged name", overlay.DisplayName);
         Assert.Equal(new NormalizedVector2(2F, 3F), overlay.DisplaySize);
+    }
+
+    [Fact]
+    public void Visual_edits_replace_the_engine_preview_and_saved_values_are_applied_on_reopen()
+    {
+        SpriteAuthoredOverlay saved;
+        using (Harness harness = Harness.Create())
+        {
+            harness.Send("select", id: "sprite.actor", sequence: "state:Move@0");
+            harness.SendRaw("""{"action":"edit-pivot","id":"sprite.actor","pivotX":0.25,"pivotY":0.75}""");
+            Assert.Equal(new Vector2(.25F, .75F), harness.Appearance.SpriteRequests.Last().Pivot);
+            harness.SendRaw("""{"action":"edit-timing","id":"sprite.actor","sequence":"state:Move@0","framesPerSecond":3,"loop":false}""");
+            Assert.Equal(3, ValueReader.NumberField(harness.Ui.LastProjection.Value, "selected", "states", 0, "fps"));
+            SpriteInspectionFrame frame = harness.Publication.Catalog.Require("sprite.actor").Frames[0];
+            int editedWidth = Math.Max(1, frame.Width - 1);
+            harness.SendRaw(JsonSerializer.Serialize(new { action = "edit-frame", id = "sprite.actor", frameId = frame.FrameIndex,
+                frameX = frame.X, frameY = frame.Y, frameWidth = editedWidth, frameHeight = frame.Height }));
+            Assert.Equal(editedWidth, ValueReader.NumberField(harness.Ui.LastProjection.Value, "selected", "frames", 0, "width"));
+            harness.Send("save", id: "sprite.actor");
+            saved = Assert.Single(SpriteAuthoredOverlayStore.Read(File.ReadAllBytes(harness.OverlayPath)).Overlays);
+            harness.SendRaw("""{"action":"edit-pivot","id":"sprite.actor","pivotX":0.9,"pivotY":0.1}""");
+            harness.Send("discard", id: "sprite.actor");
+            Assert.Equal(new Vector2(.25F, .75F), harness.Appearance.SpriteRequests.Last().Pivot);
+        }
+        using Harness reopened = Harness.Create(saved);
+        reopened.Send("select", id: "sprite.actor", sequence: "state:Move@0");
+        Assert.Equal(new Vector2(.25F, .75F), reopened.Appearance.SpriteRequests.First().Pivot);
+        Assert.Equal(saved.FrameRects![0].Width, ValueReader.NumberField(reopened.Ui.LastProjection.Value, "selected", "frames", 0, "width"));
+        Assert.Equal(3, ValueReader.NumberField(reopened.Ui.LastProjection.Value, "selected", "states", 0, "fps"));
     }
 
     [Fact]

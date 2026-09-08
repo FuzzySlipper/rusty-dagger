@@ -143,6 +143,28 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
+    public void ReappliesPerFrameAndPerStateAuthoredOverlayDuringDungeonRegeneration()
+    {
+        Arena2DungeonMediaPublication baseline = Arena2DungeonMediaPublication.Create(CreateRequest());
+        DungeonActorSpriteMedia baselineActor = Assert.Single(baseline.Actors);
+        AuthoredMediaOverlay overlay = new(
+            baselineActor.SpriteResourceId,
+            true,
+            FrameRects: [new(0, 0, 0, 1, 1)],
+            StateTimings: [new(DungeonActorSpriteState.Move.ToString(), 11F, false)]);
+
+        Arena2DungeonMediaPublication regenerated = Arena2DungeonMediaPublication.Create(CreateRequest() with { AuthoredOverlays = [overlay] });
+        DungeonActorSpriteMedia actor = Assert.Single(regenerated.Actors);
+
+        Assert.Equal(1, actor.Descriptor.Frames[0].Width);
+        Assert.Equal(1, actor.States.SelectMany(state => state.Frames).Single(frame => frame.AtlasFrameIndex == 0).AtlasFrame.Width);
+        DungeonActorSpriteStateLayout move = actor.States.Single(state => state.State == DungeonActorSpriteState.Move);
+        Assert.Equal(11F, move.Playback.FramesPerSecond);
+        Assert.False(move.Playback.Loops);
+        Assert.Equal(baselineActor.States.Single(state => state.State == DungeonActorSpriteState.Move).SourcePlayback, move.SourcePlayback);
+    }
+
+    [Fact]
     public void RejectsSourceClosureMalformedArchivesAndAtlasQuotaOverflow()
     {
         Arena2DungeonMediaSource[] sources = CreateSources();

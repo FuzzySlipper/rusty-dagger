@@ -108,6 +108,25 @@ public sealed class Arena2ClassicMediaPublicationTests
     }
 
     [Fact]
+    public void ReappliesPerActionTimingOverlayWithoutChangingOtherClassicActions()
+    {
+        Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(CreateInputs());
+        string weaponId = baseline.MediaManifest.Resources.Single(resource => resource.Kind == NormalizedMediaKind.WeaponSprite).Id;
+        ClassicWeaponActionManifest baselineStrike = baseline.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown);
+
+        Arena2ClassicMediaPublication regenerated = Arena2ClassicMediaPublication.Create(CreateInputs(), new Arena2ClassicMediaProfile(AuthoredOverlays:
+        [
+            new AuthoredMediaOverlay(weaponId, true, ActionTimings: [new(ClassicDaggerWeaponAction.Idle.ToString(), 7F, false)]),
+        ]));
+
+        ClassicWeaponActionManifest idle = regenerated.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
+        ClassicWeaponActionManifest strike = regenerated.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown);
+        Assert.Equal(7F, idle.Timing.FramesPerSecond);
+        Assert.False(idle.Timing.Loop);
+        Assert.Equal(baselineStrike.Timing, strike.Timing);
+    }
+
+    [Fact]
     public void RejectsUnownedExternalClassicOverlayAndResourceWideWeaponTiming()
     {
         Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(CreateInputs());
