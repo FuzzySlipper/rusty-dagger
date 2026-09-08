@@ -3,7 +3,7 @@
     <!-- This repository consumes one complete, verified Engine release pair.
          scripts/install-engine-pair.sh verifies these identities before it
          atomically installs .runtime/sdk-feed and .runtime/runtime-pack. -->
-    <RustyEnginePackageVersion>0.1.0-dev.8058772cbad2</RustyEnginePackageVersion>
-    <RustyEnginePairSourceRevision>8058772cbad2cf0125df43e85ec6436681b49180</RustyEnginePairSourceRevision>
+    <RustyEnginePackageVersion>0.1.0-dev.11eb8178488c</RustyEnginePackageVersion>
+    <RustyEnginePairSourceRevision>11eb8178488cfd16ac1ee04735a83241daea7333</RustyEnginePairSourceRevision>
   </PropertyGroup>
 </Project>
