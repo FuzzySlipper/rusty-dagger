@@ -50,6 +50,28 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Fact]
+    public void ArcherRetainsItsDistinctClassicClassCareerIdentity()
+    {
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+
+        // Daggerfall Unity loads class enemy 141 from CLASS13.CFG; its EnemyBasics record assigns KnightsAndMages and loot C.
+        DaggerfallActorDefinition archer = definitions.RequireActor(new DaggerfallActorId("archer"));
+        Assert.Equal("enemy-class", archer.Kind);
+        Assert.Equal(141, archer.MobileId);
+        Assert.Equal((11, 30), (archer.Health.Minimum, archer.Health.Maximum));
+        Assert.Equal("knights-and-mages", archer.Team);
+        Assert.Equal("C", archer.LootTableKey);
+        Assert.Null(archer.ActionId);
+        Assert.Empty(archer.Attacks);
+        Assert.Equal(55, archer.Stats[DaggerfallMechanicsIds.Strength]);
+        Assert.Equal(43, archer.Stats[DaggerfallMechanicsIds.Intelligence]);
+        Assert.Equal(60, archer.Stats[DaggerfallMechanicsIds.Agility]);
+        Assert.Equal(35, archer.Stats[new DaggerfallStatId("archery")]);
+        Assert.Equal(35, archer.Stats[DaggerfallMechanicsIds.HandToHand]);
+        Assert.Equal(35, archer.Stats[DaggerfallMechanicsIds.Dodging]);
+    }
+
+    [Fact]
     public void LootTablesMatchTheCompleteClassicDonorMatrix()
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));

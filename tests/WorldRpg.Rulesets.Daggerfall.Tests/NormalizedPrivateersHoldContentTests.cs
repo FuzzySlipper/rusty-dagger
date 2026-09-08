@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
@@ -7,6 +8,31 @@ namespace WorldRpg.Rulesets.Daggerfall.Tests;
 
 public sealed class NormalizedPrivateersHoldContentTests
 {
+    [Fact]
+    public void Every_extracted_fixed_enemy_is_present_with_its_original_mobile_and_position()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        using JsonDocument extracted = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/normalized.json")));
+
+        // Compare against independent import output: the migration's rat/skeleton-only
+        // payload passed media validation while silently omitting other fixed enemies.
+        foreach (JsonElement actor in extracted.RootElement.GetProperty("world").GetProperty("actors").EnumerateArray())
+        {
+            JsonElement position = actor.GetProperty("position");
+            var placement = Assert.Single(inputs.Project.Actors.Values, value =>
+                value.Position.X == position.GetProperty("x").GetSingle()
+                && value.Position.Y == position.GetProperty("y").GetSingle()
+                && value.Position.Z == position.GetProperty("z").GetSingle());
+            Assert.Equal($"actor/mobile-{definitions.Actors[placement.ActorId].MobileId}", actor.GetProperty("actorResourceId").GetString());
+            Assert.True(inputs.ActorSprites.ContainsKey(placement.EntityId));
+        }
+        Assert.Equal("imp", inputs.Project.Actors[2009].ActorId.Value);
+        Assert.Equal("giant-bat", inputs.Project.Actors[2006].ActorId.Value);
+    }
+
     [Fact]
     public void ReadsTheGeneratedClosureWithoutSourceShapedSpatialOrSpriteFields()
     {
