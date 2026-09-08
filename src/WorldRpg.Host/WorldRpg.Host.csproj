@@ -21,7 +21,7 @@
     <RustyEngineProductLifecycleMode>realtime</RustyEngineProductLifecycleMode>
     <RustyEngineProductFixedStepHz>60</RustyEngineProductFixedStepHz>
     <RustyEngineProductFixedStepMaxCatchUpSteps>4</RustyEngineProductFixedStepMaxCatchUpSteps>
-    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
+    <RustyEngineWatchPaths>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Kit'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../WorldRpg.Rulesets.Daggerfall'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../ui'));$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../content'))</RustyEngineWatchPaths>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,6 +34,7 @@
     <RustyEngineProductInputIntent Include="move.left" Value="digital" />
     <RustyEngineProductInputIntent Include="move.backward" Value="digital" />
     <RustyEngineProductInputIntent Include="move.right" Value="digital" />
+    <RustyEngineProductInputIntent Include="dagger.ui" Value="payload:dagger.ui.action.v1" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
     <RustyEngineProductInputMapping Include="move.forward.key-w" Intent="move.forward" Trigger="key:key-w:held" />
     <RustyEngineProductInputMapping Include="move.left.key-a" Intent="move.left" Trigger="key:key-a:held" />
@@ -46,6 +47,14 @@
   <Target Name="BuildWorldRpgProductUi" BeforeTargets="GenerateRustyEngineProductComposition">
     <MakeDir Directories="$(RustyEngineProductUiRoot)" />
     <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(MSBuildThisFileDirectory)../ui/main.ts&quot;" />
+    <ItemGroup>
+      <!-- Static DOM artwork; Engine still owns world resources and rendering. -->
+      <InventoryUiArt Include="$(MSBuildThisFileDirectory)../../content/worldrpg/imports/privateers-hold/media/ui/inventory-icons/*.png" />
+      <InventoryUiSkin Include="$(MSBuildThisFileDirectory)../../content/worldrpg/imports/privateers-hold/media/ui/authored/*.png" />
+    </ItemGroup>
+    <Copy SourceFiles="@(InventoryUiArt)" DestinationFolder="$(RustyEngineProductUiRoot)/inventory-art/inventory-icons" />
+    <Copy SourceFiles="@(InventoryUiSkin)" DestinationFolder="$(RustyEngineProductUiRoot)/inventory-art/authored" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../ui/inventory.css" DestinationFolder="$(RustyEngineProductUiRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)../ui/styles.css" DestinationFolder="$(RustyEngineProductUiRoot)" />
   </Target>
 </Project>

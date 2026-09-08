@@ -1,0 +1,85 @@
+.dagger-inventory {
+  --inventory-panel-art: none;
+  --inventory-title-art: none;
+  --inventory-slot-art: none;
+  color: #f4e6bd;
+  background: #171813 var(--inventory-panel-art) center / 100% 100% no-repeat;
+  border: 1px solid #c5a45e;
+  box-shadow: 0 12px 32px rgb(0 0 0 / .65), inset 0 0 0 2px rgb(22 18 10 / .65);
+  font: .82rem Georgia, serif;
+  max-width: min(66rem, calc(100vw - 48px));
+  min-width: min(48rem, calc(100vw - 48px));
+  padding: 13px;
+}
+
+.dagger-inventory-title {
+  background: #302718 var(--inventory-title-art) center / 100% 100% no-repeat;
+  border: 1px solid #c5a45e;
+  color: #f8e7b4;
+  font-size: 1.12rem;
+  letter-spacing: .055em;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  text-align: center;
+  text-shadow: 1px 1px 0 #000;
+  text-transform: uppercase;
+}
+
+.dagger-inventory-body { display: grid; gap: 14px; grid-template-columns: minmax(21rem, 1.3fr) minmax(12rem, .8fr) minmax(14rem, .9fr); }
+.dagger-inventory h3 { color: #e4c676; font: 700 .7rem ui-monospace, monospace; letter-spacing: .09em; margin: 0 0 7px; text-transform: uppercase; }
+.dagger-inventory-grid { display: grid; gap: 4px; grid-template-columns: repeat(10, minmax(0, 1fr)); }
+.dagger-inventory-overflow-title { margin-top: 12px !important; }
+.dagger-inventory-overflow { display: grid; gap: 4px; list-style: none; margin: 0; max-height: 8rem; overflow-y: auto; padding: 0 3px 0 0; }
+.dagger-inventory-overflow-item { align-items: center; background: rgb(20 21 16 / .83); border: 1px solid #7d6c45; color: #f4e6bd; cursor: grab; display: grid; gap: 2px 7px; grid-template-columns: 2rem minmax(0, 1fr) auto; padding: 4px 6px; text-align: left; width: 100%; }
+.dagger-inventory-overflow-item:hover, .dagger-inventory-overflow-item.is-selected { border-color: #f7db80; box-shadow: inset 0 0 0 1px #c5a45e; }
+.dagger-inventory-overflow-item:focus-visible { outline: 2px solid #fff0a7; outline-offset: 2px; }
+.dagger-inventory-overflow-item img { grid-row: 1 / span 2; image-rendering: pixelated; max-height: 28px; max-width: 28px; object-fit: contain; pointer-events: none; }
+.dagger-inventory-overflow-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dagger-inventory-overflow-item > span { color: #e6cc84; font: 700 .68rem ui-monospace, monospace; }
+.dagger-inventory-overflow-item small { color: #c3b48b; font: .67rem Georgia, serif; grid-column: 2 / -1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dagger-inventory-grid-slot, .dagger-inventory-equipment-slot {
+  align-items: center;
+  background: #25261f var(--inventory-slot-art) center / 100% 100% no-repeat;
+  border: 1px solid #897445;
+  color: #f4e6bd;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  min-height: 43px;
+  padding: 2px;
+  position: relative;
+}
+.dagger-inventory-grid-slot img, .dagger-inventory-equipment-slot img { image-rendering: pixelated; max-height: 36px; max-width: 90%; object-fit: contain; pointer-events: none; }
+.dagger-inventory-grid-slot[draggable="true"], .dagger-inventory-equipment-slot[draggable="true"] { cursor: grab; }
+.dagger-inventory-grid-slot.is-drop-target, .dagger-inventory-equipment-slot.is-drop-target { border-color: #ffe99a; box-shadow: inset 0 0 0 2px #d6ac4e; }
+.dagger-inventory-grid-slot.is-selected, .dagger-inventory-equipment-slot.is-selected { outline: 2px solid #f7db80; outline-offset: -3px; }
+.dagger-inventory-grid-slot:focus-visible, .dagger-inventory-equipment-slot:focus-visible, .dagger-inventory-keyboard-actions button:focus-visible, .dagger-inventory-keyboard-actions select:focus-visible { outline: 2px solid #fff0a7; outline-offset: 2px; }
+.dagger-inventory-fallback-label { font: 700 .55rem ui-monospace, monospace; line-height: 1.1; max-width: 100%; overflow-wrap: anywhere; text-align: center; text-shadow: 1px 1px #000; }
+.dagger-inventory-quantity { background: rgb(13 12 8 / .82); bottom: 2px; color: #fff1c0; font: 700 .65rem ui-monospace, monospace; line-height: 1; padding: 2px 3px; position: absolute; right: 2px; text-shadow: 1px 1px #000; }
+.dagger-inventory-empty-mark { border: 1px solid rgb(216 187 107 / .18); height: 42%; transform: rotate(45deg); width: 42%; }
+
+.dagger-inventory-equipment { display: grid; gap: 4px; grid-template-columns: repeat(5, minmax(0, 1fr)); max-height: 22rem; overflow-y: auto; padding-right: 3px; }
+.dagger-inventory-equipment-slot { min-height: 54px; padding-top: 14px; }
+.dagger-inventory-equipment-slot img { max-height: 31px; }
+.dagger-inventory-equipment-label { background: rgb(17 15 9 / .86); color: #edda9a; font: 700 .54rem ui-monospace, monospace; left: 1px; line-height: 1.1; overflow: hidden; padding: 2px; position: absolute; right: 1px; text-align: center; text-overflow: ellipsis; text-transform: uppercase; top: 1px; white-space: nowrap; }
+.dagger-inventory-equipment-slot:disabled { cursor: default; opacity: .55; }
+.dagger-inventory-details { background: rgb(12 13 10 / .74); border: 1px solid #7d6c45; min-height: 13rem; padding: 10px; }
+.dagger-inventory-details > strong { color: #f5df9d; display: block; font-size: 1rem; margin-bottom: 8px; }
+.dagger-inventory-details > p { line-height: 1.35; margin: 7px 0; }
+.dagger-inventory-metadata { color: #c3b48b; font: .68rem ui-monospace, monospace; overflow-wrap: anywhere; }
+.dagger-inventory-keyboard-actions { border-top: 1px solid rgb(197 164 94 / .45); display: grid; gap: 6px; margin-top: 10px; padding-top: 10px; }
+.dagger-inventory-keyboard-actions select, .dagger-inventory-keyboard-actions button { background: #302817; border: 1px solid #a88b4f; color: #f4e6bd; font: .7rem ui-monospace, monospace; min-width: 0; padding: 7px; }
+.dagger-inventory-keyboard-actions button { cursor: pointer; }
+.dagger-inventory-keyboard-actions button:hover:not(:disabled) { background: #594521; }
+.dagger-inventory-keyboard-actions :disabled { cursor: default; opacity: .5; }
+.dagger-inventory-status { border-top: 1px solid rgb(197 164 94 / .45); color: #dfc987; margin: 12px 0 0; min-height: 1.25em; padding: 9px 4px 0; }
+
+@media (max-width: 52rem) {
+  .dagger-inventory { min-width: 0; width: calc(100vw - 32px); }
+  .dagger-inventory-body { grid-template-columns: 1fr 1fr; }
+  .dagger-inventory-details { grid-column: 1 / -1; }
+}
+
+/* Item/slot captions are drag surfaces; selection belongs in the details panel. */
+.dagger-inventory-grid-slot, .dagger-inventory-equipment-slot, .dagger-inventory-overflow-item { user-select: none; }
+.dagger-inventory-grid-slot > *, .dagger-inventory-equipment-slot > *, .dagger-inventory-overflow-item > * { pointer-events: none; }

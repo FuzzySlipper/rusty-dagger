@@ -953,6 +953,9 @@ public sealed class NormalizedRuntimeSeamTests
 
             Assert.All(appearance.AtlasRequests.Last().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
             Assert.Equal(expectedSizes[ordinal], appearance.SpriteRequests.Last().Size);
+            presentation.Publish(actors);
+            Assert.All(appearance.Snapshots.Last(), fact => Assert.InRange(fact.ObjectId, 1UL, (1UL << 53) - 1));
+            Assert.Equal(appearance.Snapshots.Last().Count(), appearance.Snapshots.Last().Select(fact => fact.ObjectId).Distinct().Count());
         }
     }
 
@@ -969,6 +972,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         presentation.Publish(actors);
         AppearanceFact first = Assert.Single(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+        Assert.InRange(first.ObjectId, 2UL, (1UL << 53) - 1);
         Assert.Equal(new Vector3(.2F, -.2F, -.7F), first.Transform.Translation);
         Assert.Equal(Quaternion.Identity, first.Transform.Rotation);
         Assert.All([first.Transform.Translation.X, first.Transform.Translation.Y, first.Transform.Translation.Z], coordinate => Assert.InRange(coordinate, -16F, 16F));
@@ -2115,6 +2119,8 @@ public sealed class NormalizedRuntimeSeamTests
         public Appearance CreatePrimitive(PrimitiveAppearanceRequest request) => CreateAppearance();
         public Appearance ReplacePrimitive(PrimitiveAppearanceReplaceRequest request) => CreateAppearance();
         public Appearance CreateStaticMesh(StaticMeshAppearanceRequest request) => CreateAppearance();
+        public MeshResource CreateMeshResource(MeshResourceCreateRequest request) => throw new NotSupportedException();
+        public Appearance CreateMeshAppearance(MeshResource resource) => throw new NotSupportedException();
         public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();

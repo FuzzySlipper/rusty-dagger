@@ -2804,7 +2804,8 @@
       "id": "left-hand",
       "allowedClassifications": [
         "weapon-one-hand",
-        "shield"
+        "shield",
+        "weapon-two-hand"
       ]
     },
     {

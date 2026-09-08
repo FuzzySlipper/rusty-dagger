@@ -462,7 +462,16 @@ internal static class PrivateersHoldContent
             catch (InvalidOperationException exception) { diagnostics.Add(exception.Message); }
             NormalizedClassicWeapon? weapon = ReadClassicWeapon(root, resources, diagnostics);
             IReadOnlyList<NormalizedClassicEffect> effects = ReadClassicEffects(root, resources, diagnostics);
-            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapon, effects));
+            Dictionary<string, string> icons = new(StringComparer.Ordinal);
+            foreach (JsonElement icon in DaggerfallBaseContent.Array(root, "inventoryIcons", diagnostics))
+            {
+                string itemId = DaggerfallBaseContent.Text(icon, "itemId", diagnostics);
+                string mediaId = DaggerfallBaseContent.Text(icon, "mediaId", diagnostics);
+                if (resources.TryGetValue(mediaId, out ClassicMediaResource? resource) && resource.Kind == "userInterface")
+                    icons[itemId] = $"inventory-art/inventory-icons/{Path.GetFileName(resource.Path)}";
+                else diagnostics.Add($"Inventory icon '{itemId}' refers to missing inventory media.");
+            }
+            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapon, effects) { InventoryIcons = new ReadOnlyDictionary<string, string>(icons) });
         }
         catch (JsonException exception)
         {
@@ -795,6 +804,7 @@ internal sealed record NormalizedClassicEffect(string Name, int SourceRecordOrdi
 internal sealed record NormalizedClassicPresentation(NormalizedClassicWeapon? Weapon, IReadOnlyList<NormalizedClassicEffect> Effects)
 {
     internal static NormalizedClassicPresentation Empty { get; } = new(null, Array.Empty<NormalizedClassicEffect>());
+    internal IReadOnlyDictionary<string, string> InventoryIcons { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
     internal IReadOnlyDictionary<string, string> CompatibleItemVisuals { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
     internal ClassicViewmodelStyle? Viewmodel { get; init; }
     internal bool TryEffect(string name, out NormalizedClassicEffect? effect)

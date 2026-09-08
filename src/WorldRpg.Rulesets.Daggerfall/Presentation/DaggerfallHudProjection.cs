@@ -14,7 +14,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private readonly UiStream _hud = ui.OpenStream(new UiStreamRequest("dagger.hud", "dagger.ui.snapshot.v1"));
     private ulong _sequence;
 
-    internal void Publish(PlayerActorState player, ProgressionState progression, PresentationState presentation)
+    internal void Publish(PlayerActorState player, ProgressionState progression, PresentationState presentation, InventoryPresentation? inventory = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -24,10 +24,28 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("experience", builder.Number(progression.Experience)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),
         ];
+        if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         if (compositionIdentity is not null)
             fields = [.. fields, ("composition", Composition(builder, compositionIdentity))];
         uint root = builder.Object(fields);
         ui.PublishProjection(new UiProjection(_hud, ++_sequence, builder.Build(root)));
+    }
+
+    private static uint Inventory(UiValueBuilder builder, InventoryPresentation value)
+    {
+        uint[] items = value.Items.Select(item => builder.Object(
+            ("key", builder.String(item.Key)), ("definition", builder.String(item.Definition)),
+            ("label", builder.String(item.Label)), ("quantity", builder.String(item.Quantity)),
+            ("weight", builder.Number(item.Weight)), ("value", builder.Number(item.Value)),
+            ("details", builder.String(item.Details)), ("icon", item.Icon is null ? builder.Null() : builder.String(item.Icon)),
+            ("gridSlot", item.GridSlot is int slot ? builder.Number(slot) : builder.Null()),
+            ("equippedSlots", builder.Array(item.EquippedSlots.Select(builder.String).ToArray())),
+            ("compatibleSlots", builder.Array(item.CompatibleSlots.Select(builder.String).ToArray())))).ToArray();
+        uint[] slots = value.Slots.Select(slot => builder.Object(
+            ("id", builder.String(slot.Id)), ("label", builder.String(slot.Label)),
+            ("itemKey", slot.ItemKey is null ? builder.Null() : builder.String(slot.ItemKey)))).ToArray();
+        return builder.Object(("revision", builder.String(value.Revision)), ("message", builder.String(value.Message)),
+            ("items", builder.Array(items)), ("slots", builder.Array(slots)));
     }
 
     private static uint Composition(UiValueBuilder builder, ResolvedCompositionIdentity identity) => builder.Object(

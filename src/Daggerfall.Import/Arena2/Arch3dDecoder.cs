@@ -204,7 +204,7 @@ public static class Arch3dDecoder
         }
 
         double[] xi = [(c1.Y - c2.Y) / determinant, (-c1.X + c2.X) / determinant, ((c1.X * c2.Y) - (c2.X * c1.Y)) / determinant];
-        double[] yi = [(-c0.Y + c2.Y) / determinant, (c0.X - c2.X) / determinant, ((c0.X * c2.Y) - (c2.X * c0.Y)) / determinant];
+        double[] yi = [(-c0.Y + c2.Y) / determinant, (c0.X - c2.X) / determinant, ((c2.X * c0.Y) - (c0.X * c2.Y)) / determinant];
         double[] zi = [(c0.Y - c1.Y) / determinant, (-c0.X + c1.X) / determinant, ((c0.X * c1.Y) - (c1.X * c0.Y)) / determinant];
         double[] us = [points[0].U, points[0].U + points[1].U, points[0].U + points[1].U + points[2].U];
         double[] vs = [points[0].V, points[0].V + points[1].V, points[0].V + points[1].V + points[2].V];

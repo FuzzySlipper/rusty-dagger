@@ -1,0 +1,12 @@
+{
+  "project": "rusty-dagger",
+  "serve": {
+    "command": "exec ./.runtime/runtime-pack/bin/rusty dev --project ./src/WorldRpg.Host/WorldRpg.Host.csproj --runtime ./.runtime/runtime-pack --live-debug --bind-host {host} --port {port}",
+    "preferredPort": 4174,
+    "healthUrl": "/",
+    "readyText": "Rusty Product Host",
+    "reusePolicy": "broker_owned",
+    "startupTimeout": "180s",
+    "healthInterval": "250ms"
+  }
+}

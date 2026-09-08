@@ -285,6 +285,20 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
             incomingSlots.Select(RequireSlot));
     }
 
+    /// <summary>Moves an already equipped item and any explicit replacement in one Engine candidate.</summary>
+    public EquipmentMutationReceipt Reassign(UniqueInventoryItem item, IReadOnlyList<EquipmentSlotId> slots,
+        IReadOnlyList<UniqueInventoryItem> replaced, EquipmentChange change)
+    {
+        ThrowIfDisposed();
+        change.Validate();
+        InventoryWorldCandidate candidate = _world.Prepare();
+        candidate.Unequip(_owner, RequireEntity(item));
+        foreach (UniqueInventoryItem outgoing in replaced) candidate.Unequip(_owner, RequireEntity(outgoing));
+        EquipmentMutationReceipt receipt = candidate.Equip(_owner, RequireEntity(item), slots.Select(RequireSlot));
+        candidate.Publish();
+        return receipt;
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
