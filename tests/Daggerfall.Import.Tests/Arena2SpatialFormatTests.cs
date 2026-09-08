@@ -5,6 +5,37 @@ namespace Daggerfall.Import.Tests;
 
 public sealed class Arena2SpatialFormatTests
 {
+    [Theory]
+    [InlineData(1024, 2048)]
+    [InlineData(-4096, 8192)]
+    public void Arch3dReconstructsTranslatedQuadUvsFromTheFirstThreeVertices(int x, int y)
+    {
+        byte[] data = new byte[152];
+        System.Text.Encoding.ASCII.GetBytes("v2.6").CopyTo(data, 0);
+        BitConverter.GetBytes(4).CopyTo(data, 4);
+        BitConverter.GetBytes(1).CopyTo(data, 8);
+        BitConverter.GetBytes(64).CopyTo(data, 48);
+        BitConverter.GetBytes(112).CopyTo(data, 60);
+        WriteVector(data, 64, [x, y, 0]);
+        WriteVector(data, 76, [x + 256, y, 0]);
+        WriteVector(data, 88, [x + 256, y + 256, 0]);
+        WriteVector(data, 100, [x, y + 256, 0]);
+        data[112] = 4;
+        // Only the first three UV pairs define the face mapping; later pairs
+        // are reconstructed, and translating geometry must not alter them.
+        foreach ((int index, short u, short v) in new[] { (0, (short)10, (short)20), (1, (short)5, (short)6), (2, (short)7, (short)8), (3, (short)999, (short)999) })
+        {
+            int offset = 120 + (index * 8);
+            BitConverter.GetBytes(index * 12).CopyTo(data, offset);
+            BitConverter.GetBytes(u).CopyTo(data, offset + 4);
+            BitConverter.GetBytes(v).CopyTo(data, offset + 6);
+        }
+
+        Arch3dPlane plane = Assert.Single(Arch3dDecoder.Decode(data, "translated-quad", 61000).Planes);
+
+        Assert.Equal(new[] { (10, 20), (15, 26), (22, 34), (17, 28) }, plane.Points.Select(point => (point.U, point.V)));
+    }
+
     [Fact]
     public void Arch3dDecodesV26AndV25PointOffsetsAndTriangleUvDeltas()
     {

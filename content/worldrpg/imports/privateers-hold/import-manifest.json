@@ -1546,8 +1546,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "83140f53a69e9b361ac7732c0351831f348df90b3960f6d3a94a8a7fb87ed6d0",
-      "byteLen": 7719833,
+      "contentHash": "727bbdd8854349aa7b9f7fa3ebddd5b2bc153f99278aaf8ac1e61febb64c2ba4",
+      "byteLen": 7697864,
       "dependsOnPaths": [
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",
@@ -1572,8 +1572,8 @@
     },
     {
       "relativePath": "spatial/privateer-s-hold/static-mesh.json",
-      "contentHash": "f763d4bb4a314a32787e148c93104621391e8456ef923bec622241c102260c7e",
-      "byteLen": 2616231,
+      "contentHash": "4c8ec37072d3978f0fb161b67669b9cbd801fd57f4cb18f3df6fce4fe509d58d",
+      "byteLen": 2594262,
       "dependsOnPaths": []
     }
   ]

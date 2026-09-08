@@ -5,7 +5,7 @@
     "pitchMaximumRadians": 1.5533,
     "maximumLookDeltaRadians": 0.35,
     "invertHorizontal": false,
-    "invertVertical": false,
+    "invertVertical": true,
     "wrapYaw": true
   },
   "spatial": {

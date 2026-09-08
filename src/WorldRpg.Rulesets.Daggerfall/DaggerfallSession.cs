@@ -37,6 +37,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     private readonly DaggerfallRewardReactions _rewards;
     private readonly DaggerfallOutcomePresentation _outcomes;
     private readonly DaggerfallHudProjection _hud;
+    private readonly DaggerfallInventoryPresentation _inventoryUi;
     private readonly PrivateersHoldAppearance _appearance;
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
@@ -160,6 +161,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 State.Progression,
                 tuning.LootInteraction);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
+            _inventoryUi = new DaggerfallInventoryPresentation(inventory, equipmentCoordinator, definitions, inputs.ClassicPresentation.InventoryIcons);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random);
@@ -306,7 +308,22 @@ internal sealed class DaggerfallSession : ISaveableGameSession
 
         float deltaSeconds = (float)facts.FixedDeltaSeconds;
         ProductUpdateState firstStep = new(deltaSeconds);
-        foreach (ProductInputEvent inputEvent in input) firstStep.Add(inputEvent);
+        foreach (ProductInputEvent inputEvent in input)
+        {
+            firstStep.Add(inputEvent);
+            if (inputEvent.ValueKind != InputValueKind.ProductPayload
+                || !inputEvent.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)) continue;
+            DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse(inputEvent.PayloadData.Span);
+            switch (action?.Action)
+            {
+                case "attack": firstStep.Request(DaggerfallInput.Attack); break;
+                case "inventory": break;
+                case "inventory-move": _inventoryUi.Move(action!); break;
+                case "character": Presentation.SetOutcome("Character sheet UI is awaiting restoration."); break;
+                case "loot": Presentation.SetOutcome("Loot UI is awaiting restoration; no items were taken."); break;
+                default: Presentation.SetOutcome("Unrecognized player UI action."); break;
+            }
+        }
 
         // One admitted update owns one input slice. Later catch-up steps derive
         // only committed held keyboard/mapped-direction intent; direct axes,
@@ -449,13 +466,13 @@ internal sealed class DaggerfallSession : ISaveableGameSession
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation);
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _inventoryUi.Read());
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
     }
 
-    private static ItemDefinition ToManagedItem(DaggerfallItemDefinition item)
+    internal static ItemDefinition ToManagedItem(DaggerfallItemDefinition item)
     {
         ItemEquipmentPolicy? equipment = item.Equipment is null
             ? null
@@ -477,7 +494,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             equipment);
     }
 
-    private static EquipmentSlotDefinition ToManagedSlot(DaggerfallEquipmentSlotDefinition slot) =>
+    internal static EquipmentSlotDefinition ToManagedSlot(DaggerfallEquipmentSlotDefinition slot) =>
         new(Rusty.Engine.Mechanics.EquipmentSlotId.Parse(slot.Id.Value), slot.AllowedClassifications.Select(ItemClassificationId.Parse));
 
     internal void ResolveExplicitMelee(ExplicitMeleeRequest request)

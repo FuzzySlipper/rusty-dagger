@@ -13,7 +13,8 @@ internal sealed record DaggerfallTuning(
     DaggerfallPresentationAudioTuning PresentationAudio)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
-        new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: false, WrapYaw: true),
+        // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
+        new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: true, WrapYaw: true),
         new SpatialTuning(.5, 32, 32, 2, new CharacterControllerTuning(
             StandingHeight: 1.8f,
             Radius: .25f,

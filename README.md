@@ -127,7 +127,20 @@ normal downstream builds never discover an adjacent checkout.
 `WorldRpg.SpriteWorkbench` remains a package-backed product tool. Its launcher
 stages its operator-selected publication into ignored workbench content, then
 runs the same `rusty dev` workflow; it no longer assembles a browser host or
-calls Cargo directly.
+calls Cargo directly. Launch it with an existing writable authoring directory:
+
+```sh
+bash src/scripts/run-sprite-workbench.sh content/worldrpg/imports/privateers-hold /absolute/authoring-directory sprites/privateers-hold.json 4175
+```
+
+In the game, **Escape** opens the menu; Escape in a submenu returns to the menu
+before returning to play. The menu releases gameplay controls but does not pause
+the world. Composition diagnostics are available there. **I** opens inventory and equipment: drag items between the 50-slot pack grid and
+compatible equipment slots, or select an item and use the keyboard destination
+controls. Drops use the current inventory revision; rejected drops preserve the
+items and layout. Slot arrangement lasts for the session, matching the earlier
+UI; saves retain items and equipment. Character and selective loot panels are
+awaiting restoration; **C/F** report that status without changing inventory.
 
 ## Content and migration boundary
 

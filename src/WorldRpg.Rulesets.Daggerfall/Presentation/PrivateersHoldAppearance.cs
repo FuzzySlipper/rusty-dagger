@@ -30,6 +30,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly Dictionary<long, ActorVisual> actors = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
+    // Appearance object identities must be exactly representable in browser snapshots.
+    // These transient product visuals use a disjoint descending pool, not resource hashes.
+    private ulong nextVisualEntityId = (1UL << 53) - 1;
     private readonly HashSet<PresentationEventIdentity> deliveredEvents = [];
     private readonly List<SpriteAtlas> atlases = [];
     private readonly List<Material> materials = [];
@@ -451,7 +454,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             SpritePlaybackFrame[] playbackFrames = SpriteAtlasAdapter.ToPlaybackFrames(effect.Sequence.Select(index => effect.Frames.Single(frame => frame.Id == index).Id).ToArray(), effect.FramesPerSecond);
             playback = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(visual, atlas, playbackFrames, Array.Empty<SpritePlaybackMarker>(), effect.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(playback, SpritePlaybackControl.Start));
-            effects.Add(new EffectVisual(EffectEntityId(identity, name), position, atlas, visual, playback));
+            effects.Add(new EffectVisual(NextVisualEntityId(), position, atlas, visual, playback));
         }
         catch
         {
@@ -476,7 +479,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 weapon.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
             visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, style.Pivot, style.Size, BillboardMode.None, SpriteSizeMode.World, style.RenderOrder, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
-            viewmodel = new ViewmodelVisual(AtlasEntityId(weapon.ResourceId), new Transform(style.Position.ToVector(), Quaternion.Identity, Vector3.One), atlas, visual);
+            viewmodel = new ViewmodelVisual(NextVisualEntityId(), new Transform(style.Position.ToVector(), Quaternion.Identity, Vector3.One), atlas, visual);
             StartWeaponAction("idle");
         }
         catch
@@ -526,20 +529,14 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         Retire(weapon);
     }
 
-    private static ulong AtlasEntityId(string resourceId)
+    private ulong NextVisualEntityId()
     {
-        ulong hash = 14695981039346656037UL;
-        foreach (char value in resourceId) hash = (hash ^ value) * 1099511628211UL;
-        return hash == 0 ? 1UL : hash;
-    }
-
-    private static ulong EffectEntityId(PresentationEventIdentity identity, string name)
-    {
-        // Product entity ids are positive; this is presentation-only identity
-        // derived solely from the already idempotent authoritative combat fact.
-        ulong hash = 14695981039346656037UL;
-        foreach (char value in $"{identity.Generation}:{identity.SimulationStep}:{identity.Attacker}:{identity.Target}:{name}") hash = (hash ^ value) * 1099511628211UL;
-        return hash == 0 ? 1UL : hash;
+        while (nextVisualEntityId > 1)
+        {
+            ulong candidate = nextVisualEntityId--;
+            if (!actors.ContainsKey(checked((long)candidate))) return candidate;
+        }
+        throw new InvalidOperationException("Presentation entity identities are exhausted.");
     }
 
     private NormalizedAttackSequence SelectAttack(IReadOnlyList<NormalizedAttackSequence> sequences, ulong generation, ulong step, long attacker, long target)

@@ -39,7 +39,7 @@
 .dagger-composition dt { color: #aa9c7a; }
 .dagger-composition dd { margin: 0; overflow-wrap: anywhere; }
 
-.dagger-hud button {
+.dagger-attack {
   position: absolute;
   right: 24px;
   bottom: 24px;
@@ -53,3 +53,18 @@
 }
 
 .dagger-hud button:hover, .dagger-hud button:focus-visible { background: #594521; outline: 2px solid #f4d983; }
+
+.dagger-menu-toggle { position: absolute; top: 22px; right: 24px; }
+.dagger-menu-toggle, .dagger-menu-home > button, .dagger-menu-panel > button { padding: 10px 18px; border: 1px solid #d4b56b; background: #312817; color: #f7e7bd; font: 700 .8rem ui-monospace, monospace; cursor: pointer; pointer-events: auto; }
+.dagger-menu { width: min(42rem, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; padding: 24px; border: 1px solid #d4b56b; background: #151712; color: #f2e3ba; pointer-events: auto; }
+.dagger-menu::backdrop { background: rgb(0 0 0 / .65); }
+.dagger-menu h1 { margin: 0 0 20px; font-size: 1.5rem; }
+.dagger-menu-home { display: grid; gap: 10px; }
+.dagger-menu button:disabled { opacity: .55; cursor: default; }
+.dagger-menu p { font-size: .9rem; line-height: 1.5; }
+.dagger-menu .dagger-composition { position: static; max-width: none; margin-bottom: 18px; }
+.dagger-menu [hidden] { display: none; }
+
+.dagger-menu.has-inventory { width: min(72rem, calc(100vw - 24px)); }
+.dagger-menu.has-inventory > h1 { font-size: 1rem; margin-bottom: 8px; }
+.dagger-inventory-root { margin-bottom: 12px; }
