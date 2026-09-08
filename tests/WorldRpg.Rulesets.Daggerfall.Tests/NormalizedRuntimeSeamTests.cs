@@ -29,6 +29,32 @@ public sealed class NormalizedRuntimeSeamTests
     private static readonly ContentSha256 Hash = new(1, 2, 3, 4);
 
     [Fact]
+    public void Every_authored_enemy_has_a_live_appearance_at_its_world_position()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        AppearanceFake appearance = new(releases);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d), []);
+
+        AppearanceFact[] snapshot = appearance.Snapshots.Last();
+        foreach (AuthoredActor actor in inputs.Project.Actors.Values)
+        {
+            Assert.False(session.State.Actors.All[actor.EntityId].IsDefeated);
+            AppearanceFact fact = Assert.Single(snapshot, value => value.ObjectId == checked((ulong)actor.EntityId));
+            Assert.True(fact.Visible);
+            Assert.Equal(RenderLayer.Scene, fact.Layer);
+            Assert.Equal(new Transform(actor.Position.ToVector(), Quaternion.Identity, Vector3.One), fact.Transform);
+        }
+    }
+
+    [Fact]
     public void Spatial_system_admits_one_content_artifact_reads_it_back_and_releases_session_before_reference()
     {
         List<string> releases = [];
@@ -1097,7 +1123,8 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(new Vector2(0, 1), update.PlanarIntent);
         Assert.True(update.IsRequested(attack));
         Assert.Equal(.25f * DaggerfallTuning.Defaults.PlayerControl.LookSensitivity, player.YawRadians, precision: 6);
-        Assert.Equal(-.5f * DaggerfallTuning.Defaults.PlayerControl.LookSensitivity, player.PitchRadians, precision: 6);
+        // The ordinary non-inverted look convention turns upward mouse motion into positive pitch.
+        Assert.Equal(.5f * DaggerfallTuning.Defaults.PlayerControl.LookSensitivity, player.PitchRadians, precision: 6);
 
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));

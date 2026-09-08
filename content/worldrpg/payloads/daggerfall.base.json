@@ -173,6 +173,44 @@
       "action": "thief-strike"
     },
     {
+      "id": "archer",
+      "kind": "enemy-class",
+      "attributes": {
+        "strength": 55,
+        "intelligence": 43,
+        "willpower": 45,
+        "agility": 60,
+        "endurance": 50,
+        "personality": 44,
+        "speed": 53,
+        "luck": 50
+      },
+      "skills": {
+        "archery": 35,
+        "hand-to-hand": 35,
+        "dodging": 35,
+        "axe": 35,
+        "blunt-weapon": 35,
+        "critical-strike": 35,
+        "long-blade": 35,
+        "short-blade": 35,
+        "climbing": 35,
+        "jumping": 35,
+        "running": 35,
+        "swimming": 35
+      },
+      "armor": 0,
+      "health": {
+        "minimum": 11,
+        "maximum": 30
+      },
+      "mobileId": 141,
+      "xpReward": 50,
+      "team": "knights-and-mages",
+      "lootTableKey": "C",
+      "attacks": []
+    },
+    {
       "id": "rat",
       "kind": "monster",
       "attributes": {

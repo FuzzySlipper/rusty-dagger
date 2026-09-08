@@ -286,7 +286,7 @@ internal static class DaggerfallBaseContent
         {
             if (actor.Kind is not ("player" or "monster" or "enemy-class")) diagnostics.Add($"Actor '{actor.Id.Value}' has unsupported kind '{actor.Kind}'.");
             if (actor.Kind == "player" && (actor.Id.Value != "player" || actor.MobileId is not null)) diagnostics.Add("Only actor 'player' may have kind player and it cannot have a mobile id.");
-            if (actor.Kind == "enemy-class" && (actor.Id.Value != "thief" || actor.MobileId != 138)) diagnostics.Add("The only admitted enemy class is thief mobile 138.");
+            if (actor.Kind == "enemy-class" && (actor.Id.Value, actor.MobileId) is not (("thief", 138) or ("archer", 141))) diagnostics.Add("Enemy classes must be thief mobile 138 or archer mobile 141.");
             if (actor.Kind == "monster" && (actor.MobileId is null || actor.MobileId is 39 or < 0 or > 42)) diagnostics.Add($"Monster '{actor.Id.Value}' has an unsupported mobile id.");
             if (actor.Level is < 1 or > 100 || actor.Weight is < 0 or > 100_000 || actor.Armor is < -MaximumAuthoredArmor or > MaximumAuthoredArmor || actor.Rewards.ExperienceReward is < 0 or > 1_000_000) diagnostics.Add($"Actor '{actor.Id.Value}' has an out-of-range level, weight, armor, or xp reward.");
             if (actor.Team is { } team && !ValidId(team)) diagnostics.Add($"Actor '{actor.Id.Value}' has an invalid team.");
@@ -487,7 +487,7 @@ internal static class DaggerfallBaseContent
     {
         int[] expectedMobiles = [.. Enumerable.Range(0, 39), .. Enumerable.Range(40, 3)];
         int[] actualMobiles = actors.Values.Where(actor => actor.Kind == "monster").Select(actor => actor.MobileId ?? -1).Order().ToArray();
-        if (actors.Count != 44 || actors.Values.Count(actor => actor.Kind == "monster") != 42 || !actualMobiles.SequenceEqual(expectedMobiles) || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thief) || thief.MobileId != 138) diagnostics.Add("Daggerfall actor roster must contain exactly mobiles 0..38, 40..42, thief 138, and player without a mobile id.");
+        if (actors.Count != 45 || actors.Values.Count(actor => actor.Kind == "monster") != 42 || !actualMobiles.SequenceEqual(expectedMobiles) || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thief) || thief.MobileId != 138 || !actors.TryGetValue(new("archer"), out DaggerfallActorDefinition? archer) || archer.MobileId != 141) diagnostics.Add("Daggerfall actor roster must contain exactly mobiles 0..38, 40..42, thief 138, archer 141, and player without a mobile id.");
         if (items.Count != 31 || slots.Count != 25 || actions.Count != 5 || loot.Count != 22 || armorValues.Count != 12) diagnostics.Add("Daggerfall catalog cardinality does not match the adopted donor snapshot.");
         if (armorValues.Values.Any(value => value > MaximumAuthoredArmor)) diagnostics.Add("Armor values by material exceed the Daggerfall policy bound.");
         if (!actors.TryGetValue(new("player"), out DaggerfallActorDefinition? player) || player.Loadout.Count == 0) diagnostics.Add("Daggerfall player loadout is required.");
