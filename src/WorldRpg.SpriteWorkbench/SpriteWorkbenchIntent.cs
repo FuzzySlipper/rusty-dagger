@@ -5,7 +5,7 @@ namespace WorldRpg.SpriteWorkbench;
 
 internal sealed record SpriteWorkbenchIntent(string Action, string? Id = null, string? Sequence = null, int? Orientation = null, int? SequenceFrameIndex = null,
     double? ElapsedSeconds = null, string? DisplayName = null, float? PivotX = null, float? PivotY = null, float? DisplaySizeX = null,
-    float? DisplaySizeY = null, float? FramesPerSecond = null, bool? Loop = null, int[]? FrameSequence = null)
+    float? DisplaySizeY = null, float? FramesPerSecond = null, bool? Loop = null, int[]? FrameSequence = null, int? FrameId = null, int? FrameX = null, int? FrameY = null, int? FrameWidth = null, int? FrameHeight = null)
 {
     internal const string Contract = "worldrpg.sprite-workbench.intent.v1";
     private const int MaximumPayloadBytes = 16 * 1024;

@@ -42,7 +42,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         try
         {
             foreach (SpriteInspectionEntry entry in publication.Catalog.Entries.OrderBy(value => value.Id, StringComparer.Ordinal))
-                previews.Add(entry.Id, CreatePreview(entry));
+                previews.Add(entry.Id, CreatePreview(Effective(entry, savedOverlays.GetValueOrDefault(entry.Id))));
             PublishState();
         }
         catch (Exception creationError)
@@ -136,6 +136,9 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             case "step": RequireCurrent(intent); stepRequested = true; running = false; break;
             case "sample": Sample(intent); break;
             case "edit": Edit(intent); break;
+            case "edit-pivot": EditPivot(intent); break;
+            case "edit-frame": EditFrame(intent); break;
+            case "edit-timing": EditTiming(intent); break;
             case "save": Save(intent); break;
             case "discard": Discard(intent); break;
             default: throw new FormatException($"Unknown sprite workbench action '{intent.Action}'.");
@@ -159,7 +162,12 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         selectedId = preview.Entry.Id;
         selectedOrientation = requestedOrientation;
         selectedSequence = selected.Name;
-        pendingEdit = null;
+        if (pendingEdit is not null && pendingEdit.Id != selectedId)
+        {
+            string abandonedId = pendingEdit.Id;
+            pendingEdit = null;
+            ReplacePreview(abandonedId, savedOverlays.GetValueOrDefault(abandonedId));
+        }
         running = false;
         saveStatus = "selection changed";
     }
@@ -205,13 +213,81 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     private void Edit(SpriteWorkbenchIntent intent)
     {
         Preview preview = RequireCurrent(intent);
+        SpriteAuthoredOverlay baseline = CurrentOverlay(preview.Entry.Id);
         SpriteAuthoredOverlay candidate = new(preview.Entry.Id, intent.DisplayName,
             intent.PivotX is null && intent.PivotY is null ? null : new NormalizedVector2(RequiredFinite(intent.PivotX), RequiredFinite(intent.PivotY)),
             intent.DisplaySizeX is null && intent.DisplaySizeY is null ? null : new NormalizedVector2(RequiredFinite(intent.DisplaySizeX), RequiredFinite(intent.DisplaySizeY)),
-            intent.FramesPerSecond, intent.Loop, intent.FrameSequence);
-        SpriteAuthoredOverlayStore.Validate(new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, publication.AuthoringBasisDigest, [candidate]), publication.Catalog, publication.AuthoringBasisDigest);
-        pendingEdit = candidate;
+            intent.FramesPerSecond, intent.Loop, intent.FrameSequence, baseline.FrameRects, baseline.StateTimings, baseline.ActionTimings);
+        ApplyEdit(candidate);
     }
+
+    private SpriteAuthoredOverlay CurrentOverlay(string id) => pendingEdit?.Id == id ? pendingEdit : savedOverlays.GetValueOrDefault(id) ?? new(id);
+
+    private void EditPivot(SpriteWorkbenchIntent intent)
+    {
+        Preview preview = RequireCurrent(intent);
+        ApplyEdit(CurrentOverlay(preview.Entry.Id) with { Pivot = new(RequiredFinite(intent.PivotX), RequiredFinite(intent.PivotY)) });
+    }
+
+    private void EditFrame(SpriteWorkbenchIntent intent)
+    {
+        Preview preview = RequireCurrent(intent);
+        if (intent.FrameId is not int frame || intent.FrameX is not int x || intent.FrameY is not int y
+            || intent.FrameWidth is not int width || intent.FrameHeight is not int height)
+            throw new FormatException("Select a frame and supply its pixel rectangle.");
+        SpriteAuthoredOverlay baseline = CurrentOverlay(preview.Entry.Id);
+        ApplyEdit(baseline with { FrameRects = [.. (baseline.FrameRects ?? []).Where(value => value.FrameIndex != frame), new(frame, x, y, width, height)] });
+    }
+
+    private void EditTiming(SpriteWorkbenchIntent intent)
+    {
+        Preview preview = RequireCurrent(intent);
+        PreviewSequence sequence = preview.ResolveSequence(intent.Sequence ?? selectedSequence, selectedOrientation);
+        string name = sequence.Name.Split('@')[0];
+        SpriteAuthoredOverlay baseline = CurrentOverlay(preview.Entry.Id);
+        if (name.StartsWith("state:", StringComparison.Ordinal))
+        {
+            string state = name["state:".Length..];
+            ApplyEdit(baseline with { StateTimings = [.. (baseline.StateTimings ?? []).Where(value => value.Name != state), new(state, intent.FramesPerSecond, intent.Loop)] });
+        }
+        else if (name.StartsWith("action:", StringComparison.Ordinal))
+        {
+            string action = name["action:".Length..];
+            ApplyEdit(baseline with { ActionTimings = [.. (baseline.ActionTimings ?? []).Where(value => value.Name != action), new(action, intent.FramesPerSecond, intent.Loop)] });
+        }
+        else throw new FormatException("This sprite has no named animation timing; use its resource FPS and loop fields.");
+    }
+
+    private void ApplyEdit(SpriteAuthoredOverlay candidate)
+    {
+        SpriteAuthoredOverlayStore.Validate(new(SpriteAuthoredOverlayDocument.CurrentSchemaVersion, publication.AuthoringBasisDigest, [candidate]), publication.Catalog, publication.AuthoringBasisDigest);
+        ReplacePreview(candidate.Id, candidate);
+        pendingEdit = candidate;
+        saveStatus = "unsaved edit applied";
+    }
+
+    private void ReplacePreview(string id, SpriteAuthoredOverlay? overlay)
+    {
+        Preview previous = previews[id];
+        Preview replacement = CreatePreview(Effective(publication.Catalog.Require(id), overlay));
+        if (selectedId == id)
+        {
+            PreviewSequence sequence = replacement.ResolveSequence(selectedSequence, selectedOrientation);
+            engine.Graphics.ControlSpritePlayback(new(sequence.Playback!, SpritePlaybackControl.Restart));
+            engine.Graphics.ControlSpritePlayback(new(sequence.Playback!, SpritePlaybackControl.Pause));
+            selectedSequence = sequence.Name;
+            running = false;
+        }
+        previews[id] = replacement;
+        // Publish the replacement before retiring the old retained appearance.
+        PublishAppearanceSnapshot();
+        List<Exception> failures = [];
+        previous.Dispose(failures);
+        if (failures.Count > 0) throw new AggregateException("Sprite preview replacement cleanup failed.", failures);
+    }
+
+    private static SpriteInspectionEntry Effective(SpriteInspectionEntry entry, SpriteAuthoredOverlay? overlay) =>
+        overlay is null ? entry : SpriteAuthoredOverlayApplicator.Apply(entry, overlay);
 
     private void Save(SpriteWorkbenchIntent intent)
     {
@@ -231,6 +307,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     private void Discard(SpriteWorkbenchIntent intent)
     {
         RequireCurrent(intent);
+        ReplacePreview(selectedId!, savedOverlays.GetValueOrDefault(selectedId!));
         pendingEdit = null;
         // Discard is intentionally local: the validated session cache remains the
         // saved baseline; it never polls, archives, or deletes the authored file.
@@ -294,7 +371,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         foreach (SpriteInspectionAction action in entry.Actions.Where(action => action.FramesPerSecond is not null && action.FrameIndices.Count > 0))
             values.Add(new($"action:{action.Name}", action.FrameIndices.Select(index => checked((uint)index)).ToArray(), action.FramesPerSecond!.Value, action.Loops ?? false, 0));
         if (values.Count == 0)
-            values.Add(new("frame", entry.Frames.Select(frame => checked((uint)frame.FrameIndex)).ToArray(), 1D, true, 0));
+            values.Add(new("frame", (entry.AuthoredValues.Sequence ?? entry.Frames.Select(frame => frame.FrameIndex).ToArray()).Select(frame => checked((uint)frame)).ToArray(), entry.AuthoredValues.FramesPerSecond ?? 1D, entry.AuthoredValues.Loop ?? true, 0));
         return values;
     }
 
@@ -391,7 +468,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             ("provenance", builder.Object(("path", builder.String(entry.Closure.RelativePath)), ("digest", builder.String(entry.Closure.ContentDigest.Value)), ("byteLength", builder.Number(entry.Closure.ByteLength)),
                 ("dependsOnPaths", builder.Array(entry.Closure.DependsOnPaths.Select(value => builder.String(value)).ToArray())),
                 ("sources", builder.Array(entry.Closure.PublicationSources.Select(source => builder.Object(("path", builder.String(source.SourcePath)), ("digest", builder.String(source.ContentHash.Value)), ("byteLength", builder.Number(source.ByteLen)))).ToArray())))),
-            ("atlas", builder.Object(("width", builder.Number(entry.Atlas.Width)), ("height", builder.Number(entry.Atlas.Height)))),
+            ("atlas", builder.Object(("url", builder.String("./atlas/" + entry.Closure.RelativePath)), ("width", builder.Number(entry.Atlas.Width)), ("height", builder.Number(entry.Atlas.Height)))),
             ("frames", builder.Array(frames)), ("states", builder.Array(states)), ("actions", builder.Array(actions)), ("availableSequences", builder.Array(sequences)),
             // These arrays are control affordances, unlike the complete inspection
             // facts above: every value must be legal for the active sequence.

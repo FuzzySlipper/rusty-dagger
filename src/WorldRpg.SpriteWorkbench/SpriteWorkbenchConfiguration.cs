@@ -52,7 +52,7 @@ public sealed record SpriteWorkbenchPreviewPlacement(
     ulong EntityId = SpriteWorkbenchPreviewPlacement.DefaultEntityId,
     float PositionX = 0F,
     float PositionY = 0F,
-    float PositionZ = 0F,
+    float PositionZ = -4F,
     float RotationX = 0F,
     float RotationY = 0F,
     float RotationZ = 0F,
@@ -64,7 +64,7 @@ public sealed record SpriteWorkbenchPreviewPlacement(
     RenderLayer Layer = RenderLayer.Viewmodel)
 {
     /// <summary>Stable logical owner ID reserved for the workbench preview.</summary>
-    public const ulong DefaultEntityId = 0x57524B4250524556UL;
+    public const ulong DefaultEntityId = 0x57524B42UL;
 
     public static SpriteWorkbenchPreviewPlacement Default { get; } = new();
 

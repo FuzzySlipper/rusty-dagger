@@ -736,6 +736,9 @@ public sealed record Arena2ClassicMediaPublication(
                         FramesPerSecond = overlay.FramesPerSecond ?? existing.FramesPerSecond,
                         Loop = overlay.Loop ?? existing.Loop,
                         Sequence = overlay.Sequence ?? existing.Sequence,
+                        FrameRects = overlay.FrameRects ?? existing.FrameRects,
+                        StateTimings = overlay.StateTimings ?? existing.StateTimings,
+                        ActionTimings = overlay.ActionTimings ?? existing.ActionTimings,
                     };
                 }
                 else
@@ -758,6 +761,7 @@ public sealed record Arena2ClassicMediaPublication(
         }
 
         Dictionary<ClassicEffect, ClassicEffectPresentation> effects = profile.Effects.ToDictionary(pair => pair.Key, pair => pair.Value);
+        Dictionary<ClassicDaggerWeaponAction, ClassicWeaponActionPresentation> weaponActions = profile.WeaponActions.ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (AuthoredMediaOverlay overlay in authoredOverlays)
         {
             ArgumentNullException.ThrowIfNull(overlay);
@@ -766,35 +770,96 @@ public sealed record Arena2ClassicMediaPublication(
                 throw new ArgumentException("External classic media overlays must be authored values.", nameof(authoredOverlays));
             }
 
+            if (overlay.StateTimings is { Count: > 0 })
+            {
+                throw new ArgumentException("Classic media does not publish named sprite states for authored timing.", nameof(authoredOverlays));
+            }
+
             if (StringComparer.Ordinal.Equals(overlay.Id, profile.WeaponMediaId)
                 && (overlay.FramesPerSecond is not null || overlay.Loop is not null || overlay.Sequence is not null))
             {
                 throw new ArgumentException("Classic weapon timing and sequence are action-specific and cannot be supplied as resource-wide overlays.", nameof(authoredOverlays));
             }
 
-            ClassicEffectPresentation[] matched = effects.Values
-                .Where(effect => StringComparer.Ordinal.Equals(effect.MediaId, overlay.Id))
-                .ToArray();
-            if (matched.Length == 0 || (overlay.FramesPerSecond is null && overlay.Loop is null))
+            if (StringComparer.Ordinal.Equals(overlay.Id, profile.WeaponMediaId))
             {
+                ApplyWeaponActionTimings(weaponActions, overlay.ActionTimings, nameof(authoredOverlays));
                 continue;
             }
 
-            ClassicSpriteTiming current = matched[0].Timing;
-            if (matched.Any(effect => effect.Timing != current))
+            ClassicEffectPresentation[] matched = effects.Values
+                .Where(effect => StringComparer.Ordinal.Equals(effect.MediaId, overlay.Id))
+                .ToArray();
+            if (matched.Length == 0)
             {
-                throw new ArgumentException("A shared classic effect media resource must have compatible timings before a resource-wide timing overlay can be applied.", nameof(authoredOverlays));
+                if (overlay.ActionTimings is { Count: > 0 })
+                {
+                    throw new ArgumentException("An action timing overlay must identify a classic effect resource.", nameof(authoredOverlays));
+                }
+                continue;
             }
 
-            ClassicSpriteTiming updated = new(overlay.FramesPerSecond ?? current.FramesPerSecond, overlay.Loop ?? current.Loop);
-            updated.Validate();
-            foreach (ClassicEffectPresentation effect in matched)
+            if (overlay.FramesPerSecond is not null || overlay.Loop is not null)
             {
-                effects[effect.Effect] = effect with { Timing = updated };
+                ClassicSpriteTiming current = matched[0].Timing;
+                if (matched.Any(effect => effect.Timing != current))
+                {
+                    throw new ArgumentException("A shared classic effect media resource must have compatible timings before a resource-wide timing overlay can be applied.", nameof(authoredOverlays));
+                }
+
+                ClassicSpriteTiming updated = new(overlay.FramesPerSecond ?? current.FramesPerSecond, overlay.Loop ?? current.Loop);
+                updated.Validate();
+                foreach (ClassicEffectPresentation effect in matched)
+                {
+                    effects[effect.Effect] = effect with { Timing = updated };
+                }
             }
+
+            ApplyEffectActionTimings(effects, overlay.Id, overlay.ActionTimings, nameof(authoredOverlays));
         }
 
-        return profile with { Effects = effects };
+        return profile with { Effects = effects, WeaponActions = weaponActions };
+    }
+
+    private static void ApplyWeaponActionTimings(
+        IDictionary<ClassicDaggerWeaponAction, ClassicWeaponActionPresentation> actions,
+        IReadOnlyList<AuthoredMediaActionTiming>? timings,
+        string parameterName)
+    {
+        if (timings is null) return;
+        foreach (AuthoredMediaActionTiming timing in timings)
+        {
+            if (!Enum.TryParse(timing.Name, ignoreCase: false, out ClassicDaggerWeaponAction action) || !actions.TryGetValue(action, out ClassicWeaponActionPresentation? current))
+            {
+                throw new ArgumentException("An authored classic weapon action timing must name a generated weapon action.", parameterName);
+            }
+
+            ClassicSpriteTiming updated = new(timing.FramesPerSecond ?? current.Timing.FramesPerSecond, timing.Loop ?? current.Timing.Loop);
+            updated.Validate();
+            actions[action] = current with { Timing = updated };
+        }
+    }
+
+    private static void ApplyEffectActionTimings(
+        IDictionary<ClassicEffect, ClassicEffectPresentation> effects,
+        string mediaId,
+        IReadOnlyList<AuthoredMediaActionTiming>? timings,
+        string parameterName)
+    {
+        if (timings is null) return;
+        foreach (AuthoredMediaActionTiming timing in timings)
+        {
+            if (!Enum.TryParse(timing.Name, ignoreCase: false, out ClassicEffect effect)
+                || !effects.TryGetValue(effect, out ClassicEffectPresentation? current)
+                || !StringComparer.Ordinal.Equals(current.MediaId, mediaId))
+            {
+                throw new ArgumentException("An authored classic effect timing must name an effect published by the selected resource.", parameterName);
+            }
+
+            ClassicSpriteTiming updated = new(timing.FramesPerSecond ?? current.Timing.FramesPerSecond, timing.Loop ?? current.Timing.Loop);
+            updated.Validate();
+            effects[effect] = current with { Timing = updated };
+        }
     }
 
     private static IReadOnlyList<LogicalSourceRecord> MergeSources(

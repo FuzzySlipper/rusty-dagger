@@ -15,7 +15,8 @@ public sealed record SpriteInspectionEntry(
     IReadOnlyList<SpriteInspectionFrame> Frames,
     IReadOnlyList<SpriteInspectionState> States,
     IReadOnlyList<SpriteInspectionAction> Actions,
-    SpriteAuthoredValues AuthoredValues);
+    SpriteAuthoredValues AuthoredValues,
+    IReadOnlyList<SpriteInspectionFrame>? GeneratedFrames = null);
 
 /// <summary>The source family that supplies the semantic meaning of a sprite set.</summary>
 public enum SpriteInspectionKind
@@ -114,7 +115,7 @@ public static class SpriteAuthoringBasis
             catalog.Entries.OrderBy(entry => entry.Id, StringComparer.Ordinal).Select(entry => new BasisEntry(
                 entry.Id, entry.Kind, entry.Closure.RelativePath, entry.Closure.ContentDigest, entry.Closure.ByteLength,
                 entry.Atlas.Width, entry.Atlas.Height,
-                entry.Frames.OrderBy(frame => frame.FrameIndex).Select(frame => new BasisFrame(frame.Id, frame.FrameIndex, frame.X, frame.Y, frame.Width, frame.Height, frame.SourceWidth, frame.SourceHeight, frame.Mirrored, frame.SourceRecord, frame.SourceFrame, frame.Orientation)).ToArray(),
+                (entry.GeneratedFrames ?? entry.Frames).OrderBy(frame => frame.FrameIndex).Select(frame => new BasisFrame(frame.Id, frame.FrameIndex, frame.X, frame.Y, frame.Width, frame.Height, frame.SourceWidth, frame.SourceHeight, frame.Mirrored, frame.SourceRecord, frame.SourceFrame, frame.Orientation)).ToArray(),
                 entry.States.OrderBy(state => state.Name, StringComparer.Ordinal).Select(state => new BasisState(state.Name, state.FrameStart, state.FramesPerOrientation, state.FrameIndices.Order().ToArray(), state.IsPreferredRest)).ToArray(),
                 entry.Actions.OrderBy(action => action.Name, StringComparer.Ordinal).Select(action => new BasisAction(
                     action.Name,
@@ -198,7 +199,7 @@ public static class SpriteInspectionCatalogBuilder
                 Frames(descriptor, billboard.Frames),
                 [],
                 [new("billboard", billboard.Playback?.FramesPerSecond, billboard.Playback?.Loops, descriptor.Sequence ?? descriptor.Frames.Select(frame => frame.FrameIndex).ToArray(), SourceFramesPerSecond: billboard.SourcePlayback?.FramesPerSecond)],
-                Authored(descriptor)));
+                Authored(descriptor), GeneratedFrames(descriptor, billboard.Frames)));
         }
     }
 
@@ -226,7 +227,7 @@ public static class SpriteInspectionCatalogBuilder
                 states,
                 [new("primary-attack-source", null, null, [], Sequence(actor.SourceAttackSequence.PrimaryFrames)),
                  .. actor.SourceAttackSequence.Alternates.Select((alternate, index) => new SpriteInspectionAction($"primary-attack-alternate-{index}", null, null, [], Sequence(alternate.Frames), alternate.Chance))],
-                Authored(descriptor)));
+                Authored(descriptor), GeneratedFrames(descriptor, layouts)));
 
             if (actor.Corpse is not null)
             {
@@ -238,7 +239,7 @@ public static class SpriteInspectionCatalogBuilder
                     ToClosure(corpse, closure, sources),
                     new(corpse.AtlasWidth, corpse.AtlasHeight),
                     Frames(corpse, [actor.Corpse.Frame]),
-                    [], [], Authored(corpse)));
+                    [], [], Authored(corpse), GeneratedFrames(corpse, [actor.Corpse.Frame])));
             }
         }
     }
@@ -267,7 +268,7 @@ public static class SpriteInspectionCatalogBuilder
                 action.Action.ToString(), action.Timing.FramesPerSecond, action.Timing.Loop,
                 Enumerable.Range(action.FrameStart, action.FrameCount).ToArray(),
                 SourceRecordOrdinal: action.SourceRecordOrdinal)).ToArray(),
-            Authored(descriptor)));
+            Authored(descriptor), GeneratedFrames(descriptor, null)));
     }
 
     private static void AddClassicEffects(
@@ -289,7 +290,7 @@ public static class SpriteInspectionCatalogBuilder
                     effect.Effect.ToString(), effect.Timing.FramesPerSecond, effect.Timing.Loop,
                     descriptor.Sequence ?? descriptor.Frames.Select(frame => frame.FrameIndex).ToArray(),
                     SourceRecordOrdinal: effect.SourceRecordOrdinal)).ToArray(),
-                Authored(descriptor)));
+                Authored(descriptor), GeneratedFrames(descriptor, null)));
         }
     }
 
@@ -329,6 +330,9 @@ public static class SpriteInspectionCatalogBuilder
         }).ToArray();
     }
 
+    private static IReadOnlyList<SpriteInspectionFrame> GeneratedFrames(NormalizedMediaDescriptor descriptor, IReadOnlyList<DungeonMediaFrameLayout>? layouts) =>
+        Frames(descriptor with { Frames = descriptor.GeneratedFrames ?? descriptor.Frames }, layouts);
+
     private static SpriteAuthoredValues Authored(NormalizedMediaDescriptor descriptor) => new(
         descriptor.DisplayName, descriptor.Pivot, descriptor.DisplaySize, descriptor.FramesPerSecond, descriptor.Loop, descriptor.Sequence?.ToArray());
 
@@ -347,7 +351,13 @@ public sealed record SpriteAuthoredOverlayDocument(int SchemaVersion, ContentDig
     public const int CurrentSchemaVersion = 1;
 }
 
-/// <summary>Typed authored overlay values. Generated frames, UVs, bytes, dimensions, paths, and hashes have no fields here.</summary>
+/// <summary>Typed authored overlay values. Generated bytes, paths, hashes, and source facts have no fields here.</summary>
+public sealed record SpriteAuthoredFrameRect(int FrameIndex, int X, int Y, int Width, int Height);
+
+public sealed record SpriteAuthoredStateTiming(string Name, float? FramesPerSecond = null, bool? Loop = null);
+
+public sealed record SpriteAuthoredActionTiming(string Name, float? FramesPerSecond = null, bool? Loop = null);
+
 public sealed record SpriteAuthoredOverlay(
     string Id,
     string? DisplayName = null,
@@ -355,7 +365,65 @@ public sealed record SpriteAuthoredOverlay(
     NormalizedVector2? DisplaySize = null,
     float? FramesPerSecond = null,
     bool? Loop = null,
-    IReadOnlyList<int>? Sequence = null);
+    IReadOnlyList<int>? Sequence = null,
+    IReadOnlyList<SpriteAuthoredFrameRect>? FrameRects = null,
+    IReadOnlyList<SpriteAuthoredStateTiming>? StateTimings = null,
+    IReadOnlyList<SpriteAuthoredActionTiming>? ActionTimings = null);
+
+/// <summary>Applies saved authored values to an inspection projection without changing generated bytes or source facts.</summary>
+public static class SpriteAuthoredOverlayApplicator
+{
+    public static SpriteInspectionEntry Apply(SpriteInspectionEntry entry, SpriteAuthoredOverlay overlay)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        ArgumentNullException.ThrowIfNull(overlay);
+        if (!StringComparer.Ordinal.Equals(entry.Id, overlay.Id))
+        {
+            throw new ArgumentException("An authored overlay must identify the inspected sprite entry.", nameof(overlay));
+        }
+
+        SpriteAuthoredOverlayStore.ValidateValues(overlay, entry);
+        SpriteAuthoredValues values = entry.AuthoredValues;
+        return entry with
+        {
+            Label = overlay.DisplayName ?? entry.Label,
+            AuthoredValues = new(
+                overlay.DisplayName ?? values.DisplayName,
+                overlay.Pivot ?? values.Pivot,
+                overlay.DisplaySize ?? values.DisplaySize,
+                overlay.FramesPerSecond ?? values.FramesPerSecond,
+                overlay.Loop ?? values.Loop,
+                overlay.Sequence ?? values.Sequence),
+            Frames = entry.Frames.Select(frame => overlay.FrameRects?.SingleOrDefault(rect => rect.FrameIndex == frame.FrameIndex) is { } rect
+                ? frame with { X = rect.X, Y = rect.Y, Width = rect.Width, Height = rect.Height }
+                : frame).ToArray(),
+            States = entry.States.Select(state =>
+            {
+                SpriteAuthoredStateTiming? timing = overlay.StateTimings?.SingleOrDefault(value => StringComparer.Ordinal.Equals(value.Name, state.Name));
+                return state with
+                {
+                    FramesPerSecond = timing?.FramesPerSecond ?? overlay.FramesPerSecond ?? state.FramesPerSecond,
+                    Loops = timing?.Loop ?? overlay.Loop ?? state.Loops,
+                };
+            }).ToArray(),
+            Actions = entry.Actions.Select(action =>
+            {
+                if (action.FramesPerSecond is null && action.Loops is null)
+                {
+                    return action;
+                }
+
+                SpriteAuthoredActionTiming? timing = overlay.ActionTimings?.SingleOrDefault(value => StringComparer.Ordinal.Equals(value.Name, action.Name));
+                return action with
+                {
+                    FramesPerSecond = timing?.FramesPerSecond ?? overlay.FramesPerSecond ?? action.FramesPerSecond,
+                    Loops = timing?.Loop ?? overlay.Loop ?? action.Loops,
+                    FrameIndices = overlay.Sequence ?? action.FrameIndices,
+                };
+            }).ToArray(),
+        };
+    }
+}
 
 /// <summary>
 /// Strict JSON and safe filesystem operations for authored sprite overlays.
@@ -424,7 +492,7 @@ public static class SpriteAuthoredOverlayStore
             {
                 throw new FormatException("Classic weapon timing and sequence are action-specific and cannot be authored as resource-wide values.");
             }
-            ValidateValues(overlay, entry.Frames.Count);
+            ValidateValues(overlay, entry);
         }
     }
 
@@ -433,7 +501,10 @@ public static class SpriteAuthoredOverlayStore
     {
         Validate(document, catalog, authoringBasisDigest);
         return document.Overlays.Select(overlay => new AuthoredMediaOverlay(
-            overlay.Id, true, overlay.DisplayName, overlay.Pivot, overlay.DisplaySize, overlay.FramesPerSecond, overlay.Loop, overlay.Sequence?.ToArray())).ToArray();
+            overlay.Id, true, overlay.DisplayName, overlay.Pivot, overlay.DisplaySize, overlay.FramesPerSecond, overlay.Loop, overlay.Sequence?.ToArray(),
+            overlay.FrameRects?.Select(rect => new AuthoredMediaFrameRect(rect.FrameIndex, rect.X, rect.Y, rect.Width, rect.Height)).ToArray(),
+            overlay.StateTimings?.Select(timing => new AuthoredMediaStateTiming(timing.Name, timing.FramesPerSecond, timing.Loop)).ToArray(),
+            overlay.ActionTimings?.Select(timing => new AuthoredMediaActionTiming(timing.Name, timing.FramesPerSecond, timing.Loop)).ToArray())).ToArray();
     }
 
     public static string ResolveRelativePath(string rootDirectory, string relativePath)
@@ -566,7 +637,7 @@ public static class SpriteAuthoredOverlayStore
         return candidate.StartsWith(prefix, StringComparison.Ordinal);
     }
 
-    private static void ValidateValues(SpriteAuthoredOverlay overlay, int frameCount)
+    internal static void ValidateValues(SpriteAuthoredOverlay overlay, SpriteInspectionEntry entry)
     {
         if (overlay.DisplayName is not null && (string.IsNullOrWhiteSpace(overlay.DisplayName) || overlay.DisplayName.Any(char.IsControl)))
         {
@@ -579,9 +650,66 @@ public static class SpriteAuthoredOverlayStore
             || overlay.FramesPerSecond is <= 0F
             || (overlay.FramesPerSecond is not null && !float.IsFinite(overlay.FramesPerSecond.Value))
             || overlay.Sequence is { Count: 0 }
-            || overlay.Sequence?.Any(index => index < 0 || index >= frameCount) == true)
+            || overlay.Sequence?.Any(index => index < 0 || index >= entry.Frames.Count) == true)
         {
             throw new FormatException("A sprite overlay contains invalid authored presentation values.");
+        }
+
+        ValidateFrameRects(overlay.FrameRects, entry);
+        ValidateTimings(overlay.StateTimings, entry.States.Select(state => state.Name), nameof(overlay.StateTimings));
+        ValidateTimings(overlay.ActionTimings,
+            entry.Actions.Where(action => action.FramesPerSecond is not null || action.Loops is not null).Select(action => action.Name),
+            nameof(overlay.ActionTimings));
+    }
+
+    private static void ValidateFrameRects(IReadOnlyList<SpriteAuthoredFrameRect>? rectangles, SpriteInspectionEntry entry)
+    {
+        if (rectangles is null) return;
+        HashSet<int> frames = [];
+        foreach (SpriteAuthoredFrameRect rect in rectangles)
+        {
+            ArgumentNullException.ThrowIfNull(rect);
+            if (rect.FrameIndex < 0 || rect.X < 0 || rect.Y < 0 || rect.Width <= 0 || rect.Height <= 0
+                || !frames.Add(rect.FrameIndex) || !entry.Frames.Any(frame => frame.FrameIndex == rect.FrameIndex)
+                || rect.X > entry.Atlas.Width - rect.Width || rect.Y > entry.Atlas.Height - rect.Height)
+            {
+                throw new FormatException("A sprite overlay frame rectangle must uniquely identify a generated frame and remain inside its atlas.");
+            }
+        }
+    }
+
+    private static void ValidateTimings<TTiming>(IReadOnlyList<TTiming>? timings, IEnumerable<string> availableNames, string parameterName)
+        where TTiming : class
+    {
+        if (timings is null) return;
+        HashSet<string> available = availableNames.ToHashSet(StringComparer.Ordinal);
+        HashSet<string> names = new(StringComparer.Ordinal);
+        foreach (TTiming timing in timings)
+        {
+            ArgumentNullException.ThrowIfNull(timing);
+            string name = timing switch
+            {
+                SpriteAuthoredStateTiming state => state.Name,
+                SpriteAuthoredActionTiming action => action.Name,
+                _ => throw new InvalidOperationException("Unknown sprite timing type."),
+            };
+            float? framesPerSecond = timing switch
+            {
+                SpriteAuthoredStateTiming state => state.FramesPerSecond,
+                SpriteAuthoredActionTiming action => action.FramesPerSecond,
+                _ => null,
+            };
+            bool? loop = timing switch
+            {
+                SpriteAuthoredStateTiming state => state.Loop,
+                SpriteAuthoredActionTiming action => action.Loop,
+                _ => null,
+            };
+            if (string.IsNullOrWhiteSpace(name) || name.Any(char.IsControl) || !available.Contains(name) || !names.Add(name)
+                || (framesPerSecond is null && loop is null) || framesPerSecond is <= 0F || (framesPerSecond is not null && !float.IsFinite(framesPerSecond.Value)))
+            {
+                throw new FormatException($"The sprite overlay has an invalid {parameterName} value.");
+            }
         }
     }
 }
