@@ -108,9 +108,10 @@ npm ci
   --runtime ./.runtime/runtime-pack
 ```
 
-The Host declares the semantic `attack=digital` intent and Engine-owned held
-WASD mappings for `move.*`; the DOM attack control only claims that declared
-intent and renders the `dagger.hud` projection. The SDK compiles the
+Use WASD to move and the mouse to look. Left mouse or V attacks once per press;
+combat cooldowns limit repeated attacks. Engine input capture keeps gameplay
+controls out of menus, inventory and console interactions. The DOM renders the
+`dagger.hud` projection. The SDK compiles the
 product-owned DOM UI and atomically stages the loose Product bundle. The
 runtime pack owns the host, browser shell, renderer, and browser transport.
 

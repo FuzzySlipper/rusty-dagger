@@ -39,18 +39,7 @@
 .dagger-composition dt { color: #aa9c7a; }
 .dagger-composition dd { margin: 0; overflow-wrap: anywhere; }
 
-.dagger-attack {
-  position: absolute;
-  right: 24px;
-  bottom: 24px;
-  padding: 10px 18px;
-  border: 1px solid #d4b56b;
-  background: #312817;
-  color: #f7e7bd;
-  font: 700 .8rem ui-monospace, monospace;
-  cursor: pointer;
-  pointer-events: auto;
-}
+
 
 .dagger-hud button:hover, .dagger-hud button:focus-visible { background: #594521; outline: 2px solid #f4d983; }
 
