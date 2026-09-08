@@ -38,7 +38,9 @@
     "minimumFacingCosine": 0.5,
     "attackReach": 1.25,
     "chaseSpeedUnitsPerSecond": 3.0,
-    "navigationMaximumVisited": 32
+    "navigationMaximumVisited": 32,
+    "spawnGroundProbeLift": 0.2,
+    "spawnGroundProbeDistance": 3
   },
   "lootInteraction": {
     "maximumDistance": 2.25,

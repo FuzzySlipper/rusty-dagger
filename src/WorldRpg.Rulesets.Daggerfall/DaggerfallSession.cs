@@ -1,4 +1,5 @@
 using Rusty.Engine;
+using System.Numerics;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
@@ -129,6 +130,22 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
+            if (saved is null)
+            {
+                // RDB marker heights are probe origins, not floor contacts. Unlike
+                // DFU's centered capsule, our navigation pose is the sprite's base.
+                foreach (ActorState actor in actors.All.Values.Where(actor => authored[actor.EntityId].GroundOnSpawn))
+                {
+                    SpatialHit floor = engine.Spatial.CastRay(new SpatialRaycastRequest(
+                        _spatial.Session,
+                        actor.Position.ToVector() + Vector3.UnitY * tuning.EnemyBehavior.SpawnGroundProbeLift,
+                        -Vector3.UnitY,
+                        tuning.EnemyBehavior.SpawnGroundProbeDistance,
+                        new SpatialQueryFilter(uint.MaxValue, uint.MaxValue), default, default, default));
+                    if (floor.Present && !floor.StartSolid && floor.Normal.Y > 0f)
+                        actor.ApplyPose(new ActorPose(WorldPoint.From(floor.Point), actor.HeadingYawRadians));
+                }
+            }
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);

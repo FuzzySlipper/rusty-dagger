@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Numerics;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
@@ -51,6 +52,30 @@ public sealed class NormalizedPrivateersHoldContentTests
         Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapon).ResourceId);
         Assert.Equal("weapon.dagger.steel", inputs.ClassicPresentation.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal(["blood0", "blood1", "blood2", "magicSparkle"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
+    }
+
+    [Fact]
+    public void Preserves_each_actor_crop_at_its_scaled_world_geometry()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        using JsonDocument media = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/dungeon/manifest.json")));
+
+        JsonElement actor = media.RootElement.GetProperty("actors").EnumerateArray().Single(value => value.GetProperty("mobileId").GetInt32() == 0);
+        Vector2 worldSize = Vector(actor.GetProperty("worldSize"));
+        Vector2 sourceWorldSize = Vector(actor.GetProperty("sourceWorldSize"));
+        NormalizedActorSprite sprite = inputs.ActorSprites[2007];
+        foreach (uint frameId in new uint[] { 0, 8 })
+        {
+            JsonElement sourceFrame = actor.GetProperty("states").EnumerateArray()
+                .SelectMany(state => state.GetProperty("frames").EnumerateArray())
+                .Single(frame => frame.GetProperty("atlasFrameIndex").GetUInt32() == frameId);
+            Vector2 sourceSize = Vector(sourceFrame.GetProperty("sourceWorldSize"));
+            Vector2 expected = new(sourceSize.X * worldSize.X / sourceWorldSize.X, sourceSize.Y * worldSize.Y / sourceWorldSize.Y);
+            Assert.Equal(expected, Assert.Single(sprite.Frames, frame => frame.Id == frameId).DisplaySize);
+        }
     }
 
     [Fact]
@@ -136,6 +161,8 @@ public sealed class NormalizedPrivateersHoldContentTests
             .ToArray();
         return new ProductContent(files);
     }
+
+    private static Vector2 Vector(JsonElement value) => new(value.GetProperty("x").GetSingle(), value.GetProperty("y").GetSingle());
 
     private static string RepositoryRoot()
     {

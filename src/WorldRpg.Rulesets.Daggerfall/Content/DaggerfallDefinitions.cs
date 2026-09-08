@@ -56,7 +56,7 @@ internal sealed record DaggerfallAttackRange(int MinimumDamage, int MaximumDamag
 internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds, string? Material = null, int DamageBonus = 0);
 internal sealed record DaggerfallRewardPolicy(int ExperienceReward);
 internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
-internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation)
+internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, bool GroundOnSpawn = false)
 {
     internal DaggerfallVitalValues PlayerInitialVitals => DaggerfallVitalValues.Player(Stats);
 }
