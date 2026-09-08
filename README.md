@@ -139,8 +139,12 @@ the world. Composition diagnostics are available there. **I** opens inventory an
 compatible equipment slots, or select an item and use the keyboard destination
 controls. Drops use the current inventory revision; rejected drops preserve the
 items and layout. Slot arrangement lasts for the session, matching the earlier
-UI; saves retain items and equipment. Character and selective loot panels are
-awaiting restoration; **C/F** report that status without changing inventory.
+UI; saves retain items and equipment. **C** opens the read-only character sheet with live resources, attributes, skills,
+progression and equipped items. **F** searches the aimed nearby corpse and opens
+its loot without taking anything. **Take 1** transfers one stack unit; **Take**
+transfers one unique item. Empty loot stays open until Exit. Transfers recheck
+visibility, range and the displayed revision; rejected transfers leave contents
+unchanged. Both panels are also available from the game menu.
 
 ## Content and migration boundary
 

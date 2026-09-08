@@ -27,4 +27,12 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"inventory-move\",\"revision\":\"1:2\",\"item\":\"unique:1002\",\"targetGrid\":\"3\"}", false)]
     public void Inventory_drop_requires_a_revision_identity_and_exactly_one_typed_target(string json, bool accepted)
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+    [Theory]
+    [InlineData("{\"action\":\"loot-take\",\"container\":\"2000:1\",\"revision\":\"2000:1:8\",\"item\":\"stack:gold-piece\"}", true)]
+    [InlineData("{\"action\":\"loot-take\",\"revision\":\"8\",\"item\":\"stack:gold-piece\"}", false)]
+    [InlineData("{\"action\":\"loot-take\",\"container\":\"2000:1\",\"revision\":\"8\",\"item\":\"stack:gold-piece\",\"quantity\":5}", false)]
+    [InlineData("{\"action\":\"loot-close\",\"container\":\"2000:1\"}", true)]
+    [InlineData("{\"action\":\"loot-close\"}", false)]
+    public void Loot_actions_require_the_open_container_and_selected_revision(string json, bool accepted)
+        => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }

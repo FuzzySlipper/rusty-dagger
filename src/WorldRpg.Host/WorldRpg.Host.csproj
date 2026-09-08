@@ -36,6 +36,8 @@
     <RustyEngineProductInputIntent Include="move.right" Value="digital" />
     <RustyEngineProductInputIntent Include="dagger.ui" Value="payload:dagger.ui.action.v1" />
     <RustyEngineProductInputIntent Include="attack" Value="digital" />
+    <RustyEngineProductInputIntent Include="interact" Value="digital" />
+    <RustyEngineProductInputMapping Include="interact.key-f" Intent="interact" Trigger="key:key-f:pressed" />
     <RustyEngineProductInputMapping Include="move.forward.key-w" Intent="move.forward" Trigger="key:key-w:held" />
     <RustyEngineProductInputMapping Include="move.left.key-a" Intent="move.left" Trigger="key:key-a:held" />
     <RustyEngineProductInputMapping Include="move.backward.key-s" Intent="move.backward" Trigger="key:key-s:held" />
@@ -54,6 +56,9 @@
     </ItemGroup>
     <Copy SourceFiles="@(InventoryUiArt)" DestinationFolder="$(RustyEngineProductUiRoot)/inventory-art/inventory-icons" />
     <Copy SourceFiles="@(InventoryUiSkin)" DestinationFolder="$(RustyEngineProductUiRoot)/inventory-art/authored" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../../content/worldrpg/imports/privateers-hold/media/ui/window-character-sheet-chrome.png" DestinationFolder="$(RustyEngineProductUiRoot)/character-art" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../ui/character.css" DestinationFolder="$(RustyEngineProductUiRoot)" />
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)../ui/loot.css" DestinationFolder="$(RustyEngineProductUiRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)../ui/inventory.css" DestinationFolder="$(RustyEngineProductUiRoot)" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)../ui/styles.css" DestinationFolder="$(RustyEngineProductUiRoot)" />
   </Target>

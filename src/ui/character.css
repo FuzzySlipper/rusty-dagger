@@ -1,0 +1,37 @@
+.dagger-character {
+  background: #15150f;
+  border: 1px solid #c5a45e;
+  box-shadow: 0 12px 32px rgb(0 0 0 / .65), inset 0 0 0 2px rgb(22 18 10 / .65);
+  color: #f4e6bd;
+  font: .82rem Georgia, serif;
+  isolation: isolate;
+  max-width: min(66rem, calc(100vw - 48px));
+  min-width: min(44rem, calc(100vw - 48px));
+  overflow: hidden;
+  padding: 13px;
+  position: relative;
+}
+
+.dagger-character > :not(.dagger-character-chrome) { position: relative; z-index: 1; }
+.dagger-character-chrome { height: 100%; image-rendering: pixelated; inset: 0; object-fit: cover; opacity: .17; pointer-events: none; position: absolute; width: 100%; z-index: 0; }
+.dagger-character-title { background: rgb(48 39 24 / .93); border: 1px solid #c5a45e; margin: 0 0 12px; padding: 9px 13px; text-align: center; text-shadow: 1px 1px 0 #000; }
+.dagger-character-title p { color: #e4c676; font: 700 .64rem ui-monospace, monospace; letter-spacing: .1em; margin: 0 0 3px; text-transform: uppercase; }
+.dagger-character-title h2 { color: #f8e7b4; font: 500 1.18rem Georgia, serif; letter-spacing: .06em; margin: 0; text-transform: uppercase; }
+.dagger-character-overview { background: #7d6c45; display: grid; gap: 1px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dagger-character-overview div { background: rgb(20 21 16 / .9); display: grid; gap: 3px; min-width: 0; padding: 8px; }
+.dagger-character-overview span, .dagger-character-rows dt, .dagger-character-rows > div > span { color: #e4c676; font: 700 .63rem ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; }
+.dagger-character-overview strong, .dagger-character-rows dd { font: 600 .8rem ui-monospace, monospace; overflow-wrap: anywhere; }
+.dagger-character-columns { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 14px; }
+.dagger-character-section { background: rgb(12 13 10 / .78); border: 1px solid #7d6c45; min-width: 0; padding: 10px; }
+.dagger-character-section h3 { color: #f5df9d; font: 700 .7rem ui-monospace, monospace; letter-spacing: .09em; margin: 0 0 7px; text-transform: uppercase; }
+.dagger-character-rows { display: grid; gap: 6px; margin: 0; }
+.dagger-character-rows > div { align-items: baseline; border-bottom: 1px solid rgb(125 108 69 / .45); display: flex; gap: 9px; justify-content: space-between; min-width: 0; padding-bottom: 5px; }
+.dagger-character-rows dd { margin: 0; text-align: right; }
+.dagger-character-rows > div > span { color: #c3b48b; font-size: .58rem; text-align: right; }
+.dagger-character-rows > div:has(span) { align-items: start; display: grid; gap: 2px 8px; grid-template-columns: minmax(0, 1fr) auto; }
+.dagger-character-rows > div:has(span) dd { color: #e6cc84; grid-column: 1 / -1; text-align: left; }
+
+@media (max-width: 52rem) {
+  .dagger-character { min-width: 0; width: calc(100vw - 32px); }
+  .dagger-character-columns { grid-template-columns: 1fr; }
+}

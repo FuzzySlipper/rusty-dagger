@@ -8,6 +8,33 @@ namespace WorldRpg.Kit.Tests;
 public sealed class MechanicsInventoryContainerCoordinatorTests
 {
     [Fact]
+    public void Selective_transfers_move_one_unit_or_unique_and_reject_stale_or_capacity_failures_atomically()
+    {
+        InventoryWorld world = new();
+        MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
+        EntityId source = new(10), player = new(20);
+        containers.RegisterOwner(source);
+        containers.RegisterOwner(player);
+        containers.Seed(source, [new(new InventoryItemId("zinc"), 4), new(new InventoryItemId("sword"), UniqueIdentity: "one", UniqueEntityId: 40)]);
+        ulong revision = world.Revision;
+        InventoryContainerTransferReceipt first = containers.Transfer(source, player, new(new InventoryItemId("zinc"), 1), revision);
+        Assert.Equal(3UL, containers.Read(source).Stacks.Single().Quantity);
+        Assert.Equal(1UL, containers.Read(player).Stacks.Single().Quantity);
+        Assert.Single(containers.Read(source).UniqueItems);
+        Assert.Throws<MechanicsException>(() => containers.Transfer(source, player, new(new InventoryItemId("zinc"), 1), revision));
+        Assert.Equal(first.WorldRevisionAfter, world.Revision);
+        containers.Transfer(source, player, new(new InventoryItemId("sword"), 1, 40), world.Revision);
+        Assert.Empty(containers.Read(source).UniqueItems);
+        Assert.Equal(40UL, containers.Read(player).UniqueItems.Single().Entity.Value);
+        containers.Seed(player, [new(new InventoryItemId("zinc"), 9)]);
+        ulong beforeRejection = world.Revision;
+        Assert.Throws<MechanicsException>(() => containers.Transfer(source, player, new(new InventoryItemId("zinc"), 1), world.Revision));
+        Assert.Equal(beforeRejection, world.Revision);
+        Assert.Equal(3UL, containers.Read(source).Stacks.Single().Quantity);
+        Assert.Equal(10UL, containers.Read(player).Stacks.Single().Quantity);
+    }
+
+    [Fact]
     public void Seed_and_transfer_all_preserve_mixed_contents_with_one_publish_each()
     {
         InventoryWorld world = new();

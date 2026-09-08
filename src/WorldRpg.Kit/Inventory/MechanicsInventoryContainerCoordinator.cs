@@ -28,6 +28,9 @@ public sealed record InventoryContainerSeed(
     }
 }
 
+/// <summary>A caller-selected amount of one stack, or one unique item, to transfer.</summary>
+public sealed record InventoryContainerSelection(InventoryItemId Item, ulong Quantity, ulong? UniqueEntityId = null);
+
 /// <summary>One copied fungible transfer performed by a container move.</summary>
 public readonly record struct InventoryContainerStackTransfer(InventoryItemId Item, ulong Quantity);
 
@@ -62,7 +65,7 @@ public sealed class InventoryContainerSeedReceipt
     public InventoryContainerSummary After { get; }
 }
 
-/// <summary>Copied evidence for one atomic move of every item in a container.</summary>
+/// <summary>Copied evidence for one atomic transfer between containers.</summary>
 public sealed class InventoryContainerTransferReceipt
 {
     internal InventoryContainerTransferReceipt(
@@ -185,7 +188,20 @@ public sealed class MechanicsInventoryContainerCoordinator
     /// Moves all directly contained items from one registered owner to another
     /// through one detached candidate and one Engine publication.
     /// </summary>
-    public InventoryContainerTransferReceipt TransferAll(EntityId source, EntityId destination)
+    public InventoryContainerTransferReceipt TransferAll(EntityId source, EntityId destination, ulong? expectedWorldRevision = null) =>
+        TransferCore(source, destination, null, expectedWorldRevision);
+
+    /// <summary>Transfers a selected amount through the same Engine candidate and revision guard.</summary>
+    public InventoryContainerTransferReceipt Transfer(EntityId source, EntityId destination, InventoryContainerSelection selection, ulong expectedWorldRevision)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+        ArgumentOutOfRangeException.ThrowIfZero(selection.Quantity);
+        if (selection.UniqueEntityId is not null && selection.Quantity != 1)
+            throw new ArgumentException("A unique transfer moves exactly one item.", nameof(selection));
+        return TransferCore(source, destination, selection, expectedWorldRevision);
+    }
+
+    private InventoryContainerTransferReceipt TransferCore(EntityId source, EntityId destination, InventoryContainerSelection? selection, ulong? expectedWorldRevision)
     {
         RequireRegistered(source, nameof(source));
         RequireRegistered(destination, nameof(destination));
@@ -203,7 +219,23 @@ public sealed class MechanicsInventoryContainerCoordinator
             .OrderBy(item => item.Entity.Value)
             .ToArray();
         ulong worldRevisionBefore = _world.Revision;
-        InventoryWorldCandidate candidate = _world.Prepare(worldRevisionBefore);
+        InventoryWorldCandidate candidate = _world.Prepare(expectedWorldRevision ?? worldRevisionBefore);
+        if (selection is not null)
+        {
+            ItemDefinition definition = RequireDefinition(selection.Item);
+            if (selection.UniqueEntityId is ulong entity)
+            {
+                uniqueItems = uniqueItems.Where(item => item.Entity.Value == entity && item.Definition == definition.Id).ToArray();
+                if (uniqueItems.Length != 1) throw new InvalidOperationException("The selected item is no longer in this container.");
+                stacks = [];
+            }
+            else
+            {
+                if (definition.Kind != ItemKind.Fungible) throw new ArgumentException("A stack transfer requires a fungible item.", nameof(selection));
+                stacks = [new InventoryStack(definition.Id, selection.Quantity)];
+                uniqueItems = [];
+            }
+        }
 
         foreach (InventoryStack stack in stacks)
         {

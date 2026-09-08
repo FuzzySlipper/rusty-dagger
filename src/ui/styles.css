@@ -68,3 +68,5 @@
 .dagger-menu.has-inventory { width: min(72rem, calc(100vw - 24px)); }
 .dagger-menu.has-inventory > h1 { font-size: 1rem; margin-bottom: 8px; }
 .dagger-inventory-root { margin-bottom: 12px; }
+
+.dagger-menu.has-character { width: min(70rem, calc(100vw - 32px)); }
