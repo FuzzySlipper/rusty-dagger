@@ -316,6 +316,13 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
 
     private Preview CreatePreview(SpriteInspectionEntry entry)
     {
+        // Project the same resolved values used by the Engine sprite, so an
+        // operator can edit either vector component without a hidden null pair.
+        entry = entry with { AuthoredValues = entry.AuthoredValues with
+        {
+            Pivot = entry.AuthoredValues.Pivot ?? new NormalizedVector2(0, 0),
+            DisplaySize = entry.AuthoredValues.DisplaySize ?? new NormalizedVector2(1, 1),
+        } };
         VerifyAdmittedContent(entry);
         RenderResourceInfo resource = engine.Graphics.OpenResource(new(entry.Closure.RelativePath));
         SpriteAtlas atlas = engine.Graphics.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(entry.Atlas.Width, entry.Atlas.Height,

@@ -342,6 +342,8 @@ public sealed class SpriteWorkbenchProductTests
         using (Harness harness = Harness.Create())
         {
             harness.Send("select", id: "sprite.actor", sequence: "state:Move@0");
+            Assert.False(ValueReader.IsNull(harness.Ui.LastProjection.Value, "selected", "authored", "pivotX"));
+            Assert.False(ValueReader.IsNull(harness.Ui.LastProjection.Value, "selected", "authored", "pivotY"));
             harness.SendRaw("""{"action":"edit-pivot","id":"sprite.actor","pivotX":0.25,"pivotY":0.75}""");
             Assert.Equal(new Vector2(.25F, .75F), harness.Appearance.SpriteRequests.Last().Pivot);
             harness.SendRaw("""{"action":"edit-timing","id":"sprite.actor","sequence":"state:Move@0","framesPerSecond":3,"loop":false}""");
