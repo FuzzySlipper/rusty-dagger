@@ -70,3 +70,7 @@
 .dagger-inventory-root { margin-bottom: 12px; }
 
 .dagger-menu.has-character { width: min(70rem, calc(100vw - 32px)); }
+
+.dagger-menu.has-debug { width: min(64rem, calc(100vw - 32px)); }
+.dagger-debug-root { color: #e2cf96; min-height: 18rem; }
+.dagger-workbench-link { color: #e2cf96; }

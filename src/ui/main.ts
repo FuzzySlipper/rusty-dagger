@@ -1,3 +1,5 @@
+/// <reference path="./live-debug-panel.d.ts" />
+import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
 import { mountCharacter, isCharacterProjection, type CharacterProjection } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
@@ -66,6 +68,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
         <button data-action="inventory">Inventory &amp; equipment · I</button>
         <button data-action="character">Character · C</button>
         <button data-action="loot">Search aimed loot · F</button>
+        <button data-action="debug">Engine debug console</button>
         <button data-action="diagnostics">Composition diagnostics</button>
         <button data-action="tools">Sprite animation tool</button>
         <button disabled>Settings — not yet available</button>
@@ -79,8 +82,9 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <div class="dagger-inventory-root" hidden></div>
       <div class="dagger-character-root" hidden></div>
       <div class="dagger-loot-root" hidden></div>
+      <div class="dagger-debug-root" data-rusty-ui-interactive hidden></div>
       <button data-action="loot-exit" hidden>Exit loot</button>
-      <section class="dagger-tools" hidden><p>The sprite workbench runs as a separate authoring tool. Its launcher is documented in the repository README.</p><p>In-game tool launching and visual editing are being restored separately.</p></section>
+      <section class="dagger-tools" hidden><p>Sprite Workbench is a separate authoring application. Start it from the repository terminal:</p><pre>bash src/scripts/run-sprite-workbench.sh</pre><p>Edits save to authoring/sprites/privateers-hold.json.</p><a class="dagger-workbench-link" target="_blank" rel="noopener">Open Sprite Workbench ↗</a></section>
       <button data-action="back">Back to menu</button>
       </div>
     </dialog>
@@ -119,13 +123,32 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const panel = shell.querySelector<HTMLElement>('.dagger-menu-panel')!;
   const diagnostics = shell.querySelector<HTMLElement>('.dagger-composition')!;
   const tools = shell.querySelector<HTMLElement>('.dagger-tools')!;
+  const workbenchUrl = new URL(window.location.href);
+  workbenchUrl.port = '4175'; workbenchUrl.pathname = '/'; workbenchUrl.search = ''; workbenchUrl.hash = '';
+  shell.querySelector<HTMLAnchorElement>('.dagger-workbench-link')!.href = workbenchUrl.href;
   const menuToggle = shell.querySelector<HTMLButtonElement>('.dagger-menu-toggle')!;
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | null = null;
+  const debugRoot = shell.querySelector<HTMLElement>('.dagger-debug-root')!;
+  let debugPanel: LiveDebugPanelMount | null = null;
+  const closeDebug = (): void => { debugPanel?.dispose(); debugPanel = null; debugRoot.replaceChildren(); };
+  const openDebug = (): void => {
+    closeDebug();
+    const host = document.createElement('div');
+    debugRoot.append(host);
+    void mountLiveDebugPanel(host, { enabled: true, presentation: 'inline' }).then(mount => {
+      if (!host.isConnected || activePanel !== 'debug') { mount.dispose(); return; }
+      debugPanel = mount;
+      host.querySelector<HTMLInputElement>('input')?.focus();
+    }).catch(error => {
+      if (host.isConnected) host.textContent = `Debug console unavailable: ${error instanceof Error ? error.message : String(error)}`;
+    });
+  };
+  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug' | null = null;
   const showHome = (): void => {
     const previous = activePanel;
+    if (previous === 'debug') closeDebug();
     if (previous === 'loot') closeLoot();
     activePanel = null;
-    menu.classList.remove('has-inventory', 'has-character', 'has-loot');
+    menu.classList.remove('has-inventory', 'has-character', 'has-loot', 'has-debug');
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
@@ -133,6 +156,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   };
   const closeMenu = (): void => {
     if (activePanel === 'loot') closeLoot();
+    closeDebug();
     activePanel = null;
     menu.close();
     context.ui.setInteractionMode('gameplay');
@@ -148,9 +172,10 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot'): void => {
+  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | 'debug'): void => {
     if (!menu.open) openMenu();
     if (activePanel === 'loot' && action !== 'loot') closeLoot();
+    if (activePanel === 'debug') closeDebug();
     activePanel = action;
     home.hidden = true;
     panel.hidden = false;
@@ -159,13 +184,16 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     inventoryRoot.hidden = action !== 'inventory';
     characterRoot.hidden = action !== 'character';
     lootRoot.hidden = action !== 'loot';
+    debugRoot.hidden = action !== 'debug';
+    if (action === 'debug') openDebug();
     shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     menu.classList.toggle('has-inventory', action === 'inventory');
     menu.classList.toggle('has-character', action === 'character');
     menu.classList.toggle('has-loot', action === 'loot');
+    menu.classList.toggle('has-debug', action === 'debug');
     menuTitle.textContent = action === 'diagnostics' ? 'Composition diagnostics'
       : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character'
-      : action === 'loot' ? 'Loot' : 'Sprite animation tool';
+      : action === 'loot' ? 'Loot' : action === 'debug' ? 'Engine debug console' : 'Sprite animation tool';
     if (action === 'character') {
       menuTitle.focus({ preventScroll: true });
       menu.scrollTop = 0;
@@ -177,7 +205,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (action === 'back') showHome();
     else if (action === 'loot-exit') closeMenu();
     else if (action === 'loot') claim('loot');
-    else if (action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character') showPanel(action);
+    else if (action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
   };
   // Capture before Engine input sees navigation keys. Escape's native dialog
   // cancellation is suppressed so one physical press performs exactly one step.
@@ -207,7 +235,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       event.preventDefault();
       event.stopPropagation();
       if (!event.repeat) {
-        if (action === 'inventory' || action === 'character') showPanel(action);
+        if (action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
         else claim(action);
       }
     }
@@ -245,6 +273,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   }) ?? (() => {});
   return { dispose: () => {
     unsubscribe();
+    closeDebug();
     inventoryView.dispose();
     characterView.dispose();
     lootView.dispose();
