@@ -144,7 +144,7 @@ internal sealed class DaggerfallCorpseLootModule
     }
 
     /// <summary>Reads Engine visibility and prepares, but does not publish, an explicit loot action.</summary>
-    internal PendingCorpseLoot? PrepareLoot(PlayerControlState player, LookReceipt look)
+    internal PendingCorpseLoot? PrepareLoot(PlayerControlState player, LookReceipt look, long? targetActorId = null)
     {
         ArgumentNullException.ThrowIfNull(player);
         if (player.Position is not WorldPoint position)
@@ -154,7 +154,7 @@ internal sealed class DaggerfallCorpseLootModule
         }
 
         CorpseContainer[] eligible = _corpses.Values
-            .Where(corpse => corpse.IsInteractable)
+            .Where(corpse => corpse.IsInteractable && (targetActorId is null || corpse.ActorId == targetActorId))
             .OrderBy(corpse => corpse.ActorId)
             .ToArray();
         if (eligible.Length == 0)
@@ -213,7 +213,11 @@ internal sealed class DaggerfallCorpseLootModule
         ArgumentNullException.ThrowIfNull(facts);
         if (!_corpses.TryGetValue(pending.Container.ActorId, out CorpseContainer? current)
             || current != pending.Container
-            || !current.IsInteractable) throw new InvalidOperationException("The prepared corpse loot action is no longer current.");
+            || !current.IsInteractable)
+        {
+            LastCommit = new CorpseLootCommitEvidence(pending.Container.ActorId, false, "The prepared loot action is no longer current.");
+            return CorpseLootCommitResult.Rejected;
+        }
 
         if (pending.IsEmpty)
         {
@@ -224,21 +228,30 @@ internal sealed class DaggerfallCorpseLootModule
         }
         try
         {
-            // TransferAll is the sole Engine publication.  All code after it
+            // The transfer is the sole Engine publication. All code after it
             // is deterministic local bookkeeping and preconstructed facts.
-            _containers.TransferAll(current.Owner, _playerOwner);
+            if (pending.Selection is { } selection)
+                _containers.Transfer(current.Owner, _playerOwner, selection, pending.ExpectedWorldRevision!.Value);
+            else _containers.TransferAll(current.Owner, _playerOwner, pending.ExpectedWorldRevision);
         }
-        catch (MechanicsException rejection)
+        catch (Exception rejection) when (rejection is MechanicsException or InvalidOperationException)
         {
             LastCommit = new CorpseLootCommitEvidence(pending.Container.ActorId, false, rejection.Message);
             return CorpseLootCommitResult.Rejected;
         }
-        _corpses[current.ActorId] = current with { IsInteractable = false };
+        InventoryView remaining = _containers.Read(current.Owner);
+        bool emptied = remaining.Stacks.Count == 0 && remaining.UniqueItems.Count == 0;
+        _corpses[current.ActorId] = current with { IsInteractable = !emptied };
         foreach (LootAwardedFact fact in pending.Facts) facts.Append(fact);
-        facts.Append(new CorpseLootedFact(current.ActorId));
+        if (emptied) facts.Append(new CorpseLootedFact(current.ActorId));
         LastCommit = new CorpseLootCommitEvidence(pending.Container.ActorId, true, null);
         return CorpseLootCommitResult.Committed;
     }
+
+    internal InventoryView? ReadContents(long actorId) =>
+        _corpses.TryGetValue(actorId, out CorpseContainer? corpse) && corpse.IsRegistered ? _containers.Read(corpse.Owner) : null;
+
+    internal string ContainerName(long actorId) => _definitions[actorId].Id.Value;
 
     private void SeedRegistered(CorpseContainer corpse, IReadOnlyList<InventoryContainerSeed> seeds)
     {
@@ -283,7 +296,8 @@ internal sealed class DaggerfallCorpseLootModule
 internal sealed record CorpseContainer(long ActorId, EntityId Owner, ulong OriginatingSequence, IReadOnlyList<InventoryContainerSeed> Seeds, bool IsRegistered, bool IsSeeded, bool IsInteractable);
 
 /// <summary>Prevalidated product policy waiting for the outer Engine publication boundary.</summary>
-internal sealed record PendingCorpseLoot(CorpseContainer Container, IReadOnlyList<LootAwardedFact> Facts, bool IsEmpty);
+internal sealed record PendingCorpseLoot(CorpseContainer Container, IReadOnlyList<LootAwardedFact> Facts, bool IsEmpty,
+    InventoryContainerSelection? Selection = null, ulong? ExpectedWorldRevision = null);
 
 internal enum CorpseLootCommitResult { Committed, Rejected }
 internal sealed record CorpseLootCommitEvidence(long ActorId, bool Committed, string? Rejection);

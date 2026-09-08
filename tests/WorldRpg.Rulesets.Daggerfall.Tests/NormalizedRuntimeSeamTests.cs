@@ -1295,6 +1295,50 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Loot_ui_actions_open_without_transfer_then_take_one_at_the_admitted_boundary_and_close()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        CorpseContainer corpse = session.Corpses[2000];
+        Assert.True(corpse.IsRegistered);
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        ulong before = session.State.Inventory.Read().WorldRevision;
+        void Ui(string json, ulong step)
+        {
+            ProductInputEvent action = Input(InputEventKind.DirectDigital) with
+            {
+                ValueKind = InputValueKind.ProductPayload,
+                PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+                PayloadData = Encoding.UTF8.GetBytes(json),
+            };
+            session.Update(new ProductUpdate(OuterUpdate(step), [action]));
+        }
+        Ui("{\"action\":\"loot\"}", 2);
+        LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
+        Assert.Equal(before, session.State.Inventory.Read().WorldRevision);
+        InventoryItemPresentation gold = opened.Items.Single(item => item.Definition == "gold-piece");
+        string take = System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key });
+        Ui(take, 3);
+        Assert.Equal(ulong.Parse(gold.Quantity) - 1, ulong.Parse(session.OpenLoot!.Items.Single(item => item.Key == gold.Key).Quantity));
+        ulong after = session.State.Inventory.Read().WorldRevision;
+        Ui(take, 4);
+        Assert.Equal(after, session.State.Inventory.Read().WorldRevision);
+        Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-close", container = opened.Container }), 5);
+        Assert.Null(session.OpenLoot);
+    }
+
+    [Fact]
     public void Corpse_loot_uses_engine_visibility_and_transfers_to_the_player_only_after_explicit_interaction()
     {
         string root = RepositoryRoot();
@@ -1331,19 +1375,59 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.True(loot.Corpses[2000].IsInteractable);
 
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
-        PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
-        Assert.False(pending.IsEmpty);
+        world.RegisterEquipment(new EquipmentState(playerOwner));
+        using MechanicsEquipmentCoordinator equipment = new(world, playerOwner, items,
+            definitions.EquipmentSlots.Values.ToDictionary(slot => new WorldRpg.Kit.Inventory.EquipmentSlotId(slot.Id.Value), DaggerfallSession.ToManagedSlot));
+        DaggerfallInventoryPresentation inventoryUi = new(new MechanicsInventoryCoordinator(world, playerOwner, items), equipment, definitions,
+            new Dictionary<string, string>());
+        DaggerfallLootPresentation panel = new(loot, inventoryUi);
+        PlayerControlState player = new(new WorldPoint(0, 0, 0), 0, 0);
+        // An ordinary generated corpse can hold mixed contents. Ensure the selected stack
+        // has several units so this exercise distinguishes taking one from taking all.
+        containers.Seed(loot.Corpses[2000].Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        ulong beforeOpen = world.Revision;
+        Assert.Null(panel.Open(player, ForwardLook()));
+        LootPresentation opened = Assert.IsType<LootPresentation>(panel.Read());
+        Assert.Equal(beforeOpen, world.Revision);
+        Assert.Empty(containers.Read(playerOwner).Stacks);
+        InventoryItemPresentation gold = opened.Items.Single(item => item.Key == "stack:gold-piece");
+        ulong goldBefore = ulong.Parse(gold.Quantity);
+        DaggerfallPlayerUiAction take = new("loot-take", opened.Revision, gold.Key, Container: opened.Container);
+        Assert.Null(panel.PrepareTake(take with { Container = "other" }, player, ForwardLook()));
+        Assert.Equal(beforeOpen, world.Revision);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Occluded, 0d));
+        Assert.Null(panel.PrepareTake(take, player, ForwardLook()));
+        Assert.Equal(beforeOpen, world.Revision);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        PendingCorpseLoot pending = Assert.IsType<PendingCorpseLoot>(panel.PrepareTake(take, player, ForwardLook()));
         FactBuffer<IProductFact> facts = new();
-        Assert.Equal(CorpseLootCommitResult.Committed, loot.TryCommitLoot(pending, facts));
+        panel.Complete(loot.TryCommitLoot(pending, facts));
+        Assert.Equal(1UL, containers.Read(playerOwner).Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
+        Assert.Equal(goldBefore - 1, containers.Read(loot.Corpses[2000].Owner).Stacks.Single(stack => stack.Definition.Value == "gold-piece").Quantity);
+        Assert.True(loot.Corpses[2000].IsInteractable);
+        ulong afterTake = world.Revision;
+        Assert.Null(panel.PrepareTake(take, player, ForwardLook()));
+        Assert.Equal(afterTake, world.Revision);
+        Assert.Contains("changed", panel.Message);
+        while (panel.Read() is { Empty: false } current)
+        {
+            InventoryItemPresentation next = current.Items[0];
+            PendingCorpseLoot one = Assert.IsType<PendingCorpseLoot>(panel.PrepareTake(
+                new("loot-take", current.Revision, next.Key, Container: current.Container), player, ForwardLook()));
+            panel.Complete(loot.TryCommitLoot(one, facts));
+        }
         Assert.False(loot.Corpses[2000].IsInteractable);
-        Assert.NotEmpty(containers.Read(playerOwner).Stacks);
+        Assert.True(Assert.IsType<LootPresentation>(panel.Read()).Empty);
+        Assert.Contains("until Exit", panel.Message);
         List<IProductFact> delivered = [];
         facts.Deliver(delivered.Add);
-        Assert.NotEmpty(delivered.OfType<LootAwardedFact>());
+        Assert.All(delivered.OfType<LootAwardedFact>(), fact => Assert.Equal(1UL, fact.Quantity));
         Assert.Single(delivered.OfType<CorpseLootedFact>());
         Assert.Equal(2.25d, loot.LastEvidence?.Request.Observers.Span[0].MaximumDistance);
         Assert.Equal(.5d, loot.LastEvidence?.Request.Observers.Span[0].MinimumFacingCosine);
-        Assert.Null(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
+        panel.Close(opened.Container);
+        Assert.Null(panel.Read());
+
     }
 
     [Fact]

@@ -33,14 +33,17 @@ internal sealed class DaggerfallInventoryPresentation(
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         _layout.Reconcile(items.Where(item => item.Slots.Length == 0).Select(item => item.Key));
         return new InventoryPresentation($"{current.WorldRevision}:{_layout.Revision}", items.Select(item =>
-        {
-            DaggerfallItemDefinition definition = definitions.Items[new DaggerfallItemId(item.Definition)];
-            return new InventoryItemPresentation(item.Key, item.Definition, Label(item.Definition), item.Quantity.ToString(CultureInfo.InvariantCulture),
-                definition.Weight, definition.Value, Details(definition), icons.GetValueOrDefault(item.Definition),
-                item.Slots.Length == 0 ? _layout.Position(item.Key) : null, item.Slots,
-                definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => Compatible(definition, slot)).ToArray());
-        }).ToArray(), definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
-            equipped.TryGet(new SlotId(slot.Id.Value), out UniqueItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), _message);
+            DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? _layout.Position(item.Key) : null, item.Slots)).ToArray(),
+            definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
+                equipped.TryGet(new SlotId(slot.Id.Value), out UniqueItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), _message);
+    }
+
+    internal InventoryItemPresentation DescribeItem(string key, string itemId, ulong quantity, int? gridSlot = null, string[]? equippedSlots = null)
+    {
+        DaggerfallItemDefinition definition = definitions.Items[new DaggerfallItemId(itemId)];
+        return new InventoryItemPresentation(key, itemId, Label(itemId), quantity.ToString(CultureInfo.InvariantCulture),
+            definition.Weight, definition.Value, Details(definition), icons.GetValueOrDefault(itemId), gridSlot, equippedSlots ?? [],
+            definitions.EquipmentSlots.Keys.Select(slot => slot.Value).Where(slot => Compatible(definition, slot)).ToArray());
     }
 
     internal void Move(DaggerfallPlayerUiAction action)
@@ -117,7 +120,7 @@ internal sealed class DaggerfallInventoryPresentation(
     private static UniqueItem Unique(InventoryItemPresentation item) => new(ulong.Parse(item.Key.AsSpan("unique:".Length), CultureInfo.InvariantCulture), new InventoryItemId(item.Definition));
     internal static string UniqueKey(ulong entity) => $"unique:{entity.ToString(CultureInfo.InvariantCulture)}";
     internal static string StackKey(string definition) => $"stack:{definition}";
-    private static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
+    internal static string Label(string id) => CultureInfo.InvariantCulture.TextInfo.ToTitleCase(id.Replace('-', ' '));
     private static string Details(DaggerfallItemDefinition item) => item.Weapon is { } weapon
         ? $"Damage {weapon.MinimumDamage}–{weapon.MaximumDamage}; {Label(weapon.Material)}; {Label(weapon.Skill)}"
         : item.Armor is { } armor ? $"Armor: {Label(armor.Material)}" : item.Shield is not null ? "Shield" : item.IsFungible ? "Stackable item" : "Equipment";

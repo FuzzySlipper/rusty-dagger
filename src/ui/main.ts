@@ -1,4 +1,6 @@
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
+import { mountCharacter, isCharacterProjection, type CharacterProjection } from './character.js';
+import { mountLoot, type LootProjection, type LootAction } from './loot.js';
 
 interface ProjectionEnvelope {
   readonly contract: string;
@@ -11,7 +13,7 @@ interface ProductUiContext {
     focusGameplay(): void;
   };
   readonly projection?: { subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void };
-  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: { action: string } | InventoryAction }): void };
+  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: { action: string } | InventoryAction | LootAction }): void };
 }
 
 interface DaggerHud {
@@ -19,6 +21,8 @@ interface DaggerHud {
   readonly lastOutcome: string;
   readonly composition: CompositionIdentity;
   readonly inventory?: InventoryProjection;
+  readonly character?: CharacterProjection;
+  readonly loot?: LootProjection | null;
 }
 
 interface CompositionIdentity {
@@ -38,7 +42,13 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const inventoryStylesheet = document.createElement('link');
   inventoryStylesheet.rel = 'stylesheet';
   inventoryStylesheet.href = new URL('./inventory.css', import.meta.url).href;
-  document.head.append(stylesheet, inventoryStylesheet);
+  const characterStylesheet = document.createElement('link');
+  characterStylesheet.rel = 'stylesheet';
+  characterStylesheet.href = new URL('./character.css', import.meta.url).href;
+  const lootStylesheet = document.createElement('link');
+  lootStylesheet.rel = 'stylesheet';
+  lootStylesheet.href = new URL('./loot.css', import.meta.url).href;
+  document.head.append(stylesheet, inventoryStylesheet, characterStylesheet, lootStylesheet);
 
   const shell = document.createElement('section');
   shell.className = 'dagger-hud';
@@ -50,12 +60,12 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <button class="dagger-menu-toggle" type="button" aria-haspopup="dialog">Menu · Esc</button>
     <dialog class="dagger-menu" aria-labelledby="dagger-menu-title">
-      <h1 id="dagger-menu-title">Game menu</h1>
+      <h1 id="dagger-menu-title" tabindex="-1">Game menu</h1>
       <div class="dagger-menu-home">
         <button data-action="resume" autofocus>Return to game</button>
         <button data-action="inventory">Inventory &amp; equipment · I</button>
-        <button disabled>Character · C — awaiting restoration</button>
-        <button disabled>Loot · F — awaiting restoration</button>
+        <button data-action="character">Character · C</button>
+        <button data-action="loot">Search aimed loot · F</button>
         <button data-action="diagnostics">Composition diagnostics</button>
         <button data-action="tools">Sprite animation tool</button>
         <button disabled>Settings — not yet available</button>
@@ -67,6 +77,9 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       <dl></dl>
     </section>
       <div class="dagger-inventory-root" hidden></div>
+      <div class="dagger-character-root" hidden></div>
+      <div class="dagger-loot-root" hidden></div>
+      <button data-action="loot-exit" hidden>Exit loot</button>
       <section class="dagger-tools" hidden><p>The sprite workbench runs as a separate authoring tool. Its launcher is documented in the repository README.</p><p>In-game tool launching and visual editing are being restored separately.</p></section>
       <button data-action="back">Back to menu</button>
       </div>
@@ -86,6 +99,19 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
   }));
+  const characterRoot = shell.querySelector<HTMLElement>('.dagger-character-root')!;
+  const characterView = mountCharacter(characterRoot);
+  const lootRoot = shell.querySelector<HTMLElement>('.dagger-loot-root')!;
+  const lootView = mountLoot(lootRoot, action => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
+  }));
+  let currentLoot: LootProjection | null = null;
+  let lastLootContainer: string | null = null;
+  const closeLoot = (): void => {
+    if (currentLoot) context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'loot-close', container: currentLoot.container },
+    });
+  };
   const onAttack = (): void => { if (!menu.open) claim('attack'); };
   const menu = shell.querySelector<HTMLDialogElement>('dialog')!;
   const menuTitle = shell.querySelector<HTMLElement>('#dagger-menu-title')!;
@@ -94,17 +120,20 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const diagnostics = shell.querySelector<HTMLElement>('.dagger-composition')!;
   const tools = shell.querySelector<HTMLElement>('.dagger-tools')!;
   const menuToggle = shell.querySelector<HTMLButtonElement>('.dagger-menu-toggle')!;
-  let activePanel: 'diagnostics' | 'tools' | 'inventory' | null = null;
+  let activePanel: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot' | null = null;
   const showHome = (): void => {
     const previous = activePanel;
+    if (previous === 'loot') closeLoot();
     activePanel = null;
-    menu.classList.remove('has-inventory');
+    menu.classList.remove('has-inventory', 'has-character', 'has-loot');
     home.hidden = false;
     panel.hidden = true;
     menuTitle.textContent = 'Game menu';
     home.querySelector<HTMLButtonElement>(`[data-action="${previous ?? 'resume'}"]`)!.focus();
   };
   const closeMenu = (): void => {
+    if (activePanel === 'loot') closeLoot();
+    activePanel = null;
     menu.close();
     context.ui.setInteractionMode('gameplay');
     context.ui.focusGameplay();
@@ -119,24 +148,36 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     else if (menu.open) closeMenu();
     else openMenu();
   };
-  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory'): void => {
+  const showPanel = (action: 'diagnostics' | 'tools' | 'inventory' | 'character' | 'loot'): void => {
     if (!menu.open) openMenu();
+    if (activePanel === 'loot' && action !== 'loot') closeLoot();
     activePanel = action;
     home.hidden = true;
     panel.hidden = false;
     diagnostics.hidden = action !== 'diagnostics';
     tools.hidden = action !== 'tools';
     inventoryRoot.hidden = action !== 'inventory';
+    characterRoot.hidden = action !== 'character';
+    lootRoot.hidden = action !== 'loot';
+    shell.querySelector<HTMLButtonElement>('[data-action="loot-exit"]')!.hidden = action !== 'loot';
     menu.classList.toggle('has-inventory', action === 'inventory');
+    menu.classList.toggle('has-character', action === 'character');
+    menu.classList.toggle('has-loot', action === 'loot');
     menuTitle.textContent = action === 'diagnostics' ? 'Composition diagnostics'
-      : action === 'inventory' ? 'Inventory & equipment' : 'Sprite animation tool';
-    panel.querySelector<HTMLButtonElement>(':scope > [data-action="back"]')!.focus();
+      : action === 'inventory' ? 'Inventory & equipment' : action === 'character' ? 'Character'
+      : action === 'loot' ? 'Loot' : 'Sprite animation tool';
+    if (action === 'character') {
+      menuTitle.focus({ preventScroll: true });
+      menu.scrollTop = 0;
+    } else panel.querySelector<HTMLButtonElement>(':scope > [data-action="back"]')!.focus();
   };
   const onMenuClick = (event: MouseEvent): void => {
     const action = (event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action;
     if (action === 'resume') closeMenu();
     else if (action === 'back') showHome();
-    else if (action === 'diagnostics' || action === 'tools' || action === 'inventory') showPanel(action);
+    else if (action === 'loot-exit') closeMenu();
+    else if (action === 'loot') claim('loot');
+    else if (action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character') showPanel(action);
   };
   // Capture before Engine input sees navigation keys. Escape's native dialog
   // cancellation is suppressed so one physical press performs exactly one step.
@@ -166,7 +207,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       event.preventDefault();
       event.stopPropagation();
       if (!event.repeat) {
-        if (action === 'inventory') showPanel('inventory');
+        if (action === 'inventory' || action === 'character') showPanel(action);
         else claim(action);
       }
     }
@@ -181,6 +222,13 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
     if (value.inventory) inventoryView.update(value.inventory);
+    if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
+    currentLoot = value.loot ?? null;
+    lootView.update(currentLoot);
+    if (currentLoot && currentLoot.container !== lastLootContainer) {
+      lastLootContainer = currentLoot.container;
+      showPanel('loot');
+    } else if (!currentLoot && activePanel === 'loot') showHome();
     vitals.replaceChildren(...value.resources.map((resource) => {
       const row = document.createElement('p');
       const label = document.createElement('span');
@@ -198,6 +246,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   return { dispose: () => {
     unsubscribe();
     inventoryView.dispose();
+    characterView.dispose();
+    lootView.dispose();
     document.removeEventListener('keydown', onKeyDown, true);
     menu.removeEventListener('cancel', onCancel);
     menu.removeEventListener('click', onMenuClick);
@@ -206,6 +256,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     attack.removeEventListener('click', onAttack);
     stylesheet.remove();
     inventoryStylesheet.remove();
+    characterStylesheet.remove();
+    lootStylesheet.remove();
     shell.remove();
   } };
 }

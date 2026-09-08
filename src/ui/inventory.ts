@@ -231,6 +231,9 @@ export function mountInventory(
 
   shell.addEventListener('dragstart', onDragStart);
   shell.addEventListener('dragend', onDragEnd);
+  // Admit the destination on entry as well as movement so native drag sessions
+  // negotiate the move before mouse release, including occupied item buttons.
+  shell.addEventListener('dragenter', onDragOver);
   shell.addEventListener('dragover', onDragOver);
   shell.addEventListener('dragleave', onDragLeave);
   shell.addEventListener('drop', onDrop);
@@ -261,6 +264,7 @@ export function mountInventory(
       disposed = true;
       shell.removeEventListener('dragstart', onDragStart);
       shell.removeEventListener('dragend', onDragEnd);
+      shell.removeEventListener('dragenter', onDragOver);
       shell.removeEventListener('dragover', onDragOver);
       shell.removeEventListener('dragleave', onDragLeave);
       shell.removeEventListener('drop', onDrop);

@@ -38,6 +38,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     private readonly DaggerfallOutcomePresentation _outcomes;
     private readonly DaggerfallHudProjection _hud;
     private readonly DaggerfallInventoryPresentation _inventoryUi;
+    private readonly DaggerfallLootPresentation _lootUi;
+    private readonly DaggerfallCharacterPresentation _characterUi;
     private readonly PrivateersHoldAppearance _appearance;
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
@@ -162,6 +164,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 tuning.LootInteraction);
             _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
             _inventoryUi = new DaggerfallInventoryPresentation(inventory, equipmentCoordinator, definitions, inputs.ClassicPresentation.InventoryIcons);
+            _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
+            _characterUi = new DaggerfallCharacterPresentation(definitions, playerDefinition, equipmentCoordinator);
             _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random);
@@ -286,8 +290,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession
 
         if (committedBoundaryLoot is { } pending)
         {
-            if (_corpseLoot.TryCommitLoot(pending, _facts) == CorpseLootCommitResult.Rejected)
-                Presentation.SetOutcome("Cannot loot corpse right now");
+            CorpseLootCommitResult result = _corpseLoot.TryCommitLoot(pending, _facts);
+            _lootUi.Complete(result);
+            Presentation.SetOutcome(_lootUi.Message);
         }
         return ProductUpdateResult.None;
     }
@@ -319,8 +324,12 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 case "attack": firstStep.Request(DaggerfallInput.Attack); break;
                 case "inventory": break;
                 case "inventory-move": _inventoryUi.Move(action!); break;
-                case "character": Presentation.SetOutcome("Character sheet UI is awaiting restoration."); break;
-                case "loot": Presentation.SetOutcome("Loot UI is awaiting restoration; no items were taken."); break;
+                case "character": break;
+                case "loot": firstStep.Request(DaggerfallInput.Interact); break;
+                case "loot-close": _lootUi.Close(action!.Container); break;
+                case "loot-take":
+                    _pendingLoot ??= _lootUi.PrepareTake(action!, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl));
+                    break;
                 default: Presentation.SetOutcome("Unrecognized player UI action."); break;
             }
         }
@@ -356,7 +365,11 @@ internal sealed class DaggerfallSession : ISaveableGameSession
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
         if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
-        if (update.IsRequested(DaggerfallInput.Interact)) _pendingLoot ??= _corpseLoot.PrepareLoot(State.PlayerControl, currentLook);
+        if (update.IsRequested(DaggerfallInput.Interact))
+        {
+            _pendingLoot ??= _lootUi.Open(State.PlayerControl, currentLook);
+            Presentation.SetOutcome(_lootUi.Message);
+        }
         DeliverFacts();
         PublishPresentation();
     }
@@ -466,7 +479,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _inventoryUi.Read());
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
@@ -515,6 +528,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
         else _facts.Deliver(React);
     }
     internal IReadOnlyDictionary<long, EnemyBehaviorEvidence> LastEnemyBehavior => _enemyBehavior.LastEvidence;
+    internal LootPresentation? OpenLoot => _lootUi.Read();
     internal CorpseLootEvidence? LastCorpseLoot => _corpseLoot.LastEvidence;
     internal CorpseLootCommitEvidence? LastCorpseLootCommit => _corpseLoot.LastCommit;
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpseLoot.Corpses;
