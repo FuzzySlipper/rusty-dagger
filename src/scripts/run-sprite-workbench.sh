@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+if [[ $# -eq 0 ]]; then
+  mkdir -p "$repo_root/authoring/sprites"
+  set -- "$repo_root/content/worldrpg/imports/privateers-hold" "$repo_root/authoring" sprites/privateers-hold.json 4175
+fi
 if [[ $# -ne 4 ]]; then
-  echo "usage: bash src/scripts/run-sprite-workbench.sh PUBLICATION_ROOT AUTHORING_ROOT OVERLAY_PATH PORT" >&2
+  echo "usage: bash src/scripts/run-sprite-workbench.sh [PUBLICATION_ROOT AUTHORING_ROOT OVERLAY_PATH PORT]" >&2
   exit 2
 fi
 
@@ -10,7 +15,6 @@ publication_root=$(cd "$1" && pwd)
 authoring_root=$(cd "$2" && pwd)
 overlay_path=$3
 port=$4
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 runtime_pack="$repo_root/.runtime/runtime-pack"
 if [[ ! -f "$publication_root/import-manifest.json" || ! -d "$authoring_root" || ! "$overlay_path" =~ ^sprites/.+\.json$ || ! "$port" =~ ^[0-9]+$ || ! -x "$runtime_pack/bin/rusty" ]]; then
   echo "publication must be a generated import root; authoring must exist; overlay is sprites/*.json; port is numeric; and the verified Engine runtime pack must be installed." >&2
