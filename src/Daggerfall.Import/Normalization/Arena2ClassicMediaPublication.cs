@@ -10,7 +10,15 @@ namespace Daggerfall.Import.Normalization;
 /// therefore remains suitable for offline import tools and tests.
 /// </summary>
 public sealed record Arena2ClassicMediaInputs(
+    byte[] Weapon01Cif,
     byte[] Weapon02Cif,
+    byte[] Weapon04Cif,
+    byte[] Weapon05Cif,
+    byte[] Weapon06Cif,
+    byte[] Weapon07Cif,
+    byte[] Weapon08Cif,
+    byte[] Weapon09Cif,
+    byte[] Weapon10Cif,
     byte[] ArtPalette,
     byte[] Texture380,
     byte[] Palette,
@@ -135,6 +143,7 @@ public enum ClassicDaggerWeaponAction
 public enum ClassicWeaponScreenAlignment
 {
     Left,
+    Center,
     Right,
 }
 
@@ -191,7 +200,8 @@ public sealed record ClassicWeaponActionManifest(
     float ScreenOffset,
     ClassicSpriteTiming Timing,
     short SourceXOffset,
-    short SourceYOffset)
+    short SourceYOffset,
+    IReadOnlyList<int>? Sequence = null)
 {
     internal void Validate(int totalFrames)
     {
@@ -204,8 +214,15 @@ public sealed record ClassicWeaponActionManifest(
 
         ArgumentNullException.ThrowIfNull(Timing);
         Timing.Validate();
+        if (Sequence is { Count: 0 } || Sequence?.Any(frame => frame < 0 || frame >= totalFrames) == true)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Sequence), "Classic weapon action sequences must identify generated atlas frames.");
+        }
     }
 }
+
+/// <summary>One generated first-person weapon resource and its source-normalized actions.</summary>
+public sealed record ClassicWeaponMediaManifest(string ResourceId, IReadOnlyList<ClassicWeaponActionManifest> Actions);
 
 /// <summary>Typed source interpretation for a selected TEXTURE.380 effect atlas.</summary>
 public sealed record ClassicEffectManifest(ClassicEffect Effect, string MediaId, int SourceRecordOrdinal, ClassicSpriteTiming Timing)
@@ -308,7 +325,7 @@ public sealed record Arena2ClassicMediaPublication(
     NormalizedMediaManifest MediaManifest,
     IReadOnlyList<LogicalSourceRecord> Sources,
     LogicalSourceRecord? AuthoredUiManifestSource,
-    IReadOnlyList<ClassicWeaponActionManifest> WeaponActions,
+    IReadOnlyList<ClassicWeaponMediaManifest> WeaponMedia,
     IReadOnlyList<ClassicEffectManifest> Effects,
     IReadOnlyList<ClassicAudioManifest> Audio,
     IReadOnlyList<ClassicUiImageManifest> UiImages,
@@ -320,16 +337,98 @@ public sealed record Arena2ClassicMediaPublication(
     private const int WeaponReferenceHeight = 200;
     private const int FontCellSize = 16;
 
-    private static readonly WeaponActionSource[] WeaponActionSources =
+    private static readonly WeaponActionSource[] DaggerWeaponActionSources =
     [
-        new(ClassicDaggerWeaponAction.Idle, ClassicWeaponScreenAlignment.Right, 0.04F, true),
-        new(ClassicDaggerWeaponAction.StrikeDown, ClassicWeaponScreenAlignment.Right, 0F, false),
-        new(ClassicDaggerWeaponAction.StrikeDownLeft, ClassicWeaponScreenAlignment.Right, 0F, false),
-        new(ClassicDaggerWeaponAction.StrikeLeft, ClassicWeaponScreenAlignment.Right, 0F, false),
-        new(ClassicDaggerWeaponAction.StrikeRight, ClassicWeaponScreenAlignment.Left, 0F, false),
-        new(ClassicDaggerWeaponAction.StrikeDownRight, ClassicWeaponScreenAlignment.Left, 0F, false),
-        new(ClassicDaggerWeaponAction.StrikeUp, ClassicWeaponScreenAlignment.Right, 0F, false),
+        new(ClassicDaggerWeaponAction.Idle, 0, ClassicWeaponScreenAlignment.Right, 0.04F, true, 1),
+        new(ClassicDaggerWeaponAction.StrikeDown, 1, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownLeft, 2, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeLeft, 3, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeRight, 4, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownRight, 5, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeUp, 6, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
     ];
+
+    private static readonly WeaponActionSource[] GeneralWeaponActionSources =
+    [
+        new(ClassicDaggerWeaponAction.Idle, 0, ClassicWeaponScreenAlignment.Right, 0F, true, 1),
+        new(ClassicDaggerWeaponAction.StrikeDown, 1, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownLeft, 2, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeLeft, 3, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeRight, 4, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownRight, 5, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeUp, 6, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+    ];
+
+    private static readonly WeaponActionSource[] StaffWeaponActionSources =
+    [
+        new(ClassicDaggerWeaponAction.Idle, 0, ClassicWeaponScreenAlignment.Right, 0.02F, true, 1),
+        new(ClassicDaggerWeaponAction.StrikeDown, 1, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownLeft, 2, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeLeft, 3, ClassicWeaponScreenAlignment.Center, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeRight, 4, ClassicWeaponScreenAlignment.Center, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownRight, 5, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeUp, 6, ClassicWeaponScreenAlignment.Right, 0F, false, 5),
+    ];
+
+    private static readonly WeaponActionSource[] UnarmedWeaponActionSources =
+    [
+        new(ClassicDaggerWeaponAction.Idle, 0, ClassicWeaponScreenAlignment.Center, 0.15F, true, 1),
+        new(ClassicDaggerWeaponAction.StrikeDown, 1, ClassicWeaponScreenAlignment.Center, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownLeft, 2, ClassicWeaponScreenAlignment.Center, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeLeft, 3, ClassicWeaponScreenAlignment.Center, 0F, false, 5, [0, 1, 2, 3, 4, 2, 1, 0]),
+        new(ClassicDaggerWeaponAction.StrikeRight, 4, ClassicWeaponScreenAlignment.Center, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeDownRight, 5, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+        new(ClassicDaggerWeaponAction.StrikeUp, 6, ClassicWeaponScreenAlignment.Left, 0F, false, 5),
+    ];
+
+    private static readonly WeaponActionSource[] BowWeaponActionSources =
+    [
+        new(ClassicDaggerWeaponAction.Idle, 0, ClassicWeaponScreenAlignment.Right, 0F, true, 1),
+        new(ClassicDaggerWeaponAction.StrikeDown, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 7),
+        new(ClassicDaggerWeaponAction.StrikeDownLeft, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 7),
+        new(ClassicDaggerWeaponAction.StrikeLeft, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 7),
+        new(ClassicDaggerWeaponAction.StrikeRight, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 7),
+        new(ClassicDaggerWeaponAction.StrikeDownRight, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 7),
+        new(ClassicDaggerWeaponAction.StrikeUp, 0, ClassicWeaponScreenAlignment.Right, 0F, false, 4),
+    ];
+
+    private static readonly WeaponMediaSource[] WeaponMediaSources =
+    [
+        new("WEAPON01.CIF", "weapon.staff", StaffWeaponActionSources),
+        new("WEAPON02.CIF", "weapon.dagger.steel", DaggerWeaponActionSources),
+        new("WEAPON04.CIF", "weapon.longblade", GeneralWeaponActionSources),
+        new("WEAPON05.CIF", "weapon.mace", GeneralWeaponActionSources),
+        new("WEAPON06.CIF", "weapon.flail", GeneralWeaponActionSources),
+        new("WEAPON07.CIF", "weapon.warhammer", GeneralWeaponActionSources),
+        new("WEAPON08.CIF", "weapon.axe", GeneralWeaponActionSources),
+        new("WEAPON09.CIF", "weapon.bow", BowWeaponActionSources),
+        new("WEAPON10.CIF", "weapon.unarmed", UnarmedWeaponActionSources),
+    ];
+
+    internal static void ValidateCanonicalWeaponAction(string resourceId, ClassicWeaponActionManifest action)
+    {
+        WeaponMediaSource weapon = resourceId.StartsWith("weapon.dagger", StringComparison.Ordinal)
+            ? WeaponMediaSources.Single(source => source.ResourceId == "weapon.dagger.steel")
+            : WeaponMediaSources.SingleOrDefault(source => source.ResourceId == resourceId)
+                ?? throw new InvalidOperationException($"Classic weapon resource '{resourceId}' is not in the admitted source closure.");
+        WeaponActionSource expected = weapon.Actions.Single(source => source.Action == action.Action);
+        if (action.SourceRecordOrdinal != expected.SourceRecordOrdinal || action.FrameCount != expected.FrameCount
+            || !SequencesEqual(action.FrameStart, action.Sequence, expected.Sequence))
+        {
+            throw new InvalidOperationException("Classic weapon action facts differ from the admitted Arena2 source interpretation.");
+        }
+    }
+
+    internal static bool IsAdmittedWeaponResource(string resourceId) =>
+        resourceId.StartsWith("weapon.dagger", StringComparison.Ordinal)
+        || WeaponMediaSources.Any(source => source.ResourceId == resourceId);
+
+    private static bool SequencesEqual(int frameStart, IReadOnlyList<int>? actual, IReadOnlyList<int>? relativeExpected)
+    {
+        if (relativeExpected is null) return actual is null;
+        return actual is { } sequence && sequence.Count == relativeExpected.Count
+            && sequence.SequenceEqual(relativeExpected.Select(frame => checked(frameStart + frame)));
+    }
 
     private static readonly EffectSource[] EffectSources =
     [
@@ -407,8 +506,24 @@ public sealed record Arena2ClassicMediaPublication(
         Arena2Palette palette = PaletteDecoder.Decode(source.Palette, "arena2/PAL.PAL");
         List<GeneratedMediaArtifact> generated = [];
 
-        (GeneratedMediaArtifact weapon, ClassicWeaponActionManifest[] actions) = BuildWeapon(source.Weapon02Cif, artPalette, resolved, effectiveOptions);
-        generated.Add(weapon);
+        List<ClassicWeaponMediaManifest> weaponMedia = [];
+        foreach (WeaponMediaSource weaponSource in WeaponMediaSources)
+        {
+            string resourceId = weaponSource.ResourceId == "weapon.dagger.steel" ? resolved.WeaponMediaId : weaponSource.ResourceId;
+            IReadOnlyDictionary<ClassicDaggerWeaponAction, ClassicWeaponActionPresentation>? profileActions = weaponSource.ResourceId == "weapon.dagger.steel"
+                ? resolved.WeaponActions
+                : null;
+            (GeneratedMediaArtifact weapon, ClassicWeaponActionManifest[] actions) = BuildWeapon(
+                source.RequireWeapon(weaponSource.FileName),
+                $"arena2/{weaponSource.FileName}",
+                resourceId,
+                weaponSource.Actions,
+                profileActions,
+                artPalette,
+                effectiveOptions);
+            generated.Add(weapon);
+            weaponMedia.Add(new(resourceId, actions));
+        }
         generated.AddRange(BuildEffects(source.Texture380, palette, resolved, effectiveOptions, out ClassicEffectManifest[] effects));
         generated.AddRange(BuildAudio(source.DaggerSound, effectiveOptions, out ClassicAudioManifest[] audio));
         generated.AddRange(BuildUi(source, artPalette, resolved, effectiveOptions, out ClassicUiImageManifest[] uiImages));
@@ -436,7 +551,7 @@ public sealed record Arena2ClassicMediaPublication(
             mediaManifest,
             MergeSources(source.LogicalSources, resolved.AuthoredUiAssets, authoredManifestSource),
             authoredManifestSource,
-            actions,
+            weaponMedia,
             effects,
             audio,
             uiImages,
@@ -447,54 +562,69 @@ public sealed record Arena2ClassicMediaPublication(
 
     private static (GeneratedMediaArtifact Artifact, ClassicWeaponActionManifest[] Actions) BuildWeapon(
         ReadOnlySpan<byte> weaponBytes,
+        string sourceName,
+        string resourceId,
+        IReadOnlyList<WeaponActionSource> actionSources,
+        IReadOnlyDictionary<ClassicDaggerWeaponAction, ClassicWeaponActionPresentation>? profileActions,
         Arena2Palette palette,
-        ResolvedProfile profile,
         Arena2ClassicMediaPublicationOptions options)
     {
-        WeaponCifArchive weapon = WeaponCifArchive.Parse(weaponBytes, "arena2/WEAPON02.CIF");
-        if (weapon.RecordCount != WeaponActionSources.Length)
-        {
-            throw new Arena2FormatException("arena2/WEAPON02.CIF", 0, $"classic dagger requires exactly {WeaponActionSources.Length} action records, got {weapon.RecordCount}");
-        }
+        WeaponCifArchive weapon = WeaponCifArchive.Parse(weaponBytes, sourceName);
 
         List<DecodedSpriteFrame> frames = [];
         List<ClassicWeaponActionManifest> actions = [];
-        for (int record = 0; record < WeaponActionSources.Length; record++)
+        Dictionary<string, int> frameStarts = new(StringComparer.Ordinal);
+        foreach (WeaponActionSource sourceMapping in actionSources)
         {
-            WeaponActionSource sourceMapping = WeaponActionSources[record];
-            ClassicWeaponActionPresentation mapping = profile.WeaponActions[sourceMapping.Action];
-            WeaponCifRecordInfo info = weapon.GetRecordInfo(record);
-            int start = frames.Count;
-            for (int frame = 0; frame < info.FrameCount; frame++)
+            WeaponCifRecordInfo info = weapon.GetRecordInfo(sourceMapping.SourceRecordOrdinal);
+            IReadOnlyList<int> frameSourceRecords = sourceMapping.FrameSourceRecords ?? [sourceMapping.SourceRecordOrdinal];
+            int availableFrames = frameSourceRecords.Sum(record => weapon.GetRecordInfo(record).FrameCount);
+            if (availableFrames < sourceMapping.FrameCount)
             {
-                IndexedWeaponCifFrame decoded = weapon.DecodeFrame(record, frame);
-                frames.Add(new($"{profile.WeaponMediaId}/{frames.Count:D2}", WeaponReferenceWidth, WeaponReferenceHeight,
-                    PlaceWeaponFrame(decoded, palette, mapping.Alignment, mapping.ScreenOffset)));
+                throw new Arena2FormatException(sourceName, 0, $"weapon action '{sourceMapping.Action}' requires {sourceMapping.FrameCount} frames, got {availableFrames}");
             }
+
+            ClassicWeaponActionPresentation mapping = profileActions?.GetValueOrDefault(sourceMapping.Action)
+                ?? new(sourceMapping.Action, sourceMapping.Alignment, sourceMapping.ScreenOffset, new ClassicSpriteTiming(10F, sourceMapping.Loop));
+            string frameSourceKey = string.Join(',', frameSourceRecords);
+            if (!frameStarts.TryGetValue(frameSourceKey, out int start))
+            {
+                start = frames.Count;
+                foreach (int sourceRecord in frameSourceRecords)
+                {
+                    WeaponCifRecordInfo frameInfo = weapon.GetRecordInfo(sourceRecord);
+                    for (int frame = 0; frame < frameInfo.FrameCount; frame++)
+                    {
+                        IndexedWeaponCifFrame decoded = weapon.DecodeFrame(sourceRecord, frame);
+                        frames.Add(new($"{resourceId}/{frames.Count:D2}", WeaponReferenceWidth, WeaponReferenceHeight,
+                            PlaceWeaponFrame(decoded, palette, mapping.Alignment, mapping.ScreenOffset)));
+                    }
+                }
+
+                frameStarts.Add(frameSourceKey, start);
+            }
+
+            IReadOnlyList<int>? sequence = sourceMapping.Sequence?.Select(frame => checked(start + frame)).ToArray();
 
             ClassicWeaponActionManifest action = new(
                 sourceMapping.Action,
-                record,
+                sourceMapping.SourceRecordOrdinal,
                 start,
-                info.FrameCount,
+                sourceMapping.FrameCount,
                 mapping.Alignment,
                 mapping.ScreenOffset,
                 mapping.Timing,
                 info.XOffset,
-                info.YOffset);
+                info.YOffset,
+                sequence);
             action.Validate(frames.Count);
             actions.Add(action);
-        }
-
-        if (frames.Count != 31)
-        {
-            throw new Arena2FormatException("arena2/WEAPON02.CIF", 0, $"classic dagger action table requires exactly 31 frames, got {frames.Count}");
         }
 
         NormalizedSpriteAtlas atlas = SpriteAtlasNormalizer.Normalize(
             frames,
             SpriteAtlasOptions.FixedCellGrid(options.MaximumAtlasDimension, WeaponReferenceWidth, WeaponReferenceHeight, bottomAlign: true));
-        return (GeneratedMediaArtifact.FromAtlas(profile.WeaponMediaId, NormalizedMediaKind.WeaponSprite, $"media/combat/{Slug(profile.WeaponMediaId)}-atlas.png", atlas), actions.ToArray());
+        return (GeneratedMediaArtifact.FromAtlas(resourceId, NormalizedMediaKind.WeaponSprite, $"media/combat/{Slug(resourceId)}-atlas.png", atlas), actions.ToArray());
     }
 
     private static IEnumerable<GeneratedMediaArtifact> BuildEffects(
@@ -906,7 +1036,7 @@ public sealed record Arena2ClassicMediaPublication(
 
     private static ResolvedProfile ResolveProfile(Arena2ClassicMediaProfile profile)
     {
-        IReadOnlyList<ClassicWeaponActionPresentation> weaponActions = profile.WeaponActions ?? WeaponActionSources
+        IReadOnlyList<ClassicWeaponActionPresentation> weaponActions = profile.WeaponActions ?? DaggerWeaponActionSources
             .Select(source => new ClassicWeaponActionPresentation(source.Action, source.Alignment, source.ScreenOffset, new ClassicSpriteTiming(10F, source.Loop)))
             .ToArray();
         IReadOnlyList<ClassicEffectPresentation> effects = profile.Effects ?? EffectSources
@@ -1171,7 +1301,13 @@ public sealed record Arena2ClassicMediaPublication(
         int available = WeaponReferenceWidth - source.Info.Width;
         int requestedOffset = checked((int)MathF.Round(screenOffset * WeaponReferenceWidth, MidpointRounding.AwayFromZero));
         int offset = Math.Clamp(requestedOffset, 0, available);
-        int x = alignment == ClassicWeaponScreenAlignment.Left ? offset : available - offset;
+        int x = alignment switch
+        {
+            ClassicWeaponScreenAlignment.Left => offset,
+            ClassicWeaponScreenAlignment.Center => available / 2,
+            ClassicWeaponScreenAlignment.Right => available - offset,
+            _ => throw new ArgumentOutOfRangeException(nameof(alignment)),
+        };
         int y = WeaponReferenceHeight - source.Info.Height;
         for (int row = 0; row < source.Info.Height; row++)
         {
@@ -1215,7 +1351,16 @@ public sealed record Arena2ClassicMediaPublication(
 
     private static string Slug(string value) => value.Replace('.', '-');
 
-    private sealed record WeaponActionSource(ClassicDaggerWeaponAction Action, ClassicWeaponScreenAlignment Alignment, float ScreenOffset, bool Loop);
+    private sealed record WeaponActionSource(
+        ClassicDaggerWeaponAction Action,
+        int SourceRecordOrdinal,
+        ClassicWeaponScreenAlignment Alignment,
+        float ScreenOffset,
+        bool Loop,
+        int FrameCount,
+        IReadOnlyList<int>? Sequence = null,
+        IReadOnlyList<int>? FrameSourceRecords = null);
+    private sealed record WeaponMediaSource(string FileName, string ResourceId, IReadOnlyList<WeaponActionSource> Actions);
     private sealed record EffectSource(ClassicEffect Effect, string MediaId, int SourceRecordOrdinal);
     private sealed record AudioSource(ClassicDaggerAudioClip Clip, string MediaId, int SourceRecordOrdinal);
     private sealed record UiImageSource(ClassicUiImage Image, string MediaId, string FileName, bool IsHeaderless);
@@ -1225,7 +1370,15 @@ public sealed record Arena2ClassicMediaPublication(
     {
         private SourceBytes(Arena2ClassicMediaInputs inputs, IReadOnlyList<LogicalSourceRecord> logicalSources)
         {
+            Weapon01Cif = inputs.Weapon01Cif;
             Weapon02Cif = inputs.Weapon02Cif;
+            Weapon04Cif = inputs.Weapon04Cif;
+            Weapon05Cif = inputs.Weapon05Cif;
+            Weapon06Cif = inputs.Weapon06Cif;
+            Weapon07Cif = inputs.Weapon07Cif;
+            Weapon08Cif = inputs.Weapon08Cif;
+            Weapon09Cif = inputs.Weapon09Cif;
+            Weapon10Cif = inputs.Weapon10Cif;
             ArtPalette = inputs.ArtPalette;
             Texture380 = inputs.Texture380;
             Palette = inputs.Palette;
@@ -1244,7 +1397,15 @@ public sealed record Arena2ClassicMediaPublication(
             LogicalSources = logicalSources;
         }
 
+        public byte[] Weapon01Cif { get; }
         public byte[] Weapon02Cif { get; }
+        public byte[] Weapon04Cif { get; }
+        public byte[] Weapon05Cif { get; }
+        public byte[] Weapon06Cif { get; }
+        public byte[] Weapon07Cif { get; }
+        public byte[] Weapon08Cif { get; }
+        public byte[] Weapon09Cif { get; }
+        public byte[] Weapon10Cif { get; }
         public byte[] ArtPalette { get; }
         public byte[] Texture380 { get; }
         public byte[] Palette { get; }
@@ -1266,7 +1427,10 @@ public sealed record Arena2ClassicMediaPublication(
         {
             (string FileName, byte[] Bytes)[] sources =
             [
-                ("WEAPON02.CIF", inputs.Weapon02Cif), ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
+                ("WEAPON01.CIF", inputs.Weapon01Cif), ("WEAPON02.CIF", inputs.Weapon02Cif), ("WEAPON04.CIF", inputs.Weapon04Cif),
+                ("WEAPON05.CIF", inputs.Weapon05Cif), ("WEAPON06.CIF", inputs.Weapon06Cif), ("WEAPON07.CIF", inputs.Weapon07Cif),
+                ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif),
+                ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
                 ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img),
                 ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
@@ -1285,6 +1449,20 @@ public sealed record Arena2ClassicMediaPublication(
 
             return new(inputs, logicalSources.OrderBy(source => source.SourcePath, StringComparer.Ordinal).ToArray());
         }
+
+        public byte[] RequireWeapon(string fileName) => fileName switch
+        {
+            "WEAPON01.CIF" => Weapon01Cif,
+            "WEAPON02.CIF" => Weapon02Cif,
+            "WEAPON04.CIF" => Weapon04Cif,
+            "WEAPON05.CIF" => Weapon05Cif,
+            "WEAPON06.CIF" => Weapon06Cif,
+            "WEAPON07.CIF" => Weapon07Cif,
+            "WEAPON08.CIF" => Weapon08Cif,
+            "WEAPON09.CIF" => Weapon09Cif,
+            "WEAPON10.CIF" => Weapon10Cif,
+            _ => throw new ArgumentOutOfRangeException(nameof(fileName), "The requested source is not an admitted classic weapon CIF."),
+        };
 
         public IndexedImg DecodeUi(string fileName) => fileName switch
         {

@@ -381,7 +381,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession
         _camera.Update(State.PlayerControl);
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
-        if (update.IsRequested(DaggerfallInput.Attack)) _combat.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
+        if (update.IsRequested(DaggerfallInput.ToggleWeapon)) _appearance.ToggleWeaponDrawn();
+        _appearance.UpdateRightHandEquipment(State.Equipment.Read());
+        if (update.IsRequested(DaggerfallInput.Attack) && _appearance.CanStartPlayerAttack) _combat.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
         if (update.IsRequested(DaggerfallInput.Interact))
         {
             _pendingLoot ??= _lootUi.Open(State.PlayerControl, currentLook);
@@ -581,6 +583,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
 
 internal static class DaggerfallInput
 {
+    internal static readonly InputActionId ToggleWeapon = new("daggerfall.toggle-weapon");
     internal static readonly InputActionId Attack = new("daggerfall.attack");
     internal static readonly InputActionId Interact = new("daggerfall.interact");
     internal static readonly PlayerControlBindings Controls = new(
@@ -592,6 +595,7 @@ internal static class DaggerfallInput
         new DirectionalMovementBindings("move.forward"u8.ToArray(), "move.backward"u8.ToArray(), "move.left"u8.ToArray(), "move.right"u8.ToArray()));
     internal static readonly IReadOnlyList<InputActionBinding> Bindings = [
         new(Attack, "attack"u8.ToArray()),
+        new(ToggleWeapon, "toggle-weapon"u8.ToArray()),
         new(Interact, "interact"u8.ToArray()),
     ];
 }

@@ -77,7 +77,7 @@ public sealed record DungeonActorMediaManifest(
 public sealed record ClassicMediaManifestSidecar(
     int SchemaVersion,
     NormalizedMediaManifest Media,
-    IReadOnlyList<ClassicWeaponActionManifest> WeaponActions,
+    IReadOnlyList<ClassicWeaponMediaManifest> WeaponMedia,
     IReadOnlyList<ClassicEffectManifest> Effects,
     IReadOnlyList<ClassicAudioManifest> Audio,
     IReadOnlyList<ClassicUiImageManifest> UiImages,
@@ -85,7 +85,7 @@ public sealed record ClassicMediaManifestSidecar(
     ClassicFontManifest Font,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 }
 
 /// <summary>
@@ -101,26 +101,6 @@ public sealed record Arena2MediaBundlePublication(
     public const string DungeonMediaManifestRelativePath = "media/dungeon/manifest.json";
     public const string ClassicMediaManifestRelativePath = "media/classic/manifest.json";
     public const string NormalizedDocumentRelativePath = "normalized.json";
-
-    // These are source-format record positions, not presentation policy. They
-    // keep a manually mutated publication from relabeling the fixed dagger
-    // action table after its generated atlas has been validated.
-    private static readonly IReadOnlyDictionary<ClassicDaggerWeaponAction, int> WeaponActionSourceRecords =
-        new Dictionary<ClassicDaggerWeaponAction, int>
-        {
-            [ClassicDaggerWeaponAction.Idle] = 0,
-            [ClassicDaggerWeaponAction.StrikeDown] = 1,
-            [ClassicDaggerWeaponAction.StrikeDownLeft] = 2,
-            [ClassicDaggerWeaponAction.StrikeLeft] = 3,
-            [ClassicDaggerWeaponAction.StrikeRight] = 4,
-            [ClassicDaggerWeaponAction.StrikeDownRight] = 5,
-            [ClassicDaggerWeaponAction.StrikeUp] = 6,
-        };
-
-    internal static int ExpectedWeaponActionSourceRecordOrdinal(ClassicDaggerWeaponAction action) =>
-        WeaponActionSourceRecords.TryGetValue(action, out int sourceRecord)
-            ? sourceRecord
-            : throw new ArgumentOutOfRangeException(nameof(action), "The weapon action is not part of the fixed classic source closure.");
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -393,56 +373,9 @@ public sealed record Arena2MediaBundlePublication(
 
     private static void ValidatePersistedClassicSidecar(ClassicMediaManifestSidecar sidecar, IReadOnlyDictionary<string, NormalizedMediaDescriptor> media)
     {
-        ArgumentNullException.ThrowIfNull(sidecar.WeaponActions);
+        ArgumentNullException.ThrowIfNull(sidecar.WeaponMedia);
         ArgumentNullException.ThrowIfNull(sidecar.Effects);
-        NormalizedMediaDescriptor weapon = media.Values.SingleOrDefault(resource => resource.Kind == NormalizedMediaKind.WeaponSprite)
-            ?? throw new InvalidOperationException("Persisted classic media has no weapon descriptor.");
-        if (media.Values.Count(resource => resource.Kind == NormalizedMediaKind.WeaponSprite) != 1)
-        {
-            throw new InvalidOperationException("Persisted classic media has multiple weapon descriptors.");
-        }
-
-        if (weapon.Frames.Count == 0)
-        {
-            throw new InvalidOperationException("Persisted classic weapon metadata requires regenerated frames.");
-        }
-
-        ClassicDaggerWeaponAction[] actions = Enum.GetValues<ClassicDaggerWeaponAction>();
-        if (sidecar.WeaponActions.Any(action => action is null) || sidecar.WeaponActions.Count != actions.Length
-            || !sidecar.WeaponActions.Select(action => action.Action).SequenceEqual(actions))
-        {
-            throw new InvalidOperationException("Persisted classic weapon actions must contain the exact canonical action set.");
-        }
-
-        HashSet<int> coveredFrames = [];
-        int expectedFrameStart = 0;
-        foreach (ClassicWeaponActionManifest action in sidecar.WeaponActions)
-        {
-            action.Validate(weapon.Frames.Count);
-            if (action.FrameStart != expectedFrameStart)
-            {
-                throw new InvalidOperationException("Persisted classic weapon actions must retain the canonical ordered frame ranges.");
-            }
-            if (action.SourceRecordOrdinal != ExpectedWeaponActionSourceRecordOrdinal(action.Action))
-            {
-                throw new InvalidOperationException("Persisted classic weapon actions have noncanonical source records.");
-            }
-
-            foreach (int frame in Enumerable.Range(action.FrameStart, action.FrameCount))
-            {
-                if (!coveredFrames.Add(frame))
-                {
-                    throw new InvalidOperationException("Persisted classic weapon actions overlap.");
-                }
-            }
-
-            expectedFrameStart = checked(expectedFrameStart + action.FrameCount);
-        }
-
-        if (!coveredFrames.SetEquals(weapon.Frames.Select(frame => frame.FrameIndex)))
-        {
-            throw new InvalidOperationException("Persisted classic weapon actions do not cover the generated atlas.");
-        }
+        ValidateWeaponMedia(sidecar.WeaponMedia, media, "Persisted classic");
 
         ValidateEffectProjections(sidecar.Effects, media);
         ArgumentNullException.ThrowIfNull(sidecar.Audio);
@@ -642,7 +575,9 @@ public sealed record Arena2MediaBundlePublication(
     private static ClassicMediaManifestSidecar CreateClassicSidecar(Arena2ClassicMediaPublication publication) => new(
         ClassicMediaManifestSidecar.CurrentSchemaVersion,
         CanonicalizeMedia(publication.MediaManifest),
-        publication.WeaponActions.OrderBy(action => action.Action).ThenBy(action => action.SourceRecordOrdinal).ThenBy(action => action.FrameStart).ToArray(),
+        publication.WeaponMedia.OrderBy(weapon => weapon.ResourceId, StringComparer.Ordinal).Select(weapon => new ClassicWeaponMediaManifest(
+            weapon.ResourceId,
+            weapon.Actions.OrderBy(action => action.Action).ThenBy(action => action.SourceRecordOrdinal).ThenBy(action => action.FrameStart).ToArray())).ToArray(),
         publication.Effects.OrderBy(effect => effect.Effect).ThenBy(effect => effect.MediaId, StringComparer.Ordinal).ToArray(),
         publication.Audio.OrderBy(audio => audio.Clip).ThenBy(audio => audio.MediaId, StringComparer.Ordinal).ToArray(),
         publication.UiImages.OrderBy(image => image.Image).ThenBy(image => image.MediaId, StringComparer.Ordinal).ToArray(),
@@ -789,7 +724,7 @@ public sealed record Arena2MediaBundlePublication(
     {
         ArgumentNullException.ThrowIfNull(publication.Artifacts);
         ArgumentNullException.ThrowIfNull(publication.Sources);
-        ArgumentNullException.ThrowIfNull(publication.WeaponActions);
+        ArgumentNullException.ThrowIfNull(publication.WeaponMedia);
         ArgumentNullException.ThrowIfNull(publication.Effects);
         ArgumentNullException.ThrowIfNull(publication.Audio);
         ArgumentNullException.ThrowIfNull(publication.UiImages);
@@ -802,58 +737,7 @@ public sealed record Arena2MediaBundlePublication(
         }
         NormalizedImportDocument.ValidateUnique(publication.Sources, source => source.SourcePath, "classic media logical source");
 
-        NormalizedMediaDescriptor weapon = media.Values.SingleOrDefault(resource => resource.Kind == NormalizedMediaKind.WeaponSprite)
-            ?? throw new InvalidOperationException("Classic media must contain exactly one canonical weapon sprite descriptor.");
-        if (media.Values.Count(resource => resource.Kind == NormalizedMediaKind.WeaponSprite) != 1)
-        {
-            throw new InvalidOperationException("Classic media contains more than one weapon sprite descriptor.");
-        }
-
-        ClassicDaggerWeaponAction[] expectedWeaponActions = Enum.GetValues<ClassicDaggerWeaponAction>();
-        if (publication.WeaponActions.Count != expectedWeaponActions.Length
-            || !publication.WeaponActions.Select(action => action.Action).SequenceEqual(expectedWeaponActions))
-        {
-            throw new InvalidOperationException("Classic weapon metadata must contain the exact fixed dagger action set.");
-        }
-
-        HashSet<int> coveredWeaponFrames = [];
-        int expectedWeaponFrameStart = 0;
-        foreach (ClassicWeaponActionManifest action in publication.WeaponActions)
-        {
-            try
-            {
-                action.Validate(weapon.Frames.Count);
-            }
-            catch (ArgumentException exception)
-            {
-                throw new InvalidOperationException("Classic weapon metadata is invalid.", exception);
-            }
-
-            if (action.FrameStart != expectedWeaponFrameStart)
-            {
-                throw new InvalidOperationException("Classic weapon action ranges must retain canonical action order.");
-            }
-
-            if (action.SourceRecordOrdinal != ExpectedWeaponActionSourceRecordOrdinal(action.Action))
-            {
-                throw new InvalidOperationException("Classic weapon action source records must retain their fixed Daggerfall positions.");
-            }
-
-            for (int frame = action.FrameStart; frame < action.FrameStart + action.FrameCount; frame++)
-            {
-                if (!coveredWeaponFrames.Add(frame))
-                {
-                    throw new InvalidOperationException("Classic weapon action ranges overlap in the canonical weapon descriptor.");
-                }
-            }
-
-            expectedWeaponFrameStart = checked(expectedWeaponFrameStart + action.FrameCount);
-        }
-
-        if (!coveredWeaponFrames.SetEquals(weapon.Frames.Select(frame => frame.FrameIndex)))
-        {
-            throw new InvalidOperationException("Classic weapon actions must uniquely cover every canonical weapon frame.");
-        }
+        ValidateWeaponMedia(publication.WeaponMedia, media, "Classic");
 
         ValidateEffectProjections(publication.Effects, media);
         ValidateClassicReferences(publication.Audio.Select(audio => audio.MediaId), media, NormalizedMediaKind.Audio, "audio");
@@ -890,6 +774,57 @@ public sealed record Arena2MediaBundlePublication(
             && !publication.Sources.Contains(publication.AuthoredUiManifestSource))
         {
             throw new InvalidOperationException("Classic authored UI manifest provenance must be retained by the publication source set.");
+        }
+    }
+
+    private static void ValidateWeaponMedia(
+        IReadOnlyList<ClassicWeaponMediaManifest> weaponMedia,
+        IReadOnlyDictionary<string, NormalizedMediaDescriptor> media,
+        string subject)
+    {
+        ArgumentNullException.ThrowIfNull(weaponMedia);
+        if (weaponMedia.Count == 0 || weaponMedia.Any(weapon => weapon is null)
+            || weaponMedia.Select(weapon => weapon.ResourceId).Distinct(StringComparer.Ordinal).Count() != weaponMedia.Count)
+        {
+            throw new InvalidOperationException($"{subject} weapon metadata must contain each admitted weapon resource exactly once.");
+        }
+
+        ClassicDaggerWeaponAction[] expectedActions = Enum.GetValues<ClassicDaggerWeaponAction>();
+        foreach (ClassicWeaponMediaManifest weapon in weaponMedia)
+        {
+            NormalizedMediaDescriptor descriptor = RequirePersistedDescriptor(media, weapon.ResourceId, NormalizedMediaKind.WeaponSprite, "classic weapon");
+            if (descriptor.Frames.Count == 0 || weapon.Actions is null || weapon.Actions.Any(action => action is null)
+                || weapon.Actions.Count != expectedActions.Length || !weapon.Actions.Select(action => action.Action).SequenceEqual(expectedActions))
+            {
+                throw new InvalidOperationException($"{subject} weapon '{weapon.ResourceId}' must contain the exact canonical action set.");
+            }
+
+            HashSet<int> coveredFrames = [];
+            foreach (ClassicWeaponActionManifest action in weapon.Actions)
+            {
+                try
+                {
+                    action.Validate(descriptor.Frames.Count);
+                    if (Arena2ClassicMediaPublication.IsAdmittedWeaponResource(weapon.ResourceId))
+                    {
+                        Arena2ClassicMediaPublication.ValidateCanonicalWeaponAction(weapon.ResourceId, action);
+                    }
+                }
+                catch (ArgumentException exception)
+                {
+                    throw new InvalidOperationException($"{subject} weapon metadata is invalid.", exception);
+                }
+
+                foreach (int frame in action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount))
+                {
+                    coveredFrames.Add(frame);
+                }
+            }
+
+            if (!coveredFrames.SetEquals(descriptor.Frames.Select(frame => frame.FrameIndex)))
+            {
+                throw new InvalidOperationException($"{subject} weapon actions do not cover the generated atlas for '{weapon.ResourceId}'.");
+            }
         }
     }
 

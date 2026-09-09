@@ -13,7 +13,6 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal static class PrivateersHoldContent
 {
     private const int SchemaVersion = 1;
-    private const float EngineViewmodelLocalCoordinateLimit = 16F;
 
     internal static PrivateersHoldInputs Read(ProductContent content, ReadOnlyMemory<byte> payload, DaggerfallDefinitions definitions)
     {
@@ -412,7 +411,7 @@ internal static class PrivateersHoldContent
             using JsonDocument document = JsonDocument.Parse(bytes);
             JsonElement root = DaggerfallBaseContent.Object(document.RootElement, "classic media manifest", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(root, "classic media manifest", diagnostics);
-            if (DaggerfallBaseContent.Integer(root, "schemaVersion", diagnostics) != 1) diagnostics.Add("Classic media manifest schemaVersion must be 1.");
+            if (DaggerfallBaseContent.Integer(root, "schemaVersion", diagnostics) != 2) diagnostics.Add("Classic media manifest schemaVersion must be 2.");
             Dictionary<string, ClassicMediaResource> resources = [];
             JsonElement media = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "media", diagnostics), "classic media", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(media, "classic media", diagnostics);
@@ -475,7 +474,7 @@ internal static class PrivateersHoldContent
             }
             try { OrderedHitCues(audio); }
             catch (InvalidOperationException exception) { diagnostics.Add(exception.Message); }
-            NormalizedClassicWeapon? weapon = ReadClassicWeapon(root, resources, diagnostics);
+            IReadOnlyDictionary<string, NormalizedClassicWeapon> weapons = ReadClassicWeapons(root, resources, diagnostics);
             IReadOnlyList<NormalizedClassicEffect> effects = ReadClassicEffects(root, resources, diagnostics);
             Dictionary<string, string> icons = new(StringComparer.Ordinal);
             foreach (JsonElement icon in DaggerfallBaseContent.Array(root, "inventoryIcons", diagnostics))
@@ -486,7 +485,7 @@ internal static class PrivateersHoldContent
                     icons[itemId] = $"inventory-art/inventory-icons/{Path.GetFileName(resource.Path)}";
                 else diagnostics.Add($"Inventory icon '{itemId}' refers to missing inventory media.");
             }
-            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapon, effects) { InventoryIcons = new ReadOnlyDictionary<string, string>(icons) });
+            return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapons, effects) { InventoryIcons = new ReadOnlyDictionary<string, string>(icons) });
         }
         catch (JsonException exception)
         {
@@ -495,13 +494,28 @@ internal static class PrivateersHoldContent
         }
     }
 
-    private static NormalizedClassicWeapon? ReadClassicWeapon(JsonElement root, IReadOnlyDictionary<string, ClassicMediaResource> resources, DaggerfallContentDiagnostics diagnostics)
+    private static IReadOnlyDictionary<string, NormalizedClassicWeapon> ReadClassicWeapons(JsonElement root, IReadOnlyDictionary<string, ClassicMediaResource> resources, DaggerfallContentDiagnostics diagnostics)
     {
-        ClassicMediaResource[] weaponResources = resources.Values.Where(candidate => candidate.Kind == "weaponSprite").ToArray();
-        if (weaponResources.Length != 1) diagnostics.Add("Classic media must publish exactly one weaponSprite resource.");
-        ClassicMediaResource? resource = weaponResources.Length == 1 ? weaponResources[0] : null;
+        Dictionary<string, NormalizedClassicWeapon> weapons = new(StringComparer.Ordinal);
+        foreach (JsonElement entry in DaggerfallBaseContent.Array(root, "weaponMedia", diagnostics))
+        {
+            string id = DaggerfallBaseContent.Text(entry, "resourceId", diagnostics);
+            if (!resources.TryGetValue(id, out ClassicMediaResource? resource) || resource.Kind != "weaponSprite")
+            {
+                diagnostics.Add($"Classic weapon '{id}' refers to missing weaponSprite media.");
+                continue;
+            }
+            NormalizedClassicWeapon weapon = ReadClassicWeapon(entry, resource, diagnostics);
+            if (!weapons.TryAdd(id, weapon)) diagnostics.Add($"Classic weapons repeat '{id}'.");
+        }
+        if (weapons.Count != resources.Values.Count(resource => resource.Kind == "weaponSprite")) diagnostics.Add("Every weaponSprite requires one action collection.");
+        return new ReadOnlyDictionary<string, NormalizedClassicWeapon>(weapons);
+    }
+
+    private static NormalizedClassicWeapon ReadClassicWeapon(JsonElement root, ClassicMediaResource resource, DaggerfallContentDiagnostics diagnostics)
+    {
         Dictionary<string, NormalizedClassicWeaponAction> actions = new(StringComparer.Ordinal);
-        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "weaponActions", diagnostics))
+        foreach (JsonElement value in DaggerfallBaseContent.Array(root, "actions", diagnostics))
         {
             JsonElement action = DaggerfallBaseContent.Object(value, "classic weapon action", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(action, "classic weapon action", diagnostics);
@@ -516,18 +530,17 @@ internal static class PrivateersHoldContent
             float fps = DaggerfallBaseContent.Property(timing, "framesPerSecond", diagnostics).TryGetSingle(out float parsedFps) ? parsedFps : 0F;
             JsonElement loop = DaggerfallBaseContent.Property(timing, "loop", diagnostics);
             bool loops = loop.ValueKind == JsonValueKind.True;
-            if (loop.ValueKind is not (JsonValueKind.True or JsonValueKind.False) || !float.IsFinite(fps) || fps <= 0F || start < 0 || count <= 0 || !float.IsFinite(offset) || alignment is not ("left" or "right"))
+            if (loop.ValueKind is not (JsonValueKind.True or JsonValueKind.False) || !float.IsFinite(fps) || fps <= 0F || start < 0 || count <= 0 || !float.IsFinite(offset) || alignment is not ("left" or "right" or "center"))
                 diagnostics.Add($"Classic weapon action '{name}' has invalid framing, timing, or alignment.");
             short sourceXOffset = checked((short)DaggerfallBaseContent.Integer(action, "sourceXOffset", diagnostics));
             short sourceYOffset = checked((short)DaggerfallBaseContent.Integer(action, "sourceYOffset", diagnostics));
-            if (resource is not null && (start < 0 || count <= 0 || (long)start + count > resource.Frames.Count)) diagnostics.Add($"Classic weapon action '{name}' is outside weaponSprite frame bounds.");
-            if (!actions.TryAdd(name, new NormalizedClassicWeaponAction(name, sourceRecordOrdinal, start, count, alignment, offset, fps, loops, sourceXOffset, sourceYOffset))) diagnostics.Add($"Classic weapon actions repeat '{name}'.");
+            if (start < 0 || count <= 0 || (long)start + count > resource.Frames.Count) diagnostics.Add($"Classic weapon action '{name}' is outside weaponSprite frame bounds.");
+            if (!actions.TryAdd(name, new NormalizedClassicWeaponAction(name, sourceRecordOrdinal, start, count, alignment, offset, fps, loops, sourceXOffset, sourceYOffset) { Sequence = action.TryGetProperty("sequence", out JsonElement sequence) && sequence.ValueKind != JsonValueKind.Null ? sequence.EnumerateArray().Select(frame => frame.GetInt32()).ToArray() : null })) diagnostics.Add($"Classic weapon actions repeat '{name}'.");
         }
-        string[] expected = ["idle", "strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
-        if (actions.Count != expected.Length || expected.Any(name => !actions.ContainsKey(name))) diagnostics.Add("Classic weapon actions must provide the complete authored dagger action family.");
-        foreach ((int ordinal, string expectedName) in expected.Select((value, index) => (index, value)))
-            if (actions.TryGetValue(expectedName, out NormalizedClassicWeaponAction? action) && action.SourceRecordOrdinal != ordinal) diagnostics.Add($"Classic weapon action '{expectedName}' must retain source record ordinal {ordinal}.");
-        if (resource is not null)
+        foreach (NormalizedClassicWeaponAction action in actions.Values)
+            if (action.Sequence is { } sequence && (sequence.Count == 0 || sequence.Any(frame => frame < action.FrameStart || frame >= (long)action.FrameStart + action.FrameCount))) diagnostics.Add($"Classic weapon action '{action.Name}' sequence is outside its frame range.");
+        string[] requiredActions = ["idle", "strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
+        if (actions.Count != requiredActions.Length || requiredActions.Any(name => !actions.ContainsKey(name))) diagnostics.Add("Classic weapons require the normalized ready and six directional attack actions.");
         {
             if (!resource.Frames.Select(frame => frame.Id).Order().SequenceEqual(Enumerable.Range(0, resource.Frames.Count).Select(index => (uint)index))) diagnostics.Add("Classic weaponSprite frames must use contiguous canonical frame indexes.");
             HashSet<int> covered = [];
@@ -535,11 +548,11 @@ internal static class PrivateersHoldContent
             {
                 long end = (long)action.FrameStart + action.FrameCount;
                 if (action.FrameStart < 0 || action.FrameCount <= 0 || end > resource.Frames.Count) continue;
-                for (int frame = action.FrameStart; frame < (int)end; frame++) if (!covered.Add(frame)) diagnostics.Add("Classic weapon action ranges must not overlap.");
+                for (int frame = action.FrameStart; frame < (int)end; frame++) covered.Add(frame);
             }
             if (!covered.SetEquals(Enumerable.Range(0, resource.Frames.Count))) diagnostics.Add("Classic weapon action ranges must cover every canonical weapon frame.");
         }
-        return resource is null ? null : new NormalizedClassicWeapon(resource.Id, resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Pivot, resource.DisplaySize, resource.Sequence, new ReadOnlyDictionary<string, NormalizedClassicWeaponAction>(actions));
+        return new NormalizedClassicWeapon(resource.Id, resource.Path, resource.Hash, resource.AtlasWidth, resource.AtlasHeight, resource.Frames, resource.Pivot, resource.DisplaySize, resource.Sequence, new ReadOnlyDictionary<string, NormalizedClassicWeaponAction>(actions));
     }
 
     private static IReadOnlyList<NormalizedClassicEffect> ReadClassicEffects(JsonElement root, IReadOnlyDictionary<string, ClassicMediaResource> resources, DaggerfallContentDiagnostics diagnostics)
@@ -584,29 +597,22 @@ internal static class PrivateersHoldContent
             DaggerfallBaseContent.RejectDuplicateProperties(mapping, "classic weapon visual", diagnostics);
             string itemId = DaggerfallBaseContent.Text(mapping, "itemId", diagnostics);
             string resource = DaggerfallBaseContent.Text(mapping, "resource", diagnostics);
-            if (classic.Weapon is null || resource != classic.Weapon.ResourceId) diagnostics.Add($"Classic weapon visual '{itemId}' does not select the admitted weaponSprite resource.");
+            if (!classic.Weapons.ContainsKey(resource) || !definitions.Items.TryGetValue(new DaggerfallItemId(itemId), out DaggerfallItemDefinition? item) || item.Weapon is null) diagnostics.Add($"Classic weapon visual '{itemId}' does not select the admitted weaponSprite resource.");
             if (!mappings.TryAdd(itemId, resource)) diagnostics.Add($"Classic weapon visuals repeat item '{itemId}'.");
         }
-        if (mappings.Count != 1 || !mappings.TryGetValue("iron-dagger", out string? mappedResource) || mappedResource != "weapon.dagger.steel"
-            || !definitions.Items.TryGetValue(new DaggerfallItemId("iron-dagger"), out DaggerfallItemDefinition? dagger)
-            || dagger.Weapon is not { Material: "iron", Skill: "short-blade" })
-            diagnostics.Add("Classic dagger viewmodel compatibility is restricted to the admitted iron-dagger bridge.");
+        foreach (DaggerfallItemDefinition item in definitions.Items.Values.Where(item => item.Weapon is not null))
+            if (!mappings.ContainsKey(item.Id.Value)) diagnostics.Add($"Weapon '{item.Id.Value}' has no presentation mapping.");
+        string unarmed = DaggerfallBaseContent.Text(presentation, "unarmedVisual", diagnostics);
+        if (!classic.Weapons.ContainsKey(unarmed)) diagnostics.Add("Unarmed presentation must select admitted weaponSprite media.");
         ClassicViewmodelStyle? viewmodel = null;
         if (mappings.Count > 0)
         {
             JsonElement style = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(presentation, "viewmodel", diagnostics), "classic viewmodel", diagnostics);
             DaggerfallBaseContent.RejectDuplicateProperties(style, "classic viewmodel", diagnostics);
-            WorldPoint position = Point(DaggerfallBaseContent.Property(style, "position", diagnostics), "classic viewmodel.position", diagnostics);
-            Vector2 pivot = GeneratedVector2(DaggerfallBaseContent.Property(style, "pivot", diagnostics), "classic viewmodel.pivot", diagnostics);
-            Vector2 size = GeneratedVector2(DaggerfallBaseContent.Property(style, "worldSize", diagnostics), "classic viewmodel.worldSize", diagnostics);
             int renderOrder = DaggerfallBaseContent.Integer(style, "renderOrder", diagnostics);
-            if (MathF.Abs(position.X) > EngineViewmodelLocalCoordinateLimit || MathF.Abs(position.Y) > EngineViewmodelLocalCoordinateLimit || MathF.Abs(position.Z) > EngineViewmodelLocalCoordinateLimit)
-                diagnostics.Add($"Classic viewmodel position must remain within Engine local +/-{EngineViewmodelLocalCoordinateLimit} bounds.");
-            if (pivot.X is < 0F or > 1F || pivot.Y is < 0F or > 1F) diagnostics.Add("Classic viewmodel pivot must be normalized within [0,1].");
-            if (size.X <= 0F || size.Y <= 0F) diagnostics.Add("Classic viewmodel worldSize must be positive.");
-            viewmodel = new ClassicViewmodelStyle(position, pivot, size, renderOrder);
+            viewmodel = new ClassicViewmodelStyle(renderOrder);
         }
-        return classic with { CompatibleItemVisuals = new ReadOnlyDictionary<string, string>(mappings), Viewmodel = viewmodel };
+        return classic with { CompatibleItemVisuals = new ReadOnlyDictionary<string, string>(mappings), UnarmedVisual = unarmed, Viewmodel = viewmodel };
     }
 
     private static Vector2 OptionalClassicVector2(JsonElement objectValue, string property, Vector2 fallback, string name, DaggerfallContentDiagnostics diagnostics, bool positive = false, bool normalized = true)
@@ -816,14 +822,18 @@ internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Fr
 }
 internal sealed record NormalizedAttackSequence(int Chance, IReadOnlyList<int> SourceFrames);
 internal sealed record NormalizedAudioClip(string Id, string Path, ContentSha256 Sha256);
-internal sealed record NormalizedClassicWeaponAction(string Name, int SourceRecordOrdinal, int FrameStart, int FrameCount, string Alignment, float ScreenOffset, float FramesPerSecond, bool Loops, short SourceXOffset, short SourceYOffset);
+internal sealed record NormalizedClassicWeaponAction(string Name, int SourceRecordOrdinal, int FrameStart, int FrameCount, string Alignment, float ScreenOffset, float FramesPerSecond, bool Loops, short SourceXOffset, short SourceYOffset)
+{
+    internal IReadOnlyList<int>? Sequence { get; init; }
+}
 internal sealed record NormalizedClassicWeapon(string ResourceId, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, IReadOnlyDictionary<string, NormalizedClassicWeaponAction> Actions);
 internal sealed record NormalizedClassicEffect(string Name, int SourceRecordOrdinal, string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, Vector2 Pivot, Vector2 DisplaySize, IReadOnlyList<int> Sequence, float FramesPerSecond, bool Loops);
-internal sealed record NormalizedClassicPresentation(NormalizedClassicWeapon? Weapon, IReadOnlyList<NormalizedClassicEffect> Effects)
+internal sealed record NormalizedClassicPresentation(IReadOnlyDictionary<string, NormalizedClassicWeapon> Weapons, IReadOnlyList<NormalizedClassicEffect> Effects)
 {
-    internal static NormalizedClassicPresentation Empty { get; } = new(null, Array.Empty<NormalizedClassicEffect>());
+    internal static NormalizedClassicPresentation Empty { get; } = new(new Dictionary<string, NormalizedClassicWeapon>(), Array.Empty<NormalizedClassicEffect>());
     internal IReadOnlyDictionary<string, string> InventoryIcons { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
     internal IReadOnlyDictionary<string, string> CompatibleItemVisuals { get; init; } = new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+    internal string? UnarmedVisual { get; init; }
     internal ClassicViewmodelStyle? Viewmodel { get; init; }
     internal bool TryEffect(string name, out NormalizedClassicEffect? effect)
     {
@@ -831,7 +841,7 @@ internal sealed record NormalizedClassicPresentation(NormalizedClassicWeapon? We
         return effect is not null;
     }
 }
-internal sealed record ClassicViewmodelStyle(WorldPoint Position, Vector2 Pivot, Vector2 Size, int RenderOrder);
+internal sealed record ClassicViewmodelStyle(int RenderOrder);
 internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 TextureSha256, int AtlasWidth, int AtlasHeight, IReadOnlyList<NormalizedAtlasFrame> Frames, uint InitialFrameId, Vector2 Pivot, Vector2 Size)
 {
     internal IReadOnlyDictionary<string, NormalizedSpriteState> States { get; init; } = new ReadOnlyDictionary<string, NormalizedSpriteState>(new Dictionary<string, NormalizedSpriteState>());

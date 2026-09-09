@@ -97,6 +97,8 @@ internal sealed class CombatModule
         long? target = _targeting.Select(playerControl, look, actionReach);
         if (target is not long targetId)
         {
+            if (!TryAdmitPlayerAttack(generation, simulationStep, fixedDeltaSeconds, action: null, out DaggerfallAttackDefinition attack, facts)) return;
+            LatchPlayerCooldown(generation, simulationStep, fixedDeltaSeconds, attack);
             facts.Append(new AttackRejectedFact(AttackRejection.NoTargetInReach));
             return;
         }
@@ -125,23 +127,7 @@ internal sealed class CombatModule
         DaggerfallAttackDefinition attack;
         if (attacker.Id == PlayerId)
         {
-            string? selectedActionId = request.Action?.Value ?? attacker.Definition.ActionId;
-            if (selectedActionId is null || !_actions.TryGetValue(selectedActionId, out DaggerfallActionDefinition? playerAction) || playerAction.Interpretation != "player-equipped-melee" || playerAction.CooldownSeconds is not double playerCooldown || playerAction.StaminaCost is not int staminaCost)
-            {
-                facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
-                return;
-            }
-            EquipmentRead equipment = _equipment.Read();
-            DaggerfallWeaponDefinition? weapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
-            attack = weapon is not null
-                ? new DaggerfallAttackDefinition(weapon.Skill, weapon.MinimumDamage, weapon.MaximumDamage, playerCooldown, weapon.Material, playerAction.DamageBonus)
-                : new DaggerfallAttackDefinition(
-                    "hand-to-hand",
-                    DaggerfallFormulaPolicy.HandToHandMinimumDamage(ReadStat(attacker, DaggerfallMechanicsIds.HandToHand)),
-                    DaggerfallFormulaPolicy.HandToHandMaximumDamage(ReadStat(attacker, DaggerfallMechanicsIds.HandToHand)),
-                    playerCooldown,
-                    DamageBonus: playerAction.DamageBonus);
-            if (!SpendPlayerStamina(attacker, staminaCost, facts)) return;
+            if (!TryAdmitPlayerAttack(request.Generation, request.SimulationStep, request.FixedDeltaSeconds, request.Action, out attack, facts)) return;
         }
         else if (attacker.Definition.ActionId is { } actionId && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? authoredAction) && authoredAction.CooldownSeconds is double authoredCooldown) attack = ResolveFixedAttack(attacker.Definition, authoredAction, authoredCooldown);
         else
@@ -186,6 +172,42 @@ internal sealed class CombatModule
         if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(target.Id, attacker.Id, applied, request.Generation, request.SimulationStep));
     }
 
+    private bool TryAdmitPlayerAttack(ulong generation, ulong simulationStep, double fixedDeltaSeconds, DaggerfallActionId? action, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
+    {
+        if (!TryResolve(PlayerId, out Combatant player))
+        {
+            attack = default!;
+            facts.Append(new AttackRejectedFact(AttackRejection.UnknownExplicitCombatant));
+            return false;
+        }
+        if (_readyAtStep.TryGetValue((generation, PlayerId), out ulong readyAt) && simulationStep < readyAt)
+        {
+            attack = default!;
+            facts.Append(new AttackRejectedFact(AttackRejection.Cooldown));
+            return false;
+        }
+        string? selectedActionId = action?.Value ?? player.Definition.ActionId;
+        if (selectedActionId is null || !_actions.TryGetValue(selectedActionId, out DaggerfallActionDefinition? playerAction) || playerAction.Interpretation != "player-equipped-melee" || playerAction.CooldownSeconds is not double playerCooldown || playerAction.StaminaCost is not int staminaCost)
+        {
+            attack = default!;
+            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
+            return false;
+        }
+        EquipmentRead equipment = _equipment.Read();
+        DaggerfallWeaponDefinition? weapon = ReadWeapon(equipment, "right-hand") ?? ReadWeapon(equipment, "left-hand");
+        attack = weapon is not null
+            ? new DaggerfallAttackDefinition(weapon.Skill, weapon.MinimumDamage, weapon.MaximumDamage, playerCooldown, weapon.Material, playerAction.DamageBonus)
+            : new DaggerfallAttackDefinition(
+                "hand-to-hand",
+                DaggerfallFormulaPolicy.HandToHandMinimumDamage(ReadStat(player, DaggerfallMechanicsIds.HandToHand)),
+                DaggerfallFormulaPolicy.HandToHandMaximumDamage(ReadStat(player, DaggerfallMechanicsIds.HandToHand)),
+                playerCooldown,
+                DamageBonus: playerAction.DamageBonus);
+        if (!SpendPlayerStamina(player, staminaCost, facts)) return false;
+        facts.Append(new PlayerAttackStartedFact(generation, simulationStep));
+        return true;
+    }
+
     private bool SpendPlayerStamina(Combatant player, int staminaCost, FactBuffer<IProductFact> facts)
     {
         ActorTrackRead stamina = player.Mechanics.ReadTrack(TrackId.Parse(StaminaTrack));
@@ -225,6 +247,7 @@ internal sealed class CombatModule
     private static int ReadStat(Combatant actor, DaggerfallStatId stat) => checked((int)actor.Mechanics.ReadStat(StatId.Parse(stat.Value)).Base.Raw);
     private int Draw(ExplicitMeleeRequest request, long attacker, long target, int salt, int minimum, int maximum, bool enemy) => checked((int)_random.DrawKeyed(new KeyedRngRequest(CombatRandomKey.Seed, enemy ? CombatRandomKey.EnemyScope : CombatRandomKey.PlayerScope, CombatRandomKey.For(request.Generation, request.SimulationStep, attacker, target, salt), minimum, maximum)).Value);
     private static ulong RequiredSteps(double cooldown, double fixedDelta) => checked((ulong)Math.Max(1d, Math.Ceiling(cooldown / fixedDelta)));
+    private void LatchPlayerCooldown(ulong generation, ulong simulationStep, double fixedDeltaSeconds, DaggerfallAttackDefinition attack) => _readyAtStep[(generation, PlayerId)] = checked(simulationStep + RequiredSteps(attack.CooldownSeconds, fixedDeltaSeconds));
     private void LatchCooldown(ExplicitMeleeRequest request, DaggerfallAttackDefinition attack) => _readyAtStep[(request.Generation, request.AttackerId)] = checked(request.SimulationStep + RequiredSteps(attack.CooldownSeconds, request.FixedDeltaSeconds));
     private readonly record struct Combatant(long Id, ActorMechanicsState Mechanics, DaggerfallActorDefinition Definition);
 }

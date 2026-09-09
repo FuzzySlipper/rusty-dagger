@@ -392,9 +392,65 @@
       },
       {
         "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON01.CIF",
+        "contentDigest": "9d0c7bbf1cdb277e20b4e71e3adecb490b7a3427e8ed096bd17fd959e8a76160",
+        "byteLength": 83784,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
         "sourcePath": "arena2/WEAPON02.CIF",
         "contentDigest": "707746fb170007077bdaf4066bb4ab3b88cb8bbdfa91cb93c9dde5b505d5c8a3",
         "byteLength": 163844,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON04.CIF",
+        "contentDigest": "046c2c9e2bbd2d661f42fc3fafc299d0eb2a296ad239ac9a3a87dc566e28ef7a",
+        "byteLength": 58595,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON05.CIF",
+        "contentDigest": "a847de0783ee083ea81c5977f805683ebf58b903208b4cd847a4dfeadf357a4c",
+        "byteLength": 94287,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON06.CIF",
+        "contentDigest": "67642f10aae4930898fe22be173cc391b119eb4c81e26445e91ce7c83f2cb211",
+        "byteLength": 167709,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON07.CIF",
+        "contentDigest": "55b823821a81980449ff7c461339dc3e7d291f207de61efd28ce481b8122a45a",
+        "byteLength": 186665,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON08.CIF",
+        "contentDigest": "51f82efeb8fae856fd26355479022409607eb096c67946c8a34a76d416ad1f29",
+        "byteLength": 135225,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON09.CIF",
+        "contentDigest": "452285e8b5b81ac5d837969f33f9cfe50b938a467dbae70a9f68a662d0088e10",
+        "byteLength": 61951,
+        "sourceSchemaVersion": 1
+      },
+      {
+        "schemaVersion": 1,
+        "sourcePath": "arena2/WEAPON10.CIF",
+        "contentDigest": "5ec3789a52f50c2848f7be434128183ae06c62b1909fed63a66082c91ee06964",
+        "byteLength": 76298,
         "sourceSchemaVersion": 1
       },
       {

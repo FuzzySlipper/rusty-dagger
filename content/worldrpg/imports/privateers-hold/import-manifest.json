@@ -279,9 +279,49 @@
       "byteLen": 327366
     },
     {
+      "sourcePath": "arena2/WEAPON01.CIF",
+      "contentHash": "9d0c7bbf1cdb277e20b4e71e3adecb490b7a3427e8ed096bd17fd959e8a76160",
+      "byteLen": 83784
+    },
+    {
       "sourcePath": "arena2/WEAPON02.CIF",
       "contentHash": "707746fb170007077bdaf4066bb4ab3b88cb8bbdfa91cb93c9dde5b505d5c8a3",
       "byteLen": 163844
+    },
+    {
+      "sourcePath": "arena2/WEAPON04.CIF",
+      "contentHash": "046c2c9e2bbd2d661f42fc3fafc299d0eb2a296ad239ac9a3a87dc566e28ef7a",
+      "byteLen": 58595
+    },
+    {
+      "sourcePath": "arena2/WEAPON05.CIF",
+      "contentHash": "a847de0783ee083ea81c5977f805683ebf58b903208b4cd847a4dfeadf357a4c",
+      "byteLen": 94287
+    },
+    {
+      "sourcePath": "arena2/WEAPON06.CIF",
+      "contentHash": "67642f10aae4930898fe22be173cc391b119eb4c81e26445e91ce7c83f2cb211",
+      "byteLen": 167709
+    },
+    {
+      "sourcePath": "arena2/WEAPON07.CIF",
+      "contentHash": "55b823821a81980449ff7c461339dc3e7d291f207de61efd28ce481b8122a45a",
+      "byteLen": 186665
+    },
+    {
+      "sourcePath": "arena2/WEAPON08.CIF",
+      "contentHash": "51f82efeb8fae856fd26355479022409607eb096c67946c8a34a76d416ad1f29",
+      "byteLen": 135225
+    },
+    {
+      "sourcePath": "arena2/WEAPON09.CIF",
+      "contentHash": "452285e8b5b81ac5d837969f33f9cfe50b938a467dbae70a9f68a662d0088e10",
+      "byteLen": 61951
+    },
+    {
+      "sourcePath": "arena2/WEAPON10.CIF",
+      "contentHash": "5ec3789a52f50c2848f7be434128183ae06c62b1909fed63a66082c91ee06964",
+      "byteLen": 76298
     },
     {
       "sourcePath": "authored-ui/ui-authored-assets.json",
@@ -343,8 +383,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "360ae51523120ecfe93b0dfd7386d71f26bc00f0bb2eda56bc244279a4028ca4",
-      "byteLen": 162268,
+      "contentHash": "c7acc92166828e383df6e829442d628cd914aeacc28e445ead0ec14d674f3ba0",
+      "byteLen": 406090,
       "dependsOnPaths": [
         "media/audio/audio-melee-dagger-swing.wav",
         "media/audio/audio-melee-hit-1.wav",
@@ -352,7 +392,15 @@
         "media/audio/audio-melee-hit-3.wav",
         "media/audio/audio-melee-hit-4.wav",
         "media/audio/audio-melee-hit-5.wav",
+        "media/combat/weapon-axe-atlas.png",
+        "media/combat/weapon-bow-atlas.png",
         "media/combat/weapon-dagger-steel-atlas.png",
+        "media/combat/weapon-flail-atlas.png",
+        "media/combat/weapon-longblade-atlas.png",
+        "media/combat/weapon-mace-atlas.png",
+        "media/combat/weapon-staff-atlas.png",
+        "media/combat/weapon-unarmed-atlas.png",
+        "media/combat/weapon-warhammer-atlas.png",
         "media/effects/effect-blood-0-atlas.png",
         "media/effects/effect-blood-1-atlas.png",
         "media/effects/effect-blood-2-atlas.png",
@@ -401,9 +449,57 @@
       ]
     },
     {
+      "relativePath": "media/combat/weapon-axe-atlas.png",
+      "contentHash": "c798b0fc2b020f884ae0a2087bec37353ea92bd6801ff0c21eb7d6b29e383036",
+      "byteLen": 107552,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-bow-atlas.png",
+      "contentHash": "46bde93e450f451bba9808d5c7503d24de592c1c091f78a25e365317622283eb",
+      "byteLen": 48784,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/combat/weapon-dagger-steel-atlas.png",
       "contentHash": "d8b5c9659660acf879d2a5b37ae0f60e2c061c3d0861f9fd9c35db30b4b9ecdc",
       "byteLen": 147440,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-flail-atlas.png",
+      "contentHash": "a6110bed99e8f2256b45183fd3ff45893ee59077bbf79208d62e1526f568ff83",
+      "byteLen": 144384,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-longblade-atlas.png",
+      "contentHash": "00ef2ce36dfa20a270fce247a2a18def60f018d16629b12ff3e5fd7460798186",
+      "byteLen": 43970,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-mace-atlas.png",
+      "contentHash": "3396f9e85fd9bc4f2dd33f58ebc944acc8b6f2c2dc3d94b93b9c30db1a57d023",
+      "byteLen": 72564,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-staff-atlas.png",
+      "contentHash": "ea721afaa27c69aa6ae5a101070926e947cbd98b5492ea664e5c933d05da4f98",
+      "byteLen": 55623,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-unarmed-atlas.png",
+      "contentHash": "340b964f9f9192d7449a676d024f334ab314b174e090a0e31f0e04d9e886a858",
+      "byteLen": 76662,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/combat/weapon-warhammer-atlas.png",
+      "contentHash": "d54d736b20738bcd8acef94616489a67249cc6167d4be1c14d5c57c709c94afc",
+      "byteLen": 136646,
       "dependsOnPaths": []
     },
     {
@@ -660,8 +756,8 @@
     },
     {
       "relativePath": "media/dungeon/manifest.json",
-      "contentHash": "9f4cd9b80cdf9ab0dcbaa69aebe84c4f7918008f2228c18e3d137a748a6d7132",
-      "byteLen": 810991,
+      "contentHash": "92d0910ddb682176771edb129caadca42c4761cc4cd08e88873f8870a4dbd2f1",
+      "byteLen": 1028697,
       "dependsOnPaths": [
         "media/dungeon/actors/mobile-0-corpse.png",
         "media/dungeon/actors/mobile-0.png",
@@ -1546,8 +1642,8 @@
     },
     {
       "relativePath": "normalized.json",
-      "contentHash": "727bbdd8854349aa7b9f7fa3ebddd5b2bc153f99278aaf8ac1e61febb64c2ba4",
-      "byteLen": 7697864,
+      "contentHash": "f83116be2ea91a653089523376e66ec428f3e3b816304b4078a34a67a5f2d3d0",
+      "byteLen": 7699827,
       "dependsOnPaths": [
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",

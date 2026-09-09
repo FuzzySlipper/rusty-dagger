@@ -98,7 +98,7 @@ public sealed class SpriteAuthoringTests
 
         ClassicMediaManifestSidecar reorderedWeaponRanges = fixture.Classic with
         {
-            WeaponActions = fixture.Classic.WeaponActions.Reverse().ToArray(),
+            WeaponMedia = [fixture.Classic.WeaponMedia.Single() with { Actions = fixture.Classic.WeaponMedia.Single().Actions.Reverse().ToArray() }],
         };
         Assert.Throws<FormatException>(() => SpriteInspectionCatalogBuilder.Create(fixture.Manifest, fixture.Dungeon, reorderedWeaponRanges));
 
@@ -390,9 +390,9 @@ public sealed class SpriteAuthoringTests
             [new("sprite/fixture", 1, 1, new(0.5F, 0.5F), new(1F, 1F), new(12F, true), new(5F, false), [new(0, 0, 0, 0, false, billboard.Frames[0], new(1F, 1F))], billboard.Id)],
             [actorManifest]);
         ClassicMediaManifestSidecar classic = new(
-            1,
+            ClassicMediaManifestSidecar.CurrentSchemaVersion,
             new([weapon, effect, font]),
-            Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray(),
+            [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
             Enum.GetValues<ClassicEffect>().Select((value, index) => new ClassicEffectManifest(value, effect.Id, index, new(10F, false))).ToArray(),
             [], [], [], new(font.Id, 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()), []);
         CanonicalImportManifest manifest = new(

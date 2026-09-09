@@ -134,26 +134,36 @@ public sealed class WeaponCifArchive
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         byte[] data = bytes.ToArray();
-        CheckedLittleEndianReader first = new(data, source);
-        short xOffset = first.ReadInt16();
-        short yOffset = first.ReadInt16();
-        ushort width = PositiveDimension(first.ReadInt16(), first, "wield image width");
-        ushort height = PositiveDimension(first.ReadInt16(), first, "wield image height");
-        EnsureFramePixels(width, height, source, 4);
-        ushort compression = first.ReadUInt16();
-        if (compression is not 0 and not 2)
+        bool hasWieldImage = !source.EndsWith("WEAPON09.CIF", StringComparison.OrdinalIgnoreCase);
+        List<WeaponRecord> records = [];
+        int position;
+        if (hasWieldImage)
         {
-            throw first.Error($"unsupported wield image compression 0x{compression:X4}");
-        }
+            CheckedLittleEndianReader first = new(data, source);
+            short xOffset = first.ReadInt16();
+            short yOffset = first.ReadInt16();
+            ushort width = PositiveDimension(first.ReadInt16(), first, "wield image width");
+            ushort height = PositiveDimension(first.ReadInt16(), first, "wield image height");
+            EnsureFramePixels(width, height, source, 4);
+            ushort compression = first.ReadUInt16();
+            if (compression is not 0 and not 2)
+            {
+                throw first.Error($"unsupported wield image compression 0x{compression:X4}");
+            }
 
-        ushort dataLength = first.ReadUInt16();
-        if (dataLength > data.Length - ImageHeaderBytes)
+            ushort dataLength = first.ReadUInt16();
+            if (dataLength > data.Length - ImageHeaderBytes)
+            {
+                throw first.Error($"weapon wield image data length {dataLength} exceeds source length {data.Length}");
+            }
+
+            records.Add(new ImageRecord(new WeaponCifRecordInfo(width, height, xOffset, yOffset, 1), compression, ImageHeaderBytes, dataLength));
+            position = checked(ImageHeaderBytes + dataLength);
+        }
+        else
         {
-            throw first.Error($"weapon wield image data length {dataLength} exceeds source length {data.Length}");
+            position = 0;
         }
-
-        List<WeaponRecord> records = [new ImageRecord(new WeaponCifRecordInfo(width, height, xOffset, yOffset, 1), compression, ImageHeaderBytes, dataLength)];
-        int position = checked(ImageHeaderBytes + dataLength);
         while (position < data.Length)
         {
             if (position > data.Length - AnimationHeaderBytes)

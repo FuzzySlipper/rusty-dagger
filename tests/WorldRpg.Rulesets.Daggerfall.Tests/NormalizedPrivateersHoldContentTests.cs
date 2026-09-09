@@ -35,6 +35,30 @@ public sealed class NormalizedPrivateersHoldContentTests
     }
 
     [Fact]
+    public void Every_supported_weapon_and_unarmed_has_complete_normalized_presentation()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = PrivateersHoldContent.Read(GeneratedContent(root),
+            File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")), definitions);
+        NormalizedClassicPresentation classic = inputs.ClassicPresentation;
+        Assert.Equal(9, classic.Weapons.Count);
+        Assert.Equal("weapon.longblade", classic.CompatibleItemVisuals["iron-longsword"]);
+        Assert.Equal("weapon.dagger.steel", classic.CompatibleItemVisuals["iron-dagger"]);
+        Assert.Equal("weapon.unarmed", classic.UnarmedVisual);
+        Assert.All(definitions.Items.Values.Where(item => item.Weapon is not null), item =>
+            Assert.True(classic.Weapons.ContainsKey(classic.CompatibleItemVisuals[item.Id.Value])));
+        Assert.All(classic.Weapons.Values, weapon =>
+        {
+            Assert.True(weapon.Actions["idle"].Loops);
+            Assert.All(weapon.Actions.Values.Where(action => action.Name != "idle"), action => Assert.False(action.Loops));
+            Assert.All(weapon.Frames, frame => { Assert.Equal(320, frame.Width); Assert.Equal(200, frame.Height); });
+        });
+        NormalizedClassicWeaponAction left = classic.Weapons["weapon.unarmed"].Actions["strikeLeft"];
+        Assert.Equal(new[] { 0, 1, 2, 3, 4, 2, 1, 0 }, left.Sequence!.Select(frame => frame - left.FrameStart));
+    }
+
+    [Fact]
     public void ReadsTheGeneratedClosureWithoutSourceShapedSpatialOrSpriteFields()
     {
         string root = RepositoryRoot();
@@ -49,7 +73,7 @@ public sealed class NormalizedPrivateersHoldContentTests
         Assert.Equal(inputs.Materials.Count, inputs.Materials.Select(material => material.Slot).Distinct().Count());
         Assert.NotEmpty(inputs.ActorSprites);
         Assert.All(inputs.ActorSprites.Values, sprite => Assert.InRange(sprite.Frames.Count, 1, 4096));
-        Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapon).ResourceId);
+        Assert.Equal("weapon.dagger.steel", Assert.IsType<NormalizedClassicWeapon>(inputs.ClassicPresentation.Weapons["weapon.dagger.steel"]).ResourceId);
         Assert.Equal("weapon.dagger.steel", inputs.ClassicPresentation.CompatibleItemVisuals["iron-dagger"]);
         Assert.Equal(["blood0", "blood1", "blood2", "magicSparkle"], inputs.ClassicPresentation.Effects.Select(effect => effect.Name));
     }
@@ -133,24 +157,15 @@ public sealed class NormalizedPrivateersHoldContentTests
     }
 
     [Fact]
-    public void RejectsClassicViewmodelMappingsOrPivotsOutsideTheAdmittedDaggerfallBridge()
+    public void RejectsDuplicateWeaponMappingsAndMissingUnarmedMedia()
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         string payload = File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
-
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
-            GeneratedContent(root),
-            Encoding.UTF8.GetBytes(payload.Replace("\"itemId\": \"iron-dagger\"", "\"itemId\": \"iron-longsword\"", StringComparison.Ordinal)),
-            definitions));
+            GeneratedContent(root), Encoding.UTF8.GetBytes(payload.Replace("\"itemId\": \"iron-dagger\"", "\"itemId\": \"iron-longsword\"", StringComparison.Ordinal)), definitions));
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
-            GeneratedContent(root),
-            Encoding.UTF8.GetBytes(payload.Replace("\"pivot\": { \"x\": 0.5, \"y\": 0.5 }", "\"pivot\": { \"x\": 1.1, \"y\": 0.5 }", StringComparison.Ordinal)),
-            definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(
-            GeneratedContent(root),
-            Encoding.UTF8.GetBytes(payload.Replace("\"position\": [0.28, -0.22, -0.75]", "\"position\": [16.1, -0.22, -0.75]", StringComparison.Ordinal)),
-            definitions));
+            GeneratedContent(root), Encoding.UTF8.GetBytes(payload.Replace("weapon.unarmed", "weapon.missing", StringComparison.Ordinal)), definitions));
     }
 
     private static ProductContent GeneratedContent(string root)
