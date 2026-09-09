@@ -326,7 +326,8 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
         VerifyAdmittedContent(entry);
         RenderResourceInfo resource = engine.Graphics.OpenResource(new(entry.Closure.RelativePath));
         SpriteAtlas atlas = engine.Graphics.CreateSpriteAtlas(new(resource.Handle, SpriteAtlasAdapter.ToAtlasFrames(entry.Atlas.Width, entry.Atlas.Height,
-            entry.Frames.Select(frame => new WorldRpg.Kit.Presentation.NormalizedSpriteFrame(checked((uint)frame.FrameIndex), frame.X, frame.Y, frame.Width, frame.Height)).ToArray())));
+            entry.Frames.Select(frame => new WorldRpg.Kit.Presentation.NormalizedSpriteFrame(checked((uint)frame.FrameIndex), frame.X, frame.Y, frame.Width, frame.Height,
+                ActorFrameDisplaySize(entry, frame))).ToArray())));
         Appearance? appearance = null;
         List<SpritePlayback> playbacks = [];
         try
@@ -581,6 +582,20 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
     private void ThrowIfShutdown() { if (shutdown) throw new ObjectDisposedException(nameof(SpriteWorkbenchProduct)); }
     private static float RequiredFinite(float? value) => value is { } scalar && float.IsFinite(scalar) ? scalar : throw new FormatException("A paired vector edit requires finite values.");
     private static Vector2 ToVector(NormalizedVector2? value, Vector2 fallback = default) => value is { } vector ? new(vector.X, vector.Y) : fallback;
+    private static Vector2? ActorFrameDisplaySize(SpriteInspectionEntry entry, SpriteInspectionFrame frame)
+    {
+        if (entry.Kind != SpriteInspectionKind.DungeonActor
+            || entry.AuthoredValues.DisplaySize is not { } authoredSize
+            || entry.SourceWorldSize is not { } sourceWorldSize
+            || frame.SourceWorldSize is not { } frameSourceWorldSize)
+        {
+            return null;
+        }
+
+        return new(
+            frameSourceWorldSize.X * authoredSize.X / sourceWorldSize.X,
+            frameSourceWorldSize.Y * authoredSize.Y / sourceWorldSize.Y);
+    }
     private void TryDisposePreviews(ICollection<Exception> failures)
     {
         foreach (Preview preview in previews.Values.Reverse()) preview.Dispose(failures);

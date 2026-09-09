@@ -699,7 +699,10 @@ public sealed record Arena2DungeonMediaPublication(
             EnforceFrameQuota(sourceFrames.Count, quotas, selection.ActorResourceId);
             NormalizedSpriteAtlas atlas = SpriteAtlasNormalizer.Normalize(
                 sourceFrames.Select(frame => frame.Decoded).ToArray(),
-                SpriteAtlasOptions.Grid(quotas.MaximumAtlasDimension, cropTransparentPixels: true, bottomAlign: true));
+                // Actor animation uses the complete source canvas as its stable local
+                // coordinate system. Trimming transparent margins would lose each
+                // frame's subject origin and recenter it during playback.
+                SpriteAtlasOptions.Grid(quotas.MaximumAtlasDimension, cropTransparentPixels: false, bottomAlign: true));
             RequireArtifactSize(atlas.PngBytes, quotas, $"actor '{selection.ActorResourceId}'");
             string spriteResourceId = $"sprite/mobile-{selection.Source.Id.Value}";
             GeneratedMediaArtifact artifact = GeneratedMediaArtifact.FromAtlas(
@@ -763,7 +766,7 @@ public sealed record Arena2DungeonMediaPublication(
             ToRgba(decoded, palette, PaletteAlphaMode.IndexZeroTransparent));
         NormalizedSpriteAtlas atlas = SpriteAtlasNormalizer.Normalize(
             [frame],
-            SpriteAtlasOptions.Grid(quotas.MaximumAtlasDimension, cropTransparentPixels: true, bottomAlign: true));
+            SpriteAtlasOptions.Grid(quotas.MaximumAtlasDimension, cropTransparentPixels: false, bottomAlign: true));
         RequireArtifactSize(atlas.PngBytes, quotas, $"corpse '{source.Id.Value}'");
         string resourceId = $"sprite/mobile-{source.Id.Value}/corpse";
         GeneratedMediaArtifact artifact = GeneratedMediaArtifact.FromAtlas(

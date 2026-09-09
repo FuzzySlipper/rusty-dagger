@@ -16,7 +16,8 @@ public sealed record SpriteInspectionEntry(
     IReadOnlyList<SpriteInspectionState> States,
     IReadOnlyList<SpriteInspectionAction> Actions,
     SpriteAuthoredValues AuthoredValues,
-    IReadOnlyList<SpriteInspectionFrame>? GeneratedFrames = null);
+    IReadOnlyList<SpriteInspectionFrame>? GeneratedFrames = null,
+    NormalizedVector2? SourceWorldSize = null);
 
 /// <summary>The source family that supplies the semantic meaning of a sprite set.</summary>
 public enum SpriteInspectionKind
@@ -52,7 +53,8 @@ public sealed record SpriteInspectionFrame(
     bool Mirrored,
     int? SourceRecord = null,
     int? SourceFrame = null,
-    int? Orientation = null);
+    int? Orientation = null,
+    NormalizedVector2? SourceWorldSize = null);
 
 /// <summary>One source-labelled state layout. It describes data only; it does not play or render.</summary>
 public sealed record SpriteInspectionState(
@@ -223,11 +225,11 @@ public static class SpriteInspectionCatalogBuilder
                 SpriteInspectionKind.DungeonActor,
                 ToClosure(descriptor, closure, sources),
                 new(descriptor.AtlasWidth, descriptor.AtlasHeight),
-                Frames(descriptor, layouts),
+                Frames(descriptor, layouts, includeSourceWorldSize: true),
                 states,
                 [new("primary-attack-source", null, null, [], Sequence(actor.SourceAttackSequence.PrimaryFrames)),
                  .. actor.SourceAttackSequence.Alternates.Select((alternate, index) => new SpriteInspectionAction($"primary-attack-alternate-{index}", null, null, [], Sequence(alternate.Frames), alternate.Chance))],
-                Authored(descriptor), GeneratedFrames(descriptor, layouts)));
+                Authored(descriptor), GeneratedFrames(descriptor, layouts, includeSourceWorldSize: true), actor.SourceWorldSize));
 
             if (actor.Corpse is not null)
             {
@@ -319,7 +321,7 @@ public static class SpriteInspectionCatalogBuilder
         }
     }
 
-    private static IReadOnlyList<SpriteInspectionFrame> Frames(NormalizedMediaDescriptor descriptor, IReadOnlyList<DungeonMediaFrameLayout>? layouts)
+    private static IReadOnlyList<SpriteInspectionFrame> Frames(NormalizedMediaDescriptor descriptor, IReadOnlyList<DungeonMediaFrameLayout>? layouts, bool includeSourceWorldSize = false)
     {
         Dictionary<int, DungeonMediaFrameLayout> layoutByIndex = layouts is null
             ? []
@@ -328,12 +330,13 @@ public static class SpriteInspectionCatalogBuilder
         {
             layoutByIndex.TryGetValue(frame.FrameIndex, out DungeonMediaFrameLayout? layout);
             return new SpriteInspectionFrame(frame.Id, frame.FrameIndex, frame.X, frame.Y, frame.Width, frame.Height,
-                frame.SourceWidth, frame.SourceHeight, frame.Mirrored, layout?.SourceRecord, layout?.SourceFrame, layout?.Orientation);
+                frame.SourceWidth, frame.SourceHeight, frame.Mirrored, layout?.SourceRecord, layout?.SourceFrame, layout?.Orientation,
+                includeSourceWorldSize ? layout?.SourceWorldSize : null);
         }).ToArray();
     }
 
-    private static IReadOnlyList<SpriteInspectionFrame> GeneratedFrames(NormalizedMediaDescriptor descriptor, IReadOnlyList<DungeonMediaFrameLayout>? layouts) =>
-        Frames(descriptor with { Frames = descriptor.GeneratedFrames ?? descriptor.Frames }, layouts);
+    private static IReadOnlyList<SpriteInspectionFrame> GeneratedFrames(NormalizedMediaDescriptor descriptor, IReadOnlyList<DungeonMediaFrameLayout>? layouts, bool includeSourceWorldSize = false) =>
+        Frames(descriptor with { Frames = descriptor.GeneratedFrames ?? descriptor.Frames }, layouts, includeSourceWorldSize);
 
     private static SpriteAuthoredValues Authored(NormalizedMediaDescriptor descriptor) => new(
         descriptor.DisplayName, descriptor.Pivot, descriptor.DisplaySize, descriptor.FramesPerSecond, descriptor.Loop, descriptor.Sequence?.ToArray());

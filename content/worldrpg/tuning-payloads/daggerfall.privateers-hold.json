@@ -46,6 +46,10 @@
     "maximumDistance": 2.25,
     "minimumFacingCosine": 0.5
   },
+  "staminaRecovery": {
+    "pointsPerSecond": 5.0,
+    "delayAfterAttackSeconds": 2.0
+  },
   "presentationAudio": {
     "volume": 1.0,
     "pitch": 1.0,

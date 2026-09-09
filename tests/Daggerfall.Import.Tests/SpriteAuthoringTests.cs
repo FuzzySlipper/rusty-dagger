@@ -23,6 +23,8 @@ public sealed class SpriteAuthoringTests
         Assert.Equal(8, actor.Frames.Count);
         Assert.Equal(0, actor.Frames[0].SourceRecord);
         Assert.Equal(0, actor.Frames[0].Orientation);
+        Assert.Equal(new NormalizedVector2(1F, 1F), actor.SourceWorldSize);
+        Assert.Equal(new NormalizedVector2(1F, 1F), actor.Frames[0].SourceWorldSize);
         SpriteInspectionState state = Assert.Single(actor.States);
         Assert.Equal("Move", state.Name);
         Assert.Equal(6F, state.FramesPerSecond);
