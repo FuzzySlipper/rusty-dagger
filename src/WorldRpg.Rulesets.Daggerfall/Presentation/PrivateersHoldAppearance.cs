@@ -487,7 +487,6 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 weapon.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
             visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, new Vector2(.5F, 0F), new Vector2(weapon.Frames[0].Width, weapon.Frames[0].Height), BillboardMode.None, SpriteSizeMode.Pixel, style.RenderOrder, SpriteDepthPolicy.DepthTestOff, new Color(1F, 1F, 1F, 1F)));
-            appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(visual, true, Vector2.Zero, Vector2.One, new Vector2(.5F, 0F), SpriteViewportFit.Contain));
             viewmodel = new ViewmodelVisual(weapon, NextVisualEntityId(), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), atlas, visual);
             StartWeaponAction("idle");
         }
@@ -515,6 +514,11 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         SpritePlayback? staged = null;
         try
         {
+            // Some classic frames terminate at a side of their native canvas.
+            // Fit that canvas against the same viewport edge so widescreen
+            // letterboxing cannot expose a cut-off hand or blade inside the view.
+            float alignment = action.Alignment switch { "left" => 0F, "right" => 1F, _ => .5F };
+            appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(viewmodel.Appearance, true, Vector2.Zero, Vector2.One, new Vector2(alignment, 0F), SpriteViewportFit.Contain));
             SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames((action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount).ToArray())
                 .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), action.FramesPerSecond);
             staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, Array.Empty<SpritePlaybackMarker>(), action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
