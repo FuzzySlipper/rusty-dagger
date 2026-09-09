@@ -50,6 +50,28 @@ public sealed class DaggerfallStaminaRecoveryModuleTests
         Assert.Equal(5, player.ReadTrack(Stamina).Current.Raw);
     }
 
+    [Fact]
+    public void Recovery_checkpoint_restores_partial_delay_and_fractional_carry()
+    {
+        using ActorMechanicsState player = PlayerMechanics();
+        player.SetTrack(Stamina, ExactValue.Zero);
+        DaggerfallStaminaRecoveryModule recovery = new(new DaggerfallStaminaRecoveryTuning(5d, 2d));
+        recovery.React(new PlayerAttackStartedFact(7, 13));
+        recovery.Update(player, 1d);
+        var delayed = recovery.Capture();
+        recovery.Update(player, .5d);
+        recovery.Restore(delayed);
+        recovery.Update(player, 1d);
+        Assert.Equal(0, player.ReadTrack(Stamina).Current.Raw);
+
+        recovery.Update(player, .1d);
+        var fractional = recovery.Capture();
+        recovery.React(new PlayerAttackStartedFact(7, 14));
+        recovery.Restore(fractional);
+        recovery.Update(player, .1d);
+        Assert.Equal(1, player.ReadTrack(Stamina).Current.Raw);
+    }
+
     private static ActorMechanicsState PlayerMechanics()
     {
         string root = RepositoryRoot();
