@@ -14,6 +14,16 @@ internal sealed class DaggerfallStaminaRecoveryModule(DaggerfallStaminaRecoveryT
     private double _quietSeconds;
     private double _recoveryCarry;
 
+    internal readonly record struct Checkpoint(double QuietSeconds, double RecoveryCarry);
+
+    internal Checkpoint Capture() => new(_quietSeconds, _recoveryCarry);
+
+    internal void Restore(Checkpoint checkpoint)
+    {
+        _quietSeconds = checkpoint.QuietSeconds;
+        _recoveryCarry = checkpoint.RecoveryCarry;
+    }
+
     /// <summary>Only admitted player swings delay recovery; rejected attempts never reset the quiet period.</summary>
     internal void React(IProductFact fact)
     {

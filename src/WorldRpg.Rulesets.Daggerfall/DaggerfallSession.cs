@@ -272,6 +272,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     {
         _appearance.BeginAdmittedUpdate();
         PrivateersHoldAppearance.PresentationCheckpoint mediaCheckpoint = _appearance.Checkpoint();
+        DaggerfallStaminaRecoveryModule.Checkpoint staminaCheckpoint = _staminaRecovery.Capture();
         _outerFacts = _facts.BeginTransaction();
         PendingCorpseLoot? committedBoundaryLoot;
         try
@@ -295,6 +296,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
         }
         catch (Exception failure)
         {
+            _staminaRecovery.Restore(staminaCheckpoint);
             _pendingLoot = null;
             FactBuffer<IProductFact>.FactTransaction? transaction = _outerFacts;
             _outerFacts = null;
