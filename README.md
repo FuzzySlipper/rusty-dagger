@@ -112,7 +112,7 @@ Use WASD to move and the mouse to look. **Z** draws or sheathes the equipped
 weapon; empty hands use unarmed art. **Left mouse** or **V** swings once per
 press while drawn, including empty space. Cooldown, stamina and the active swing
 limit repeated attacks; Engine playback returns the weapon to ready. Weapon art
-retains classic proportions and fits the bottom center of the view. Engine input capture keeps gameplay
+retains classic proportions and fits the bottom and authored side of the view. Engine input capture keeps gameplay
 controls out of menus, inventory and console interactions. The DOM renders the
 `dagger.hud` projection. The SDK compiles the
 product-owned DOM UI and atomically stages the loose Product bundle. The
