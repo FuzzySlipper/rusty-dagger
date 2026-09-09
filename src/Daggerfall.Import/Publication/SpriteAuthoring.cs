@@ -250,25 +250,27 @@ public static class SpriteInspectionCatalogBuilder
         IReadOnlyDictionary<string, ImportPublicationManifestArtifact> closure,
         IReadOnlyList<ImportPublicationSource> sources)
     {
-        if (sidecar.WeaponActions.Count == 0)
+        if (sidecar.WeaponMedia.Count == 0)
         {
             return;
         }
 
-        NormalizedMediaDescriptor descriptor = sidecar.Media.Resources.SingleOrDefault(resource => resource.Kind == NormalizedMediaKind.WeaponSprite)
-            ?? throw new FormatException("Classic media does not contain a weapon sprite descriptor.");
-        entries.Add(new(
-            descriptor.Id,
-            "Classic dagger weapon",
-            SpriteInspectionKind.ClassicWeapon,
-            ToClosure(descriptor, closure, sources),
-            new(descriptor.AtlasWidth, descriptor.AtlasHeight),
-            Frames(descriptor, null), [],
-            sidecar.WeaponActions.OrderBy(action => action.Action).Select(action => new SpriteInspectionAction(
-                action.Action.ToString(), action.Timing.FramesPerSecond, action.Timing.Loop,
-                Enumerable.Range(action.FrameStart, action.FrameCount).ToArray(),
-                SourceRecordOrdinal: action.SourceRecordOrdinal)).ToArray(),
-            Authored(descriptor), GeneratedFrames(descriptor, null)));
+        foreach (ClassicWeaponMediaManifest weapon in sidecar.WeaponMedia.OrderBy(weapon => weapon.ResourceId, StringComparer.Ordinal))
+        {
+            NormalizedMediaDescriptor descriptor = RequireDescriptor(sidecar.Media, weapon.ResourceId, "classic weapon");
+            entries.Add(new(
+                descriptor.Id,
+                $"Classic {descriptor.Id} weapon",
+                SpriteInspectionKind.ClassicWeapon,
+                ToClosure(descriptor, closure, sources),
+                new(descriptor.AtlasWidth, descriptor.AtlasHeight),
+                Frames(descriptor, null), [],
+                weapon.Actions.OrderBy(action => action.Action).Select(action => new SpriteInspectionAction(
+                    action.Action.ToString(), action.Timing.FramesPerSecond, action.Timing.Loop,
+                    action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount).ToArray(),
+                    SourceRecordOrdinal: action.SourceRecordOrdinal)).ToArray(),
+                Authored(descriptor), GeneratedFrames(descriptor, null)));
+        }
     }
 
     private static void AddClassicEffects(

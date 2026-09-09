@@ -6,14 +6,80 @@
       {
         "itemId": "iron-dagger",
         "resource": "weapon.dagger.steel"
+      },
+      {
+        "itemId": "iron-tanto",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-wakazashi",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-shortsword",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-broadsword",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-saber",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-katana",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-longsword",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-mace",
+        "resource": "weapon.mace"
+      },
+      {
+        "itemId": "iron-battle-axe",
+        "resource": "weapon.axe"
+      },
+      {
+        "itemId": "iron-claymore",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-dai-katana",
+        "resource": "weapon.longblade"
+      },
+      {
+        "itemId": "iron-staff",
+        "resource": "weapon.staff"
+      },
+      {
+        "itemId": "iron-flail",
+        "resource": "weapon.flail"
+      },
+      {
+        "itemId": "iron-warhammer",
+        "resource": "weapon.warhammer"
+      },
+      {
+        "itemId": "iron-war-axe",
+        "resource": "weapon.axe"
+      },
+      {
+        "itemId": "iron-short-bow",
+        "resource": "weapon.bow"
+      },
+      {
+        "itemId": "iron-long-bow",
+        "resource": "weapon.bow"
       }
     ],
     "viewmodel": {
-      "position": [0.28, -0.22, -0.75],
-      "pivot": { "x": 0.5, "y": 0.5 },
-      "worldSize": { "x": 1.6, "y": 1.0 },
       "renderOrder": 0
-    }
+    },
+    "unarmedVisual": "weapon.unarmed"
   },
   "startingState": {
     "position": [

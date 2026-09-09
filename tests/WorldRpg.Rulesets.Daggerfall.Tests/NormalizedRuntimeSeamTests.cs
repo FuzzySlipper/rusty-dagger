@@ -54,6 +54,53 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Player_swing_admission_starts_once_for_empty_space_and_explicit_material_rejection()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId,
+            placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        authored[2000] = authored[2000] with { MinimumMaterial = "daedric" };
+        DaggerfallMeleeTargetingModule targeting = new(perception.Service, targetingSpatial, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
+        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, definitions, authored, targeting);
+
+        long staminaBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw;
+        FactBuffer<IProductFact> facts = new();
+        combat.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 13, .125, facts);
+        List<IProductFact> emptySpace = [];
+        facts.Deliver(emptySpace.Add);
+
+        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw);
+        Assert.Equal(new PlayerAttackStartedFact(7, 13), Assert.Single(emptySpace.OfType<PlayerAttackStartedFact>()));
+        Assert.Contains(new AttackRejectedFact(AttackRejection.NoTargetInReach), emptySpace);
+        Assert.Equal(new CombatCooldown(DaggerfallActorIdentity.PlayerEntityId, 6), Assert.Single(combat.CaptureCooldowns(7, 13)));
+
+        combat.TryPlayerMelee(session.State.PlayerControl, ForwardLook(), 7, 14, .125, facts);
+        List<IProductFact> coolingDown = [];
+        facts.Deliver(coolingDown.Add);
+        Assert.Equal([new AttackRejectedFact(AttackRejection.Cooldown)], coolingDown);
+        Assert.Equal(staminaBefore - 5, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw);
+
+        combat.ResolveExplicit(new ExplicitMeleeRequest(DaggerfallActorIdentity.PlayerEntityId, 2000, 8, 20, .125), facts);
+        List<IProductFact> materialImmune = [];
+        facts.Deliver(materialImmune.Add);
+        Assert.Equal(new PlayerAttackStartedFact(8, 20), Assert.Single(materialImmune.OfType<PlayerAttackStartedFact>()));
+        Assert.Contains(new AttackRejectedFact(AttackRejection.InsufficientWeaponMaterial), materialImmune);
+        Assert.DoesNotContain(materialImmune, fact => fact is AttackHitFact or AttackMissedFact);
+    }
+
+    [Fact]
     public void Grounded_spawns_use_engine_floor_hits_while_flying_markers_keep_their_height()
     {
         string root = RepositoryRoot();
@@ -820,7 +867,7 @@ public sealed class NormalizedRuntimeSeamTests
         content.Add("weapon/dagger.png", Hash);
         AppearanceFake appearance = new(releases);
         NormalizedClassicPresentation weapon = ClassicWeapon();
-        NormalizedClassicPresentation classic = new(weapon.Weapon, ClassicEffects().Effects)
+        NormalizedClassicPresentation classic = new(weapon.Weapons, ClassicEffects().Effects)
         {
             CompatibleItemVisuals = weapon.CompatibleItemVisuals,
             Viewmodel = weapon.Viewmodel,
@@ -833,6 +880,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpritePlayback viewmodelPlayback = Viewmodel(presentation).Playback!;
         presentation.BeginAdmittedUpdate();
         PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
+        presentation.React(new PlayerAttackStartedFact(2, 3));
         presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1, false, 2, 3));
         presentation.React(new AttackMissedFact(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 2, false, 2, 3));
         using ActorsState actors = ActorsAt(new WorldPoint(2F, 0F, 3F));
@@ -1002,11 +1050,11 @@ public sealed class NormalizedRuntimeSeamTests
         presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
         Assert.Equal(2, appearance.PlaybackRequests.Count);
         Assert.All(appearance.AtlasRequests.Last().Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
-        Assert.Equal(Vector2.One, appearance.SpriteRequests.Last().Size);
+        Assert.Equal(new Vector2(8, 8), appearance.SpriteRequests.Last().Size);
         presentation.Publish(EmptyActors());
         Assert.Contains(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
 
-        AttackMissedFact miss = new(DaggerfallActorIdentity.PlayerEntityId, 12, 1, 1, false, 3, 4);
+        PlayerAttackStartedFact miss = new(3, 4);
         presentation.React(miss);
         presentation.React(miss);
         Assert.Equal(3, appearance.PlaybackRequests.Count);
@@ -1047,7 +1095,51 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Viewmodel_publishes_its_authored_bounded_local_transform_and_restores_it_exactly()
+    public void Drawn_weapon_swaps_and_empty_hands_replace_art_and_sheathing_suppresses_attacks()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        content.Add("weapon/dagger.png", Hash);
+        content.Add("weapon/sword.png", Hash);
+        content.Add("weapon/unarmed.png", Hash);
+        NormalizedClassicPresentation original = ClassicWeapon();
+        NormalizedClassicWeapon dagger = original.Weapons["weapon.dagger.steel"];
+        NormalizedClassicPresentation classic = original with
+        {
+            Weapons = new Dictionary<string, NormalizedClassicWeapon>
+            {
+                [dagger.ResourceId] = dagger,
+                ["weapon.longblade"] = dagger with { ResourceId = "weapon.longblade", TexturePath = "weapon/sword.png" },
+                ["weapon.unarmed"] = dagger with { ResourceId = "weapon.unarmed", TexturePath = "weapon/unarmed.png" },
+            },
+            CompatibleItemVisuals = new Dictionary<string, string> { ["iron-dagger"] = dagger.ResourceId, ["iron-longsword"] = "weapon.longblade" },
+            UnarmedVisual = "weapon.unarmed",
+        };
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(classic: classic));
+        presentation.UpdateRightHandEquipment(RightHand("iron-longsword"));
+        Assert.Equal("weapon.longblade", Viewmodel(presentation).Weapon.ResourceId);
+        presentation.React(new PlayerAttackStartedFact(1, 1));
+        Assert.False(presentation.CanStartPlayerAttack);
+        presentation.UpdateRightHandEquipment(RightHand("iron-dagger"));
+        Assert.Equal(dagger.ResourceId, Viewmodel(presentation).Weapon.ResourceId);
+        Assert.True(presentation.CanStartPlayerAttack);
+        presentation.UpdateRightHandEquipment(RightHand("gold"));
+        Assert.Equal("weapon.unarmed", Viewmodel(presentation).Weapon.ResourceId);
+        PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
+        presentation.ToggleWeaponDrawn();
+        presentation.UpdateRightHandEquipment(RightHand("gold"));
+        Assert.False(presentation.CanStartPlayerAttack);
+        using ActorsState actors = EmptyActors();
+        presentation.Publish(actors);
+        Assert.DoesNotContain(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
+        presentation.Restore(checkpoint);
+        Assert.Equal("weapon.unarmed", Viewmodel(presentation).Weapon.ResourceId);
+        Assert.True(presentation.CanStartPlayerAttack);
+    }
+
+    [Fact]
+    public void Viewmodel_uses_viewport_placement_and_restores_its_presentation_checkpoint()
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
@@ -1060,7 +1152,8 @@ public sealed class NormalizedRuntimeSeamTests
         presentation.Publish(actors);
         AppearanceFact first = Assert.Single(appearance.Snapshots.Last(), fact => fact.Layer == RenderLayer.Viewmodel);
         Assert.InRange(first.ObjectId, 2UL, (1UL << 53) - 1);
-        Assert.Equal(new Vector3(.2F, -.2F, -.7F), first.Transform.Translation);
+        Assert.Equal(Vector3.Zero, first.Transform.Translation);
+        Assert.Single(appearance.ViewportRequests);
         Assert.Equal(Quaternion.Identity, first.Transform.Rotation);
         Assert.All([first.Transform.Translation.X, first.Transform.Translation.Y, first.Transform.Translation.Z], coordinate => Assert.InRange(coordinate, -16F, 16F));
         PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
@@ -1114,10 +1207,10 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         byte[] payload = File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json"));
 
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["schemaVersion"] = 2), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponActions"]!.AsArray()[0]!["sourceRecordOrdinal"] = 6), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponActions"]!.AsArray()[1]!["frameStart"] = 0), payload, definitions));
-        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponActions"]!.AsArray()[0]!["frameCount"] = int.MaxValue), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["schemaVersion"] = 1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameStart"] = -1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[1]!["frameStart"] = -1), payload, definitions));
+        Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => media["weaponMedia"]!.AsArray()[0]!["actions"]!.AsArray()[0]!["frameCount"] = int.MaxValue), payload, definitions));
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media => WeaponResource(media)["frames"]!.AsArray()[0]!["frameIndex"] = 4), payload, definitions));
         Assert.Throws<DaggerfallContentException>(() => PrivateersHoldContent.Read(MutateClassicMedia(root, media =>
         {
@@ -1151,7 +1244,7 @@ public sealed class NormalizedRuntimeSeamTests
         }
         foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
         foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
-        if (inputs.ClassicPresentation.Weapon is { } weapon) content.Add(weapon.TexturePath, weapon.TextureSha256);
+        foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) content.Add(weapon.TexturePath, weapon.TextureSha256);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -1613,21 +1706,24 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using SpatialMovementSystem movement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId,
+            placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallMeleeTargetingModule targeting = new(perception.Service, movement, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
-        session.Update(AttackUpdate());
-        Assert.Equal(2000, session.LastMeleeTargeting?.SelectedTargetId);
+        Assert.Equal(2000, targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
 
         foreach (PerceptionPairKind rejected in new[] { PerceptionPairKind.FacingRejected, PerceptionPairKind.Occluded })
         {
             perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, rejected, 1d));
-            session.Update(AttackUpdate());
-            Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
+            Assert.Null(targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
         }
 
         perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 1, 1, 1, 1, 0, 0, 0);
-        session.Update(AttackUpdate());
-        Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
-        Assert.Equal(1U, session.LastMeleeTargeting?.Receipt.DistanceRejects);
+        Assert.Null(targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
+        Assert.Equal(1U, targeting.LastEvidence?.Receipt.DistanceRejects);
     }
 
     [Fact]
@@ -1645,37 +1741,40 @@ public sealed class NormalizedRuntimeSeamTests
 
         using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
         {
+            using SpatialMovementSystem sessionMovement = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+            Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+                placement => placement.EntityId,
+                placement => definitions.RequireActor(placement.ActorId));
+            authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+            DaggerfallMeleeTargetingModule targeting = new(perception.Service, sessionMovement, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
             perception.Receipt = Receipt(
                 new PerceptionPair(1, 2007, 1d, .8d, PerceptionPairKind.Visible, 1d),
                 new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d),
                 new PerceptionPair(1, 2008, .5d, .8d, PerceptionPairKind.Visible, 1d));
-            session.Update(AttackUpdate());
-            Assert.Equal(2008, session.LastMeleeTargeting?.SelectedTargetId);
+            Assert.Equal(2008, targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
 
             perception.Receipt = Receipt(
                 new PerceptionPair(1, 2007, 1d, .8d, PerceptionPairKind.Visible, 1d),
                 new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
-            session.Update(AttackUpdate());
-            Assert.Equal(2000, session.LastMeleeTargeting?.SelectedTargetId);
+            Assert.Equal(2000, targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
 
             session.State.Actors.All[2008].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
             perception.Receipt = Receipt(new PerceptionPair(1, 2008, .5d, .8d, PerceptionPairKind.Visible, 1d));
-            session.Update(AttackUpdate());
-            Assert.Null(session.LastMeleeTargeting?.SelectedTargetId);
+            Assert.Null(targeting.Select(session.State.PlayerControl, ForwardLook(), 2.25d));
         }
 
         using SpatialMovementSystem movement = new(spatial.Service, content, new SpatialContentArtifact(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256, inputs.SpatialArtifact.NavigationGridId), DaggerfallTuning.Defaults.Spatial);
         ActorMechanicsState playerMechanics = new(new EntityId(1), [], []);
         ActorMechanicsState staleMechanics = new(new EntityId(2001), [], []);
         using ActorsState actors = new(new PlayerActorState(playerMechanics, "health"), [new ActorState(2000, staleMechanics, new WorldPoint(0f, 0f, 1f), "health")]);
-        DaggerfallMeleeTargetingModule targeting = new(
+        DaggerfallMeleeTargetingModule staleTargeting = new(
             perception.Service,
             movement,
             actors,
             new Dictionary<long, DaggerfallActorDefinition> { [2000] = definitions.RequireActor(new DaggerfallActorId("skeletal-warrior")) },
             DaggerfallTuning.Defaults.MeleeTargeting);
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, .8d, PerceptionPairKind.Visible, 1d));
-        long? stale = targeting.Select(
+        long? stale = staleTargeting.Select(
             new PlayerControlState(new WorldPoint(0f, 0f, 0f), 0f, 0f),
             new LookReceipt(default, default, Quaternion.Identity, Vector3.UnitZ, Vector3.UnitX, Vector3.UnitY),
             2.25d);
@@ -1740,7 +1839,7 @@ public sealed class NormalizedRuntimeSeamTests
         }
         foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
         foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
-        if (inputs.ClassicPresentation.Weapon is { } weapon) content.Add(weapon.TexturePath, weapon.TextureSha256);
+        foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) content.Add(weapon.TexturePath, weapon.TextureSha256);
     }
 
     private static ContentFake MediaContent(List<string> releases)
@@ -1820,7 +1919,7 @@ public sealed class NormalizedRuntimeSeamTests
         IReadOnlyList<NormalizedAtlasFrame> frames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8)];
         Vector2 Size(int sourceRecordOrdinal) => sourceRecordOrdinal < 3 && bloodDisplaySizes is { Count: 3 } ? bloodDisplaySizes[sourceRecordOrdinal] : Vector2.One;
         NormalizedClassicEffect Effect(string name, int sourceRecordOrdinal, string path) => new(name, sourceRecordOrdinal, path, Hash, 8, 8, frames, new Vector2(.5F, .5F), Size(sourceRecordOrdinal), [0], 10F, false);
-        return new NormalizedClassicPresentation(null, [Effect("blood0", 0, "effect/blood0.png"), Effect("blood1", 1, "effect/blood1.png"), Effect("blood2", 2, "effect/blood2.png"), Effect("magicSparkle", 3, "effect/sparkle.png")]);
+        return new NormalizedClassicPresentation(new Dictionary<string, NormalizedClassicWeapon>(), [Effect("blood0", 0, "effect/blood0.png"), Effect("blood1", 1, "effect/blood1.png"), Effect("blood2", 2, "effect/blood2.png"), Effect("magicSparkle", 3, "effect/sparkle.png")]);
     }
 
     private static NormalizedClassicPresentation ClassicWeapon()
@@ -1828,10 +1927,10 @@ public sealed class NormalizedRuntimeSeamTests
         IReadOnlyList<NormalizedAtlasFrame> frames = [new NormalizedAtlasFrame(0, 0, 0, 8, 8)];
         string[] names = ["idle", "strikeDown", "strikeDownLeft", "strikeLeft", "strikeRight", "strikeDownRight", "strikeUp"];
         IReadOnlyDictionary<string, NormalizedClassicWeaponAction> actions = names.Select((name, sourceRecordOrdinal) => new NormalizedClassicWeaponAction(name, sourceRecordOrdinal, 0, 1, "right", name == "idle" ? .1F : .4F, 10F, name == "idle", 0, 0)).ToDictionary(action => action.Name);
-        return new NormalizedClassicPresentation(new NormalizedClassicWeapon("weapon.dagger.steel", "weapon/dagger.png", Hash, 8, 8, frames, new Vector2(.5F, .5F), Vector2.One, [0], actions), [])
+        return new NormalizedClassicPresentation(new Dictionary<string, NormalizedClassicWeapon> { ["weapon.dagger.steel"] = new("weapon.dagger.steel", "weapon/dagger.png", Hash, 8, 8, frames, new Vector2(.5F, .5F), Vector2.One, [0], actions) }, [])
         {
             CompatibleItemVisuals = new Dictionary<string, string> { ["iron-dagger"] = "weapon.dagger.steel" },
-            Viewmodel = new ClassicViewmodelStyle(new WorldPoint(.2F, -.2F, -.7F), new Vector2(.5F, .5F), Vector2.One, 0),
+            Viewmodel = new ClassicViewmodelStyle(0),
         };
     }
 
@@ -1858,7 +1957,7 @@ public sealed class NormalizedRuntimeSeamTests
 
     private static JsonObject WeaponResource(JsonObject media) => media["media"]!["resources"]!.AsArray()
         .Select(value => value!.AsObject())
-        .Single(resource => resource["kind"]!.GetValue<string>() == "weaponSprite");
+        .Single(resource => resource["id"]!.GetValue<string>() == "weapon.dagger.steel");
 
     private static JsonObject EffectResource(JsonObject media, string id) => media["media"]!["resources"]!.AsArray()
         .Select(value => value!.AsObject())
@@ -2297,6 +2396,9 @@ public sealed class NormalizedRuntimeSeamTests
         public Appearance CreateStaticMesh(StaticMeshAppearanceRequest request) => CreateAppearance();
         public MeshResource CreateMeshResource(MeshResourceCreateRequest request) => throw new NotSupportedException();
         public Appearance CreateMeshAppearance(MeshResource resource) => throw new NotSupportedException();
+        public MeshPartition PartitionMesh(MeshPartitionRequest request) => throw new NotSupportedException();
+        public MeshPartitionReadout ReadMeshPartition(MeshPartition partition) => throw new NotSupportedException();
+        public MeshResource TakeMeshPartitionPart(MeshPartitionPartRequest request) => throw new NotSupportedException();
         public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();
@@ -2311,6 +2413,8 @@ public sealed class NormalizedRuntimeSeamTests
         }
         public Appearance CreateSpriteFromAtlas(SpriteFromAtlasRequest request) { SpriteRequests.Add(request); return CreateAppearance(); }
         public Appearance ReplaceSpriteFromAtlas(SpriteFromAtlasReplaceRequest request) => CreateAppearance();
+        public void SetSpriteViewport(SpriteViewportUpdateRequest request) => ViewportRequests.Add(request);
+        internal List<SpriteViewportUpdateRequest> ViewportRequests { get; } = [];
         public void SetSpriteFrame(SpriteFrameUpdateRequest request) => SetFrameRequests.Add(request);
         public SpriteReadout ReadSprite(Appearance appearance) => default;
         public SpritePlayback CreateSpritePlayback(SpritePlaybackCreateRequest request)

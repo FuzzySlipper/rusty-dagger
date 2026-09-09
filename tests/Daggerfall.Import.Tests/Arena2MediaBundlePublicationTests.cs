@@ -45,7 +45,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.EndsWith("\n", dungeonJson, StringComparison.Ordinal);
         Assert.EndsWith("\n", classicJson, StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\": 1", dungeonJson, StringComparison.Ordinal);
-        Assert.Contains("\"schemaVersion\": 1", classicJson, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\": 2", classicJson, StringComparison.Ordinal);
         Assert.DoesNotContain("encounter", dungeonJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("encounter", classicJson, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"bytes\"", dungeonJson, StringComparison.OrdinalIgnoreCase);
@@ -71,7 +71,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Arena2ClassicMediaPublication classic = CreateClassicMedia();
         classic = classic with
         {
-            WeaponActions = [classic.WeaponActions.First() with { FrameCount = 2 }],
+            WeaponMedia = [new ClassicWeaponMediaManifest("weapon.minimal", [WeaponActions(classic).First() with { FrameCount = 2 }])],
         };
 
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(CreateDungeon(), CreateDungeonMedia(), classic));
@@ -116,17 +116,17 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
             CreateDungeon(),
             CreateDungeonMedia(),
-            classic with { WeaponActions = classic.WeaponActions.Take(6).ToArray() }));
+            WithWeaponActions(classic, WeaponActions(classic).Take(6).ToArray())));
 
-        ClassicWeaponActionManifest idle = classic.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
+        ClassicWeaponActionManifest idle = WeaponActions(classic).Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
             CreateDungeon(),
             CreateDungeonMedia(),
             classic with
             {
-                WeaponActions = classic.WeaponActions.Select(action => action.Action == ClassicDaggerWeaponAction.Idle
-                    ? idle with { SourceRecordOrdinal = 6 }
-                    : action).ToArray(),
+                WeaponMedia = [new ClassicWeaponMediaManifest("weapon.minimal", WeaponActions(classic).Select(action => action.Action == ClassicDaggerWeaponAction.Idle
+                    ? idle with { FrameStart = 1 }
+                    : action).ToArray())],
             }));
     }
 
@@ -210,7 +210,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Arena2ClassicMediaPublication classic = CreateClassicMedia();
         if (reverseClassicActions)
         {
-            classic = classic with { WeaponActions = classic.WeaponActions.Reverse().ToArray() };
+            classic = WithWeaponActions(classic, WeaponActions(classic).Reverse().ToArray());
         }
 
         return Arena2MediaBundlePublication.Create(CreateDungeon(), CreateDungeonMedia(), classic);
@@ -399,7 +399,7 @@ public sealed class Arena2MediaBundlePublicationTests
             [new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/PAL.PAL", sourceDigest ?? ContentDigest.Compute("palette"u8), 7, 1),
              new LogicalSourceRecord(LogicalSourceRecord.CurrentSchemaVersion, "arena2/WEAPON02.CIF", ContentDigest.Compute("weapon"u8), 6, 1)],
             null,
-            actions,
+            [new ClassicWeaponMediaManifest(weaponMediaId, actions)],
             effects,
             [],
             [],
@@ -411,6 +411,12 @@ public sealed class Arena2MediaBundlePublicationTests
                 Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, 0)).ToArray()),
             []);
     }
+
+    private static IReadOnlyList<ClassicWeaponActionManifest> WeaponActions(Arena2ClassicMediaPublication publication) =>
+        publication.WeaponMedia.Single().Actions;
+
+    private static Arena2ClassicMediaPublication WithWeaponActions(Arena2ClassicMediaPublication publication, IReadOnlyList<ClassicWeaponActionManifest> actions) =>
+        publication with { WeaponMedia = [publication.WeaponMedia.Single() with { Actions = actions }] };
 
     private static NormalizedSpriteAtlas CreateOneFrameAtlas(string id)
     {

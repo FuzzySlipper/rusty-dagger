@@ -602,7 +602,15 @@ internal static class Program
             .ToArray();
 
         public Arena2ClassicMediaInputs ClassicMediaInputs => new(
+            Require("WEAPON01.CIF").Bytes.ToArray(),
             Require("WEAPON02.CIF").Bytes.ToArray(),
+            Require("WEAPON04.CIF").Bytes.ToArray(),
+            Require("WEAPON05.CIF").Bytes.ToArray(),
+            Require("WEAPON06.CIF").Bytes.ToArray(),
+            Require("WEAPON07.CIF").Bytes.ToArray(),
+            Require("WEAPON08.CIF").Bytes.ToArray(),
+            Require("WEAPON09.CIF").Bytes.ToArray(),
+            Require("WEAPON10.CIF").Bytes.ToArray(),
             Require("ART_PAL.COL").Bytes.ToArray(),
             Require("TEXTURE.380").Bytes.ToArray(),
             Require("PAL.PAL").Bytes.ToArray(),
@@ -675,7 +683,15 @@ internal static class Program
     private static readonly string[] ClassicMediaSourceNames =
     [
         "ART_PAL.COL",
+        "WEAPON01.CIF",
         "WEAPON02.CIF",
+        "WEAPON04.CIF",
+        "WEAPON05.CIF",
+        "WEAPON06.CIF",
+        "WEAPON07.CIF",
+        "WEAPON08.CIF",
+        "WEAPON09.CIF",
+        "WEAPON10.CIF",
         "DAGGER.SND",
         "MAIN00I0.IMG",
         "MAIN03I0.IMG",

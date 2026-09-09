@@ -30,6 +30,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly Dictionary<long, ActorVisual> actors = [];
     private readonly List<EffectVisual> effects = [];
     private ViewmodelVisual? viewmodel;
+    private bool weaponDrawn = true;
+    internal bool CanStartPlayerAttack => weaponDrawn && viewmodel?.Strike != true;
+    internal void ToggleWeaponDrawn() => weaponDrawn = !weaponDrawn;
     // Appearance object identities must be exactly representable in browser snapshots.
     // These transient product visuals use a disjoint descending pool, not resource hashes.
     private ulong nextVisualEntityId = (1UL << 53) - 1;
@@ -83,7 +86,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         catch { Dispose(); throw; }
     }
 
-    /// <summary>Publishes authored local viewmodel placement; Engine owns camera-relative rebasing and orientation.</summary>
+    /// <summary>Publishes world and viewport weapon appearances; Engine owns projection and fitting.</summary>
     internal void Publish(ActorsState actors)
     {
         if (disposed) return;
@@ -157,7 +160,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         priorRetired.AddRange(nextRetired);
         nextRetired.Clear();
     }
-    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray(), lastPublishedSnapshot.ToArray());
+    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray(), lastPublishedSnapshot.ToArray(), weaponDrawn);
     internal void Restore(PresentationCheckpoint checkpoint)
     {
         // A failing update may already have staged a snapshot containing
@@ -180,6 +183,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
         if (viewmodel is { } currentWeapon && !ReferenceEquals(currentWeapon, checkpoint.Viewmodel?.Visual)) currentWeapon.Dispose();
         else if (viewmodel is { } retainedWeapon && checkpoint.Viewmodel is { } weaponSnapshot && !ReferenceEquals(retainedWeapon.Playback, weaponSnapshot.Playback)) retainedWeapon.Playback?.Dispose();
+        weaponDrawn = checkpoint.WeaponDrawn;
         viewmodel = checkpoint.Viewmodel?.Visual;
         checkpoint.Viewmodel?.Apply(viewmodel!);
         foreach (EffectVisual effect in effects.Where(current => checkpoint.Effects.All(snapshot => !ReferenceEquals(snapshot.Visual, current))).ToArray()) effect.Dispose();
@@ -198,22 +202,25 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         if (disposed) return;
         switch (fact)
         {
+            case PlayerAttackStartedFact started:
+                PresentationEventIdentity swing = Event(DaggerfallActorIdentity.PlayerEntityId, 0, started.OriginatingGeneration, started.OriginatingSimulationStep, "swing");
+                if (deliveredEvents.Contains(swing)) break;
+                StartWeaponStrike(swing);
+                Emit("swing", swing, 0);
+                deliveredEvents.Add(swing);
+                break;
             case AttackHitFact hit:
                 PresentationEventIdentity hitEvent = Event(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, "hit");
                 if (deliveredEvents.Contains(hitEvent)) break;
                 StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
                 StartState(hit.TargetId, "hurt", null);
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && actorState is not null) SpawnBlood(hit, hitEvent, actorState);
-                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId) StartWeaponStrike(hitEvent);
-                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId) Emit("swing", hitEvent, 0);
                 deliveredEvents.Add(hitEvent);
                 break;
             case AttackMissedFact miss:
                 PresentationEventIdentity missEvent = Event(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, "miss");
                 if (deliveredEvents.Contains(missEvent)) break;
                 StartAttack(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, missEvent);
-                if (miss.AttackerId == DaggerfallActorIdentity.PlayerEntityId) Emit("swing", missEvent, 0);
-                if (miss.AttackerId == DaggerfallActorIdentity.PlayerEntityId) StartWeaponStrike(missEvent);
                 deliveredEvents.Add(missEvent);
                 break;
             case ActorDiedFact died:
@@ -226,18 +233,20 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
     }
 
-    /// <summary>Reads the Engine-backed equipment projection; only an authored exact mapping may reveal the classic art.</summary>
+    /// <summary>Selects authored equipped art, falling back to empty hands; Engine owns sprite realization.</summary>
     internal void UpdateRightHandEquipment(EquipmentRead equipment)
     {
         ArgumentNullException.ThrowIfNull(equipment);
-        string? itemId = equipment.TryGet(new EquipmentSlotId("right-hand"), out UniqueInventoryItem item) ? item.Definition.Value : null;
-        bool compatible = itemId is not null
-            && classicPresentation.Weapon is { } weapon
-            && classicPresentation.CompatibleItemVisuals.TryGetValue(itemId, out string? resource)
-            && resource == weapon.ResourceId
-            && classicPresentation.Viewmodel is not null;
-        if (compatible && viewmodel is null) CreateViewmodel();
-        else if (!compatible && viewmodel is not null) RetireViewmodel();
+        string? resource = null;
+        foreach (string slot in new[] { "right-hand", "left-hand" })
+            if (equipment.TryGet(new EquipmentSlotId(slot), out UniqueInventoryItem item)
+                && classicPresentation.CompatibleItemVisuals.TryGetValue(item.Definition.Value, out resource)) break;
+        resource ??= classicPresentation.UnarmedVisual;
+        NormalizedClassicWeapon? selected = weaponDrawn && resource is not null
+            && classicPresentation.Weapons.TryGetValue(resource, out NormalizedClassicWeapon? weapon) ? weapon : null;
+        if (viewmodel?.Weapon.ResourceId == selected?.ResourceId) return;
+        RetireViewmodel();
+        if (selected is not null && classicPresentation.Viewmodel is not null) CreateViewmodel(selected);
     }
 
     /// <summary>Called exactly once from the outer Product.Update, never from a private catch-up step.</summary>
@@ -324,7 +333,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         foreach (NormalizedClassicEffect effect in classicEffects.Values.OrderBy(effect => effect.Name, StringComparer.Ordinal))
             AdmitClassicTexture(new ContentArtifact(effect.TexturePath, effect.TextureSha256));
-        if (classicPresentation.Weapon is { } weapon)
+        foreach (NormalizedClassicWeapon weapon in classicPresentation.Weapons.Values)
             AdmitClassicTexture(new ContentArtifact(weapon.TexturePath, weapon.TextureSha256));
     }
 
@@ -465,9 +474,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
     }
 
-    private void CreateViewmodel()
+    private void CreateViewmodel(NormalizedClassicWeapon weapon)
     {
-        NormalizedClassicWeapon weapon = classicPresentation.Weapon ?? throw new InvalidOperationException("No admitted classic weapon sprite is available.");
         ClassicViewmodelStyle style = classicPresentation.Viewmodel ?? throw new InvalidOperationException("No authored classic viewmodel style is available.");
         SpriteAtlas? atlas = null;
         Appearance? visual = null;
@@ -478,8 +486,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(weapon.AtlasWidth, weapon.AtlasHeight,
                 weapon.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height)).ToArray());
             atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
-            visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, style.Pivot, style.Size, BillboardMode.None, SpriteSizeMode.World, style.RenderOrder, SpriteDepthPolicy.Default, new Color(1F, 1F, 1F, 1F)));
-            viewmodel = new ViewmodelVisual(NextVisualEntityId(), new Transform(style.Position.ToVector(), Quaternion.Identity, Vector3.One), atlas, visual);
+            visual = appearance.CreateSpriteFromAtlas(new SpriteFromAtlasRequest(atlas, weapon.Frames[0].Id, new Vector2(.5F, 0F), new Vector2(weapon.Frames[0].Width, weapon.Frames[0].Height), BillboardMode.None, SpriteSizeMode.Pixel, style.RenderOrder, SpriteDepthPolicy.DepthTestOff, new Color(1F, 1F, 1F, 1F)));
+            appearance.SetSpriteViewport(new SpriteViewportUpdateRequest(visual, true, Vector2.Zero, Vector2.One, new Vector2(.5F, 0F), SpriteViewportFit.Contain));
+            viewmodel = new ViewmodelVisual(weapon, NextVisualEntityId(), new Transform(Vector3.Zero, Quaternion.Identity, Vector3.One), atlas, visual);
             StartWeaponAction("idle");
         }
         catch
@@ -501,19 +510,19 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     private void StartWeaponAction(string name)
     {
-        if (viewmodel is null || classicPresentation.Weapon is not { } weapon || !weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? action)) return;
+        if (viewmodel is null || !viewmodel.Weapon.Actions.TryGetValue(name, out NormalizedClassicWeaponAction? action)) return;
+        NormalizedClassicWeapon weapon = viewmodel.Weapon;
         SpritePlayback? staged = null;
         try
         {
-            SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames(Enumerable.Range(action.FrameStart, action.FrameCount)
+            SpritePlaybackFrame[] frames = SpriteAtlasAdapter.ToPlaybackFrames((action.Sequence ?? Enumerable.Range(action.FrameStart, action.FrameCount).ToArray())
                 .Select(index => weapon.Frames.Single(frame => frame.Id == index).Id).ToArray(), action.FramesPerSecond);
             staged = appearance.CreateSpritePlayback(new SpritePlaybackCreateRequest(viewmodel.Appearance, viewmodel.Atlas, frames, Array.Empty<SpritePlaybackMarker>(), action.Loops ? SpritePlaybackLoopMode.Loop : SpritePlaybackLoopMode.OneShot, 1d));
             appearance.ControlSpritePlayback(new SpritePlaybackControlRequest(staged, SpritePlaybackControl.Start));
             SpritePlayback? old = viewmodel.Playback;
             viewmodel.Playback = staged;
-            // The importer already placed each fixed 320x200 weapon frame from
-            // alignment and screenOffset. Engine owns camera-relative rebasing;
-            // Daggerfall retains this authored local transform unchanged.
+            // Imported cells retain classic placement; Engine fits the complete
+            // canvas to the viewport and advances the selected sequence.
             viewmodel.Strike = name != "idle";
             viewmodel.CompletedOuterUpdate = false;
             viewmodel.LastOuterUpdate = null;
@@ -690,8 +699,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         }
     }
 
-    internal sealed class ViewmodelVisual(ulong entityId, Transform transform, SpriteAtlas atlas, Appearance appearance) : IDisposable
+    internal sealed class ViewmodelVisual(NormalizedClassicWeapon weapon, ulong entityId, Transform transform, SpriteAtlas atlas, Appearance appearance) : IDisposable
     {
+        internal NormalizedClassicWeapon Weapon { get; } = weapon;
         internal ulong EntityId { get; } = entityId;
         internal Transform Transform { get; set; } = transform;
         internal SpriteAtlas Atlas { get; } = atlas;
@@ -716,7 +726,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     internal readonly record struct PresentationEventIdentity(ulong Generation, ulong SimulationStep, long Attacker, long Target, string Outcome);
     internal readonly record struct AppearanceOuterUpdate(ulong Generation, ulong ControlRevision, ulong SimulationStep, uint AdmittedStepCount);
-    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired, IReadOnlyList<AppearanceFact> PublishedSnapshot);
+    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired, IReadOnlyList<AppearanceFact> PublishedSnapshot, bool WeaponDrawn);
     internal sealed record ActorSnapshot(Appearance? Live, SpritePlayback? Playback, string State, bool Defeated, bool Completed, ulong Marker, uint PlaybackFrame, NormalizedSpriteState? ActiveState, IReadOnlyList<int> SourceFrames, int Orientation, ActiveAttackPresentation? ActiveAttack, AppearanceOuterUpdate? LastOuterUpdate)
     {
         internal static ActorSnapshot From(ActorVisual visual) => new(visual.Live, visual.Playback, visual.State, visual.Defeated, visual.CompletedOuterUpdate, visual.LastMarkerCrossing, visual.LastPlaybackFrameIndex, visual.ActiveState, visual.SourceFrameIndices, visual.Orientation, visual.ActiveAttack, visual.LastOuterUpdate);

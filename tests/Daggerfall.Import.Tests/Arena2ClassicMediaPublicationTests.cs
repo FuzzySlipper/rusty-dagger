@@ -1,4 +1,5 @@
 using System.Text;
+using System.IO.Compression;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
@@ -16,19 +17,28 @@ public sealed class Arena2ClassicMediaPublicationTests
         Arena2ClassicMediaPublication first = Arena2ClassicMediaPublication.Create(inputs);
         Arena2ClassicMediaPublication second = Arena2ClassicMediaPublication.Create(inputs);
 
-        Assert.Equal(49, first.Artifacts.Count);
-        Assert.Equal(49, first.MediaManifest.Resources.Count);
-        Assert.Equal(16, first.Sources.Count);
+        Assert.Equal(57, first.Artifacts.Count);
+        Assert.Equal(57, first.MediaManifest.Resources.Count);
+        Assert.Equal(24, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
 
-        Assert.Equal(7, first.WeaponActions.Count);
-        Assert.Equal(31, first.WeaponActions.Sum(action => action.FrameCount));
-        Assert.Equal(ClassicDaggerWeaponAction.Idle, first.WeaponActions[0].Action);
-        Assert.True(first.WeaponActions[0].Timing.Loop);
-        Assert.All(first.WeaponActions.Skip(1), action => Assert.False(action.Timing.Loop));
-        Assert.All(first.WeaponActions, action => Assert.Equal(10F, action.Timing.FramesPerSecond));
+        IReadOnlyList<ClassicWeaponActionManifest> daggerActions = WeaponActions(first, "weapon.dagger.steel");
+        Assert.Equal(7, daggerActions.Count);
+        Assert.Equal(31, daggerActions.Sum(action => action.FrameCount));
+        Assert.Equal(ClassicDaggerWeaponAction.Idle, daggerActions[0].Action);
+        Assert.True(daggerActions[0].Timing.Loop);
+        Assert.All(daggerActions.Skip(1), action => Assert.False(action.Timing.Loop));
+        Assert.All(daggerActions, action => Assert.Equal(10F, action.Timing.FramesPerSecond));
+        Assert.Equal(9, first.WeaponMedia.Count);
+        Assert.Equal(["weapon.axe", "weapon.bow", "weapon.dagger.steel", "weapon.flail", "weapon.longblade", "weapon.mace", "weapon.staff", "weapon.unarmed", "weapon.warhammer"], first.WeaponMedia.Select(weapon => weapon.ResourceId).OrderBy(id => id, StringComparer.Ordinal));
+        ClassicWeaponMediaManifest bow = first.WeaponMedia.Single(weapon => weapon.ResourceId == "weapon.bow");
+        Assert.All(bow.Actions, action => Assert.Equal(0, action.SourceRecordOrdinal));
+        Assert.Equal(7, bow.Actions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown).FrameCount);
+        Assert.Equal(4, bow.Actions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeUp).FrameCount);
+        ClassicWeaponActionManifest unarmedLeft = first.WeaponMedia.Single(weapon => weapon.ResourceId == "weapon.unarmed").Actions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeLeft);
+        Assert.Equal([unarmedLeft.FrameStart, unarmedLeft.FrameStart + 1, unarmedLeft.FrameStart + 2, unarmedLeft.FrameStart + 3, unarmedLeft.FrameStart + 4, unarmedLeft.FrameStart + 2, unarmedLeft.FrameStart + 1, unarmedLeft.FrameStart], unarmedLeft.Sequence);
         Assert.Equal(4, first.Effects.Count);
         Assert.All(first.Effects, effect => Assert.False(effect.Timing.Loop));
         Assert.Equal(6, first.Audio.Count);
@@ -48,6 +58,19 @@ public sealed class Arena2ClassicMediaPublicationTests
         byte[] wave = Artifact(first, "media/audio/audio-melee-dagger-swing.wav");
         AssertWave(wave);
         Assert.Equal("arena2/DAGGER.SND", first.Sources.Single(source => source.SourcePath == "arena2/DAGGER.SND").SourcePath);
+    }
+
+    [Fact]
+    public void CentersUnarmedFramesOnTheClassicCanvas()
+    {
+        Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs());
+        NormalizedMediaDescriptor unarmed = publication.MediaManifest.Resources.Single(resource => resource.Id == "weapon.unarmed");
+        ClassicWeaponActionManifest left = WeaponActions(publication, "weapon.unarmed").Single(action => action.Action == ClassicDaggerWeaponAction.StrikeLeft);
+        NormalizedAtlasFrame frame = unarmed.Frames.Single(value => value.FrameIndex == left.FrameStart);
+        byte[] atlas = Artifact(publication, "media/combat/weapon-unarmed-atlas.png");
+
+        Assert.Equal(255, ReadPngAlpha(atlas, unarmed.AtlasWidth, frame.X + ((320 - 1) / 2), frame.Y + 199));
+        Assert.Equal(0, ReadPngAlpha(atlas, unarmed.AtlasWidth, frame.X + 319, frame.Y + 199));
     }
 
     [Fact]
@@ -111,16 +134,16 @@ public sealed class Arena2ClassicMediaPublicationTests
     public void ReappliesPerActionTimingOverlayWithoutChangingOtherClassicActions()
     {
         Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(CreateInputs());
-        string weaponId = baseline.MediaManifest.Resources.Single(resource => resource.Kind == NormalizedMediaKind.WeaponSprite).Id;
-        ClassicWeaponActionManifest baselineStrike = baseline.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown);
+        string weaponId = "weapon.dagger.steel";
+        ClassicWeaponActionManifest baselineStrike = WeaponActions(baseline, "weapon.dagger.steel").Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown);
 
         Arena2ClassicMediaPublication regenerated = Arena2ClassicMediaPublication.Create(CreateInputs(), new Arena2ClassicMediaProfile(AuthoredOverlays:
         [
             new AuthoredMediaOverlay(weaponId, true, ActionTimings: [new(ClassicDaggerWeaponAction.Idle.ToString(), 7F, false)]),
         ]));
 
-        ClassicWeaponActionManifest idle = regenerated.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
-        ClassicWeaponActionManifest strike = regenerated.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown);
+        ClassicWeaponActionManifest idle = WeaponActions(regenerated, "weapon.dagger.steel").Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
+        ClassicWeaponActionManifest strike = WeaponActions(regenerated, "weapon.dagger.steel").Single(action => action.Action == ClassicDaggerWeaponAction.StrikeDown);
         Assert.Equal(7F, idle.Timing.FramesPerSecond);
         Assert.False(idle.Timing.Loop);
         Assert.Equal(baselineStrike.Timing, strike.Timing);
@@ -131,7 +154,7 @@ public sealed class Arena2ClassicMediaPublicationTests
     {
         Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(CreateInputs());
         string effectId = baseline.Effects.Single(effect => effect.Effect == ClassicEffect.Blood0).MediaId;
-        string weaponId = baseline.MediaManifest.Resources.Single(resource => resource.Kind == NormalizedMediaKind.WeaponSprite).Id;
+        string weaponId = "weapon.dagger.steel";
 
         Assert.Throws<ArgumentException>(() => Arena2ClassicMediaPublication.Create(CreateInputs(), new Arena2ClassicMediaProfile(AuthoredOverlays:
         [
@@ -150,7 +173,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Arena2ClassicMediaPublication baseline = Arena2ClassicMediaPublication.Create(inputs);
         Arena2ClassicMediaProfile profile = new(
             WeaponMediaId: "weapon.dagger.profiled",
-            WeaponActions: baseline.WeaponActions
+            WeaponActions: WeaponActions(baseline, "weapon.dagger.steel")
                 .Select(action => new ClassicWeaponActionPresentation(
                     action.Action,
                     action.Action == ClassicDaggerWeaponAction.Idle ? ClassicWeaponScreenAlignment.Left : action.Alignment,
@@ -184,8 +207,8 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(inputs, profile);
 
-        Assert.Equal("weapon.dagger.profiled", publication.MediaManifest.Resources.Single(resource => resource.Kind == NormalizedMediaKind.WeaponSprite).Id);
-        ClassicWeaponActionManifest idle = publication.WeaponActions.Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
+        Assert.Equal("weapon.dagger.profiled", publication.MediaManifest.Resources.Single(resource => resource.Id == "weapon.dagger.profiled").Id);
+        ClassicWeaponActionManifest idle = WeaponActions(publication, "weapon.dagger.profiled").Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
         Assert.Equal(ClassicWeaponScreenAlignment.Left, idle.Alignment);
         Assert.Equal(12F, idle.Timing.FramesPerSecond);
         Assert.Equal("MAIN03I0.IMG", publication.UiImages.Single(image => image.Image == ClassicUiImage.HudChromeMain).SourceFile);
@@ -255,20 +278,24 @@ public sealed class Arena2ClassicMediaPublicationTests
     public void RegeneratesTheSelectedClosureFromOperatorSuppliedArena2WhenAvailable()
     {
         string arena2 = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../local/arena2"));
-        if (!File.Exists(Path.Combine(arena2, "WEAPON02.CIF"))) return;
+        if (!new[] { "WEAPON01.CIF", "WEAPON02.CIF", "WEAPON04.CIF", "WEAPON05.CIF", "WEAPON06.CIF", "WEAPON07.CIF", "WEAPON08.CIF", "WEAPON09.CIF", "WEAPON10.CIF" }.All(file => File.Exists(Path.Combine(arena2, file)))) return;
 
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(new(
-            Read(arena2, "WEAPON02.CIF"), Read(arena2, "ART_PAL.COL"), Read(arena2, "TEXTURE.380"), Read(arena2, "PAL.PAL"), Read(arena2, "DAGGER.SND"),
+            Read(arena2, "WEAPON01.CIF"), Read(arena2, "WEAPON02.CIF"), Read(arena2, "WEAPON04.CIF"), Read(arena2, "WEAPON05.CIF"), Read(arena2, "WEAPON06.CIF"), Read(arena2, "WEAPON07.CIF"), Read(arena2, "WEAPON08.CIF"), Read(arena2, "WEAPON09.CIF"), Read(arena2, "WEAPON10.CIF"),
+            Read(arena2, "ART_PAL.COL"), Read(arena2, "TEXTURE.380"), Read(arena2, "PAL.PAL"), Read(arena2, "DAGGER.SND"),
             Read(arena2, "MAIN00I0.IMG"), Read(arena2, "MAIN03I0.IMG"), Read(arena2, "MAIN04I0.IMG"), Read(arena2, "MAIN05I0.IMG"), Read(arena2, "INVE00I0.IMG"), Read(arena2, "INFO00I0.IMG"),
             Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT")));
 
-        Assert.Equal(31, publication.WeaponActions.Sum(action => action.FrameCount));
-        Assert.Equal(49, publication.Artifacts.Count);
+        Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
+        Assert.Equal(57, publication.Artifacts.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
     }
 
     private static byte[] Artifact(Arena2ClassicMediaPublication publication, string path) => publication.Artifacts.Single(artifact => artifact.RelativePath == path).Bytes.ToArray();
+
+    private static IReadOnlyList<ClassicWeaponActionManifest> WeaponActions(Arena2ClassicMediaPublication publication, string resourceId) =>
+        publication.WeaponMedia.Single(weapon => weapon.ResourceId == resourceId).Actions;
 
     private static void AssertPng(byte[] png, int width, int height)
     {
@@ -276,6 +303,32 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal("IHDR", Encoding.ASCII.GetString(png, 12, 4));
         Assert.Equal(width, ReadBigEndian(png, 16));
         Assert.Equal(height, ReadBigEndian(png, 20));
+    }
+
+    private static byte ReadPngAlpha(byte[] png, int width, int x, int y)
+    {
+        int position = 8;
+        byte[]? compressed = null;
+        while (position < png.Length)
+        {
+            int length = ReadBigEndian(png, position);
+            string kind = Encoding.ASCII.GetString(png, position + 4, 4);
+            if (kind == "IDAT")
+            {
+                compressed = png.AsSpan(position + 8, length).ToArray();
+                break;
+            }
+
+            position += checked(length + 12);
+        }
+
+        Assert.NotNull(compressed);
+        using MemoryStream input = new(compressed!);
+        using ZLibStream zlib = new(input, CompressionMode.Decompress);
+        using MemoryStream scanlines = new();
+        zlib.CopyTo(scanlines);
+        int pixel = checked((y * (width * 4 + 1)) + 1 + (x * 4));
+        return scanlines.GetBuffer()[pixel + 3];
     }
 
     private static void AssertWave(byte[] wave)
@@ -290,6 +343,14 @@ public sealed class Arena2ClassicMediaPublicationTests
     }
 
     private static Arena2ClassicMediaInputs CreateInputs() => new(
+        CreateWeaponCif(),
+        CreateWeaponCif(),
+        CreateWeaponCif(),
+        CreateWeaponCif(),
+        CreateWeaponCif(),
+        CreateWeaponCif(),
+        CreateWeaponCif(),
+        CreateWeaponCif(7, includeWieldImage: false, animationRecordCount: 1),
         CreateWeaponCif(),
         CreatePalette(),
         CreateTextureArchive(4),
@@ -335,17 +396,20 @@ public sealed class Arena2ClassicMediaPublicationTests
         return image;
     }
 
-    private static byte[] CreateWeaponCif()
+    private static byte[] CreateWeaponCif(int animationFrameCount = 5, bool includeWieldImage = true, int animationRecordCount = 6)
     {
         List<byte> bytes = [];
-        AppendInt16(bytes, 0);
-        AppendInt16(bytes, 0);
-        AppendInt16(bytes, 1);
-        AppendInt16(bytes, 1);
-        AppendUInt16(bytes, 0);
-        AppendUInt16(bytes, 1);
-        bytes.Add(1);
-        for (int action = 0; action < 6; action++)
+        if (includeWieldImage)
+        {
+            AppendInt16(bytes, 0);
+            AppendInt16(bytes, 0);
+            AppendInt16(bytes, 1);
+            AppendInt16(bytes, 1);
+            AppendUInt16(bytes, 0);
+            AppendUInt16(bytes, 1);
+            bytes.Add(1);
+        }
+        for (int action = 0; action < animationRecordCount; action++)
         {
             AppendUInt16(bytes, 1);
             AppendUInt16(bytes, 1);
@@ -355,11 +419,11 @@ public sealed class Arena2ClassicMediaPublicationTests
             AppendInt16(bytes, 0);
             for (int frame = 0; frame < 31; frame++)
             {
-                AppendUInt16(bytes, frame < 5 ? checked((ushort)(76 + (frame * 2))) : (ushort)0);
+                AppendUInt16(bytes, frame < animationFrameCount ? checked((ushort)(76 + (frame * 2))) : (ushort)0);
             }
 
-            AppendUInt16(bytes, 86);
-            for (int frame = 0; frame < 5; frame++)
+            AppendUInt16(bytes, checked((ushort)(76 + (animationFrameCount * 2))));
+            for (int frame = 0; frame < animationFrameCount; frame++)
             {
                 bytes.Add(0);
                 bytes.Add((byte)(action + frame + 2));
