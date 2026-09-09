@@ -58,6 +58,25 @@ public sealed class SpriteWorkbenchProductTests
     }
 
     [Fact]
+    public void Dungeon_actor_preview_maps_each_frame_world_size_from_authored_size()
+    {
+        using Harness harness = Harness.Create();
+
+        SpriteAtlasFrame[] initial = harness.Appearance.AtlasRequests[0].Frames.Span.ToArray();
+        Assert.All(initial, frame => Assert.True(frame.HasSize));
+        Assert.Equal(new Vector2(1F, 1F), initial[0].Size);
+        Assert.Equal(new Vector2(2F, 3F), initial[1].Size);
+
+        harness.Send("select", id: "sprite.actor", sequence: "state:Move@0");
+        harness.Send("edit", id: "sprite.actor", displaySizeX: 2F, displaySizeY: 3F);
+
+        SpriteAtlasFrame[] edited = harness.Appearance.AtlasRequests.Last().Frames.Span.ToArray();
+        Assert.Equal(new Vector2(2F, 3F), edited[0].Size);
+        Assert.Equal(new Vector2(4F, 9F), edited[1].Size);
+        Assert.All(harness.Appearance.AtlasRequests[1].Frames.Span.ToArray(), frame => Assert.False(frame.HasSize));
+    }
+
+    [Fact]
     public void Construction_rejects_duplicate_or_invalid_admitted_content_paths()
     {
         Assert.Throws<FormatException>(() => Harness.Create(new HarnessOptions(AddDuplicateAdmittedPath: true)));
@@ -991,15 +1010,15 @@ public sealed class SpriteWorkbenchProductTests
             };
             NormalizedMediaDescriptor font = Descriptor("font.classic", NormalizedMediaKind.Font, "media/classic/font.bin", fontBytes, 1);
             DungeonMediaFrameLayout[] layouts = Enumerable.Range(0, actor.Frames.Count)
-                .Select(index => new DungeonMediaFrameLayout(index, 0, index / 3, index / 3, false, actor.Frames[index], new(1F, 1F))).ToArray();
+                .Select(index => new DungeonMediaFrameLayout(index, 0, index / 3, index / 3, false, actor.Frames[index], index == 1 ? new(2F, 3F) : new(1F, 1F))).ToArray();
             DungeonActorMediaManifest actorManifest = new(
                 "actor/rat", 1, "Rat", DungeonActorSpriteState.Move, new([0, -1], []), "sprite/rat", new(.5F, 0F), new(1F, 1F), new(1F, 1F),
                 [new(DungeonActorSpriteState.Move, new(6F, true), new(6F, true), 0, 3, layouts)], null, actor.Id);
             DungeonMediaManifestSidecar dungeon = new(1, new([actor]), [], [], [actorManifest]);
             ClassicMediaManifestSidecar classic = new(
-                1,
+                ClassicMediaManifestSidecar.CurrentSchemaVersion,
                 new([weapon, effect, font]),
-                Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray(),
+                [new ClassicWeaponMediaManifest(weapon.Id, Enum.GetValues<ClassicDaggerWeaponAction>().Select((action, index) => new ClassicWeaponActionManifest(action, index, index, 1, ClassicWeaponScreenAlignment.Right, 0F, new(10F, true), 0, 0)).ToArray())],
                 Enum.GetValues<ClassicEffect>().Select((effectValue, index) => new ClassicEffectManifest(effectValue, effect.Id, index, new(10F, false))).ToArray(),
                 [], [], [], new(font.Id, 1, 1, Enumerable.Range(0, 240).Select(index => new ClassicFontGlyphMetric(index, index, 0, 1, checked((ushort)index))).ToArray()), []);
             byte[] dungeonBytes = Serialize(dungeon);

@@ -29,6 +29,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
     private readonly CombatModule _combat;
+    private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
@@ -151,6 +152,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
             DaggerfallMeleeTargetingModule targeting = new(engine.Perception, _spatial, State.Actors, authored, tuning.MeleeTargeting);
             _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored, targeting);
+            _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
                 _spatial,
@@ -381,6 +383,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
         _camera.Update(State.PlayerControl);
         _enemyBehavior.Update(State.PlayerControl, generation, simulationStep, update.DeltaSeconds, _facts);
         LookReceipt currentLook = _input.ResolveCurrentLook(State.PlayerControl);
+        _staminaRecovery.Update(State.Actors.Player.Mechanics, update.DeltaSeconds);
         if (update.IsRequested(DaggerfallInput.ToggleWeapon)) _appearance.ToggleWeaponDrawn();
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         if (update.IsRequested(DaggerfallInput.Attack) && _appearance.CanStartPlayerAttack) _combat.TryPlayerMelee(State.PlayerControl, currentLook, generation, simulationStep, update.DeltaSeconds, _facts);
@@ -486,6 +489,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
 
     private void React(IProductFact fact)
     {
+        _staminaRecovery.React(fact);
         if (fact is ActorDiedFact died)
         {
             _corpseLoot.Create(died);

@@ -10,6 +10,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallMeleeTargetingTuning MeleeTargeting,
     DaggerfallEnemyBehaviorTuning EnemyBehavior,
     DaggerfallLootInteractionTuning LootInteraction,
+    DaggerfallStaminaRecoveryTuning StaminaRecovery,
     DaggerfallPresentationAudioTuning PresentationAudio)
 {
     internal static DaggerfallTuning Defaults { get; } = new(
@@ -27,6 +28,7 @@ internal sealed record DaggerfallTuning(
         new DaggerfallMeleeTargetingTuning(2.25d, .5d),
         new DaggerfallEnemyBehaviorTuning(12d, .5d, 1.25d, 3f, 32),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
+        new DaggerfallStaminaRecoveryTuning(5d, 2d),
         new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F));
 
     internal DaggerfallTuning Validate() => this with
@@ -37,6 +39,7 @@ internal sealed record DaggerfallTuning(
         MeleeTargeting = MeleeTargeting.Validate(),
         EnemyBehavior = EnemyBehavior.Validate(),
         LootInteraction = LootInteraction.Validate(),
+        StaminaRecovery = StaminaRecovery.Validate(),
         PresentationAudio = PresentationAudio.Validate(),
     };
 
@@ -50,6 +53,7 @@ internal sealed record DaggerfallTuning(
         JsonElement meleeTargeting = root.GetProperty("meleeTargeting");
         JsonElement enemyBehavior = root.GetProperty("enemyBehavior");
         JsonElement lootInteraction = root.GetProperty("lootInteraction");
+        JsonElement staminaRecovery = root.GetProperty("staminaRecovery");
         JsonElement presentationAudio = root.GetProperty("presentationAudio");
         return new DaggerfallTuning(
             new PlayerControlTuning(
@@ -85,6 +89,9 @@ internal sealed record DaggerfallTuning(
             new DaggerfallLootInteractionTuning(
                 lootInteraction.GetProperty("maximumDistance").GetDouble(),
                 lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),
+            new DaggerfallStaminaRecoveryTuning(
+                staminaRecovery.GetProperty("pointsPerSecond").GetDouble(),
+                staminaRecovery.GetProperty("delayAfterAttackSeconds").GetDouble()),
             new DaggerfallPresentationAudioTuning(
                 presentationAudio.GetProperty("volume").GetSingle(),
                 presentationAudio.GetProperty("pitch").GetSingle(),
@@ -101,6 +108,17 @@ internal sealed record DaggerfallTuning(
         StrafeSpeed: controller.GetProperty("strafeSpeed").GetSingle(),
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
+}
+
+/// <summary>Product-selected real-time stamina recovery; this is not the donor's per-rest-hour fatigue formula.</summary>
+internal sealed record DaggerfallStaminaRecoveryTuning(double PointsPerSecond, double DelayAfterAttackSeconds)
+{
+    internal DaggerfallStaminaRecoveryTuning Validate()
+    {
+        if (!double.IsFinite(PointsPerSecond) || PointsPerSecond <= 0d) throw new ArgumentOutOfRangeException(nameof(PointsPerSecond));
+        if (!double.IsFinite(DelayAfterAttackSeconds) || DelayAfterAttackSeconds < 0d) throw new ArgumentOutOfRangeException(nameof(DelayAfterAttackSeconds));
+        return this;
+    }
 }
 
 /// <summary>Ruleset-tunable Engine visibility query bounds for explicit corpse looting.</summary>

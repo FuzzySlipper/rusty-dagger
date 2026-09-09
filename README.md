@@ -111,8 +111,14 @@ npm ci
 Use WASD to move and the mouse to look. **Z** draws or sheathes the equipped
 weapon; empty hands use unarmed art. **Left mouse** or **V** swings once per
 press while drawn, including empty space. Cooldown, stamina and the active swing
-limit repeated attacks; Engine playback returns the weapon to ready. Weapon art
-retains classic proportions and fits the bottom and authored side of the view. Engine input capture keeps gameplay
+limit repeated attacks; Engine playback returns the weapon to ready.
+
+Stamina recovers at five points per second after two seconds without an admitted
+swing, including from exhaustion. The Daggerfall tuning payloads control this
+automatic recovery; it is separate from classic rest-based fatigue recovery.
+
+Weapon art retains classic proportions and fits the bottom and authored side of
+the view. Engine input capture keeps gameplay
 controls out of menus, inventory and console interactions. The DOM renders the
 `dagger.hud` projection. The SDK compiles the
 product-owned DOM UI and atomically stages the loose Product bundle. The

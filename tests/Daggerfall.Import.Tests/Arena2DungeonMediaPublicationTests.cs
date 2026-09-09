@@ -76,6 +76,32 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
+    public void ActorAndCorpseAtlasesRetainFullVariableSourceCanvasesWithAsymmetricTransparentMargins()
+    {
+        Arena2DungeonMediaSource[] sources = CreateSources();
+        Replace(sources, "TEXTURE.255", CreateAsymmetricTransparentTextureArchive(20));
+        Replace(sources, "TEXTURE.401", CreateAsymmetricTransparentTextureArchive(2));
+
+        DungeonActorSpriteMedia actor = Assert.Single(Arena2DungeonMediaPublication.Create(
+            Arena2DungeonMediaRequest.Create(CreateDungeon(), new Arena2DungeonMediaSourceSet(sources))).Actors);
+
+        DungeonMediaFrameLayout[] actorFrames = actor.States.SelectMany(state => state.Frames).ToArray();
+        Assert.Contains(actorFrames, frame => frame.AtlasFrame.SourceWidth == 3);
+        Assert.Contains(actorFrames, frame => frame.AtlasFrame.SourceWidth == 4);
+        Assert.All(actorFrames, frame =>
+        {
+            Assert.Equal(frame.AtlasFrame.SourceWidth, frame.AtlasFrame.Width);
+            Assert.Equal(frame.AtlasFrame.SourceHeight, frame.AtlasFrame.Height);
+        });
+        DungeonMediaFrameLayout narrow = actorFrames.First(frame => frame.AtlasFrame.SourceWidth == 3);
+        DungeonMediaFrameLayout wide = actorFrames.First(frame => frame.AtlasFrame.SourceWidth == 4);
+        Assert.Equal(narrow.SourceWorldSize.X / narrow.AtlasFrame.SourceWidth, wide.SourceWorldSize.X / wide.AtlasFrame.SourceWidth);
+        Assert.NotNull(actor.Corpse);
+        Assert.Equal(actor.Corpse!.Frame.AtlasFrame.SourceWidth, actor.Corpse.Frame.AtlasFrame.Width);
+        Assert.Equal(actor.Corpse.Frame.AtlasFrame.SourceHeight, actor.Corpse.Frame.AtlasFrame.Height);
+    }
+
+    [Fact]
     public void RejectsAnActorWhosePreferredRestStateWasNotPublished()
     {
         Arena2DungeonMediaSource[] sources = CreateSources();
@@ -345,6 +371,33 @@ public sealed class Arena2DungeonMediaPublicationTests
             bytes[offset + recordBytes + 1] = color;
             bytes[offset + recordBytes + 256] = color;
             bytes[offset + recordBytes + 257] = color;
+        }
+
+        return bytes;
+    }
+
+    private static byte[] CreateAsymmetricTransparentTextureArchive(int recordCount)
+    {
+        const int headerBytes = 26;
+        const int tableEntryBytes = 20;
+        const int recordBytes = 28;
+        const int paddedPixelRows = 512;
+        int recordsStart = headerBytes + (recordCount * tableEntryBytes);
+        byte[] bytes = new byte[recordsStart + (recordCount * (recordBytes + paddedPixelRows))];
+        BitConverter.GetBytes(checked((short)recordCount)).CopyTo(bytes, 0);
+        for (int record = 0; record < recordCount; record++)
+        {
+            int offset = recordsStart + (record * (recordBytes + paddedPixelRows));
+            short width = record % 2 == 0 ? (short)4 : (short)3;
+            const short height = 2;
+            BitConverter.GetBytes(offset).CopyTo(bytes, headerBytes + (record * tableEntryBytes) + 2);
+            BitConverter.GetBytes(width).CopyTo(bytes, offset + 4);
+            BitConverter.GetBytes(height).CopyTo(bytes, offset + 6);
+            BitConverter.GetBytes((uint)recordBytes).CopyTo(bytes, offset + 14);
+            BitConverter.GetBytes((ushort)1).CopyTo(bytes, offset + 20);
+            int x = record % width;
+            int y = record % height;
+            bytes[offset + recordBytes + (y * 256) + x] = checked((byte)(record + 1));
         }
 
         return bytes;

@@ -1295,6 +1295,26 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Session_fixed_steps_restore_exhausted_player_stamina()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        var stamina = Rusty.Engine.Mechanics.TrackId.Parse("stamina");
+        session.State.Actors.Player.Mechanics.SetTrack(stamina, Rusty.Engine.Mechanics.ExactValue.Zero);
+
+        for (int step = 0; step < 8; step++) session.Update(new ProductUpdateState(.125f));
+
+        Assert.Equal(5, session.State.Actors.Player.Mechanics.ReadTrack(stamina).Current.Raw);
+    }
+
+    [Fact]
     public void Daggerfall_save_before_first_step_uses_an_explicit_no_checkpoint_branch()
     {
         string root = RepositoryRoot();
