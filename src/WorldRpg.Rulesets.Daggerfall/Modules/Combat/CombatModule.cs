@@ -107,14 +107,21 @@ internal sealed class CombatModule
     }
 
     /// <summary>
-    /// Resolves one melee request against current state in the same admitted step: the
-    /// player's own swing, whose input admission, stamina spend and outcome belong
-    /// together. Enemy swings go through <see cref="TryBeginEnemyAttack"/> and land at
-    /// their authored damage frame instead.
+    /// Resolves the player's own melee swing against current state in the same admitted
+    /// step, because input admission, stamina spend and outcome belong together. There
+    /// is deliberately no enemy path here: an enemy swing goes through
+    /// <see cref="TryBeginEnemyAttack"/> and lands on its authored damage frame, so
+    /// resolving one in-step would quietly restore the timing this owner just fixed.
     /// </summary>
     internal void ResolveExplicit(ExplicitMeleeRequest request, FactBuffer<IProductFact> facts)
     {
         request.Validate();
+        if (request.AttackerId != PlayerId)
+        {
+            throw new ArgumentException(
+                "An enemy swing must be resolved through TryBeginEnemyAttack so it lands on its authored damage frame.",
+                nameof(request));
+        }
         if (!TryResolve(request.AttackerId, out Combatant attacker) || !TryResolve(request.TargetId, out Combatant target))
         {
             facts.Append(new AttackRejectedFact(AttackRejection.UnknownExplicitCombatant));
@@ -131,30 +138,19 @@ internal sealed class CombatModule
             return;
         }
 
-        DaggerfallAttackDefinition attack;
-        if (attacker.Id == PlayerId)
-        {
-            if (!TryAdmitPlayerAttack(request.Generation, request.SimulationStep, request.FixedDeltaSeconds, request.Action, out attack, facts)) return;
-        }
-        else if (attacker.Definition.ActionId is { } actionId && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? authoredAction) && authoredAction.CooldownSeconds is double authoredCooldown) attack = ResolveFixedAttack(attacker.Definition, authoredAction, authoredCooldown);
-        else
-        {
-            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
-            return;
-        }
+        if (!TryAdmitPlayerAttack(request.Generation, request.SimulationStep, request.FixedDeltaSeconds, request.Action, out DaggerfallAttackDefinition attack, facts)) return;
 
-        bool enemyAttack = attacker.Id != PlayerId;
         int chance = HitChance(attacker, target, attack.Skill);
-        int roll = Draw(request, attacker.Id, target.Id, CombatRandomKey.HitSalt, 1, 100, enemyAttack);
+        int roll = Draw(request, attacker.Id, target.Id, CombatRandomKey.HitSalt, 1, 100, enemy: false);
         if (roll > chance)
         {
             LatchCooldown(request, attack);
-            facts.Append(new AttackMissedFact(attacker.Id, target.Id, roll, chance, enemyAttack, request.Generation, request.SimulationStep));
+            facts.Append(new AttackMissedFact(attacker.Id, target.Id, roll, chance, false, request.Generation, request.SimulationStep));
             return;
         }
 
-        int body = DaggerfallFormulaPolicy.StruckBodyPart(Draw(request, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemyAttack));
-        int rawDamage = Draw(request, attacker.Id, target.Id, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemyAttack);
+        int body = DaggerfallFormulaPolicy.StruckBodyPart(Draw(request, attacker.Id, target.Id, CombatRandomKey.BodySalt, 0, 19, enemy: false));
+        int rawDamage = Draw(request, attacker.Id, target.Id, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemy: false);
         // Unarmed hand-to-hand is a natural attack and deliberately bypasses
         // the metal gate; only a weapon with authored material is gated.
         if (attacker.Id == PlayerId && attack.Material is not null && !DaggerfallFormulaPolicy.CanHitMaterial(attack.Material, target.Definition.MinimumMaterial, _weaponMaterialRanks))
@@ -173,7 +169,7 @@ internal sealed class CombatModule
         // Daggerfall owns the policy; the managed track owns its bounds and mutation invariants.
         LatchCooldown(request, attack);
         int applied = checked((int)(change.Before.Raw - change.After.Raw));
-        facts.Append(new AttackHitFact(attacker.Id, target.Id, applied, body, enemyAttack, request.Generation, request.SimulationStep));
+        facts.Append(new AttackHitFact(attacker.Id, target.Id, applied, body, false, request.Generation, request.SimulationStep));
         if (applied > 0) facts.Append(new ActorDamagedFact(target.Id, applied));
         bool defeated = change.After <= change.Bounds.Minimum;
         if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(target.Id, attacker.Id, applied, request.Generation, request.SimulationStep));

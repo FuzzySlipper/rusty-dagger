@@ -2318,6 +2318,145 @@ public sealed class NormalizedRuntimeSeamTests
     private static PrivateersHoldAppearance.ViewmodelVisual Viewmodel(PrivateersHoldAppearance presentation) => Assert.IsType<PrivateersHoldAppearance.ViewmodelVisual>(typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
     [Fact]
+    public void The_immediate_resolver_refuses_an_enemy_swing()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, _, _) = VisibleEnemySession(releases);
+        using DaggerfallSession disposable = session;
+
+        // One resolver owns enemy swings; the in-step path is the player's, and
+        // accepting an enemy here would silently restore the old timing.
+        Assert.Throws<ArgumentException>(() => session.ResolveExplicitMelee(new ExplicitMeleeRequest(2000, 1, 1, 1, .125)));
+    }
+
+    [Fact]
+    public void A_save_taken_mid_swing_keeps_the_charge_and_never_replays_the_strike()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        List<string> releases = [];
+        DaggerfallSavePayload saved;
+        using (DaggerfallSession original = VisibleEnemySession(releases).Session)
+        {
+            original.Update(new ProductUpdate(OuterUpdate(1), []));
+            saved = DaggerfallSavePayload.Decode(original.CaptureSave());
+        }
+
+        // The decision charged the attack before the save, and the swing itself is
+        // transient: the resumed session must not replay damage it never saw land.
+        Assert.Contains(saved.CombatCooldowns, cooldown => cooldown.AttackerId == 2000);
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        AppearanceFake resumedAppearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, resumedAppearance, perception.Service);
+        using DaggerfallSession resumed = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+        long resumedHealth = PlayerHealth(resumed);
+
+        resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1);
+        resumed.Update(new ProductUpdate(OuterUpdate(2), []));
+
+        Assert.Equal(resumedHealth, PlayerHealth(resumed));
+    }
+
+    [Fact]
+    public void A_swing_without_an_authored_damage_frame_resolves_immediately()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        // Media without a -1 frame has no strike beat to wait for, so the decision
+        // resolves where it is made rather than hanging unresolved.
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
+
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
+
+        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.False(impact.Expired);
+    }
+
+    [Fact]
+    public void An_enemy_that_loses_reach_before_the_damage_frame_cancels_its_swing()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake appearance, PerceptionFake perception) = VisibleEnemySession(releases);
+        using DaggerfallSession disposable = session;
+        long healthBefore = PlayerHealth(session);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        // Still visible, but beyond the authored reach: the behaviour chases instead
+        // of attacking, which cancels the swing already in flight.
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 5d, 1d, PerceptionPairKind.Visible, 5d));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+
+        Assert.Equal(EnemyBehaviorState.Chase, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(healthBefore, PlayerHealth(session));
+    }
+
+    [Fact]
+    public void An_enemy_defeated_mid_swing_never_lands_its_strike()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
+        using DaggerfallSession disposable = session;
+        long healthBefore = PlayerHealth(session);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(-999), ExactTrackSetPolicy.ClampToBounds);
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+
+        Assert.Equal(EnemyBehaviorState.Dead, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(healthBefore, PlayerHealth(session));
+    }
+
+    [Fact]
+    public void An_enemy_swing_that_expires_never_lands_even_when_a_frame_crosses_later()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, AppearanceFake appearance, _) = VisibleEnemySession(releases);
+        using DaggerfallSession disposable = session;
+        long healthBefore = PlayerHealth(session);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        // The animation ends without ever reaching its damage frame.
+        appearance.AdvanceReceiptForAll = new SpritePlaybackAdvanceLeaseReceipt(
+            Array.Empty<SpritePlaybackMarkerCrossing>(),
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 3, true),
+            true);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.Equal(healthBefore, PlayerHealth(session));
+
+        // A crossing arriving afterwards cannot land the expired swing.
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.Equal(healthBefore, PlayerHealth(session));
+    }
+
+    [Fact]
+    public void A_multi_step_update_decides_one_enemy_swing_without_damaging_inside_it()
+    {
+        List<string> releases = [];
+        (DaggerfallSession session, _, _) = VisibleEnemySession(releases);
+        using DaggerfallSession disposable = session;
+        long healthBefore = PlayerHealth(session);
+
+        // Three admitted catch-up steps own one swing, and none of them damages: the
+        // strike still waits for its authored frame.
+        ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 3, 0, 1d / 60d);
+        session.Update(new ProductUpdate(facts, []));
+
+        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(healthBefore, PlayerHealth(session));
+    }
+
+    [Fact]
     public void A_non_advanced_completed_receipt_does_not_cancel_a_swing_that_can_still_land()
     {
         List<string> releases = [];
@@ -2428,6 +2567,24 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
     }
+
+    /// <summary>A session whose one placed enemy can see the player at the given distance.</summary>
+    private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, distance, 1d, PerceptionPairKind.Visible, distance));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        return (new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults), appearance, perception);
+    }
+
+    private static long PlayerHealth(DaggerfallSession session) => session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
 
     private static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
 
@@ -2585,10 +2742,16 @@ public sealed class NormalizedRuntimeSeamTests
             nameof(ISpatialService.ReplaceContentArtifact) => Replace((SpatialContentArtifactReplaceRequest)arguments![0]!),
             nameof(ISpatialService.ReadContentArtifact) => Read(),
             nameof(ISpatialService.ProposeCharacterStep) => Step((CharacterStepRequest)arguments![0]!),
+            // Navigation is not under test here: an honest no-path receipt leaves the
+            // actor's pose intact instead of reporting a bogus waypoint.
+            nameof(ISpatialService.EvaluateNavigationStep) => NoNavigationPath((NavigationStepRequest)arguments![0]!),
             nameof(ISpatialService.CaptureCharacterContinuation) => Capture((CharacterContinuationCaptureRequest)arguments![0]!),
             nameof(ISpatialService.RestoreCharacterContinuation) => Restore((CharacterContinuationRestoreRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
+
+        private static NavigationStepReceipt NoNavigationPath(NavigationStepRequest request) => new(
+            NavigationPathOutcome.NoPath, request.Target, default, 0, 0, 0, 0, 0, 0);
 
         private SpatialContentArtifactReplaceReceipt Replace(SpatialContentArtifactReplaceRequest request)
         {
