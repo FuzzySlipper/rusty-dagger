@@ -157,6 +157,20 @@ public sealed class ItemTemplateLedgerTests
     }
 
     [Fact]
+    public void Refuses_an_implicit_member_that_would_wrap()
+    {
+        // A value past the last representable one would wrap negative and then be dropped
+        // as a sentinel: a silent loss the refusal names instead.
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
+            "public enum Weapons { Dagger = 2147483647, Longsword }",
+            Mapping("Weapons"),
+            ItemsFileSource,
+            "fixture"));
+
+        Assert.Contains("wrap", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Refuses_a_duplicate_enumeration_declaration()
     {
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ItemTemplateBaseline.FromDonorSources(
