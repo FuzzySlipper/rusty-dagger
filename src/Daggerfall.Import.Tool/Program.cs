@@ -48,6 +48,11 @@ internal static class Program
                 return RunItemTemplateLedgerCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "texture-leaves")
+            {
+                return RunTextureLeafCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -70,6 +75,54 @@ internal static class Program
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Enumerates the supplied texture leaves, reports what every documented id holds, and
+    /// — when the documented inventory is supplied — checks that the two agree.
+    /// </summary>
+    private static int RunTextureLeafCommand(IReadOnlyList<string> args)
+    {
+        bool check = args.Contains("--inventory", StringComparer.Ordinal);
+        if (args.Count != (check ? 5 : 3) || args[1] != "--arena2" || (check && args[3] != "--inventory"))
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool texture-leaves --arena2 SOURCE_DIR [--inventory INVENTORY.csv]");
+        }
+
+        string arena2 = args[2];
+        List<(int Id, string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
+        foreach (string path in Directory.EnumerateFiles(arena2, "TEXTURE.*"))
+        {
+            string name = Path.GetFileName(path);
+            sources.Add((int.Parse(name["TEXTURE.".Length..], CultureInfo.InvariantCulture), name, File.ReadAllBytes(path)));
+        }
+
+        TextureLeafInventory inventory = TextureLeafInventory.Enumerate(sources, Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)));
+        Console.WriteLine($"texture leaves: {inventory.Decoded.Count()} decoded, {inventory.Malformed.Count()} supplied and unreadable, {inventory.NotSupplied.Count()} not supplied, {inventory.Records} records, {inventory.Frames} frames");
+        foreach (TextureLeafRecord leaf in inventory.Malformed)
+        {
+            Console.WriteLine($"  unreadable {leaf.Path}: {leaf.Note}");
+        }
+
+        if (!check)
+        {
+            return 0;
+        }
+
+        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(args[4]));
+        HashSet<string> documented = [.. rows
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-018"))
+            .Select(row => Path.GetFileName(row.PathOrPattern))];
+        string[] supplied = [.. inventory.Leaves.Where(leaf => leaf.Path.Length != 0).Select(leaf => leaf.Path)];
+        string[] missing = [.. supplied.Where(path => !documented.Contains(path))];
+        string[] extra = [.. documented.Where(path => !supplied.Contains(path, StringComparer.Ordinal))];
+        if (missing.Length != 0 || extra.Length != 0)
+        {
+            throw new InvalidOperationException($"The documented inventory and the supplied corpus disagree; supplied but undocumented: [{string.Join(", ", missing)}], documented but not supplied: [{string.Join(", ", extra)}].");
+        }
+
+        Console.WriteLine($"inventory: {documented.Count} documented texture leaves match the corpus, {TextureLeafInventory.NotSuppliedCount} documented as absent");
+        return 0;
     }
 
     /// <summary>
