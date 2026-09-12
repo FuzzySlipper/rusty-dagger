@@ -1,6 +1,8 @@
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Text;
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Publication;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -121,6 +123,44 @@ public sealed class MonsterArchiveTests
         Assert.NotEmpty(linked);
         Assert.All(linked, key => Assert.Contains(key, keys));
     }
+
+    [Fact]
+    public void Every_media_reference_a_linked_record_makes_is_supplied()
+    {
+        MonsterArchiveInventory inventory = ReadInventory();
+        HashSet<int> supplied = SuppliedTextureArchives();
+
+        // The corpus supplies 472 texture archives; every archive the linked mobiles point
+        // at must be one of them, or the media a later task publishes does not exist.
+        Assert.Empty(inventory.MissingMedia(supplied));
+    }
+
+    [Fact]
+    public void Reports_a_media_reference_the_supplied_sources_do_not_carry()
+    {
+        MonsterArchiveInventory inventory = ReadInventory();
+        HashSet<int> withoutTheRatArchive = SuppliedTextureArchives();
+        withoutTheRatArchive.Remove(255);
+
+        // A gap is reported against each record that makes the reference, so the task
+        // that publishes that media can see which mobile and which records are affected.
+        MonsterArchiveMediaGap[] gaps = [.. inventory.MissingMedia(withoutTheRatArchive)];
+        Assert.Equal(["ASCR0000.ANC", "ENEMY000.CFG"], gaps.Select(gap => gap.RecordName).Order(StringComparer.Ordinal));
+        Assert.All(gaps, gap =>
+        {
+            Assert.Equal(0, gap.MobileId);
+            Assert.Equal("live", gap.Kind);
+            Assert.Equal(255, gap.TextureArchive);
+        });
+    }
+
+    /// <summary>The texture archives the documented inventory says are supplied.</summary>
+    private static HashSet<int> SuppliedTextureArchives() =>
+    [
+        .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")))
+            .Where(row => row.RowType == "file" && row.Id.StartsWith("CNT-018.file.TEXTURE", StringComparison.Ordinal))
+            .Select(row => int.Parse(Path.GetExtension(row.PathOrPattern).TrimStart('.'), CultureInfo.InvariantCulture)),
+    ];
 
     [Fact]
     public void Retains_a_configuration_that_does_not_fit_the_record_shape()
