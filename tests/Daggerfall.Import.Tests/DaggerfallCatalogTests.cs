@@ -116,6 +116,18 @@ public sealed class DaggerfallCatalogTests
     }
 
     [Fact]
+    public void The_published_catalogs_cover_every_pack_key_they_reference()
+    {
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+
+        // The reference catalogs are a view of keys the pack defines, so they must cover
+        // every one of them: an actor or item added to the pack without re-running the
+        // builder would leave a consumer resolving a key the catalog does not list.
+        Assert.Equal(EnemyIds().Order(StringComparer.Ordinal), catalogs.Enemies.Select(enemy => enemy.Id).Order(StringComparer.Ordinal));
+        Assert.Equal(ItemIds().Order(StringComparer.Ordinal), catalogs.ItemTemplates.Select(item => item.Id).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void Refuses_a_catalog_citing_a_source_the_inventory_does_not_carry()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
