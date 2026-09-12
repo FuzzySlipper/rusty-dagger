@@ -122,14 +122,35 @@ internal static class Program
 
     }
 
-    /// <summary>A consumer claims a source by the path it read; the manifest records the leaf.</summary>
+    /// <summary>
+    /// The names a consumer's source set can claim by. A published source path keeps
+    /// the directory it was read from, so both the path relative to the corpus root and
+    /// the leaf are offered; the manifest decides which of them identifies one supplied
+    /// file, rather than the caller discarding the path here.
+    /// </summary>
     private static HashSet<string> ImportedNames(IEnumerable<string> sourcePaths) =>
-        sourcePaths.Select(path => path.Split('/')[^1]).ToHashSet(StringComparer.Ordinal);
+        ClaimNames(sourcePaths);
 
-    private static HashSet<string> ExcludedNames(IReadOnlyList<SourceInventoryRow> inventory) => inventory
+    private static HashSet<string> ExcludedNames(IReadOnlyList<SourceInventoryRow> inventory) => ClaimNames(inventory
         .Where(row => StringComparer.Ordinal.Equals(row.Disposition, "excluded"))
-        .Select(row => row.PathOrPattern.Split('/')[^1])
-        .ToHashSet(StringComparer.Ordinal);
+        .Select(row => row.PathOrPattern));
+
+    private static HashSet<string> ClaimNames(IEnumerable<string> sourcePaths)
+    {
+        HashSet<string> names = new(StringComparer.Ordinal);
+        foreach (string sourcePath in sourcePaths)
+        {
+            names.Add(sourcePath);
+            names.Add(sourcePath.Split('/')[^1]);
+            int corpus = sourcePath.IndexOf("arena2/", StringComparison.Ordinal);
+            if (corpus >= 0)
+            {
+                names.Add(sourcePath[(corpus + "arena2/".Length)..]);
+            }
+        }
+
+        return names;
+    }
 
     /// <summary>
     /// Adds the source manifest to a publication closure, so the record identities and

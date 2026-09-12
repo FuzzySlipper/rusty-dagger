@@ -396,6 +396,28 @@ public sealed class SourceManifestTests : IDisposable
     }
 
     [Fact]
+    public void A_path_qualified_claim_credits_the_nested_file_its_leaf_cannot_identify()
+    {
+        Write("X.TXT", "top level"u8);
+        Directory.CreateDirectory(Path.Combine(root, "books"));
+        Write(Path.Combine("books", "X.TXT"), "nested"u8);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,text,local/arena2/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-002,family,CNT-002,text,local/arena2/books/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-001.file.X.TXT,file,CNT-001,source-file,local/arena2/X.TXT,1,9,X,scope,uninspected,top level",
+            "CNT-002.file.books/X.TXT,file,CNT-002,source-file,local/arena2/books/X.TXT,1,6,X,scope,uninspected,nested");
+
+        // The leaf names two files, so only the path can identify the one a consumer
+        // read — otherwise an imported file would be recorded as unused.
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, ["books/X.TXT"], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.file.X.TXT").Disposition);
+        Assert.Equal(SourceRecordDisposition.Imported, Record(manifest, "CNT-002.file.books/X.TXT").Disposition);
+    }
+
+    [Fact]
     public void A_claim_that_names_two_supplied_paths_credits_neither()
     {
         Write("X.TXT", "top level"u8);
