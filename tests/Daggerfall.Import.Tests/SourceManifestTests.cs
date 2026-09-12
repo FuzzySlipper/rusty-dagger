@@ -450,6 +450,12 @@ public sealed class SourceManifestTests : IDisposable
 
         Assert.False(blocked.Updated);
         Assert.True(blocked.UpdateBlocked);
+        // A report-only run refuses nothing: it must not claim to have been blocked,
+        // and a caller scanning for drift should not see a failure.
+        SourceInventoryReconciliation advisory = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: false);
+        Assert.False(advisory.Updated);
+        Assert.False(advisory.UpdateBlocked);
+        Assert.False(advisory.IsClean);
         Assert.Single(blocked.Drift);
         Assert.Single(blocked.Unreconciled);
         Assert.Equal(contents, File.ReadAllText(inventoryFile));
