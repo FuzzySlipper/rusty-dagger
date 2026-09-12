@@ -37,6 +37,8 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     // These transient product visuals use a disjoint descending pool, not resource hashes.
     private ulong nextVisualEntityId = (1UL << 53) - 1;
     private readonly HashSet<PresentationEventIdentity> deliveredEvents = [];
+    private readonly HashSet<PresentationEventIdentity> appliedImpacts = [];
+    private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
     private readonly List<Material> materials = [];
     private readonly List<IDisposable> priorRetired = [];
@@ -160,7 +162,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         priorRetired.AddRange(nextRetired);
         nextRetired.Clear();
     }
-    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray(), lastPublishedSnapshot.ToArray(), weaponDrawn);
+    internal PresentationCheckpoint Checkpoint() => new(actors.ToDictionary(pair => pair.Key, pair => ActorSnapshot.From(pair.Value)), ViewmodelSnapshot.From(viewmodel), effects.Select(EffectSnapshot.From).ToArray(), deliveredEvents.ToHashSet(), priorRetired.ToArray(), nextRetired.ToArray(), lastPublishedSnapshot.ToArray(), weaponDrawn, appliedImpacts.ToHashSet(), attackImpacts.ToArray());
     internal void Restore(PresentationCheckpoint checkpoint)
     {
         // A failing update may already have staged a snapshot containing
@@ -172,6 +174,10 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         DisposeRetiredIntermediates(checkpoint);
         deliveredEvents.Clear();
         deliveredEvents.UnionWith(checkpoint.Events);
+        appliedImpacts.Clear();
+        appliedImpacts.UnionWith(checkpoint.AppliedImpacts);
+        attackImpacts.Clear();
+        attackImpacts.AddRange(checkpoint.PendingImpacts);
         foreach ((long id, ActorSnapshot snapshot) in checkpoint.Actors)
         {
             if (!actors.TryGetValue(id, out ActorVisual? visual)) continue;
@@ -209,15 +215,30 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 Emit("swing", swing, 0);
                 deliveredEvents.Add(swing);
                 break;
+            case EnemyAttackStartedFact started:
+                // An enemy swing starts here; its consequence arrives later, when the
+                // authored damage frame is reached. A sequence with no damage frame
+                // resolves inside this same update instead of never landing.
+                PresentationEventIdentity startEvent = Event(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, started.WillHit ? "hit" : "miss");
+                if (deliveredEvents.Contains(startEvent)) break;
+                deliveredEvents.Add(startEvent);
+                if (!StartAttack(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, startEvent))
+                    attackImpacts.Add(new AttackImpactNotice(started.AttackerId, started.TargetId, started.OriginatingGeneration, started.OriginatingSimulationStep, Expired: false));
+                break;
             case AttackHitFact hit:
                 PresentationEventIdentity hitEvent = Event(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, "hit");
-                if (deliveredEvents.Contains(hitEvent)) break;
-                StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
+                // A player swing has no separate start fact, so its presentation begins
+                // here. An enemy swing already began, and must not restart playback.
+                if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && deliveredEvents.Add(hitEvent))
+                    StartAttack(hit.AttackerId, hit.TargetId, hit.OriginatingGeneration, hit.OriginatingSimulationStep, hitEvent);
+                if (!appliedImpacts.Add(hitEvent)) break;
                 StartState(hit.TargetId, "hurt", null);
                 if (hit.AttackerId == DaggerfallActorIdentity.PlayerEntityId && actorState is not null) SpawnBlood(hit, hitEvent, actorState);
-                deliveredEvents.Add(hitEvent);
                 break;
             case AttackMissedFact miss:
+                // An enemy miss was already presented at its swing; only the player's
+                // swing is started by its own resolved outcome.
+                if (miss.AttackerId != DaggerfallActorIdentity.PlayerEntityId) break;
                 PresentationEventIdentity missEvent = Event(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, "miss");
                 if (deliveredEvents.Contains(missEvent)) break;
                 StartAttack(miss.AttackerId, miss.TargetId, miss.OriginatingGeneration, miss.OriginatingSimulationStep, missEvent);
@@ -266,10 +287,23 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                 {
                     if (crossing.CrossingSequence <= visual.LastMarkerCrossing) continue;
                     visual.LastMarkerCrossing = crossing.CrossingSequence;
-                    if (visual.ActiveAttack is { Identity.Outcome: "hit" } attack) Emit(attack.HitCue, attack.Identity, crossing.CrossingSequence);
+                    if (visual.ActiveAttack is not { } crossingAttack) continue;
+                    if (crossingAttack.Identity.Outcome == "hit") Emit(crossingAttack.HitCue, crossingAttack.Identity, crossing.CrossingSequence);
+                    // The authored damage frame is the strike beat: report it once so the
+                    // ruleset applies the decision it already made.
+                    if (crossingAttack.ImpactReported) continue;
+                    visual.ActiveAttack = crossingAttack with { ImpactReported = true };
+                    attackImpacts.Add(new AttackImpactNotice(crossingAttack.Identity.Attacker, crossingAttack.Identity.Target, crossingAttack.Identity.Generation, crossingAttack.Identity.SimulationStep, Expired: false));
                 }
             }
             if (!receipt.Readout.Completed || visual.State is "idle" or "move") { visual.LastOuterUpdate = identity; continue; }
+            // A swing that ended without reaching a damage frame must not land later.
+            if (visual.ActiveAttack is { } endedAttack)
+            {
+                if (!endedAttack.ImpactReported)
+                    attackImpacts.Add(new AttackImpactNotice(endedAttack.Identity.Attacker, endedAttack.Identity.Target, endedAttack.Identity.Generation, endedAttack.Identity.SimulationStep, Expired: true));
+                visual.ActiveAttack = null;
+            }
             // Publish the Engine's completed final frame for this outer update.
             // The following admitted update returns to the authored rest state.
             if (visual.CompletedOuterUpdate) StartState(visual.EntityId, PreferredRestState(visual.Sprite), null);
@@ -412,14 +446,30 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         return (atlas, value);
     }
 
-    private void StartAttack(long entityId, long targetId, ulong generation, ulong simulationStep, PresentationEventIdentity presentationEvent)
+    /// <summary>
+    /// Starts one attack's authored playback and reports whether it carries a damage
+    /// frame. Without one there is no strike beat to wait for, so the caller resolves
+    /// the swing immediately; the same fallback already covers its hit cue.
+    /// </summary>
+    private bool StartAttack(long entityId, long targetId, ulong generation, ulong simulationStep, PresentationEventIdentity presentationEvent)
     {
-        if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Live is null || visual.Sprite.AttackSequences.Count == 0) return;
+        if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Live is null || visual.Sprite.AttackSequences.Count == 0) return false;
         NormalizedAttackSequence selected = SelectAttack(visual.Sprite.AttackSequences, generation, simulationStep, entityId, targetId);
         StartState(entityId, "primaryAttack", visual, selected);
         string hitCue = SelectHitCue(presentationEvent);
         visual.ActiveAttack = new ActiveAttackPresentation(presentationEvent, hitCue);
-        if (presentationEvent.Outcome == "hit" && !selected.SourceFrames.Contains(-1)) Emit(hitCue, presentationEvent, 0);
+        bool hasDamageFrame = selected.SourceFrames.Contains(-1);
+        if (presentationEvent.Outcome == "hit" && !hasDamageFrame) Emit(hitCue, presentationEvent, 0);
+        return hasDamageFrame;
+    }
+
+    /// <summary>Drains the swings whose authored damage frame was reached or passed this update.</summary>
+    internal IReadOnlyList<AttackImpactNotice> TakeAttackImpacts()
+    {
+        if (attackImpacts.Count == 0) return [];
+        AttackImpactNotice[] drained = attackImpacts.ToArray();
+        attackImpacts.Clear();
+        return drained;
     }
 
     private void SpawnBlood(AttackHitFact hit, PresentationEventIdentity identity, ActorsState actors)
@@ -730,7 +780,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     internal readonly record struct PresentationEventIdentity(ulong Generation, ulong SimulationStep, long Attacker, long Target, string Outcome);
     internal readonly record struct AppearanceOuterUpdate(ulong Generation, ulong ControlRevision, ulong SimulationStep, uint AdmittedStepCount);
-    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired, IReadOnlyList<AppearanceFact> PublishedSnapshot, bool WeaponDrawn);
+    internal sealed record PresentationCheckpoint(IReadOnlyDictionary<long, ActorSnapshot> Actors, ViewmodelSnapshot? Viewmodel, IReadOnlyList<EffectSnapshot> Effects, IReadOnlySet<PresentationEventIdentity> Events, IReadOnlyList<IDisposable> PriorRetired, IReadOnlyList<IDisposable> NextRetired, IReadOnlyList<AppearanceFact> PublishedSnapshot, bool WeaponDrawn, IReadOnlySet<PresentationEventIdentity> AppliedImpacts, IReadOnlyList<AttackImpactNotice> PendingImpacts);
     internal sealed record ActorSnapshot(Appearance? Live, SpritePlayback? Playback, string State, bool Defeated, bool Completed, ulong Marker, uint PlaybackFrame, NormalizedSpriteState? ActiveState, IReadOnlyList<int> SourceFrames, int Orientation, ActiveAttackPresentation? ActiveAttack, AppearanceOuterUpdate? LastOuterUpdate)
     {
         internal static ActorSnapshot From(ActorVisual visual) => new(visual.Live, visual.Playback, visual.State, visual.Defeated, visual.CompletedOuterUpdate, visual.LastMarkerCrossing, visual.LastPlaybackFrameIndex, visual.ActiveState, visual.SourceFrameIndices, visual.Orientation, visual.ActiveAttack, visual.LastOuterUpdate);
@@ -746,5 +796,5 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         internal static EffectSnapshot From(EffectVisual visual) => new(visual, visual.CompletedOuterUpdate, visual.LastOuterUpdate);
         internal void Apply() { Visual.CompletedOuterUpdate = Completed; Visual.LastOuterUpdate = LastOuterUpdate; }
     }
-    internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, string HitCue);
+    internal readonly record struct ActiveAttackPresentation(PresentationEventIdentity Identity, string HitCue, bool ImpactReported = false);
 }

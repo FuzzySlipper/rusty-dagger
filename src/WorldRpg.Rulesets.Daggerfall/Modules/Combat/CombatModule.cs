@@ -25,6 +25,7 @@ internal sealed class CombatModule
     private readonly IReadOnlyDictionary<long, DaggerfallActorDefinition> _definitions;
     private readonly DaggerfallMeleeTargetingModule _targeting;
     private readonly Dictionary<(ulong Generation, long Attacker), ulong> _readyAtStep = [];
+    private readonly Dictionary<(ulong Generation, long Attacker), PendingEnemyImpact> _pendingImpacts = [];
     private readonly Dictionary<long, ulong> _restoredRemainingCooldowns = [];
 
     internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallMeleeTargetingModule targeting)
@@ -105,6 +106,12 @@ internal sealed class CombatModule
         ResolveExplicit(new ExplicitMeleeRequest(PlayerId, targetId, generation, simulationStep, fixedDeltaSeconds), facts);
     }
 
+    /// <summary>
+    /// Resolves one melee request against current state in the same admitted step: the
+    /// player's own swing, whose input admission, stamina spend and outcome belong
+    /// together. Enemy swings go through <see cref="TryBeginEnemyAttack"/> and land at
+    /// their authored damage frame instead.
+    /// </summary>
     internal void ResolveExplicit(ExplicitMeleeRequest request, FactBuffer<IProductFact> facts)
     {
         request.Validate();
@@ -171,6 +178,97 @@ internal sealed class CombatModule
         bool defeated = change.After <= change.Bounds.Minimum;
         if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(target.Id, attacker.Id, applied, request.Generation, request.SimulationStep));
     }
+
+    /// <summary>
+    /// Decides one enemy melee attack without touching health. The roll, struck body
+    /// and damage are fixed here so the outcome is deterministic from the admitted
+    /// step, but they are applied only when the authored damage frame is reached.
+    /// A swing already in flight refuses a second one from the same attacker.
+    /// </summary>
+    internal bool TryBeginEnemyAttack(long attackerId, long targetId, ulong generation, ulong simulationStep, double fixedDeltaSeconds, FactBuffer<IProductFact> facts)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        if (_pendingImpacts.ContainsKey((generation, attackerId))) return false;
+        if (!TryResolve(attackerId, out Combatant attacker) || !TryResolve(targetId, out Combatant target))
+        {
+            facts.Append(new AttackRejectedFact(AttackRejection.UnknownExplicitCombatant));
+            return false;
+        }
+        if (IsDefeated(target))
+        {
+            facts.Append(new AttackRejectedFact(AttackRejection.TargetDefeated));
+            return false;
+        }
+        if (_readyAtStep.TryGetValue((generation, attackerId), out ulong readyAt) && simulationStep < readyAt)
+        {
+            facts.Append(new AttackRejectedFact(AttackRejection.Cooldown));
+            return false;
+        }
+        if (attacker.Definition.ActionId is not { } actionId
+            || !_actions.TryGetValue(actionId, out DaggerfallActionDefinition? authoredAction)
+            || authoredAction.CooldownSeconds is not double authoredCooldown)
+        {
+            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
+            return false;
+        }
+
+        DaggerfallAttackDefinition attack = ResolveFixedAttack(attacker.Definition, authoredAction, authoredCooldown);
+        ExplicitMeleeRequest request = new(attackerId, targetId, generation, simulationStep, fixedDeltaSeconds);
+        int chance = HitChance(attacker, target, attack.Skill);
+        int roll = Draw(request, attackerId, targetId, CombatRandomKey.HitSalt, 1, 100, enemy: true);
+        bool willHit = roll <= chance;
+        // A miss draws nothing further, matching the resolved player path.
+        int body = willHit ? DaggerfallFormulaPolicy.StruckBodyPart(Draw(request, attackerId, targetId, CombatRandomKey.BodySalt, 0, 19, enemy: true)) : 0;
+        int damage = willHit
+            ? Math.Max(1, checked(Draw(request, attackerId, targetId, CombatRandomKey.DamageSalt, attack.MinimumDamage, attack.MaximumDamage, enemy: true) + StrengthModifier(attacker) + attack.DamageBonus))
+            : 0;
+        LatchCooldown(request, attack);
+        _pendingImpacts[(generation, attackerId)] = new PendingEnemyImpact(attackerId, targetId, willHit, body, damage, roll, chance);
+        facts.Append(new EnemyAttackStartedFact(attackerId, targetId, willHit, generation, simulationStep));
+        return true;
+    }
+
+    /// <summary>
+    /// Applies the swings whose authored damage frame was reached inside the current
+    /// admitted update. A swing whose attacker died mid-strike, whose target is gone
+    /// or defeated, or whose target left reach is resolved as a miss or dropped
+    /// rather than applied late; an expired swing applies nothing.
+    /// </summary>
+    internal void ApplyImpacts(IReadOnlyList<AttackImpactNotice> notices, ulong generation, FactBuffer<IProductFact> facts)
+    {
+        ArgumentNullException.ThrowIfNull(notices);
+        ArgumentNullException.ThrowIfNull(facts);
+        foreach (AttackImpactNotice notice in notices)
+        {
+            if (!_pendingImpacts.Remove((notice.Generation, notice.AttackerId), out PendingEnemyImpact pending)) continue;
+            if (notice.Expired || notice.Generation != generation) continue;
+            if (!TryResolve(pending.AttackerId, out Combatant attacker) || IsDefeated(attacker)) continue;
+            if (!TryResolve(pending.TargetId, out Combatant target) || IsDefeated(target)) continue;
+            if (!pending.WillHit)
+            {
+                facts.Append(new AttackMissedFact(pending.AttackerId, pending.TargetId, pending.Roll, pending.Chance, true, notice.Generation, notice.SimulationStep));
+                continue;
+            }
+
+            ActorTrackRead targetHealth = target.Mechanics.ReadTrack(TrackId.Parse(HealthTrack));
+            ExactTrackSetReceipt change = target.Mechanics.SetTrack(
+                TrackId.Parse(HealthTrack),
+                new ExactValue(checked(targetHealth.Current.Raw - pending.Damage)),
+                ExactTrackSetPolicy.ClampToBounds);
+            int applied = checked((int)(change.Before.Raw - change.After.Raw));
+            facts.Append(new AttackHitFact(pending.AttackerId, pending.TargetId, applied, pending.Body, true, notice.Generation, notice.SimulationStep));
+            if (applied > 0) facts.Append(new ActorDamagedFact(pending.TargetId, applied));
+            bool defeated = change.After <= change.Bounds.Minimum;
+            if (defeated && change.Before > change.Bounds.Minimum) facts.Append(new ActorDiedFact(pending.TargetId, pending.AttackerId, applied, notice.Generation, notice.SimulationStep));
+        }
+    }
+
+    /// <summary>
+    /// Drops a swing that is no longer being made, so a target that left reach or an
+    /// attacker that changed its mind is never struck late. Range and visibility belong
+    /// to the behaviour that admitted the attack, not to this module.
+    /// </summary>
+    internal void InterruptPendingAttack(long attackerId, ulong generation) => _pendingImpacts.Remove((generation, attackerId));
 
     private bool TryAdmitPlayerAttack(ulong generation, ulong simulationStep, double fixedDeltaSeconds, DaggerfallActionId? action, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
     {
@@ -253,3 +351,9 @@ internal sealed class CombatModule
 }
 
 internal readonly record struct CombatCooldown(long AttackerId, ulong RemainingSteps);
+
+/// <summary>A decided enemy swing waiting for its authored damage frame.</summary>
+internal readonly record struct PendingEnemyImpact(long AttackerId, long TargetId, bool WillHit, int Body, int Damage, int Roll, int Chance);
+
+/// <summary>One swing's authored damage frame: reached, or passed without being reached.</summary>
+internal readonly record struct AttackImpactNotice(long AttackerId, long TargetId, ulong Generation, ulong SimulationStep, bool Expired);
