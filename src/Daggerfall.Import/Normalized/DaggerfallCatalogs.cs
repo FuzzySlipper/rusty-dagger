@@ -128,6 +128,14 @@ public sealed record DaggerfallCareerRecord(
             throw new ArgumentOutOfRangeException(nameof(AdvancementMultiplier), AdvancementMultiplier, $"Career '{Id}' must carry a positive advancement multiplier.");
         }
 
+        // The counts the runtime requires, enforced here too, so everything this builder
+        // publishes is something the runtime reads. A whole group holding the carrier's
+        // terminal no-skill value names no skill, which is not a career.
+        if (PrimarySkills.Count is < 1 or > 3 || MajorSkills.Count is < 1 or > 3 || MinorSkills.Count is < 1 or > 6)
+        {
+            throw new InvalidOperationException($"Career '{Id}' names {PrimarySkills.Count} primary, {MajorSkills.Count} major and {MinorSkills.Count} minor skills where the classic record carries one to three of each and up to six minor.");
+        }
+
         NormalizedImportDocument.ValidateUnique(PrimarySkills, value => value, $"career '{Id}' primary skill");
         NormalizedImportDocument.ValidateUnique(MajorSkills, value => value, $"career '{Id}' major skill");
         NormalizedImportDocument.ValidateUnique(MinorSkills, value => value, $"career '{Id}' minor skill");
