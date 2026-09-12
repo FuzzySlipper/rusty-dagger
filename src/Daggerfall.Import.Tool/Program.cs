@@ -86,7 +86,10 @@ internal static class Program
                 || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
             .Select(Path.GetFileName)
             .OfType<string>()];
-        QuestSourceInventory inventory = QuestSourceInventory.Enumerate(paths, Path.GetFileName(arena2));
+        // A directory may be supplied with a trailing separator, which has no file name of
+        // its own; the source label is the directory the caller named.
+        string label = Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2));
+        QuestSourceInventory inventory = QuestSourceInventory.Enumerate(paths, string.IsNullOrEmpty(label) ? arena2 : label);
         int marked = 0, unmarked = 0, decoded = 0, badResources = 0, badBinaries = 0;
         long records = 0;
         foreach (QuestSourceFile file in inventory.Files)
