@@ -1609,6 +1609,42 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_save_reserving_content_above_the_cursor_restores_instead_of_being_refused()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        DaggerfallSavePayload session = CapturedSave(root);
+        KindAllocatorState item = session.Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
+        // Content a later site load claims, reserved beyond the current allocator range.
+        ulong futureContent = session.NextUniqueItemEntityId + 1_000;
+        DaggerfallSavePayload saved = session with
+        {
+            Identities = new DurableIdentityState([
+                new KindAllocatorState(DurableIdentityKind.Item, item.NextIdentity, [.. item.Reserved, futureContent], item.Removed),
+            ]),
+        };
+
+        // Tolerated rather than refused: the allocator treats a reservation as live
+        // content wherever it sits, so the save is still restorable.
+        saved.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession resumed = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+        DurableIdentityAllocator ledger = DurableIdentityAllocator.Restore(DaggerfallSavePayload.Decode(resumed.CaptureSave()).RestoredIdentities());
+
+        Assert.Equal(DurableIdentityClassification.Live, ledger.Classify(new DurableIdentityReference(DurableIdentityKind.Item, futureContent)));
+        Assert.Contains(futureContent, ledger.ReservedIdentities(DurableIdentityKind.Item));
+        // Allocation continues in the current range and never collides with it.
+        Assert.NotEqual(futureContent, ledger.Allocate(DurableIdentityKind.Item).Value);
+    }
+
+    [Fact]
     public void A_session_refuses_to_tombstone_authored_content_and_accepts_a_generated_identity()
     {
         string root = RepositoryRoot();

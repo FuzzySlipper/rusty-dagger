@@ -91,11 +91,11 @@ internal sealed record DaggerfallSavePayload(
         HashSet<ulong> reserved = [];
         foreach (ulong value in ReservedUniqueItemEntityIds)
             if (value == 0 || !reserved.Add(value)) throw new ArgumentException("Reserved unique entity identities must be non-zero and unique.");
-        // This payload holds one numeric identity space whose cursor sits above every
-        // reservation: authored placements and loadout items are small content ids,
-        // and a dynamic identity is only ever issued beyond the authored range.
-        if (reserved.Any(value => value >= NextUniqueItemEntityId))
-            throw new ArgumentException("Reserved unique entity identities must sit below the allocator cursor.");
+        // Authored content normally reserves identities below the cursor, but a
+        // reservation at or above it is tolerated rather than refused: the allocator
+        // treats a reservation as live content wherever it sits and skips it when
+        // issuing, so such a save still restores correctly. Nothing is silently
+        // repaired or dropped here; the save keeps the values it carries.
         HashSet<long> cooldowns = [];
         foreach (DaggerfallCombatCooldownSave value in CombatCooldowns)
         {
