@@ -1838,6 +1838,37 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_rejected_restore_leaves_the_live_session_untouched()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession live = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        // A structurally inconsistent save: the equipment slot names no held unique item.
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(live.CaptureSave()).Payload;
+        DaggerfallSavePayload inconsistent = saved with
+        {
+            Inventory = saved.Inventory with { Equipment = [new DaggerfallEquipmentSave("right-hand", 999_999)] },
+        };
+        byte[] before = live.CaptureSave().Bytes.ToArray();
+
+        Assert.Throws<ArgumentException>(() => DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
+            DaggerfallSavePayload.Encode(inconsistent), RandomMinimum.Create()));
+
+        // The live session was neither replaced nor partly reconstructed: it holds the
+        // same state and still steps.
+        Assert.Equal(before, live.CaptureSave().Bytes.ToArray());
+        live.Update(OuterUpdate(1), []);
+    }
+
+    [Fact]
     public void A_save_written_before_owner_sections_existed_is_still_readable()
     {
         string root = RepositoryRoot();
