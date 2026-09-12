@@ -1,16 +1,16 @@
 namespace Daggerfall.Import.Publication;
 
-/// <summary>
-/// Keeps the documented inventory's disposition column honest against a scan. Drift
-/// is reported rather than refused, and only the disposition column is ever written:
-/// row order, stable ids and every other documented field are preserved.
-/// </summary>
 /// <summary>What reconciliation found: disagreeing dispositions, and rows it could not resolve at all.</summary>
 public sealed record SourceInventoryReconciliation(IReadOnlyList<string> Drift, IReadOnlyList<string> Unreconciled)
 {
     public bool IsClean => Drift.Count == 0 && Unreconciled.Count == 0;
 }
 
+/// <summary>
+/// Keeps the documented inventory's disposition column honest against a scan. Drift
+/// is reported rather than refused, and only the disposition column is ever written:
+/// row order, stable ids and every other documented field are preserved.
+/// </summary>
 public static class SourceInventoryReconciler
 {
     public const string DispositionHeader = "disposition";

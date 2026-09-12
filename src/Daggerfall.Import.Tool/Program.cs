@@ -85,7 +85,10 @@ internal static class Program
         SourceManifestFamilyCount total = SourceManifestFamilyCount.From("total", "summary", readback.Records);
         Console.WriteLine($"source manifest: {total.Discovered} records across {readback.Families.Count(family => family.Discovered > 0)} supplied families");
         Console.WriteLine($"  imported {total.Imported}, unused {total.Unused}, source-gap {total.SourceGap}, required-pending {total.RequiredPending}, unresolved {total.Unresolved}, excluded {total.Excluded}, duplicate {total.Duplicate}, malformed {total.Malformed}");
-        foreach (SourceManifestFamilyCount family in readback.Families.Where(family => family.Discovered > 0))
+        // Every family is printed, including the ones with no records: a documented
+        // source gap or an excluded family is exactly what a reader needs to see, and
+        // filtering by record count hides precisely those.
+        foreach (SourceManifestFamilyCount family in readback.Families)
         {
             Console.WriteLine($"  {family.FamilyId} [{family.DocumentedDisposition}]: {family.Discovered} = {family.Imported} imported, {family.Unused} unused, {family.SourceGap} source-gap, {family.RequiredPending} pending, {family.Unresolved} unresolved, {family.Excluded} excluded, {family.Malformed} malformed");
         }
