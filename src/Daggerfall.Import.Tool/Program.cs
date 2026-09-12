@@ -38,6 +38,11 @@ internal static class Program
                 return RunMonsterArchiveCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "quest-sources")
+            {
+                return RunQuestSourceCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -60,6 +65,77 @@ internal static class Program
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Enumerates the classic quest source corpus, decodes both envelopes, and — when the
+    /// documented inventory is supplied — checks that every supplied path is one the
+    /// inventory carries and that it carries no path the corpus does not.
+    /// </summary>
+    private static int RunQuestSourceCommand(IReadOnlyList<string> args)
+    {
+        bool check = args.Contains("--inventory", StringComparer.Ordinal);
+        if (args.Count != (check ? 5 : 3) || args[1] != "--arena2" || (check && args[3] != "--inventory"))
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool quest-sources --arena2 SOURCE_DIR [--inventory INVENTORY.csv]");
+        }
+
+        string arena2 = args[2];
+        string[] paths = [.. Directory.EnumerateFiles(arena2)
+            .Where(path => path.EndsWith(QuestSourceInventory.BinaryExtension, StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith(QuestSourceInventory.ResourcesExtension, StringComparison.OrdinalIgnoreCase))
+            .Select(Path.GetFileName)
+            .OfType<string>()];
+        QuestSourceInventory inventory = QuestSourceInventory.Enumerate(paths, Path.GetFileName(arena2));
+        int marked = 0, unmarked = 0, decoded = 0, badResources = 0, badBinaries = 0;
+        long records = 0;
+        foreach (QuestSourceFile file in inventory.Files)
+        {
+            byte[] bytes = File.ReadAllBytes(Path.Combine(arena2, file.Path));
+            if (file.Family == QuestSourceFamily.QuestBinary)
+            {
+                QuestBinaryEnvelope envelope = QuestBinaryEnvelope.Decode(bytes, file.Path);
+                marked += envelope.HasTerminalMarker ? 1 : 0;
+                unmarked += envelope.HasTerminalMarker ? 0 : 1;
+                badBinaries += envelope.Disposition == QuestBinaryEnvelopeDisposition.WellFormed ? 0 : 1;
+            }
+            else
+            {
+                QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(bytes, file.Path);
+                decoded += envelope.Disposition == QuestResourceEnvelopeDisposition.Decoded ? 1 : 0;
+                badResources += envelope.Disposition == QuestResourceEnvelopeDisposition.Decoded ? 0 : 1;
+                records += envelope.Records.Count;
+            }
+        }
+
+        Console.WriteLine($"quest sources: {inventory.Files.Count} files, {inventory.Binaries.Count()} QBN, {inventory.Resources.Count()} QRC, {inventory.Files.Count(file => file.Pairing == QuestSourcePairing.Paired)} paired, {inventory.BinaryOnly.Count()} binary-only, {inventory.ResourcesOnly.Count()} resources-only");
+        Console.WriteLine($"binary envelopes: {marked} with the terminal marker, {unmarked} without, {badBinaries} not well formed");
+        Console.WriteLine($"resource envelopes: {decoded} decoded into {records} records, {badResources} not decoded");
+        foreach (QuestSourceFile file in inventory.BinaryOnly.Concat(inventory.ResourcesOnly))
+        {
+            Console.WriteLine($"  unpaired {file.Path} ({file.Pairing})");
+        }
+
+        if (!check)
+        {
+            return 0;
+        }
+
+        // The inventory is the authority for which paths exist; this checks the corpus and
+        // the document against each other rather than trusting either alone.
+        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(args[4]));
+        HashSet<string> documented = [.. rows
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-017"))
+            .Select(row => Path.GetFileName(row.PathOrPattern))];
+        string[] missing = [.. inventory.Files.Select(file => file.Path).Where(path => !documented.Contains(path))];
+        string[] extra = [.. documented.Where(path => !inventory.Files.Any(file => StringComparer.Ordinal.Equals(file.Path, path)))];
+        if (missing.Length != 0 || extra.Length != 0)
+        {
+            throw new InvalidOperationException($"The documented inventory and the supplied corpus disagree; supplied but undocumented: [{string.Join(", ", missing)}], documented but not supplied: [{string.Join(", ", extra)}].");
+        }
+
+        Console.WriteLine($"inventory: {documented.Count} documented paths match the corpus");
+        return 0;
     }
 
     /// <summary>
