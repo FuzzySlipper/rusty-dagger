@@ -36,8 +36,8 @@ internal static class DaggerfallBaseContent
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools = ReadLootCategoryPools(root, diagnostics);
             IReadOnlyList<DaggerfallDonorErratum> donorErrata = ReadDonorErrata(root, diagnostics);
-            DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, items.Count, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, actors, items, diagnostics);
+            DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
@@ -186,12 +186,12 @@ internal static class DaggerfallBaseContent
     /// carries a provenance and a disposition, that the summary agrees with the entries, and
     /// that no target claims a native fact while the native source is absent.
     /// </summary>
-    private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, int publishedItems, DaggerfallContentDiagnostics diagnostics)
+    private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallCatalogSet catalogs, int publishedItems, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("itemTemplateLedger", out JsonElement value) || value.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must carry an itemTemplateLedger section: every native item template target needs a provenance and a disposition before any catalog publication claims one.");
-            return new DaggerfallItemTemplateLedger(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, 0, string.Empty, false, 0, 0, 0, 0, []);
+            return new DaggerfallItemTemplateLedger(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, 0, string.Empty, false, 0, 0, 0, 0, []);
         }
 
         JsonElement ledger = Object(value, "itemTemplateLedger", diagnostics);
@@ -199,8 +199,49 @@ internal static class DaggerfallBaseContent
         JsonElement baseline = Object(Property(ledger, "baseline", diagnostics), "itemTemplateLedger.baseline", diagnostics);
         JsonElement published = Object(Property(ledger, "publishedItems", diagnostics), "itemTemplateLedger.publishedItems", diagnostics);
         JsonElement summary = Object(Property(ledger, "summary", diagnostics), "itemTemplateLedger.summary", diagnostics);
+        JsonElement substitute = Object(Property(ledger, "substitute", diagnostics), "itemTemplateLedger.substitute", diagnostics);
         string status = Text(target, "status", diagnostics);
-        bool decodedTemplates = published.TryGetProperty("nativeDecoding", out JsonElement nativeDecodingValue) && nativeDecodingValue.ValueKind == JsonValueKind.True;
+        string recordId = Text(target, "recordId", diagnostics);
+
+        // The status is a closed vocabulary rather than a free string: a near miss like
+        // 'Absent' would otherwise slip past every check that compares it ordinally.
+        if (status.Length != 0
+            && !string.Equals(status, DaggerfallItemTemplateLedger.AbsentStatus, StringComparison.Ordinal)
+            && !string.Equals(status, DaggerfallItemTemplateLedger.PresentStatus, StringComparison.Ordinal))
+        {
+            diagnostics.Add($"The item template ledger records source status '{status}', which is neither '{DaggerfallItemTemplateLedger.AbsentStatus}' nor '{DaggerfallItemTemplateLedger.PresentStatus}'.");
+        }
+
+        // The ledger's target cites the documented inventory exactly as a catalog citation
+        // does, so a manifest change cannot leave one half of the pack stale.
+        if (recordId.Length != 0 && !catalogs.SourceRecords.Contains(recordId, StringComparer.Ordinal))
+        {
+            diagnostics.Add($"The item template ledger cites '{recordId}', which the payload's catalog sources do not carry.");
+        }
+
+        string substituteStatus = Text(substitute, "status", diagnostics);
+        foreach (JsonElement rule in Array(baseline, "rules", diagnostics))
+        {
+            JsonElement entry = Object(rule, "itemTemplateLedger.baseline.rules[]", diagnostics);
+            if (string.IsNullOrWhiteSpace(Text(entry, "id", diagnostics))
+                || string.IsNullOrWhiteSpace(Text(entry, "rule", diagnostics))
+                || string.IsNullOrWhiteSpace(Text(entry, "evidence", diagnostics)))
+            {
+                diagnostics.Add("Every item template baseline rule must record an id, the rule it states and the donor evidence it rests on.");
+            }
+        }
+        bool decodedTemplates = false;
+        if (published.TryGetProperty("nativeDecoding", out JsonElement nativeDecodingValue))
+        {
+            if (nativeDecodingValue.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+            {
+                diagnostics.Add("The item template ledger's nativeDecoding must be a boolean.");
+            }
+            else
+            {
+                decodedTemplates = nativeDecodingValue.ValueKind == JsonValueKind.True;
+            }
+        }
 
         List<DaggerfallItemTemplateTarget> targets = [];
         HashSet<int> indices = [];
@@ -211,7 +252,8 @@ internal static class DaggerfallBaseContent
             int index = Integer(item, "index", diagnostics);
             string provenance = Text(item, "provenance", diagnostics);
             string disposition = Text(item, "disposition", diagnostics);
-            string[] groups = [.. Array(item, "donorGroups", diagnostics).Select(group => group.ValueKind == JsonValueKind.String ? group.GetString() ?? string.Empty : string.Empty)];
+            string[] groups = ReadGroupNames(item, "donorGroups", index, diagnostics);
+            string[] referenceGroups = ReadGroupNames(item, "donorReferenceGroups", index, diagnostics);
             if (index < 0 || index >= DaggerfallItemTemplateLedger.TargetCount)
             {
                 diagnostics.Add($"Item template target index {index} is outside the classic 0..{DaggerfallItemTemplateLedger.TargetCount - 1} space.");
@@ -230,6 +272,12 @@ internal static class DaggerfallBaseContent
             {
                 diagnostics.Add($"Item template target {index} has no disposition.");
             }
+            else if (!DaggerfallItemTemplateLedger.Dispositions.Contains(disposition, StringComparer.Ordinal))
+            {
+                // The vocabulary is closed so a typo cannot pass as a state: an unknown
+                // disposition would be neither resolved nor unresolved to a reader.
+                diagnostics.Add($"Item template target {index} has disposition '{disposition}', which is not one of [{string.Join(", ", DaggerfallItemTemplateLedger.Dispositions)}].");
+            }
 
             if (groups.Length != 0)
             {
@@ -244,7 +292,7 @@ internal static class DaggerfallBaseContent
                 diagnostics.Add($"Item template target {index} is '{disposition}' while the native item template source is '{status}'.");
             }
 
-            targets.Add(new DaggerfallItemTemplateTarget(index, groups, provenance, disposition));
+            targets.Add(new DaggerfallItemTemplateTarget(index, groups, referenceGroups, provenance, disposition));
         }
 
         int unreferenced = targets.Count - referenced;
@@ -268,13 +316,29 @@ internal static class DaggerfallBaseContent
             diagnostics.Add($"The item template ledger claims native decoding while its source status is '{status}'.");
         }
 
+        // Decoding needs either the byte source or an explicitly marked substitute, so a
+        // resolved target with neither is a claim without a source behind it.
+        bool substituteAvailable = string.Equals(substituteStatus, "available", StringComparison.Ordinal);
+        if (substituteStatus.Length != 0 && !substituteAvailable && !string.Equals(substituteStatus, "missing", StringComparison.Ordinal))
+        {
+            diagnostics.Add($"The item template ledger records substitute status '{substituteStatus}', which is neither available nor missing.");
+        }
+
+        if (!substituteAvailable && !string.Equals(status, "present", StringComparison.Ordinal)
+            && targets.Any(target => !string.Equals(target.Disposition, DaggerfallItemTemplateLedger.UnresolvedDisposition, StringComparison.Ordinal)))
+        {
+            diagnostics.Add("The item template ledger resolves a target while it records neither the native byte source nor a substitute.");
+        }
+
         return new DaggerfallItemTemplateLedger(
             Text(target, "recordId", diagnostics),
             Text(target, "path", diagnostics),
             status,
             Text(target, "reason", diagnostics),
             Text(baseline, "rule", diagnostics),
-            Text(baseline, "path", diagnostics),
+            Text(baseline, "donorSource", diagnostics),
+            substituteStatus,
+            Text(substitute, "path", diagnostics),
             declaredPublished,
             Text(published, "valueProvenance", diagnostics),
             decodedTemplates,
@@ -283,6 +347,24 @@ internal static class DaggerfallBaseContent
             Integer(summary, "unreferencedByAnyGroup", diagnostics),
             Integer(summary, "nativeTemplatesDecoded", diagnostics),
             targets);
+    }
+
+    /// <summary>Reads a target's group names, reporting an entry that is not a name.</summary>
+    private static string[] ReadGroupNames(JsonElement item, string property, int index, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<string> names = [];
+        foreach (JsonElement group in Array(item, property, diagnostics))
+        {
+            if (group.ValueKind != JsonValueKind.String || string.IsNullOrWhiteSpace(group.GetString()))
+            {
+                diagnostics.Add($"Item template target {index} has a {property} entry that is not a group name.");
+                continue;
+            }
+
+            names.Add(group.GetString()!);
+        }
+
+        return [.. names];
     }
 
     /// <summary>Requires a declared summary count to match what the entries actually say.</summary>
