@@ -94,10 +94,25 @@ public sealed class UiMediaInventory
         ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         List<UiMediaRecord> files = [];
+        HashSet<string> seen = new(StringComparer.Ordinal);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in sources.OrderBy(entry => entry.Path, StringComparer.Ordinal))
         {
+            // A path is the identity and the binding is matched against it, so a missing or
+            // repeated path is refused here rather than producing two records for one file.
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("A UI media file was supplied without a path, which is the identity the enumeration records and the consumer binds against.", nameof(sources));
+            }
+
+            if (!seen.Add(path))
+            {
+                throw new ArgumentException($"'{path}' was supplied more than once, so its record would be ambiguous.", nameof(sources));
+            }
+
             string family = FamilyOf(path, source);
-            bool bound = admitted.Contains(path);
+            // The family is matched case-insensitively, so the binding is too: a consumer
+            // naming MAIN00I0.IMG binds main00i0.img rather than half-matching it.
+            bool bound = admitted.Contains(path) || admitted.Any(name => StringComparer.OrdinalIgnoreCase.Equals(name, path));
             UiMediaDisposition disposition = bound ? UiMediaDisposition.Admitted : UiMediaDisposition.RequiredPending;
             bool read = ImgDecoder.TryDecodeUi(bytes.Span, path, out IndexedImg? image, out UiMediaDecode decode, out string reason);
             string binding = bound

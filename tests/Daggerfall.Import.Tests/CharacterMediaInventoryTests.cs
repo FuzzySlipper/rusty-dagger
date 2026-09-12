@@ -75,7 +75,8 @@ public sealed class CharacterMediaInventoryTests
 
         (string Key, IReadOnlyList<string> Files) clash = Assert.Single(clashing.DuplicateKeys);
         Assert.Equal("BODY00I0", clash.Key);
-        Assert.Equal(2, clash.Files.Count);
+        // Which files clash, not just how many: a count alone passes for the wrong pair.
+        Assert.Equal(["BODY00I0.IMG", "body00i0.IMG"], clash.Files);
     }
 
     [Fact]
@@ -120,6 +121,17 @@ public sealed class CharacterMediaInventoryTests
 
         Assert.Equal(forward.Files.Select(file => file.Path), reversed.Files.Select(file => file.Path));
         Assert.Equal(forward.Files.Select(file => file.Disposition), reversed.Files.Select(file => file.Disposition));
+    }
+
+    [Fact]
+    public void Refuses_a_path_supplied_twice_or_not_at_all()
+    {
+        // A path is the identity and the consumer binds against it, so a missing or repeated
+        // path is refused rather than producing two records for one file or a null.
+        Assert.Throws<ArgumentException>(() => CharacterMediaInventory.Enumerate(
+            [(null!, ValidImage())], new HashSet<string>(StringComparer.Ordinal), "none", "fixture"));
+        Assert.Throws<ArgumentException>(() => CharacterMediaInventory.Enumerate(
+            [("BODY00I0.IMG", ValidImage()), ("BODY00I0.IMG", ValidImage())], new HashSet<string>(StringComparer.Ordinal), "none", "fixture"));
     }
 
     [Fact]
