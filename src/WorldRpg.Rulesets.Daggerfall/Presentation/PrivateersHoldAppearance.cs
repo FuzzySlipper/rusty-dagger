@@ -288,11 +288,12 @@ internal sealed class PrivateersHoldAppearance : IDisposable
                     if (crossing.CrossingSequence <= visual.LastMarkerCrossing) continue;
                     visual.LastMarkerCrossing = crossing.CrossingSequence;
                     if (visual.ActiveAttack is not { } crossingAttack) continue;
-                    if (crossingAttack.Identity.Outcome == "hit") Emit(crossingAttack.HitCue, crossingAttack.Identity, crossing.CrossingSequence);
-                    // The authored damage frame is the strike beat: report it once so the
-                    // ruleset applies the decision it already made.
+                    // One decided swing owns one strike beat, even when the authored
+                    // sequence carries several damage frames: the first crossing sounds
+                    // and reports, and later frames of the same swing do neither.
                     if (crossingAttack.ImpactReported) continue;
                     visual.ActiveAttack = crossingAttack with { ImpactReported = true };
+                    if (crossingAttack.Identity.Outcome == "hit") Emit(crossingAttack.HitCue, crossingAttack.Identity, crossing.CrossingSequence);
                     attackImpacts.Add(new AttackImpactNotice(crossingAttack.Identity.Attacker, crossingAttack.Identity.Target, crossingAttack.Identity.Generation, crossingAttack.Identity.SimulationStep, Expired: false));
                 }
             }

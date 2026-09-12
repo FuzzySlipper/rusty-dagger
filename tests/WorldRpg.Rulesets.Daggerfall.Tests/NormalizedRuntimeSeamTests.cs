@@ -2408,6 +2408,33 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_swing_with_several_damage_frames_sounds_and_lands_once()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        // Authored sequences really do carry two or three -1 frames, so both cross in
+        // one advance. One decided swing still owns exactly one strike beat.
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            new[]
+            {
+                new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1),
+                new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 2),
+            },
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
+            true));
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1, -1, 0]), audio.Service);
+
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
+        presentation.Advance(OuterUpdate(1));
+
+        Assert.Single(audio.Emits);
+        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.False(impact.Expired);
+    }
+
+    [Fact]
     public void A_swing_without_an_authored_damage_frame_resolves_immediately()
     {
         List<string> releases = [];
