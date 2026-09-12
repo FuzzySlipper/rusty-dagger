@@ -51,6 +51,12 @@ public sealed record MonsterArchiveRecord(
 }
 
 /// <summary>
+/// One media reference a linked record makes that the supplied source set does not
+/// carry: the live texture archive or the corpse texture archive a mobile needs.
+/// </summary>
+public sealed record MonsterArchiveMediaGap(string RecordName, byte MobileId, string Kind, int TextureArchive);
+
+/// <summary>
 /// The enumerated contents of one MONSTER.BSA. The task is enumeration: this type
 /// records what the archive holds and which source mobile each record belongs to. It
 /// assigns no actor policy, no audio selection and no animation playback; those belong
@@ -122,6 +128,30 @@ public sealed class MonsterArchiveInventory
 
     /// <summary>Gets every record that belongs to one classic mobile.</summary>
     public IEnumerable<MonsterArchiveRecord> ForMobile(Arena2MobileId id) => Records.Where(record => record.MobileId == id.Value);
+
+    /// <summary>
+    /// The media a linked record references that the supplied source set does not carry.
+    /// The caller supplies the archives it has, so this stays a source question rather
+    /// than a second inventory: a link to media that is not supplied is a gap the task
+    /// that publishes that media needs to see.
+    /// </summary>
+    public IEnumerable<MonsterArchiveMediaGap> MissingMedia(IReadOnlySet<int> suppliedTextureArchives)
+    {
+        ArgumentNullException.ThrowIfNull(suppliedTextureArchives);
+        foreach (MonsterArchiveRecord record in Records.Where(record => record.Source is not null))
+        {
+            Arena2MobileSource source = record.Source!;
+            if (!suppliedTextureArchives.Contains(source.TextureArchive.Value))
+            {
+                yield return new MonsterArchiveMediaGap(record.Name, record.MobileId, "live", source.TextureArchive.Value);
+            }
+
+            if (source.Corpse is Arena2MobileCorpseSource corpse && !suppliedTextureArchives.Contains(corpse.TextureArchive.Value))
+            {
+                yield return new MonsterArchiveMediaGap(record.Name, record.MobileId, "corpse", corpse.TextureArchive.Value);
+            }
+        }
+    }
 
     private static MonsterArchiveRecord Enumerate(BsaArchive archive, BsaRecord record, string name, string source)
     {
