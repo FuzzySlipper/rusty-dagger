@@ -12,7 +12,7 @@ namespace Daggerfall.Import.Tests;
 public sealed class UiMediaInventoryTests
 {
     [Fact]
-    public void Enumerates_every_documented_family_file_with_its_canvas()
+    public void Enumerates_every_documented_family_file_with_its_canvases()
     {
         UiMediaInventory inventory = ReadInventory();
 
@@ -22,12 +22,20 @@ public sealed class UiMediaInventoryTests
             UiMediaInventory.DocumentedFamilies.Select(family => (family.Prefix, inventory.Family(family.Prefix).Count())),
             UiMediaInventory.DocumentedFamilies.Select(family => (family.Prefix, family.Count)));
         Assert.All(inventory.Files, file => Assert.False(string.IsNullOrWhiteSpace(file.Family)));
-        // Binding and decodability are separate facts: a file can be bound and still be one
-        // the current decoder paths do not read.
-        Assert.True(inventory.Files.Count(file => file.Decode != UiMediaDecode.Unread) > 0);
-        Assert.All(inventory.Files.Where(file => file.Decode != UiMediaDecode.Unread), file => Assert.True(file.Width > 0 && file.Height > 0));
-        Assert.All(inventory.Unread, file => Assert.Contains("Neither decoder path", file.Note, StringComparison.Ordinal));
-        Assert.All(inventory.Files.Where(file => file.Decode != UiMediaDecode.Unread), file => Assert.Contains("pixels", file.Note, StringComparison.Ordinal));
+        // A file count is not a canvas count: the supplied CIF and the two GFX members carry
+        // 27 canvases between them, so the families supply 86 canvases across 63 files.
+        Assert.Equal(86, inventory.Files.Sum(file => file.CanvasCount));
+        Assert.All(inventory.Files.Where(file => file.Decode != Arena2CanvasKind.Unread), file =>
+        {
+            Assert.True(file.CanvasCount > 0);
+            Assert.All(file.Canvases, canvas => Assert.True(canvas.Width > 0 && canvas.Height > 0));
+            Assert.Contains("Read as", file.Note, StringComparison.Ordinal);
+        });
+        // One supplied file remains unread: TALK00I0.IMG declares compression 0x0800, which is
+        // none of the four values the classic reader's own compression enum defines.
+        UiMediaRecord unread = Assert.Single(inventory.Unread);
+        Assert.Equal("TALK00I0.IMG", unread.Path);
+        Assert.Contains("compression 2048", unread.Note, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -104,11 +112,12 @@ public sealed class UiMediaInventoryTests
             "fixture consumer",
             "fixture");
 
-        Assert.Equal(UiMediaDecode.Unread, inventory.Files.Single(file => file.Path == "MAIN00I0.IMG").Decode);
+        Assert.Equal(Arena2CanvasKind.Unread, inventory.Files.Single(file => file.Path == "MAIN00I0.IMG").Decode);
         // The neighbour must still read: an assertion that only restates the expected
         // disposition cannot fail and would not notice one bad file affecting another.
-        Assert.Equal(UiMediaDecode.Header, inventory.Files.Single(file => file.Path == "MAIN01I0.IMG").Decode);
-        Assert.Equal(320, inventory.Files.Single(file => file.Path == "MAIN01I0.IMG").Width);
+        UiMediaRecord neighbour = inventory.Files.Single(file => file.Path == "MAIN01I0.IMG");
+        Assert.Equal(Arena2CanvasKind.ImgRecord, neighbour.Decode);
+        Assert.Equal((320, 46), (neighbour.Canvases[0].Width, neighbour.Canvases[0].Height));
         Assert.Single(inventory.Unread);
     }
 
