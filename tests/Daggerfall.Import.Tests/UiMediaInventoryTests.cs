@@ -52,7 +52,7 @@ public sealed class UiMediaInventoryTests
         Assert.Equal(
             ["INFO00I0.IMG", "INVE00I0.IMG", "MAIN00I0.IMG", "MAIN03I0.IMG", "MAIN04I0.IMG", "MAIN05I0.IMG"],
             inventory.Admitted.Select(file => file.Path).Order(StringComparer.Ordinal));
-        Assert.All(inventory.Admitted, file => Assert.Equal("content/ui/ui-manifest.json", file.Consumer));
+        Assert.All(inventory.Admitted, file => Assert.Equal("the published classic UI media manifest", file.Consumer));
         Assert.Equal(57, inventory.RequiredPending.Count());
     }
 
@@ -75,6 +75,7 @@ public sealed class UiMediaInventoryTests
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => UiMediaInventory.Enumerate(
             [("NOTAFAMILY.IMG", new byte[16])],
             new HashSet<string>(StringComparer.Ordinal),
+            "fixture consumer",
             "fixture"));
 
         Assert.Contains("none of the documented UI media families", error.Message, StringComparison.Ordinal);
@@ -86,6 +87,7 @@ public sealed class UiMediaInventoryTests
         UiMediaInventory inventory = UiMediaInventory.Enumerate(
             [("MAIN00I0.IMG", new byte[8]), ("MAIN01I0.IMG", ValidImage())],
             new HashSet<string>(StringComparer.Ordinal),
+            "fixture consumer",
             "fixture");
 
         Assert.Equal(UiMediaDecode.Unread, inventory.Files.Single(file => file.Path == "MAIN00I0.IMG").Decode);
@@ -128,7 +130,7 @@ public sealed class UiMediaInventoryTests
             }
         }
 
-        return UiMediaInventory.Enumerate(sources, BoundFiles(), "local/arena2");
+        return UiMediaInventory.Enumerate(sources, BoundFiles(), "the published classic UI media manifest", "local/arena2");
     }
 
     /// <summary>The files the published classic media manifest binds.</summary>

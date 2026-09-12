@@ -13,6 +13,19 @@ public sealed record IndexedImg(
     ReadOnlyMemory<byte> Pixels);
 
 /// <summary>Decoder for supported uncompressed Arena2 IMG records.</summary>
+/// <summary>How one UI canvas was read, or that neither path read it.</summary>
+public enum UiMediaDecode
+{
+    /// <summary>Read as a standard IMG record.</summary>
+    Header,
+
+    /// <summary>Read as a headerless UI canvas.</summary>
+    Headerless,
+
+    /// <summary>Neither path read it.</summary>
+    Unread,
+}
+
 public static class ImgDecoder
 {
     /// <summary>Decodes a headered, uncompressed IMG record without pixel reordering.</summary>
@@ -60,6 +73,50 @@ public static class ImgDecoder
     }
 
     /// <summary>Decodes the one explicit, source-selected 320x200 headerless UI canvas shape.</summary>
+    /// <summary>
+    /// Reads one UI canvas by the repository's single probing policy: the standard IMG
+    /// record first, then the headerless canvas the classic UI publication reads.
+    /// </summary>
+    /// <remarks>
+    /// This exists so the surveys and any other caller probe the same way. The publication
+    /// that emits the canvases still dispatches per file from its own source table; that
+    /// table decides which files it publishes, while this decides only how a supplied file
+    /// is read when a caller asks.
+    /// </remarks>
+    public static bool TryDecodeUi(
+        ReadOnlySpan<byte> bytes,
+        string source,
+        out IndexedImg? image,
+        out UiMediaDecode decode,
+        out string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        try
+        {
+            image = Decode(bytes, source);
+            decode = UiMediaDecode.Header;
+            reason = string.Empty;
+            return true;
+        }
+        catch (Arena2FormatException headerFailure)
+        {
+            try
+            {
+                image = DecodeHeaderlessUiCanvas(bytes, source);
+                decode = UiMediaDecode.Headerless;
+                reason = string.Empty;
+                return true;
+            }
+            catch (Arena2FormatException headerlessFailure)
+            {
+                image = null;
+                decode = UiMediaDecode.Unread;
+                reason = $"{headerFailure.Message} The headerless UI canvas path also refused it: {headerlessFailure.Message}";
+                return false;
+            }
+        }
+    }
+
     public static IndexedImg DecodeHeaderlessUiCanvas(ReadOnlySpan<byte> bytes, string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);

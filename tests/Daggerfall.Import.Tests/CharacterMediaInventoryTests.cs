@@ -70,6 +70,7 @@ public sealed class CharacterMediaInventoryTests
         CharacterMediaInventory clashing = CharacterMediaInventory.Enumerate(
             [("BODY00I0.IMG", ValidImage()), ("body00i0.IMG", ValidImage())],
             new HashSet<string>(StringComparer.Ordinal),
+            "fixture consumer",
             "fixture");
 
         (string Key, IReadOnlyList<string> Files) clash = Assert.Single(clashing.DuplicateKeys);
@@ -83,6 +84,7 @@ public sealed class CharacterMediaInventoryTests
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => CharacterMediaInventory.Enumerate(
             [("NOTAFAMILY.IMG", new byte[16])],
             new HashSet<string>(StringComparer.Ordinal),
+            "fixture consumer",
             "fixture"));
 
         Assert.Contains("none of the documented character media families", error.Message, StringComparison.Ordinal);
@@ -94,11 +96,12 @@ public sealed class CharacterMediaInventoryTests
         CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(
             [("SCBG00I0.IMG", ValidImage())],
             new HashSet<string>(["SCBG00I0.IMG"], StringComparer.Ordinal),
+            "the fixture consumer",
             "fixture");
 
         CharacterMediaRecord record = Assert.Single(inventory.Files);
         Assert.Equal(CharacterMediaDisposition.Bound, record.Disposition);
-        Assert.NotEqual(string.Empty, record.Consumer);
+        Assert.Equal("the fixture consumer", record.Consumer);
         Assert.Equal("SCBG", record.Family);
     }
 
@@ -128,7 +131,7 @@ public sealed class CharacterMediaInventoryTests
             }
         }
 
-        return CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "local/arena2");
+        return CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "no published consumer yet", "local/arena2");
     }
 
     private static string RepositoryRoot()
