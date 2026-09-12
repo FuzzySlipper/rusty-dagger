@@ -9,7 +9,7 @@ public enum DurableIdentityClassification
     /// <summary>The identity was allocated and has since been removed. Removal is not absence.</summary>
     Removed,
 
-    /// <summary>This allocator never issued the identity: it is at or above the cursor.</summary>
+    /// <summary>This ledger has no record of the identity: nothing issued it and nothing reserved it.</summary>
     NeverIssued,
 
     /// <summary>The stored identity does not belong to the requested kind of world object.</summary>
@@ -40,7 +40,11 @@ public readonly record struct DurableIdentityReference(DurableIdentityKind Kind,
     }
 }
 
-/// <summary>Persisted allocator evidence for one kind of durable world object.</summary>
+/// <summary>
+/// Persisted allocator evidence for one kind of durable world object.
+/// <paramref name="NextIdentity"/> is the progress marker one past the last issued
+/// identity, or zero when the kind has issued every identity it can.
+/// </summary>
 public readonly record struct KindAllocatorState(
     DurableIdentityKind Kind,
     ulong NextIdentity,
@@ -52,8 +56,6 @@ public readonly record struct KindAllocatorState(
         if (!Enum.IsDefined(Kind)) throw new ArgumentOutOfRangeException(nameof(Kind));
         ArgumentNullException.ThrowIfNull(Reserved);
         ArgumentNullException.ThrowIfNull(Removed);
-        // Zero is the exhaustion marker rather than a cursor: a kind that has issued
-        // every identity it can still has to be capturable and restorable.
         HashSet<ulong> reserved = [];
         foreach (ulong value in Reserved)
         {
@@ -68,7 +70,9 @@ public readonly record struct KindAllocatorState(
         {
             if (value == 0 || !removed.Add(value))
                 throw new ArgumentException("Removed durable identities must be non-zero and distinct.", nameof(Removed));
-            if (value >= NextIdentity)
+            // The exhaustion marker is not a boundary: a kind that has issued every
+            // identity it can still records the ones it has since removed.
+            if (NextIdentity != 0 && value >= NextIdentity)
                 throw new ArgumentException("A removed durable identity must have been issued by this allocator.", nameof(Removed));
             if (reserved.Contains(value))
                 throw new ArgumentException("A reserved durable identity cannot also be removed.", nameof(Removed));
@@ -170,7 +174,7 @@ public sealed class DurableIdentityAllocator
         return new DurableIdentityAllocator(state.Kinds);
     }
 
-    /// <summary>Captures every kind's next issued identity, reservations, and tombstones for the product save owner.</summary>
+    /// <summary>Captures every kind's progress marker, reservations, and tombstones for the product save owner.</summary>
     public DurableIdentityState CaptureState() => new(_kinds.Values
         .OrderBy(ledger => (int)ledger.Kind)
         .Select(ledger => new KindAllocatorState(
@@ -182,7 +186,7 @@ public sealed class DurableIdentityAllocator
 
     public ulong NextIdentity(DurableIdentityKind kind) => Require(kind).NextIssued;
 
-    /// <summary>A copied view of the authored identities this allocator must never issue.</summary>
+    /// <summary>A copied view of every identity this allocator must never issue again: authored reservations and the identities it issued.</summary>
     public IReadOnlyCollection<ulong> ReservedIdentities(DurableIdentityKind kind) => Array.AsReadOnly(Require(kind).Reserved.Order().ToArray());
 
     /// <summary>A copied view of the tombstones recorded for this kind.</summary>
@@ -227,11 +231,9 @@ public sealed class DurableIdentityAllocator
             Kind = kind;
             _reserved = state.Reserved.ToHashSet();
             _removed = state.Removed.ToHashSet();
-            // Every issued identity is strictly below the cursor, so the previous
-            // identity is what the search starts from. Zero is the empty prefix, which
-            // lets the first valid identity be issued.
             // The marker is authoritative: a kind that reports no next identity stays
-            // exhausted even if its reservation list cannot explain how it got there.
+            // exhausted, and one that reports a cursor keeps the identity before it as
+            // the last issued, which is where the search for the next one starts.
             _exhausted = state.NextIdentity == ExhaustedCursor;
             _cursor = _exhausted ? 0 : state.NextIdentity - 1;
             if (!_exhausted && Scan() == 0) _exhausted = true;
