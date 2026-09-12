@@ -225,7 +225,7 @@ internal sealed record DaggerfallSavePayload(
 
         DaggerfallSavePayload resolved = this with { Actors = [.. resolvedActors] };
         DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
-        ReportPlayerTracks(Player, playerDefinition, notices);
+        resolved = resolved with { Player = ReportPlayerTracks(Player, playerDefinition, notices) };
         // Saved values the selected content disagrees with are reported with what was
         // observed. The saved state is what the player had; refusing would cost the whole
         // save over a difference the content cannot settle, and the donor assigns these
@@ -261,10 +261,11 @@ internal sealed record DaggerfallSavePayload(
         long playerHealthMaximum = playerDefinition.PlayerInitialVitals.HealthMaximum;
         for (int restoredLevel = 2; restoredLevel <= expectedLevel; restoredLevel++)
             playerHealthMaximum = checked(playerHealthMaximum + DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, restoredLevel));
-        if (Player.Health > playerHealthMaximum)
+        if (resolved.Player.Health > playerHealthMaximum)
         {
             notices.Add(new SaveRestoreNotice("player-health-above-reconstruction",
-                $"Saved player health {Player.Health} exceeds the {playerHealthMaximum} this session reconstructs for level {expectedLevel}; the saved value is kept because the reconstruction is not an authority on the player's health."));
+                $"Saved player health {resolved.Player.Health} exceeds the {playerHealthMaximum} this session reconstructs for level {expectedLevel} and was reduced to that maximum."));
+            resolved = resolved with { Player = resolved.Player with { Health = playerHealthMaximum } };
         }
 
         // Durable references resolve against the ledger the save carries: an identity is
@@ -313,9 +314,15 @@ internal sealed record DaggerfallSavePayload(
             .ToHashSet();
         if (live.Overlaps(placementIdentities))
             throw new ArgumentException("Saved unique items cannot collide with player or actor placement identities.");
-        // A tombstoned identity that reads as an increment makes the allocator's issue
-        // path unable to terminate, and a tombstoned reservation contradicts the ledger's
-        // own invariant, so the ledger refuses both before resolution reaches here.
+        // A tombstoned identity that is also reserved contradicts the ledger's own
+        // invariant and is refused before resolution. A tombstoned *placement* identity
+        // that is not reserved is representable, so the placement is restored from
+        // content and the tombstone is reported and kept rather than passing in silence.
+        foreach (ulong value in removed.Intersect(placementIdentities).Order())
+        {
+            notices.Add(new SaveRestoreNotice("authored-identity-removed",
+                $"Saved identity {value} is authored content and is also recorded as removed; the placement is restored from content and the tombstone is kept so the allocator never reissues it."));
+        }
 
         resolved = resolved with { Inventory = inventory, Corpses = [.. resolvedCorpses] };
         return new DaggerfallRestorePlan(resolved, notices);
@@ -417,7 +424,7 @@ internal sealed record DaggerfallSavePayload(
     /// all three verbatim in restore mode and the reconstruction is not an authority on
     /// the state the player actually had.
     /// </summary>
-    private static void ReportPlayerTracks(DaggerfallPlayerSave value, DaggerfallActorDefinition definition, List<SaveRestoreNotice> notices)
+    private static DaggerfallPlayerSave ReportPlayerTracks(DaggerfallPlayerSave value, DaggerfallActorDefinition definition, List<SaveRestoreNotice> notices)
     {
         DaggerfallVitalValues initial = definition.PlayerInitialVitals;
         if (value.Health < 0 || value.Stamina < 0 || value.Magicka < 0)
@@ -429,14 +436,23 @@ internal sealed record DaggerfallSavePayload(
         if (value.Stamina > initial.StaminaMaximum)
         {
             notices.Add(new SaveRestoreNotice("player-stamina-above-maximum",
-                $"Saved player stamina {value.Stamina} exceeds the {initial.StaminaMaximum} the selected content allows; the saved value is kept."));
+                $"Saved player stamina {value.Stamina} exceeds the {initial.StaminaMaximum} the selected content allows and was reduced to that maximum."));
         }
 
         if (value.Magicka > initial.MagickaMaximum)
         {
             notices.Add(new SaveRestoreNotice("player-magicka-above-maximum",
-                $"Saved player magicka {value.Magicka} exceeds the {initial.MagickaMaximum} the selected content allows; the saved value is kept."));
+                $"Saved player magicka {value.Magicka} exceeds the {initial.MagickaMaximum} the selected content allows and was reduced to that maximum."));
         }
+
+        // A track value the mechanics substrate cannot hold would turn a reported
+        // difference into a failure during session construction, which is exactly the
+        // silently-failing restore this task exists to remove.
+        return value with
+        {
+            Stamina = Math.Min(value.Stamina, initial.StaminaMaximum),
+            Magicka = Math.Min(value.Magicka, initial.MagickaMaximum),
+        };
     }
 
     /// <summary>
@@ -451,20 +467,22 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException($"Saved actor {value.EntityId} health cannot be negative: {value.Health}.");
         }
 
+        long health = value.Health;
         if (value.Health > definition.Health.Maximum)
         {
             notices.Add(new SaveRestoreNotice("actor-health-above-maximum",
-                $"Saved actor {value.EntityId} health {value.Health} exceeds the {definition.Health.Maximum} its selected definition allows; the saved value is kept."));
+                $"Saved actor {value.EntityId} health {value.Health} exceeds the {definition.Health.Maximum} its selected definition allows and was reduced to that maximum."));
+            health = definition.Health.Maximum;
         }
 
         if (value.Stamina == 0 && value.Magicka == 0)
         {
-            return value;
+            return value with { Health = health };
         }
 
         notices.Add(new SaveRestoreNotice("actor-unused-tracks-cleared",
             $"Saved actor {value.EntityId} carries stamina {value.Stamina} and magicka {value.Magicka}, which an actor does not use; both are cleared."));
-        return value with { Stamina = 0, Magicka = 0 };
+        return value with { Health = health, Stamina = 0, Magicka = 0 };
     }
 
     private static void ValidateInventory(DaggerfallInventorySave inventory, DaggerfallDefinitions definitions, HashSet<ulong> allUnique, string owner, bool requireEquipmentSlots)

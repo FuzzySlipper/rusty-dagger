@@ -1868,9 +1868,13 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Contains(tracks.Notices, value => value.Code == "player-stamina-above-maximum");
         Assert.Contains(tracks.Notices, value => value.Code == "player-magicka-above-maximum");
         Assert.Contains(tracks.Notices, value => value.Code == "actor-health-above-maximum");
-        Assert.Equal(100_000, tracks.Payload.Player.Stamina);
+        // A value the mechanics substrate cannot hold is reduced to the maximum the
+        // selected content allows, because keeping it would fail during construction.
+        DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
+        Assert.Equal(playerDefinition.PlayerInitialVitals.StaminaMaximum, tracks.Payload.Player.Stamina);
+        Assert.Equal(playerDefinition.PlayerInitialVitals.MagickaMaximum, tracks.Payload.Player.Magicka);
         DaggerfallActorSave reported = tracks.Payload.Actors.Single(actor => actor.EntityId == first.EntityId);
-        Assert.Equal(actorDefinition.Health.Maximum + 1_000, reported.Health);
+        Assert.Equal(actorDefinition.Health.Maximum, reported.Health);
         // An actor does not use stamina or magicka: the values are reported and cleared
         // rather than refusing an otherwise restorable save.
         SaveRestoreNotice unused = Assert.Single(tracks.Notices, value => value.Code == "actor-unused-tracks-cleared");
@@ -1927,6 +1931,64 @@ public sealed class NormalizedRuntimeSeamTests
         // A reservation that is also tombstoned contradicts the ledger's own invariant,
         // so the ledger refuses it rather than resolution reporting it.
         Assert.Throws<ArgumentException>(() => tombstoned.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+
+        // A tombstoned placement identity that is not reserved is representable, so the
+        // placement is restored from content and the tombstone is reported, not silent.
+        ulong placement = (ulong)saved.ReservedUniqueItemEntityIds[0];
+        DaggerfallSavePayload tombstonedPlacement = saved with
+        {
+            Identities = new DurableIdentityState([
+                new KindAllocatorState(
+                    DurableIdentityKind.Item,
+                    saved.NextUniqueItemEntityId,
+                    [.. saved.ReservedUniqueItemEntityIds.Where(value => value != placement)],
+                    [placement]),
+            ]),
+        };
+        DaggerfallRestorePlan placementPlan = tombstonedPlacement.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        SaveRestoreNotice tombstoneNotice = Assert.Single(placementPlan.Notices, value => value.Code == "authored-identity-removed");
+        Assert.Contains(placement.ToString(CultureInfo.InvariantCulture), tombstoneNotice.Message, StringComparison.Ordinal);
+        Assert.Contains(placement, placementPlan.Payload.RemovedUniqueItemEntityIds);
+    }
+
+    [Fact]
+    public void A_restore_reduces_saved_tracks_to_the_bounds_this_session_resolves()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        DaggerfallSavePayload saved = CapturedSave(root);
+        DaggerfallActorDefinition actorDefinition = definitions.RequireActor(inputs.Project.Actors.Values.First().ActorId);
+        long target = saved.Actors.OrderBy(actor => actor.EntityId).First().EntityId;
+        // Values far outside anything the selected content or the mechanics substrate
+        // can hold: the restore must still produce a session, with the reduction reported.
+        DaggerfallSavePayload absurd = saved with
+        {
+            Player = saved.Player with { Health = long.MaxValue, Stamina = 1_000_000, Magicka = 1_000_000 },
+            Actors = [.. saved.Actors.Select(actor => actor.EntityId == target
+                ? actor with { Health = actorDefinition.Health.Maximum + 100_000 }
+                : actor)],
+        };
+        DaggerfallRestorePlan plan = absurd.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
+            DaggerfallSavePayload.Encode(plan.Payload), RandomMinimum.Create());
+
+        // Whether the reduction happened in resolution or against the bounds the Engine
+        // resolves while restoring, it is reported and the restore still happens.
+        Assert.Contains(session.RestoreNotices, value => value.Code is "player-health-above-reconstruction" or "track-reduced-to-resolved-bounds");
+        Assert.True(session.RestoreNotices.Any(value => value.Code == "track-reduced-to-resolved-bounds"
+            || value.Code is "player-stamina-above-maximum" or "player-magicka-above-maximum" or "actor-health-above-maximum"));
+        DaggerfallSavePayload recaptured = DaggerfallSavePayload.Read(session.CaptureSave()).Payload;
+        Assert.True(recaptured.Player.Health < long.MaxValue);
+        Assert.True(recaptured.Player.Stamina <= 1_000_000);
     }
 
     [Fact]

@@ -47,7 +47,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private readonly PrivateersHoldAppearance _appearance;
     private readonly IReadOnlyList<IDaggerfallSaveOwner> _saveOwners;
 
-    private readonly IReadOnlyList<SaveRestoreNotice> _restoreNotices;
+    private readonly List<SaveRestoreNotice> _restoreNotices;
     private IReadOnlyList<DaggerfallOwnerSave> _carriedOwnerSections;
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
@@ -492,9 +492,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         // Recreate deterministic health-max sources before restoring mutable
         // current values, so level-up semantics never collapse into a bare max.
         _rewards.RestoreProgression(saved.Experience, saved.Level);
-        ApplyTracks(State.Actors.Player.Mechanics, saved.Player.Health, saved.Player.Stamina, saved.Player.Magicka);
+        ApplyTracks(State.Actors.Player.Mechanics, saved.Player.Health, saved.Player.Stamina, saved.Player.Magicka, "player");
         foreach (DaggerfallActorSave actor in actors)
-            ApplyTracks(State.Actors.All[actor.EntityId].Mechanics, actor.Health, actor.Stamina, actor.Magicka);
+            ApplyTracks(State.Actors.All[actor.EntityId].Mechanics, actor.Health, actor.Stamina, actor.Magicka, $"actor {actor.EntityId}");
 
         ApplyInventory(saved.Inventory);
 
@@ -522,11 +522,31 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private static long ReadTrack(ActorMechanicsState mechanics, DaggerfallTrackId track) =>
         mechanics.ReadTrack(TrackId.Parse(track.Value)).Current.Raw;
 
-    private static void ApplyTracks(ActorMechanicsState mechanics, long health, long stamina, long magicka)
+    /// <summary>
+    /// Writes the saved tracks, reduced to the bounds this session actually resolves.
+    /// Resolution already reports a saved value the selected content disagrees with, but
+    /// the Engine is the authority on what a track can hold — most visibly for a
+    /// level-up health maximum, which depends on rolls made while restoring — so the
+    /// value is checked against the resolved bounds here rather than trusted.
+    /// </summary>
+    private void ApplyTracks(ActorMechanicsState mechanics, long health, long stamina, long magicka, string owner)
     {
-        mechanics.SetTrack(TrackId.Parse(DaggerfallMechanicsIds.Health.Value), new ExactValue(health));
-        mechanics.SetTrack(TrackId.Parse(DaggerfallMechanicsIds.Stamina.Value), new ExactValue(stamina));
-        mechanics.SetTrack(TrackId.Parse(DaggerfallMechanicsIds.Magicka.Value), new ExactValue(magicka));
+        ApplyTrack(mechanics, DaggerfallMechanicsIds.Health, health, owner);
+        ApplyTrack(mechanics, DaggerfallMechanicsIds.Stamina, stamina, owner);
+        ApplyTrack(mechanics, DaggerfallMechanicsIds.Magicka, magicka, owner);
+    }
+
+    private void ApplyTrack(ActorMechanicsState mechanics, DaggerfallTrackId track, long value, string owner)
+    {
+        ActorTrackRead read = mechanics.ReadTrack(TrackId.Parse(track.Value));
+        long reduced = Math.Clamp(value, read.Bounds.Minimum.Raw, read.Bounds.Maximum.Raw);
+        if (reduced != value)
+        {
+            _restoreNotices.Add(new SaveRestoreNotice("track-reduced-to-resolved-bounds",
+                $"Saved {owner} {track.Value} {value} is outside the bounds this session resolves ({read.Bounds.Minimum.Raw} to {read.Bounds.Maximum.Raw}) and was reduced to {reduced}."));
+        }
+
+        mechanics.SetTrack(TrackId.Parse(track.Value), new ExactValue(reduced));
     }
 
     private void ApplyInventory(DaggerfallInventorySave saved)
