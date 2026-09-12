@@ -167,7 +167,11 @@ public sealed record DaggerfallCatalogs(
 {
     public const int CurrentSchemaVersion = 1;
 
-    /// <summary>The eight classic attributes a career record carries a value for.</summary>
+    /// <summary>
+    /// The eight classic attributes a career record carries a value for. The product
+    /// vocabulary carries a ninth, <c>reflexes</c>, which the donor adds and the classic
+    /// carrier has no field for, so a career publishes values for these eight only.
+    /// </summary>
     public const int ClassicAttributeCount = 8;
 
     /// <summary>The five classic resistance elements.</summary>
