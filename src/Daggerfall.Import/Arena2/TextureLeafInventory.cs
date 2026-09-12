@@ -35,17 +35,15 @@ public sealed record TextureLeafRecord(
 /// records and frames; it publishes no image, and the geometry, dungeon and media tasks
 /// resolve frames through the archive decoder rather than through a second copy of the
 /// frame facts kept here.
+///
+/// The corpus carries leaves the donor itself refuses by name: its texture reader lists
+/// the two truncated stubs among its unsupported filenames, so their malformed record here
+/// agrees with the donor rather than being a product-only judgement.
 /// </remarks>
 public sealed class TextureLeafInventory
 {
     /// <summary>The highest documented leaf id.</summary>
     public const int MaximumLeafId = 511;
-
-    /// <summary>The number of leaves the documentation records as supplied.</summary>
-    public const int PresentCount = 472;
-
-    /// <summary>The number of leaves the documentation records as absent.</summary>
-    public const int NotSuppliedCount = 40;
 
     private readonly Dictionary<int, TextureLeafRecord> byId;
 
@@ -125,18 +123,19 @@ public sealed class TextureLeafInventory
                 // let one label change what the same bytes decode to.
                 string label = $"TEXTURE.{id:000}";
                 TextureArchive archive = TextureArchive.Parse(entry.Bytes.Span, label, solidPalette);
-                if (archive.RecordCount == 0)
-                {
-                    // A header declaring no records is not a decoded leaf: a consumer
-                    // receiving it would have no addressable frame.
-                    leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Malformed, 0, 0, "The archive declares no records."));
-                    continue;
-                }
-
                 int frames = 0;
                 for (int record = 0; record < archive.RecordCount; record++)
                 {
                     frames += archive.GetRecordInfo(record).FrameCount;
+                }
+
+                if (archive.RecordCount == 0 || frames == 0)
+                {
+                    // A leaf with nothing to draw is not a decoded leaf: a header declaring
+                    // no records, or records that all declare no frames, leaves a consumer
+                    // with no addressable frame. One supplied leaf is exactly that.
+                    leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Malformed, archive.RecordCount, 0, "The archive declares no addressable frames."));
+                    continue;
                 }
 
                 leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Decoded, archive.RecordCount, frames, $"{archive.RecordCount} records, {frames} frames."));

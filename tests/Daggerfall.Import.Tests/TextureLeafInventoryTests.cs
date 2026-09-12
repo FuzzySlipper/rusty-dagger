@@ -20,8 +20,8 @@ public sealed class TextureLeafInventoryTests
         Assert.Equal(Enumerable.Range(0, 512), inventory.Leaves.Select(leaf => leaf.Id));
         Assert.Equal(472, inventory.Leaves.Count(leaf => leaf.Disposition != TextureLeafDisposition.NotSupplied));
         Assert.Equal(40, inventory.NotSupplied.Count());
-        Assert.Equal(2, inventory.Malformed.Count());
-        Assert.Equal(470, inventory.Decoded.Count());
+        Assert.Equal(3, inventory.Malformed.Count());
+        Assert.Equal(469, inventory.Decoded.Count());
     }
 
     [Fact]
@@ -42,13 +42,15 @@ public sealed class TextureLeafInventoryTests
     {
         TextureLeafInventory inventory = ReadInventory();
 
-        // Two supplied archives are 46-byte stubs whose record header runs past the file.
-        // Each keeps the decoder's own diagnostic, so an operator sees why rather than only
-        // that something is missing.
-        Assert.Equal([215, 217], inventory.Malformed.Select(leaf => leaf.Id));
+        // Two supplied archives are 46-byte stubs whose record header runs past the file,
+        // and one is a leaf whose every record declares no frames — nothing to draw. The
+        // donor's own reader refuses all three by name, so this agrees with it rather than
+        // being a product-only judgement. Each keeps a reason, so an operator sees why.
+        Assert.Equal([215, 217, 436], inventory.Malformed.Select(leaf => leaf.Id));
         Assert.All(inventory.Malformed, leaf => Assert.False(string.IsNullOrWhiteSpace(leaf.Note)));
-        Assert.All(inventory.Malformed, leaf => Assert.Contains("exceeds source length", leaf.Note, StringComparison.Ordinal));
-        Assert.All(inventory.Malformed, leaf => Assert.Equal(46, new FileInfo(Path.Combine(RepositoryRoot(), "local/arena2", leaf.Path)).Length));
+        Assert.All(inventory.Malformed, leaf => Assert.Equal(string.Empty, leaf.Note.Contains("has no frames", StringComparison.Ordinal) ? "unexpected" : string.Empty));
+        Assert.Contains(inventory.Malformed, leaf => leaf.Id == 215 && leaf.Note.Contains("exceeds source length", StringComparison.Ordinal));
+        Assert.Contains(inventory.Malformed, leaf => leaf.Id == 436 && leaf.Note.Contains("no addressable frames", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -57,7 +59,7 @@ public sealed class TextureLeafInventoryTests
         TextureLeafInventory inventory = ReadInventory();
 
         // Record and frame totals are measurements of the corpus, not transcribed numbers.
-        Assert.Equal(6718, inventory.Records);
+        Assert.Equal(6713, inventory.Records);
         Assert.Equal(11211, inventory.Frames);
         Assert.True(inventory.TryGet(2, out TextureLeafRecord? leaf));
         Assert.Equal(56, leaf!.Records);

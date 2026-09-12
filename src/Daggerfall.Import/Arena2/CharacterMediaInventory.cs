@@ -103,17 +103,33 @@ public sealed class CharacterMediaInventory
             .Where(group => group.Count() > 1)
             .Select(group => (group.Key, (IReadOnlyList<string>)group.Select(file => file.Path).Order(StringComparer.Ordinal).ToArray()));
 
+    /// <summary>
+    /// Enumerates the documented character media families for a caller that names no
+    /// consumer.
+    /// </summary>
+    public static CharacterMediaInventory Enumerate(
+        IEnumerable<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
+        IReadOnlySet<string> bound,
+        string source) =>
+        Enumerate(sources, bound, UnstatedConsumer, source);
+
+    /// <summary>The label a bound record carries when its caller names no consumer.</summary>
+    public const string UnstatedConsumer = "an unstated consumer";
+
     /// <summary>Enumerates the documented character media families.</summary>
     /// <param name="sources">File name and bytes for every supplied file.</param>
     /// <param name="bound">File names a published consumer binds.</param>
+    /// <param name="consumer">The consumer that binds those files, named by the caller.</param>
     /// <param name="source">Logical source identity for error messages.</param>
     public static CharacterMediaInventory Enumerate(
         IEnumerable<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
         IReadOnlySet<string> bound,
+        string consumer,
         string source)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(bound);
+        ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         List<CharacterMediaRecord> files = [];
         foreach ((string path, ReadOnlyMemory<byte> bytes) in sources.OrderBy(entry => entry.Path, StringComparer.Ordinal))
@@ -140,22 +156,11 @@ public sealed class CharacterMediaInventory
                     frames = info.FrameCount;
                     decode = CharacterMediaDecode.Cif;
                 }
-                else
+                else if (ImgDecoder.TryDecodeUi(bytes.Span, path, out IndexedImg? ui, out UiMediaDecode canvas, out reason))
                 {
-                    try
-                    {
-                        IndexedImg image = ImgDecoder.Decode(bytes.Span, path);
-                        width = image.Width;
-                        height = image.Height;
-                        decode = CharacterMediaDecode.Header;
-                    }
-                    catch (Arena2FormatException)
-                    {
-                        IndexedImg image = ImgDecoder.DecodeHeaderlessUiCanvas(bytes.Span, path);
-                        width = image.Width;
-                        height = image.Height;
-                        decode = CharacterMediaDecode.Headerless;
-                    }
+                    width = ui!.Width;
+                    height = ui.Height;
+                    decode = canvas == UiMediaDecode.Header ? CharacterMediaDecode.Header : CharacterMediaDecode.Headerless;
                 }
             }
             catch (Arena2FormatException failure)
@@ -167,7 +172,7 @@ public sealed class CharacterMediaInventory
             // families have no reader at all, and the weapon CIF reader refuses face CIFs.
             bool unsupported = decode == CharacterMediaDecode.NotRead;
             string binding = isBound
-                ? "Bound by a published consumer."
+                ? $"Bound by {consumer}."
                 : "No published consumer binds this file; it is retained unbound with its candidate use.";
             files.Add(new CharacterMediaRecord(
                 path,
@@ -177,7 +182,7 @@ public sealed class CharacterMediaInventory
                 frames,
                 key,
                 use,
-                isBound ? "content/worldrpg/imports/privateers-hold" : string.Empty,
+                isBound ? consumer : string.Empty,
                 unsupported ? CharacterMediaDisposition.Unsupported : isBound ? CharacterMediaDisposition.Bound : CharacterMediaDisposition.Unbound,
                 decode,
                 decode == CharacterMediaDecode.NotRead ? $"{binding} {reason}" : $"{binding} Candidate use: {use}."));

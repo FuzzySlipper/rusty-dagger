@@ -11,19 +11,6 @@ public enum UiMediaDisposition
 
 }
 
-/// <summary>Whether the decoder read one UI media file, and by which path.</summary>
-public enum UiMediaDecode
-{
-    /// <summary>The file carries a standard IMG record.</summary>
-    Header,
-
-    /// <summary>The file is a headerless UI canvas, which the classic UI publication reads.</summary>
-    Headerless,
-
-    /// <summary>Neither decoder path read the file.</summary>
-    Unread,
-}
-
 /// <summary>One supplied UI media file: its family, its canvas, and what binds it.</summary>
 public sealed record UiMediaRecord(
     string Path,
@@ -77,17 +64,32 @@ public sealed class UiMediaInventory
     /// <summary>The supplied files neither decoder path reads.</summary>
     public IEnumerable<UiMediaRecord> Unread => Files.Where(file => file.Decode == UiMediaDecode.Unread);
 
+    /// <summary>
+    /// Enumerates the documented UI media families for a caller that names no consumer.
+    /// </summary>
+    public static UiMediaInventory Enumerate(
+        IEnumerable<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
+        IReadOnlySet<string> admitted,
+        string source) =>
+        Enumerate(sources, admitted, UnstatedConsumer, source);
+
+    /// <summary>The label a bound record carries when its caller names no consumer.</summary>
+    public const string UnstatedConsumer = "an unstated consumer";
+
     /// <summary>Enumerates the documented UI media families.</summary>
     /// <param name="sources">File name and bytes for every supplied file.</param>
     /// <param name="admitted">File names a published consumer binds.</param>
+    /// <param name="consumer">The consumer that binds those files, named by the caller.</param>
     /// <param name="source">Logical source identity for error messages.</param>
     public static UiMediaInventory Enumerate(
         IEnumerable<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
         IReadOnlySet<string> admitted,
+        string consumer,
         string source)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(admitted);
+        ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         List<UiMediaRecord> files = [];
         foreach ((string path, ReadOnlyMemory<byte> bytes) in sources.OrderBy(entry => entry.Path, StringComparer.Ordinal))
@@ -95,44 +97,21 @@ public sealed class UiMediaInventory
             string family = FamilyOf(path, source);
             bool bound = admitted.Contains(path);
             UiMediaDisposition disposition = bound ? UiMediaDisposition.Admitted : UiMediaDisposition.RequiredPending;
-            string consumer = bound ? "content/ui/ui-manifest.json" : string.Empty;
-            IndexedImg? image = null;
-            UiMediaDecode decode = UiMediaDecode.Unread;
-            string reason = string.Empty;
-            try
-            {
-                image = ImgDecoder.Decode(bytes.Span, path);
-                decode = UiMediaDecode.Header;
-            }
-            catch (Arena2FormatException headerFailure)
-            {
-                // The classic UI publication reads some canvases through the headerless path,
-                // so a file the standard reader refuses is not yet unread.
-                try
-                {
-                    image = ImgDecoder.DecodeHeaderlessUiCanvas(bytes.Span, path);
-                    decode = UiMediaDecode.Headerless;
-                }
-                catch (Arena2FormatException headerlessFailure)
-                {
-                    reason = $"{headerFailure.Message} The headerless UI canvas path also refused it: {headerlessFailure.Message}";
-                }
-            }
-
+            bool read = ImgDecoder.TryDecodeUi(bytes.Span, path, out IndexedImg? image, out UiMediaDecode decode, out string reason);
             string binding = bound
-                ? "Bound by the published UI asset manifest."
+                ? $"Bound by {consumer}."
                 : "No published consumer binds this file; the binding is required-pending. Candidates named by this task's inventory: F095, F100, F102, F104, F105, F106.";
             files.Add(new UiMediaRecord(
                 path,
                 family,
                 image?.Width ?? 0,
                 image?.Height ?? 0,
-                consumer,
+                bound ? consumer : string.Empty,
                 disposition,
                 decode,
-                decode == UiMediaDecode.Unread
-                    ? $"{binding} Neither decoder path read it: {reason}"
-                    : $"{binding} Read as {(decode == UiMediaDecode.Header ? "a standard IMG record" : "a headerless UI canvas")}, {image!.Width} by {image.Height} pixels."));
+                read
+                    ? $"{binding} Read as {(decode == UiMediaDecode.Header ? "a standard IMG record" : "a headerless UI canvas")}, {image!.Width} by {image.Height} pixels."
+                    : $"{binding} Neither decoder path read it: {reason}"));
         }
 
         return new UiMediaInventory(source, files);
