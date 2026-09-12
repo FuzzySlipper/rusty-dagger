@@ -99,7 +99,11 @@ public sealed class WorldRpgProduct : IEngineProduct
             return new(null, loaded.Revision, [new("unsupported", "The selected compiled ruleset does not support save resume.")]);
         try
         {
-            return new(new WorldRpgProduct((saveable.CreateSession(new GameSessionContext(context.Engine, composition), loaded.State.Payload), composition.Identity)), loaded.Revision, []);
+            IGameSession session = saveable.CreateSession(new GameSessionContext(context.Engine, composition), loaded.State.Payload);
+            return new(new WorldRpgProduct((session, composition.Identity)), loaded.Revision, [])
+            {
+                Notices = session is IRestoringGameSession restoring ? restoring.RestoreNotices : [],
+            };
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
         {
@@ -167,5 +171,12 @@ public sealed class WorldRpgProduct : IEngineProduct
 public sealed record WorldRpgSaveDiagnostic(string Code, string Message);
 public sealed record WorldRpgResumeResult(WorldRpgProduct? Product, ulong Revision, IReadOnlyList<WorldRpgSaveDiagnostic> Diagnostics)
 {
+    /// <summary>
+    /// What the restore reported without refusing: a migrated schema or a reference the
+    /// selected content could not explain. A notice never blocks a resume; only a
+    /// diagnostic does.
+    /// </summary>
+    public IReadOnlyList<SaveRestoreNotice> Notices { get; init; } = [];
+
     public bool IsResumed => Product is not null && Diagnostics.Count == 0;
 }

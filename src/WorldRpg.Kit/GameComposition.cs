@@ -392,3 +392,20 @@ public interface ISaveableGameSession : IGameSession
 {
     RulesetSavePayload CaptureSave();
 }
+
+/// <summary>
+/// A recoverable difference between a saved payload and the product that read it: a
+/// migrated schema, or a reference the selected content could not explain. It is
+/// reported rather than raised, because the save is still restorable.
+/// </summary>
+public sealed record SaveRestoreNotice(string Code, string Message);
+
+/// <summary>
+/// Optional session seam for what a restore had to report. A notice never blocks the
+/// resume: a difference whose meaning is recoverable is reported with its observed
+/// value, and only a payload that cannot be interpreted is refused.
+/// </summary>
+public interface IRestoringGameSession : IGameSession
+{
+    IReadOnlyList<SaveRestoreNotice> RestoreNotices { get; }
+}

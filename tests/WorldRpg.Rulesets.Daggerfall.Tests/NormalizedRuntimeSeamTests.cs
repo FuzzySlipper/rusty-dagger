@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Numerics;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Rusty.Engine;
 using Rusty.Engine.Entities;
@@ -1333,7 +1335,7 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
 
-        DaggerfallSavePayload saved = DaggerfallSavePayload.Decode(session.CaptureSave());
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave()).Payload;
 
         Assert.Null(saved.Continuation);
         Assert.NotEmpty(saved.Inventory.UniqueItems);
@@ -1355,7 +1357,7 @@ public sealed class NormalizedRuntimeSeamTests
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         session.Update(new ProductUpdateState(.125f));
 
-        DaggerfallSavePayload saved = DaggerfallSavePayload.Decode(session.CaptureSave());
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave()).Payload;
 
         Assert.NotNull(saved.Continuation);
         Assert.Equal(1UL, saved.Continuation!.Checkpoint.SourceGeneration);
@@ -1384,12 +1386,12 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Decode(payload));
+        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Read(payload).Payload);
 
-        DaggerfallSavePayload immediate = DaggerfallSavePayload.Decode(resumed.CaptureSave());
+        DaggerfallSavePayload immediate = DaggerfallSavePayload.Read(resumed.CaptureSave()).Payload;
 
-        Assert.Equal(DaggerfallSavePayload.Decode(payload).Continuation, immediate.Continuation);
-        DaggerfallInventorySave originalInventory = DaggerfallSavePayload.Decode(payload).Inventory;
+        Assert.Equal(DaggerfallSavePayload.Read(payload).Payload.Continuation, immediate.Continuation);
+        DaggerfallInventorySave originalInventory = DaggerfallSavePayload.Read(payload).Payload.Inventory;
         Assert.Equal(originalInventory.Stacks, immediate.Inventory.Stacks);
         Assert.Equal(originalInventory.UniqueItems, immediate.Inventory.UniqueItems);
         Assert.Equal(originalInventory.Equipment, immediate.Inventory.Equipment);
@@ -1419,7 +1421,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Decode(payload));
+        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Read(payload).Payload);
         long before = resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
 
         resumed.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 2, 1, .125));
@@ -1440,7 +1442,7 @@ public sealed class NormalizedRuntimeSeamTests
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         DaggerfallSavePayload saved;
         using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
-            saved = DaggerfallSavePayload.Decode(session.CaptureSave());
+            saved = DaggerfallSavePayload.Read(session.CaptureSave()).Payload;
 
         DaggerfallSavePayload badInventory = saved with
         {
@@ -1462,12 +1464,12 @@ public sealed class NormalizedRuntimeSeamTests
             },
         };
 
-        Assert.Throws<ArgumentException>(() => badInventory.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badCorpse.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badPitch.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badHealth.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badProgression.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => collidingUnique.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badInventory.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badCorpse.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badPitch.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badHealth.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => badProgression.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => collidingUnique.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
     }
 
     [Fact]
@@ -1562,7 +1564,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession resumedSession = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
-        DaggerfallSavePayload resumed = DaggerfallSavePayload.Decode(resumedSession.CaptureSave());
+        DaggerfallSavePayload resumed = DaggerfallSavePayload.Read(resumedSession.CaptureSave()).Payload;
 
         DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(resumed.RestoredIdentities());
 
@@ -1578,7 +1580,7 @@ public sealed class NormalizedRuntimeSeamTests
             Assert.Equal(DurableIdentityClassification.Live, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, item.EntityId)));
         // And a resumed session's own re-save is still a valid save: the resume leg
         // must not turn held identities into tombstones.
-        resumed.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        resumed.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
     }
 
     [Fact]
@@ -1605,8 +1607,8 @@ public sealed class NormalizedRuntimeSeamTests
             RulesetSavePayload resaved = ((ISaveableGameSession)restoredSession).CaptureSave();
             // A resumed session's own save is still restorable through the same seam.
             using IGameSession second = ruleset.CreateSession(new GameSessionContext(source.Context, GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition()), resaved);
-            DaggerfallSavePayload first = DaggerfallSavePayload.Decode(captured);
-            DaggerfallSavePayload after = DaggerfallSavePayload.Decode(((ISaveableGameSession)second).CaptureSave());
+            DaggerfallSavePayload first = DaggerfallSavePayload.Read(captured).Payload;
+            DaggerfallSavePayload after = DaggerfallSavePayload.Read(((ISaveableGameSession)second).CaptureSave()).Payload;
             Assert.Equal(first.Identities.Kinds.Length, after.Identities.Kinds.Length);
             foreach (DaggerfallUniqueSave item in first.Inventory.UniqueItems)
                 Assert.Contains(item.EntityId, after.ReservedUniqueItemEntityIds);
@@ -1633,7 +1635,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         // Tolerated rather than refused: the allocator treats a reservation as live
         // content wherever it sits, so the save is still restorable.
-        saved.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        saved.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
 
         List<string> releases = [];
         ContentFake content = new(releases);
@@ -1641,7 +1643,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession resumed = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
-        DurableIdentityAllocator ledger = DurableIdentityAllocator.Restore(DaggerfallSavePayload.Decode(resumed.CaptureSave()).RestoredIdentities());
+        DurableIdentityAllocator ledger = DurableIdentityAllocator.Restore(DaggerfallSavePayload.Read(resumed.CaptureSave()).Payload.RestoredIdentities());
 
         Assert.Equal(DurableIdentityClassification.Live, ledger.Classify(new DurableIdentityReference(DurableIdentityKind.Item, futureContent)));
         Assert.Contains(futureContent, ledger.ReservedIdentities(DurableIdentityKind.Item));
@@ -1661,7 +1663,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        ulong authored = DaggerfallSavePayload.Decode(session.CaptureSave()).Inventory.UniqueItems.First().EntityId;
+        ulong authored = DaggerfallSavePayload.Read(session.CaptureSave()).Payload.Inventory.UniqueItems.First().EntityId;
 
         // Authored loadout content is reserved, never issued, so it cannot be removed.
         Assert.Throws<InvalidOperationException>(() => session.RemoveUniqueItemIdentity(authored));
@@ -1672,12 +1674,12 @@ public sealed class NormalizedRuntimeSeamTests
 
         Assert.Contains(generated.Value, session.UniqueItemAllocator.RemovedEntityIds);
         Assert.DoesNotContain(generated.Value, session.UniqueItemAllocator.ReservedEntityIds);
-        DaggerfallSavePayload saved = DaggerfallSavePayload.Decode(session.CaptureSave());
-        saved.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Read(session.CaptureSave()).Payload;
+        saved.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
     }
 
     [Fact]
-    public void Restore_rejects_a_held_identity_that_the_content_cannot_explain()
+    public void Restore_reports_a_held_identity_the_content_cannot_explain_instead_of_refusing()
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
@@ -1694,8 +1696,15 @@ public sealed class NormalizedRuntimeSeamTests
             },
         };
 
-        Assert.Throws<ArgumentException>(() => dangling.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Empty(DaggerfallSavePayload.Decode(DaggerfallSavePayload.Encode(saved)).RemovedUniqueItemEntityIds);
+        DaggerfallRestorePlan plan = dangling.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        // The identity is reported with the value that was observed and is not
+        // materialized under an identity nothing explains; the save still restores.
+        SaveRestoreNotice notice = Assert.Single(plan.Notices, value => value.Code == "unexplained-item-identity");
+        Assert.Contains(unissued.ToString(CultureInfo.InvariantCulture), notice.Message, StringComparison.Ordinal);
+        Assert.Empty(plan.Payload.Inventory.UniqueItems);
+        Assert.Empty(saved.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()).Notices);
+        Assert.Empty(DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(saved)).Payload.RemovedUniqueItemEntityIds);
     }
 
     [Fact]
@@ -1706,7 +1715,7 @@ public sealed class NormalizedRuntimeSeamTests
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallSavePayload session = CapturedSave(root);
         // A fresh save holds the authored loadout, whose identities are authored content.
-        session.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        session.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
 
         ulong generated = DaggerfallUniqueItemAllocator.DefaultFirstEntityId;
         ulong[] held = [.. session.Inventory.UniqueItems.Select(item => item.EntityId), generated];
@@ -1724,7 +1733,7 @@ public sealed class NormalizedRuntimeSeamTests
             },
         };
 
-        lootBearing.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        lootBearing.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
 
         // A held identity that is neither authored content nor issued is dangling.
         DaggerfallSavePayload dangling = lootBearing with
@@ -1736,7 +1745,7 @@ public sealed class NormalizedRuntimeSeamTests
                     .ToArray(),
             },
         };
-        Assert.Throws<ArgumentException>(() => dangling.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => dangling.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
     }
 
     [Fact]
@@ -1768,27 +1777,156 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.DoesNotContain(retired, ledger.ReservedEntityIds);
         Assert.Equal(retired + 1, ledger.NextEntityId);
         // Re-saving keeps the tombstone, and the next generated identity cannot reuse it.
-        DaggerfallSavePayload recaptured = DaggerfallSavePayload.Decode(resumed.CaptureSave());
+        DaggerfallSavePayload recaptured = DaggerfallSavePayload.Read(resumed.CaptureSave()).Payload;
         Assert.Contains(retired, recaptured.Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item).Removed);
         Assert.True(retired < recaptured.NextUniqueItemEntityId);
     }
 
     [Fact]
-    public void Daggerfall_save_from_an_older_schema_is_rejected_instead_of_misread()
+    public void Daggerfall_schema_one_is_read_and_migrated_with_the_difference_reported()
+    {
+        string root = RepositoryRoot();
+        DaggerfallSavePayload saved = CapturedSave(root);
+        KindAllocatorState items = saved.Identities.RequireKinds(DaggerfallSavePayload.PersistedKinds).Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
+        // A real schema-1 payload: cursor, flat reservation list, no tombstones.
+        DaggerfallSavePayloadV1 legacy = new(
+            1,
+            saved.Player,
+            saved.Actors,
+            saved.Experience,
+            saved.Level,
+            saved.Inventory,
+            saved.Corpses,
+            items.NextIdentity,
+            [.. items.Reserved],
+            saved.CombatCooldowns,
+            saved.Continuation);
+        RulesetSavePayload encoded = new(
+            DaggerfallRuleset.Identity,
+            1,
+            JsonSerializer.SerializeToUtf8Bytes(legacy, DaggerfallSaveJsonContext.Default.DaggerfallSavePayloadV1));
+
+        DaggerfallSaveRead read = DaggerfallSavePayload.Read(encoded);
+
+        SaveRestoreNotice notice = Assert.Single(read.Notices);
+        Assert.Equal("save-schema-migrated", notice.Code);
+        Assert.Contains(items.NextIdentity.ToString(CultureInfo.InvariantCulture), notice.Message, StringComparison.Ordinal);
+        KindAllocatorState migrated = read.Payload.Identities.RequireKinds(DaggerfallSavePayload.PersistedKinds).Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
+        Assert.Equal(items.NextIdentity, migrated.NextIdentity);
+        Assert.Equal(items.Reserved.Order(), migrated.Reserved.Order());
+        Assert.Empty(migrated.Removed);
+        Assert.Equal(DaggerfallSavePayload.CurrentSchemaVersion, read.Payload.SchemaVersion);
+    }
+
+    [Fact]
+    public void Daggerfall_save_versions_whose_meaning_cannot_be_recovered_are_still_refused()
     {
         string root = RepositoryRoot();
         DaggerfallSavePayload saved = CapturedSave(root);
         RulesetSavePayload encoded = DaggerfallSavePayload.Encode(saved);
-        RulesetSavePayload previousSchema = new(encoded.Ruleset, DaggerfallSavePayload.CurrentSchemaVersion - 1, encoded.Bytes.Span);
-        DaggerfallSavePayload embeddedPreviousSchema = saved with { SchemaVersion = DaggerfallSavePayload.CurrentSchemaVersion - 1 };
+        // A future version is not interpretable here, and a schema-1 label on bytes that
+        // never carried schema-1 fields would be a misread rather than a migration.
+        RulesetSavePayload future = new(encoded.Ruleset, DaggerfallSavePayload.CurrentSchemaVersion + 1, encoded.Bytes.Span);
+        RulesetSavePayload mislabelled = new(encoded.Ruleset, 1, encoded.Bytes.Span);
+        RulesetSavePayload embeddedFuture = DaggerfallSavePayload.Encode(saved with { SchemaVersion = DaggerfallSavePayload.CurrentSchemaVersion + 1 });
 
-        ArgumentException unsupported = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Decode(previousSchema));
-        ArgumentException embedded = Assert.Throws<ArgumentException>(() =>
-            DaggerfallSavePayload.Decode(DaggerfallSavePayload.Encode(embeddedPreviousSchema)));
+        ArgumentException unsupported = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(future));
+        ArgumentException mislabelledError = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(mislabelled));
+        ArgumentException embedded = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Read(embeddedFuture));
 
         Assert.Contains("schema", unsupported.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("does not carry that schema", mislabelledError.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("schema", embedded.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(2U, DaggerfallSavePayload.CurrentSchemaVersion);
+    }
+
+    [Fact]
+    public void Restore_reports_an_authored_placement_the_save_omits_and_materializes_it_from_content()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload saved = CapturedSave(root);
+        DaggerfallActorSave omitted = saved.Actors.OrderBy(actor => actor.EntityId).First();
+        DaggerfallSavePayload partial = saved with { Actors = [.. saved.Actors.Where(actor => actor.EntityId != omitted.EntityId)] };
+
+        DaggerfallRestorePlan plan = partial.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        // An authored placement the save does not mention is recoverable: the site load
+        // places it, so the save restores rather than being refused.
+        SaveRestoreNotice notice = Assert.Single(plan.Notices, value => value.Code == "authored-actor-not-saved");
+        Assert.Contains(omitted.EntityId.ToString(CultureInfo.InvariantCulture), notice.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(plan.Payload.Actors, actor => actor.EntityId == omitted.EntityId);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession session = new(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, plan.Payload, plan.Notices);
+
+        Assert.Contains(session.RestoreNotices, value => value.Code == "authored-actor-not-saved");
+    }
+
+    [Fact]
+    public void Restore_reports_an_actor_reference_nothing_explains_and_keeps_the_rest_of_the_save()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload saved = CapturedSave(root);
+        long unexplained = saved.Actors.Max(actor => actor.EntityId) + 1000;
+        DaggerfallSavePayload invented = saved with
+        {
+            Actors = [.. saved.Actors, new DaggerfallActorSave(unexplained, 1f, 2f, 3f, 0f, 1, 0, 0)],
+        };
+
+        DaggerfallRestorePlan plan = invented.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        // Neither a placement in the selected content nor an identity the allocator
+        // issued: reported with the observed identity, and not materialized.
+        SaveRestoreNotice notice = Assert.Single(plan.Notices, value => value.Code == "unexplained-actor");
+        Assert.Contains(unexplained.ToString(CultureInfo.InvariantCulture), notice.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(plan.Payload.Actors, actor => actor.EntityId == unexplained);
+        Assert.NotEmpty(plan.Payload.Actors);
+    }
+
+    [Fact]
+    public void Restore_carries_an_owner_section_no_current_owner_reads_and_preserves_its_bytes()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload saved = CapturedSave(root);
+        byte[] section = [1, 2, 3, 4];
+        DaggerfallSavePayload withOwner = saved with { Owners = [new DaggerfallOwnerSave("quests", section)] };
+
+        DaggerfallRestorePlan plan = withOwner.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession session = new(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, plan.Payload, plan.Notices);
+
+        // A section this build cannot interpret is reported and preserved unchanged, so a
+        // save written by a later owner is not silently discarded.
+        Assert.Contains(session.RestoreNotices, value => value.Code == "unread-owner-section");
+        DaggerfallOwnerSave carried = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Payload.Owners);
+        Assert.Equal("quests", carried.OwnerId);
+        Assert.Equal(section, carried.Section);
+    }
+
+    [Fact]
+    public void Durable_owner_sections_must_name_one_owner_each()
+    {
+        string root = RepositoryRoot();
+        DaggerfallSavePayload saved = CapturedSave(root);
+        byte[] section = [9];
+
+        Assert.Throws<ArgumentException>(() => (saved with { Owners = [new DaggerfallOwnerSave("quests", section), new DaggerfallOwnerSave("quests", section)] }).Validate());
+        Assert.Throws<ArgumentException>(() => (saved with { Owners = [new DaggerfallOwnerSave("", section)] }).Validate());
+        Assert.Throws<ArgumentException>(() => (saved with { Owners = [new DaggerfallOwnerSave("quests", [])] }).Validate());
     }
 
     private static DaggerfallSavePayload CapturedSave(string root)
@@ -1801,10 +1939,10 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
-        return DaggerfallSavePayload.Decode(session.CaptureSave());
+        return DaggerfallSavePayload.Read(session.CaptureSave()).Payload;
     }
 
-    private static DaggerfallSavePayload RoundTrip(DaggerfallSavePayload value) => DaggerfallSavePayload.Decode(DaggerfallSavePayload.Encode(value));
+    private static DaggerfallSavePayload RoundTrip(DaggerfallSavePayload value) => DaggerfallSavePayload.Read(DaggerfallSavePayload.Encode(value)).Payload;
 
     private static IReadOnlyList<DaggerfallLoadoutEntry> PlayerLoadout(string root) =>
         DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")))
@@ -2387,7 +2525,7 @@ public sealed class NormalizedRuntimeSeamTests
         using (DaggerfallSession original = VisibleEnemySession(releases).Session)
         {
             original.Update(new ProductUpdate(OuterUpdate(1), []));
-            saved = DaggerfallSavePayload.Decode(original.CaptureSave());
+            saved = DaggerfallSavePayload.Read(original.CaptureSave()).Payload;
         }
 
         // The decision charged the attack before the save, and the swing itself is
