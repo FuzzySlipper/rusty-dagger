@@ -135,6 +135,14 @@ public sealed class MonsterArchiveInventory
     /// than a second inventory: a link to media that is not supplied is a gap the task
     /// that publishes that media needs to see.
     /// </summary>
+    /// <remarks>
+    /// This is not the publication's texture closure. That check
+    /// (<c>Arena2DungeonMediaPublication.EnforceExactTextureClosure</c>) refuses a
+    /// publication whose supplied archives are not exactly the set one dungeon selection
+    /// requires. This one asks, per archive record, whether the mobile it names has its
+    /// media in the supplied sources at all, and reports the records that do not rather
+    /// than refusing: an enumeration is allowed to find the corpus incomplete.
+    /// </remarks>
     public IEnumerable<MonsterArchiveMediaGap> MissingMedia(IReadOnlySet<int> suppliedTextureArchives)
     {
         ArgumentNullException.ThrowIfNull(suppliedTextureArchives);
