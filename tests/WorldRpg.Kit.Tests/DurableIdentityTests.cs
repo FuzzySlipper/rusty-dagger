@@ -22,6 +22,52 @@ public sealed class DurableIdentityTests
     }
 
     [Fact]
+    public void A_persisted_cursor_may_sit_on_a_reservation_without_letting_the_next_session_reissue_it()
+    {
+        // A reservation immediately above the last issued identity is the case where
+        // the persisted progress marker is not the next identity to issue. It must not
+        // be advanced to the next issuable identity, or the identity between them would
+        // be reissued after a restore.
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Item, 10, [11]);
+        DurableIdentityReference issued = identities.Allocate(DurableIdentityKind.Item);
+        Assert.Equal(10UL, issued.Value);
+        Assert.Equal(12UL, identities.NextIdentity(DurableIdentityKind.Item));
+
+        DurableIdentityState captured = identities.CaptureState();
+        Assert.Equal(11UL, captured.Kinds.Single().NextIdentity);
+        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(captured);
+
+        // The reservation is still live and the next identity is past it, while the
+        // already-issued identity stays issued rather than becoming available again.
+        Assert.Equal(DurableIdentityClassification.Live, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, 11)));
+        DurableIdentityReference next = restored.Allocate(DurableIdentityKind.Item);
+        Assert.Equal(12UL, next.Value);
+        Assert.NotEqual(issued.Value, next.Value);
+    }
+
+    [Fact]
+    public void Removal_follows_the_ledger_record_below_the_cursor_and_the_session_guards_authorship()
+    {
+        // Below the progress marker the ledger cannot tell an authored reservation from
+        // an issued identity, so it accepts both and the session owns the distinction;
+        // above the marker it still refuses, because nothing there was issued.
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Item, 10, [100]);
+        Assert.Equal(10UL, identities.Allocate(DurableIdentityKind.Item).Value);
+        Assert.Equal(11UL, identities.Allocate(DurableIdentityKind.Item).Value);
+
+        // An issued identity below the marker is removable, and its tombstone sticks.
+        identities.Remove(new DurableIdentityReference(DurableIdentityKind.Item, 10));
+        Assert.Equal(DurableIdentityClassification.Removed, identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, 10)));
+        // A reservation is live but was never issued, so the ledger refuses it above the
+        // marker and the session owns that distinction below the marker.
+        Assert.Equal(DurableIdentityClassification.Live, identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, 100)));
+        Assert.Throws<InvalidOperationException>(() =>
+            identities.Remove(new DurableIdentityReference(DurableIdentityKind.Item, 100)));
+        Assert.Throws<InvalidOperationException>(() =>
+            identities.Remove(new DurableIdentityReference(DurableIdentityKind.Item, 5_000)));
+    }
+
+    [Fact]
     public void Removal_tombstones_an_issued_identity_and_classification_separates_removed_from_never_issued()
     {
         DurableIdentityAllocator identities = new(DurableIdentityKind.Item, 1_000);

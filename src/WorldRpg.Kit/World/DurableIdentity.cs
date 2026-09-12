@@ -247,14 +247,22 @@ public sealed class DurableIdentityAllocator
         internal IReadOnlyCollection<ulong> Reserved => _reserved;
         internal IReadOnlyCollection<ulong> Removed => _removed;
 
-        /// <summary>The cursor to persist: the next identity to issue, or the exhaustion marker.</summary>
+        /// <summary>
+        /// The persisted progress marker: one past the last issued identity, or the
+        /// exhaustion marker. It is deliberately not the identity the next allocation
+        /// will issue — the next identity may be higher, because reserved and tombstoned
+        /// identities are skipped — and it may therefore sit on a reservation. Moving it
+        /// forward to the next issuable identity instead would lose the boundary between
+        /// an identity that was issued and a reservation below it, and a restored ledger
+        /// would be free to issue that identity a second time.
+        /// </summary>
         internal ulong PersistedCursor => _exhausted ? ExhaustedCursor : _cursor + 1;
 
         /// <summary>
-        /// The identity the next allocation will issue, and the identity persisted for
-        /// the next session. Reserved and tombstoned identities are skipped, and an
-        /// exhausted kind reports none rather than advertising a value that allocation
-        /// would refuse. Peeking never moves the cursor.
+        /// The identity the next allocation will issue. Reserved and tombstoned
+        /// identities are skipped, and an exhausted kind reports none rather than
+        /// advertising a value that allocation would refuse. Peeking never moves the
+        /// cursor; see <see cref="PersistedCursor"/> for what is saved.
         /// </summary>
         internal ulong NextIssued => !_exhausted && Scan() is ulong value && value != 0
             ? value
@@ -273,12 +281,20 @@ public sealed class DurableIdentityAllocator
             return allocated;
         }
 
+        /// <summary>
+        /// Records a tombstone for an identity this allocator issued. An authored
+        /// reservation is refused: it was never issued, so tombstoning it would report
+        /// content as removed. A restored ledger can only enforce this for reservations
+        /// above its progress marker; below it, an authored reservation is
+        /// indistinguishable from an issued identity, and the caller that still knows
+        /// which identities the selected content claims owns that distinction.
+        /// </summary>
         internal void Remove(ulong value)
         {
             if (_removed.Contains(value)) return;
             if (!_reserved.Contains(value) || value > _cursor)
             {
-                throw new InvalidOperationException($"Durable {Kind} identity {value} was never issued by this allocator and cannot be removed.");
+                throw new InvalidOperationException($"Durable {Kind} identity {value} was not issued by this allocator and cannot be removed.");
             }
 
             _reserved.Remove(value);
