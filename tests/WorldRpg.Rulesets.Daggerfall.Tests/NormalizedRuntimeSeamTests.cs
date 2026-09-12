@@ -1838,6 +1838,158 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void Restore_reports_tracks_and_item_identities_the_content_disagrees_with()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload saved = CapturedSave(root);
+        DaggerfallActorDefinition actorDefinition = definitions.RequireActor(inputs.Project.Actors.Values.First().ActorId);
+        DaggerfallActorSave first = saved.Actors.OrderBy(actor => actor.EntityId).First();
+        DaggerfallSavePayload inconsistent = saved with
+        {
+            Player = saved.Player with { Stamina = 100_000, Magicka = 100_000 },
+            Actors = [.. saved.Actors.Select(actor => actor.EntityId == first.EntityId
+                ? actor with { Health = actorDefinition.Health.Maximum + 1_000 }
+                : actor)],
+        };
+        DaggerfallSavePayload duplicated = saved with
+        {
+            Inventory = saved.Inventory with
+            {
+                UniqueItems = [.. saved.Inventory.UniqueItems, saved.Inventory.UniqueItems[0]],
+                Equipment = [],
+            },
+        };
+
+        DaggerfallRestorePlan tracks = inconsistent.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        // The donor assigns all three tracks verbatim in restore mode, so a value above
+        // the reconstruction is reported and kept rather than costing the whole save.
+        Assert.Contains(tracks.Notices, value => value.Code == "player-stamina-above-maximum");
+        Assert.Contains(tracks.Notices, value => value.Code == "player-magicka-above-maximum");
+        Assert.Contains(tracks.Notices, value => value.Code == "actor-health-above-maximum");
+        Assert.Equal(100_000, tracks.Payload.Player.Stamina);
+        Assert.Equal(actorDefinition.Health.Maximum + 1_000, tracks.Payload.Actors.Single(actor => actor.EntityId == first.EntityId).Health);
+
+        // Two items sharing one durable identity is internally inconsistent rather than
+        // a content disagreement, so it is still refused.
+        Assert.Throws<ArgumentException>(() => duplicated.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        // A negative track is inconsistent in the same way.
+        Assert.Throws<ArgumentException>(() => (saved with { Player = saved.Player with { Stamina = -1 } })
+            .ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        // A corpse referring to an actor nothing explains is reported and dropped.
+        DaggerfallSavePayload orphanCorpse = saved with
+        {
+            Actors = [.. saved.Actors.Where(actor => actor.EntityId != saved.Actors[0].EntityId)],
+            Corpses = [new DaggerfallCorpseSave(saved.Actors[0].EntityId, 1, true, true, [], [])],
+        };
+        DaggerfallRestorePlan corpse = orphanCorpse.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        Assert.Contains(corpse.Notices, value => value.Code == "unexplained-corpse");
+        Assert.Empty(corpse.Payload.Corpses);
+        // Experience beyond the authored rewards, health beyond the reconstruction and an
+        // over-maximum stack each report the observed value instead of refusing.
+        DaggerfallStackSave fungible = saved.Inventory.Stacks[0];
+        DaggerfallItemDefinition fungibleDefinition = definitions.Items[new DaggerfallItemId(fungible.ItemId)];
+        DaggerfallSavePayload overMaximum = saved with
+        {
+            Experience = 1_000_000,
+            Player = saved.Player with { Health = long.MaxValue / 4 },
+            Inventory = saved.Inventory with
+            {
+                Stacks = [.. saved.Inventory.Stacks.Select(value => StringComparer.Ordinal.Equals(value.ItemId, fungible.ItemId)
+                    ? value with { Quantity = fungibleDefinition.MaximumQuantity + 10 }
+                    : value)],
+            },
+        };
+        DaggerfallRestorePlan values = overMaximum.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        Assert.Contains(values.Notices, value => value.Code == "progression-above-authored-rewards");
+        Assert.Contains(values.Notices, value => value.Code == "player-health-above-reconstruction");
+        SaveRestoreNotice stack = Assert.Single(values.Notices, value => value.Code == "stack-above-authored-maximum");
+        Assert.Contains((fungibleDefinition.MaximumQuantity + 10).ToString(CultureInfo.InvariantCulture), stack.Message, StringComparison.Ordinal);
+        // An authored identity the ledger also tombstones keeps its authored reservation.
+        DaggerfallSavePayload tombstoned = saved with
+        {
+            Identities = new DurableIdentityState([
+                new KindAllocatorState(
+                    DurableIdentityKind.Item,
+                    saved.NextUniqueItemEntityId,
+                    saved.ReservedUniqueItemEntityIds,
+                    [saved.ReservedUniqueItemEntityIds[0]]),
+            ]),
+        };
+        // A reservation that is also tombstoned contradicts the ledger's own invariant,
+        // so the ledger refuses it rather than resolution reporting it.
+        Assert.Throws<ArgumentException>(() => tombstoned.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+    }
+
+    [Fact]
+    public void A_registered_owner_whose_save_carries_no_section_is_reported()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        DaggerfallSavePayload saved = CapturedSave(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        RecordingSaveOwner owner = new("quests");
+
+        using DaggerfallSession session = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
+            DaggerfallSavePayload.Encode(saved), RandomMinimum.Create(), [owner]);
+
+        // An owner this build has but the save says nothing about starts fresh, and that
+        // is reported rather than passing as a complete restore.
+        Assert.Contains(session.RestoreNotices, value => value.Code == "owner-section-absent" && value.Message.Contains("quests", StringComparison.Ordinal));
+        Assert.False(owner.Restored);
+    }
+
+    [Fact]
+    public void A_registered_owner_restores_its_own_section_and_writes_it_back()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        byte[] section = [7, 8, 9];
+        DaggerfallSavePayload saved = CapturedSave(root) with { Owners = [new DaggerfallOwnerSave("quests", section)] };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        RecordingSaveOwner owner = new("quests");
+
+        using DaggerfallSession session = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
+            DaggerfallSavePayload.Encode(saved), RandomMinimum.Create(), [owner]);
+
+        // The seam is a read path: the owner receives exactly its bytes, and what it
+        // captures replaces that section on the next save.
+        Assert.Equal(section, owner.Received);
+        Assert.DoesNotContain(session.RestoreNotices, value => value.Code == "unread-owner-section");
+        DaggerfallOwnerSave written = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Payload.Owners);
+        Assert.Equal("quests", written.OwnerId);
+        Assert.Equal([7, 8, 9], written.Section);
+    }
+
+    private sealed class RecordingSaveOwner(string ownerId) : IDaggerfallSaveOwner
+    {
+        public string OwnerId => ownerId;
+
+        public byte[]? Received { get; private set; }
+
+        public bool Restored => Received is not null;
+
+        public byte[] Capture() => Received ?? [1];
+
+        public void Restore(ReadOnlySpan<byte> section) => Received = section.ToArray();
+    }
+
+    [Fact]
     public void A_rejected_restore_leaves_the_live_session_untouched()
     {
         string root = RepositoryRoot();

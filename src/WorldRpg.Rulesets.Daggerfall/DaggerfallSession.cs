@@ -113,6 +113,20 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             owner.Restore(section.Section);
         }
 
+        // The mirror case: an owner this build has, restoring a save that carries no
+        // section for it. It continues from fresh state, which is a difference worth
+        // reporting for the same reason an unread section is.
+        foreach (IDaggerfallSaveOwner owner in _saveOwners.OrderBy(value => value.OwnerId, StringComparer.Ordinal))
+        {
+            if ((saved?.Owners ?? []).Any(section => StringComparer.Ordinal.Equals(section.OwnerId, owner.OwnerId)))
+            {
+                continue;
+            }
+
+            sectionNotices.Add(new SaveRestoreNotice("owner-section-absent",
+                $"The save carries no section for owner '{owner.OwnerId}', which this build has; that owner starts from its default state."));
+        }
+
         _carriedOwnerSections = carried;
         _restoreNotices = [.. restoreNotices, .. sectionNotices];
         List<IDisposable> partiallyConstructed = [];
