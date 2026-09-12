@@ -1470,8 +1470,8 @@ public sealed record Arena2ClassicMediaPublication(
             "MAIN03I0.IMG" => ImgDecoder.Decode(Main03I0Img, "arena2/MAIN03I0.IMG"),
             "MAIN04I0.IMG" => ImgDecoder.Decode(Main04I0Img, "arena2/MAIN04I0.IMG"),
             "MAIN05I0.IMG" => ImgDecoder.Decode(Main05I0Img, "arena2/MAIN05I0.IMG"),
-            "INVE00I0.IMG" => ImgDecoder.DecodeHeaderlessUiCanvas(Inve00I0Img, "arena2/INVE00I0.IMG"),
-            "INFO00I0.IMG" => ImgDecoder.DecodeHeaderlessUiCanvas(Info00I0Img, "arena2/INFO00I0.IMG"),
+            "INVE00I0.IMG" => ImgDecoder.DecodeHeaderless(Inve00I0Img, "arena2/INVE00I0.IMG"),
+            "INFO00I0.IMG" => ImgDecoder.DecodeHeaderless(Info00I0Img, "arena2/INFO00I0.IMG"),
             _ => throw new ArgumentOutOfRangeException(nameof(fileName)),
         };
     }

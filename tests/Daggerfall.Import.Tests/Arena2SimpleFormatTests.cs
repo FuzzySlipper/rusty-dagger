@@ -64,10 +64,14 @@ public sealed class Arena2SimpleFormatTests
         byte[] headerless = new byte[Arena2FormatConstants.HeaderlessUiImgBytes];
         headerless[0] = 7;
         Assert.Throws<Arena2FormatException>(() => ImgDecoder.Decode(headerless, "headerless.img"));
-        IndexedImg canvas = ImgDecoder.DecodeHeaderlessUiCanvas(headerless, "ui-canvas.img");
+        IndexedImg canvas = ImgDecoder.DecodeHeaderless(headerless, "ui-canvas.img");
         Assert.True(canvas.IsHeaderless);
         Assert.Equal((ushort)320, canvas.Width);
         Assert.Equal((byte)7, canvas.Pixels.Span[0]);
+
+        // A length with no documented shape establishes no canvas, so it is refused rather
+        // than decoded at a shape this repository would have to invent.
+        Assert.Throws<Arena2FormatException>(() => ImgDecoder.DecodeHeaderless(new byte[700], "undocumented.img"));
     }
 
     [Fact]

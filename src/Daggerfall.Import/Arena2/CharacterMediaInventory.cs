@@ -13,44 +13,32 @@ public enum CharacterMediaDisposition
     Unsupported,
 }
 
-/// <summary>How far the repository's decoders read one character media file.</summary>
-public enum CharacterMediaDecode
-{
-    /// <summary>Read as a standard IMG record.</summary>
-    Header,
-
-    /// <summary>Read as a headerless UI canvas.</summary>
-    Headerless,
-
-    /// <summary>Read as a CIF record with addressable frames.</summary>
-    Cif,
-
-    /// <summary>No decoder reads this format yet.</summary>
-    NotRead,
-}
-
-/// <summary>One supplied character media file: its family, its canvas, and its binding.</summary>
+/// <summary>One supplied character media file: its family, its canvases, and its binding.</summary>
 public sealed record CharacterMediaRecord(
     string Path,
     string Family,
-    int Width,
-    int Height,
-    int Frames,
+    IReadOnlyList<Arena2Canvas> Canvases,
     string Key,
     string UseCandidate,
     string Consumer,
     CharacterMediaDisposition Disposition,
-    CharacterMediaDecode Decode,
-    string Note);
+    Arena2CanvasKind Decode,
+    string Note)
+{
+    /// <summary>How many addressable canvases the file supplies.</summary>
+    public int CanvasCount => Canvases.Count;
+}
 
 /// <summary>
-/// The character, face and story-art inventory: every file in the documented families with
-/// its canvas, its identity key, the use it is a candidate for, and its binding.
+/// The character, face and story-art inventory: every file in the documented families with the
+/// canvases it carries, its identity key, the use it is a candidate for, and its binding.
 /// </summary>
 /// <remarks>
 /// This records source facts and candidate uses only. It creates no character-creation or
-/// social runtime behavior, and a file no decoder reads is retained with the format named
-/// rather than dropped or approximated.
+/// social runtime behavior, and a file no reader reads is retained with the format named
+/// rather than dropped or approximated. Canvases are enumerated per file rather than assumed
+/// one per file: a face CIF is a sequence of IMG records and FACES.CIF is a fixed-cell grid,
+/// so a file count is not a canvas count.
 /// </remarks>
 public sealed class CharacterMediaInventory
 {
@@ -88,7 +76,7 @@ public sealed class CharacterMediaInventory
     /// <summary>The files with no published consumer yet.</summary>
     public IEnumerable<CharacterMediaRecord> Unbound => Files.Where(file => file.Disposition == CharacterMediaDisposition.Unbound);
 
-    /// <summary>The files whose format has no decoder here.</summary>
+    /// <summary>The files no reader read.</summary>
     public IEnumerable<CharacterMediaRecord> Unsupported => Files.Where(file => file.Disposition == CharacterMediaDisposition.Unsupported);
 
     /// <summary>The files of one documented family.</summary>
@@ -148,61 +136,22 @@ public sealed class CharacterMediaInventory
             (string family, string use) = FamilyOf(path, source);
             bool isBound = bound.Contains(path) || bound.Any(name => StringComparer.OrdinalIgnoreCase.Equals(name, path));
             string key = KeyOf(path);
-            int width = 0, height = 0, frames = 1;
-            CharacterMediaDecode decode = CharacterMediaDecode.NotRead;
-            string reason = string.Empty;
-            string extension = System.IO.Path.GetExtension(path).ToUpperInvariant();
-            try
-            {
-                if (extension is ".CEL" or ".BSS")
-                {
-                    reason = $"The {extension} format has no decoder in this repository yet.";
-                }
-                else if (extension == ".CIF")
-                {
-                    WeaponCifArchive archive = WeaponCifArchive.Parse(bytes.Span, path);
-                    WeaponCifRecordInfo info = archive.GetRecordInfo(0);
-                    width = info.Width;
-                    height = info.Height;
-                    frames = info.FrameCount;
-                    decode = CharacterMediaDecode.Cif;
-                }
-                else if (ImgDecoder.TryDecodeUi(bytes.Span, path, out IndexedImg? ui, out UiMediaDecode canvas, out reason))
-                {
-                    width = ui!.Width;
-                    height = ui.Height;
-                    decode = canvas == UiMediaDecode.Header ? CharacterMediaDecode.Header : CharacterMediaDecode.Headerless;
-                }
-            }
-            catch (Arena2FormatException failure)
-            {
-                // A face CIF failing the weapon CIF grammar is the wrong reader, not a
-                // damaged file, so the note says which reader refused it.
-                reason = extension == ".CIF"
-                    ? $"The weapon CIF reader refuses this face canvas, which is a different family: {failure.Message}"
-                    : failure.Message;
-            }
-
-            // "No decoder reads this file" is one fact whatever the format: the CEL and BSS
-            // families have no reader at all, and the weapon CIF reader refuses face CIFs.
-            bool unsupported = decode == CharacterMediaDecode.NotRead;
+            Arena2CanvasSet canvases = Arena2CanvasReader.Read(bytes.Span, path);
             string binding = isBound
                 ? $"Bound by {consumer}."
                 : "No published consumer binds this file; it is retained unbound with its candidate use.";
             files.Add(new CharacterMediaRecord(
                 path,
                 family,
-                width,
-                height,
-                frames,
+                canvases.Canvases,
                 key,
                 use,
                 isBound ? consumer : string.Empty,
                 // Binding and decodability are separate facts, as in the UI inventory: a
                 // bound file stays bound whether or not this repository reads it.
-                isBound ? CharacterMediaDisposition.Bound : unsupported ? CharacterMediaDisposition.Unsupported : CharacterMediaDisposition.Unbound,
-                decode,
-                decode == CharacterMediaDecode.NotRead ? $"{binding} {reason}" : $"{binding} Candidate use: {use}."));
+                isBound ? CharacterMediaDisposition.Bound : canvases.Read ? CharacterMediaDisposition.Unbound : CharacterMediaDisposition.Unsupported,
+                canvases.Kind,
+                $"{binding} {canvases.Description} Candidate use: {use}."));
         }
 
         return new CharacterMediaInventory(source, files);

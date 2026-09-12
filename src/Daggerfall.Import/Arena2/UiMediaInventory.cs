@@ -11,25 +11,30 @@ public enum UiMediaDisposition
 
 }
 
-/// <summary>One supplied UI media file: its family, its canvas, and what binds it.</summary>
+/// <summary>One supplied UI media file: its family, the canvases it carries, and what binds it.</summary>
 public sealed record UiMediaRecord(
     string Path,
     string Family,
-    int Width,
-    int Height,
+    IReadOnlyList<Arena2Canvas> Canvases,
     string Consumer,
     UiMediaDisposition Disposition,
-    UiMediaDecode Decode,
-    string Note);
+    Arena2CanvasKind Decode,
+    string Note)
+{
+    /// <summary>How many addressable canvases the file supplies.</summary>
+    public int CanvasCount => Canvases.Count;
+}
 
 /// <summary>
-/// The classic UI media inventory: every file in the documented families with its canvas
-/// and its binding. A file no published consumer binds is retained as required-pending
+/// The classic UI media inventory: every file in the documented families with the canvases it
+/// carries and its binding. A file no published consumer binds is retained as required-pending
 /// rather than dropped, because the family exists whether or not a window consumes it yet.
 /// </summary>
 /// <remarks>
-/// This records source facts. It names no DOM projection, action or window topology, and
-/// the files it admits are the ones the published UI asset manifest already binds.
+/// This records source facts. It names no DOM projection, action or window topology, and the
+/// files it admits are the ones the published UI asset manifest already binds. Canvases are
+/// enumerated per file rather than assumed one per file: a supplied CIF is a sequence of IMG
+/// records and a supplied GFX is a frame container, so a file count is not a canvas count.
 /// </remarks>
 public sealed class UiMediaInventory
 {
@@ -63,12 +68,10 @@ public sealed class UiMediaInventory
     /// <summary>The files no published consumer binds yet.</summary>
     public IEnumerable<UiMediaRecord> RequiredPending => Files.Where(file => file.Disposition == UiMediaDisposition.RequiredPending);
 
-    /// <summary>The supplied files neither decoder path reads.</summary>
-    public IEnumerable<UiMediaRecord> Unread => Files.Where(file => file.Decode == UiMediaDecode.Unread);
+    /// <summary>The supplied files no reader read.</summary>
+    public IEnumerable<UiMediaRecord> Unread => Files.Where(file => file.Decode == Arena2CanvasKind.Unread);
 
-    /// <summary>
-    /// Enumerates the documented UI media families for a caller that names no consumer.
-    /// </summary>
+    /// <summary>Enumerates the documented UI media families for a caller that names no consumer.</summary>
     public static UiMediaInventory Enumerate(
         IEnumerable<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
         IReadOnlySet<string> admitted,
@@ -114,21 +117,18 @@ public sealed class UiMediaInventory
             // naming MAIN00I0.IMG binds main00i0.img rather than half-matching it.
             bool bound = admitted.Contains(path) || admitted.Any(name => StringComparer.OrdinalIgnoreCase.Equals(name, path));
             UiMediaDisposition disposition = bound ? UiMediaDisposition.Admitted : UiMediaDisposition.RequiredPending;
-            bool read = ImgDecoder.TryDecodeUi(bytes.Span, path, out IndexedImg? image, out UiMediaDecode decode, out string reason);
             string binding = bound
                 ? $"Bound by {consumer}."
                 : "No published consumer binds this file; the binding is required-pending. Candidates named by this task's inventory: F095, F100, F102, F104, F105, F106.";
+            Arena2CanvasSet canvases = Arena2CanvasReader.Read(bytes.Span, path);
             files.Add(new UiMediaRecord(
                 path,
                 family,
-                image?.Width ?? 0,
-                image?.Height ?? 0,
+                canvases.Canvases,
                 bound ? consumer : string.Empty,
                 disposition,
-                decode,
-                read
-                    ? $"{binding} Read as {(decode == UiMediaDecode.Header ? "a standard IMG record" : "a headerless UI canvas")}, {image!.Width} by {image.Height} pixels."
-                    : $"{binding} Neither decoder path read it: {reason}"));
+                canvases.Kind,
+                $"{binding} {canvases.Description}"));
         }
 
         return new UiMediaInventory(source, files);

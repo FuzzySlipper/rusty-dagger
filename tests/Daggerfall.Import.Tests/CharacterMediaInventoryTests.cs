@@ -28,20 +28,38 @@ public sealed class CharacterMediaInventoryTests
     {
         CharacterMediaInventory inventory = ReadInventory();
 
-        // The five IMG families read through the image decoder: 64 files. The face CIFs are
-        // refused by the weapon CIF reader, and the CEL and BSS families have no reader at
-        // all, so 23 files are retained with the reason rather than dropped.
-        Assert.Equal(60, inventory.Files.Count(file => file.Decode is CharacterMediaDecode.Header or CharacterMediaDecode.Headerless));
-        Assert.Equal(27, inventory.Unsupported.Count());
-        Assert.Equal(17, inventory.Unsupported.Count(file => file.Family == "FACE"));
-        Assert.Equal(6, inventory.Unsupported.Count(file => file.Family is "CEL" or "BSS"));
-        // Four supplied IMG files are compressed and the image decoder reads uncompressed
-        // records only; they are retained with the decoder's reason.
-        Assert.Equal(4, inventory.Unsupported.Count(file => file.Family is "BODY" or "CHAR" or "CUST" or "NITE" or "SCBG"));
-        Assert.All(inventory.Unsupported, file => Assert.Equal(CharacterMediaDecode.NotRead, file.Decode));
+        // Every supplied file but six reads: the face CIFs are sequences of IMG records and
+        // FACES.CIF is the fixed-cell grid the classic reader names, so the six files retained
+        // with a reason are the three CEL and three BSS files whose readers this repository
+        // does not have.
+        Assert.Equal(81, inventory.Files.Count(file => file.Decode != Arena2CanvasKind.Unread));
+        Assert.Equal(6, inventory.Unsupported.Count());
+        Assert.Equal(3, inventory.Unsupported.Count(file => file.Family == "CEL"));
+        Assert.Equal(3, inventory.Unsupported.Count(file => file.Family == "BSS"));
+        Assert.All(inventory.Unsupported, file => Assert.Equal(Arena2CanvasKind.Unread, file.Decode));
         Assert.All(inventory.Unsupported, file => Assert.False(string.IsNullOrWhiteSpace(file.Note)));
         Assert.All(inventory.Unsupported, file => Assert.Contains("retained unbound", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unsupported, file => Assert.False(string.IsNullOrWhiteSpace(file.UseCandidate)));
+    }
+
+    [Fact]
+    public void Enumerates_the_canvases_inside_a_file_rather_than_one_canvas_per_file()
+    {
+        CharacterMediaInventory inventory = ReadInventory();
+
+        // Each face CIF is ten records and FACES.CIF is 61 grid cells, so the face family
+        // supplies 221 canvases in 17 files: a file count would report 17 and hide 204.
+        Assert.Equal(221, inventory.Family("FACE").Sum(file => file.CanvasCount));
+        Assert.All(inventory.Family("FACE"), file =>
+            Assert.Equal(file.Path == "FACES.CIF" ? 61 : 10, file.CanvasCount));
+
+        // The night and rest art is a documented headerless shape of 512x219, not a compressed
+        // IMG record: the four files read at the shape their length establishes.
+        Assert.All(inventory.Family("NITE"), file =>
+        {
+            Assert.Equal(Arena2CanvasKind.HeaderlessCanvas, file.Decode);
+            Assert.Equal((512, 219), (file.Canvases[0].Width, file.Canvases[0].Height));
+        });
     }
 
     [Fact]
@@ -80,14 +98,15 @@ public sealed class CharacterMediaInventoryTests
     }
 
     [Fact]
-    public void Names_the_reader_that_refused_a_face_canvas()
+    public void Names_the_reader_a_format_needs_rather_than_calling_the_source_bad()
     {
         CharacterMediaInventory inventory = ReadInventory();
 
-        // A face CIF is not a damaged file: the weapon CIF reader is the wrong reader for
-        // it, and the note says so rather than presenting the refusal as corruption.
-        CharacterMediaRecord face = inventory.Family("FACE").First(file => file.Decode == CharacterMediaDecode.NotRead);
-        Assert.Contains("weapon CIF reader refuses this face canvas", face.Note, StringComparison.Ordinal);
+        // A CEL is not a damaged file: the classic reader reads it with an FLC animation reader
+        // this repository does not have, and the note names that reader.
+        CharacterMediaRecord portrait = inventory.Family("CEL").First();
+        Assert.Contains("FLC animation reader", portrait.Note, StringComparison.Ordinal);
+        Assert.Contains("does not have", portrait.Note, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -96,14 +115,14 @@ public sealed class CharacterMediaInventoryTests
         // Binding and decodability are separate facts: a consumer that binds an unread file
         // still binds it, and the record says both.
         CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(
-            [("FACE00I0.CIF", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/FACE00I0.CIF")))],
-            new HashSet<string>(["FACE00I0.CIF"], StringComparer.Ordinal),
+            [("MAGE.CEL", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MAGE.CEL")))],
+            new HashSet<string>(["MAGE.CEL"], StringComparer.Ordinal),
             "the fixture consumer",
             "fixture");
 
         CharacterMediaRecord record = Assert.Single(inventory.Files);
         Assert.Equal(CharacterMediaDisposition.Bound, record.Disposition);
-        Assert.Equal(CharacterMediaDecode.NotRead, record.Decode);
+        Assert.Equal(Arena2CanvasKind.Unread, record.Decode);
         Assert.Equal("the fixture consumer", record.Consumer);
     }
 
