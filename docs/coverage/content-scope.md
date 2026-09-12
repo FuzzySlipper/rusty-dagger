@@ -53,6 +53,24 @@ Disposition terms used here:
 | `uninspected` | The file is present, but its record semantics or usable record count still needs a bounded existing-decoder inventory. |
 | `excluded` | The coverage plan explicitly leaves the family or topology outside the product target. |
 
+Per-file rows additionally use the dispositions the import tool computes, which are the
+values of `SourceRecordDisposition` in `src/Daggerfall.Import/Publication/SourceManifest.cs`:
+
+| Disposition | Meaning for a supplied record |
+| --- | --- |
+| `imported` | Decoded and published into the normalized pack. |
+| `required-pending` | Admitted, and required by a named normalizer that has not consumed it yet. |
+| `unused` | Supplied and admitted to a family, but no consumer claims it. |
+| `duplicate` | Another inventory row already claimed the same supplied file. |
+| `malformed` | Supplied, but reading or decoding it failed; the note carries the reason. |
+| `unresolved` | Supplied with no documented inventory row; it still needs a disposition. |
+
+`source-gap` keeps the family-level meaning above and additionally marks a documented file
+this local corpus does not supply. A record that states a byte length always states the
+digest of exactly those bytes, so a `source-gap` carries neither. Each run of
+`daggerfall-import-tool source-manifest` reports where the documented column disagrees with
+the tree, and `--update-inventory` is the only writer of that column.
+
 Stable `CNT-...` IDs name source families or authored sets. They must not be reused when a
 family is split into implementation tasks; child tasks should retain the parent ID and add a
 stable suffix. Individual QBN, QRC and book identifiers are in the companion manifest so that
