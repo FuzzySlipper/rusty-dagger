@@ -20,14 +20,18 @@ an evolving mainline product path, not a spike or a compatibility exercise.
 - paired Engine checkout: `/home/dev/rusty-engine`
 - Dagger Den project: `rusty-dagger`
 - current shared boundary brief: `[doc: rusty-engine/downstream-csharp-agent-brief]`
-- current structure authority: Board post #139 and campaign #7322
+- structure history: Board post #139 and completed campaigns #7322 / #7533
+- coverage direction and task planning: `docs/daggerfall-coverage-plan.md`
+- task-creation inventory, dispositions and dependencies: `docs/daggerfall-task-preparation.md`
+- created coverage backlog: Den campaign #7922; `docs/coverage/task-index.md` maps tasks and inventory IDs (Den owns live status)
+- point-in-time donor/coverage inventory: `docs/daggerfall-feature-map.md`
 
 Before substantial work, resolve the current Den task and project guidance, then
 read the downstream brief for C# organization or Engine-boundary work. The user
 request and owning task override older wording. If Den is unreachable, stop and
 report the failed read rather than reconstructing direction from source or Git.
 
-## Current state versus target graph
+## Current product graph
 
 **Implemented today:** `src/WorldRpg.Kit/` contains the safe composition
 contract and reusable world-RPG mechanisms, while `src/WorldRpg.Rulesets.Daggerfall/` owns Daggerfall policy and session composition,
@@ -36,15 +40,13 @@ ordinary product entry. The immutable `Rusty.Engine` SDK generates CoreCLR and
 NativeAOT composition beneath ignored `obj` output. The ruleset's current
 `Modules/` placement is a migration fact rather than an architecture boundary.
 
-**Ordered target:** #7435 → #7441 → #7436 → #7437 → #7438 → #7323 → #7324 → #7325.
+The foundation campaign #7322 and C# migration campaign #7533 are complete.
+Use the coverage plan for subsequent work; do not restart their migration or
+first-contact proof sequence. `docs/code-migration-map.md` records disposition.
 
-#7441 reconciled the current product with the published Engine
-update/input/look/spatial/appearance contracts. #7436 establishes the project
-graph; #7437 exercises Kit through an intentionally incompatible composition.
-
-| Target owner | Responsibility |
+| Owner | Responsibility |
 | --- | --- |
-| `WorldRpg.Kit` | Reusable and reasonably uncertain world-RPG mechanisms: typed IDs, compiled ruleset/session contracts, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, and thin Engine-backed inventory coordination. Bundle/content-pack/tuning resolution is #7438 work. It is not a universal RPG framework. |
+| `WorldRpg.Kit` | Reusable and reasonably uncertain world-RPG mechanisms: typed IDs, compiled ruleset/session contracts, bundle/content-pack/tuning resolution, controls, actor lifetime, spatial session stepping, progression, bounded facts, structured UI values, and thin Engine-backed inventory coordination. It is not a universal RPG framework. |
 | `WorldRpg.Host` | Current reference-product lifecycle, explicit built-in ruleset/default selection, and session construction. Bundle/launcher selection and diagnostics expand later. It may select Daggerfall, never interpret Daggerfall rules or source files. |
 | `WorldRpg.Rulesets.Daggerfall` | Daggerfall identities, formulas, attack and reward policy, content interpretation, presentation meaning, save behavior, and Daggerfall session composition. |
 | `WorldRpg.Host` product metadata | The one explicit product type and bundle declaration. The SDK generates ABI, lifecycle adaptation, services, handles, and both loader compositions beneath `obj`; there is no checked NativeProduct assembly. |
@@ -123,15 +125,49 @@ There is one Engine-admitted update. Host/ruleset code may use the optional
 `Rusty.Engine.Application` phases when it simplifies the product or implement
 `IEngineProduct.Update` directly; it must not create a second loop, clock,
 timer, thread, browser authority, ECS, scheduler, service locator, or renderer.
+Product game-time/calendar state and explicit rest/travel time advancement are
+allowed inside admitted updates; they do not establish an independent clock.
 
-`gameplay/` is semantic donor material for formulas, catalogs, authored meaning,
-and behavior. Root Rust crates, Angular, the HTTP server, Studio adapter, old
-scripts, and their gates are inactive donor material. Preserve useful semantics;
-do not revive their runtime/evaluator/package/transport/authority topology.
+The original game and `/home/research/daggerfall-unity` are behavior and content
+references, not a code-style or architecture template. Consult exact donor
+behavior before implementation. Adapt UI concepts and semantic actions to thin
+DOM presentation; do not port Unity widgets, scene wiring, MonoBehaviours,
+god singletons, Resources loading, Unity serialization, or Unity import bridges.
+Offline import into Rusty-friendly packs replaces DFU content-reader bootstrap
+and Arena2 application-path setup. Product orchestration, modes, and saves use
+the existing Rusty owners, not DFU GameManager/StateManager topology. See the
+coverage plan for explicit exclusions and music scope (no MIDI playback).
+
+The removed `gameplay/`, Rust crates, Angular, HTTP server, Studio adapter,
+scripts, and gates are historical semantic donors only. Preserve useful
+semantics; do not revive their runtime/evaluator/package/transport topology.
 The installed runtime pack owns the browser shell, renderer, transport, and
 host. SDK-generated CoreCLR/NativeAOT composition is ignored `obj` output, not
 another product runtime or an authority source. Do not recreate the former
 `src/browser-bundle/` assembly path.
+
+## Coverage execution and drift
+
+Plan dependencies and explicit behavior/interoperability contracts using
+`docs/daggerfall-coverage-plan.md`. No vertical slices, proof threads, or default
+interactive deliverable gates. A demo passing does not establish implementation
+completeness. Do not leave no-op branches, hardcoded examples, parallel paths,
+or partial adapters to satisfy a demonstration. Include the task's real callers,
+state changes, content, and save/UI interoperability where applicable.
+
+Before creating a mechanism, check both the current Engine surface and existing
+rusty-dagger owners for reuse or extension. Narrow drift reviews should separately
+check upstream reinvention, local duplication, ownership/tuning leakage, and
+behavior/interoperability completeness. Review the task's change and relevant
+callers; report concrete source-backed defects, not new scope or stylistic
+preferences. The root reconciles findings. This is not a mandatory multi-review
+ceremony for every edit; the plan describes how to assign bounded review lanes.
+The always-on reuse lanes, reviewer packets, and revision-round rules live in
+`docs/agent-review/` (policy: `[doc: rusty-dagger/agent-review-workflow]`).
+Use focused compilation and semantic checks appropriate to the change. Broader
+interactive evaluation can inform later reconciliation without becoming each
+task's definition of done. Stop an upstream-blocked task honestly and continue
+independent ready work; never invent a substitute to unblock the queue.
 
 Use the packaged SDK and matched runtime pack for focused safe compilation and
 CoreCLR staging. `rusty dev` is ordinary development; NativeAOT is an explicit
