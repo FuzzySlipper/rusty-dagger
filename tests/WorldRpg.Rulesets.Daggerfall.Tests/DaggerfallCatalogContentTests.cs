@@ -103,6 +103,48 @@ public sealed class DaggerfallCatalogContentTests
     }
 
     [Fact]
+    public void RequiresAProvenanceAndDispositionForEveryItemTemplateTarget()
+    {
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+
+        // FALL.EXE is not supplied, so every one of the classic 288 targets is unresolved
+        // and says what its entry rests on. The ledger is what keeps a migrated item value
+        // from reading as a decoded native template fact.
+        Assert.Equal(288, definitions.ItemTemplates.Targets.Count);
+        Assert.Equal(Enumerable.Range(0, 288), definitions.ItemTemplates.Targets.Select(target => target.Index));
+        Assert.All(definitions.ItemTemplates.Targets, target =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(target.Provenance));
+            Assert.Equal(DaggerfallItemTemplateLedger.UnresolvedDisposition, target.Disposition);
+        });
+        Assert.Equal("absent", definitions.ItemTemplates.SourceStatus);
+        Assert.False(definitions.ItemTemplates.NativeSourceSupplied);
+        Assert.False(definitions.ItemTemplates.PublishedNativeDecoding);
+        Assert.Equal("catalog-migration", definitions.ItemTemplates.PublishedValueProvenance);
+        Assert.Equal(definitions.Items.Count, definitions.ItemTemplates.PublishedItemCount);
+        Assert.Equal(279, definitions.ItemTemplates.Targets.Count(target => target.DonorGroups.Count != 0));
+        Assert.Equal([99, 100, 101, 246, 250, 251, 266, 272, 273], definitions.ItemTemplates.Targets.Where(target => target.DonorGroups.Count == 0).Select(target => target.Index));
+    }
+
+    [Theory]
+    [InlineData("\"itemTemplateLedger\"", "\"itemTemplateLedgerAbsent\"")]
+    [InlineData("\"provenance\": \"no-donor-group\"", "\"provenance\": \"\"")]
+    [InlineData("\"disposition\": \"unresolved\"", "\"disposition\": \"decoded\"")]
+    [InlineData("\"targets\": 288", "\"targets\": 287")]
+    [InlineData("\"referencedByDonorGroups\": 279", "\"referencedByDonorGroups\": 278")]
+    [InlineData("\"nativeTemplatesDecoded\": 0", "\"nativeTemplatesDecoded\": 279")]
+    [InlineData("\"nativeDecoding\": false", "\"nativeDecoding\": true")]
+    [InlineData("\"count\": 31,", "\"count\": 30,")]
+    public void RejectsAnItemTemplateLedgerThatMisstatesItsOwnCoverage(string before, string after)
+    {
+        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string tampered = payload.Replace(before, after, StringComparison.Ordinal);
+        Assert.NotEqual(payload, tampered);
+
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
+    }
+
+    [Fact]
     public void RejectsAUnicodeIdentifierThatIsShortInUtf16ButNotEngineCompatible()
     {
         string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));

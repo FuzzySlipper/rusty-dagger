@@ -43,6 +43,11 @@ internal static class Program
                 return RunQuestSourceCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "item-template-ledger")
+            {
+                return RunItemTemplateLedgerCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -65,6 +70,57 @@ internal static class Program
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Builds the item-template ledger from the donor's own group enumerations and either
+    /// reports the drift against the pack's ledger or publishes the rebuilt section.
+    /// </summary>
+    private static int RunItemTemplateLedgerCommand(IReadOnlyList<string> args)
+    {
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        if (args.Count != (update ? 6 : 5) || args[1] != "--donor" || args[3] != "--pack")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool item-template-ledger --donor ITEMS_DIR --pack PACK.json [--update]");
+        }
+
+        string donor = args[2];
+        string packFile = args[4];
+        ItemTemplateBaseline baseline = ItemTemplateBaseline.FromDonorSources(
+            File.ReadAllText(Path.Combine(donor, "ItemEnums.cs")),
+            File.ReadAllText(Path.Combine(donor, "ItemHelper.cs")),
+            "donor");
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        int publishedItems = pack["items"]?.AsArray().Count ?? 0;
+        JsonObject ledger = ItemTemplateLedgerBuilder.Build(
+            baseline,
+            "CNT-011",
+            "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs",
+            "absent",
+            publishedItems);
+        Console.WriteLine($"item template ledger: {baseline.Targets.Count} targets, {baseline.Targets.Count(target => target.IsReferenced)} referenced by donor groups, {baseline.Unreferenced.Count()} referenced by none, {baseline.OutOfRangeIndices.Count} outside the classic space");
+        Console.WriteLine($"unreferenced indices: [{string.Join(", ", baseline.Unreferenced.Select(target => target.Index))}]");
+        Console.WriteLine($"published items: {publishedItems}, value provenance 'catalog-migration', native decoding false");
+
+        string rebuilt = ledger.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        string? existing = pack[ItemTemplateLedgerBuilder.SectionName]?.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+        if (!update)
+        {
+            Console.WriteLine(existing is null
+                ? $"pack: no {ItemTemplateLedgerBuilder.SectionName} section (rerun with --update to publish it)"
+                : string.Equals(existing, rebuilt, StringComparison.Ordinal)
+                    ? $"pack: {ItemTemplateLedgerBuilder.SectionName} matches the donor baseline"
+                    : $"pack: {ItemTemplateLedgerBuilder.SectionName} differs from the donor baseline (rerun with --update to publish it)");
+            // Report only: the pack's ledger is the published artifact, and a difference is
+            // printed for a human to publish rather than failed, since this command needs
+            // the donor checkout that a routine build does not carry.
+            return 0;
+        }
+
+        pack[ItemTemplateLedgerBuilder.SectionName] = JsonNode.Parse(rebuilt);
+        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: {ItemTemplateLedgerBuilder.SectionName} updated in {packFile}");
+        return 0;
     }
 
     /// <summary>
