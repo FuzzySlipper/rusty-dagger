@@ -21,9 +21,13 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallCorpseSave[] Corpses,
     DurableIdentityState Identities,
     DaggerfallCombatCooldownSave[] CombatCooldowns,
-    DaggerfallContinuationSave? Continuation)
+    DaggerfallContinuationSave? Continuation,
+    DaggerfallOwnerSave[] Owners)
 {
     internal const uint CurrentSchemaVersion = 2;
+
+    /// <summary>The schema whose identity fields map onto the current shape without loss.</summary>
+    internal const uint MigratableSchemaVersion = 1;
 
     /// <summary>The one durable identity kind Daggerfall currently allocates dynamically.</summary>
     internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Item];
@@ -41,17 +45,54 @@ internal sealed record DaggerfallSavePayload(
         new(DaggerfallRuleset.Identity, CurrentSchemaVersion,
             JsonSerializer.SerializeToUtf8Bytes(value, DaggerfallSaveJsonContext.Default.DaggerfallSavePayload));
 
-    internal static DaggerfallSavePayload Decode(RulesetSavePayload payload)
+    /// <summary>
+    /// Reads a save into the current shape. A payload whose meaning is recoverable is
+    /// migrated and reported; only a version this code cannot interpret is refused.
+    /// </summary>
+    internal static DaggerfallSaveRead Read(RulesetSavePayload payload)
     {
+        ArgumentNullException.ThrowIfNull(payload);
         if (payload.Ruleset != DaggerfallRuleset.Identity)
             throw new ArgumentException("The save payload does not belong to the Daggerfall ruleset.", nameof(payload));
-        if (payload.SchemaVersion != CurrentSchemaVersion)
-            throw new ArgumentException($"Daggerfall save schema {payload.SchemaVersion} is not supported.", nameof(payload));
+        if (payload.SchemaVersion == CurrentSchemaVersion)
+        {
+            return new DaggerfallSaveRead(ReadCurrent(payload), []);
+        }
+
+        if (payload.SchemaVersion == MigratableSchemaVersion)
+        {
+            DaggerfallSavePayloadV1 legacy = ReadLegacy(payload);
+            DaggerfallSavePayload migrated = legacy.Migrate();
+            return new DaggerfallSaveRead(migrated.Validate(),
+            [
+                new SaveRestoreNotice("save-schema-migrated",
+                    $"The save was written as Daggerfall schema {MigratableSchemaVersion} and was read as schema {CurrentSchemaVersion}: the reservation list became the item kind's reservations, cursor {legacy.NextUniqueItemEntityId} became the progress marker, and no identities were recorded as removed."),
+            ]);
+        }
+
+        throw new ArgumentException($"Daggerfall save schema {payload.SchemaVersion} is not supported.", nameof(payload));
+    }
+
+    private static DaggerfallSavePayload ReadCurrent(RulesetSavePayload payload)
+    {
         try
         {
             DaggerfallSavePayload value = JsonSerializer.Deserialize(payload.Bytes.Span, DaggerfallSaveJsonContext.Default.DaggerfallSavePayload)
                 ?? throw new ArgumentException("The Daggerfall save payload is empty.", nameof(payload));
             return value.Validate();
+        }
+        catch (JsonException exception)
+        {
+            throw new ArgumentException("The Daggerfall save payload is malformed.", nameof(payload), exception);
+        }
+    }
+
+    private static DaggerfallSavePayloadV1 ReadLegacy(RulesetSavePayload payload)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize(payload.Bytes.Span, DaggerfallSaveJsonContext.Default.DaggerfallSavePayloadV1)
+                ?? throw new ArgumentException("The Daggerfall save payload is empty.", nameof(payload));
         }
         catch (JsonException exception)
         {
@@ -68,6 +109,15 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Corpses);
         ArgumentNullException.ThrowIfNull(Identities);
         ArgumentNullException.ThrowIfNull(CombatCooldowns);
+        ArgumentNullException.ThrowIfNull(Owners);
+        HashSet<string> owners = new(StringComparer.Ordinal);
+        foreach (DaggerfallOwnerSave owner in Owners)
+        {
+            ArgumentNullException.ThrowIfNull(owner);
+            if (string.IsNullOrWhiteSpace(owner.OwnerId) || owner.Section.Length == 0 || !owners.Add(owner.OwnerId))
+                throw new ArgumentException("Durable owner sections must name one non-empty owner id each and be distinct.");
+        }
+
         if (Experience < 0 || Level < 1) throw new ArgumentOutOfRangeException(nameof(Experience));
         Identities.Validate().RequireKinds(PersistedKinds);
         KindAllocatorState identityState = Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
@@ -115,24 +165,53 @@ internal sealed record DaggerfallSavePayload(
     /// </summary>
     internal DurableIdentityState RestoredIdentities() => Identities.Validate().RequireKinds(PersistedKinds);
 
-    /// <summary>Checks every ruleset/content reference before a restore session owns Engine resources.</summary>
-    internal void ValidateForRestore(DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, IRandomService random)
+    /// <summary>
+    /// Resolves every ruleset/content reference before a restore session owns Engine
+    /// resources, and reports what it could not explain instead of refusing an
+    /// otherwise restorable save. An authored reference is a placement the selected
+    /// content carries; a dynamic reference is an identity the allocator issued. A
+    /// reference neither explains is reported and left out rather than materialized
+    /// with an invented identity.
+    /// </summary>
+    internal DaggerfallRestorePlan ResolveRestore(DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, IRandomService random)
     {
         ArgumentNullException.ThrowIfNull(definitions);
         ArgumentNullException.ThrowIfNull(inputs);
         tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         ArgumentNullException.ThrowIfNull(random);
         Validate();
+        List<SaveRestoreNotice> notices = [];
         Dictionary<long, DaggerfallActorSave> savedActors = Actors.ToDictionary(actor => actor.EntityId);
-        long[] expectedActors = inputs.Project.Actors.Keys.OrderBy(value => value).ToArray();
-        if (!savedActors.Keys.OrderBy(value => value).SequenceEqual(expectedActors))
-            throw new ArgumentException("The saved actor identities do not exactly match the selected Daggerfall content.");
-        foreach (AuthoredActor authored in inputs.Project.Actors.Values)
+        // The authored placement each saved actor explains. A saved actor the content
+        // does not place is a reference nothing here can explain.
+        List<DaggerfallActorSave> resolvedActors = [];
+        foreach (DaggerfallActorSave actor in Actors.OrderBy(value => value.EntityId))
         {
-            if (!definitions.Actors.TryGetValue(authored.ActorId, out DaggerfallActorDefinition? definition))
-                throw new ArgumentException($"Selected content references unknown actor '{authored.ActorId.Value}'.");
-            ValidateTracks(savedActors[authored.EntityId], definition, $"actor {authored.EntityId}");
+            if (inputs.Project.Actors.TryGetValue(actor.EntityId, out AuthoredActor? placement))
+            {
+                if (!definitions.Actors.TryGetValue(placement.ActorId, out DaggerfallActorDefinition? definition))
+                    throw new ArgumentException($"Selected content references unknown actor '{placement.ActorId.Value}'.");
+                ValidateTracks(actor, definition, $"actor {actor.EntityId}");
+                resolvedActors.Add(actor);
+                continue;
+            }
+
+            notices.Add(new SaveRestoreNotice("unexplained-actor",
+                $"Saved actor {actor.EntityId} is neither a placement in the selected content nor an identity the allocator issued, so it is not restored."));
         }
+
+        // An authored placement the save does not mention is recoverable: the site load
+        // materializes it at its authored position with authored vitals.
+        foreach (AuthoredActor placement in inputs.Project.Actors.Values.OrderBy(value => value.EntityId))
+        {
+            if (!savedActors.ContainsKey(placement.EntityId))
+            {
+                notices.Add(new SaveRestoreNotice("authored-actor-not-saved",
+                    $"Authored placement {placement.EntityId} is absent from the save and is materialized at its authored position."));
+            }
+        }
+
+        DaggerfallSavePayload resolved = this with { Actors = [.. resolvedActors] };
         DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
         ValidateTracks(Player, playerDefinition, "player");
         if (Player.PitchRadians < tuning.PlayerControl.PitchMinimumRadians || Player.PitchRadians > tuning.PlayerControl.PitchMaximumRadians)
@@ -153,36 +232,96 @@ internal sealed record DaggerfallSavePayload(
         if (Player.Health > playerHealthMaximum)
             throw new ArgumentException("Saved player health exceeds its reconstructed Daggerfall maximum.");
 
-        HashSet<long> corpses = [];
-        foreach (DaggerfallCorpseSave corpse in Corpses)
-        {
-            if (!corpses.Add(corpse.ActorId) || !savedActors.TryGetValue(corpse.ActorId, out DaggerfallActorSave? actor) || actor.Health != 0)
-                throw new ArgumentException("Saved corpses must refer once to a defeated selected actor.");
-            if (!corpse.IsInteractable && (corpse.Stacks.Length != 0 || corpse.UniqueItems.Length != 0))
-                throw new ArgumentException("A looted corpse cannot retain inventory contents.");
-        }
-
-        HashSet<ulong> live = [];
-        ValidateInventory(Inventory, definitions, live, "player", requireEquipmentSlots: true);
-        foreach (DaggerfallCorpseSave corpse in Corpses)
-            ValidateInventory(new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, live, $"corpse {corpse.ActorId}", requireEquipmentSlots: false);
+        // Durable references resolve against the ledger the save carries: an identity is
+        // explainable when authored content reserved it or the allocator issued it
+        // below the progress marker. Anything else is reported and left out.
         KindAllocatorState identityState = Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
         HashSet<ulong> removed = identityState.Removed.ToHashSet();
         HashSet<ulong> placementIdentities = PlacementEntityIds(inputs);
-        // Authored loadout items are current unique identities by definition, so they
-        // are excluded here and checked by the issue evidence below instead.
+        bool Explainable(ulong value) =>
+            identityState.Reserved.Contains(value)
+            || (value < identityState.NextIdentity && !removed.Contains(value));
+        foreach (ulong value in resolved.Inventory.UniqueItems.Select(item => item.EntityId)
+            .Concat(resolved.Corpses.SelectMany(corpse => corpse.UniqueItems.Select(item => item.EntityId)))
+            .Where(value => !Explainable(value))
+            .Distinct()
+            .Order())
+        {
+            notices.Add(new SaveRestoreNotice("unexplained-item-identity",
+                $"Saved unique item identity {value} is neither reserved content nor issued by the carried ledger, so that item is not restored."));
+        }
+
+        DaggerfallInventorySave inventory = ResolveInventory(resolved.Inventory, definitions, "player", Explainable);
+        List<DaggerfallCorpseSave> resolvedCorpses = [];
+        Dictionary<long, DaggerfallActorSave> resolvedSaved = resolvedActors.ToDictionary(actor => actor.EntityId);
+        HashSet<long> corpseActors = [];
+        foreach (DaggerfallCorpseSave corpse in Corpses)
+        {
+            if (!resolvedSaved.TryGetValue(corpse.ActorId, out DaggerfallActorSave? actor))
+            {
+                notices.Add(new SaveRestoreNotice("unexplained-corpse",
+                    $"Saved corpse for actor {corpse.ActorId} refers to an actor that is not restored, so the corpse is not restored."));
+                continue;
+            }
+
+            if (!corpseActors.Add(corpse.ActorId) || actor.Health != 0)
+                throw new ArgumentException("Saved corpses must refer once to a defeated selected actor.");
+            if (!corpse.IsInteractable && (corpse.Stacks.Length != 0 || corpse.UniqueItems.Length != 0))
+                throw new ArgumentException("A looted corpse cannot retain inventory contents.");
+            DaggerfallInventorySave corpseInventory = ResolveInventory(
+                new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, $"corpse {corpse.ActorId}", Explainable);
+            resolvedCorpses.Add(corpse with { Stacks = corpseInventory.Stacks, UniqueItems = corpseInventory.UniqueItems });
+        }
+
+        HashSet<ulong> live = inventory.UniqueItems.Select(item => item.EntityId)
+            .Concat(resolvedCorpses.SelectMany(corpse => corpse.UniqueItems.Select(item => item.EntityId)))
+            .ToHashSet();
         if (live.Overlaps(placementIdentities))
             throw new ArgumentException("Saved unique items cannot collide with player or actor placement identities.");
-        if (removed.Overlaps(placementIdentities) || removed.Overlaps(live))
-            throw new ArgumentException("A removed identity cannot be authored content or a currently held unique item.");
-        foreach (ulong value in live.Concat(removed))
+        foreach (ulong value in removed.Intersect(placementIdentities).Order())
         {
-            // Every identity a save holds is either authored content the allocator
-            // reserved, or an identity this allocator issued. A value that is neither
-            // is a dangling reference the selected content cannot explain.
-            if (!identityState.Reserved.Contains(value) && value >= identityState.NextIdentity)
-                throw new ArgumentException($"Saved unique entity identity {value} is neither reserved content nor issued by the allocator.");
+            // Authored content claims the identity whether or not the ledger tombstoned
+            // it, so the reservation wins and the contradiction is reported.
+            notices.Add(new SaveRestoreNotice("authored-identity-removed",
+                $"Identity {value} is authored content and is also recorded as removed; the authored reservation is kept and the tombstone is ignored."));
         }
+
+        resolved = resolved with { Inventory = inventory, Corpses = [.. resolvedCorpses] };
+        return new DaggerfallRestorePlan(resolved, notices);
+    }
+
+    /// <summary>
+    /// Keeps the inventory whose durable references the ledger explains and reports the
+    /// rest. Structure, item definitions and equipment compatibility are still checked
+    /// exactly: only the identity evidence is treated as recoverable.
+    /// </summary>
+    private static DaggerfallInventorySave ResolveInventory(
+        DaggerfallInventorySave inventory,
+        DaggerfallDefinitions definitions,
+        string owner,
+        Func<ulong, bool> explainable)
+    {
+        List<DaggerfallUniqueSave> unique = [];
+        foreach (DaggerfallUniqueSave item in inventory.UniqueItems)
+        {
+            if (!definitions.Items.TryGetValue(new DaggerfallItemId(item.ItemId), out DaggerfallItemDefinition? definition) || definition.IsFungible)
+                throw new ArgumentException($"Saved {owner} unique item '{item.ItemId}' is not a selected non-fungible item.");
+            if (!explainable(item.EntityId))
+            {
+                // Reported by the caller with the identity it observed; the item is not
+                // materialized under an identity nothing explains.
+                continue;
+            }
+
+            unique.Add(item);
+        }
+
+        DaggerfallUniqueSave[] kept = [.. unique];
+        DaggerfallEquipmentSave[] equipment = [.. inventory.Equipment.Where(entry => kept.Any(item => item.EntityId == entry.ItemEntityId))];
+        DaggerfallInventorySave resolved = new(inventory.Stacks, kept, equipment);
+        HashSet<ulong> live = [];
+        ValidateInventory(resolved, definitions, live, owner, requireEquipmentSlots: owner == "player");
+        return resolved;
     }
 
     /// <summary>The player and every authored placement identity, which no dynamic allocation may collide with.</summary>
@@ -249,6 +388,66 @@ internal sealed record DaggerfallSavePayload(
                 || !item.Equipment.Classifications.Any(classification => slot.AllowedClassifications.Contains(classification)))
                 throw new ArgumentException($"Saved equipment slot '{equipped.SlotId}' is incompatible with its unique item.");
         }
+    }
+}
+
+/// <summary>
+/// A save reduced to what the selected content and the carried ledger explain, with
+/// what had to be reported about the rest.
+/// </summary>
+internal sealed record DaggerfallRestorePlan(DaggerfallSavePayload Payload, IReadOnlyList<SaveRestoreNotice> Notices);
+
+/// <summary>What reading a save produced: the payload in the current shape, and what it had to report.</summary>
+internal sealed record DaggerfallSaveRead(DaggerfallSavePayload Payload, IReadOnlyList<SaveRestoreNotice> Notices);
+
+/// <summary>
+/// A later world, item, effect or quest owner's durable section. Sections are opaque to
+/// every owner but their own and are carried in owner-id order, which is what lets a
+/// later task add state without reshaping the payload every other owner reads.
+/// </summary>
+internal sealed record DaggerfallOwnerSave(string OwnerId, byte[] Section);
+
+/// <summary>
+/// The schema-1 shape, kept only to read what it wrote: a flat reservation list, an
+/// explicit next identity, and no notion of removed identities. Its meaning is fully
+/// recoverable, so it is migrated rather than refused.
+/// </summary>
+internal sealed record DaggerfallSavePayloadV1(
+    uint SchemaVersion,
+    DaggerfallPlayerSave Player,
+    DaggerfallActorSave[] Actors,
+    int Experience,
+    int Level,
+    DaggerfallInventorySave Inventory,
+    DaggerfallCorpseSave[] Corpses,
+    ulong NextUniqueItemEntityId,
+    ulong[] ReservedUniqueItemEntityIds,
+    DaggerfallCombatCooldownSave[] CombatCooldowns,
+    DaggerfallContinuationSave? Continuation)
+{
+    internal DaggerfallSavePayload Migrate()
+    {
+        // A schema-1 label on bytes that never carried schema-1 fields is a misread, not
+        // a migration: the values it should have are absent, so its meaning is not
+        // recoverable and the save is refused with what was actually found.
+        if (ReservedUniqueItemEntityIds is null || NextUniqueItemEntityId == 0)
+        {
+            throw new ArgumentException(
+                $"A payload labelled as Daggerfall schema {DaggerfallSavePayload.MigratableSchemaVersion} does not carry that schema's identity fields (next unique item identity {NextUniqueItemEntityId}, reservation list {(ReservedUniqueItemEntityIds is null ? "absent" : "present")}).");
+        }
+
+        return new DaggerfallSavePayload(
+            DaggerfallSavePayload.CurrentSchemaVersion,
+            Player,
+            Actors,
+            Experience,
+            Level,
+            Inventory,
+            Corpses,
+            new DurableIdentityState([new KindAllocatorState(DurableIdentityKind.Item, NextUniqueItemEntityId, ReservedUniqueItemEntityIds, [])]),
+            CombatCooldowns,
+            Continuation,
+            []);
     }
 }
 
@@ -333,6 +532,7 @@ internal sealed record DaggerfallContinuationSave(CharacterContinuationCheckpoin
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(DaggerfallSavePayload))]
+[JsonSerializable(typeof(DaggerfallSavePayloadV1))]
 [JsonSerializable(typeof(DurableIdentityState))]
 [JsonSerializable(typeof(KindAllocatorState))]
 [JsonSerializable(typeof(CharacterContinuationCheckpoint))]

@@ -22,7 +22,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             throw new InvalidOperationException($"Daggerfall cannot interpret ruleset '{context.Composition.Ruleset.Value}'.");
         // Decode all detached ruleset data before session construction creates
         // any Engine-owned state.
-        DaggerfallSavePayload payload = DaggerfallSavePayload.Decode(saved);
+        DaggerfallSaveRead read = DaggerfallSavePayload.Read(saved);
         // Resolve only detached content definitions before admitting a fresh
         // session; malformed actor/inventory/corpse references never reach
         // Engine-backed construction.
@@ -30,14 +30,18 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         ContentPack pack = context.Composition.RequireContentPack(PrivateersHoldPack);
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(context.Composition.Content, pack.Payload, definitions);
         DaggerfallTuning tuning = DaggerfallTuning.Read(context.Composition.Tuning.Payload.Span);
-        payload.ValidateForRestore(definitions, inputs, tuning, context.Engine.Random);
+        // Reference resolution reports what the selected content cannot explain rather
+        // than refusing an otherwise restorable save; only an uninterpretable payload
+        // reaches the caller as an error.
+        DaggerfallRestorePlan plan = read.Payload.ResolveRestore(definitions, inputs, tuning, context.Engine.Random);
         return new DaggerfallSession(
             context.Engine,
             context.CompositionIdentity,
             definitions,
             inputs,
             tuning,
-            payload);
+            plan.Payload,
+            [.. read.Notices, .. plan.Notices]);
     }
 
     private static IGameSession CreateSessionCore(GameSessionContext context, DaggerfallSavePayload? saved)
@@ -53,6 +57,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             definitions,
             PrivateersHoldContent.Read(context.Composition.Content, pack.Payload, definitions),
             DaggerfallTuning.Read(context.Composition.Tuning.Payload.Span),
-            saved);
+            saved,
+            restoreNotices: []);
     }
 }

@@ -22,7 +22,7 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed class DaggerfallSession : ISaveableGameSession
+internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSession
 {
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
     private readonly IRandomService _random;
@@ -45,27 +45,50 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     private readonly DaggerfallLootPresentation _lootUi;
     private readonly DaggerfallCharacterPresentation _characterUi;
     private readonly PrivateersHoldAppearance _appearance;
+    /// <summary>
+    /// The durable owners this build has. Each is an explicit registration a later
+    /// world, item, effect or quest task adds beside its own records; there is no
+    /// reflection registry and no service locator.
+    /// </summary>
+    internal static readonly string[] RegisteredSaveOwners = [];
+
+    private readonly IReadOnlyList<SaveRestoreNotice> _restoreNotices;
+    private IReadOnlyList<DaggerfallOwnerSave> _carriedOwnerSections;
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
     private bool _disposed;
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity: null, saved: null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity: null, saved: null, restoreNotices: [])
     {
     }
 
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, saved: null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, saved: null, restoreNotices: [])
     {
     }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallSavePayload? saved)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, saved)
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallSavePayload? saved, IReadOnlyList<SaveRestoreNotice>? restoreNotices = null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, saved, restoreNotices ?? [])
     {
     }
 
-    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved)
+    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved, IReadOnlyList<SaveRestoreNotice> restoreNotices)
     {
+        ArgumentNullException.ThrowIfNull(restoreNotices);
+        // Sections a payload carried for an owner this build does not have are kept
+        // verbatim so a save written by a later owner is not silently discarded — and
+        // reported, because a section nothing reads is a difference worth knowing about.
+        _carriedOwnerSections = saved?.Owners ?? [];
+        _restoreNotices =
+        [
+            .. restoreNotices,
+            .. _carriedOwnerSections
+                .Where(section => !RegisteredSaveOwners.Contains(section.OwnerId))
+                .OrderBy(section => section.OwnerId, StringComparer.Ordinal)
+                .Select(section => new SaveRestoreNotice("unread-owner-section",
+                    $"Saved section for owner '{section.OwnerId}' has no owner in this build; it is preserved unchanged and not interpreted.")),
+        ];
         List<IDisposable> partiallyConstructed = [];
         try
         {
@@ -208,6 +231,13 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     internal PresentationState Presentation { get; }
     public void PublishInitial() => PublishPresentation();
 
+    /// <summary>
+    /// What the restore of this session had to report: a migrated schema, a reference
+    /// the content could not explain, or a section no current owner reads. None of
+    /// these refused the save, and none of them is silent.
+    /// </summary>
+    public IReadOnlyList<SaveRestoreNotice> RestoreNotices => _restoreNotices;
+
     public RulesetSavePayload CaptureSave()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(DaggerfallSession));
@@ -267,7 +297,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             _uniqueItems.CaptureState(),
             _combat.CaptureCooldowns(_latestUpdateGeneration, _latestSimulationStep)
                 .Select(value => new DaggerfallCombatCooldownSave(value.AttackerId, value.RemainingSteps)).ToArray(),
-            continuation));
+            continuation,
+            [.. _carriedOwnerSections.OrderBy(section => section.OwnerId, StringComparer.Ordinal)]));
     }
 
     public ProductUpdateResult Update(ProductUpdate update)
@@ -404,8 +435,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     private void ApplySave(DaggerfallSavePayload saved, DaggerfallActorDefinition playerDefinition)
     {
         saved.Validate();
-        if (saved.Actors.Length != State.Actors.All.Count)
-            throw new ArgumentException("The saved Daggerfall actor set does not match the selected content.", nameof(saved));
+        // Every saved actor was resolved against the selected content before this
+        // session existed, so this applies what the content explains rather than
+        // requiring the saved set to equal the authored set. An authored placement the
+        // save does not mention keeps its authored pose and vitals.
         DaggerfallActorSave[] actors = saved.Actors.OrderBy(actor => actor.EntityId).ToArray();
         foreach (DaggerfallActorSave actor in actors)
         {
