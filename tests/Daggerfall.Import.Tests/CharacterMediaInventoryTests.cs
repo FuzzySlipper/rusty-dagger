@@ -79,6 +79,50 @@ public sealed class CharacterMediaInventoryTests
     }
 
     [Fact]
+    public void Names_the_reader_that_refused_a_face_canvas()
+    {
+        CharacterMediaInventory inventory = ReadInventory();
+
+        // A face CIF is not a damaged file: the weapon CIF reader is the wrong reader for
+        // it, and the note says so rather than presenting the refusal as corruption.
+        CharacterMediaRecord face = inventory.Family("FACE").First(file => file.Decode == CharacterMediaDecode.NotRead);
+        Assert.Contains("weapon CIF reader refuses this face canvas", face.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Keeps_a_binding_whether_or_not_the_file_reads()
+    {
+        // Binding and decodability are separate facts: a consumer that binds an unread file
+        // still binds it, and the record says both.
+        CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(
+            [("FACE00I0.CIF", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/FACE00I0.CIF")))],
+            new HashSet<string>(["FACE00I0.CIF"], StringComparer.Ordinal),
+            "the fixture consumer",
+            "fixture");
+
+        CharacterMediaRecord record = Assert.Single(inventory.Files);
+        Assert.Equal(CharacterMediaDisposition.Bound, record.Disposition);
+        Assert.Equal(CharacterMediaDecode.NotRead, record.Decode);
+        Assert.Equal("the fixture consumer", record.Consumer);
+    }
+
+    [Fact]
+    public void Reports_the_same_records_whatever_order_the_sources_arrive_in()
+    {
+        // The consumer/disposition report is deterministic: the same files in any input
+        // order produce the same sequence.
+        List<(string Path, ReadOnlyMemory<byte> Bytes)> sources =
+        [
+            ("SCBG00I0.IMG", ValidImage()), ("MAGE.CEL", new byte[16]), ("BODY00I0.IMG", ValidImage()),
+        ];
+        CharacterMediaInventory forward = CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "none", "fixture");
+        CharacterMediaInventory reversed = CharacterMediaInventory.Enumerate([.. Enumerable.Reverse(sources)], new HashSet<string>(StringComparer.Ordinal), "none", "fixture");
+
+        Assert.Equal(forward.Files.Select(file => file.Path), reversed.Files.Select(file => file.Path));
+        Assert.Equal(forward.Files.Select(file => file.Disposition), reversed.Files.Select(file => file.Disposition));
+    }
+
+    [Fact]
     public void Refuses_a_file_in_no_documented_family()
     {
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => CharacterMediaInventory.Enumerate(
