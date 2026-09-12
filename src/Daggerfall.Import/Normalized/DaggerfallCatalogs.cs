@@ -231,7 +231,7 @@ public sealed record DaggerfallCatalogs(
     /// </summary>
     public static readonly int[] ElementFlagMasks = [8, 16, 4 | 64, 32, 2];
 
-    /// <summary>Health, and each other byte the classic carrier spends on effect flags.</summary>
+    /// <summary>The largest value one classic effect-flag byte can carry.</summary>
     public const int MaximumFlagByte = 255;
 
     public void Validate(IReadOnlySet<string> inventoryRecordIds)
