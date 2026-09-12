@@ -10,6 +10,12 @@ internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownE
 internal sealed record AttackRejectedFact(AttackRejection Reason) : IProductFact;
 /// <summary>One player melee swing passed cooldown and stamina admission, independently of its target outcome.</summary>
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
+/// <summary>
+/// One enemy melee swing began. The attack's outcome is already decided, so the
+/// presentation can play the matching strike, but nothing has been applied yet:
+/// the damage lands when the authored damage frame is reached.
+/// </summary>
+internal sealed record EnemyAttackStartedFact(long AttackerId, long TargetId, bool WillHit, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 internal sealed record AttackMissedFact(long AttackerId, long TargetId, int Roll, int Chance, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>Struck body follows the donor table; scalar current armor deliberately ignores it.</summary>
 internal sealed record AttackHitFact(long AttackerId, long TargetId, int Damage, int StruckBody, bool EnemyAttack, ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;

@@ -619,7 +619,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         presentation.UpdateDirections(actors, new WorldPoint(0f, 0f, -1f));
         Assert.Equal(0u, appearance.SetFrameRequests.Last().FrameId);
-        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 1, 1));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 1));
         int playbackCount = appearance.PlaybackRequests.Count;
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
             ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
@@ -643,19 +643,19 @@ public sealed class NormalizedRuntimeSeamTests
 
         using (PrivateersHoldAppearance first = new(content, appearance, favoredAlternate, random: random.Service))
         {
-            first.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+            first.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
             SpritePlaybackCreateRequest selected = appearance.PlaybackRequests.Last();
             Assert.Equal([3u], selected.Frames.Span.ToArray().Select(frame => frame.FrameId));
 
             int beforeDuplicate = appearance.PlaybackRequests.Count;
-            first.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+            first.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
             Assert.Equal(beforeDuplicate, appearance.PlaybackRequests.Count);
         }
 
         AppearanceFake secondAppearance = new(releases);
         using (PrivateersHoldAppearance second = new(content, secondAppearance, MediaInputs(primaryChance: 20), random: KeyedRandomFake.Create(40).Service))
         {
-            second.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+            second.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
             Assert.Equal([2u], secondAppearance.PlaybackRequests.Last().Frames.Span.ToArray().Select(frame => frame.FrameId));
         }
 
@@ -679,8 +679,8 @@ public sealed class NormalizedRuntimeSeamTests
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
             true));
 
-        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
-        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 3, 4));
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
         int playbacksBefore = appearance.PlaybackRequests.Count;
         int audioBefore = audio.Emits.Count;
 
@@ -688,9 +688,14 @@ public sealed class NormalizedRuntimeSeamTests
         presentation.Advance(OuterUpdate(2));
 
         Assert.Equal(playbacksBefore, appearance.PlaybackRequests.Count);
-        // The Daggerfall marker may produce a presentation sound, but a duplicate
-        // Engine crossing must not replay it or cause any gameplay mutation.
+        // The authored damage frame is the strike beat: it sounds once and reports the
+        // impact once, and the ruleset — not the presentation — owns the consequence.
         Assert.Equal(audioBefore + 1, audio.Emits.Count);
+        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.False(impact.Expired);
+        Assert.Equal(11, impact.AttackerId);
+        Assert.Equal(12, impact.TargetId);
+        Assert.Empty(presentation.TakeAttackImpacts());
         FieldInfo actorsField = typeof(PrivateersHoldAppearance).GetField("actors", BindingFlags.Instance | BindingFlags.NonPublic)!;
         System.Collections.IDictionary visuals = (System.Collections.IDictionary)actorsField.GetValue(presentation)!;
         object visual = visuals[11L]!;
@@ -708,7 +713,7 @@ public sealed class NormalizedRuntimeSeamTests
         AudioRecorder audio = AudioRecorder.Create();
         DaggerfallPresentationAudioTuning tuning = new(.25F, 1.5F, .75F, 12F);
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service, tuning);
-        AttackHitFact hit = new(11, 12, 1, 0, false, 7, 9);
+        EnemyAttackStartedFact hit = new(11, 12, true, 7, 9);
 
         presentation.React(hit);
         int playbackCount = appearance.PlaybackRequests.Count;
@@ -731,7 +736,7 @@ public sealed class NormalizedRuntimeSeamTests
         ContentFake content = MediaContent(releases);
         AppearanceFake appearance = new(releases);
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs());
-        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
         int beforeCompletion = appearance.PlaybackRequests.Count;
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
             ReadOnlyMemory<SpritePlaybackMarkerCrossing>.Empty,
@@ -769,7 +774,7 @@ public sealed class NormalizedRuntimeSeamTests
         using PrivateersHoldAppearance presentation = new(content, replacementFailure, MediaInputs());
         SpritePlaybackHandle original = Assert.Single(replacementFailure.CreatedPlaybacks).Handle;
         replacementFailure.FailSpritePlaybackControlAt = replacementFailure.ControlRequests.Count + 1;
-        Assert.Throws<InvalidOperationException>(() => presentation.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9)));
+        Assert.Throws<InvalidOperationException>(() => presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9)));
 
         presentation.Advance(OuterUpdate(1));
         Assert.Equal(original, Assert.Single(replacementFailure.AdvanceRequests).Playback.Handle);
@@ -786,7 +791,7 @@ public sealed class NormalizedRuntimeSeamTests
         using PrivateersHoldAppearance presentation = new(content, appearance, inputs);
         int before = appearance.PlaybackRequests.Count;
 
-        Assert.Throws<InvalidOperationException>(() => presentation.React(new AttackHitFact(11, 12, 1, 0, false, 7, 9)));
+        Assert.Throws<InvalidOperationException>(() => presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9)));
         Assert.Equal(before, appearance.PlaybackRequests.Count);
     }
 
@@ -819,7 +824,7 @@ public sealed class NormalizedRuntimeSeamTests
         AudioRecorder audio = AudioRecorder.Create();
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(), audio.Service);
         SpritePlayback original = Visual(presentation).Playback!;
-        AttackHitFact hit = new(11, 12, 1, 0, false, 17, 23);
+        EnemyAttackStartedFact hit = new(11, 12, true, 17, 23);
 
         presentation.BeginAdmittedUpdate();
         PrivateersHoldAppearance.PresentationCheckpoint checkpoint = presentation.Checkpoint();
@@ -908,7 +913,7 @@ public sealed class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs());
         SpritePlayback original = Visual(presentation).Playback!;
-        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 1, 2));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 1, 2));
 
         Assert.Equal(0, appearance.DisposedPlaybacks);
         presentation.BeginAdmittedUpdate();
@@ -931,7 +936,7 @@ public sealed class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
-        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 2, 3));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 2, 3));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
             new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
@@ -953,7 +958,7 @@ public sealed class NormalizedRuntimeSeamTests
         AppearanceFake appearance = new(releases);
         AudioRecorder audio = AudioRecorder.Create();
         using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
-        presentation.React(new AttackMissedFact(11, 12, 1, 1, false, 2, 3));
+        presentation.React(new EnemyAttackStartedFact(11, 12, false, 2, 3));
         appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
             new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
             new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 1, false),
@@ -969,7 +974,7 @@ public sealed class NormalizedRuntimeSeamTests
     {
         List<string> releases = [];
         ContentFake content = MediaContent(releases);
-        AttackHitFact hit = new(11, 12, 1, 0, false, 8, 13);
+        EnemyAttackStartedFact hit = new(11, 12, true, 8, 13);
         AudioRecorder firstAudio = AudioRecorder.Create();
         AppearanceFake firstAppearance = new(releases);
         using (PrivateersHoldAppearance first = new(content, firstAppearance, MediaInputs(includeAlternate: false), firstAudio.Service, random: KeyedRandomFake.Create(5).Service))
@@ -1003,7 +1008,7 @@ public sealed class NormalizedRuntimeSeamTests
         ];
 
         using PrivateersHoldAppearance presentation = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false, audio: authoredAudio), audio.Service, random: KeyedRandomFake.Create(2).Service);
-        presentation.React(new AttackHitFact(11, 12, 1, 0, false, 8, 13));
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 8, 13));
 
         Assert.Equal((ulong)3, Assert.Single(audio.Emits).Descriptor.Clip.Value);
     }
@@ -2025,16 +2030,22 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
 
         using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
-        session.Update(new ProductUpdateState(.125f));
+        // The swing is decided on the admitted step and lands when its authored damage
+        // frame is reached, so the update that carries the crossing is the one that hurts.
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
         Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
         long healthAfterAttack = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
         Assert.True(healthAfterAttack < healthBefore);
 
-        session.Update(new ProductUpdateState(.125f));
+        // The same swing cannot land twice, and a frame that never crosses lands nothing.
+        appearance.AdvanceReceiptForAll = null;
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
         Assert.Equal(healthAfterAttack, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
 
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.FacingRejected, 0d));
@@ -2306,7 +2317,97 @@ public sealed class NormalizedRuntimeSeamTests
     private static PrivateersHoldAppearance.EffectVisual Effect(PrivateersHoldAppearance presentation) => Assert.Single((List<PrivateersHoldAppearance.EffectVisual>)typeof(PrivateersHoldAppearance).GetField("effects", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation)!);
     private static PrivateersHoldAppearance.ViewmodelVisual Viewmodel(PrivateersHoldAppearance presentation) => Assert.IsType<PrivateersHoldAppearance.ViewmodelVisual>(typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
+    [Fact]
+    public void A_swing_that_ends_without_reaching_its_damage_frame_reports_an_expired_impact()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            Array.Empty<SpritePlaybackMarkerCrossing>(),
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
+            true));
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
+        presentation.Advance(OuterUpdate(1));
+
+        // Playback ended before the beat: the swing must be reported as expired rather
+        // than left pending, so it can never land after the animation is over.
+        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.True(impact.Expired);
+        Assert.Empty(audio.Emits);
+    }
+
+    [Fact]
+    public void An_enemy_swing_lands_once_at_its_damage_frame_and_never_on_the_decision_update()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+
+        // The update that decides the swing carries no damage: nothing has been struck
+        // until the authored damage frame is reached.
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        long healthAfterImpact = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        Assert.True(healthAfterImpact < healthBefore);
+
+        // The same frame cannot land a second time.
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.Equal(healthAfterImpact, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+    }
+
+    [Fact]
+    public void An_enemy_swing_cancelled_before_its_damage_frame_never_lands_late()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+        // Losing sight cancels the swing; a crossing from the already-playing animation
+        // must not land the strike the attacker is no longer making.
+        perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 0d, PerceptionPairKind.Occluded, 0d));
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+
+        Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
+        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+    }
+
     private static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
+
+    /// <summary>One advanced sprite frame whose authored damage frame was crossed.</summary>
+    private static SpritePlaybackAdvanceLeaseReceipt CrossedMarker(uint frame, ulong crossing = 1) => new(
+        new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, crossing) },
+        new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Playing, 0D, 0, frame, false),
+        true);
 
     private static JsonObject FirstActorState(JsonObject media, string name) => media["actors"]!.AsArray()
         .Select(value => value!.AsObject())
@@ -2801,10 +2902,12 @@ public sealed class NormalizedRuntimeSeamTests
             return default;
         }
         public SpritePlaybackReadout SelectSpritePlaybackFrame(SpritePlaybackFrameSelectionRequest request) => default;
+        /// <summary>When set, every advanced playback reports this receipt, so a crossing reaches whichever actor is attacking.</summary>
+        internal SpritePlaybackAdvanceLeaseReceipt? AdvanceReceiptForAll { get; set; }
         public SpritePlaybackAdvanceLeaseReceipt AdvanceSpritePlayback(SpritePlaybackAdvanceRequest request)
         {
             AdvanceRequests.Add(request);
-            SpritePlaybackAdvanceLeaseReceipt receipt = AdvanceReceipts.Count == 0 ? default : AdvanceReceipts.Dequeue();
+            SpritePlaybackAdvanceLeaseReceipt receipt = AdvanceReceiptForAll ?? (AdvanceReceipts.Count == 0 ? default : AdvanceReceipts.Dequeue());
             foreach (SpritePlaybackMarkerCrossing crossing in receipt.Crossings.Span) LastCrossingSequence = Math.Max(LastCrossingSequence, crossing.CrossingSequence);
             return receipt;
         }

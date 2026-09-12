@@ -112,7 +112,15 @@ internal sealed class DaggerfallEnemyBehaviorModule
             StateMachineInstance after = _instances[actor.EntityId];
             if (desired == EnemyBehaviorState.Attack)
             {
-                _combat.ResolveExplicit(new ExplicitMeleeRequest(actor.EntityId, DaggerfallActorIdentity.PlayerEntityId, generation, simulationStep, deltaSeconds), facts);
+                // The swing is decided here and lands when its authored damage frame is
+                // reached; this module keeps owning reach and visibility throughout.
+                _combat.TryBeginEnemyAttack(actor.EntityId, DaggerfallActorIdentity.PlayerEntityId, generation, simulationStep, deltaSeconds, facts);
+            }
+            else
+            {
+                // Leaving the attack state, losing sight or dying cancels the swing
+                // before its damage frame rather than letting it land late.
+                _combat.InterruptPendingAttack(actor.EntityId, generation);
             }
             evidence.Add(actor.EntityId, new EnemyBehaviorEvidence(actor.EntityId, ToState(after.Current), visibility, navigation));
         }

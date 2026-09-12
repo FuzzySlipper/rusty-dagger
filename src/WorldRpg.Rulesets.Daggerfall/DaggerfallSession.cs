@@ -287,6 +287,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             && update.Facts.AdmittedStepCount > 0)
         {
             _appearance.Advance(update.Facts);
+            ApplyAttackImpacts();
             PublishPresentation();
         }
         _appearance.CompleteAdmittedUpdate();
@@ -536,6 +537,20 @@ internal sealed class DaggerfallSession : ISaveableGameSession
 
     internal static EquipmentSlotDefinition ToManagedSlot(DaggerfallEquipmentSlotDefinition slot) =>
         new(Rusty.Engine.Mechanics.EquipmentSlotId.Parse(slot.Id.Value), slot.AllowedClassifications.Select(ItemClassificationId.Parse));
+
+    /// <summary>
+    /// Applies the enemy swings whose authored damage frame was reached in the sprite
+    /// playback this update consumed. The presentation reports the beat; the ruleset
+    /// owns what it means, and a swing that expired or lost its target applies nothing.
+    /// </summary>
+    private void ApplyAttackImpacts()
+    {
+        IReadOnlyList<AttackImpactNotice> impacts = _appearance.TakeAttackImpacts();
+        if (impacts.Count == 0) return;
+        if (_latestUpdateGeneration is not ulong generation) return;
+        _combat.ApplyImpacts(impacts, generation, _facts);
+        DeliverFacts();
+    }
 
     internal void ResolveExplicitMelee(ExplicitMeleeRequest request)
     {
