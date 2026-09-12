@@ -369,6 +369,52 @@ public sealed class SourceManifestTests : IDisposable
         SourceManifestRecord lockedRecord = Record(manifest, "CNT-001.file.LOCKED.CIF");
         Assert.Equal(SourceRecordDisposition.Malformed, lockedRecord.Disposition);
         Assert.Contains("could not be read", lockedRecord.Note, StringComparison.Ordinal);
+        // A documented file that could not be read is still accounted for, so the
+        // undocumented sweep does not report the same file a second time.
+        Assert.DoesNotContain(manifest.Records, record => record.Id.StartsWith("scan.LOCKED", StringComparison.Ordinal));
+        Assert.Single(manifest.Records, record => record.SourcePath.EndsWith("LOCKED.CIF", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Two_documented_rows_in_different_families_may_duplicate_one_file()
+    {
+        Write("A.CIF", "alpha"u8);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-009,family,CNT-009,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,first family",
+            "CNT-009.file.A.CIF,file,CNT-009,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,second family");
+
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        // The duplicate is the same supplied file, whichever family its row sits in.
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.file.A.CIF").Disposition);
+        Assert.Equal(SourceRecordDisposition.Duplicate, Record(manifest, "CNT-009.file.A.CIF").Disposition);
+        manifest.Validate();
+    }
+
+    [Fact]
+    public void A_claim_that_names_two_supplied_paths_credits_neither()
+    {
+        Write("X.TXT", "top level"u8);
+        Directory.CreateDirectory(Path.Combine(root, "sub"));
+        Write(Path.Combine("sub", "X.TXT"), "nested"u8);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,text,local/arena2/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-002,family,CNT-002,text,local/arena2/sub/X.TXT,1,,X,scope,current-structural,note",
+            "CNT-001.file.X.TXT,file,CNT-001,source-file,local/arena2/X.TXT,1,9,X,scope,uninspected,top level",
+            "CNT-002.file.sub/X.TXT,file,CNT-002,source-file,local/arena2/sub/X.TXT,1,6,X,scope,uninspected,nested");
+
+        // The claim names a leaf two supplied paths carry, so it identifies neither and
+        // is not credited to whichever file matches first.
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, ["X.TXT"], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.file.X.TXT").Disposition);
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-002.file.sub/X.TXT").Disposition);
     }
 
     [Fact]

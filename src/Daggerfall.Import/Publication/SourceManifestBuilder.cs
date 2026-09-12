@@ -138,6 +138,10 @@ public static class SourceManifestBuilder
             byLoosePath.TryAdd(relative, relative);
         }
 
+        HashSet<string> unambiguous = UnambiguousPaths(byExactPath.Keys);
+        Dictionary<string, int> leafCounts = byExactPath.Keys
+            .GroupBy(path => path.Split('/')[^1], StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
         List<SourceManifestRecord> records = [];
         HashSet<string> claimed = new(StringComparer.Ordinal);
         foreach (SourceInventoryRow row in inventory.Where(row => row.RowType == "file"))
@@ -265,12 +269,15 @@ public static class SourceManifestBuilder
 
             if (!TryReadSource(path, out byte[] bytes, out string? readFailure))
             {
+                // The row is accounted for even though its bytes are not, so the
+                // undocumented sweep does not report the same file a second time.
+                claimed.Add(relative);
                 return new SourceManifestRecord(id, familyId, familyPath, logical, 0, null, null, null, SourceRecordDisposition.Malformed, readFailure!);
             }
 
-            SourceRecordDisposition disposition = Claimed(excluded, relative, byExactPath.Keys) ? SourceRecordDisposition.Excluded
-                : Claimed(imported, relative, byExactPath.Keys) ? SourceRecordDisposition.Imported
-                : Claimed(pending, relative, byExactPath.Keys) ? SourceRecordDisposition.RequiredPending
+            SourceRecordDisposition disposition = Claimed(excluded, relative, unambiguous, leafCounts) ? SourceRecordDisposition.Excluded
+                : Claimed(imported, relative, unambiguous, leafCounts) ? SourceRecordDisposition.Imported
+                : Claimed(pending, relative, unambiguous, leafCounts) ? SourceRecordDisposition.RequiredPending
                 : SourceRecordDisposition.Unused;
             if (!claimed.Add(relative))
             {
@@ -412,18 +419,35 @@ public static class SourceManifestBuilder
         sourcePath.StartsWith($"{sourceRoot}/", StringComparison.Ordinal) ? sourcePath[(sourceRoot.Length + 1)..] : sourcePath;
 
     /// <summary>
-    /// A caller may name a source by the path it read or by its leaf, but a leaf shared
-    /// by several supplied paths cannot identify which one was meant.
+    /// Which supplied paths a claim can actually identify. A name shared by several
+    /// paths names none of them, so a caller has to disambiguate rather than have the
+    /// claim credited to whichever file happens to match first.
     /// </summary>
-    private static bool Claimed(HashSet<string> names, string relative, IEnumerable<string> suppliedPaths)
+    private static HashSet<string> UnambiguousPaths(IEnumerable<string> suppliedPaths)
     {
-        if (names.Contains(relative))
+        string[] paths = suppliedPaths.ToArray();
+        Dictionary<string, int> leaves = paths
+            .GroupBy(path => path.Split('/')[^1], StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        HashSet<string> unambiguous = new(StringComparer.Ordinal);
+        foreach (string path in paths)
         {
-            return true;
+            string leaf = path.Split('/')[^1];
+            // A nested path stays usable even when its leaf is shared; a top-level path
+            // and a leaf are the same string, so a shared one identifies neither.
+            if (leaves[leaf] == 1 || !StringComparer.Ordinal.Equals(leaf, path))
+            {
+                unambiguous.Add(path);
+            }
         }
 
+        return unambiguous;
+    }
+
+    private static bool Claimed(HashSet<string> names, string relative, HashSet<string> unambiguous, IReadOnlyDictionary<string, int> leaves)
+    {
         string leaf = relative.Split('/')[^1];
-        return names.Contains(leaf) && suppliedPaths.Count(path => StringComparer.Ordinal.Equals(path.Split('/')[^1], leaf)) == 1;
+        return (unambiguous.Contains(relative) && names.Contains(relative)) || (leaves[leaf] == 1 && names.Contains(leaf));
     }
 
     private static string DescribeDisposition(SourceRecordDisposition disposition) => disposition switch

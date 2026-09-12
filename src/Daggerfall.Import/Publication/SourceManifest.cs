@@ -200,7 +200,9 @@ public sealed record SourceManifest(
             string identity = $"{record.FamilyId}\u001f{record.SourcePath}\u001f{record.ArchiveKey ?? string.Empty}\u001f{record.ArchiveOrdinal?.ToString() ?? string.Empty}";
             if (record.Disposition == SourceRecordDisposition.Duplicate)
             {
-                duplicates.Add(identity);
+                // A duplicate duplicates a supplied file: the same path and archive
+                // coordinates, regardless of which family its inventory row sits in.
+                duplicates.Add(SourceRecordIdentity.Supplied(record));
             }
             else if (!identities.Add(identity))
             {
@@ -213,9 +215,13 @@ public sealed record SourceManifest(
             }
         }
 
+        HashSet<string> supplied = Records
+            .Where(record => record.Disposition != SourceRecordDisposition.Duplicate)
+            .Select(SourceRecordIdentity.Supplied)
+            .ToHashSet(StringComparer.Ordinal);
         foreach (string duplicate in duplicates)
         {
-            if (!identities.Contains(duplicate))
+            if (!supplied.Contains(duplicate))
             {
                 throw new InvalidOperationException("The source manifest dispositions a record as a duplicate of a record it does not match.");
             }
@@ -238,6 +244,13 @@ public sealed record SourceManifest(
             }
         }
     }
+}
+
+/// <summary>What a record duplicates: the supplied path and the archive record it came from.</summary>
+file static class SourceRecordIdentity
+{
+    public static string Supplied(SourceManifestRecord record) =>
+        $"{record.SourcePath}\u001f{record.ArchiveKey ?? string.Empty}\u001f{record.ArchiveOrdinal?.ToString() ?? string.Empty}";
 }
 
 /// <summary>Canonical JSON for <see cref="SourceManifest"/>.</summary>
