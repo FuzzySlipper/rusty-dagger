@@ -89,11 +89,25 @@ public sealed class QuestSourceInventory
         // stems differ only by case would make the pairing ambiguous.
         Dictionary<string, string> binaries = new(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, string> resources = new(StringComparer.OrdinalIgnoreCase);
+        int index = 0;
         foreach (string path in paths.Order(StringComparer.Ordinal))
         {
+            if (path is null)
+            {
+                throw new ArgumentException($"Quest source path {index} is null; a path is the identity a consumer cites.", nameof(paths));
+            }
+
+            index++;
             string fileName = System.IO.Path.GetFileName(path);
-            QuestSourceFamily family = FamilyOf(fileName, source);
+            QuestSourceFamily family = FamilyOf(fileName, path, source);
             string stem = System.IO.Path.GetFileNameWithoutExtension(fileName);
+            if (string.IsNullOrEmpty(stem))
+            {
+                // A stem is what files pair on, so a file without one has no identity to
+                // pair by and would otherwise pair on the empty string with any other.
+                throw new Arena2FormatException(source, 0, $"'{path}' has no stem before its extension, so it has no identity to pair on");
+            }
+
             Dictionary<string, string> familyStems = family == QuestSourceFamily.QuestBinary ? binaries : resources;
             if (!familyStems.TryAdd(stem, path))
             {
@@ -130,7 +144,7 @@ public sealed class QuestSourceInventory
         return byPath.TryGetValue(path, out file);
     }
 
-    private static QuestSourceFamily FamilyOf(string fileName, string source)
+    private static QuestSourceFamily FamilyOf(string fileName, string path, string source)
     {
         if (fileName.EndsWith(BinaryExtension, StringComparison.OrdinalIgnoreCase) && !fileName.EndsWith(ResourcesExtension, StringComparison.OrdinalIgnoreCase))
         {
@@ -142,6 +156,8 @@ public sealed class QuestSourceInventory
             return QuestSourceFamily.QuestResources;
         }
 
-        throw new Arena2FormatException(source, 0, $"'{fileName}' is in neither the {BinaryExtension} nor the {ResourcesExtension} family");
+        // The supplied path is the identity, so the diagnostic cites it rather than the
+        // file name derived from it, which is empty for a directory-like input.
+        throw new Arena2FormatException(source, 0, $"'{path}' is in neither the {BinaryExtension} nor the {ResourcesExtension} family");
     }
 }

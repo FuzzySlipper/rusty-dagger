@@ -42,7 +42,7 @@ public sealed record QuestResourceEnvelope(
     QuestResourceEnvelopeDisposition Disposition,
     string Note)
 {
-    /// <summary>The size of one directory entry: a two-byte token id and a four-byte offset.</summary>
+    /// <summary>The size of one directory entry: a two-byte id and a four-byte offset.</summary>
     public const int DirectoryEntryBytes = 6;
 
     /// <summary>The sentinel id that ends every directory.</summary>

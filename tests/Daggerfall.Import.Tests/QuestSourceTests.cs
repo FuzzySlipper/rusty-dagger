@@ -72,6 +72,37 @@ public sealed class QuestSourceTests
     }
 
     [Fact]
+    public void Rejects_a_file_with_no_stem_to_pair_on()
+    {
+        // A stemless file has no identity to pair by, and pairing two of them on the empty
+        // string would report a companion relationship the corpus does not have.
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() =>
+            QuestSourceInventory.Enumerate([".QBN", ".QRC"], "fixture"));
+
+        Assert.Contains("no stem before its extension", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Names_the_supplied_path_when_a_file_is_in_neither_family()
+    {
+        // A directory-like input has no file name of its own, so the diagnostic cites what
+        // the caller supplied rather than the empty name derived from it.
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() =>
+            QuestSourceInventory.Enumerate(["somedir/"], "fixture"));
+
+        Assert.Contains("'somedir/'", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_a_null_path_element_with_a_diagnostic()
+    {
+        ArgumentException error = Assert.Throws<ArgumentException>(() =>
+            QuestSourceInventory.Enumerate([null!], "fixture"));
+
+        Assert.Contains("is null", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Rejects_two_files_claiming_one_stem()
     {
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() =>
