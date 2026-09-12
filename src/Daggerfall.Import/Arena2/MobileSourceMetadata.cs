@@ -243,11 +243,16 @@ public sealed record Arena2MobileForeignLinks(
             throw new ArgumentException("A mobile loot table key must be absent or non-empty.", nameof(LootTableKey));
         }
 
-        foreach (string cue in (string[])[MoveSoundCue, BarkSoundCue, AttackSoundCue])
+        foreach ((string name, string cue) in ((string Name, string Value)[])[
+            (nameof(MoveSoundCue), MoveSoundCue),
+            (nameof(BarkSoundCue), BarkSoundCue),
+            (nameof(AttackSoundCue), AttackSoundCue)])
         {
             if (string.IsNullOrWhiteSpace(cue))
             {
-                throw new ArgumentException("A mobile vocal cue must name the donor clip it plays.", nameof(cue));
+                // Name the cue that failed: a consumer fixing link data needs to know which
+                // of the three it is.
+                throw new ArgumentException($"A mobile vocal cue must name the donor clip it plays ({name}).", name);
             }
         }
 

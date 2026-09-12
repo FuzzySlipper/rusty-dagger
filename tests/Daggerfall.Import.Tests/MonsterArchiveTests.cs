@@ -204,6 +204,29 @@ public sealed class MonsterArchiveTests
     }
 
     [Fact]
+    public void Locates_a_truncated_archive_at_the_directory_entry_that_does_not_fit()
+    {
+        // Truncating the real archive shifts the directory window, so payload bytes are
+        // read as entries. The refusal must point at the entry that does not fit rather
+        // than at an offset only the arithmetic could reach.
+        byte[] truncated = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MONSTER.BSA"))[..^10];
+
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => MonsterArchiveInventory.Enumerate(truncated, "MONSTER.BSA"));
+
+        Assert.InRange(error.Offset, 0, truncated.Length);
+        Assert.Contains("directory", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Names_the_cue_that_fails_link_validation()
+    {
+        ArgumentException error = Assert.Throws<ArgumentException>(() => new Arena2MobileForeignLinks(
+            null, "  ", "EnemyRatBark", "EnemyRatAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0).Validate());
+
+        Assert.Equal("MoveSoundCue", error.ParamName);
+    }
+
+    [Fact]
     public void Refuses_an_archive_whose_directory_repeats_a_name()
     {
         // Two records under one archive key would make the enumeration's lookup ambiguous,
