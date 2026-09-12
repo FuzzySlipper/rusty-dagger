@@ -156,6 +156,25 @@ public sealed class DaggerfallCatalogTests
     }
 
     [Fact]
+    public void The_published_career_carries_its_data_and_no_computed_views()
+    {
+        // The published record is the carrier the runtime reads, so it must not carry
+        // computed views: a view serialized by accident published an array of empty
+        // objects beside the values it was derived from.
+        System.Text.Json.Nodes.JsonObject career = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!
+            ["catalogs"]!["careers"]!.AsArray()
+            .Select(value => value!.AsObject())
+            .First(value => value["id"]!.GetValue<string>() == "class00");
+
+        Assert.DoesNotContain("flagBytes", career.Select(property => property.Key));
+        Assert.DoesNotContain("skillReferences", career.Select(property => property.Key));
+        Assert.Equal(34, System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!
+            ["catalogs"]!["careers"]!.AsArray()
+            .Select(value => value!.AsObject())
+            .Single(value => value["id"]!.GetValue<string>() == "class12")["resistanceFlags"]!.GetValue<int>());
+    }
+
+    [Fact]
     public void The_published_catalogs_cover_every_pack_key_they_reference()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();

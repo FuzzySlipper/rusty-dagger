@@ -91,6 +91,8 @@ public sealed record DaggerfallCareerRecord(
     int CriticalWeaknessFlags,
     DaggerfallCatalogSource Source)
 {
+    /// <summary>Every skill the career trains, in record order.</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public IEnumerable<string> SkillReferences => PrimarySkills.Concat(MajorSkills).Concat(MinorSkills);
 
     /// <summary>
@@ -99,6 +101,7 @@ public sealed record DaggerfallCareerRecord(
     /// than elements — paralysis and the low-tolerance and critical-weakness flags have
     /// no key here yet, and dropping the byte would lose them silently.
     /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
     public IEnumerable<(string Name, int Value)> FlagBytes =>
     [
         ("resistanceFlags", ResistanceFlags),

@@ -3888,27 +3888,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS00.CFG",
           "path": "local/arena2/CLASS00.CFG"
-        },
-        "skillReferences": [
-          "mysticism",
-          "alteration",
-          "thaumaturgy",
-          "illusion",
-          "destruction",
-          "restoration",
-          "medical",
-          "short-blade",
-          "blunt-weapon",
-          "dragonish",
-          "daedric",
-          "dodging"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class01",
@@ -3952,27 +3932,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS01.CFG",
           "path": "local/arena2/CLASS01.CFG"
-        },
-        "skillReferences": [
-          "axe",
-          "long-blade",
-          "blunt-weapon",
-          "destruction",
-          "illusion",
-          "alteration",
-          "restoration",
-          "thaumaturgy",
-          "mysticism",
-          "short-blade",
-          "hand-to-hand",
-          "archery"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class02",
@@ -4016,27 +3976,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS02.CFG",
           "path": "local/arena2/CLASS02.CFG"
-        },
-        "skillReferences": [
-          "destruction",
-          "long-blade",
-          "axe",
-          "thaumaturgy",
-          "alteration",
-          "hand-to-hand",
-          "illusion",
-          "mysticism",
-          "restoration",
-          "archery",
-          "short-blade",
-          "blunt-weapon"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class03",
@@ -4080,27 +4020,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS03.CFG",
           "path": "local/arena2/CLASS03.CFG"
-        },
-        "skillReferences": [
-          "mysticism",
-          "alteration",
-          "thaumaturgy",
-          "destruction",
-          "restoration",
-          "illusion",
-          "medical",
-          "short-blade",
-          "blunt-weapon",
-          "dragonish",
-          "daedric",
-          "dodging"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class04",
@@ -4144,27 +4064,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS04.CFG",
           "path": "local/arena2/CLASS04.CFG"
-        },
-        "skillReferences": [
-          "restoration",
-          "medical",
-          "dodging",
-          "thaumaturgy",
-          "mysticism",
-          "alteration",
-          "illusion",
-          "streetwise",
-          "etiquette",
-          "short-blade",
-          "hand-to-hand",
-          "blunt-weapon"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class05",
@@ -4208,27 +4108,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS05.CFG",
           "path": "local/arena2/CLASS05.CFG"
-        },
-        "skillReferences": [
-          "illusion",
-          "stealth",
-          "dodging",
-          "thaumaturgy",
-          "short-blade",
-          "lockpicking",
-          "alteration",
-          "critical-strike",
-          "mercantile",
-          "destruction",
-          "restoration",
-          "backstabbing"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class06",
@@ -4272,27 +4152,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS06.CFG",
           "path": "local/arena2/CLASS06.CFG"
-        },
-        "skillReferences": [
-          "streetwise",
-          "etiquette",
-          "pickpocket",
-          "stealth",
-          "short-blade",
-          "hand-to-hand",
-          "lockpicking",
-          "alteration",
-          "illusion",
-          "destruction",
-          "archery",
-          "restoration"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class07",
@@ -4336,27 +4196,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS07.CFG",
           "path": "local/arena2/CLASS07.CFG"
-        },
-        "skillReferences": [
-          "lockpicking",
-          "stealth",
-          "climbing",
-          "mercantile",
-          "dodging",
-          "short-blade",
-          "jumping",
-          "running",
-          "critical-strike",
-          "pickpocket",
-          "streetwise",
-          "backstabbing"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class08",
@@ -4400,27 +4240,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS08.CFG",
           "path": "local/arena2/CLASS08.CFG"
-        },
-        "skillReferences": [
-          "long-blade",
-          "stealth",
-          "dodging",
-          "pickpocket",
-          "backstabbing",
-          "streetwise",
-          "critical-strike",
-          "blunt-weapon",
-          "lockpicking",
-          "hand-to-hand",
-          "running",
-          "swimming"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class09",
@@ -4464,27 +4284,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS09.CFG",
           "path": "local/arena2/CLASS09.CFG"
-        },
-        "skillReferences": [
-          "jumping",
-          "dodging",
-          "running",
-          "climbing",
-          "hand-to-hand",
-          "stealth",
-          "pickpocket",
-          "critical-strike",
-          "backstabbing",
-          "short-blade",
-          "archery",
-          "swimming"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class10",
@@ -4528,27 +4328,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS10.CFG",
           "path": "local/arena2/CLASS10.CFG"
-        },
-        "skillReferences": [
-          "pickpocket",
-          "stealth",
-          "short-blade",
-          "backstabbing",
-          "climbing",
-          "lockpicking",
-          "critical-strike",
-          "jumping",
-          "running",
-          "dodging",
-          "streetwise",
-          "mercantile"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class11",
@@ -4592,27 +4372,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS11.CFG",
           "path": "local/arena2/CLASS11.CFG"
-        },
-        "skillReferences": [
-          "critical-strike",
-          "backstabbing",
-          "stealth",
-          "short-blade",
-          "long-blade",
-          "blunt-weapon",
-          "axe",
-          "archery",
-          "lockpicking",
-          "pickpocket",
-          "climbing",
-          "dodging"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class12",
@@ -4659,27 +4419,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS12.CFG",
           "path": "local/arena2/CLASS12.CFG"
-        },
-        "skillReferences": [
-          "hand-to-hand",
-          "critical-strike",
-          "dodging",
-          "swimming",
-          "medical",
-          "blunt-weapon",
-          "axe",
-          "long-blade",
-          "archery",
-          "short-blade",
-          "jumping",
-          "climbing"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class13",
@@ -4723,27 +4463,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS13.CFG",
           "path": "local/arena2/CLASS13.CFG"
-        },
-        "skillReferences": [
-          "archery",
-          "hand-to-hand",
-          "dodging",
-          "axe",
-          "blunt-weapon",
-          "critical-strike",
-          "long-blade",
-          "short-blade",
-          "climbing",
-          "jumping",
-          "running",
-          "swimming"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class14",
@@ -4787,27 +4507,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS14.CFG",
           "path": "local/arena2/CLASS14.CFG"
-        },
-        "skillReferences": [
-          "long-blade",
-          "axe",
-          "climbing",
-          "swimming",
-          "archery",
-          "critical-strike",
-          "blunt-weapon",
-          "hand-to-hand",
-          "short-blade",
-          "running",
-          "dodging",
-          "spriggan"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class15",
@@ -4853,27 +4553,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS15.CFG",
           "path": "local/arena2/CLASS15.CFG"
-        },
-        "skillReferences": [
-          "blunt-weapon",
-          "long-blade",
-          "axe",
-          "jumping",
-          "running",
-          "swimming",
-          "medical",
-          "climbing",
-          "dodging",
-          "critical-strike",
-          "archery",
-          "giantish"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class16",
@@ -4917,27 +4597,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS16.CFG",
           "path": "local/arena2/CLASS16.CFG"
-        },
-        "skillReferences": [
-          "axe",
-          "long-blade",
-          "blunt-weapon",
-          "hand-to-hand",
-          "archery",
-          "short-blade",
-          "climbing",
-          "jumping",
-          "dodging",
-          "running",
-          "swimming",
-          "medical"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class17",
@@ -4981,27 +4641,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS17.CFG",
           "path": "local/arena2/CLASS17.CFG"
-        },
-        "skillReferences": [
-          "long-blade",
-          "etiquette",
-          "blunt-weapon",
-          "axe",
-          "archery",
-          "short-blade",
-          "medical",
-          "dodging",
-          "hand-to-hand",
-          "jumping",
-          "swimming",
-          "climbing"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       },
       {
         "id": "class18",
@@ -5044,26 +4684,7 @@
         "source": {
           "recordId": "CNT-010.file.CLASS18.CFG",
           "path": "local/arena2/CLASS18.CFG"
-        },
-        "skillReferences": [
-          "long-blade",
-          "archery",
-          "critical-strike",
-          "etiquette",
-          "dodging",
-          "medical",
-          "orcish",
-          "stealth",
-          "backstabbing",
-          "destruction",
-          "restoration"
-        ],
-        "flagBytes": [
-          {},
-          {},
-          {},
-          {}
-        ]
+        }
       }
     ],
     "careerNameCollisions": [
