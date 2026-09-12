@@ -106,6 +106,10 @@ public sealed class QuestSourceTests
             {
                 marked++;
             }
+            else
+            {
+                Assert.Contains("no terminal marker", envelope.Note, StringComparison.Ordinal);
+            }
         }
 
         // 272 of the 306 carry the terminal marker; the other 34 end without one, which
@@ -114,6 +118,106 @@ public sealed class QuestSourceTests
         Assert.Equal(34, inventory.Binaries.Count() - marked);
         Assert.Equal(294, CountVariant(inventory, 0));
         Assert.Equal(12, CountVariant(inventory, 1));
+    }
+
+    [Fact]
+    public void Reports_the_bytes_after_the_marker_without_framing_them_as_a_record()
+    {
+        byte[] bytes = new byte[64];
+        bytes[58] = 0xff;
+        bytes[59] = 0xff;
+        bytes[60] = 0x36;
+
+        QuestBinaryEnvelope envelope = QuestBinaryEnvelope.Decode(bytes, "fixture.QBN");
+
+        // The two marker bytes are what the corpus establishes. The four bytes after them
+        // take forty distinct values across the supplied files, so they are reported as
+        // trailing bytes rather than called part of a marker record.
+        Assert.True(envelope.HasTerminalMarker);
+        Assert.Equal(0x00000036u, envelope.TrailingBytes);
+        Assert.Contains("trailing bytes 0x00000036", envelope.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Reports_a_gap_between_the_directory_and_the_first_record()
+    {
+        string root = RepositoryRoot();
+        QuestSourceInventory inventory = ReadInventory();
+
+        // Exactly one supplied file starts its first record one byte past its directory.
+        // The records are still located, so the envelope decodes, but the byte that belongs
+        // to no record is disclosed.
+        List<string> gapped = [];
+        foreach (QuestSourceFile file in inventory.Resources)
+        {
+            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", file.Path)), file.Path);
+            if (envelope.Note.Contains("belong to no record", StringComparison.Ordinal))
+            {
+                gapped.Add(file.Path);
+            }
+        }
+
+        Assert.Equal(["B0C00Y06.QRC"], gapped);
+    }
+
+    [Fact]
+    public void Every_supplied_record_ends_at_the_separator_the_corpus_uses()
+    {
+        string root = RepositoryRoot();
+        QuestSourceInventory inventory = ReadInventory();
+
+        // A corpus fact, asserted rather than assumed: every one of the 4588 supplied
+        // records ends with the 0xFE separator, which is what makes the length-is-the-next-
+        // offset reading of a record's extent hold rather than merely fit.
+        int records = 0;
+        foreach (QuestSourceFile file in inventory.Resources)
+        {
+            QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2", file.Path)), file.Path);
+            foreach (QuestResourceRecord record in envelope.Records)
+            {
+                Assert.Equal(0xfe, record.Payload.Span[^1]);
+                records++;
+            }
+        }
+
+        Assert.Equal(4588, records);
+    }
+
+    [Fact]
+    public void Refuses_a_resource_envelope_whose_entry_points_outside_the_record_region()
+    {
+        // Below the record region: the directory's own bytes are not a record.
+        byte[] below = BuildResourceEnvelope([(1000, 8)]);
+        QuestResourceEnvelope under = QuestResourceEnvelope.Decode(below, "fixture.QRC");
+        Assert.Equal(QuestResourceEnvelopeDisposition.Malformed, under.Disposition);
+        Assert.Contains("outside the record region", under.Note, StringComparison.Ordinal);
+
+        // Past the end of the file: the sentinel's offset is the last four directory
+        // bytes, so a directory claiming a record beyond the file is refused.
+        byte[] beyond = BuildResourceEnvelope([(1000, 20)]);
+        int sentinelOffset = 2 + (2 * QuestResourceEnvelope.DirectoryEntryBytes) - 4;
+        beyond[sentinelOffset] = 0xff;
+        beyond[sentinelOffset + 1] = 0x00;
+        QuestResourceEnvelope over = QuestResourceEnvelope.Decode(beyond, "fixture.QRC");
+        Assert.Equal(QuestResourceEnvelopeDisposition.Malformed, over.Disposition);
+        Assert.Contains("outside the record region", over.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Delivers_record_bytes_that_are_not_text_unchanged()
+    {
+        // No text encoding is asserted at this layer: a record of arbitrary bytes is data
+        // the worker decodes, not an envelope defect.
+        byte[] bytes = BuildResourceEnvelope([(7, 20)]);
+        bytes[20] = 0x00;
+        bytes[21] = 0xff;
+        bytes[22] = 0x80;
+        bytes[23] = 0xfe;
+
+        QuestResourceEnvelope envelope = QuestResourceEnvelope.Decode(bytes, "fixture.QRC");
+
+        Assert.Equal(QuestResourceEnvelopeDisposition.Decoded, envelope.Disposition);
+        Assert.Equal([0x00, 0xff, 0x80, 0xfe], envelope.Records.Single().Payload.ToArray());
     }
 
     [Fact]
