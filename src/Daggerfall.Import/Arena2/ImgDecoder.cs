@@ -104,8 +104,13 @@ public static class ImgDecoder
     /// wrong image rather than a reported gap. A documented shape whose file is shorter than
     /// the shape is refused for the same reason — the classic reader would pad the canvas with
     /// the bytes that are missing. A file longer than its shape yields the shape's leading
-    /// bytes; the remainder is not part of the canvas, as in the classic reader, which reads
-    /// the shape's byte count and ignores the rest.
+    /// bytes; the remainder is not part of the canvas and this decoder does not read it, but it
+    /// can carry meaning: the 64768-byte length is a 320x200 canvas followed by a 768-byte
+    /// palette, which the classic reader reads for exactly `CHGN00I0.IMG`, `DIE_00I0.IMG`,
+    /// `PICK02I0.IMG`, `PICK03I0.IMG`, `PRIS00I0.IMG` and `TITL00I0.IMG` (donor
+    /// <c>ImgFile.ReadPalette</c>, which also scales that palette's RGB by four because it is
+    /// otherwise very dark). Those six files are `CNT-027` source, and reading their palette
+    /// belongs to the publication that emits them rather than to this shape table.
     /// </remarks>
     public static IndexedImg DecodeHeaderless(ReadOnlySpan<byte> bytes, string source)
     {
