@@ -116,15 +116,63 @@ public sealed class DaggerfallCatalogTests
     }
 
     [Fact]
+    public void Publishes_resistance_and_immunity_elements_from_the_classic_effect_flags()
+    {
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+
+        // The classic bytes are EffectFlags, not element indices: fire is 8, frost 16,
+        // poison 4, disease 64, shock 32, magic 2 and paralysis 1. Every one of the four
+        // non-zero flag cases in the supplied corpus is checked here.
+        DaggerfallCareerRecord monk = catalogs.Careers.Single(career => career.Id == "class12");
+        Assert.Equal(34, monk.ResistanceFlags);
+        Assert.Equal(["shock", "magic"], monk.ResistanceElements);
+        Assert.Equal(0, monk.ImmunityFlags);
+        Assert.Empty(monk.ImmunityElements);
+        DaggerfallCareerRecord barbarian = catalogs.Careers.Single(career => career.Id == "class15");
+        Assert.Equal(4, barbarian.ImmunityFlags);
+        Assert.Equal(["disease-or-poison"], barbarian.ImmunityElements);
+        // Both Knights are immune to paralysis, which is not one of the five elements, so
+        // the element list is empty and the byte keeps the bit for the task that owns it.
+        foreach (string id in (string[])["class17", "class18"])
+        {
+            DaggerfallCareerRecord knight = catalogs.Careers.Single(career => career.Id == id);
+            Assert.Equal(1, knight.ImmunityFlags);
+            Assert.Empty(knight.ImmunityElements);
+        }
+
+        // Every career's element lists are exactly the interpretation of its own bytes.
+        foreach (DaggerfallCareerRecord career in catalogs.Careers)
+        {
+            Assert.Equal(ExpectedElements(career.ResistanceFlags), career.ResistanceElements);
+            Assert.Equal(ExpectedElements(career.ImmunityFlags), career.ImmunityElements);
+        }
+    }
+
+    private static List<string> ExpectedElements(int flags)
+    {
+        string[] keys = ["fire", "frost", "disease-or-poison", "shock", "magic"];
+        int[] masks = [8, 16, 4 | 64, 32, 2];
+        return [.. keys.Where((_, index) => (flags & masks[index]) != 0)];
+    }
+
+    [Fact]
     public void The_published_catalogs_cover_every_pack_key_they_reference()
     {
         DaggerfallCatalogs catalogs = BuildFromRepository();
 
-        // The reference catalogs are a view of keys the pack defines, so they must cover
-        // every one of them: an actor or item added to the pack without re-running the
-        // builder would leave a consumer resolving a key the catalog does not list.
-        Assert.Equal(EnemyIds().Order(StringComparer.Ordinal), catalogs.Enemies.Select(enemy => enemy.Id).Order(StringComparer.Ordinal));
-        Assert.Equal(ItemIds().Order(StringComparer.Ordinal), catalogs.ItemTemplates.Select(item => item.Id).Order(StringComparer.Ordinal));
+        // The reference catalogs are a view of keys the pack defines, so the *published*
+        // pack must cover every one of them: an actor or item added without re-running
+        // the builder would otherwise leave a consumer resolving a key the catalog the
+        // pack actually carries does not list. Comparing the builder's own inputs with
+        // its own output would prove nothing, so this reads the pack file.
+        System.Text.Json.Nodes.JsonNode published = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!;
+        string[] publishedEnemies = [.. published["catalogs"]!["enemies"]!.AsArray().Select(value => value!["id"]!.GetValue<string>())];
+        string[] publishedItems = [.. published["catalogs"]!["itemTemplates"]!.AsArray().Select(value => value!["id"]!.GetValue<string>())];
+        Assert.Equal(EnemyIds().Order(StringComparer.Ordinal), publishedEnemies.Order(StringComparer.Ordinal));
+        Assert.Equal(ItemIds().Order(StringComparer.Ordinal), publishedItems.Order(StringComparer.Ordinal));
+        // And the builder reproduces that published section.
+        Assert.Equal(publishedEnemies, catalogs.Enemies.Select(enemy => enemy.Id));
+        Assert.Equal(publishedItems, catalogs.ItemTemplates.Select(item => item.Id));
     }
 
     [Fact]

@@ -29,9 +29,27 @@ internal sealed record DaggerfallCareerDefinition(
     float AdvancementMultiplier,
     IReadOnlyList<string> ResistanceElements,
     IReadOnlyList<string> ImmunityElements,
+    int ResistanceFlags,
+    int ImmunityFlags,
+    int LowToleranceFlags,
+    int CriticalWeaknessFlags,
     DaggerfallCatalogCitation Source)
 {
     internal IEnumerable<string> SkillReferences => PrimarySkills.Concat(MajorSkills).Concat(MinorSkills);
+
+    /// <summary>
+    /// The four classic effect-flag bytes as published. The element lists are the
+    /// interpretation this contract owns; the bytes are kept because they carry more
+    /// than elements — paralysis and the low-tolerance and critical-weakness flags have
+    /// no key here yet, and a later task needs them without reopening a source file.
+    /// </summary>
+    internal IEnumerable<(string Name, int Value)> FlagBytes =>
+    [
+        ("resistanceFlags", ResistanceFlags),
+        ("immunityFlags", ImmunityFlags),
+        ("lowToleranceFlags", LowToleranceFlags),
+        ("criticalWeaknessFlags", CriticalWeaknessFlags),
+    ];
 }
 
 /// <summary>A key that names a record another catalog owns.</summary>
@@ -56,6 +74,9 @@ internal sealed class DaggerfallCatalogSet(
     IReadOnlyList<DaggerfallCatalogReference> itemTemplates,
     IReadOnlyList<DaggerfallPendingCatalogDefinition> pending)
 {
+    /// <summary>The classic element keys, in the index order the catalog publishes.</summary>
+    internal static readonly string[] ElementKeys = ["fire", "frost", "disease-or-poison", "shock", "magic"];
+
     internal IReadOnlyList<DaggerfallCatalogKey> Attributes { get; } = Array.AsReadOnly(attributes.ToArray());
 
     internal IReadOnlyList<DaggerfallCatalogKey> Skills { get; } = Array.AsReadOnly(skills.ToArray());

@@ -3881,6 +3881,10 @@
         "advancementMultiplier": 1.0390625,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS00.CFG",
           "path": "local/arena2/CLASS00.CFG"
@@ -3898,6 +3902,12 @@
           "dragonish",
           "daedric",
           "dodging"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -3935,6 +3945,10 @@
         "advancementMultiplier": 0.9140625,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS01.CFG",
           "path": "local/arena2/CLASS01.CFG"
@@ -3952,6 +3966,12 @@
           "short-blade",
           "hand-to-hand",
           "archery"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -3989,6 +4009,10 @@
         "advancementMultiplier": 0.95703125,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS02.CFG",
           "path": "local/arena2/CLASS02.CFG"
@@ -4006,6 +4030,12 @@
           "archery",
           "short-blade",
           "blunt-weapon"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4043,6 +4073,10 @@
         "advancementMultiplier": 1.0390625,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS03.CFG",
           "path": "local/arena2/CLASS03.CFG"
@@ -4060,6 +4094,12 @@
           "dragonish",
           "daedric",
           "dodging"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4097,6 +4137,10 @@
         "advancementMultiplier": 1,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS04.CFG",
           "path": "local/arena2/CLASS04.CFG"
@@ -4114,6 +4158,12 @@
           "short-blade",
           "hand-to-hand",
           "blunt-weapon"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4151,6 +4201,10 @@
         "advancementMultiplier": 1,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS05.CFG",
           "path": "local/arena2/CLASS05.CFG"
@@ -4168,6 +4222,12 @@
           "destruction",
           "restoration",
           "backstabbing"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4205,6 +4265,10 @@
         "advancementMultiplier": 0.95703125,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS06.CFG",
           "path": "local/arena2/CLASS06.CFG"
@@ -4222,6 +4286,12 @@
           "destruction",
           "archery",
           "restoration"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4259,6 +4329,10 @@
         "advancementMultiplier": 1,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS07.CFG",
           "path": "local/arena2/CLASS07.CFG"
@@ -4276,6 +4350,12 @@
           "pickpocket",
           "streetwise",
           "backstabbing"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4313,6 +4393,10 @@
         "advancementMultiplier": 0.9140625,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS08.CFG",
           "path": "local/arena2/CLASS08.CFG"
@@ -4330,6 +4414,12 @@
           "hand-to-hand",
           "running",
           "swimming"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4367,6 +4457,10 @@
         "advancementMultiplier": 1,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS09.CFG",
           "path": "local/arena2/CLASS09.CFG"
@@ -4384,6 +4478,12 @@
           "short-blade",
           "archery",
           "swimming"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4421,6 +4521,10 @@
         "advancementMultiplier": 0.95703125,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS10.CFG",
           "path": "local/arena2/CLASS10.CFG"
@@ -4438,6 +4542,12 @@
           "dodging",
           "streetwise",
           "mercantile"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4475,6 +4585,10 @@
         "advancementMultiplier": 0.9140625,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS11.CFG",
           "path": "local/arena2/CLASS11.CFG"
@@ -4492,6 +4606,12 @@
           "pickpocket",
           "climbing",
           "dodging"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4528,9 +4648,14 @@
         "hitPointsPerLevel": 14,
         "advancementMultiplier": 0.87109375,
         "resistanceElements": [
-          "frost"
+          "shock",
+          "magic"
         ],
         "immunityElements": [],
+        "resistanceFlags": 34,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS12.CFG",
           "path": "local/arena2/CLASS12.CFG"
@@ -4548,6 +4673,12 @@
           "short-blade",
           "jumping",
           "climbing"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4585,6 +4716,10 @@
         "advancementMultiplier": 0.83203125,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS13.CFG",
           "path": "local/arena2/CLASS13.CFG"
@@ -4602,6 +4737,12 @@
           "jumping",
           "running",
           "swimming"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4639,6 +4780,10 @@
         "advancementMultiplier": 0.7890625,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS14.CFG",
           "path": "local/arena2/CLASS14.CFG"
@@ -4656,6 +4801,12 @@
           "running",
           "dodging",
           "spriggan"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4695,6 +4846,10 @@
         "immunityElements": [
           "disease-or-poison"
         ],
+        "resistanceFlags": 0,
+        "immunityFlags": 4,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS15.CFG",
           "path": "local/arena2/CLASS15.CFG"
@@ -4712,6 +4867,12 @@
           "critical-strike",
           "archery",
           "giantish"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4749,6 +4910,10 @@
         "advancementMultiplier": 0.74609375,
         "resistanceElements": [],
         "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 0,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS16.CFG",
           "path": "local/arena2/CLASS16.CFG"
@@ -4766,6 +4931,12 @@
           "running",
           "swimming",
           "medical"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4802,9 +4973,11 @@
         "hitPointsPerLevel": 18,
         "advancementMultiplier": 0.7890625,
         "resistanceElements": [],
-        "immunityElements": [
-          "fire"
-        ],
+        "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 1,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS17.CFG",
           "path": "local/arena2/CLASS17.CFG"
@@ -4822,6 +4995,12 @@
           "jumping",
           "swimming",
           "climbing"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       },
       {
@@ -4857,9 +5036,11 @@
         "hitPointsPerLevel": 18,
         "advancementMultiplier": 0.7890625,
         "resistanceElements": [],
-        "immunityElements": [
-          "fire"
-        ],
+        "immunityElements": [],
+        "resistanceFlags": 0,
+        "immunityFlags": 1,
+        "lowToleranceFlags": 0,
+        "criticalWeaknessFlags": 0,
         "source": {
           "recordId": "CNT-010.file.CLASS18.CFG",
           "path": "local/arena2/CLASS18.CFG"
@@ -4876,6 +5057,12 @@
           "backstabbing",
           "destruction",
           "restoration"
+        ],
+        "flagBytes": [
+          {},
+          {},
+          {},
+          {}
         ]
       }
     ],

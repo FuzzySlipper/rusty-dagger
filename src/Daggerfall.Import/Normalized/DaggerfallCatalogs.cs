@@ -85,9 +85,27 @@ public sealed record DaggerfallCareerRecord(
     float AdvancementMultiplier,
     IReadOnlyList<string> ResistanceElements,
     IReadOnlyList<string> ImmunityElements,
+    int ResistanceFlags,
+    int ImmunityFlags,
+    int LowToleranceFlags,
+    int CriticalWeaknessFlags,
     DaggerfallCatalogSource Source)
 {
     public IEnumerable<string> SkillReferences => PrimarySkills.Concat(MajorSkills).Concat(MinorSkills);
+
+    /// <summary>
+    /// The four classic effect-flag bytes as they were read. The element lists are the
+    /// interpretation this contract owns; the bytes are kept because they carry more
+    /// than elements — paralysis and the low-tolerance and critical-weakness flags have
+    /// no key here yet, and dropping the byte would lose them silently.
+    /// </summary>
+    public IEnumerable<(string Name, int Value)> FlagBytes =>
+    [
+        ("resistanceFlags", ResistanceFlags),
+        ("immunityFlags", ImmunityFlags),
+        ("lowToleranceFlags", LowToleranceFlags),
+        ("criticalWeaknessFlags", CriticalWeaknessFlags),
+    ];
 
     public void Validate(IReadOnlySet<string> inventoryRecordIds, IReadOnlySet<string> skillKeys, IReadOnlySet<string> attributeKeys, IReadOnlySet<string> elementKeys)
     {
@@ -114,8 +132,33 @@ public sealed record DaggerfallCareerRecord(
         RequireReferences(SkillReferences, skillKeys, $"career '{Id}' names skill");
         RequireReferences(ResistanceElements, elementKeys, $"career '{Id}' resists element");
         RequireReferences(ImmunityElements, elementKeys, $"career '{Id}' is immune to element");
+        RequireElements(ResistanceElements, ResistanceFlags, "resists");
+        RequireElements(ImmunityElements, ImmunityFlags, "is immune to");
         RequireReferences(Attributes, attributeKeys, $"career '{Id}' names attribute");
+        foreach ((string name, int value) in FlagBytes)
+        {
+            if (value is < 0 or > DaggerfallCatalogs.MaximumFlagByte)
+            {
+                throw new ArgumentOutOfRangeException(nameof(value), value, $"Career '{Id}' must carry {name} as one byte.");
+            }
+        }
+
         Source.Validate(inventoryRecordIds);
+    }
+
+    /// <summary>
+    /// The published element list must be the interpretation of the flag byte it came
+    /// from, so a hand-edited list that disagrees with its bytes is refused rather than
+    /// published as if the carrier said it.
+    /// </summary>
+    private void RequireElements(IReadOnlyList<string> elements, int flags, string verb)
+    {
+        string[] expected = [.. DaggerfallCatalogs.ElementKeys
+            .Where((_, index) => (flags & DaggerfallCatalogs.ElementFlagMasks[index]) != 0)];
+        if (!elements.SequenceEqual(expected, StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException($"Career '{Id}' {verb} [{string.Join(", ", elements)}] where its flags {flags} say [{string.Join(", ", expected)}].");
+        }
     }
 
     private static void RequireReferences(IEnumerable<string> values, IReadOnlySet<string> candidates, string owner)
@@ -179,6 +222,17 @@ public sealed record DaggerfallCatalogs(
 
     /// <summary>The named element keys, in classic index order.</summary>
     public static readonly string[] ElementKeys = ["fire", "frost", "disease-or-poison", "shock", "magic"];
+
+    /// <summary>
+    /// The classic effect flag each element key answers to, in the same order. These are
+    /// the classic <c>EffectFlags</c> bits, not the element index: fire is 8, frost 16,
+    /// disease or poison is poison (4) or disease (64), shock 32 and magic 2. The
+    /// remaining bits, paralysis (1) above all, name no element in this key space.
+    /// </summary>
+    public static readonly int[] ElementFlagMasks = [8, 16, 4 | 64, 32, 2];
+
+    /// <summary>Health, and each other byte the classic carrier spends on effect flags.</summary>
+    public const int MaximumFlagByte = 255;
 
     public void Validate(IReadOnlySet<string> inventoryRecordIds)
     {

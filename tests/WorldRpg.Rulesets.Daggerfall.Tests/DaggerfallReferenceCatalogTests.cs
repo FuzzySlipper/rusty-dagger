@@ -144,6 +144,24 @@ public sealed class DaggerfallReferenceCatalogTests
     }
 
     [Fact]
+    public void Rejects_element_lists_that_disagree_with_the_carriers_own_flags()
+    {
+        // The published elements are an interpretation of a published byte, so a pack
+        // whose list contradicts its own flags is refused rather than handed to a
+        // consumer that would grant immunity the carrier never did.
+        DaggerfallContentException error = Mutate(pack =>
+        {
+            System.Text.Json.Nodes.JsonObject monk = pack["catalogs"]!["careers"]!.AsArray()
+                .Select(value => value!.AsObject())
+                .Single(career => career["id"]!.GetValue<string>() == "class12");
+            monk["resistanceElements"] = new JsonArray("frost");
+        });
+
+        Assert.Contains("class12", error.Message, StringComparison.Ordinal);
+        Assert.Contains("shock", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Rejects_career_name_collisions_that_do_not_match_the_careers()
     {
         DaggerfallContentException error = Mutate(pack =>
