@@ -105,6 +105,41 @@ public sealed class DaggerfallCatalogTests
     }
 
     [Fact]
+    public void Refuses_a_career_whose_whole_skill_group_names_no_skill()
+    {
+        // The terminal value is legal in a slot, but a carrier whose primary group is all
+        // terminal names no skill at all, and the runtime refuses such a career, so the
+        // builder must not publish one: everything it builds must be readable.
+        byte[] carrier = ReadClass("CLASS00.CFG");
+        carrier[16] = ClassCfgDecoder.NoSkillIndex;
+        carrier[17] = ClassCfgDecoder.NoSkillIndex;
+        carrier[18] = ClassCfgDecoder.NoSkillIndex;
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", carrier)], EnemyIds(), ItemIds()));
+
+        Assert.Contains("class00", error.Message, StringComparison.Ordinal);
+        Assert.Contains("primary", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Everything_the_builder_publishes_is_something_the_runtime_reads()
+    {
+        // Build-to-read totality: the offline validation is the same contract the runtime
+        // enforces, so a career the builder accepts can never be a pack the game refuses.
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+
+        Assert.All(catalogs.Careers, career =>
+        {
+            Assert.InRange(career.PrimarySkills.Count, 1, 3);
+            Assert.InRange(career.MajorSkills.Count, 1, 3);
+            Assert.InRange(career.MinorSkills.Count, 1, 6);
+            Assert.Equal(8, career.Attributes.Count);
+            Assert.Equal(career.SkillReferences.Count(), career.SkillReferences.Distinct(StringComparer.Ordinal).Count());
+        });
+    }
+
+    [Fact]
     public void Refuses_a_career_file_whose_name_is_only_a_suffix_of_a_documented_one()
     {
         // A suffix match would have cited SS00.CFG as the CLASS00 carrier, publishing
