@@ -113,7 +113,19 @@ public sealed class TextureLeafInventory
 
             try
             {
-                TextureArchive archive = TextureArchive.Parse(entry.Bytes.Span, entry.Path, solidPalette);
+                // The id decides the palette the decoder infers, not the caller's path: the
+                // path is this record's identity, and letting it select a parse mode would
+                // let one label change what the same bytes decode to.
+                string label = $"TEXTURE.{id:000}";
+                TextureArchive archive = TextureArchive.Parse(entry.Bytes.Span, label, solidPalette);
+                if (archive.RecordCount == 0)
+                {
+                    // A header declaring no records is not a decoded leaf: a consumer
+                    // receiving it would have no addressable frame.
+                    leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Malformed, 0, 0, "The archive declares no records."));
+                    continue;
+                }
+
                 int frames = 0;
                 for (int record = 0; record < archive.RecordCount; record++)
                 {
@@ -134,11 +146,7 @@ public sealed class TextureLeafInventory
     }
 
     /// <summary>Gets one leaf by id.</summary>
-    public bool TryGet(int id, out TextureLeafRecord? leaf)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(id);
-        return byId.TryGetValue(id, out leaf);
-    }
+    public bool TryGet(int id, out TextureLeafRecord? leaf) => byId.TryGetValue(id, out leaf);
 
     /// <summary>
     /// Requires a leaf to be supplied, naming the consumer that asked for it. A caller that
@@ -148,7 +156,7 @@ public sealed class TextureLeafInventory
     public TextureLeafRecord Require(int id, string consumer)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
-        if (!TryGet(id, out TextureLeafRecord? leaf) || leaf!.Disposition == TextureLeafDisposition.NotSupplied)
+        if (id < 0 || !TryGet(id, out TextureLeafRecord? leaf) || leaf!.Disposition == TextureLeafDisposition.NotSupplied)
         {
             throw new InvalidOperationException($"'{consumer}' references texture leaf {id}, which the supplied corpus does not carry.");
         }
