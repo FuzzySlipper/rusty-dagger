@@ -1,3 +1,4 @@
+using Daggerfall.Import.Arena2;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -32,6 +33,11 @@ internal static class Program
                 return RunCatalogCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "monster-archive")
+            {
+                return RunMonsterArchiveCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -54,6 +60,34 @@ internal static class Program
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Enumerates MONSTER.BSA and reports what every record is, which source mobile it
+    /// belongs to, and which records nothing in this build explains.
+    /// </summary>
+    private static int RunMonsterArchiveCommand(IReadOnlyList<string> args)
+    {
+        if (args.Count != 3 || args[1] != "--monster")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool monster-archive --monster MONSTER.BSA");
+        }
+
+        string path = args[2];
+        MonsterArchiveInventory inventory = MonsterArchiveInventory.Enumerate(File.ReadAllBytes(path), Path.GetFileName(path));
+        int decoded = inventory.Records.Count(record => record.Disposition == MonsterArchiveRecordDisposition.Decoded);
+        int malformed = inventory.Records.Count(record => record.Disposition == MonsterArchiveRecordDisposition.Malformed);
+        int unrecognized = inventory.Records.Count(record => record.Disposition == MonsterArchiveRecordDisposition.Unrecognized);
+        Console.WriteLine($"{inventory.Source}: {inventory.Records.Count} records, {inventory.AnimationScripts.Count()} animation scripts, {inventory.EnemyConfigurations.Count()} enemy configurations, {decoded} decoded, {malformed} malformed, {unrecognized} unrecognized");
+        Console.WriteLine($"links: {inventory.Records.Count(record => record.IsLinked)} records resolve to a supported source mobile, {inventory.Unlinked.Count()} stay unlinked");
+        foreach (MonsterArchiveRecord record in inventory.Records.Where(record => record.Disposition != MonsterArchiveRecordDisposition.Decoded).Take(8))
+        {
+            Console.WriteLine($"  {record.Name}: {record.Disposition} - {record.Note}");
+        }
+
+        // A report command still fails when the archive cannot be read at all; records it
+        // merely cannot explain are reported rather than treated as a failure.
+        return 0;
     }
 
     /// <summary>
