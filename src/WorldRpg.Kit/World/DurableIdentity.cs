@@ -9,7 +9,7 @@ public enum DurableIdentityClassification
     /// <summary>The identity was allocated and has since been removed. Removal is not absence.</summary>
     Removed,
 
-    /// <summary>No allocator ever issued this identity in the persisted ledger.</summary>
+    /// <summary>This allocator never issued the identity: it is at or above the cursor.</summary>
     NeverIssued,
 
     /// <summary>The stored identity does not belong to the requested kind of world object.</summary>
