@@ -184,4 +184,50 @@ public sealed class DurableIdentityTests
         // which is what keeps a corpse id from being read as an item id.
         Assert.Equal(DurableIdentityClassification.Live, actors.Classify(actor));
     }
+
+    [Fact]
+    public void Repeated_allocate_remove_capture_and_restore_cycles_never_collide_or_reissue()
+    {
+        var random = new Random(20260912);
+        for (int round = 0; round < 40; round++)
+        {
+            ulong first = (ulong)random.NextInt64(10, 10_000);
+            ulong[] reserved = Enumerable.Range(0, random.Next(0, 40))
+                .Select(_ => (ulong)random.NextInt64(1, 20_000))
+                .Distinct()
+                .ToArray();
+            DurableIdentityAllocator identities = new(DurableIdentityKind.Item, first, reserved);
+            List<ulong> issued = [];
+            for (int step = 0; step < 40; step++)
+            {
+                DurableIdentityReference reference = identities.Allocate(DurableIdentityKind.Item);
+                Assert.DoesNotContain(reference.Value, issued);
+                Assert.DoesNotContain(reference.Value, reserved);
+                Assert.Equal(DurableIdentityClassification.Live, identities.Classify(reference));
+                issued.Add(reference.Value);
+            }
+
+            for (int index = 0; index < issued.Count; index += 2)
+                identities.Remove(new DurableIdentityReference(DurableIdentityKind.Item, issued[index]));
+
+            DurableIdentityState captured = identities.CaptureState();
+            DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(captured);
+            for (int index = 0; index < issued.Count; index++)
+            {
+                DurableIdentityClassification expected = index % 2 == 0
+                    ? DurableIdentityClassification.Removed
+                    : DurableIdentityClassification.Live;
+                Assert.Equal(expected, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, issued[index])));
+            }
+
+            for (int step = 0; step < 10; step++)
+            {
+                DurableIdentityReference reference = restored.Allocate(DurableIdentityKind.Item);
+                Assert.DoesNotContain(reference.Value, issued);
+                issued.Add(reference.Value);
+            }
+
+            Assert.Equal(captured.Kinds.Single().Removed.Length, restored.CaptureState().Kinds.Single().Removed.Length);
+        }
+    }
 }
