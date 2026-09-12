@@ -87,12 +87,12 @@ public sealed record SourceManifestRecord(
             throw new ArgumentException($"Source record '{Id}' has an empty archive key.", nameof(ArchiveKey));
         }
 
-        // A record that claims to be supplied states the bytes it stands for; a record
-        // the source tree does not supply has no local bytes to state.
-        bool supplied = Disposition != SourceRecordDisposition.SourceGap;
-        if (supplied && Digest is null)
+        // A record that states a byte length states the digest of exactly those bytes.
+        // A record with no bytes to state — a documented gap, or a supplied directory
+        // that is not a source record — carries neither.
+        if (Digest is null && ByteLength != 0)
         {
-            throw new InvalidOperationException($"Supplied source record '{Id}' must carry the digest of what was read.");
+            throw new InvalidOperationException($"Source record '{Id}' states {ByteLength} bytes without the digest of what was read.");
         }
 
         Digest?.Validate();

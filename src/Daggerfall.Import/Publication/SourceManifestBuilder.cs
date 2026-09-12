@@ -37,6 +37,9 @@ public sealed record SourceManifestRequest(
 /// </summary>
 public static class SourceManifestBuilder
 {
+    /// <summary>Family for content the source tree supplies without any documented row.</summary>
+    public const string UndocumentedFamily = "scan.undocumented";
+
     private static readonly string[] Header =
     [
         "id", "row_type", "family_id", "kind", "path_or_pattern", "available_count", "byte_size", "record_or_stem", "current_scope", "disposition", "notes",
@@ -91,9 +94,12 @@ public static class SourceManifestBuilder
         NormalizedImportDocument.RequireLogicalPath(request.InventoryPath, nameof(request.InventoryPath));
 
         IReadOnlyList<SourceInventoryRow> inventory = ReadInventory(inventoryCsv);
+        // A family row's own id can differ from the family_id its file rows cite
+        // (the quest families do exactly that), so membership is the family_id column.
         Dictionary<string, string> familyPaths = inventory
             .Where(row => row.RowType == "family")
-            .ToDictionary(row => row.Id, row => row.PathOrPattern, StringComparer.Ordinal);
+            .GroupBy(row => row.FamilyId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().PathOrPattern, StringComparer.Ordinal);
         HashSet<string> imported = new(request.ImportedNames, StringComparer.Ordinal);
         HashSet<string> pending = new(request.RequiredPendingNames, StringComparer.Ordinal);
         HashSet<string> excluded = new(request.ExcludedNames, StringComparer.Ordinal);
@@ -167,7 +173,7 @@ public static class SourceManifestBuilder
             bool directory = Directory.Exists(entry);
             records.Add(new SourceManifestRecord(
                 $"scan.{name}",
-                ScanFamily(name),
+                UndocumentedFamily,
                 request.SourceRoot,
                 $"{request.SourceRoot}/{name}",
                 directory ? 0 : new FileInfo(entry).Length,
@@ -183,7 +189,10 @@ public static class SourceManifestBuilder
             request.SourceRoot,
             request.InventoryPath,
             records,
-            inventory.Where(row => row.RowType == "family").Select(row => row.Id).Distinct(StringComparer.Ordinal)
+            inventory.Where(row => row.RowType == "family").Select(row => row.FamilyId)
+                .Concat(inventory.Where(row => row.RowType == "file").Select(row => row.FamilyId))
+                .Concat(records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, UndocumentedFamily)).Select(record => record.FamilyId))
+                .Distinct(StringComparer.Ordinal)
                 .OrderBy(id => id, StringComparer.Ordinal)
                 .Select(id => SourceManifestFamilyCount.From(id, records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, id))))
                 .ToArray());
@@ -269,12 +278,6 @@ public static class SourceManifestBuilder
 
     private static string LeafName(string pathOrPattern) =>
         pathOrPattern.StartsWith("local/arena2/", StringComparison.Ordinal) ? pathOrPattern["local/arena2/".Length..] : pathOrPattern;
-
-    private static string ScanFamily(string name)
-    {
-        string stem = Path.GetFileNameWithoutExtension(name);
-        return stem.Length == 0 ? "scan" : $"scan.{stem}";
-    }
 
     private static bool Matches(string pattern, string name)
     {
