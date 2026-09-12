@@ -214,6 +214,33 @@ public sealed class SourceManifestTests : IDisposable
         Assert.Single(SourceManifestBuilder.ReadInventory(Encoding.UTF8.GetBytes($"{Header}\nCNT-001,family,CNT-001,k,p,1,,r,s,d,n\n")));
     }
 
+    [Fact]
+    public void Inventory_reconciliation_reports_drift_and_updates_only_the_disposition_column()
+    {
+        string inventoryFile = Path.Combine(root, "inventory.csv");
+        // CRLF on purpose: the rewrite must keep the terminator the file already uses.
+        File.WriteAllText(inventoryFile, (Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,keep me",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,a note without commas",
+            "CNT-001.file.GONE.CIF,file,CNT-001,source-file,local/arena2/GONE.CIF,1,5,GONE,scope,uninspected,note") + "\n").Replace("\n", "\r\n"));
+        SourceManifestRecord supplied = Record("CNT-001.file.A.CIF");
+        SourceManifestRecord gap = Record("CNT-001.file.GONE.CIF") with { Disposition = SourceRecordDisposition.SourceGap, Digest = null, ByteLength = 0 };
+
+        IReadOnlyList<string> before = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false);
+
+        Assert.Equal(2, before.Count);
+        Assert.Contains("uninspected", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
+        IReadOnlyList<string> updated = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: true);
+        Assert.Equal(before, updated);
+        string text = File.ReadAllText(inventoryFile);
+        Assert.Contains("\r\n", text, StringComparison.Ordinal);
+        Assert.Contains("scope,imported,a note without commas", text, StringComparison.Ordinal);
+        Assert.Contains("scope,source-gap,note", text, StringComparison.Ordinal);
+        // Every other field survives untouched, including a family row's free text.
+        Assert.Contains("current-structural,keep me", text, StringComparison.Ordinal);
+        Assert.Empty(SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false));
+    }
+
     private static SourceManifestRecord Record(string id) => new(
         id, "CNT-001", "local/arena2/A.CIF", "local/arena2/A.CIF", 5,
         ContentDigest.Compute("alpha"u8), null, null, SourceRecordDisposition.Imported, "note");

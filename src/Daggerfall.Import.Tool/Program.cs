@@ -58,9 +58,10 @@ internal static class Program
     /// </summary>
     private static int RunSourceManifestCommand(IReadOnlyList<string> args)
     {
-        if (args.Count != 7 || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--output")
+        bool update = args.Count == 8 && args[7] == "--update-inventory";
+        if ((args.Count != 7 && !update) || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--output")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool source-manifest --arena2 SOURCE_DIR --inventory INVENTORY.csv --output DIR");
+            throw new ArgumentException("usage: daggerfall-import-tool source-manifest --arena2 SOURCE_DIR --inventory INVENTORY.csv --output DIR [--update-inventory]");
         }
 
         string arena2 = args[2];
@@ -109,6 +110,19 @@ internal static class Program
 
         Console.WriteLine($"manifest: {manifestPath}");
         Console.WriteLine($"digest: {ContentDigest.Compute(bytes).Value}");
+
+        // Report where the documented inventory and the supplied tree disagree, and
+        // rewrite the documented dispositions only when asked: drift is reported, not
+        // treated as a reason to refuse the scan.
+        IReadOnlyList<string> drift = SourceInventoryReconciler.Reconcile(inventoryFile, readback.Records, update);
+        foreach (string line in drift)
+        {
+            Console.WriteLine($"inventory drift: {line}");
+        }
+
+        Console.WriteLine(drift.Count == 0
+            ? "inventory: documented dispositions match the supplied tree"
+            : update ? $"inventory: {drift.Count} documented dispositions updated" : $"inventory: {drift.Count} documented dispositions disagree; rerun with --update-inventory to record them");
         return 0;
     }
 
