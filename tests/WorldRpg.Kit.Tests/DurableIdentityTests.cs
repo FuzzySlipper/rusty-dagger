@@ -321,4 +321,24 @@ public sealed class DurableIdentityTests
         Assert.Equal(DurableIdentityClassification.Live, identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, 999)));
         Assert.Equal(DurableIdentityClassification.NeverIssued, identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, 1_000)));
     }
+
+    [Fact]
+    public void An_exhausted_kind_that_also_holds_tombstones_still_captures_and_restores()
+    {
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Item, ulong.MaxValue - 1);
+        DurableIdentityReference first = identities.Allocate(DurableIdentityKind.Item);
+        DurableIdentityReference second = identities.Allocate(DurableIdentityKind.Item);
+        identities.Remove(first);
+
+        DurableIdentityState captured = identities.CaptureState();
+        Assert.Equal(0UL, captured.Kinds.Single().NextIdentity);
+        Assert.Equal([first.Value], captured.Kinds.Single().Removed);
+
+        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(captured);
+
+        Assert.Equal(DurableIdentityClassification.Removed, restored.Classify(first));
+        Assert.Equal(DurableIdentityClassification.Live, restored.Classify(second));
+        Assert.Equal([first.Value], restored.RemovedIdentities(DurableIdentityKind.Item));
+        Assert.Throws<InvalidOperationException>(() => restored.Allocate(DurableIdentityKind.Item));
+    }
 }
