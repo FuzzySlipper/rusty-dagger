@@ -1,18 +1,5 @@
 namespace Daggerfall.Import.Arena2;
 
-/// <summary>What the enumeration established about one character media file.</summary>
-public enum CharacterMediaDisposition
-{
-    /// <summary>The file is bound to a published consumer.</summary>
-    Bound,
-
-    /// <summary>The file is supplied and no published consumer binds it yet.</summary>
-    Unbound,
-
-    /// <summary>The file's format has no decoder in this repository yet.</summary>
-    Unsupported,
-}
-
 /// <summary>One supplied character media file: its family, its canvases, and its binding.</summary>
 public sealed record CharacterMediaRecord(
     string Path,
@@ -21,7 +8,7 @@ public sealed record CharacterMediaRecord(
     string Key,
     string UseCandidate,
     string Consumer,
-    CharacterMediaDisposition Disposition,
+    MediaBinding Binding,
     Arena2CanvasKind Decode,
     string Note)
 {
@@ -38,13 +25,23 @@ public sealed record CharacterMediaRecord(
 /// social runtime behavior, and a file no reader reads is retained with the format named
 /// rather than dropped or approximated. Canvases are enumerated per file rather than assumed
 /// one per file: a face CIF is a sequence of IMG records and FACES.CIF is a fixed-cell grid,
-/// so a file count is not a canvas count.
+/// so a file count is not a canvas count. Binding and decodability are separate facts, so
+/// <see cref="Bound"/>, <see cref="Unbound"/> and <see cref="Unsupported"/> answer three
+/// different questions and a file can appear in more than one of them.
+/// <para>
+/// What this does <em>not</em> establish: no canvas here carries a palette or a companion-media
+/// reference, and no cross-check derives either. A publisher that emits these canvases has to
+/// derive both and refuse a canvas whose palette or companion is absent; the absence is stated
+/// here so that it is a known boundary rather than an assumed default.
+/// </para>
 /// </remarks>
 public sealed class CharacterMediaInventory
 {
     /// <summary>
-    /// The documented families with the file count the inventory records for each and the
-    /// use the family is a candidate for. The face count includes the single FACES.CIF.
+    /// The documented families with the file count the corpus supplies for each and the use the
+    /// family is a candidate for. The counts are corpus counts and the CNT-021 manifest row
+    /// documents the same vector, which the reconciliation test asserts in both directions
+    /// rather than trusting either side. The face count includes the single FACES.CIF.
     /// </summary>
     public static readonly (string Prefix, int Count, string Use)[] DocumentedFamilies =
     [
@@ -71,13 +68,13 @@ public sealed class CharacterMediaInventory
     public IReadOnlyList<CharacterMediaRecord> Files { get; }
 
     /// <summary>The files a published consumer binds.</summary>
-    public IEnumerable<CharacterMediaRecord> Bound => Files.Where(file => file.Disposition == CharacterMediaDisposition.Bound);
+    public IEnumerable<CharacterMediaRecord> Bound => Files.Where(file => file.Binding == MediaBinding.Admitted);
 
-    /// <summary>The files with no published consumer yet.</summary>
-    public IEnumerable<CharacterMediaRecord> Unbound => Files.Where(file => file.Disposition == CharacterMediaDisposition.Unbound);
+    /// <summary>The files no published consumer binds yet, whether or not they read.</summary>
+    public IEnumerable<CharacterMediaRecord> Unbound => Files.Where(file => file.Binding == MediaBinding.RequiredPending);
 
-    /// <summary>The files no reader read.</summary>
-    public IEnumerable<CharacterMediaRecord> Unsupported => Files.Where(file => file.Disposition == CharacterMediaDisposition.Unsupported);
+    /// <summary>The files no reader read; a file a consumer binds is still listed here when it does not read.</summary>
+    public IEnumerable<CharacterMediaRecord> Unsupported => Files.Where(file => file.Decode == Arena2CanvasKind.Unread);
 
     /// <summary>The files of one documented family.</summary>
     public IEnumerable<CharacterMediaRecord> Family(string prefix) => Files.Where(file => StringComparer.Ordinal.Equals(file.Family, prefix));
@@ -137,7 +134,7 @@ public sealed class CharacterMediaInventory
             bool isBound = bound.Contains(path) || bound.Any(name => StringComparer.OrdinalIgnoreCase.Equals(name, path));
             string key = KeyOf(path);
             Arena2CanvasSet canvases = Arena2CanvasReader.Read(bytes.Span, path);
-            string binding = isBound
+            string bindingNote = isBound
                 ? $"Bound by {consumer}."
                 : "No published consumer binds this file; it is retained unbound with its candidate use.";
             files.Add(new CharacterMediaRecord(
@@ -149,9 +146,9 @@ public sealed class CharacterMediaInventory
                 isBound ? consumer : string.Empty,
                 // Binding and decodability are separate facts, as in the UI inventory: a
                 // bound file stays bound whether or not this repository reads it.
-                isBound ? CharacterMediaDisposition.Bound : canvases.Read ? CharacterMediaDisposition.Unbound : CharacterMediaDisposition.Unsupported,
+                isBound ? MediaBinding.Admitted : MediaBinding.RequiredPending,
                 canvases.Kind,
-                $"{binding} {canvases.Description} Candidate use: {use}."));
+                $"{bindingNote} {canvases.Description} Candidate use: {use}."));
         }
 
         return new CharacterMediaInventory(source, files);

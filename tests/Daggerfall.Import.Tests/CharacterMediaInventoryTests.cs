@@ -121,9 +121,25 @@ public sealed class CharacterMediaInventoryTests
             "fixture");
 
         CharacterMediaRecord record = Assert.Single(inventory.Files);
-        Assert.Equal(CharacterMediaDisposition.Bound, record.Disposition);
+        Assert.Equal(MediaBinding.Admitted, record.Binding);
         Assert.Equal(Arena2CanvasKind.Unread, record.Decode);
         Assert.Equal("the fixture consumer", record.Consumer);
+    }
+
+    [Fact]
+    public void The_documented_inventory_carries_the_families_it_claims()
+    {
+        // The family counts come from the manifest's CNT-021 row; this checks the corpus against
+        // the documented vector in both directions rather than trusting either side, which is
+        // what keeps this table from being a second, unchecked source.
+        string line = File.ReadLines(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv"))
+            .Single(value => value.StartsWith("CNT-021,family,", StringComparison.Ordinal));
+        int[] documented = [.. line.Split(',')[5].Split(';', StringSplitOptions.TrimEntries).Select(int.Parse)];
+
+        CharacterMediaInventory inventory = ReadInventory();
+        int[] measured = [.. CharacterMediaInventory.DocumentedFamilies.Select(entry => inventory.Family(entry.Prefix).Count())];
+        Assert.Equal(CharacterMediaInventory.DocumentedFamilies.Length, documented.Length);
+        Assert.Equal(documented, measured);
     }
 
     [Fact]
@@ -139,7 +155,7 @@ public sealed class CharacterMediaInventoryTests
         CharacterMediaInventory reversed = CharacterMediaInventory.Enumerate([.. Enumerable.Reverse(sources)], new HashSet<string>(StringComparer.Ordinal), "none", "fixture");
 
         Assert.Equal(forward.Files.Select(file => file.Path), reversed.Files.Select(file => file.Path));
-        Assert.Equal(forward.Files.Select(file => file.Disposition), reversed.Files.Select(file => file.Disposition));
+        Assert.Equal(forward.Files.Select(file => file.Binding), reversed.Files.Select(file => file.Binding));
     }
 
     [Fact]
@@ -175,7 +191,7 @@ public sealed class CharacterMediaInventoryTests
             "fixture");
 
         CharacterMediaRecord record = Assert.Single(inventory.Files);
-        Assert.Equal(CharacterMediaDisposition.Bound, record.Disposition);
+        Assert.Equal(MediaBinding.Admitted, record.Binding);
         Assert.Equal("the fixture consumer", record.Consumer);
         Assert.Equal("SCBG", record.Family);
     }
