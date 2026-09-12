@@ -2356,9 +2356,11 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.DoesNotContain(impacts, fact => fact is AttackHitFact or AttackMissedFact);
         Assert.Equal(0, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
 
-        // The swing is consumed rather than left blocking its attacker forever.
+        // The swing is consumed by the dropped impact rather than left blocking its
+        // attacker: a same-generation retry past the cooldown is accepted only if the
+        // pending entry for this exact (generation, attacker) key is gone.
         session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(100), ExactTrackSetPolicy.ClampToBounds);
-        Assert.True(combat.TryBeginEnemyAttack(2000, DaggerfallActorIdentity.PlayerEntityId, 78, 1, .125, facts));
+        Assert.True(combat.TryBeginEnemyAttack(2000, DaggerfallActorIdentity.PlayerEntityId, 77, 1_000, .125, facts));
     }
 
     [Fact]
