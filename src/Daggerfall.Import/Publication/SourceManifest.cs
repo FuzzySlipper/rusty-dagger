@@ -240,11 +240,24 @@ public static class SourceManifestSerializer
         return [.. bytes, (byte)'\n'];
     }
 
-    /// <summary>Reads a manifest and rejects one that is internally inconsistent.</summary>
+    /// <summary>
+    /// Reads a manifest and rejects one that is internally inconsistent. Malformed
+    /// bytes fail as <see cref="FormatException"/> so a caller's normal failure path
+    /// handles them, matching how the publication manifest is read.
+    /// </summary>
     public static SourceManifest Deserialize(ReadOnlySpan<byte> bytes)
     {
-        SourceManifest manifest = JsonSerializer.Deserialize<SourceManifest>(bytes, Options)
-            ?? throw new InvalidOperationException("The source manifest is empty.");
+        SourceManifest manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<SourceManifest>(bytes, Options)
+                ?? throw new FormatException("The source manifest is empty.");
+        }
+        catch (JsonException exception)
+        {
+            throw new FormatException("The source manifest is not a supported strict JSON document.", exception);
+        }
+
         manifest.Validate();
         return manifest;
     }
