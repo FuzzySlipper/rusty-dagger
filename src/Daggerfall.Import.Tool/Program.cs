@@ -94,7 +94,12 @@ internal static class Program
         foreach (string path in Directory.EnumerateFiles(arena2, "TEXTURE.*"))
         {
             string name = Path.GetFileName(path);
-            sources.Add((int.Parse(name["TEXTURE.".Length..], CultureInfo.InvariantCulture), name, File.ReadAllBytes(path)));
+            if (!int.TryParse(name["TEXTURE.".Length..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int leafId))
+            {
+                throw new InvalidOperationException($"'{name}' does not carry a texture leaf number, so it cannot be enumerated as a leaf.");
+            }
+
+            sources.Add((leafId, name, File.ReadAllBytes(path)));
         }
 
         TextureLeafInventory inventory = TextureLeafInventory.Enumerate(sources, Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)));
@@ -121,7 +126,7 @@ internal static class Program
             throw new InvalidOperationException($"The documented inventory and the supplied corpus disagree; supplied but undocumented: [{string.Join(", ", missing)}], documented but not supplied: [{string.Join(", ", extra)}].");
         }
 
-        Console.WriteLine($"inventory: {documented.Count} documented texture leaves match the corpus, {TextureLeafInventory.NotSuppliedCount} documented as absent");
+        Console.WriteLine($"inventory: {documented.Count} documented texture leaves match the corpus, {inventory.NotSupplied.Count()} not supplied");
         return 0;
     }
 

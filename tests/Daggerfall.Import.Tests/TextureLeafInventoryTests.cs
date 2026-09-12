@@ -96,6 +96,41 @@ public sealed class TextureLeafInventoryTests
     }
 
     [Fact]
+    public void The_palette_contents_reach_the_encoded_image()
+    {
+        string root = RepositoryRoot();
+        TextureArchive archive = TextureArchive.Parse(File.ReadAllBytes(Path.Combine(root, "local/arena2/TEXTURE.002")), "TEXTURE.002");
+        Arena2Palette palette = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(root, "local/arena2/PAL.PAL")), "PAL.PAL");
+        IndexedTextureFrame frame = archive.DecodeFrame(0, 0);
+
+        // A 256-colour palette makes an index-range check vacuous, so the palette's own
+        // contents are asserted: the encoded image must change when the colours do, and a
+        // real texture must use more than one of them.
+        Assert.Equal(256, palette.Colors.Length);
+        byte[] real = Encode(frame, palette);
+        // The same frame under a palette whose every colour is identical must encode
+        // differently, which is what shows the colours reach the image.
+        Rgb24[] monochrome = [.. Enumerable.Repeat(new Rgb24(7, 9, 11), 256)];
+        byte[] rgba = new byte[frame.Pixels.Length * 4];
+        for (int index = 0; index < frame.Pixels.Length; index++)
+        {
+            rgba[(index * 4) + 0] = monochrome[0].Red;
+            rgba[(index * 4) + 1] = monochrome[0].Green;
+            rgba[(index * 4) + 2] = monochrome[0].Blue;
+            rgba[(index * 4) + 3] = 0xff;
+        }
+
+        byte[] flat = DeterministicPngEncoder.EncodeRgba8(frame.Width, frame.Height, rgba);
+        Assert.NotEqual(real, flat);
+        Assert.True(real.Distinct().Count() > 1);
+
+        // And a frame's indices are its own: the same bytes under a different leaf label
+        // used to select a different palette, so the id decides the palette now.
+        TextureArchive sameBytes = TextureArchive.Parse(File.ReadAllBytes(Path.Combine(root, "local/arena2/TEXTURE.002")), "TEXTURE.007");
+        Assert.Equal(frame.Pixels.ToArray(), sameBytes.DecodeFrame(0, 0).Pixels.ToArray());
+    }
+
+    [Fact]
     public void Encodes_a_frame_to_identical_png_bytes_every_time()
     {
         string root = RepositoryRoot();
