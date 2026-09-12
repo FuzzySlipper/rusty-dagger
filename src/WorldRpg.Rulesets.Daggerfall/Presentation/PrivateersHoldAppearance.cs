@@ -298,7 +298,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             }
             if (!receipt.Readout.Completed || visual.State is "idle" or "move") { visual.LastOuterUpdate = identity; continue; }
             // A swing that ended without reaching a damage frame must not land later.
-            if (visual.ActiveAttack is { } endedAttack)
+            // An Engine receipt that reports completion without advancing is not
+            // authoritative, so the swing stays live for a frame that can still land.
+            if (receipt.Advanced && visual.ActiveAttack is { } endedAttack)
             {
                 if (!endedAttack.ImpactReported)
                     attackImpacts.Add(new AttackImpactNotice(endedAttack.Identity.Attacker, endedAttack.Identity.Target, endedAttack.Identity.Generation, endedAttack.Identity.SimulationStep, Expired: true));
