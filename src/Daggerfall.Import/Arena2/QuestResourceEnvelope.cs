@@ -13,20 +13,24 @@ public enum QuestResourceEnvelopeDisposition
     Malformed,
 }
 
-/// <summary>One resource record: its classic token id, its extent, and its raw bytes.</summary>
+/// <summary>
+/// One resource record: the id the directory stores for it, its extent, and its raw
+/// bytes. What the id names — a message token, an action, something else — is not
+/// established here.
+/// </summary>
 public sealed record QuestResourceRecord(ushort Id, int Offset, int Length, ReadOnlyMemory<byte> Payload);
 
 /// <summary>
 /// The envelope of one classic quest resource companion. The observed layout, verified
 /// across all 303 supplied files, is a directory followed by the records it indexes: a
-/// little-endian directory size in bytes, then that many bytes of six-byte entries — a
-/// token id and the record's offset — ending with the <c>0xffff</c> sentinel entry whose
-/// offset is the end of the file.
+/// little-endian directory size in bytes, then that many bytes of six-byte entries — an
+/// id and the record's offset — ending with the <c>0xffff</c> sentinel entry whose offset
+/// is the end of the file.
 /// </summary>
 /// <remarks>
-/// The record payloads are delivered as bytes. What a token id means, how its text is
-/// parsed and which action or resource it names belong to the quest-source inventory and
-/// the worker that consumes these records, not to this envelope.
+/// The record payloads are delivered as bytes. What an id means, how its text is parsed
+/// and which action or resource it names belong to the quest-source inventory and the
+/// worker that consumes these records, not to this envelope.
 /// </remarks>
 public sealed record QuestResourceEnvelope(
     string Path,
@@ -39,7 +43,7 @@ public sealed record QuestResourceEnvelope(
     /// <summary>The size of one directory entry: a two-byte token id and a four-byte offset.</summary>
     public const int DirectoryEntryBytes = 6;
 
-    /// <summary>The sentinel token id that ends every directory.</summary>
+    /// <summary>The sentinel id that ends every directory.</summary>
     public const ushort SentinelId = 0xffff;
 
     /// <summary>The bytes the directory size field occupies.</summary>
