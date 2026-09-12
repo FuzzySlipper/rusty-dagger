@@ -142,4 +142,46 @@ public sealed class DurableIdentityTests
         Assert.Equal([DurableIdentityKind.Actor], actorOnly.Kinds.Select(state => state.Kind));
         Assert.Throws<ArgumentException>(() => DurableIdentityAllocator.Restore(actorOnly).CaptureState().RequireKinds([DurableIdentityKind.Item]));
     }
+
+    [Fact]
+    public void A_reference_that_resolves_to_nothing_is_dangling_while_a_live_unloaded_one_is_not()
+    {
+        // The player and one authored placement are reserved before gameplay, and no
+        // dynamic identity has been issued yet, so the whole reserved range is content
+        // that a later site load can legitimately materialize.
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Actor, 1_000, [1, 1001]);
+        DurableIdentityReference player = new(DurableIdentityKind.Actor, 1);
+        DurableIdentityReference placement = new(DurableIdentityKind.Actor, 1001);
+        DurableIdentityReference dangling = new(DurableIdentityKind.Actor, 1002);
+
+        Assert.True(identities.Classify(player) is DurableIdentityClassification.Live);
+        Assert.True(identities.Classify(placement) is DurableIdentityClassification.Live);
+        Assert.Equal(DurableIdentityClassification.NeverIssued, identities.Classify(dangling));
+        Assert.Throws<InvalidOperationException>(() => identities.Remove(dangling));
+        Assert.Equal(DurableIdentityClassification.NeverIssued, identities.Classify(dangling));
+
+        // Issuing and removing a dynamic identity is a removal, not a dangling value.
+        DurableIdentityReference spawned = identities.Allocate(DurableIdentityKind.Actor);
+        identities.Remove(spawned);
+        Assert.Equal(DurableIdentityClassification.Removed, identities.Classify(spawned));
+        Assert.Equal(DurableIdentityClassification.Live, identities.Classify(placement));
+    }
+
+    [Fact]
+    public void References_are_rejected_for_the_wrong_kind_even_when_the_value_is_live_elsewhere()
+    {
+        DurableIdentityAllocator actors = new(DurableIdentityKind.Actor, 10);
+        DurableIdentityReference actor = actors.Allocate(DurableIdentityKind.Actor);
+        DurableIdentityAllocator items = new(DurableIdentityKind.Item, 10);
+
+        Assert.Equal(DurableIdentityClassification.WrongKind,
+            items.Classify(new DurableIdentityReference(DurableIdentityKind.Container, actor.Value)));
+        Assert.Equal(DurableIdentityClassification.WrongKind,
+            items.Classify(new DurableIdentityReference(DurableIdentityKind.Resource, actor.Value)));
+        Assert.Throws<InvalidOperationException>(() => items.Remove(new DurableIdentityReference(DurableIdentityKind.Container, actor.Value)));
+        Assert.Throws<InvalidOperationException>(() => items.Allocate(DurableIdentityKind.Container));
+        // The same numeric value is live for its own kind and meaningless for another,
+        // which is what keeps a corpse id from being read as an item id.
+        Assert.Equal(DurableIdentityClassification.Live, actors.Classify(actor));
+    }
 }
