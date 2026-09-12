@@ -79,7 +79,7 @@ public sealed class CharacterMediaInventory
     /// <summary>Logical source identity supplied to <see cref="Enumerate"/>.</summary>
     public string Source { get; }
 
-    /// <summary>Every supplied file, ordered by family and then path.</summary>
+    /// <summary>Every supplied file, ordered by path.</summary>
     public IReadOnlyList<CharacterMediaRecord> Files { get; }
 
     /// <summary>The files a published consumer binds.</summary>
@@ -165,7 +165,11 @@ public sealed class CharacterMediaInventory
             }
             catch (Arena2FormatException failure)
             {
-                reason = failure.Message;
+                // A face CIF failing the weapon CIF grammar is the wrong reader, not a
+                // damaged file, so the note says which reader refused it.
+                reason = extension == ".CIF"
+                    ? $"The weapon CIF reader refuses this face canvas, which is a different family: {failure.Message}"
+                    : failure.Message;
             }
 
             // "No decoder reads this file" is one fact whatever the format: the CEL and BSS
@@ -183,7 +187,9 @@ public sealed class CharacterMediaInventory
                 key,
                 use,
                 isBound ? consumer : string.Empty,
-                unsupported ? CharacterMediaDisposition.Unsupported : isBound ? CharacterMediaDisposition.Bound : CharacterMediaDisposition.Unbound,
+                // Binding and decodability are separate facts, as in the UI inventory: a
+                // bound file stays bound whether or not this repository reads it.
+                isBound ? CharacterMediaDisposition.Bound : unsupported ? CharacterMediaDisposition.Unsupported : CharacterMediaDisposition.Unbound,
                 decode,
                 decode == CharacterMediaDecode.NotRead ? $"{binding} {reason}" : $"{binding} Candidate use: {use}."));
         }

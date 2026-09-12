@@ -34,8 +34,10 @@ public sealed record UiMediaRecord(
 public sealed class UiMediaInventory
 {
     /// <summary>
-    /// The documented families and the file count the inventory records for each, in
-    /// documentation order.
+    /// The families in documentation order with the count the corpus supplies for each.
+    /// Every count matches the documented CNT-020 vector except INFO, where the corpus
+    /// carries two files and the documentation records one: INFO01I0.IMG is supplied and
+    /// undocumented, which the reconciliation test asserts rather than hides.
     /// </summary>
     public static readonly (string Prefix, int Count)[] DocumentedFamilies =
     [
