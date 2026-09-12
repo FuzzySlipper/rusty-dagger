@@ -72,7 +72,8 @@ internal sealed class DaggerfallCatalogSet(
     IReadOnlyList<string> careerNameCollisions,
     IReadOnlyList<DaggerfallCatalogReference> enemies,
     IReadOnlyList<DaggerfallCatalogReference> itemTemplates,
-    IReadOnlyList<DaggerfallPendingCatalogDefinition> pending)
+    IReadOnlyList<DaggerfallPendingCatalogDefinition> pending,
+    IReadOnlyList<string> sourceRecords)
 {
     /// <summary>The classic element keys, in the index order the catalog publishes.</summary>
     internal static readonly string[] ElementKeys = ["fire", "frost", "disease-or-poison", "shock", "magic"];
@@ -95,6 +96,12 @@ internal sealed class DaggerfallCatalogSet(
     internal IReadOnlyList<DaggerfallCatalogReference> ItemTemplates { get; } = Array.AsReadOnly(itemTemplates.ToArray());
 
     internal IReadOnlyList<DaggerfallPendingCatalogDefinition> Pending { get; } = Array.AsReadOnly(pending.ToArray());
+
+    /// <summary>
+    /// The documented inventory records the pack says it drew from. A citation outside
+    /// this set is refused, so a consumer can check provenance without the inventory.
+    /// </summary>
+    internal IReadOnlyList<string> SourceRecords { get; } = Array.AsReadOnly(sourceRecords.ToArray());
 
     private Dictionary<string, DaggerfallCareerDefinition> CareersById { get; } =
         careers.ToDictionary(career => career.Id, StringComparer.Ordinal);
