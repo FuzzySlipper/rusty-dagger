@@ -9,6 +9,13 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
     internal static readonly ContentPackId BasePack = new("daggerfall.base");
     internal static readonly ContentPackId PrivateersHoldPack = new("daggerfall.privateers-hold");
 
+    /// <summary>
+    /// The durable owners this build registers. A later world, item, effect or quest task
+    /// adds its owner here beside its own records, and both a fresh session and a
+    /// restore use the same list, so an owner cannot be wired into one path only.
+    /// </summary>
+    internal static readonly IDaggerfallSaveOwner[] SaveOwners = [];
+
     public RulesetId Id => Identity;
 
     public IGameSession CreateSession(GameSessionContext context)
@@ -40,7 +47,8 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             inputs,
             tuning,
             saved,
-            context.Engine.Random);
+            context.Engine.Random,
+            SaveOwners);
     }
 
     /// <summary>A fresh session: no saved state exists, so nothing is resolved or reported.</summary>

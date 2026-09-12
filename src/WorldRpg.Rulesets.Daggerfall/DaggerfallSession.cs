@@ -53,13 +53,13 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private ulong? _latestSimulationStep;
     private bool _disposed;
 
-    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity: null, saved: null, restoreNotices: [], saveOwners: null)
+    internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, IReadOnlyList<IDaggerfallSaveOwner>? saveOwners = null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity: null, saved: null, restoreNotices: [], saveOwners)
     {
     }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, saved: null, restoreNotices: [], saveOwners: null)
+    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, IReadOnlyList<IDaggerfallSaveOwner>? saveOwners = null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, saved: null, restoreNotices: [], saveOwners)
     {
     }
 
@@ -93,6 +93,16 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     {
         ArgumentNullException.ThrowIfNull(restoreNotices);
         _saveOwners = saveOwners ?? [];
+        HashSet<string> ownerIds = new(StringComparer.Ordinal);
+        foreach (IDaggerfallSaveOwner owner in _saveOwners)
+        {
+            ArgumentNullException.ThrowIfNull(owner);
+            if (string.IsNullOrWhiteSpace(owner.OwnerId) || !ownerIds.Add(owner.OwnerId))
+            {
+                throw new ArgumentException("Save owners must declare one non-empty, distinct owner id each.", nameof(saveOwners));
+            }
+        }
+
         // A section named for an owner this build has is restored by that owner, which
         // is what makes the seam a read path rather than a label. Anything else is kept
         // verbatim and reported, so a save written by a later owner is neither
@@ -110,7 +120,17 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                 continue;
             }
 
-            owner.Restore(section.Section);
+            try
+            {
+                owner.Restore(section.Section);
+            }
+            catch (Exception failure) when (failure is not (OutOfMemoryException or StackOverflowException))
+            {
+                // An owner that cannot read its own section starts fresh rather than
+                // costing the save: that is recoverable drift, and it is reported.
+                sectionNotices.Add(new SaveRestoreNotice("owner-section-unreadable",
+                    $"Saved section for owner '{section.OwnerId}' could not be read by that owner ({failure.Message}); the owner starts from its default state."));
+            }
         }
 
         // The mirror case: an owner this build has, restoring a save that carries no
@@ -338,7 +358,11 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             _combat.CaptureCooldowns(_latestUpdateGeneration, _latestSimulationStep)
                 .Select(value => new DaggerfallCombatCooldownSave(value.AttackerId, value.RemainingSteps)).ToArray(),
             continuation,
-            [.. _saveOwners.Select(owner => new DaggerfallOwnerSave(owner.OwnerId, owner.Capture()))
+            [.. _saveOwners.Select(owner => new DaggerfallOwnerSave(
+                    owner.OwnerId,
+                    owner.Capture() is { Length: > 0 } captured
+                        ? captured
+                        : throw new InvalidOperationException($"Save owner '{owner.OwnerId}' captured no section; a durable owner must write the state it owns.")))
                 .Concat(_carriedOwnerSections)
                 .OrderBy(section => section.OwnerId, StringComparer.Ordinal)]));
     }

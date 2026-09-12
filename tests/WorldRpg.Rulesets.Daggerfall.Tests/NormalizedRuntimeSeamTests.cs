@@ -1952,6 +1952,91 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_crafted_save_cannot_make_the_restore_cost_unbounded()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload saved = CapturedSave(root);
+        DaggerfallSavePayload absurd = saved with { Experience = int.MaxValue };
+
+        // Level derives from experience, and each level costs a roll and a progression
+        // source, so the level reconstructed is bounded by what the content can award.
+        DaggerfallRestorePlan plan = absurd.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        SaveRestoreNotice bounded = Assert.Single(plan.Notices, value => value.Code == "progression-level-bounded");
+        Assert.Contains(int.MaxValue.ToString(CultureInfo.InvariantCulture), bounded.Message, StringComparison.Ordinal);
+        Assert.Contains("progression-above-authored-rewards", plan.Notices.Select(value => value.Code));
+        Assert.InRange(plan.Payload.Level, 1, 100);
+    }
+
+    [Fact]
+    public void A_durable_owner_section_without_bytes_is_a_payload_error()
+    {
+        string root = RepositoryRoot();
+        DaggerfallSavePayload saved = CapturedSave(root);
+
+        // A null section must fail as a payload error the Host already reports, not as a
+        // null reference from validating it.
+        ArgumentException error = Assert.Throws<ArgumentException>(() =>
+            (saved with { Owners = [new DaggerfallOwnerSave("quests", null!)] }).Validate());
+        Assert.Contains("bytes", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void A_save_owner_that_cannot_read_its_section_is_reported_and_starts_fresh()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        DaggerfallSavePayload saved = CapturedSave(root) with { Owners = [new DaggerfallOwnerSave("quests", [1, 2, 3])] };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = DaggerfallSession.Restore(
+            engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults,
+            DaggerfallSavePayload.Encode(saved), RandomMinimum.Create(), [new ThrowingSaveOwner("quests")]);
+
+        // An owner that cannot read its own section costs that section, not the save: it
+        // is reported, it starts fresh, and the next capture writes its fresh state.
+        Assert.Contains(session.RestoreNotices, value => value.Code == "owner-section-unreadable");
+        DaggerfallOwnerSave recaptured = Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Payload.Owners, value => value.OwnerId == "quests");
+        Assert.Equal([1], recaptured.Section);
+    }
+
+    [Fact]
+    public void Save_owners_must_declare_one_distinct_owner_each()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        // A duplicate id would make a capture write two sections the next read refuses.
+        Assert.Throws<ArgumentException>(() => new DaggerfallSession(
+            engine.Context, definitions, inputs, DaggerfallTuning.Defaults, [new RecordingSaveOwner("quests"), new RecordingSaveOwner("quests")]));
+        Assert.Throws<ArgumentException>(() => new DaggerfallSession(
+            engine.Context, definitions, inputs, DaggerfallTuning.Defaults, [new RecordingSaveOwner("  ")]));
+    }
+
+    private sealed class ThrowingSaveOwner(string ownerId) : IDaggerfallSaveOwner
+    {
+        public string OwnerId => ownerId;
+
+        public byte[] Capture() => [1];
+
+        public void Restore(ReadOnlySpan<byte> section) => throw new JsonException("The saved quest section is not readable.");
+    }
+
+    [Fact]
     public void A_restore_reduces_saved_tracks_to_the_bounds_this_session_resolves()
     {
         string root = RepositoryRoot();

@@ -127,8 +127,8 @@ internal sealed record DaggerfallSavePayload(
         foreach (DaggerfallOwnerSave owner in Owners)
         {
             ArgumentNullException.ThrowIfNull(owner);
-            if (string.IsNullOrWhiteSpace(owner.OwnerId) || owner.Section.Length == 0 || !owners.Add(owner.OwnerId))
-                throw new ArgumentException("Durable owner sections must name one non-empty owner id each and be distinct.");
+            if (string.IsNullOrWhiteSpace(owner.OwnerId) || owner.Section is null || owner.Section.Length == 0 || !owners.Add(owner.OwnerId))
+                throw new ArgumentException("Durable owner sections must name one non-empty owner id each, carry non-empty bytes, and be distinct.");
         }
 
         if (Experience < 0 || Level < 1) throw new ArgumentOutOfRangeException(nameof(Experience));
@@ -255,6 +255,19 @@ internal sealed record DaggerfallSavePayload(
         {
             notices.Add(new SaveRestoreNotice("progression-above-authored-rewards",
                 $"Saved experience {Experience} exceeds the {maximumExperience} the selected content can award; the saved value is kept because the selected content may have changed."));
+        }
+
+        // Reconstructing a level costs one keyed roll and one progression source per
+        // level, so the work is bounded by what the selected content can award rather
+        // than by a saved number. A crafted save therefore restores in bounded time and
+        // reports the level it could not reconstruct.
+        int authoredLevel = checked(1 + DaggerfallFormulaPolicy.ExperimentalXpLevel(maximumExperience, DaggerfallFormulaPolicy.Experimental));
+        if (expectedLevel > authoredLevel)
+        {
+            notices.Add(new SaveRestoreNotice("progression-level-bounded",
+                $"Saved experience {Experience} derives level {expectedLevel}, beyond the {authoredLevel} the selected content can award; the restore reconstructs level {authoredLevel} so its cost stays bounded by the content."));
+            expectedLevel = authoredLevel;
+            resolved = resolved with { Level = authoredLevel };
         }
 
         int endurance = playerDefinition.Stats.Endurance;
