@@ -1591,6 +1591,24 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Empty(DaggerfallSavePayload.Decode(DaggerfallSavePayload.Encode(saved)).RemovedUniqueItemEntityIds);
     }
 
+    [Fact]
+    public void Daggerfall_save_from_an_older_schema_is_rejected_instead_of_misread()
+    {
+        string root = RepositoryRoot();
+        DaggerfallSavePayload saved = CapturedSave(root);
+        RulesetSavePayload encoded = DaggerfallSavePayload.Encode(saved);
+        RulesetSavePayload previousSchema = new(encoded.Ruleset, DaggerfallSavePayload.CurrentSchemaVersion - 1, encoded.Bytes.Span);
+        DaggerfallSavePayload embeddedPreviousSchema = saved with { SchemaVersion = DaggerfallSavePayload.CurrentSchemaVersion - 1 };
+
+        ArgumentException unsupported = Assert.Throws<ArgumentException>(() => DaggerfallSavePayload.Decode(previousSchema));
+        ArgumentException embedded = Assert.Throws<ArgumentException>(() =>
+            DaggerfallSavePayload.Decode(DaggerfallSavePayload.Encode(embeddedPreviousSchema)));
+
+        Assert.Contains("schema", unsupported.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("schema", embedded.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(2U, DaggerfallSavePayload.CurrentSchemaVersion);
+    }
+
     private static DaggerfallSavePayload CapturedSave(string root)
     {
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
