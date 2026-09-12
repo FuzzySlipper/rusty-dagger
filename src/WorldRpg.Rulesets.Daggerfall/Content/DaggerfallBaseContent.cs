@@ -85,7 +85,7 @@ internal static class DaggerfallBaseContent
         foreach (DaggerfallRaceDefinition race in definitions.Catalogs.Races.OrderBy(race => race.Id, StringComparer.Ordinal)) Add("catalog-race", race.Id, race.DonorRaceId, race.Source.SourceRecordId, race.Source.Path);
         foreach (DaggerfallCareerDefinition career in definitions.Catalogs.Careers.OrderBy(career => career.Id, StringComparer.Ordinal))
         {
-            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), career.HitPointsPerLevel, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), career.Source.SourceRecordId, career.Source.Path);
+            Add("catalog-career", career.Id, career.Name, string.Join(',', career.PrimarySkills), string.Join(',', career.MajorSkills), string.Join(',', career.MinorSkills), string.Join(',', career.Attributes), career.HitPointsPerLevel, FingerprintField(career.AdvancementMultiplier), string.Join(',', career.ResistanceElements), string.Join(',', career.ImmunityElements), string.Join(',', career.FlagBytes.Select(flag => $"{flag.Name}={flag.Value}")), career.Source.SourceRecordId, career.Source.Path);
         }
 
         foreach (string collision in definitions.Catalogs.CareerNameCollisions) Add("catalog-career-name-collision", collision);
@@ -451,8 +451,13 @@ internal static class DaggerfallBaseContent
             IReadOnlyList<string> immune = ReadIds(career, "immunityElements", diagnostics);
             int hitPoints = Integer(career, "hitPointsPerLevel", diagnostics);
             float multiplier = Number(career, "advancementMultiplier", diagnostics);
+            int resistanceFlags = FlagByte(career, "resistanceFlags", diagnostics);
+            int immunityFlags = FlagByte(career, "immunityFlags", diagnostics);
+            int lowToleranceFlags = FlagByte(career, "lowToleranceFlags", diagnostics);
+            int criticalWeaknessFlags = FlagByte(career, "criticalWeaknessFlags", diagnostics);
             DaggerfallCareerDefinition definition = new(
-                id, name, primary, major, minor, careerAttributes, hitPoints, multiplier, resistant, immune, ReadCitation(career, diagnostics));
+                id, name, primary, major, minor, careerAttributes, hitPoints, multiplier, resistant, immune,
+                resistanceFlags, immunityFlags, lowToleranceFlags, criticalWeaknessFlags, ReadCitation(career, diagnostics));
             foreach (string skill in definition.SkillReferences)
             {
                 if (!skillKeys.Contains(skill, StringComparer.Ordinal))
@@ -482,6 +487,11 @@ internal static class DaggerfallBaseContent
                 diagnostics.Add($"Career '{id}' must carry a name, positive hit points per level and a positive advancement multiplier.");
             }
 
+            // The published element lists must be what the carrier's flag bytes say. A
+            // list that disagrees with its bytes is content a consumer would act on
+            // while the source says otherwise.
+            RequireElements(id, "resistanceElements", resistant, resistanceFlags, diagnostics);
+            RequireElements(id, "immunityElements", immune, immunityFlags, diagnostics);
             careers.Add(definition);
         }
 
@@ -524,6 +534,47 @@ internal static class DaggerfallBaseContent
         }
 
         return new DaggerfallCatalogSet(attributes, skills, resistances, races, careers, collisions, enemies, itemTemplates, pending);
+    }
+
+    /// <summary>The classic effect flag each element key answers to, in key order.</summary>
+    private static readonly int[] CatalogElementFlagMasks = [8, 16, 4 | 64, 32, 2];
+
+    /// <summary>
+    /// Reads one classic effect-flag byte. The element lists are an interpretation of
+    /// these bytes, so the byte is required and range-checked rather than inferred.
+    /// </summary>
+    private static int FlagByte(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
+    {
+        int result = Integer(value, property, diagnostics);
+        if (result is < 0 or > 255)
+        {
+            diagnostics.Add($"'{property}' must be one byte.");
+            return 0;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// The published element list must be the interpretation of the flag byte it came
+    /// from, so a list that disagrees with its own bytes is refused rather than handed to
+    /// a consumer that would act on it.
+    /// </summary>
+    private static void RequireElements(string id, string property, IReadOnlyList<string> elements, int flags, DaggerfallContentDiagnostics diagnostics)
+    {
+        List<string> expected = [];
+        for (int index = 0; index < DaggerfallCatalogSet.ElementKeys.Length; index++)
+        {
+            if ((flags & CatalogElementFlagMasks[index]) != 0)
+            {
+                expected.Add(DaggerfallCatalogSet.ElementKeys[index]);
+            }
+        }
+
+        if (!elements.SequenceEqual(expected, StringComparer.Ordinal))
+        {
+            diagnostics.Add($"Career '{id}' publishes {property} [{string.Join(", ", elements)}] where its flags {flags} say [{string.Join(", ", expected)}].");
+        }
     }
 
     /// <summary>One indexed key catalog: distinct ids, distinct contiguous indices, valid citations.</summary>

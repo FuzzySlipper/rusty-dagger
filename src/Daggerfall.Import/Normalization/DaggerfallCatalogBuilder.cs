@@ -97,6 +97,10 @@ public static class DaggerfallCatalogBuilder
                 decoded.AdvancementMultiplier,
                 [.. FlaggedElements(decoded.ResistanceFlags)],
                 [.. FlaggedElements(decoded.ImmunityFlags)],
+                decoded.ResistanceFlags,
+                decoded.ImmunityFlags,
+                decoded.LowToleranceFlags,
+                decoded.CriticalWeaknessFlags,
                 new DaggerfallCatalogSource(carrier.Id, carrier.PathOrPattern)));
         }
 
@@ -143,12 +147,16 @@ public static class DaggerfallCatalogBuilder
     private static IEnumerable<string> Skill(int index, IReadOnlyList<DaggerfallIndexedKey> skills) =>
         index == ClassCfgDecoder.NoSkillIndex ? [] : [skills[index].Id];
 
-    /// <summary>The elements a classic flag byte marks, in index order.</summary>
+    /// <summary>
+    /// The elements a classic effect-flag byte marks, in key order. The bit is the
+    /// classic effect flag rather than the element's index, so fire is bit 3 and magic
+    /// bit 1; a flag with no element in this key space, paralysis above all, marks none.
+    /// </summary>
     private static IEnumerable<string> FlaggedElements(byte flags)
     {
         for (int index = 0; index < DaggerfallCatalogs.ElementCount; index++)
         {
-            if ((flags & (1 << index)) != 0)
+            if ((flags & DaggerfallCatalogs.ElementFlagMasks[index]) != 0)
             {
                 yield return DaggerfallCatalogs.ElementKeys[index];
             }
