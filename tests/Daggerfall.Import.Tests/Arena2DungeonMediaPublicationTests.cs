@@ -262,12 +262,22 @@ public sealed class Arena2DungeonMediaPublicationTests
                 Actors = [new NormalizedActorPlacement("actor/fixture", actorId, new NormalizedVector3(0, 0, 0))],
             },
         };
-        return Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(
+        // The exact texture closure requires every archive the selected mobile
+        // references, its corpse included, so the fixture derives them from the source
+        // links rather than listing them: a link that gains a corpse cannot leave this
+        // fixture silently incomplete.
+        List<Arena2DungeonMediaSource> sources =
         [
             new Arena2DungeonMediaSource("arena2/PAL.PAL", CreatePalette()),
             new Arena2DungeonMediaSource("arena2/TEXTURE.002", CreateTextureArchive(2)),
             new Arena2DungeonMediaSource($"arena2/TEXTURE.{archive:000}", CreateTextureArchive(20)),
-        ]));
+        ];
+        if (MobileSourceMetadata.TryGet(new Arena2MobileId(mobileId), out Arena2MobileSource? mobile) && mobile.Corpse is Arena2MobileCorpseSource corpse)
+        {
+            sources.Add(new Arena2DungeonMediaSource($"arena2/TEXTURE.{corpse.TextureArchive.Value:000}", CreateTextureArchive(20)));
+        }
+
+        return Arena2DungeonMediaRequest.Create(document, new Arena2DungeonMediaSourceSet(sources));
     }
 
     private static Arena2DungeonMediaSource[] CreateSources() =>

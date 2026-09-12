@@ -133,6 +133,11 @@ public sealed class MonsterArchiveTests
         // The corpus supplies 472 texture archives; every archive the linked mobiles point
         // at must be one of them, or the media a later task publishes does not exist.
         Assert.Empty(inventory.MissingMedia(supplied));
+        // And the check must have something to check: eight mobiles referencing a live
+        // archive and a corpse each, so a link that loses its corpse cannot make this
+        // pass by having nothing to compare.
+        Assert.All(inventory.Records.Where(record => record.IsLinked).Select(record => record.Source!.Id.Value).Distinct(), mobileId =>
+            Assert.NotNull(MobileSourceMetadata.All.Single(source => source.Id.Value == mobileId).Corpse));
     }
 
     [Fact]
