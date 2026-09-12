@@ -21,6 +21,11 @@ internal static class Program
                 return RunSpriteCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "source-manifest")
+            {
+                return RunSourceManifestCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = BuildPlan(options);
             switch (options.Command)
@@ -43,6 +48,68 @@ internal static class Program
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Reconciles the documented inventory against a real source tree and writes the
+    /// machine-readable source manifest later normalizers consume. A source is
+    /// imported when one of this tool's admitted source closures claims it; everything
+    /// else the tree supplies is recorded as unused rather than ignored.
+    /// </summary>
+    private static int RunSourceManifestCommand(IReadOnlyList<string> args)
+    {
+        if (args.Count != 7 || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--output")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool source-manifest --arena2 SOURCE_DIR --inventory INVENTORY.csv --output DIR");
+        }
+
+        string arena2 = args[2];
+        string inventoryFile = args[4];
+        string output = args[6];
+        byte[] inventoryBytes = File.ReadAllBytes(inventoryFile);
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(inventoryBytes);
+        HashSet<string> imported = new(DungeonSourceNames.Concat(ClassicMediaSourceNames), StringComparer.Ordinal);
+        HashSet<string> excluded = inventory
+            .Where(row => StringComparer.Ordinal.Equals(row.Disposition, "excluded"))
+            .Select(row => row.PathOrPattern.Split('/')[^1])
+            .ToHashSet(StringComparer.Ordinal);
+        SourceManifest manifest = SourceManifestBuilder.Build(
+            new SourceManifestRequest("local/arena2", Path.GetFileName(inventoryFile), arena2, imported, [], excluded),
+            inventoryBytes);
+
+        List<SourceManifestRecord> records = [.. manifest.Records];
+        foreach (SourceManifestRecord archive in manifest.Records.Where(record =>
+            record.Disposition is not (SourceRecordDisposition.SourceGap or SourceRecordDisposition.Excluded)
+            && record.SourcePath.EndsWith(".BSA", StringComparison.OrdinalIgnoreCase)))
+        {
+            records.AddRange(SourceManifestBuilder.DecodeArchiveRecords(
+                archive, File.ReadAllBytes(Path.Combine(arena2, Path.GetFileName(archive.SourcePath)))));
+        }
+
+        SourceManifest complete = manifest with
+        {
+            Records = records,
+            Families = manifest.Families
+                .Select(family => SourceManifestFamilyCount.From(family.FamilyId, records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, family.FamilyId))))
+                .ToArray(),
+        };
+        byte[] bytes = SourceManifestSerializer.Serialize(complete);
+        string manifestPath = Path.Combine(output, SourceManifestSerializer.ManifestRelativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
+        File.WriteAllBytes(manifestPath, bytes);
+
+        SourceManifest readback = SourceManifestSerializer.Deserialize(bytes);
+        SourceManifestFamilyCount total = SourceManifestFamilyCount.From("total", readback.Records);
+        Console.WriteLine($"source manifest: {total.Discovered} records across {readback.Families.Count(family => family.Discovered > 0)} supplied families");
+        Console.WriteLine($"  imported {total.Imported}, unused {total.Unused}, source-gap {total.SourceGap}, required-pending {total.RequiredPending}, unresolved {total.Unresolved}, excluded {total.Excluded}, duplicate {total.Duplicate}, malformed {total.Malformed}");
+        foreach (SourceManifestFamilyCount family in readback.Families.Where(family => family.Discovered > 0))
+        {
+            Console.WriteLine($"  {family.FamilyId}: {family.Discovered} = {family.Imported} imported, {family.Unused} unused, {family.SourceGap} source-gap, {family.RequiredPending} pending, {family.Unresolved} unresolved, {family.Excluded} excluded");
+        }
+
+        Console.WriteLine($"manifest: {manifestPath}");
+        Console.WriteLine($"digest: {ContentDigest.Compute(bytes).Value}");
+        return 0;
     }
 
     private static int RunSpriteCommand(IReadOnlyList<string> args)
@@ -476,6 +543,7 @@ internal static class Program
         Plan,
         Write,
         VerifyRealData,
+        SourceManifest,
     }
 
     private enum SpriteToolCommand
