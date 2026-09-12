@@ -3386,5 +3386,2042 @@
     "chain2-material-alias-is-not-authored",
     "bows-retain-donor-both-hands-policy",
     "loot-matrix-uses-fall-exe-errata"
-  ]
+  ],
+  "catalogs": {
+    "schemaVersion": 1,
+    "attributes": [
+      {
+        "id": "strength",
+        "index": 0,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "intelligence",
+        "index": 1,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "willpower",
+        "index": 2,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "agility",
+        "index": 3,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "endurance",
+        "index": 4,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "personality",
+        "index": 5,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "speed",
+        "index": 6,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "luck",
+        "index": 7,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      }
+    ],
+    "skills": [
+      {
+        "id": "medical",
+        "index": 0,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "etiquette",
+        "index": 1,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "streetwise",
+        "index": 2,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "jumping",
+        "index": 3,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "orcish",
+        "index": 4,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "harpy",
+        "index": 5,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "giantish",
+        "index": 6,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "dragonish",
+        "index": 7,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "nymph",
+        "index": 8,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "daedric",
+        "index": 9,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "spriggan",
+        "index": 10,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "centaurian",
+        "index": 11,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "impish",
+        "index": 12,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "lockpicking",
+        "index": 13,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "mercantile",
+        "index": 14,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "pickpocket",
+        "index": 15,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "stealth",
+        "index": 16,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "swimming",
+        "index": 17,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "climbing",
+        "index": 18,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "backstabbing",
+        "index": 19,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "dodging",
+        "index": 20,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "running",
+        "index": 21,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "destruction",
+        "index": 22,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "restoration",
+        "index": 23,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "illusion",
+        "index": 24,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "alteration",
+        "index": 25,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "thaumaturgy",
+        "index": 26,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "mysticism",
+        "index": 27,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "short-blade",
+        "index": 28,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "long-blade",
+        "index": 29,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "hand-to-hand",
+        "index": 30,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "axe",
+        "index": 31,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "blunt-weapon",
+        "index": 32,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "archery",
+        "index": 33,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "critical-strike",
+        "index": 34,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      }
+    ],
+    "resistances": [
+      {
+        "id": "fire",
+        "index": 0,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "frost",
+        "index": 1,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "disease-or-poison",
+        "index": 2,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "shock",
+        "index": 3,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      },
+      {
+        "id": "magic",
+        "index": 4,
+        "source": {
+          "recordId": "CNT-010",
+          "path": "local/arena2/CLASS*.CFG;CLASSES.DAT"
+        }
+      }
+    ],
+    "races": [
+      {
+        "id": "breton",
+        "donorRaceId": 1,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      },
+      {
+        "id": "redguard",
+        "donorRaceId": 2,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      },
+      {
+        "id": "nord",
+        "donorRaceId": 3,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      },
+      {
+        "id": "dark-elf",
+        "donorRaceId": 4,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      },
+      {
+        "id": "high-elf",
+        "donorRaceId": 5,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      },
+      {
+        "id": "wood-elf",
+        "donorRaceId": 6,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      },
+      {
+        "id": "khajiit",
+        "donorRaceId": 7,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      },
+      {
+        "id": "argonian",
+        "donorRaceId": 8,
+        "source": {
+          "recordId": "CNT-009",
+          "path": "donor:Assets/Scripts/Game/Entities/RaceTemplate.cs"
+        }
+      }
+    ],
+    "careers": [
+      {
+        "id": "class00",
+        "name": "Mage",
+        "primarySkills": [
+          "mysticism",
+          "alteration",
+          "thaumaturgy"
+        ],
+        "majorSkills": [
+          "illusion",
+          "destruction",
+          "restoration"
+        ],
+        "minorSkills": [
+          "medical",
+          "short-blade",
+          "blunt-weapon",
+          "dragonish",
+          "daedric",
+          "dodging"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 6,
+        "advancementMultiplier": 1.0390625,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS00.CFG",
+          "path": "local/arena2/CLASS00.CFG"
+        },
+        "skillReferences": [
+          "mysticism",
+          "alteration",
+          "thaumaturgy",
+          "illusion",
+          "destruction",
+          "restoration",
+          "medical",
+          "short-blade",
+          "blunt-weapon",
+          "dragonish",
+          "daedric",
+          "dodging"
+        ]
+      },
+      {
+        "id": "class01",
+        "name": "Spellsword",
+        "primarySkills": [
+          "axe",
+          "long-blade",
+          "blunt-weapon"
+        ],
+        "majorSkills": [
+          "destruction",
+          "illusion",
+          "alteration"
+        ],
+        "minorSkills": [
+          "restoration",
+          "thaumaturgy",
+          "mysticism",
+          "short-blade",
+          "hand-to-hand",
+          "archery"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 12,
+        "advancementMultiplier": 0.9140625,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS01.CFG",
+          "path": "local/arena2/CLASS01.CFG"
+        },
+        "skillReferences": [
+          "axe",
+          "long-blade",
+          "blunt-weapon",
+          "destruction",
+          "illusion",
+          "alteration",
+          "restoration",
+          "thaumaturgy",
+          "mysticism",
+          "short-blade",
+          "hand-to-hand",
+          "archery"
+        ]
+      },
+      {
+        "id": "class02",
+        "name": "Battlemage",
+        "primarySkills": [
+          "destruction",
+          "long-blade",
+          "axe"
+        ],
+        "majorSkills": [
+          "thaumaturgy",
+          "alteration",
+          "hand-to-hand"
+        ],
+        "minorSkills": [
+          "illusion",
+          "mysticism",
+          "restoration",
+          "archery",
+          "short-blade",
+          "blunt-weapon"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 10,
+        "advancementMultiplier": 0.95703125,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS02.CFG",
+          "path": "local/arena2/CLASS02.CFG"
+        },
+        "skillReferences": [
+          "destruction",
+          "long-blade",
+          "axe",
+          "thaumaturgy",
+          "alteration",
+          "hand-to-hand",
+          "illusion",
+          "mysticism",
+          "restoration",
+          "archery",
+          "short-blade",
+          "blunt-weapon"
+        ]
+      },
+      {
+        "id": "class03",
+        "name": "Sorcerer",
+        "primarySkills": [
+          "mysticism",
+          "alteration",
+          "thaumaturgy"
+        ],
+        "majorSkills": [
+          "destruction",
+          "restoration",
+          "illusion"
+        ],
+        "minorSkills": [
+          "medical",
+          "short-blade",
+          "blunt-weapon",
+          "dragonish",
+          "daedric",
+          "dodging"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 6,
+        "advancementMultiplier": 1.0390625,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS03.CFG",
+          "path": "local/arena2/CLASS03.CFG"
+        },
+        "skillReferences": [
+          "mysticism",
+          "alteration",
+          "thaumaturgy",
+          "destruction",
+          "restoration",
+          "illusion",
+          "medical",
+          "short-blade",
+          "blunt-weapon",
+          "dragonish",
+          "daedric",
+          "dodging"
+        ]
+      },
+      {
+        "id": "class04",
+        "name": "Healer",
+        "primarySkills": [
+          "restoration",
+          "medical",
+          "dodging"
+        ],
+        "majorSkills": [
+          "thaumaturgy",
+          "mysticism",
+          "alteration"
+        ],
+        "minorSkills": [
+          "illusion",
+          "streetwise",
+          "etiquette",
+          "short-blade",
+          "hand-to-hand",
+          "blunt-weapon"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 8,
+        "advancementMultiplier": 1,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS04.CFG",
+          "path": "local/arena2/CLASS04.CFG"
+        },
+        "skillReferences": [
+          "restoration",
+          "medical",
+          "dodging",
+          "thaumaturgy",
+          "mysticism",
+          "alteration",
+          "illusion",
+          "streetwise",
+          "etiquette",
+          "short-blade",
+          "hand-to-hand",
+          "blunt-weapon"
+        ]
+      },
+      {
+        "id": "class05",
+        "name": "Nightblade",
+        "primarySkills": [
+          "illusion",
+          "stealth",
+          "dodging"
+        ],
+        "majorSkills": [
+          "thaumaturgy",
+          "short-blade",
+          "lockpicking"
+        ],
+        "minorSkills": [
+          "alteration",
+          "critical-strike",
+          "mercantile",
+          "destruction",
+          "restoration",
+          "backstabbing"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 8,
+        "advancementMultiplier": 1,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS05.CFG",
+          "path": "local/arena2/CLASS05.CFG"
+        },
+        "skillReferences": [
+          "illusion",
+          "stealth",
+          "dodging",
+          "thaumaturgy",
+          "short-blade",
+          "lockpicking",
+          "alteration",
+          "critical-strike",
+          "mercantile",
+          "destruction",
+          "restoration",
+          "backstabbing"
+        ]
+      },
+      {
+        "id": "class06",
+        "name": "Bard",
+        "primarySkills": [
+          "streetwise",
+          "etiquette",
+          "pickpocket"
+        ],
+        "majorSkills": [
+          "stealth",
+          "short-blade",
+          "hand-to-hand"
+        ],
+        "minorSkills": [
+          "lockpicking",
+          "alteration",
+          "illusion",
+          "destruction",
+          "archery",
+          "restoration"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 10,
+        "advancementMultiplier": 0.95703125,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS06.CFG",
+          "path": "local/arena2/CLASS06.CFG"
+        },
+        "skillReferences": [
+          "streetwise",
+          "etiquette",
+          "pickpocket",
+          "stealth",
+          "short-blade",
+          "hand-to-hand",
+          "lockpicking",
+          "alteration",
+          "illusion",
+          "destruction",
+          "archery",
+          "restoration"
+        ]
+      },
+      {
+        "id": "class07",
+        "name": "Burglar",
+        "primarySkills": [
+          "lockpicking",
+          "stealth",
+          "climbing"
+        ],
+        "majorSkills": [
+          "mercantile",
+          "dodging",
+          "short-blade"
+        ],
+        "minorSkills": [
+          "jumping",
+          "running",
+          "critical-strike",
+          "pickpocket",
+          "streetwise",
+          "backstabbing"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 8,
+        "advancementMultiplier": 1,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS07.CFG",
+          "path": "local/arena2/CLASS07.CFG"
+        },
+        "skillReferences": [
+          "lockpicking",
+          "stealth",
+          "climbing",
+          "mercantile",
+          "dodging",
+          "short-blade",
+          "jumping",
+          "running",
+          "critical-strike",
+          "pickpocket",
+          "streetwise",
+          "backstabbing"
+        ]
+      },
+      {
+        "id": "class08",
+        "name": "Rogue",
+        "primarySkills": [
+          "long-blade",
+          "stealth",
+          "dodging"
+        ],
+        "majorSkills": [
+          "pickpocket",
+          "backstabbing",
+          "streetwise"
+        ],
+        "minorSkills": [
+          "critical-strike",
+          "blunt-weapon",
+          "lockpicking",
+          "hand-to-hand",
+          "running",
+          "swimming"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 12,
+        "advancementMultiplier": 0.9140625,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS08.CFG",
+          "path": "local/arena2/CLASS08.CFG"
+        },
+        "skillReferences": [
+          "long-blade",
+          "stealth",
+          "dodging",
+          "pickpocket",
+          "backstabbing",
+          "streetwise",
+          "critical-strike",
+          "blunt-weapon",
+          "lockpicking",
+          "hand-to-hand",
+          "running",
+          "swimming"
+        ]
+      },
+      {
+        "id": "class09",
+        "name": "Acrobat",
+        "primarySkills": [
+          "jumping",
+          "dodging",
+          "running"
+        ],
+        "majorSkills": [
+          "climbing",
+          "hand-to-hand",
+          "stealth"
+        ],
+        "minorSkills": [
+          "pickpocket",
+          "critical-strike",
+          "backstabbing",
+          "short-blade",
+          "archery",
+          "swimming"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 8,
+        "advancementMultiplier": 1,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS09.CFG",
+          "path": "local/arena2/CLASS09.CFG"
+        },
+        "skillReferences": [
+          "jumping",
+          "dodging",
+          "running",
+          "climbing",
+          "hand-to-hand",
+          "stealth",
+          "pickpocket",
+          "critical-strike",
+          "backstabbing",
+          "short-blade",
+          "archery",
+          "swimming"
+        ]
+      },
+      {
+        "id": "class10",
+        "name": "Thief",
+        "primarySkills": [
+          "pickpocket",
+          "stealth",
+          "short-blade"
+        ],
+        "majorSkills": [
+          "backstabbing",
+          "climbing",
+          "lockpicking"
+        ],
+        "minorSkills": [
+          "critical-strike",
+          "jumping",
+          "running",
+          "dodging",
+          "streetwise",
+          "mercantile"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 10,
+        "advancementMultiplier": 0.95703125,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS10.CFG",
+          "path": "local/arena2/CLASS10.CFG"
+        },
+        "skillReferences": [
+          "pickpocket",
+          "stealth",
+          "short-blade",
+          "backstabbing",
+          "climbing",
+          "lockpicking",
+          "critical-strike",
+          "jumping",
+          "running",
+          "dodging",
+          "streetwise",
+          "mercantile"
+        ]
+      },
+      {
+        "id": "class11",
+        "name": "Assassin",
+        "primarySkills": [
+          "critical-strike",
+          "backstabbing",
+          "stealth"
+        ],
+        "majorSkills": [
+          "short-blade",
+          "long-blade",
+          "blunt-weapon"
+        ],
+        "minorSkills": [
+          "axe",
+          "archery",
+          "lockpicking",
+          "pickpocket",
+          "climbing",
+          "dodging"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 12,
+        "advancementMultiplier": 0.9140625,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS11.CFG",
+          "path": "local/arena2/CLASS11.CFG"
+        },
+        "skillReferences": [
+          "critical-strike",
+          "backstabbing",
+          "stealth",
+          "short-blade",
+          "long-blade",
+          "blunt-weapon",
+          "axe",
+          "archery",
+          "lockpicking",
+          "pickpocket",
+          "climbing",
+          "dodging"
+        ]
+      },
+      {
+        "id": "class12",
+        "name": "Monk",
+        "primarySkills": [
+          "hand-to-hand",
+          "critical-strike",
+          "dodging"
+        ],
+        "majorSkills": [
+          "swimming",
+          "medical",
+          "blunt-weapon"
+        ],
+        "minorSkills": [
+          "axe",
+          "long-blade",
+          "archery",
+          "short-blade",
+          "jumping",
+          "climbing"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 14,
+        "advancementMultiplier": 0.87109375,
+        "resistanceElements": [
+          "frost"
+        ],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS12.CFG",
+          "path": "local/arena2/CLASS12.CFG"
+        },
+        "skillReferences": [
+          "hand-to-hand",
+          "critical-strike",
+          "dodging",
+          "swimming",
+          "medical",
+          "blunt-weapon",
+          "axe",
+          "long-blade",
+          "archery",
+          "short-blade",
+          "jumping",
+          "climbing"
+        ]
+      },
+      {
+        "id": "class13",
+        "name": "Archer",
+        "primarySkills": [
+          "archery",
+          "hand-to-hand",
+          "dodging"
+        ],
+        "majorSkills": [
+          "axe",
+          "blunt-weapon",
+          "critical-strike"
+        ],
+        "minorSkills": [
+          "long-blade",
+          "short-blade",
+          "climbing",
+          "jumping",
+          "running",
+          "swimming"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 16,
+        "advancementMultiplier": 0.83203125,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS13.CFG",
+          "path": "local/arena2/CLASS13.CFG"
+        },
+        "skillReferences": [
+          "archery",
+          "hand-to-hand",
+          "dodging",
+          "axe",
+          "blunt-weapon",
+          "critical-strike",
+          "long-blade",
+          "short-blade",
+          "climbing",
+          "jumping",
+          "running",
+          "swimming"
+        ]
+      },
+      {
+        "id": "class14",
+        "name": "Ranger",
+        "primarySkills": [
+          "long-blade",
+          "axe",
+          "climbing"
+        ],
+        "majorSkills": [
+          "swimming",
+          "archery",
+          "critical-strike"
+        ],
+        "minorSkills": [
+          "blunt-weapon",
+          "hand-to-hand",
+          "short-blade",
+          "running",
+          "dodging",
+          "spriggan"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 18,
+        "advancementMultiplier": 0.7890625,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS14.CFG",
+          "path": "local/arena2/CLASS14.CFG"
+        },
+        "skillReferences": [
+          "long-blade",
+          "axe",
+          "climbing",
+          "swimming",
+          "archery",
+          "critical-strike",
+          "blunt-weapon",
+          "hand-to-hand",
+          "short-blade",
+          "running",
+          "dodging",
+          "spriggan"
+        ]
+      },
+      {
+        "id": "class15",
+        "name": "Barbarian",
+        "primarySkills": [
+          "blunt-weapon",
+          "long-blade",
+          "axe"
+        ],
+        "majorSkills": [
+          "jumping",
+          "running",
+          "swimming"
+        ],
+        "minorSkills": [
+          "medical",
+          "climbing",
+          "dodging",
+          "critical-strike",
+          "archery",
+          "giantish"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 25,
+        "advancementMultiplier": 0.640625,
+        "resistanceElements": [],
+        "immunityElements": [
+          "disease-or-poison"
+        ],
+        "source": {
+          "recordId": "CNT-010.file.CLASS15.CFG",
+          "path": "local/arena2/CLASS15.CFG"
+        },
+        "skillReferences": [
+          "blunt-weapon",
+          "long-blade",
+          "axe",
+          "jumping",
+          "running",
+          "swimming",
+          "medical",
+          "climbing",
+          "dodging",
+          "critical-strike",
+          "archery",
+          "giantish"
+        ]
+      },
+      {
+        "id": "class16",
+        "name": "Warrior",
+        "primarySkills": [
+          "axe",
+          "long-blade",
+          "blunt-weapon"
+        ],
+        "majorSkills": [
+          "hand-to-hand",
+          "archery",
+          "short-blade"
+        ],
+        "minorSkills": [
+          "climbing",
+          "jumping",
+          "dodging",
+          "running",
+          "swimming",
+          "medical"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 20,
+        "advancementMultiplier": 0.74609375,
+        "resistanceElements": [],
+        "immunityElements": [],
+        "source": {
+          "recordId": "CNT-010.file.CLASS16.CFG",
+          "path": "local/arena2/CLASS16.CFG"
+        },
+        "skillReferences": [
+          "axe",
+          "long-blade",
+          "blunt-weapon",
+          "hand-to-hand",
+          "archery",
+          "short-blade",
+          "climbing",
+          "jumping",
+          "dodging",
+          "running",
+          "swimming",
+          "medical"
+        ]
+      },
+      {
+        "id": "class17",
+        "name": "Knight",
+        "primarySkills": [
+          "long-blade",
+          "etiquette",
+          "blunt-weapon"
+        ],
+        "majorSkills": [
+          "axe",
+          "archery",
+          "short-blade"
+        ],
+        "minorSkills": [
+          "medical",
+          "dodging",
+          "hand-to-hand",
+          "jumping",
+          "swimming",
+          "climbing"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 18,
+        "advancementMultiplier": 0.7890625,
+        "resistanceElements": [],
+        "immunityElements": [
+          "fire"
+        ],
+        "source": {
+          "recordId": "CNT-010.file.CLASS17.CFG",
+          "path": "local/arena2/CLASS17.CFG"
+        },
+        "skillReferences": [
+          "long-blade",
+          "etiquette",
+          "blunt-weapon",
+          "axe",
+          "archery",
+          "short-blade",
+          "medical",
+          "dodging",
+          "hand-to-hand",
+          "jumping",
+          "swimming",
+          "climbing"
+        ]
+      },
+      {
+        "id": "class18",
+        "name": "Knight",
+        "primarySkills": [
+          "long-blade",
+          "archery",
+          "critical-strike"
+        ],
+        "majorSkills": [
+          "etiquette",
+          "dodging"
+        ],
+        "minorSkills": [
+          "medical",
+          "orcish",
+          "stealth",
+          "backstabbing",
+          "destruction",
+          "restoration"
+        ],
+        "attributes": [
+          "strength",
+          "intelligence",
+          "willpower",
+          "agility",
+          "endurance",
+          "personality",
+          "speed",
+          "luck"
+        ],
+        "hitPointsPerLevel": 18,
+        "advancementMultiplier": 0.7890625,
+        "resistanceElements": [],
+        "immunityElements": [
+          "fire"
+        ],
+        "source": {
+          "recordId": "CNT-010.file.CLASS18.CFG",
+          "path": "local/arena2/CLASS18.CFG"
+        },
+        "skillReferences": [
+          "long-blade",
+          "archery",
+          "critical-strike",
+          "etiquette",
+          "dodging",
+          "medical",
+          "orcish",
+          "stealth",
+          "backstabbing",
+          "destruction",
+          "restoration"
+        ]
+      }
+    ],
+    "careerNameCollisions": [
+      "Knight"
+    ],
+    "enemies": [
+      {
+        "id": "thief",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "archer",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "rat",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "imp",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "spriggan",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "giant-bat",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "grizzly-bear",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "sabertooth-tiger",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "spider",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "orc",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "centaur",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "werewolf",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "nymph",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "slaughterfish",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "orc-sergeant",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "harpy",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "wereboar",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "skeletal-warrior",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "giant",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "zombie",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "ghost",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "mummy",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "giant-scorpion",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "orc-shaman",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "gargoyle",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "wraith",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "orc-warlord",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "frost-daedra",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "fire-daedra",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "daedroth",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "vampire",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "daedra-seducer",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "vampire-ancient",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "daedra-lord",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "lich",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "ancient-lich",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "dragonling",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "fire-atronach",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "iron-atronach",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "flesh-atronach",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "ice-atronach",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "dragonling-40",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "dreugh",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      },
+      {
+        "id": "lamia",
+        "source": {
+          "recordId": "CNT-007",
+          "path": "local/arena2/MONSTER.BSA"
+        }
+      }
+    ],
+    "itemTemplates": [
+      {
+        "id": "iron-dagger",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-tanto",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-wakazashi",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-shortsword",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-broadsword",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-saber",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-katana",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-longsword",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-mace",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-battle-axe",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-claymore",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-dai-katana",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-staff",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-flail",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-warhammer",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-war-axe",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-short-bow",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-long-bow",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-helm",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-cuirass",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-right-pauldron",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-left-pauldron",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-gauntlets",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-greaves",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "iron-boots",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "buckler",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "round-shield",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "kite-shield",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "tower-shield",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "gold-piece",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      },
+      {
+        "id": "arrow",
+        "source": {
+          "recordId": "CNT-011",
+          "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs"
+        }
+      }
+    ],
+    "pending": [
+      {
+        "id": "factions",
+        "ownerTask": 7967,
+        "reason": "FACTION.TXT identities, relations and bindings are supplied by that task; this contract declares the namespace and validates references into it."
+      },
+      {
+        "id": "regionReferences",
+        "ownerTask": 7938,
+        "reason": "MAPS.BSA region, location and map-table records are supplied by that task; this contract declares the namespace and validates references into it."
+      }
+    ]
+  }
 }
