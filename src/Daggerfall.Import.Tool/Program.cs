@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Publication;
@@ -26,6 +27,11 @@ internal static class Program
                 return RunSourceManifestCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "catalogs")
+            {
+                return RunCatalogCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -48,6 +54,71 @@ internal static class Program
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
         }
+    }
+
+    /// <summary>
+    /// Builds the normalized reference catalogs from the supplied careers and the
+    /// documented inventory, reports what it found, and writes them into the base pack
+    /// when asked. The pack is the published artifact; this is how it is produced.
+    /// </summary>
+    private static int RunCatalogCommand(IReadOnlyList<string> args)
+    {
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        if (args.Count != (update ? 8 : 7) || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--pack")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool catalogs --arena2 SOURCE_DIR --inventory INVENTORY.csv --pack PACK.json [--update]");
+        }
+
+        string arena2 = args[2];
+        string inventoryFile = args[4];
+        string packFile = args[6];
+        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(inventoryFile));
+        (List<string> attributes, List<string> skills) = ReadVocabulary(packFile);
+        List<(string FileName, byte[] Bytes)> careers = [.. Directory
+            .EnumerateFiles(arena2, "CLASS*.CFG")
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .Select(path => (Path.GetFileName(path), File.ReadAllBytes(path)))];
+        (List<string> enemies, List<string> items) = ReadPackKeys(packFile);
+        DaggerfallCatalogs catalogs = DaggerfallCatalogBuilder.Build(inventory, attributes, skills, careers, enemies, items);
+        IReadOnlySet<string> inventoryIds = inventory.Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
+        byte[] section = DaggerfallCatalogSerializer.Serialize(catalogs, inventoryIds);
+
+        Console.WriteLine($"catalogs: {catalogs.Races.Count} races, {catalogs.Careers.Count} careers, {catalogs.Attributes.Count} attributes, {catalogs.Skills.Count} skills, {catalogs.Resistances.Count} elements, {catalogs.Enemies.Count} enemy references, {catalogs.ItemTemplates.Count} item-template references, {catalogs.Pending.Count} pending namespaces");
+        foreach (DaggerfallCareerRecord career in catalogs.Careers)
+        {
+            Console.WriteLine($"  {career.Id} '{career.Name}' hp/level {career.HitPointsPerLevel} primary {string.Join('/', career.PrimarySkills)} source {career.Source.RecordId}");
+        }
+
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these catalogs into it)");
+            return 0;
+        }
+
+        // Only the catalogs property is replaced; every other authored section keeps its
+        // own ordering and formatting.
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        pack["catalogs"] = JsonNode.Parse(System.Text.Encoding.UTF8.GetString(section));
+        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: catalogs updated in {packFile}");
+        return 0;
+    }
+
+    private static (List<string> Attributes, List<string> Skills) ReadVocabulary(string packFile)
+    {
+        JsonNode vocabulary = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject()["vocabulary"]!;
+        return (
+            [.. vocabulary["attributes"]!.AsArray().Select(value => value!.GetValue<string>())],
+            [.. vocabulary["skills"]!.AsArray().Select(value => value!.GetValue<string>())]);
+    }
+
+    private static (List<string> Enemies, List<string> Items) ReadPackKeys(string packFile)
+    {
+        JsonNode root = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        List<string> ids(string property) =>
+            [.. root[property]!.AsArray().Select(value => value!.AsObject()["id"]!.GetValue<string>())];
+        // The player is an actor identity but not an enemy a catalog references.
+        return ([.. ids("actors").Where(id => id != "player")], ids("items"));
     }
 
     /// <summary>
