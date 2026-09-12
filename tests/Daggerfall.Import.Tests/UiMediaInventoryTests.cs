@@ -72,7 +72,7 @@ public sealed class UiMediaInventoryTests
         // A pending binding says which task's inventory names the family, so the concern is
         // carried rather than noted.
         UiMediaRecord guild = inventory.Family("GILD").First();
-        Assert.Equal(UiMediaDisposition.RequiredPending, guild.Disposition);
+        Assert.Equal(MediaBinding.RequiredPending, guild.Binding);
         Assert.Contains("F104", guild.Note, StringComparison.Ordinal);
         Assert.Contains("GILD", guild.Path, StringComparison.Ordinal);
     }
@@ -88,7 +88,7 @@ public sealed class UiMediaInventoryTests
             "the fixture consumer",
             "fixture");
 
-        Assert.Equal(UiMediaDisposition.Admitted, inventory.Files.Single().Disposition);
+        Assert.Equal(MediaBinding.Admitted, inventory.Files.Single().Binding);
     }
 
     [Fact]

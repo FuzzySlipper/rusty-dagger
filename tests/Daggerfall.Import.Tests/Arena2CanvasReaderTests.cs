@@ -21,7 +21,50 @@ public sealed class Arena2CanvasReaderTests
         Arena2Canvas canvas = Assert.Single(canvases.Canvases);
         Assert.Equal(9, canvas.Width);
         Assert.Equal(80, canvas.Height);
-        Assert.Equal(720, canvas.Width * canvas.Height);
+        // The file is exactly its shape, which is why the whole file is the canvas.
+        Assert.Equal(new FileInfo(Corpus("BANK01I1.IMG")).Length, canvas.Width * canvas.Height);
+    }
+
+    [Fact]
+    public void Reports_a_headerless_canvas_at_its_own_shape_and_size()
+    {
+        // 112128 bytes is the documented 512x219 shape. Its pixel count exceeds a 16-bit
+        // payload field, so the record has to agree with itself rather than truncating: pixels
+        // of exactly width * height, and a payload that says the same.
+        IndexedImg image = ImgDecoder.DecodeHeaderless(new byte[112128], "NITE00I0.IMG");
+        Assert.Equal((512, 219), (image.Width, image.Height));
+        Assert.Equal(512 * 219, image.PayloadLength);
+        Assert.Equal(512 * 219, image.Pixels.Length);
+
+        // 64768 bytes is a real corpus length (PRIS00I0.IMG and peers): a 320x200 shape with
+        // 768 bytes after it. The classic reader reads the shape's byte count and ignores the
+        // rest, so the canvas is the leading 64000 bytes rather than the whole file.
+        IndexedImg padded = ImgDecoder.DecodeHeaderless(new byte[64768], "PRIS00I0.IMG");
+        Assert.Equal((320, 200), (padded.Width, padded.Height));
+        Assert.Equal(64000, padded.PayloadLength);
+        Assert.Equal(64000, padded.Pixels.Length);
+
+        // 44 bytes is the documented 22x22 shape, which needs 484 bytes. Padding the canvas with
+        // the 440 bytes the file does not carry would be an invented image, so it is refused and
+        // the reason says which part is missing.
+        Arena2FormatException truncated = Assert.Throws<Arena2FormatException>(
+            () => ImgDecoder.DecodeHeaderless(new byte[44], "stub.img"));
+        Assert.Contains("needs 484 bytes", truncated.Message, StringComparison.Ordinal);
+        Assert.Contains("44-byte file", truncated.Message, StringComparison.Ordinal);
+
+        Arena2CanvasSet unread = Arena2CanvasReader.Read(new byte[44], "STUB.IMG");
+        Assert.Equal(Arena2CanvasKind.Unread, unread.Kind);
+        Assert.Contains("needs 484 bytes", unread.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_to_describe_a_read_kind_that_carries_no_canvas()
+    {
+        // Read never produces this state, but the set is public: describing it must fail as an
+        // invalid state rather than as an index out of range.
+        Arena2CanvasSet empty = new(Arena2CanvasKind.ImgRecord, [], string.Empty);
+
+        Assert.Throws<InvalidOperationException>(() => empty.Description);
     }
 
     [Fact]

@@ -48,15 +48,23 @@ public sealed record Arena2CanvasSet(Arena2CanvasKind Kind, IReadOnlyList<Arena2
         ? $"Read as {ReadShape()}."
         : $"No reader read it: {Reason}";
 
-    private string ReadShape() => Kind switch
+    private string ReadShape()
     {
-        Arena2CanvasKind.ImgRecord => $"one IMG record of {Shape(Canvases[0])}",
-        Arena2CanvasKind.ImgRecordSequence => $"{Count} IMG records, the first of {Shape(Canvases[0])}",
-        Arena2CanvasKind.HeaderlessCanvas => $"a headerless canvas of {Shape(Canvases[0])}",
-        Arena2CanvasKind.GfxFrames => $"a GFX container of {Count} frames of {Shape(Canvases[0])}",
-        Arena2CanvasKind.RciGrid => $"an RCI grid of {Count} canvases of {Shape(Canvases[0])}",
-        _ => throw new InvalidOperationException($"{Kind} names no read shape."),
-    };
+        if (Canvases.Count == 0)
+        {
+            throw new InvalidOperationException($"a {Kind} canvas set carries no canvas, so it has no shape to describe");
+        }
+
+        return Kind switch
+        {
+            Arena2CanvasKind.ImgRecord => $"one IMG record of {Shape(Canvases[0])}",
+            Arena2CanvasKind.ImgRecordSequence => $"{Count} IMG records, the first of {Shape(Canvases[0])}",
+            Arena2CanvasKind.HeaderlessCanvas => $"a headerless canvas of {Shape(Canvases[0])}",
+            Arena2CanvasKind.GfxFrames => $"a GFX container of {Count} frames of {Shape(Canvases[0])}",
+            Arena2CanvasKind.RciGrid => $"an RCI grid of {Count} canvases of {Shape(Canvases[0])}",
+            _ => throw new InvalidOperationException($"{Kind} names no read shape."),
+        };
+    }
 
     private static string Shape(Arena2Canvas canvas) => $"{canvas.Width} by {canvas.Height} pixels";
 }
@@ -127,6 +135,8 @@ public static class Arena2CanvasReader
         }
         else if (extension == ".CIF" && name.Contains("WEAPO", StringComparison.OrdinalIgnoreCase))
         {
+            // The substring test is the classic reader's own: CifRciFile.ReadRecords dispatches
+            // on fn.Contains("WEAPO"), so matching the name exactly would leave the donor.
             refusals.Add($"'{name}' is a weapon CIF, whose frames the weapon CIF reader owns rather than this probe.");
         }
         else if (extension == ".CIF")

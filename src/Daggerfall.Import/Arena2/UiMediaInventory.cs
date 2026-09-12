@@ -1,23 +1,12 @@
 namespace Daggerfall.Import.Arena2;
 
-/// <summary>What the enumeration established about one UI media file.</summary>
-public enum UiMediaDisposition
-{
-    /// <summary>The file is bound to a published consumer.</summary>
-    Admitted,
-
-    /// <summary>The file is supplied and no published consumer binds it yet.</summary>
-    RequiredPending,
-
-}
-
 /// <summary>One supplied UI media file: its family, the canvases it carries, and what binds it.</summary>
 public sealed record UiMediaRecord(
     string Path,
     string Family,
     IReadOnlyList<Arena2Canvas> Canvases,
     string Consumer,
-    UiMediaDisposition Disposition,
+    MediaBinding Binding,
     Arena2CanvasKind Decode,
     string Note)
 {
@@ -63,10 +52,10 @@ public sealed class UiMediaInventory
     public IReadOnlyList<UiMediaRecord> Files { get; }
 
     /// <summary>The files a published consumer binds.</summary>
-    public IEnumerable<UiMediaRecord> Admitted => Files.Where(file => file.Disposition == UiMediaDisposition.Admitted);
+    public IEnumerable<UiMediaRecord> Admitted => Files.Where(file => file.Binding == MediaBinding.Admitted);
 
     /// <summary>The files no published consumer binds yet.</summary>
-    public IEnumerable<UiMediaRecord> RequiredPending => Files.Where(file => file.Disposition == UiMediaDisposition.RequiredPending);
+    public IEnumerable<UiMediaRecord> RequiredPending => Files.Where(file => file.Binding == MediaBinding.RequiredPending);
 
     /// <summary>The supplied files no reader read.</summary>
     public IEnumerable<UiMediaRecord> Unread => Files.Where(file => file.Decode == Arena2CanvasKind.Unread);
@@ -116,8 +105,8 @@ public sealed class UiMediaInventory
             // The family is matched case-insensitively, so the binding is too: a consumer
             // naming MAIN00I0.IMG binds main00i0.img rather than half-matching it.
             bool bound = admitted.Contains(path) || admitted.Any(name => StringComparer.OrdinalIgnoreCase.Equals(name, path));
-            UiMediaDisposition disposition = bound ? UiMediaDisposition.Admitted : UiMediaDisposition.RequiredPending;
-            string binding = bound
+            MediaBinding binding = bound ? MediaBinding.Admitted : MediaBinding.RequiredPending;
+            string bindingNote = bound
                 ? $"Bound by {consumer}."
                 : "No published consumer binds this file; the binding is required-pending. Candidates named by this task's inventory: F095, F100, F102, F104, F105, F106.";
             Arena2CanvasSet canvases = Arena2CanvasReader.Read(bytes.Span, path);
@@ -126,9 +115,9 @@ public sealed class UiMediaInventory
                 family,
                 canvases.Canvases,
                 bound ? consumer : string.Empty,
-                disposition,
+                binding,
                 canvases.Kind,
-                $"{binding} {canvases.Description}"));
+                $"{bindingNote} {canvases.Description}"));
         }
 
         return new UiMediaInventory(source, files);
