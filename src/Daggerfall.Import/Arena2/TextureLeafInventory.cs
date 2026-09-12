@@ -96,6 +96,13 @@ public sealed class TextureLeafInventory
                 throw new Arena2FormatException(source, 0, $"texture leaf id {id} is outside the documented 0..{MaximumLeafId} range");
             }
 
+            // The path is the record's identity and every consumer reads it, so a missing
+            // one is refused here rather than planted in a record that fails later.
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException($"Texture leaf {id} was supplied without a path, which is the identity the enumeration records.", nameof(sources));
+            }
+
             if (!supplied.TryAdd(id, (path, bytes)))
             {
                 throw new Arena2FormatException(source, 0, $"'{path}' and '{supplied[id].Path}' both claim texture leaf id {id}");
