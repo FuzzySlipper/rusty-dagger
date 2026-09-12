@@ -34,6 +34,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
     private readonly DaggerfallUniqueItemAllocator _uniqueItems;
+    private readonly HashSet<ulong> _authoredEntityIds;
     private PendingCorpseLoot? _pendingLoot;
     private readonly FactBuffer<IProductFact> _facts = new();
     private FactBuffer<IProductFact>.FactTransaction? _outerFacts;
@@ -167,8 +168,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 playerDefinition,
                 _random,
                 authored);
+            _authoredEntityIds = DaggerfallSavePayload.ContentEntityIds(inputs, playerDefinition.Loadout);
             _uniqueItems = saved is null
-                ? new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, DaggerfallSavePayload.ContentEntityIds(inputs, playerDefinition.Loadout))
+                ? new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, _authoredEntityIds)
                 : DaggerfallUniqueItemAllocator.Restore(saved.RestoredIdentities());
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
@@ -561,9 +563,17 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     /// <summary>The session's durable identity ledger for generated unique loot.</summary>
     internal DaggerfallUniqueItemAllocator UniqueItemAllocator => _uniqueItems;
 
-    /// <summary>Records that one generated unique item no longer exists, so its identity is tombstoned.</summary>
-    internal void RemoveUniqueItemIdentity(ulong entityId) =>
+    /// <summary>
+    /// Records that one generated unique item no longer exists, so its identity is
+    /// tombstoned. Authored content identities are refused — they are reserved rather
+    /// than issued, and tombstoning one would misreport content as removed.
+    /// </summary>
+    internal void RemoveUniqueItemIdentity(ulong entityId)
+    {
+        if (_authoredEntityIds.Contains(entityId))
+            throw new InvalidOperationException($"Unique item identity {entityId} is authored content and cannot be removed.");
         _uniqueItems.Remove(new DurableIdentityReference(DurableIdentityKind.Item, entityId));
+    }
 
     private DaggerfallVitalValues InitialVitals(DaggerfallActorDefinition definition, long entityId)
     {

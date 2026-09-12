@@ -109,9 +109,12 @@ public sealed class DurableIdentityTests
         Assert.Throws<ArgumentException>(() => DurableIdentityAllocator.Restore(new DurableIdentityState([
             new KindAllocatorState(DurableIdentityKind.Item, 1_000, [7], [7]),
         ])));
-        Assert.Throws<ArgumentOutOfRangeException>(() => DurableIdentityAllocator.Restore(new DurableIdentityState([
-            new KindAllocatorState(DurableIdentityKind.Item, 0, [], []),
-        ])));
+        // Zero is the exhaustion marker, and a ledger that has spent its space still
+        // has to be capturable and restorable.
+        DurableIdentityAllocator exhausted = DurableIdentityAllocator.Restore(new DurableIdentityState([
+            new KindAllocatorState(DurableIdentityKind.Item, 0, [7], []),
+        ]));
+        Assert.Throws<InvalidOperationException>(() => exhausted.Allocate(DurableIdentityKind.Item));
         Assert.Throws<ArgumentException>(() => DurableIdentityAllocator.Restore(new DurableIdentityState([
             new KindAllocatorState(DurableIdentityKind.Item, 1_000, [], []),
             new KindAllocatorState(DurableIdentityKind.Item, 2_000, [], []),
@@ -229,5 +232,47 @@ public sealed class DurableIdentityTests
 
             Assert.Equal(captured.Kinds.Single().Removed.Length, restored.CaptureState().Kinds.Single().Removed.Length);
         }
+    }
+
+    [Fact]
+    public void The_cursor_never_advertises_an_identity_that_allocation_would_refuse()
+    {
+        // The last valid identity is issued in full, and the cursor then marks
+        // exhaustion rather than wrapping to an invalid identity or a value that
+        // allocation would refuse.
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Item, ulong.MaxValue);
+
+        DurableIdentityReference last = identities.Allocate(DurableIdentityKind.Item);
+        Assert.Equal(ulong.MaxValue, last.Value);
+        Assert.Equal(DurableIdentityClassification.Live, identities.Classify(last));
+        Assert.Throws<InvalidOperationException>(() => identities.Allocate(DurableIdentityKind.Item));
+        Assert.Throws<InvalidOperationException>(() => identities.NextIdentity(DurableIdentityKind.Item));
+
+        // The exhausted kind still captures and restores, with zero as the marker.
+        DurableIdentityState captured = identities.CaptureState();
+        Assert.Equal(0UL, captured.Kinds.Single().NextIdentity);
+        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(captured);
+        Assert.Equal(DurableIdentityClassification.Live, restored.Classify(last));
+        Assert.Throws<InvalidOperationException>(() => restored.Allocate(DurableIdentityKind.Item));
+        Assert.Throws<InvalidOperationException>(() => restored.NextIdentity(DurableIdentityKind.Item));
+    }
+
+    [Fact]
+    public void Restore_rejects_evidence_that_describes_no_kind_at_all()
+    {
+        Assert.Throws<ArgumentException>(() => DurableIdentityAllocator.Restore(new DurableIdentityState([])));
+        DurableIdentityState empty = new DurableIdentityState([]);
+        Assert.Throws<ArgumentException>(() => empty.RequireKinds([DurableIdentityKind.Item]));
+    }
+
+    [Fact]
+    public void A_value_the_cursor_passed_stays_live_even_when_an_older_save_omits_it_from_reserved()
+    {
+        // An older save may list only authored reservations; an issued identity below
+        // the cursor is still live rather than dangling.
+        DurableIdentityAllocator identities = new(DurableIdentityKind.Item, 1_000);
+
+        Assert.Equal(DurableIdentityClassification.Live, identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, 999)));
+        Assert.Equal(DurableIdentityClassification.NeverIssued, identities.Classify(new DurableIdentityReference(DurableIdentityKind.Item, 1_000)));
     }
 }

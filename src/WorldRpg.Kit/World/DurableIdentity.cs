@@ -52,7 +52,8 @@ public readonly record struct KindAllocatorState(
         if (!Enum.IsDefined(Kind)) throw new ArgumentOutOfRangeException(nameof(Kind));
         ArgumentNullException.ThrowIfNull(Reserved);
         ArgumentNullException.ThrowIfNull(Removed);
-        if (NextIdentity == 0) throw new ArgumentOutOfRangeException(nameof(NextIdentity));
+        // Zero is the exhaustion marker rather than a cursor: a kind that has issued
+        // every identity it can still has to be capturable and restorable.
         HashSet<ulong> reserved = [];
         foreach (ulong value in Reserved)
         {
@@ -124,10 +125,17 @@ public sealed record DurableIdentityState
 ///
 /// Authored identities are reserved before gameplay starts, so an allocation can
 /// never collide with content that a later site load materializes. Allocation is
-/// monotonic: every identity below the cursor was issued, every identity at or
-/// above it was not. Removal records a tombstone for an issued identity, which
-/// keeps "removed" distinguishable from "never loaded" for as long as the save
+/// monotonic: an issued identity is never handed out again, and the cursor only
+/// moves forward. Removal records a tombstone for an identity the allocator issued,
+/// which keeps "removed" distinguishable from "never loaded" for as long as the save
 /// keeps the tombstone.
+///
+/// Classification is answered from what the ledger records — tombstones and
+/// reservations — rather than from the cursor, because a reservation may sit above
+/// the cursor (a site load claims its content identities before an allocation
+/// reaches them) and an older save may not have listed every issued identity. The
+/// cursor's meaning is narrowed to two facts: an exhausted kind has no next
+/// identity, and an identity the cursor never passed was never issued.
 /// </summary>
 public sealed class DurableIdentityAllocator
 {
@@ -157,6 +165,8 @@ public sealed class DurableIdentityAllocator
     {
         ArgumentNullException.ThrowIfNull(state);
         state.Validate();
+        if (state.Kinds.Length == 0)
+            throw new ArgumentException("Durable identity state must carry at least one kind.", nameof(state));
         return new DurableIdentityAllocator(state.Kinds);
     }
 
@@ -165,7 +175,7 @@ public sealed class DurableIdentityAllocator
         .OrderBy(ledger => (int)ledger.Kind)
         .Select(ledger => new KindAllocatorState(
             ledger.Kind,
-            ledger.NextIssued,
+            ledger.PersistedCursor,
             ledger.Reserved.Order().ToArray(),
             ledger.Removed.Order().ToArray()))
         .ToArray());
@@ -209,47 +219,54 @@ public sealed class DurableIdentityAllocator
     {
         private readonly HashSet<ulong> _reserved;
         private readonly HashSet<ulong> _removed;
-        private ulong NextIdentity;
+        private ulong _cursor;
+        private bool _exhausted;
 
         internal KindLedger(DurableIdentityKind kind, KindAllocatorState state)
         {
             Kind = kind;
-            NextIdentity = state.NextIdentity;
             _reserved = state.Reserved.ToHashSet();
             _removed = state.Removed.ToHashSet();
+            // Every issued identity is strictly below the cursor, so the previous
+            // identity is what the search starts from. Zero is the empty prefix, which
+            // lets the first valid identity be issued.
+            // The marker is authoritative: a kind that reports no next identity stays
+            // exhausted even if its reservation list cannot explain how it got there.
+            _exhausted = state.NextIdentity == ExhaustedCursor;
+            _cursor = _exhausted ? 0 : state.NextIdentity - 1;
+            if (!_exhausted && Scan() == 0) _exhausted = true;
         }
+
+        /// <summary>
+        /// The persisted marker for a kind that has issued every identity it can. Zero
+        /// is never an identity and never a cursor, so it is free to mean "nothing left".
+        /// </summary>
+        internal const ulong ExhaustedCursor = 0;
 
         internal DurableIdentityKind Kind { get; }
         internal IReadOnlyCollection<ulong> Reserved => _reserved;
         internal IReadOnlyCollection<ulong> Removed => _removed;
 
+        /// <summary>The cursor to persist: the next identity to issue, or the exhaustion marker.</summary>
+        internal ulong PersistedCursor => _exhausted ? ExhaustedCursor : _cursor + 1;
+
         /// <summary>
-        /// The identity the next allocation will issue. It is reported and persisted
-        /// past reserved and removed identities so a restored ledger cannot describe a
-        /// value it would never issue.
+        /// The identity the next allocation will issue, and the identity persisted for
+        /// the next session. Reserved and tombstoned identities are skipped, and an
+        /// exhausted kind reports none rather than advertising a value that allocation
+        /// would refuse. Peeking never moves the cursor.
         /// </summary>
-        internal ulong NextIssued
-        {
-            get
-            {
-                ulong value = NextIdentity;
-                while (_reserved.Contains(value) || _removed.Contains(value)) value++;
-                return value;
-            }
-        }
+        internal ulong NextIssued => !_exhausted && Scan() is ulong value && value != 0
+            ? value
+            : throw new InvalidOperationException($"The {Kind} durable identity space is exhausted.");
 
         internal ulong Allocate()
         {
-            while (_reserved.Contains(NextIdentity) || _removed.Contains(NextIdentity))
-            {
-                if (NextIdentity == ulong.MaxValue)
-                    throw new InvalidOperationException($"The {Kind} durable identity space is exhausted.");
-                NextIdentity++;
-            }
-
-            if (NextIdentity == 0 || NextIdentity == ulong.MaxValue)
+            ulong allocated = Scan();
+            if (allocated == 0 || _exhausted)
                 throw new InvalidOperationException($"The {Kind} durable identity space is exhausted.");
-            ulong allocated = NextIdentity++;
+            _cursor = allocated;
+            if (Scan() == 0) _exhausted = true;
             // An issued identity joins the authored reservations: this set is the
             // ledger's record of everything it must never hand out again.
             _reserved.Add(allocated);
@@ -259,7 +276,7 @@ public sealed class DurableIdentityAllocator
         internal void Remove(ulong value)
         {
             if (_removed.Contains(value)) return;
-            if (!_reserved.Contains(value) || value >= NextIdentity)
+            if (!_reserved.Contains(value) || value > _cursor)
             {
                 throw new InvalidOperationException($"Durable {Kind} identity {value} was never issued by this allocator and cannot be removed.");
             }
@@ -270,12 +287,34 @@ public sealed class DurableIdentityAllocator
 
         internal DurableIdentityClassification Classify(ulong value)
         {
-            // Membership is the record: a tombstone is removed, anything the ledger
-            // must still account for is live, and an absent value was never issued.
+            // Membership is the record: a tombstone is removed, and anything the
+            // ledger must still account for is live. A value the cursor has passed is
+            // accepted as live even when the caller supplies a reservation set that
+            // omits it, because an older save may not have listed every issued
+            // identity; only a value the cursor never passed was provably unissued.
             if (_removed.Contains(value)) return DurableIdentityClassification.Removed;
-            return _reserved.Contains(value)
+            if (_reserved.Contains(value)) return DurableIdentityClassification.Live;
+            return value <= _cursor
                 ? DurableIdentityClassification.Live
                 : DurableIdentityClassification.NeverIssued;
         }
+
+        /// <summary>
+        /// Finds the first free identity above the cursor. The last valid identity is
+        /// issued in full; only after it is taken does the search report exhaustion.
+        /// </summary>
+        private ulong Scan()
+        {
+            ulong value = _cursor == ulong.MaxValue ? 0 : _cursor + 1;
+            while (value != 0 && !IsFree(value))
+            {
+                if (value == ulong.MaxValue) return 0;
+                value++;
+            }
+
+            return value;
+        }
+
+        private bool IsFree(ulong value) => value != 0 && !_reserved.Contains(value) && !_removed.Contains(value);
     }
 }

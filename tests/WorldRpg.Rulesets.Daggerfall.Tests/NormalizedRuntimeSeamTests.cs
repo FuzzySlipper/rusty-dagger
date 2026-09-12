@@ -1577,6 +1577,33 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_session_refuses_to_tombstone_authored_content_and_accepts_a_generated_identity()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        ulong authored = DaggerfallSavePayload.Decode(session.CaptureSave()).Inventory.UniqueItems.First().EntityId;
+
+        // Authored loadout content is reserved, never issued, so it cannot be removed.
+        Assert.Throws<InvalidOperationException>(() => session.RemoveUniqueItemIdentity(authored));
+
+        DurableIdentityReference generated = session.UniqueItemAllocator.AllocateReference();
+        session.RemoveUniqueItemIdentity(generated.Value);
+        session.RemoveUniqueItemIdentity(generated.Value);
+
+        Assert.Contains(generated.Value, session.UniqueItemAllocator.RemovedEntityIds);
+        Assert.DoesNotContain(generated.Value, session.UniqueItemAllocator.ReservedEntityIds);
+        DaggerfallSavePayload saved = DaggerfallSavePayload.Decode(session.CaptureSave());
+        saved.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+    }
+
+    [Fact]
     public void Restore_rejects_a_held_identity_that_the_content_cannot_explain()
     {
         string root = RepositoryRoot();
