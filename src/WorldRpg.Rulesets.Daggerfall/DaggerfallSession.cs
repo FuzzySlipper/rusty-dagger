@@ -169,10 +169,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 authored);
             _uniqueItems = saved is null
                 ? new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, DaggerfallSavePayload.ContentEntityIds(inputs, playerDefinition.Loadout))
-                : DaggerfallUniqueItemAllocator.Restore(
-                    saved.NextUniqueItemEntityId,
-                    saved.ReservedUniqueItemEntityIds,
-                    saved.RemovedUniqueItemEntityIds);
+                : DaggerfallUniqueItemAllocator.Restore(saved.RestoreHint());
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
@@ -560,6 +557,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     internal CorpseLootEvidence? LastCorpseLoot => _corpseLoot.LastEvidence;
     internal CorpseLootCommitEvidence? LastCorpseLootCommit => _corpseLoot.LastCommit;
     internal IReadOnlyDictionary<long, CorpseContainer> Corpses => _corpseLoot.Corpses;
+
+    /// <summary>The session's durable identity ledger for generated unique loot.</summary>
+    internal DaggerfallUniqueItemAllocator UniqueItemAllocator => _uniqueItems;
 
     private DaggerfallVitalValues InitialVitals(DaggerfallActorDefinition definition, long entityId)
     {
