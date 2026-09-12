@@ -200,7 +200,7 @@ internal static class DaggerfallBaseContent
         JsonElement published = Object(Property(ledger, "publishedItems", diagnostics), "itemTemplateLedger.publishedItems", diagnostics);
         JsonElement summary = Object(Property(ledger, "summary", diagnostics), "itemTemplateLedger.summary", diagnostics);
         string status = Text(target, "status", diagnostics);
-        bool nativeDecoding = published.TryGetProperty("nativeDecoding", out JsonElement nativeDecodingValue) && nativeDecodingValue.ValueKind == JsonValueKind.True;
+        bool decodedTemplates = published.TryGetProperty("nativeDecoding", out JsonElement nativeDecodingValue) && nativeDecodingValue.ValueKind == JsonValueKind.True;
 
         List<DaggerfallItemTemplateTarget> targets = [];
         HashSet<int> indices = [];
@@ -251,7 +251,7 @@ internal static class DaggerfallBaseContent
         Require(summary, ledger, "targets", targets.Count, diagnostics);
         Require(summary, ledger, "referencedByDonorGroups", referenced, diagnostics);
         Require(summary, ledger, "unreferencedByAnyGroup", unreferenced, diagnostics);
-        Require(summary, ledger, "nativeTemplatesDecoded", nativeDecoding ? targets.Count(target => target.Disposition != DaggerfallItemTemplateLedger.UnresolvedDisposition) : 0, diagnostics);
+        Require(summary, ledger, "nativeTemplatesDecoded", decodedTemplates ? targets.Count(target => target.Disposition != DaggerfallItemTemplateLedger.UnresolvedDisposition) : 0, diagnostics);
         if (!ReferenceEquals(indices, null) && indices.Count != DaggerfallItemTemplateLedger.TargetCount)
         {
             diagnostics.Add($"The item template ledger declares {indices.Count} distinct target indices where the classic space has {DaggerfallItemTemplateLedger.TargetCount}.");
@@ -263,7 +263,7 @@ internal static class DaggerfallBaseContent
             diagnostics.Add($"The item template ledger records {declaredPublished} published items where the payload defines {publishedItems}.");
         }
 
-        if (string.Equals(status, DaggerfallItemTemplateLedger.AbsentStatus, StringComparison.Ordinal) && nativeDecoding)
+        if (string.Equals(status, DaggerfallItemTemplateLedger.AbsentStatus, StringComparison.Ordinal) && decodedTemplates)
         {
             diagnostics.Add($"The item template ledger claims native decoding while its source status is '{status}'.");
         }
@@ -277,7 +277,7 @@ internal static class DaggerfallBaseContent
             Text(baseline, "path", diagnostics),
             declaredPublished,
             Text(published, "valueProvenance", diagnostics),
-            nativeDecoding,
+            decodedTemplates,
             Integer(summary, "targets", diagnostics),
             Integer(summary, "referencedByDonorGroups", diagnostics),
             Integer(summary, "unreferencedByAnyGroup", diagnostics),

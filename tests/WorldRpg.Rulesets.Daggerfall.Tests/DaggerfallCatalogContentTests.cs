@@ -118,7 +118,7 @@ public sealed class DaggerfallCatalogContentTests
             Assert.Equal(DaggerfallItemTemplateLedger.UnresolvedDisposition, target.Disposition);
         });
         Assert.Equal("absent", definitions.ItemTemplates.SourceStatus);
-        Assert.False(definitions.ItemTemplates.NativeSourceSupplied);
+        Assert.False(definitions.ItemTemplates.SourceSupplied);
         Assert.False(definitions.ItemTemplates.PublishedNativeDecoding);
         Assert.Equal("catalog-migration", definitions.ItemTemplates.PublishedValueProvenance);
         Assert.Equal(definitions.Items.Count, definitions.ItemTemplates.PublishedItemCount);
