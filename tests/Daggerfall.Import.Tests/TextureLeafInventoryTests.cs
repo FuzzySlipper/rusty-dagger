@@ -20,8 +20,8 @@ public sealed class TextureLeafInventoryTests
         Assert.Equal(Enumerable.Range(0, 512), inventory.Leaves.Select(leaf => leaf.Id));
         Assert.Equal(472, inventory.Leaves.Count(leaf => leaf.Disposition != TextureLeafDisposition.NotSupplied));
         Assert.Equal(40, inventory.NotSupplied.Count());
-        Assert.Equal(5, inventory.Malformed.Count());
-        Assert.Equal(467, inventory.Decoded.Count());
+        Assert.Equal(2, inventory.Malformed.Count());
+        Assert.Equal(470, inventory.Decoded.Count());
     }
 
     [Fact]
@@ -42,12 +42,13 @@ public sealed class TextureLeafInventoryTests
     {
         TextureLeafInventory inventory = ReadInventory();
 
-        // Five supplied archives do not parse. Each keeps the decoder's own diagnostic, so
-        // an operator sees why rather than only that something is missing.
-        Assert.Equal([81, 111, 215, 217, 436], inventory.Malformed.Select(leaf => leaf.Id));
+        // Two supplied archives are 46-byte stubs whose record header runs past the file.
+        // Each keeps the decoder's own diagnostic, so an operator sees why rather than only
+        // that something is missing.
+        Assert.Equal([215, 217], inventory.Malformed.Select(leaf => leaf.Id));
         Assert.All(inventory.Malformed, leaf => Assert.False(string.IsNullOrWhiteSpace(leaf.Note)));
-        Assert.Contains(inventory.Malformed, leaf => leaf.Id == 215 && leaf.Note.Contains("exceeds source length", StringComparison.Ordinal));
-        Assert.Contains(inventory.Malformed, leaf => leaf.Id == 81 && leaf.Note.Contains("has no frames", StringComparison.Ordinal));
+        Assert.All(inventory.Malformed, leaf => Assert.Contains("exceeds source length", leaf.Note, StringComparison.Ordinal));
+        Assert.All(inventory.Malformed, leaf => Assert.Equal(46, new FileInfo(Path.Combine(RepositoryRoot(), "local/arena2", leaf.Path)).Length));
     }
 
     [Fact]
@@ -56,8 +57,8 @@ public sealed class TextureLeafInventoryTests
         TextureLeafInventory inventory = ReadInventory();
 
         // Record and frame totals are measurements of the corpus, not transcribed numbers.
-        Assert.Equal(6702, inventory.Records);
-        Assert.Equal(11203, inventory.Frames);
+        Assert.Equal(6718, inventory.Records);
+        Assert.Equal(11211, inventory.Frames);
         Assert.True(inventory.TryGet(2, out TextureLeafRecord? leaf));
         Assert.Equal(56, leaf!.Records);
         Assert.Equal(TextureLeafDisposition.Decoded, leaf.Disposition);

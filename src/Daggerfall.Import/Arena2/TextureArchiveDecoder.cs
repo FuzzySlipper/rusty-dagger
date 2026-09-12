@@ -388,11 +388,9 @@ public sealed class TextureArchive
                 throw record.Error($"texture record {ordinal} data offset {unsignedDataOffset} exceeds a supported source offset");
             }
 
-            if (frameCount == 0)
-            {
-                throw record.Error($"texture record {ordinal} has no frames");
-            }
-
+            // A record with no frames is a record the archive declares empty: the donor's
+            // own reader allocates an empty frame array for it and continues, so refusing
+            // the whole archive over one would reject leaves the corpus carries.
             int dataOffset = (int)unsignedDataOffset;
             try
             {
