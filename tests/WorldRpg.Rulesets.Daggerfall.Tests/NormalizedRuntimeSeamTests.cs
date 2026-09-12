@@ -2318,6 +2318,34 @@ public sealed class NormalizedRuntimeSeamTests
     private static PrivateersHoldAppearance.ViewmodelVisual Viewmodel(PrivateersHoldAppearance presentation) => Assert.IsType<PrivateersHoldAppearance.ViewmodelVisual>(typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
     [Fact]
+    public void A_non_advanced_completed_receipt_does_not_cancel_a_swing_that_can_still_land()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        AudioRecorder audio = AudioRecorder.Create();
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            Array.Empty<SpritePlaybackMarkerCrossing>(),
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Completed, 0D, 0, 1, true),
+            false));
+        appearance.AdvanceReceipts.Enqueue(new SpritePlaybackAdvanceLeaseReceipt(
+            new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, 1) },
+            new SpritePlaybackReadout(3, 1, SpritePlaybackState.Playing, 0D, 0, 2, false),
+            true));
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1]), audio.Service);
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 3, 4));
+
+        // Completion without an advance is not authoritative, so nothing expires yet.
+        presentation.Advance(OuterUpdate(1));
+        Assert.Empty(presentation.TakeAttackImpacts());
+
+        // The next advanced frame reaches the authored damage frame and the swing lands.
+        presentation.Advance(OuterUpdate(2));
+        AttackImpactNotice impact = Assert.Single(presentation.TakeAttackImpacts());
+        Assert.False(impact.Expired);
+    }
+
+    [Fact]
     public void A_swing_that_ends_without_reaching_its_damage_frame_reports_an_expired_impact()
     {
         List<string> releases = [];
