@@ -253,10 +253,16 @@ public sealed class DurableIdentityAllocator
         /// The persisted progress marker: one past the last issued identity, or the
         /// exhaustion marker. It is deliberately not the identity the next allocation
         /// will issue — the next identity may be higher, because reserved and tombstoned
-        /// identities are skipped — and it may therefore sit on a reservation. Moving it
-        /// forward to the next issuable identity instead would lose the boundary between
-        /// an identity that was issued and a reservation below it, and a restored ledger
-        /// would be free to issue that identity a second time.
+        /// identities are skipped — and it may therefore sit on a reservation.
+        ///
+        /// Moving it forward to the next issuable identity loses the boundary between the
+        /// identities that were issued and the reservations below it. Nothing is reissued
+        /// either way, because a skipped identity is reserved or tombstoned and both sets
+        /// persist; what is lost is the guard: a restored ledger could then tombstone a
+        /// reservation the marker used to protect, and its below-marker classification
+        /// fallback would report unissued values as live. The opposite error — a marker
+        /// behind the last issued identity, as an older save with an incomplete
+        /// reservation list can produce — is the one that risks reissuing.
         /// </summary>
         internal ulong PersistedCursor => _exhausted ? ExhaustedCursor : _cursor + 1;
 

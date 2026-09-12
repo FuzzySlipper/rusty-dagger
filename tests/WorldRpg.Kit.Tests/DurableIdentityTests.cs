@@ -24,10 +24,11 @@ public sealed class DurableIdentityTests
     [Fact]
     public void A_persisted_cursor_may_sit_on_a_reservation_without_letting_the_next_session_reissue_it()
     {
-        // A reservation immediately above the last issued identity is the case where
-        // the persisted progress marker is not the next identity to issue. It must not
-        // be advanced to the next issuable identity, or the identity between them would
-        // be reissued after a restore.
+        // A reservation immediately above the last issued identity is the case where the
+        // persisted progress marker is not the next identity to issue. Advancing it to the
+        // next issuable identity does not reissue anything, but it loses the issued /
+        // reserved boundary: the reservation below the new marker stops being protected
+        // from removal.
         DurableIdentityAllocator identities = new(DurableIdentityKind.Item, 10, [11]);
         DurableIdentityReference issued = identities.Allocate(DurableIdentityKind.Item);
         Assert.Equal(10UL, issued.Value);
