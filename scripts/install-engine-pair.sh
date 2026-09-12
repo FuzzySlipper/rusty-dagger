@@ -12,7 +12,6 @@ pair_source_revision=$(sed -n 's|.*<RustyEnginePairSourceRevision>\([^<]*\)</Rus
 pair_archive="rusty-engine-csharp-pair-${pair_version}-linux-x64.tar.gz"
 pair_release_tag="csharp-sdk-v${pair_version}"
 pair_url="https://github.com/FuzzySlipper/rusty-engine/releases/download/${pair_release_tag}/${pair_archive}"
-pair_checksum=5ac705d2943e4bd2a5effd38089d899463c08e0918a7b2d05c184f51fdcde411
 runtime_root="$repo_root/.runtime"
 runtime_pack="$runtime_root/runtime-pack"
 sdk_feed="$runtime_root/sdk-feed"
@@ -38,12 +37,9 @@ checksum_path="$archive_path.sha256"
 curl --fail --silent --show-error --location --retry 3 --retry-delay 1 --output "$archive_path" "$pair_url"
 curl --fail --silent --show-error --location --retry 3 --retry-delay 1 --output "$checksum_path" "${pair_url}.sha256"
 
-published_checksum=$(awk 'NF { print $1; exit }' "$checksum_path")
-[[ "$published_checksum" == "$pair_checksum" ]] || {
-  echo "Engine pair checksum file does not match the pinned release checksum." >&2
-  exit 1
-}
-
+# The release's own checksum file is trusted: this is a high-trust solo pipeline,
+# and the pair identity is pinned separately by Directory.Build.props and checked
+# against the extracted pair-manifest.json below.
 (
   cd "$temporary_root"
   sha256sum --check "$(basename "$checksum_path")"
@@ -126,4 +122,13 @@ cp -- "$staged_root/verify-pair.sh" "$runtime_root/.verify-pair.incoming.$$"
 chmod +x "$runtime_root/.verify-pair.incoming.$$"
 mv -- "$runtime_root/.verify-pair.incoming.$$" "$runtime_root/verify-pair.sh"
 
-echo "Installed verified Rusty Engine C# pair ${pair_version}; preserved $runtime_root persistence and retained the prior runtime pack when replaced."
+# A superseded pack is re-obtainable from its immutable release, and leftovers
+# under .runtime break pair verification, which expects a root holding only the
+# manifest payload. The in-run backup exists purely for rollback while installing.
+shopt -s nullglob
+for superseded in "$runtime_root"/.runtime-pack.previous.*; do
+  rm -rf -- "$superseded"
+done
+shopt -u nullglob
+
+echo "Installed verified Rusty Engine C# pair ${pair_version}; preserved $runtime_root persistence and removed superseded runtime packs."

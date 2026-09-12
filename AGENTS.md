@@ -176,3 +176,24 @@ Engine-contributor override, never a downstream default. Do not run retired
 Rust/Angular/broad browser/packaging gates unless the task explicitly calls for
 them. Keep this file and the README factual and compact; the migration map
 records current and target ownership in detail.
+
+## Documentation and check posture
+
+Keep durable repository documents free of commit revisions and pinned versions: a
+stale pin in prose invites a later agent to roll the code back to match the
+document, and the document is not the owner of that identity. Exact revisions
+belong in logged Den records, or in machine-checked configuration such as
+`Directory.Build.props`, which a script actually verifies. Move the Engine pin
+with `scripts/update-engine-pin.sh`, which resolves the newest published pair and
+rewrites that file; never hand-edit a version into prose.
+
+A hard failure must name the loss it prevents. Where the consequence is
+recoverable, warn and report the actual observed value instead. Keep hard stops
+for data loss, an ownership-boundary violation, or a silently wrong artifact.
+
+## Git
+
+Commit and push the work of a turn or task directly. This is a solo repository
+used for backup and change tracking, so there is no push-approval ceremony and no
+blast-radius review. Keep each commit scoped to the work that produced it, and
+leave unrelated dirty files alone.

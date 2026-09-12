@@ -7,8 +7,7 @@ claim that the donor quest runtime has been behaviorally audited, and it is
 not a task list. Task drafting should turn the records below into bounded
 work only after each source-backed behavior and its local owner is resolved.
 
-The source reference is Daggerfall Unity at
-`81e89e90c27bc3c1a7a61871e545fad129174dec` under
+The source reference is the frozen Daggerfall Unity donor checkout at
 `/home/research/daggerfall-unity`. The checkout was indexed by Codebase Memory
 on 2026-08-12 with no recorded coverage issue in the quest, table, utility, or
 localization scopes. That index is a navigation aid; the paths and line

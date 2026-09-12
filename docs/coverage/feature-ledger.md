@@ -4,10 +4,8 @@ Prepared 2026-09-10 for task creation. This accounts for all **141 feature rows*
 in sections 1–5 of the [feature map](../daggerfall-feature-map.md). Introductory,
 Engine-audit and summary tables are supporting guidance, not additional features.
 
-The [CSV companion](feature-map-disposition.csv) preserves each row's donor
-reference, description and original coverage note, plus the decisions below.
-The map remains an historical structural survey; live-source corrections below
-supersede its status where explicitly noted. This is not a fresh full parity audit.
+The map remains an historical structural survey; the decisions below supersede
+its status where explicitly noted. This is not a fresh full parity audit.
 
 IDs are permanent: do not renumber when inserting or regrouping work. Add new IDs
 or sub-behavior IDs such as `F011.wear`; preserve the parent link. Canonical aliases

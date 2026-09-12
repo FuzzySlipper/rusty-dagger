@@ -12,8 +12,8 @@ import/rendering bridges are outside the target unless a row below explicitly
 calls out a behavior that still needs an adapted product owner. DFU-only/demo
 code remains visible so it does not silently disappear from planning.
 
-**Donor revision:** `/home/research/daggerfall-unity` at
-`81e89e90c27bc3c1a7a61871e545fad129174dec`. DFU paths in this document are
+**Donor:** the frozen `/home/research/daggerfall-unity` checkout; its exact
+revision is logged in the Den coverage campaign. DFU paths in this document are
 relative to `Assets/Scripts` in that checkout. The direct enumeration found 153
 `.cs` files below `Game/MagicAndEffects/Effects`: Alteration 7, Destruction 28,
 Diseases 22, Enchanting 24, Illusion 10, Mysticism 10, Poisons 1, Restoration

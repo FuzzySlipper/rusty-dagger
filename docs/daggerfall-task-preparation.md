@@ -17,9 +17,7 @@ state. Task creation does not establish implementation coverage.
 | --- | --- |
 | [Coverage plan](daggerfall-coverage-plan.md) | Twelve-area order, ownership, exclusions, execution and drift-review posture. |
 | [Feature ledger](coverage/feature-ledger.md) | Stable F001–F141 IDs; every feature-map row has a disposition and named remaining behavior. Duplicate rows name their canonical owner. |
-| [Disposition CSV](coverage/feature-map-disposition.csv) | Exact donor references, descriptions and old survey coverage, plus the same per-row planning decisions in machine-readable form. |
 | [Supplemental behaviors](coverage/supplemental-behaviors.md) | Explicit SUP IDs for persistent world changes, dungeon actions, crime/services/time and other behavior implicit in the map; includes every registered dungeon-action flag. |
-| [Formula inventory](coverage/formula-inventory.md) | Named donor policy entries across character, skills, combat, economy, encounters, magic costs and world identity; grouped for task decomposition. |
 | [Magic inventory](coverage/magic-inventory.md) | Individually named candidate effects, helpers and behavior families behind broad magic rows. |
 | [Quest inventory](coverage/quest-content-inventory.md) | Individually named action candidates and quest-source/catalog scope behind broad quest rows. |
 | [Content scope](coverage/content-scope.md) | Source-family inventory, current content anchors and explicit authored-content target. |
@@ -29,9 +27,9 @@ each file, row or ID into exactly one ticket. A coherent behavior can involve
 several IDs; a broad ID can require several tasks with stable child identifiers.
 
 Preparation accounting: 141 feature-map rows (136 canonical rows after aliases),
-18 supplemental behavior families, 26 registered dungeon-action flags, 99 distinct
-formula/policy method names, 153 effect files with leaf IDs and parameter variants,
-83 quest-action files, and 265 donor quest-source files are inventoried. The content
+18 supplemental behavior families, 26 registered dungeon-action flags, 153 effect
+files with leaf IDs and parameter variants, 83 quest-action files, and 265 donor
+quest-source files are inventoried. The content
 manifest records 28 source families in 29 summary rows and all 1,680 supplied local
 source files. These counts include explicitly excluded helpers/demos and are not
 counts of required tasks, completed features, or usable runtime records.

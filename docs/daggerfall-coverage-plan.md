@@ -26,9 +26,10 @@ proof threads, or interactive demonstrations as the organizing unit of delivery.
 - [AGENTS.md](../AGENTS.md): active ownership and execution rules.
 - [Migration map](code-migration-map.md): current product graph and retired paths.
 - Den campaigns #7322 and #7533: completed foundation and migration history.
-- DFU donor: `/home/research/daggerfall-unity`, surveyed at
-  `81e89e90c27bc3c1a7a61871e545fad129174dec`. Recheck relevant source when planning
-  each concrete task; the survey is not a permanent API or coverage guarantee.
+- DFU donor: the frozen `/home/research/daggerfall-unity` checkout. Its exact
+  surveyed revision is logged in the Den coverage campaign rather than pinned
+  here. Recheck relevant source when planning each concrete task; the survey is
+  not a permanent API or coverage guarantee.
 
 ## Behavioral fidelity and architectural adaptation
 
