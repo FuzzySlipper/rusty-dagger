@@ -438,8 +438,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession
         _combat.RestoreCooldowns(saved.CombatCooldowns.Select(value => new CombatCooldown(value.AttackerId, value.RemainingSteps)));
         _camera.Update(State.PlayerControl);
         // Enemy behavior, perception leases, held input, pending loot, facts,
-        // and presentation effects are intentionally transient.  The next
-        // admitted step observes rebuilt actor state without replaying them.
+        // presentation effects and a swing still waiting for its damage frame are
+        // intentionally transient.  The next admitted step observes rebuilt actor
+        // state without replaying them; a swing cut off by a save keeps the cooldown
+        // it already charged but never lands.
     }
 
     private static long ReadTrack(ActorMechanicsState mechanics, DaggerfallTrackId track) =>
