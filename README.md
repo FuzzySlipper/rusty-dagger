@@ -84,16 +84,28 @@ host merely to finish a task.
 
 ## Develop and verify the current product
 
-The checked product consumes immutable `Rusty.Engine` package 
-from the installed `.runtime/sdk-feed` and the
-matched `.runtime/runtime-pack`. Start a clean checkout with the pinned,
-noninteractive pair install; it validates the release checksum, payloads, ABI,
-package version, and Engine source revision before atomically replacing the
-whole ignored pair.
+The checked product consumes the immutable `Rusty.Engine` package from the
+installed `.runtime/sdk-feed` and the matched `.runtime/runtime-pack`. That
+pair's identity belongs in `Directory.Build.props`, where the install and verify
+scripts check it; do not restate a version or revision here. Start a clean
+checkout with the pinned, noninteractive pair install. It validates the release
+checksum, payloads, ABI, package version, and Engine source revision before
+atomically replacing the whole ignored pair.
 
 ```bash
 ./scripts/install-engine-pair.sh
 ```
+
+To take the newest published Engine pair, which is the ordinary way to pick up
+newer Engine state:
+
+```bash
+./scripts/update-engine-pin.sh
+```
+
+It resolves the newest `csharp-sdk` release, rewrites both identities in
+`Directory.Build.props`, and installs the pair. `--check` reports what is
+available without changing anything.
 
 This follows the operational runbook
 `rusty-engine/downstream-csharp-sdk-runbook`. The repository neither builds
@@ -124,7 +136,9 @@ controls out of menus, inventory and console interactions. The DOM renders the
 product-owned DOM UI and atomically stages the loose Product bundle. The
 runtime pack owns the host, browser shell, renderer, and browser transport.
 
-NativeAOT is a separate fidelity/release check, not the edit-run loop:
+NativeAOT is a separate fidelity/release check, not the edit-run loop.
+`./scripts/verify.sh --aot` runs it as part of verification, or invoke it
+directly:
 
 ```bash
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:VerifyRustyEngineAot
@@ -190,7 +204,8 @@ and running, use the stable Den runbook
 `rusty-engine/downstream-csharp-agent-brief` remains the ownership reference.
 
 Run `./scripts/verify.sh` after installation for pair verification, pinned UI
-dependency installation, focused package restore/build, architecture, CoreCLR
-staging, and explicit NativeAOT fidelity proof. Hosted CI is not
+dependency installation, focused package restore/build, architecture tests, and
+CoreCLR staging. NativeAOT is a separate fidelity target and is opt-in:
+`./scripts/verify.sh --aot`. Hosted CI is not
 declared until immutable Engine artifacts are published for clean runners; do
 not replace it with a cloned Engine checkout or downstream provider build.

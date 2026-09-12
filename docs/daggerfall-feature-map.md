@@ -1,7 +1,7 @@
 # Daggerfall feature map (DFU structures → rusty-dagger coverage)
 
 **Status:** survey complete + Engine cross-check (point-in-time coverage notes). Scope is code structures and features that support Daggerfall content, not the content itself.
-**DFU donor:** `/home/research/daggerfall-unity` at `81e89e90c27bc3c1a7a61871e545fad129174dec` (~849 C# files under `Assets/Scripts`).
+**DFU donor:** the frozen `/home/research/daggerfall-unity` checkout (~849 C# files under `Assets/Scripts`); its surveyed revision is logged in the Den coverage campaign.
 **rusty-dagger:** C#-only product cutover shape per `docs/code-migration-map.md` — Engine guarantees, Kit shapes, ruleset decides, bundle assembles, host launches.
 **Reading rule:** DFU paths below are relative to `Assets/Scripts` in the DFU checkout. rusty-dagger paths are relative to this repo. Coverage is a point-in-time note, not a roadmap promise.
 

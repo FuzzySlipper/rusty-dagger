@@ -11,16 +11,13 @@ This is a creation snapshot and navigation aid. **Den owns live task status, dep
 - Filter Den by `daggerfall-coverage` and `coverage-area-02` through `coverage-area-12`; dependency availability determines execution, not the area number.
 - Read [task preparation](../daggerfall-task-preparation.md), [coverage plan](../daggerfall-coverage-plan.md), the owning Den task and its relevant inventory leaves before implementation.
 
-## Machine-readable records
+## Records
 
 | File | Meaning |
 | --- | --- |
-| [Task manifest](task-manifest.json) | Complete task contracts, stable keys, created IDs, concrete dependency IDs, capability routing, aliases and exclusions. |
-| [Coverage mapping](task-coverage-map.csv) | Many-to-many feature, supplemental, formula, effect, quest-action, quest-source and content-family mapping to tasks. |
-| [Creation receipts](task-creation-receipts.json) | Compact stable-key to Den-ID record for recovery and lookup. |
-| [Source manifest](content-source-manifest.csv) | All 1,680 supplied source files; each file inherits tasks from its `family_id` in the coverage mapping. Importers refine per-record dispositions without renumbering file IDs. |
+| [Source manifest](content-source-manifest.csv) | All 1,680 supplied source files. Importers refine per-record dispositions without renumbering file IDs. |
 
-A coverage ID attached to several tasks means their specified contributions are jointly required; it does not mean each task implements the whole feature. Effect/formula parent families inherit their individual leaf mappings. Aliases inherit canonical tasks. Explicit exclusions are rows without task IDs. The five named quest-list rows with no source are assigned to source comparison, not silently excluded from accounting or invented as scripts.
+Task contracts, stable keys, created IDs, concrete dependency IDs, capability routing, aliases and exclusions live in Den on campaign #7922 rather than in a duplicate local snapshot. A coverage ID attached to several tasks means their specified contributions are jointly required; it does not mean each task implements the whole feature. The five named quest-list rows with no source are assigned to source comparison, not silently excluded from accounting or invented as scripts.
 
 ## Scheduling and integration decisions
 

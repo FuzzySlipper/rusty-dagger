@@ -20,8 +20,8 @@ The local source corpus was inspected read-only at `/home/dev/rusty-dagger/local
 as a donor count. The raw files remain local provenance; this document does not copy their
 copyrighted payloads into a pack.
 
-The semantic donor is `/home/research/daggerfall-unity` at
-`81e89e90c27bc3c1a7a61871e545fad129174dec`. The relevant exact donor sources are
+The semantic donor is the frozen `/home/research/daggerfall-unity` checkout. The
+relevant exact donor sources are
 `Assets/Scripts/Utility/ContentReader.cs`, `Assets/Scripts/API/MapsFile.cs`,
 `Assets/Scripts/API/ItemsFile.cs`, `Assets/Scripts/API/ClassFile.cs`,
 `Assets/Scripts/API/DFCareer.cs`, `Assets/Scripts/Game/Entities/RaceTemplate.cs`,

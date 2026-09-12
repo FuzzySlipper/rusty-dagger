@@ -6,7 +6,7 @@ owners. They are planned coverage, not current implementation claims. A task can
 cover a SUP ID and its linked F IDs together; keep that mapping visible.
 
 Donor paths below are relative to `/home/research/daggerfall-unity/Assets/Scripts`
-at `81e89e90c27bc3c1a7a61871e545fad129174dec`. References identify the source family
+in the frozen donor checkout. References identify the source family
 to inspect while specifying exact semantics. Only the action registration and
 named source observations below were read as a bounded source check; this is not
 an exhaustive audit of every listed behavior.
