@@ -82,12 +82,12 @@ internal static class Program
         File.WriteAllBytes(manifestPath, bytes);
 
         SourceManifest readback = SourceManifestSerializer.Deserialize(bytes);
-        SourceManifestFamilyCount total = SourceManifestFamilyCount.From("total", readback.Records);
+        SourceManifestFamilyCount total = SourceManifestFamilyCount.From("total", "summary", readback.Records);
         Console.WriteLine($"source manifest: {total.Discovered} records across {readback.Families.Count(family => family.Discovered > 0)} supplied families");
         Console.WriteLine($"  imported {total.Imported}, unused {total.Unused}, source-gap {total.SourceGap}, required-pending {total.RequiredPending}, unresolved {total.Unresolved}, excluded {total.Excluded}, duplicate {total.Duplicate}, malformed {total.Malformed}");
         foreach (SourceManifestFamilyCount family in readback.Families.Where(family => family.Discovered > 0))
         {
-            Console.WriteLine($"  {family.FamilyId}: {family.Discovered} = {family.Imported} imported, {family.Unused} unused, {family.SourceGap} source-gap, {family.RequiredPending} pending, {family.Unresolved} unresolved, {family.Excluded} excluded, {family.Malformed} malformed");
+            Console.WriteLine($"  {family.FamilyId} [{family.DocumentedDisposition}]: {family.Discovered} = {family.Imported} imported, {family.Unused} unused, {family.SourceGap} source-gap, {family.RequiredPending} pending, {family.Unresolved} unresolved, {family.Excluded} excluded, {family.Malformed} malformed");
         }
 
         Console.WriteLine($"manifest: {manifestPath}");
@@ -137,6 +137,32 @@ internal static class Program
             new SourceManifestRequest("local/arena2", Path.GetFileName(options.InventoryFile), options.Arena2Directory,
                 ImportedNames(plan.Manifest.Sources.Select(source => source.SourcePath)), [], ExcludedNames(SourceManifestBuilder.ReadInventory(inventoryBytes))),
             inventoryBytes);
+        // A publication that carries a source manifest is its first consumer: every
+        // source it read has to appear as imported, or the artifact would claim
+        // something the closure itself contradicts.
+        HashSet<string> recorded = complete.Records
+            .Where(record => record.Disposition == SourceRecordDisposition.Imported)
+            .Select(record => record.SourcePath.Split('/')[^1])
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (string source in plan.Manifest.Sources.Select(source => source.SourcePath.Split('/')[^1]))
+        {
+            if (complete.Records.Any(record => StringComparer.Ordinal.Equals(record.SourcePath.Split('/')[^1], source)) && !recorded.Contains(source))
+            {
+                throw new InvalidOperationException($"The closure read '{source}', but the source manifest it carries does not record it as imported.");
+            }
+        }
+
+        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(options.InventoryFile!, complete.Records, update: false);
+        foreach (string line in reconciliation.Drift)
+        {
+            Console.Error.WriteLine($"inventory drift: {line}");
+        }
+
+        foreach (string line in reconciliation.Unreconciled)
+        {
+            Console.Error.WriteLine($"inventory unresolved: {line}");
+        }
+
         byte[] bytes = SourceManifestSerializer.Serialize(complete);
         ImportProvenance provenance = plan.Manifest.Sources.Count == 0
             ? throw new InvalidOperationException("A publication with no sources cannot carry a source manifest.")

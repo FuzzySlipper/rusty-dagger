@@ -43,6 +43,9 @@ public static class SourceManifestBuilder
     /// <summary>Family for content the source tree supplies without any documented row.</summary>
     public const string UndocumentedFamily = "scan.undocumented";
 
+    /// <summary>Stands in for a family the inventory never dispositions.</summary>
+    public const string UndocumentedDisposition = "unrecorded";
+
     private static readonly string[] Header =
     [
         "id", "row_type", "family_id", "kind", "path_or_pattern", "available_count", "byte_size", "record_or_stem", "current_scope", "disposition", "notes",
@@ -99,6 +102,13 @@ public static class SourceManifestBuilder
         IReadOnlyList<SourceInventoryRow> inventory = ReadInventory(inventoryCsv);
         // A family row's own id can differ from the family_id its file rows cite
         // (the quest families do exactly that), so membership is the family_id column.
+        // The inventory dispositions its family rows as well as its file rows; an
+        // all-zero family would otherwise be indistinguishable between a complete
+        // donor-backed family, a documented source gap, and an excluded one.
+        Dictionary<string, string> documentedFamilyDispositions = inventory
+            .Where(row => row.RowType == "family")
+            .GroupBy(row => row.FamilyId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().Disposition, StringComparer.Ordinal);
         Dictionary<string, string> familyPaths = inventory
             .Where(row => row.RowType == "family")
             .GroupBy(row => row.FamilyId, StringComparer.Ordinal)
@@ -108,8 +118,7 @@ public static class SourceManifestBuilder
         HashSet<string> imported = new(request.ImportedNames, StringComparer.Ordinal);
         HashSet<string> pending = new(request.RequiredPendingNames, StringComparer.Ordinal);
         HashSet<string> excluded = new(request.ExcludedNames, StringComparer.Ordinal);
-        static bool Claimed(HashSet<string> names, string relative) =>
-            names.Contains(relative) || names.Contains(relative.Split('/')[^1]);
+
 
         if (!Directory.Exists(request.SourceDirectory))
         {
@@ -172,28 +181,58 @@ public static class SourceManifestBuilder
             records.Add(Gap(row.Id, familyId, familyPath, $"{request.SourceRoot}/{pattern}", "Documented by the inventory; this source tree does not supply it."));
         }
 
-        // Anything supplied without a documented row is reported, not skipped: this is
-        // where the scan refuses to let unexamined content pass as covered.
-        foreach (string entry in entries.OrderBy(entry => Path.GetFileName(entry), StringComparer.Ordinal))
+        // Anything supplied without a documented row is reported, not skipped — at any
+        // depth, because a nested file is exactly as unexamined as a root one. This is
+        // where the scan refuses to let uncovered content pass as covered.
+        foreach (string relative in byExactPath.Keys.OrderBy(path => path, StringComparer.Ordinal))
         {
-            string name = Path.GetFileName(entry);
-            if (claimed.Contains(name))
+            if (claimed.Contains(relative))
             {
                 continue;
             }
 
-            bool directory = Directory.Exists(entry);
+            string path = Path.Combine(request.SourceDirectory, relative.Replace('/', Path.DirectorySeparatorChar));
+            string logical = $"{request.SourceRoot}/{relative}";
+            if (!TryReadSource(path, out byte[] bytes, out string? readFailure))
+            {
+                records.Add(new SourceManifestRecord($"scan.{relative}", UndocumentedFamily, request.SourceRoot, logical, 0, null, null, null, SourceRecordDisposition.Malformed, readFailure!));
+                continue;
+            }
+
             records.Add(new SourceManifestRecord(
-                $"scan.{name}",
+                $"scan.{relative}",
                 UndocumentedFamily,
                 request.SourceRoot,
-                $"{request.SourceRoot}/{name}",
-                directory ? 0 : new FileInfo(entry).Length,
-                directory ? null : ContentDigest.Compute(File.ReadAllBytes(entry)),
+                logical,
+                bytes.Length,
+                ContentDigest.Compute(bytes),
                 null,
                 null,
-                directory ? SourceRecordDisposition.Excluded : SourceRecordDisposition.Unresolved,
-                directory ? "Supplied directory, not a source record." : "Supplied by the source tree with no documented inventory row."));
+                SourceRecordDisposition.Unresolved,
+                "Supplied by the source tree with no documented inventory row."));
+        }
+
+        foreach (string directory in entries.Where(Directory.Exists)
+            .Select(entry => Path.GetFileName(entry))
+            .Where(name => name.Length != 0)
+            .OrderBy(name => name, StringComparer.Ordinal))
+        {
+            if (claimed.Contains(directory))
+            {
+                continue;
+            }
+
+            records.Add(new SourceManifestRecord(
+                $"scan.{directory}",
+                UndocumentedFamily,
+                request.SourceRoot,
+                $"{request.SourceRoot}/{directory}",
+                0,
+                null,
+                null,
+                null,
+                SourceRecordDisposition.Excluded,
+                "Supplied directory, not a source record."));
         }
 
         return new SourceManifest(
@@ -206,7 +245,10 @@ public static class SourceManifestBuilder
                 .Concat(records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, UndocumentedFamily)).Select(record => record.FamilyId))
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(id => id, StringComparer.Ordinal)
-                .Select(id => SourceManifestFamilyCount.From(id, records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, id))))
+                .Select(id => SourceManifestFamilyCount.From(
+                    id,
+                    documentedFamilyDispositions.TryGetValue(id, out string? documented) ? documented : UndocumentedDisposition,
+                    records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, id))))
                 .ToArray());
 
         SourceManifestRecord Gap(string id, string familyId, string familyPath, string sourcePath, string note) =>
@@ -221,10 +263,14 @@ public static class SourceManifestBuilder
                 return new SourceManifestRecord(id, familyId, familyPath, logical, 0, null, null, null, SourceRecordDisposition.Excluded, "Documented entry is a supplied directory, not a source record.");
             }
 
-            byte[] bytes = File.ReadAllBytes(path);
-            SourceRecordDisposition disposition = Claimed(excluded, relative) ? SourceRecordDisposition.Excluded
-                : Claimed(imported, relative) ? SourceRecordDisposition.Imported
-                : Claimed(pending, relative) ? SourceRecordDisposition.RequiredPending
+            if (!TryReadSource(path, out byte[] bytes, out string? readFailure))
+            {
+                return new SourceManifestRecord(id, familyId, familyPath, logical, 0, null, null, null, SourceRecordDisposition.Malformed, readFailure!);
+            }
+
+            SourceRecordDisposition disposition = Claimed(excluded, relative, byExactPath.Keys) ? SourceRecordDisposition.Excluded
+                : Claimed(imported, relative, byExactPath.Keys) ? SourceRecordDisposition.Imported
+                : Claimed(pending, relative, byExactPath.Keys) ? SourceRecordDisposition.RequiredPending
                 : SourceRecordDisposition.Unused;
             if (!claimed.Add(relative))
             {
@@ -301,9 +347,13 @@ public static class SourceManifestBuilder
                 continue;
             }
 
-            SourceArchiveDecode decoded = DecodeArchiveRecords(
-                record,
-                File.ReadAllBytes(Path.Combine(request.SourceDirectory, RelativePath(request.SourceRoot, record.SourcePath))));
+            if (!TryReadSource(Path.Combine(request.SourceDirectory, RelativePath(request.SourceRoot, record.SourcePath)), out byte[] archiveBytes, out string? archiveFailure))
+            {
+                records.Add(record with { Disposition = SourceRecordDisposition.Malformed, Note = archiveFailure! });
+                continue;
+            }
+
+            SourceArchiveDecode decoded = DecodeArchiveRecords(record, archiveBytes);
             if (decoded.Failure is string failure)
             {
                 records.Add(record with { Disposition = SourceRecordDisposition.Malformed, Note = failure });
@@ -320,13 +370,61 @@ public static class SourceManifestBuilder
             Families = manifest.Families
                 .Select(family => SourceManifestFamilyCount.From(
                     family.FamilyId,
+                    family.DocumentedDisposition,
                     records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, family.FamilyId))))
                 .ToArray(),
         };
     }
 
+    /// <summary>
+    /// Reads one supplied file within the admitted size limit. A file that cannot be
+    /// read, or that exceeds the limit, is a malformed record rather than a reason to
+    /// abandon every other record in the scan.
+    /// </summary>
+    private static bool TryReadSource(string path, out byte[] bytes, out string? failure)
+    {
+        try
+        {
+            FileInfo info = new(path);
+            if (info.Length > MaximumSourceBytes)
+            {
+                bytes = [];
+                failure = $"Supplied file is {info.Length} bytes, beyond the admitted {MaximumSourceBytes}-byte source limit.";
+                return false;
+            }
+
+            bytes = File.ReadAllBytes(path);
+            failure = null;
+            return true;
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        {
+            bytes = [];
+            failure = $"Supplied file could not be read: {error.Message}";
+            return false;
+        }
+    }
+
+    /// <summary>The largest single source the scan will read, matching the publication limit.</summary>
+    public const long MaximumSourceBytes = 128L * 1024L * 1024L;
+
     private static string RelativePath(string sourceRoot, string sourcePath) =>
         sourcePath.StartsWith($"{sourceRoot}/", StringComparison.Ordinal) ? sourcePath[(sourceRoot.Length + 1)..] : sourcePath;
+
+    /// <summary>
+    /// A caller may name a source by the path it read or by its leaf, but a leaf shared
+    /// by several supplied paths cannot identify which one was meant.
+    /// </summary>
+    private static bool Claimed(HashSet<string> names, string relative, IEnumerable<string> suppliedPaths)
+    {
+        if (names.Contains(relative))
+        {
+            return true;
+        }
+
+        string leaf = relative.Split('/')[^1];
+        return names.Contains(leaf) && suppliedPaths.Count(path => StringComparer.Ordinal.Equals(path.Split('/')[^1], leaf)) == 1;
+    }
 
     private static string DescribeDisposition(SourceRecordDisposition disposition) => disposition switch
     {
@@ -339,18 +437,47 @@ public static class SourceManifestBuilder
     private static string LeafName(string pathOrPattern) =>
         pathOrPattern.StartsWith("local/arena2/", StringComparison.Ordinal) ? pathOrPattern["local/arena2/".Length..] : pathOrPattern;
 
+    /// <summary>
+    /// Glob match for documented patterns: `*` spans any run, `?` spans one character,
+    /// and every other character is literal. Case-insensitive, matching how the
+    /// inventory records names a case-insensitive host would report.
+    /// </summary>
     private static bool Matches(string pattern, string name)
     {
-        int star = pattern.IndexOf('*');
-        if (star < 0)
+        int patternIndex = 0;
+        int nameIndex = 0;
+        int starIndex = -1;
+        int starNameIndex = 0;
+        while (nameIndex < name.Length)
         {
-            return StringComparer.OrdinalIgnoreCase.Equals(pattern, name);
+            if (patternIndex < pattern.Length && (pattern[patternIndex] == '?' || char.ToUpperInvariant(pattern[patternIndex]) == char.ToUpperInvariant(name[nameIndex])))
+            {
+                patternIndex++;
+                nameIndex++;
+                continue;
+            }
+
+            if (patternIndex < pattern.Length && pattern[patternIndex] == '*')
+            {
+                starIndex = patternIndex++;
+                starNameIndex = nameIndex;
+                continue;
+            }
+
+            if (starIndex < 0)
+            {
+                return false;
+            }
+
+            patternIndex = starIndex + 1;
+            nameIndex = ++starNameIndex;
         }
 
-        string prefix = pattern[..star];
-        string suffix = pattern[(star + 1)..];
-        return name.Length >= prefix.Length + suffix.Length
-            && name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
-            && name.EndsWith(suffix, StringComparison.OrdinalIgnoreCase);
+        while (patternIndex < pattern.Length && pattern[patternIndex] == '*')
+        {
+            patternIndex++;
+        }
+
+        return patternIndex == pattern.Length;
     }
 }

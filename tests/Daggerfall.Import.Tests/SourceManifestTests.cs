@@ -144,17 +144,17 @@ public sealed class SourceManifestTests : IDisposable
     {
         SourceManifestRecord good = Record("CNT-001.file.A.CIF");
         SourceManifestRecord sameIdentity = good with { Id = "CNT-001.file.A2.CIF" };
-        SourceManifestFamilyCount counted = SourceManifestFamilyCount.From("CNT-001", [good]);
+        SourceManifestFamilyCount counted = SourceManifestFamilyCount.From("CNT-001", "current-structural", [good]);
 
         // The same source record cannot appear under two identities.
         Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "local/arena2", "inventory.csv", [good, sameIdentity], [SourceManifestFamilyCount.From("CNT-001", [good, sameIdentity])]).Validate());
+            1, "local/arena2", "inventory.csv", [good, sameIdentity], [SourceManifestFamilyCount.From("CNT-001", "current-structural", [good, sameIdentity])]).Validate());
         // Family counts must reconcile with the records they count.
         Assert.Throws<InvalidOperationException>(() => new SourceManifest(
             1, "local/arena2", "inventory.csv", [good], [counted with { Discovered = 2 }]).Validate());
         // A record cannot belong to a family the manifest does not count.
         Assert.Throws<InvalidOperationException>(() => new SourceManifest(
-            1, "local/arena2", "inventory.csv", [good], [SourceManifestFamilyCount.From("CNT-002", [])]).Validate());
+            1, "local/arena2", "inventory.csv", [good], [SourceManifestFamilyCount.From("CNT-002", "current-structural", [])]).Validate());
         // Traversal, absolute paths and an unsupported schema version are refused.
         Assert.Throws<ArgumentException>(() => new SourceManifest(
             1, "local/arena2", "../escape.csv", [good], [counted]).Validate());
@@ -306,6 +306,85 @@ public sealed class SourceManifestTests : IDisposable
     {
         Assert.Throws<FormatException>(() => SourceManifestSerializer.Deserialize("not json"u8));
         Assert.Throws<FormatException>(() => SourceManifestSerializer.Deserialize("[]"u8));
+    }
+
+    [Fact]
+    public void Two_documented_rows_claiming_one_file_yield_a_duplicate_rather_than_an_error()
+    {
+        Write("A.CIF", "alpha"u8);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,first row",
+            "CNT-001.file.A.ALT.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,second row for the same file");
+
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        // The duplicate disposition has to be reachable where it is most likely: two
+        // rows in one family naming the same supplied file.
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.file.A.CIF").Disposition);
+        Assert.Equal(SourceRecordDisposition.Duplicate, Record(manifest, "CNT-001.file.A.ALT.CIF").Disposition);
+        manifest.Validate();
+    }
+
+    [Fact]
+    public void Documented_patterns_match_with_question_marks_and_repeated_stars()
+    {
+        Write("FILE1.CFG", "one"u8);
+        Write("AXBXC.DAT", "two"u8);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,cfg,local/arena2/*.CFG,2,,FILE,scope,current-structural,note",
+            "CNT-001.pattern.FILE,file,CNT-001,source-file,local/arena2/FILE?.CFG,1,5,FILE,scope,uninspected,question mark",
+            "CNT-001.pattern.STAR,file,CNT-001,source-file,local/arena2/A*B*C.DAT,1,5,STAR,scope,uninspected,two stars");
+
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.pattern.FILE.FILE1.CFG").Disposition);
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.pattern.STAR.AXBXC.DAT").Disposition);
+    }
+
+    [Fact]
+    public void An_unreadable_file_is_malformed_rather_than_abandoning_the_scan()
+    {
+        Write("GOOD.CIF", "alpha"u8);
+        string locked = Path.Combine(root, "LOCKED.CIF");
+        File.WriteAllBytes(locked, "locked"u8);
+        // An exclusive hold makes the read fail on every platform without relying on
+        // permission bits, which the analyser rejects as platform-specific.
+        using FileStream hold = new(locked, FileMode.Open, FileAccess.Read, FileShare.None);
+        string inventory = Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/GOOD.CIF,1,,GOOD,scope,current-structural,note",
+            "CNT-001.file.GOOD.CIF,file,CNT-001,source-file,local/arena2/GOOD.CIF,1,5,GOOD,scope,uninspected,note",
+            "CNT-001.file.LOCKED.CIF,file,CNT-001,source-file,local/arena2/LOCKED.CIF,1,6,LOCKED,scope,uninspected,note");
+
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        // One unreadable file must not void every other record in the scan.
+        Assert.Equal(SourceRecordDisposition.Unused, Record(manifest, "CNT-001.file.GOOD.CIF").Disposition);
+        SourceManifestRecord lockedRecord = Record(manifest, "CNT-001.file.LOCKED.CIF");
+        Assert.Equal(SourceRecordDisposition.Malformed, lockedRecord.Disposition);
+        Assert.Contains("could not be read", lockedRecord.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_row_that_cannot_be_parsed_blocks_an_update_instead_of_passing_as_clean()
+    {
+        string inventoryFile = Path.Combine(root, "broken.csv");
+        File.WriteAllText(inventoryFile, Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,uninspected,a note, with a comma"));
+
+        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
+
+        Assert.Contains(reconciliation.Unreconciled, line => line.Contains("fields where 11 are documented", StringComparison.Ordinal));
+        Assert.False(reconciliation.IsClean);
+        // The unparseable row is still there: an update refused rather than rewrote it away.
+        Assert.Contains("with a comma", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
     }
 
     private static SourceManifestRecord Record(string id) => new(

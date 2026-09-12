@@ -23,7 +23,7 @@ public enum SourceRecordDisposition
     /// <summary>Supplied and admitted to a family, but no consumer claims it.</summary>
     Unused,
 
-    /// <summary>Same content as another record already listed under a different identity.</summary>
+    /// <summary>Another inventory row already claimed the same supplied file.</summary>
     Duplicate,
 
     /// <summary>Deliberately out of scope, or not a source record at all (for example a directory).</summary>
@@ -102,6 +102,7 @@ public sealed record SourceManifestRecord(
 /// <summary>Per-family reconciliation counts, recomputed from the records on read.</summary>
 public sealed record SourceManifestFamilyCount(
     string FamilyId,
+    string DocumentedDisposition,
     int Discovered,
     int Imported,
     int RequiredPending,
@@ -115,17 +116,23 @@ public sealed record SourceManifestFamilyCount(
     public void Validate()
     {
         NormalizedImportDocument.RequireLogicalId(FamilyId, nameof(FamilyId));
+        if (string.IsNullOrWhiteSpace(DocumentedDisposition))
+        {
+            throw new InvalidOperationException($"Family '{FamilyId}' must state the disposition the inventory documents for it.");
+        }
+
         if (Discovered != Imported + RequiredPending + Unused + Duplicate + Excluded + Malformed + Unresolved + SourceGap)
         {
             throw new InvalidOperationException($"Family '{FamilyId}' counts {Discovered} discovered records but its dispositions total {Imported + RequiredPending + Unused + Duplicate + Excluded + Malformed + Unresolved + SourceGap}.");
         }
     }
 
-    public static SourceManifestFamilyCount From(string familyId, IEnumerable<SourceManifestRecord> records)
+    public static SourceManifestFamilyCount From(string familyId, string documentedDisposition, IEnumerable<SourceManifestRecord> records)
     {
         SourceManifestRecord[] values = records.ToArray();
         return new(
             familyId,
+            documentedDisposition,
             values.Length,
             values.Count(record => record.Disposition == SourceRecordDisposition.Imported),
             values.Count(record => record.Disposition == SourceRecordDisposition.RequiredPending),
@@ -176,6 +183,7 @@ public sealed record SourceManifest(
 
         HashSet<string> ids = new(StringComparer.Ordinal);
         HashSet<string> identities = new(StringComparer.Ordinal);
+        HashSet<string> duplicates = new(StringComparer.Ordinal);
         foreach (SourceManifestRecord record in Records)
         {
             ArgumentNullException.ThrowIfNull(record);
@@ -187,8 +195,14 @@ public sealed record SourceManifest(
 
             // The same supplied path may legitimately carry several archive records, so
             // identity is the path plus the archive key or ordinal it was decoded from.
+            // A record dispositioned as a duplicate is expected to collide with the
+            // record it duplicates; every other collision is an error.
             string identity = $"{record.FamilyId}\u001f{record.SourcePath}\u001f{record.ArchiveKey ?? string.Empty}\u001f{record.ArchiveOrdinal?.ToString() ?? string.Empty}";
-            if (!identities.Add(identity))
+            if (record.Disposition == SourceRecordDisposition.Duplicate)
+            {
+                duplicates.Add(identity);
+            }
+            else if (!identities.Add(identity))
             {
                 throw new InvalidOperationException($"The source manifest contains duplicate source record '{record.SourcePath}' in family '{record.FamilyId}'.");
             }
@@ -196,6 +210,14 @@ public sealed record SourceManifest(
             if (!Families.Any(family => StringComparer.Ordinal.Equals(family.FamilyId, record.FamilyId)))
             {
                 throw new InvalidOperationException($"Source record '{record.Id}' belongs to family '{record.FamilyId}', which the manifest does not count.");
+            }
+        }
+
+        foreach (string duplicate in duplicates)
+        {
+            if (!identities.Contains(duplicate))
+            {
+                throw new InvalidOperationException("The source manifest dispositions a record as a duplicate of a record it does not match.");
             }
         }
 
@@ -209,7 +231,7 @@ public sealed record SourceManifest(
                 throw new InvalidOperationException($"The source manifest contains duplicate family '{family.FamilyId}'.");
             }
 
-            SourceManifestFamilyCount counted = SourceManifestFamilyCount.From(family.FamilyId, Records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, family.FamilyId)));
+            SourceManifestFamilyCount counted = SourceManifestFamilyCount.From(family.FamilyId, family.DocumentedDisposition, Records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, family.FamilyId)));
             if (counted != family)
             {
                 throw new InvalidOperationException($"Family '{family.FamilyId}' counts do not reconcile with its records: manifest says {family.Discovered} discovered, records total {counted.Discovered}.");

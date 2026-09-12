@@ -30,13 +30,26 @@ public static class SourceInventoryReconciler
             .ToDictionary(record => record.Id, record => record.Disposition, StringComparer.Ordinal);
         string text = File.ReadAllText(inventoryFile);
         string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-        string[] lines = text.Split(newline);
+        // Mixed terminators would merge two rows into one unparseable line, and a row
+        // that cannot be parsed must be reported rather than skipped as if it agreed.
+        string[] lines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         List<string> drift = [];
         List<string> unresolved = [];
         for (int index = 1; index < lines.Length; index++)
         {
+            if (lines[index].Length == 0)
+            {
+                continue;
+            }
+
             string[] fields = lines[index].Split(',');
-            if (fields.Length != 11 || fields[1] != "file")
+            if (fields.Length != 11)
+            {
+                unresolved.Add($"line {index + 1}: {fields.Length} fields where 11 are documented");
+                continue;
+            }
+
+            if (fields[1] != "file")
             {
                 continue;
             }
@@ -62,7 +75,9 @@ public static class SourceInventoryReconciler
             }
         }
 
-        if (update && drift.Count != 0)
+        // An unparseable row is not a disposition to rewrite, so it blocks an update
+        // rather than being silently dropped by one.
+        if (update && drift.Count != 0 && unresolved.Count == 0)
         {
             File.WriteAllText(inventoryFile, string.Join(newline, lines));
         }
