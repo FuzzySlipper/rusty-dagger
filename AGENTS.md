@@ -189,7 +189,20 @@ rewrites that file; never hand-edit a version into prose.
 
 A hard failure must name the loss it prevents. Where the consequence is
 recoverable, warn and report the actual observed value instead. Keep hard stops
-for data loss, an ownership-boundary violation, or a silently wrong artifact.
+for data loss, an ownership-boundary violation, or a silently wrong artifact. A
+concrete collision is a real hard stop; a merely potential one is not.
+
+This applies to schemas and version numbers in particular. A version difference
+that leaves the meaning recoverable is a warning, not a refusal: read the older
+shape, report the drift and the observed values, and keep rejection for a version
+whose meaning genuinely cannot be recovered. That includes a version that changed
+without its meaning changing, where the older bytes remain valid input.
+
+Rescoping during implementation is expected, but the deferred requirement must
+move to a concrete receiving task — that task's required behavior and verification,
+or a new follow-up task — and the source task's record points at it. A note that a
+task became narrower does not hold the requirement: a concern is only passed on
+while some task is still carrying it.
 
 ## Git
 
