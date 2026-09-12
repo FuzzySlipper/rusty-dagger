@@ -112,6 +112,66 @@ public sealed class WorldRpgSaveStoreTests
         Assert.Contains(result.Diagnostics, value => value.Code == "selection");
     }
 
+    [Fact]
+    public void Resume_reports_a_restore_notice_without_blocking_the_resume()
+    {
+        InMemoryPersistenceService persistence = new();
+        IEngineContext engine = Engine(persistence);
+        using WorldRpgSaveStore store = new(engine, "worldrpg-test");
+        ProductContent content = Content(
+            ("worldrpg/bundles/test.bundle.json", """{"kind":"worldrpg.game-bundle","schemaVersion":1,"id":"test.bundle","version":1,"ruleset":"test","contentPacks":[{"id":"test.pack","version":1}],"tuning":{"id":"test.tuning","version":1}}"""),
+            ("worldrpg/content-packs/test.pack.json", """{"kind":"worldrpg.content-pack","schemaVersion":1,"id":"test.pack","version":1,"ruleset":"test","dependencies":[],"payload":"payload/pack.json"}"""),
+            ("worldrpg/tuning/test.tuning.json", """{"kind":"worldrpg.tuning-profile","schemaVersion":1,"id":"test.tuning","version":1,"ruleset":"test","payload":"payload/tuning.json"}"""),
+            ("payload/pack.json", "{}"),
+            ("payload/tuning.json", "{}"));
+        // The saved envelope has to carry the fingerprints the selected content resolves
+        // to, so the save is written from that resolved identity rather than a literal.
+        ResolvedGameComposition composition = GameCompositionResolver.Resolve(content, new GameBundleId("test.bundle")).RequireComposition();
+        store.Save("slot", new GameSaveEnvelope(new SaveCompositionIdentity(composition.Identity), new RulesetSavePayload(new RulesetId("test"), 1, [1, 2, 3])));
+
+        WorldRpgResumeResult result = WorldRpgProduct.TryResume(
+            new ProductCreateContext(engine, content, EmptyInput()),
+            store,
+            "slot",
+            ruleset: new ReportingRuleset(),
+            bundle: new GameBundleId("test.bundle"));
+
+        // A restore that had to report something still resumes; the report rides the one
+        // resume channel as a non-blocking entry, and IsComplete is the stricter question.
+        Assert.True(result.IsResumed, string.Join("; ", result.Diagnostics.Select(value => $"{value.Code}: {value.Message}")));
+        Assert.False(result.IsComplete);
+        WorldRpgSaveDiagnostic entry = Assert.Single(result.Diagnostics);
+        Assert.Equal("restored-with-gaps", entry.Code);
+        Assert.False(entry.IsBlocking);
+        using WorldRpgProduct? product = result.Product;
+        Assert.NotNull(product);
+    }
+
+    private sealed class ReportingRuleset : ISaveableGameRuleset
+    {
+        public RulesetId Id => new("test");
+
+        public IGameSession CreateSession(GameSessionContext context) => new ReportingSession([]);
+
+        public IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved) =>
+            new ReportingSession([new SaveRestoreNotice("restored-with-gaps", "One saved actor was left out of the restore.")]);
+    }
+
+    private sealed class ReportingSession(IReadOnlyList<SaveRestoreNotice> notices) : IRestoringGameSession
+    {
+        public IReadOnlyList<SaveRestoreNotice> RestoreNotices => notices;
+
+        public void PublishInitial()
+        {
+        }
+
+        public ProductUpdateResult Update(ProductUpdate update) => ProductUpdateResult.None;
+
+        public void Dispose()
+        {
+        }
+    }
+
     public static IEnumerable<object[]> InvalidEnvelopeJson =>
     [
         [NullComposition],

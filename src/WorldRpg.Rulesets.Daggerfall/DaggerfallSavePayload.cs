@@ -56,7 +56,7 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("The save payload does not belong to the Daggerfall ruleset.", nameof(payload));
         if (payload.SchemaVersion == CurrentSchemaVersion)
         {
-            return new DaggerfallSaveRead(ReadCurrent(payload), []);
+            return ReadCurrent(payload);
         }
 
         if (payload.SchemaVersion == MigratableSchemaVersion)
@@ -73,18 +73,31 @@ internal sealed record DaggerfallSavePayload(
         throw new ArgumentException($"Daggerfall save schema {payload.SchemaVersion} is not supported.", nameof(payload));
     }
 
-    private static DaggerfallSavePayload ReadCurrent(RulesetSavePayload payload)
+    private static DaggerfallSaveRead ReadCurrent(RulesetSavePayload payload)
     {
+        DaggerfallSavePayload value;
         try
         {
-            DaggerfallSavePayload value = JsonSerializer.Deserialize(payload.Bytes.Span, DaggerfallSaveJsonContext.Default.DaggerfallSavePayload)
+            value = JsonSerializer.Deserialize(payload.Bytes.Span, DaggerfallSaveJsonContext.Default.DaggerfallSavePayload)
                 ?? throw new ArgumentException("The Daggerfall save payload is empty.", nameof(payload));
-            return value.Validate();
         }
         catch (JsonException exception)
         {
             throw new ArgumentException("The Daggerfall save payload is malformed.", nameof(payload), exception);
         }
+
+        // A save written before the payload carried owner sections simply has none. A
+        // field added under an unchanged schema version is absent-but-recoverable, so it
+        // is filled in and reported rather than making every earlier save unreadable.
+        List<SaveRestoreNotice> notices = [];
+        if (value.Owners is null)
+        {
+            value = value with { Owners = [] };
+            notices.Add(new SaveRestoreNotice("owner-sections-absent",
+                "The save was written before durable owner sections existed and carries none; the rest of its state is read unchanged."));
+        }
+
+        return new DaggerfallSaveRead(value.Validate(), notices);
     }
 
     private static DaggerfallSavePayloadV1 ReadLegacy(RulesetSavePayload payload)
@@ -214,23 +227,46 @@ internal sealed record DaggerfallSavePayload(
         DaggerfallSavePayload resolved = this with { Actors = [.. resolvedActors] };
         DaggerfallActorDefinition playerDefinition = definitions.RequireActor(new DaggerfallActorId("player"));
         ValidateTracks(Player, playerDefinition, "player");
+        // Saved values the selected content disagrees with are reported with what was
+        // observed. The saved state is what the player had; refusing would cost the whole
+        // save over a difference the content cannot settle, and the donor assigns these
+        // values verbatim on restore (DaggerfallEntity.SetHealth in restore mode) while
+        // its pitch setter clamps.
         if (Player.PitchRadians < tuning.PlayerControl.PitchMinimumRadians || Player.PitchRadians > tuning.PlayerControl.PitchMaximumRadians)
-            throw new ArgumentException("Saved player pitch is outside the selected tuning bounds.");
+        {
+            float clamped = Math.Clamp(Player.PitchRadians, tuning.PlayerControl.PitchMinimumRadians, tuning.PlayerControl.PitchMaximumRadians);
+            notices.Add(new SaveRestoreNotice("player-pitch-outside-tuning",
+                $"Saved player pitch {Player.PitchRadians} is outside the selected tuning bounds [{tuning.PlayerControl.PitchMinimumRadians}, {tuning.PlayerControl.PitchMaximumRadians}] and was clamped to {clamped}."));
+            resolved = resolved with { Player = resolved.Player with { PitchRadians = clamped } };
+        }
+
         int expectedLevel = checked(1 + DaggerfallFormulaPolicy.ExperimentalXpLevel(Experience, DaggerfallFormulaPolicy.Experimental));
         if (Level != expectedLevel)
-            throw new ArgumentException("Saved progression level does not match the selected Daggerfall XP curve.");
+        {
+            notices.Add(new SaveRestoreNotice("progression-level-recomputed",
+                $"Saved level {Level} does not match the level {expectedLevel} that the saved experience {Experience} derives on the selected Daggerfall XP curve; the derived level is used."));
+            resolved = resolved with { Level = expectedLevel };
+        }
+
         int maximumExperience = inputs.Project.Actors.Values
             .Select(actor => definitions.RequireActor(actor.ActorId).Rewards.ExperienceReward)
             .Where(value => value > 0)
             .Aggregate(0, (total, value) => checked(total + value));
         if (Experience > maximumExperience)
-            throw new ArgumentException("Saved progression exceeds the maximum authored rewards in the selected content.");
+        {
+            notices.Add(new SaveRestoreNotice("progression-above-authored-rewards",
+                $"Saved experience {Experience} exceeds the {maximumExperience} the selected content can award; the saved value is kept because the selected content may have changed."));
+        }
+
         int endurance = playerDefinition.Stats.Endurance;
         long playerHealthMaximum = playerDefinition.PlayerInitialVitals.HealthMaximum;
-        for (int restoredLevel = 2; restoredLevel <= Level; restoredLevel++)
+        for (int restoredLevel = 2; restoredLevel <= expectedLevel; restoredLevel++)
             playerHealthMaximum = checked(playerHealthMaximum + DaggerfallLevelUpHealthSource.RollGain(random, playerDefinition, endurance, restoredLevel));
         if (Player.Health > playerHealthMaximum)
-            throw new ArgumentException("Saved player health exceeds its reconstructed Daggerfall maximum.");
+        {
+            notices.Add(new SaveRestoreNotice("player-health-above-reconstruction",
+                $"Saved player health {Player.Health} exceeds the {playerHealthMaximum} this session reconstructs for level {expectedLevel}; the saved value is kept because the reconstruction is not an authority on the player's health."));
+        }
 
         // Durable references resolve against the ledger the save carries: an identity is
         // explainable when authored content reserved it or the allocator issued it
@@ -251,7 +287,7 @@ internal sealed record DaggerfallSavePayload(
                 $"Saved unique item identity {value} is neither reserved content nor issued by the carried ledger, so that item is not restored."));
         }
 
-        DaggerfallInventorySave inventory = ResolveInventory(resolved.Inventory, definitions, "player", Explainable);
+        DaggerfallInventorySave inventory = ResolveInventory(resolved.Inventory, definitions, "player", Explainable, notices);
         List<DaggerfallCorpseSave> resolvedCorpses = [];
         Dictionary<long, DaggerfallActorSave> resolvedSaved = resolvedActors.ToDictionary(actor => actor.EntityId);
         HashSet<long> corpseActors = [];
@@ -269,7 +305,7 @@ internal sealed record DaggerfallSavePayload(
             if (!corpse.IsInteractable && (corpse.Stacks.Length != 0 || corpse.UniqueItems.Length != 0))
                 throw new ArgumentException("A looted corpse cannot retain inventory contents.");
             DaggerfallInventorySave corpseInventory = ResolveInventory(
-                new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, $"corpse {corpse.ActorId}", Explainable);
+                new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, $"corpse {corpse.ActorId}", Explainable, notices);
             resolvedCorpses.Add(corpse with { Stacks = corpseInventory.Stacks, UniqueItems = corpseInventory.UniqueItems });
         }
 
@@ -299,13 +335,40 @@ internal sealed record DaggerfallSavePayload(
         DaggerfallInventorySave inventory,
         DaggerfallDefinitions definitions,
         string owner,
-        Func<ulong, bool> explainable)
+        Func<ulong, bool> explainable,
+        List<SaveRestoreNotice> notices)
     {
+        List<DaggerfallStackSave> stacks = [];
+        foreach (DaggerfallStackSave stack in inventory.Stacks)
+        {
+            if (!definitions.Items.TryGetValue(new DaggerfallItemId(stack.ItemId), out DaggerfallItemDefinition? stackItem) || !stackItem.IsFungible)
+            {
+                notices.Add(new SaveRestoreNotice("unexplained-item-template",
+                    $"Saved {owner} stack '{stack.ItemId}' is not a fungible item in the selected content, so that stack is not restored."));
+                continue;
+            }
+
+            if (stack.Quantity > stackItem.MaximumQuantity)
+            {
+                notices.Add(new SaveRestoreNotice("stack-above-authored-maximum",
+                    $"Saved {owner} stack '{stack.ItemId}' holds {stack.Quantity}, above the selected maximum of {stackItem.MaximumQuantity}; it was reduced to the maximum."));
+                stacks.Add(stack with { Quantity = stackItem.MaximumQuantity });
+                continue;
+            }
+
+            stacks.Add(stack);
+        }
+
         List<DaggerfallUniqueSave> unique = [];
         foreach (DaggerfallUniqueSave item in inventory.UniqueItems)
         {
             if (!definitions.Items.TryGetValue(new DaggerfallItemId(item.ItemId), out DaggerfallItemDefinition? definition) || definition.IsFungible)
-                throw new ArgumentException($"Saved {owner} unique item '{item.ItemId}' is not a selected non-fungible item.");
+            {
+                notices.Add(new SaveRestoreNotice("unexplained-item-template",
+                    $"Saved {owner} unique item '{item.ItemId}' is not a non-fungible item in the selected content, so that item is not restored."));
+                continue;
+            }
+
             if (!explainable(item.EntityId))
             {
                 // Reported by the caller with the identity it observed; the item is not
@@ -318,7 +381,7 @@ internal sealed record DaggerfallSavePayload(
 
         DaggerfallUniqueSave[] kept = [.. unique];
         DaggerfallEquipmentSave[] equipment = [.. inventory.Equipment.Where(entry => kept.Any(item => item.EntityId == entry.ItemEntityId))];
-        DaggerfallInventorySave resolved = new(inventory.Stacks, kept, equipment);
+        DaggerfallInventorySave resolved = new([.. stacks], kept, equipment);
         HashSet<ulong> live = [];
         ValidateInventory(resolved, definitions, live, owner, requireEquipmentSlots: owner == "player");
         return resolved;
@@ -354,7 +417,10 @@ internal sealed record DaggerfallSavePayload(
     {
         DaggerfallVitalValues initial = definition.PlayerInitialVitals;
         if (value.Health < 0 || value.Stamina < 0 || value.Stamina > initial.StaminaMaximum || value.Magicka < 0 || value.Magicka > initial.MagickaMaximum)
-            throw new ArgumentException($"Saved {owner} tracks cannot be negative.");
+        {
+            throw new ArgumentException(
+                $"Saved {owner} tracks are outside the selected bounds: health {value.Health}, stamina {value.Stamina} of at most {initial.StaminaMaximum}, magicka {value.Magicka} of at most {initial.MagickaMaximum}.");
+        }
     }
 
     private static void ValidateTracks(DaggerfallActorSave value, DaggerfallActorDefinition definition, string owner)
@@ -406,6 +472,21 @@ internal sealed record DaggerfallSaveRead(DaggerfallSavePayload Payload, IReadOn
 /// later task add state without reshaping the payload every other owner reads.
 /// </summary>
 internal sealed record DaggerfallOwnerSave(string OwnerId, byte[] Section);
+
+/// <summary>
+/// A later world, item, effect or quest owner's durable state. The session hands each
+/// owner exactly its own section on restore and writes what it captures back under the
+/// same id; a task that supplies records implements this beside them and passes it to
+/// the session, so there is no reflection registry and no service locator.
+/// </summary>
+internal interface IDaggerfallSaveOwner
+{
+    string OwnerId { get; }
+
+    byte[] Capture();
+
+    void Restore(ReadOnlySpan<byte> section);
+}
 
 /// <summary>
 /// The schema-1 shape, kept only to read what it wrote: a flat reservation list, an

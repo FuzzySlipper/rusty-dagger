@@ -100,10 +100,14 @@ public sealed class WorldRpgProduct : IEngineProduct
         try
         {
             IGameSession session = saveable.CreateSession(new GameSessionContext(context.Engine, composition), loaded.State.Payload);
-            return new(new WorldRpgProduct((session, composition.Identity)), loaded.Revision, [])
-            {
-                Notices = session is IRestoringGameSession restoring ? restoring.RestoreNotices : [],
-            };
+            // A restore that had to report something still resumes: its notices ride the
+            // one resume channel as non-blocking entries, exactly as composition
+            // diagnostics already do.
+            IReadOnlyList<SaveRestoreNotice> notices = session is IRestoringGameSession restoring ? restoring.RestoreNotices : [];
+            return new(
+                new WorldRpgProduct((session, composition.Identity)),
+                loaded.Revision,
+                [.. notices.Select(value => new WorldRpgSaveDiagnostic(value.Code, value.Message, IsBlocking: false))]);
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException)
         {
@@ -168,15 +172,19 @@ public sealed class WorldRpgProduct : IEngineProduct
     }
 }
 
-public sealed record WorldRpgSaveDiagnostic(string Code, string Message);
+/// <summary>
+/// One thing a resume has to report. Blocking entries are why no product was created;
+/// non-blocking entries describe state that was left out of a product that did resume.
+/// </summary>
+public sealed record WorldRpgSaveDiagnostic(string Code, string Message, bool IsBlocking = true);
 public sealed record WorldRpgResumeResult(WorldRpgProduct? Product, ulong Revision, IReadOnlyList<WorldRpgSaveDiagnostic> Diagnostics)
 {
-    /// <summary>
-    /// What the restore reported without refusing: a migrated schema or a reference the
-    /// selected content could not explain. A notice never blocks a resume; only a
-    /// diagnostic does.
-    /// </summary>
-    public IReadOnlyList<SaveRestoreNotice> Notices { get; init; } = [];
+    /// <summary>A resume happened and nothing was left out of it.</summary>
+    public bool IsComplete => Product is not null && Diagnostics.Count == 0;
 
-    public bool IsResumed => Product is not null && Diagnostics.Count == 0;
+    /// <summary>
+    /// A resume happened. Non-blocking entries may still describe state that was left
+    /// out, which is why <see cref="IsComplete"/> is the stricter question.
+    /// </summary>
+    public bool IsResumed => Product is not null && Diagnostics.All(value => !value.IsBlocking);
 }

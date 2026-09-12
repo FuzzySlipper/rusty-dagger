@@ -45,12 +45,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private readonly DaggerfallLootPresentation _lootUi;
     private readonly DaggerfallCharacterPresentation _characterUi;
     private readonly PrivateersHoldAppearance _appearance;
-    /// <summary>
-    /// The durable owners this build has. Each is an explicit registration a later
-    /// world, item, effect or quest task adds beside its own records; there is no
-    /// reflection registry and no service locator.
-    /// </summary>
-    internal static readonly string[] RegisteredSaveOwners = [];
+    private readonly IReadOnlyList<IDaggerfallSaveOwner> _saveOwners;
 
     private readonly IReadOnlyList<SaveRestoreNotice> _restoreNotices;
     private IReadOnlyList<DaggerfallOwnerSave> _carriedOwnerSections;
@@ -59,36 +54,67 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private bool _disposed;
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity: null, saved: null, restoreNotices: [])
+        : this(engine, definitions, inputs, tuning, compositionIdentity: null, saved: null, restoreNotices: [], saveOwners: null)
     {
     }
 
     internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, saved: null, restoreNotices: [])
+        : this(engine, definitions, inputs, tuning, compositionIdentity, saved: null, restoreNotices: [], saveOwners: null)
     {
     }
 
-    internal DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallSavePayload? saved, IReadOnlyList<SaveRestoreNotice>? restoreNotices = null)
-        : this(engine, definitions, inputs, tuning, compositionIdentity, saved, restoreNotices ?? [])
+    /// <summary>
+    /// Builds a restored session the way the ruleset does: the payload is read into the
+    /// current shape, every reference is resolved against the selected content and the
+    /// ledger the save carries, and what that had to report rides the session. There is
+    /// deliberately no path that restores a payload nobody resolved.
+    /// </summary>
+    internal static DaggerfallSession Restore(
+        IEngineContext engine,
+        ResolvedCompositionIdentity compositionIdentity,
+        DaggerfallDefinitions definitions,
+        PrivateersHoldInputs inputs,
+        DaggerfallTuning tuning,
+        RulesetSavePayload saved,
+        IRandomService random,
+        IReadOnlyList<IDaggerfallSaveOwner>? saveOwners = null)
+    {
+        DaggerfallSaveRead read = DaggerfallSavePayload.Read(saved);
+        DaggerfallRestorePlan plan = read.Payload.ResolveRestore(definitions, inputs, tuning, random);
+        return new DaggerfallSession(engine, compositionIdentity, definitions, inputs, tuning, plan.Payload, [.. read.Notices, .. plan.Notices], saveOwners);
+    }
+
+    private DaggerfallSession(IEngineContext engine, ResolvedCompositionIdentity compositionIdentity, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, DaggerfallSavePayload? saved, IReadOnlyList<SaveRestoreNotice>? restoreNotices = null, IReadOnlyList<IDaggerfallSaveOwner>? saveOwners = null)
+        : this(engine, definitions, inputs, tuning, compositionIdentity, saved, restoreNotices ?? [], saveOwners)
     {
     }
 
-    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved, IReadOnlyList<SaveRestoreNotice> restoreNotices)
+    private DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, ResolvedCompositionIdentity? compositionIdentity, DaggerfallSavePayload? saved, IReadOnlyList<SaveRestoreNotice> restoreNotices, IReadOnlyList<IDaggerfallSaveOwner>? saveOwners)
     {
         ArgumentNullException.ThrowIfNull(restoreNotices);
-        // Sections a payload carried for an owner this build does not have are kept
-        // verbatim so a save written by a later owner is not silently discarded — and
-        // reported, because a section nothing reads is a difference worth knowing about.
-        _carriedOwnerSections = saved?.Owners ?? [];
-        _restoreNotices =
-        [
-            .. restoreNotices,
-            .. _carriedOwnerSections
-                .Where(section => !RegisteredSaveOwners.Contains(section.OwnerId))
-                .OrderBy(section => section.OwnerId, StringComparer.Ordinal)
-                .Select(section => new SaveRestoreNotice("unread-owner-section",
-                    $"Saved section for owner '{section.OwnerId}' has no owner in this build; it is preserved unchanged and not interpreted.")),
-        ];
+        _saveOwners = saveOwners ?? [];
+        // A section named for an owner this build has is restored by that owner, which
+        // is what makes the seam a read path rather than a label. Anything else is kept
+        // verbatim and reported, so a save written by a later owner is neither
+        // discarded nor passed off as understood.
+        List<DaggerfallOwnerSave> carried = [];
+        List<SaveRestoreNotice> sectionNotices = [];
+        foreach (DaggerfallOwnerSave section in (saved?.Owners ?? []).OrderBy(value => value.OwnerId, StringComparer.Ordinal))
+        {
+            IDaggerfallSaveOwner? owner = _saveOwners.FirstOrDefault(value => StringComparer.Ordinal.Equals(value.OwnerId, section.OwnerId));
+            if (owner is null)
+            {
+                carried.Add(section);
+                sectionNotices.Add(new SaveRestoreNotice("unread-owner-section",
+                    $"Saved section for owner '{section.OwnerId}' has no owner in this build; it is preserved unchanged and not interpreted."));
+                continue;
+            }
+
+            owner.Restore(section.Section);
+        }
+
+        _carriedOwnerSections = carried;
+        _restoreNotices = [.. restoreNotices, .. sectionNotices];
         List<IDisposable> partiallyConstructed = [];
         try
         {
@@ -298,7 +324,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             _combat.CaptureCooldowns(_latestUpdateGeneration, _latestSimulationStep)
                 .Select(value => new DaggerfallCombatCooldownSave(value.AttackerId, value.RemainingSteps)).ToArray(),
             continuation,
-            [.. _carriedOwnerSections.OrderBy(section => section.OwnerId, StringComparer.Ordinal)]));
+            [.. _saveOwners.Select(owner => new DaggerfallOwnerSave(owner.OwnerId, owner.Capture()))
+                .Concat(_carriedOwnerSections)
+                .OrderBy(section => section.OwnerId, StringComparer.Ordinal)]));
     }
 
     public ProductUpdateResult Update(ProductUpdate update)
