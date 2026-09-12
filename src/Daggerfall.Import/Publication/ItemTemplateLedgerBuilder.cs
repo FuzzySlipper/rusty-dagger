@@ -29,6 +29,29 @@ public static class ItemTemplateLedgerBuilder
     /// <summary>The provenance of a target no donor group names.</summary>
     public const string NoDonorGroupProvenance = "no-donor-group";
 
+    /// <summary>
+    /// Maps a documented inventory disposition to the native source's status, and refuses
+    /// any disposition that does not establish one.
+    /// </summary>
+    /// <remarks>
+    /// The two dispositions that mean the bytes are not supplied map to absent. Everything
+    /// else is refused rather than read as supply: the documented next state after a source
+    /// gap is still a state without bytes, and a ledger that claimed supply from it would
+    /// let a resolved target pass the reader's gate with no source behind it.
+    /// </remarks>
+    public static string StatusFor(string documentedDisposition)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(documentedDisposition);
+        return documentedDisposition switch
+        {
+            "source-gap" or "pending-import" => AbsentStatus,
+            _ => throw new InvalidOperationException($"The documented disposition '{documentedDisposition}' does not establish whether the native item template bytes are supplied, so this ledger will not claim either state from it."),
+        };
+    }
+
+    /// <summary>The status a target has while the native bytes are not supplied.</summary>
+    public const string AbsentStatus = "absent";
+
     /// <summary>Builds the ledger section from a donor baseline.</summary>
     /// <param name="baseline">The donor baseline read from the donor's own sources.</param>
     /// <param name="targetRecordId">The documented inventory record for the native source.</param>

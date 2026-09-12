@@ -1,4 +1,5 @@
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Publication;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -285,6 +286,20 @@ public sealed class ItemTemplateLedgerTests
             "fixture"));
 
         Assert.Contains("not closed", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_a_documented_disposition_that_does_not_establish_supply()
+    {
+        // The documented state after a source gap is still a state without bytes, so it
+        // maps to absent; anything else is refused rather than read as supply, because a
+        // ledger claiming supply would let a resolved target pass with no source behind it.
+        Assert.Equal("absent", ItemTemplateLedgerBuilder.StatusFor("source-gap"));
+        Assert.Equal("absent", ItemTemplateLedgerBuilder.StatusFor("pending-import"));
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => ItemTemplateLedgerBuilder.StatusFor("imported"));
+
+        Assert.Contains("does not establish", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
