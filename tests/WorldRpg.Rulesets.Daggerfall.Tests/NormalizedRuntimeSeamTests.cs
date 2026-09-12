@@ -1577,6 +1577,38 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void The_ruleset_restore_seam_accepts_a_captured_save_and_its_immediate_resave()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        DaggerfallRuleset ruleset = new();
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
+        RulesetSavePayload captured;
+        using (DaggerfallSession original = new(source.Context, composition, definitions, inputs, DaggerfallTuning.Defaults))
+            captured = original.CaptureSave();
+
+        // The production restore entry point validates before it owns Engine resources.
+        IGameSession restoredSession = ruleset.CreateSession(new GameSessionContext(source.Context, GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition()), captured);
+        using (restoredSession)
+        {
+            RulesetSavePayload resaved = ((ISaveableGameSession)restoredSession).CaptureSave();
+            // A resumed session's own save is still restorable through the same seam.
+            using IGameSession second = ruleset.CreateSession(new GameSessionContext(source.Context, GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition()), resaved);
+            DaggerfallSavePayload first = DaggerfallSavePayload.Decode(captured);
+            DaggerfallSavePayload after = DaggerfallSavePayload.Decode(((ISaveableGameSession)second).CaptureSave());
+            Assert.Equal(first.Identities.Kinds.Length, after.Identities.Kinds.Length);
+            foreach (DaggerfallUniqueSave item in first.Inventory.UniqueItems)
+                Assert.Contains(item.EntityId, after.ReservedUniqueItemEntityIds);
+        }
+    }
+
+    [Fact]
     public void A_session_refuses_to_tombstone_authored_content_and_accepts_a_generated_identity()
     {
         string root = RepositoryRoot();
