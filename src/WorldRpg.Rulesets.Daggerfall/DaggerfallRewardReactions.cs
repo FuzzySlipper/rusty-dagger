@@ -6,6 +6,7 @@ using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Progression;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
 namespace WorldRpg.Rulesets.Daggerfall;
@@ -177,36 +178,41 @@ internal static class LootRandomKey
     internal static string For(ulong generation, ulong update, long actor, string roll) => $"generation:{generation}:step:{update}:loot:{actor}:{roll}";
 }
 
-/// <summary>Session-owned monotonic allocator for generated unique loot entities.</summary>
-internal sealed class DaggerfallUniqueItemAllocator(ulong firstEntityId, IEnumerable<ulong>? reserved = null)
+/// <summary>
+/// Daggerfall's durable identity for generated unique loot. Allocation,
+/// reservations, and tombstones are Kit mechanism; this type only names the
+/// Daggerfall-owned entity id that the Engine handle is derived from.
+/// </summary>
+internal sealed class DaggerfallUniqueItemAllocator
 {
     internal const ulong DefaultFirstEntityId = 1_000_000_000_000UL;
-    private ulong _next = firstEntityId;
-    private readonly HashSet<ulong> _reserved = (reserved ?? []).ToHashSet();
+    private static readonly DurableIdentityKind LootKind = DurableIdentityKind.Item;
+    private readonly DurableIdentityAllocator _identities;
 
-    internal ulong NextEntityId => _next;
-    internal IReadOnlyCollection<ulong> ReservedEntityIds => _reserved;
+    internal DaggerfallUniqueItemAllocator(
+        ulong firstEntityId,
+        IEnumerable<ulong>? reserved = null,
+        IEnumerable<ulong>? removed = null) =>
+        _identities = new DurableIdentityAllocator(LootKind, firstEntityId, reserved, removed);
 
-    internal static DaggerfallUniqueItemAllocator Restore(ulong nextEntityId, IEnumerable<ulong> reserved)
+    private DaggerfallUniqueItemAllocator(DurableIdentityAllocator identities) => _identities = identities;
+
+    internal ulong NextEntityId => _identities.NextIdentity(LootKind);
+
+    internal IReadOnlyCollection<ulong> ReservedEntityIds => _identities.ReservedIdentities(LootKind);
+
+    internal IReadOnlyCollection<ulong> RemovedEntityIds => _identities.RemovedIdentities(LootKind);
+
+    internal static DaggerfallUniqueItemAllocator Restore(ulong nextEntityId, IEnumerable<ulong> reserved, IEnumerable<ulong> removed)
     {
         ArgumentOutOfRangeException.ThrowIfZero(nextEntityId);
         ArgumentNullException.ThrowIfNull(reserved);
-        ulong[] values = reserved.ToArray();
-        if (values.Any(value => value == 0) || values.Distinct().Count() != values.Length)
-            throw new ArgumentException("Unique item reservations must be non-zero and distinct.", nameof(reserved));
-        return new DaggerfallUniqueItemAllocator(nextEntityId, values);
+        ArgumentNullException.ThrowIfNull(removed);
+        return new DaggerfallUniqueItemAllocator(new DurableIdentityAllocator(LootKind, nextEntityId, reserved, removed));
     }
 
-    internal ulong Allocate()
-    {
-        while (_reserved.Contains(_next))
-        {
-            if (_next == ulong.MaxValue) throw new InvalidOperationException("The Daggerfall loot entity range is exhausted.");
-            _next++;
-        }
-        if (_next == 0 || _next == ulong.MaxValue) throw new InvalidOperationException("The Daggerfall loot entity range is exhausted.");
-        ulong allocated = _next++;
-        _reserved.Add(allocated);
-        return allocated;
-    }
+    /// <summary>Captures this session's allocator evidence for the save payload.</summary>
+    internal DurableIdentityState CaptureState() => _identities.CaptureState();
+
+    internal ulong Allocate() => _identities.Allocate(LootKind).Value;
 }

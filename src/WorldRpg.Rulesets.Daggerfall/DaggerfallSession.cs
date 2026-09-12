@@ -15,6 +15,7 @@ using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.Progression;
+using WorldRpg.Kit.World;
 using KitEquipmentSlotId = WorldRpg.Kit.Inventory.EquipmentSlotId;
 using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 
@@ -167,8 +168,11 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 _random,
                 authored);
             _uniqueItems = saved is null
-                ? new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, InitialReservedEntityIds(inputs, playerDefinition.Loadout))
-                : DaggerfallUniqueItemAllocator.Restore(saved.NextUniqueItemEntityId, saved.ReservedUniqueItemEntityIds);
+                ? new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, DaggerfallSavePayload.ContentEntityIds(inputs, playerDefinition.Loadout))
+                : DaggerfallUniqueItemAllocator.Restore(
+                    saved.NextUniqueItemEntityId,
+                    saved.ReservedUniqueItemEntityIds,
+                    saved.RemovedUniqueItemEntityIds);
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
@@ -261,8 +265,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
             State.Progression.Level,
             inventorySave,
             corpses,
-            _uniqueItems.NextEntityId,
-            _uniqueItems.ReservedEntityIds.OrderBy(value => value).ToArray(),
+            _uniqueItems.CaptureState(),
             _combat.CaptureCooldowns(_latestUpdateGeneration, _latestSimulationStep)
                 .Select(value => new DaggerfallCombatCooldownSave(value.AttackerId, value.RemainingSteps)).ToArray(),
             continuation));
@@ -578,12 +581,11 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 throw new InvalidOperationException($"Initial Mechanics entity id '{entityId}' collides with another player, placement, or item entity.");
     }
 
-    private static IEnumerable<ulong> InitialReservedEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
+    private static IEnumerable<ulong> UniqueItemEntityIds(DaggerfallSavePayload saved)
     {
-        yield return PlayerMechanicsEntityId;
-        foreach (AuthoredActor actor in inputs.Project.Actors.Values) yield return checked((ulong)actor.EntityId);
-        foreach (DaggerfallLoadoutEntry item in loadout)
-            if (item.UniqueEntityId is ulong entityId) yield return entityId;
+        foreach (DaggerfallUniqueSave item in saved.Inventory.UniqueItems) yield return item.EntityId;
+        foreach (DaggerfallCorpseSave corpse in saved.Corpses)
+            foreach (DaggerfallUniqueSave item in corpse.UniqueItems) yield return item.EntityId;
     }
 }
 
