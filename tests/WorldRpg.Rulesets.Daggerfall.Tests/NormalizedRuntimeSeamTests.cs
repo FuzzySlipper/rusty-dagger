@@ -1850,7 +1850,7 @@ public sealed class NormalizedRuntimeSeamTests
         {
             Player = saved.Player with { Stamina = 100_000, Magicka = 100_000 },
             Actors = [.. saved.Actors.Select(actor => actor.EntityId == first.EntityId
-                ? actor with { Health = actorDefinition.Health.Maximum + 1_000 }
+                ? actor with { Health = actorDefinition.Health.Maximum + 1_000, Stamina = 5, Magicka = 7 }
                 : actor)],
         };
         DaggerfallSavePayload duplicated = saved with
@@ -1869,7 +1869,14 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Contains(tracks.Notices, value => value.Code == "player-magicka-above-maximum");
         Assert.Contains(tracks.Notices, value => value.Code == "actor-health-above-maximum");
         Assert.Equal(100_000, tracks.Payload.Player.Stamina);
-        Assert.Equal(actorDefinition.Health.Maximum + 1_000, tracks.Payload.Actors.Single(actor => actor.EntityId == first.EntityId).Health);
+        DaggerfallActorSave reported = tracks.Payload.Actors.Single(actor => actor.EntityId == first.EntityId);
+        Assert.Equal(actorDefinition.Health.Maximum + 1_000, reported.Health);
+        // An actor does not use stamina or magicka: the values are reported and cleared
+        // rather than refusing an otherwise restorable save.
+        SaveRestoreNotice unused = Assert.Single(tracks.Notices, value => value.Code == "actor-unused-tracks-cleared");
+        Assert.Contains("actor " + first.EntityId.ToString(CultureInfo.InvariantCulture), unused.Message, StringComparison.Ordinal);
+        Assert.Equal(0, reported.Stamina);
+        Assert.Equal(0, reported.Magicka);
 
         // Two items sharing one durable identity is internally inconsistent rather than
         // a content disagreement, so it is still refused.
