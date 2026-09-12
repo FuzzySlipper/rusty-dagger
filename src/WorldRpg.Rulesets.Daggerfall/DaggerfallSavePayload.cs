@@ -189,13 +189,30 @@ internal sealed record DaggerfallSavePayload(
             ValidateInventory(new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, live, $"corpse {corpse.ActorId}", requireEquipmentSlots: false);
         KindAllocatorState identityState = Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
         HashSet<ulong> removed = identityState.Removed.ToHashSet();
-        HashSet<ulong> contentIdentities = ContentEntityIds(inputs, definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
-        if (live.Overlaps(contentIdentities))
-            throw new ArgumentException("Saved unique items cannot collide with player, actor, corpse-owner, or authored loadout identities.");
-        if (removed.Overlaps(contentIdentities) || removed.Overlaps(live))
+        HashSet<ulong> placementIdentities = PlacementEntityIds(inputs);
+        // Authored loadout items are current unique identities by definition, so they
+        // are excluded here and checked by the issue evidence below instead.
+        if (live.Overlaps(placementIdentities))
+            throw new ArgumentException("Saved unique items cannot collide with player or actor placement identities.");
+        if (removed.Overlaps(placementIdentities) || removed.Overlaps(live))
             throw new ArgumentException("A removed identity cannot be authored content or a currently held unique item.");
-        if (!live.Concat(removed).All(identityState.Reserved.Contains))
-            throw new ArgumentException("Every static, current, and removed unique entity identity must be reserved by the allocator state.");
+        foreach (ulong value in live.Concat(removed))
+        {
+            // Every identity a save holds is either authored content the allocator
+            // reserved, or an identity this allocator issued. A value that is neither
+            // is a dangling reference the selected content cannot explain.
+            if (!identityState.Reserved.Contains(value) && value >= identityState.NextIdentity)
+                throw new ArgumentException($"Saved unique entity identity {value} is neither reserved content nor issued by the allocator.");
+        }
+    }
+
+    /// <summary>The player and every authored placement identity, which no dynamic allocation may collide with.</summary>
+    internal static HashSet<ulong> PlacementEntityIds(PrivateersHoldInputs inputs)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        HashSet<ulong> ids = [(ulong)DaggerfallActorIdentity.PlayerEntityId];
+        foreach (AuthoredActor actor in inputs.Project.Actors.Values) ids.Add(checked((ulong)actor.EntityId));
+        return ids;
     }
 
     /// <summary>
