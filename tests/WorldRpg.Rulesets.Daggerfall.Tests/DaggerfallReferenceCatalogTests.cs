@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using Rusty.Engine;
+using WorldRpg.Kit;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
 
@@ -53,6 +55,46 @@ public sealed class DaggerfallReferenceCatalogTests
         });
         Assert.All(definitions.Catalogs.Races, race => Assert.Equal("CNT-009", race.Source.SourceRecordId));
         Assert.All(definitions.Catalogs.Skills, key => Assert.Equal("CNT-010", key.Source.SourceRecordId));
+    }
+
+    [Fact]
+    public void The_composed_pack_path_reads_and_validates_the_catalogs()
+    {
+        // The clause is that a consumer receives normalized values through existing pack
+        // resolution, so this drives the real composition: the payload the bundle names
+        // is read and validated where the ruleset builds its definitions, and a payload
+        // whose catalogs do not hold together fails there rather than at first use.
+        ResolvedGameComposition composition = GameCompositionResolver
+            .Resolve(Content(null), new GameBundleId("daggerfall.privateers-hold"))
+            .RequireComposition();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(composition.RequireContentPack(new ContentPackId("daggerfall.base")).Payload);
+        Assert.Equal(19, definitions.Catalogs.Careers.Count);
+
+        ResolvedGameComposition broken = GameCompositionResolver
+            .Resolve(Content(root => root["catalogs"]!["careers"]!.AsArray()[0]!["primarySkills"]!.AsArray()[0] = "not-a-skill"), new GameBundleId("daggerfall.privateers-hold"))
+            .RequireComposition();
+        ReadOnlyMemory<byte> brokenPayload = broken.RequireContentPack(new ContentPackId("daggerfall.base")).Payload;
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => { DaggerfallBaseContent.Read(brokenPayload); });
+        Assert.Contains("not-a-skill", error.Message, StringComparison.Ordinal);
+    }
+
+    private static ProductContent Content(Action<JsonObject>? change)
+    {
+        string contentRoot = Path.Combine(RepositoryRoot(), "content");
+        ProductContentFile[] files = [.. Directory.GetFiles(Path.Combine(contentRoot, "worldrpg"), "*", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                byte[] bytes = File.ReadAllBytes(path);
+                if (path.EndsWith("daggerfall.base.json", StringComparison.Ordinal) && change is not null)
+                {
+                    JsonObject pack = JsonNode.Parse(bytes)!.AsObject();
+                    change(pack);
+                    bytes = System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString());
+                }
+
+                return new ProductContentFile(System.Text.Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')), bytes);
+            })];
+        return new ProductContent(files);
     }
 
     [Fact]
