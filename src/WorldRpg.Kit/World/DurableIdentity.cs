@@ -78,13 +78,23 @@ public readonly record struct KindAllocatorState(
 }
 
 /// <summary>Complete persisted identity state for every kind of durable world object.</summary>
-public sealed record DurableIdentityState(KindAllocatorState[] Kinds)
+public sealed record DurableIdentityState
 {
+    private readonly KindAllocatorState[] _kinds;
+
+    public DurableIdentityState(KindAllocatorState[] kinds)
+    {
+        ArgumentNullException.ThrowIfNull(kinds);
+        _kinds = kinds.ToArray();
+    }
+
+    /// <summary>A copy of the persisted per-kind evidence, so later reuse cannot rewrite it.</summary>
+    public KindAllocatorState[] Kinds => _kinds.ToArray();
+
     public DurableIdentityState Validate()
     {
-        ArgumentNullException.ThrowIfNull(Kinds);
         HashSet<DurableIdentityKind> kinds = [];
-        foreach (KindAllocatorState state in Kinds)
+        foreach (KindAllocatorState state in _kinds)
         {
             state.Validate();
             if (!kinds.Add(state.Kind))
@@ -162,9 +172,11 @@ public sealed class DurableIdentityAllocator
 
     public ulong NextIdentity(DurableIdentityKind kind) => Require(kind).NextIssued;
 
-    public IReadOnlyCollection<ulong> ReservedIdentities(DurableIdentityKind kind) => Require(kind).Reserved;
+    /// <summary>A copied view of the authored identities this allocator must never issue.</summary>
+    public IReadOnlyCollection<ulong> ReservedIdentities(DurableIdentityKind kind) => Array.AsReadOnly(Require(kind).Reserved.Order().ToArray());
 
-    public IReadOnlyCollection<ulong> RemovedIdentities(DurableIdentityKind kind) => Require(kind).Removed;
+    /// <summary>A copied view of the tombstones recorded for this kind.</summary>
+    public IReadOnlyCollection<ulong> RemovedIdentities(DurableIdentityKind kind) => Array.AsReadOnly(Require(kind).Removed.Order().ToArray());
 
     /// <summary>Issues the next unused identity and records it as live.</summary>
     public DurableIdentityReference Allocate(DurableIdentityKind kind) => new(kind, Require(kind).Allocate());
