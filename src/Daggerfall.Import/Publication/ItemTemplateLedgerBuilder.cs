@@ -51,6 +51,17 @@ public static class ItemTemplateLedgerBuilder
             throw new InvalidOperationException($"The donor's group enumerations name template indices outside the classic space: [{string.Join(", ", baseline.OutOfRangeIndices)}].");
         }
 
+        JsonArray rules = [];
+        foreach (ItemTemplateRule rule in baseline.Rules)
+        {
+            rules.Add(new JsonObject
+            {
+                ["id"] = rule.Id,
+                ["rule"] = rule.Rule,
+                ["evidence"] = rule.Evidence,
+            });
+        }
+
         JsonArray targets = [];
         foreach (ItemTemplateTarget target in baseline.Targets)
         {
@@ -60,10 +71,17 @@ public static class ItemTemplateLedgerBuilder
                 groups.Add(group);
             }
 
+            JsonArray referenceGroups = [];
+            foreach (string group in target.DonorReferenceGroups)
+            {
+                referenceGroups.Add(group);
+            }
+
             targets.Add(new JsonObject
             {
                 ["index"] = target.Index,
                 ["donorGroups"] = groups,
+                ["donorReferenceGroups"] = referenceGroups,
                 ["provenance"] = target.IsReferenced ? DonorBaselineProvenance : NoDonorGroupProvenance,
                 ["disposition"] = UnresolvedDisposition,
             });
@@ -81,15 +99,30 @@ public static class ItemTemplateLedgerBuilder
             ["baseline"] = new JsonObject
             {
                 ["rule"] = "DEC-11",
-                ["path"] = "donor:Assets/Scripts/Game/Items/ItemEnums.cs + ItemHelper.GetEnumArray",
-                ["attribution"] = "Group attribution is the donor's own mapping from its item groups to its enumerations; it establishes which indices a group names, not what any template contains.",
+                ["citation"] = "donor-code",
+                ["donorSource"] = "donor:Assets/Scripts/Game/Items/ItemEnums.cs + ItemHelper.GetEnumArray",
+                ["attribution"] = "Group attribution is the donor's own mapping from its item groups to its enumerations; it establishes which indices a group names, not what any template contains. This baseline cites donor code rather than a supplied source, which is why it carries no inventory record: the inventory documents the native file the target names, not the donor code standing in for it.",
+                ["rules"] = rules,
+            },
+            ["substitute"] = new JsonObject
+            {
+                ["status"] = "available",
+                ["path"] = "donor:Assets/Resources/ItemTemplates.txt (and MagicItemTemplates.txt beside it)",
+                ["provenance"] = "The donor loads this table at runtime and states it was exported from FALL.EXE. It is a substitute for the byte source, not the byte source.",
+                ["recordId"] = string.Empty,
+                ["caveat"] = "No byte fidelity against FALL.EXE can be checked here: the executable is in neither checkout. Decoding from the substitute is the receiving task's work and is not claimed by this ledger.",
             },
             ["publishedItems"] = new JsonObject
             {
                 ["count"] = publishedItemCount,
                 ["valueProvenance"] = "catalog-migration",
+                ["restsOn"] = new JsonArray
+                {
+                    "donor:Assets/Resources/ItemTemplates.txt (basePrice, weight and handedness agree with it)",
+                    "donor:FormulaHelper.CalculateWeaponMin/MaxDamage (weapon damage ranges agree with it)",
+                },
                 ["nativeDecoding"] = false,
-                ["note"] = "Published item values were carried over by the catalog migration. They are not decoded native template facts, and no native index is claimed for them.",
+                ["note"] = "Published item values were carried over by the catalog migration and agree with the donor's exported table and its weapon damage rules. This task decoded nothing: no native index is claimed for them and the agreement is a provenance record, not a re-derivation.",
             },
             ["summary"] = new JsonObject
             {

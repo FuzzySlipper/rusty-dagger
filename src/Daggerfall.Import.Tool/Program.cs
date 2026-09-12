@@ -65,7 +65,7 @@ internal static class Program
                     throw new InvalidOperationException("The import command is not known.");
             }
         }
-        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or FormatException)
+        catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or IOException or UnauthorizedAccessException or FormatException or System.Text.Json.JsonException)
         {
             Console.Error.WriteLine($"daggerfall-import-tool: {exception.Message}");
             return 1;
@@ -76,28 +76,39 @@ internal static class Program
     /// Builds the item-template ledger from the donor's own group enumerations and either
     /// reports the drift against the pack's ledger or publishes the rebuilt section.
     /// </summary>
+    private const string ItemTemplateFamily = "CNT-011";
+
     private static int RunItemTemplateLedgerCommand(IReadOnlyList<string> args)
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
-        if (args.Count != (update ? 6 : 5) || args[1] != "--donor" || args[3] != "--pack")
+        if (args.Count != (update ? 8 : 7) || args[1] != "--donor" || args[3] != "--inventory" || args[5] != "--pack")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool item-template-ledger --donor ITEMS_DIR --pack PACK.json [--update]");
+            throw new ArgumentException("usage: daggerfall-import-tool item-template-ledger --donor ITEMS_DIR --inventory INVENTORY.csv --pack PACK.json [--update]");
         }
 
         string donor = args[2];
-        string packFile = args[4];
+        string packFile = args[6];
+        // The target's provenance comes from the documented inventory rather than from a
+        // literal here, so a manifest-row change flows into the ledger instead of leaving
+        // it silently stale.
+        SourceInventoryRow family = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(args[4]))
+            .FirstOrDefault(row => row.RowType == "family" && StringComparer.Ordinal.Equals(row.Id, ItemTemplateFamily))
+            ?? throw new InvalidOperationException($"The documented inventory does not carry family '{ItemTemplateFamily}'.");
+        string targetStatus = string.Equals(family.Disposition, "source-gap", StringComparison.Ordinal) ? "absent" : "present";
         ItemTemplateBaseline baseline = ItemTemplateBaseline.FromDonorSources(
             File.ReadAllText(Path.Combine(donor, "ItemEnums.cs")),
             File.ReadAllText(Path.Combine(donor, "ItemHelper.cs")),
+            File.ReadAllText(Path.Combine(donor, "..", "..", "API", "ItemsFile.cs")),
             "donor");
         JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
         int publishedItems = pack["items"]?.AsArray().Count ?? 0;
         JsonObject ledger = ItemTemplateLedgerBuilder.Build(
             baseline,
-            "CNT-011",
-            "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs",
-            "absent",
+            family.Id,
+            family.PathOrPattern,
+            targetStatus,
             publishedItems);
+        Console.WriteLine($"target: {family.Id} | {family.PathOrPattern} | documented '{family.Disposition}' -> status '{targetStatus}'");
         Console.WriteLine($"item template ledger: {baseline.Targets.Count} targets, {baseline.Targets.Count(target => target.IsReferenced)} referenced by donor groups, {baseline.Unreferenced.Count()} referenced by none, {baseline.OutOfRangeIndices.Count} outside the classic space");
         Console.WriteLine($"unreferenced indices: [{string.Join(", ", baseline.Unreferenced.Select(target => target.Index))}]");
         Console.WriteLine($"published items: {publishedItems}, value provenance 'catalog-migration', native decoding false");

@@ -124,6 +124,25 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal(definitions.Items.Count, definitions.ItemTemplates.PublishedItemCount);
         Assert.Equal(279, definitions.ItemTemplates.Targets.Count(target => target.DonorGroups.Count != 0));
         Assert.Equal([99, 100, 101, 246, 250, 251, 266, 272, 273], definitions.ItemTemplates.Targets.Where(target => target.DonorGroups.Count == 0).Select(target => target.Index));
+        // A group the donor maps to a different id space is published apart from the
+        // template groups: the artifact ids share the range but index MAGIC.DEF.
+        Assert.Contains("Artifacts", definitions.ItemTemplates.Targets[0].DonorReferenceGroups);
+        Assert.DoesNotContain("Artifacts", definitions.ItemTemplates.Targets[0].DonorGroups);
+        Assert.Equal("available", definitions.ItemTemplates.SubstituteStatus);
+        Assert.Contains("ItemTemplates.txt", definitions.ItemTemplates.SubstitutePath, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("\"id\": \"implicit-values\"", "\"id\": \"\"")]
+    [InlineData("\"evidence\": \"donor:ItemEnums.cs declares None = -1 in ItemGroups and ArtifactsSubTypes.\"", "\"evidence\": \"\"")]
+    [InlineData("\"status\": \"available\"", "\"status\": \"unclear\"")]
+    public void RejectsABaselineRuleOrSubstituteThatDoesNotSayWhatItRestsOn(string before, string after)
+    {
+        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string tampered = payload.Replace(before, after, StringComparison.Ordinal);
+        Assert.NotEqual(payload, tampered);
+
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
     }
 
     [Theory]
@@ -140,6 +159,52 @@ public sealed class DaggerfallCatalogContentTests
         string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
         string tampered = payload.Replace(before, after, StringComparison.Ordinal);
         Assert.NotEqual(payload, tampered);
+
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
+    }
+
+    [Theory]
+    [InlineData("\"status\": \"absent\"", "\"status\": \"Absent\"")]
+    [InlineData("\"disposition\": \"unresolved\"", "\"disposition\": \"banana\"")]
+    [InlineData("\"nativeDecoding\": false", "\"nativeDecoding\": \"false\"")]
+    [InlineData("\"donorGroups\": [", "\"donorGroups\": [123, ")]
+    public void RejectsALedgerThatLeavesItsVocabulary(string before, string after)
+    {
+        // A near miss must not pass as a state: 'Absent' is not the absent status, 'banana'
+        // is not a disposition, and a string is not a boolean. Each would otherwise be read
+        // as something it does not say.
+        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string tampered = payload.Replace(before, after, StringComparison.Ordinal);
+        Assert.NotEqual(payload, tampered);
+
+        Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
+    }
+
+    [Fact]
+    public void AcceptsTheFullDispositionVocabularyOnceTheSourceIsPresent()
+    {
+        // The vocabulary is closed rather than collapsed to one value: a supplied source is
+        // what lets a target be malformed or decoded, and the ledger must be able to say so.
+        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string tampered = payload
+            .Replace("\"status\": \"absent\"", "\"status\": \"present\"", StringComparison.Ordinal)
+            .Replace("\"disposition\": \"unresolved\"", "\"disposition\": \"malformed\"", StringComparison.Ordinal);
+
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered));
+
+        Assert.All(definitions.ItemTemplates.Targets, target => Assert.Equal("malformed", target.Disposition));
+    }
+
+    [Fact]
+    public void RejectsAResolvedTargetWithNeitherTheByteSourceNorASubstitute()
+    {
+        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        // Decoding needs the byte source or a marked substitute behind it. With the
+        // substitute withdrawn and a target resolved, the ledger claims a fact with nothing
+        // behind it — which is the one thing this task must never publish.
+        string tampered = payload
+            .Replace("\"status\": \"available\"", "\"status\": \"missing\"", StringComparison.Ordinal)
+            .Replace("\"disposition\": \"unresolved\"", "\"disposition\": \"decoded\"", StringComparison.Ordinal);
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
     }

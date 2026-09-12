@@ -9,6 +9,7 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 internal sealed record DaggerfallItemTemplateTarget(
     int Index,
     IReadOnlyList<string> DonorGroups,
+    IReadOnlyList<string> DonorReferenceGroups,
     string Provenance,
     string Disposition);
 
@@ -24,6 +25,8 @@ internal sealed record DaggerfallItemTemplateLedger(
     string SourceReason,
     string BaselineRule,
     string BaselinePath,
+    string SubstituteStatus,
+    string SubstitutePath,
     int PublishedItemCount,
     string PublishedValueProvenance,
     bool PublishedNativeDecoding,
@@ -38,6 +41,12 @@ internal sealed record DaggerfallItemTemplateLedger(
 
     /// <summary>The status a native source has while it is not supplied.</summary>
     public const string AbsentStatus = "absent";
+
+    /// <summary>The status a native source has when it is supplied.</summary>
+    public const string PresentStatus = "present";
+
+    /// <summary>The disposition vocabulary a target may carry.</summary>
+    public static readonly string[] Dispositions = [UnresolvedDisposition, "decoded", "malformed", "unsupported"];
 
     /// <summary>The disposition every target carries while no native fact is decoded.</summary>
     public const string UnresolvedDisposition = "unresolved";
