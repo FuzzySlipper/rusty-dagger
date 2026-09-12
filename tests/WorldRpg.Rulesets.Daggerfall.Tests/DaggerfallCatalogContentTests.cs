@@ -201,10 +201,15 @@ public sealed class DaggerfallCatalogContentTests
         // The ledger's provenance is validated the way every catalog citation is, so the
         // pack cannot carry a source reference one half knows and the other does not.
         string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
-        string tampered = payload.Replace(
-            "\"recordId\": \"CNT-011\"",
-            "\"recordId\": \"CNT-999\"",
-            StringComparison.Ordinal);
+        // The ledger's own target block, not the citation string: 'recordId: CNT-011'
+        // appears in every catalog item reference too, so a bare replacement would be
+        // caught by the catalog gate and this test would pass with the ledger gate gone.
+        const string ledgerTarget = """
+            "target": {
+                  "recordId": "CNT-011",
+            """;
+        string tampered = payload.Replace(ledgerTarget, ledgerTarget.Replace("CNT-011", "CNT-999", StringComparison.Ordinal), StringComparison.Ordinal);
+        Assert.NotEqual(payload, tampered);
 
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
     }
