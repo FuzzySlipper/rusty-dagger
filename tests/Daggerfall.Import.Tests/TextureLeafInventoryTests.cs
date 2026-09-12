@@ -122,7 +122,9 @@ public sealed class TextureLeafInventoryTests
 
         byte[] flat = DeterministicPngEncoder.EncodeRgba8(frame.Width, frame.Height, rgba);
         Assert.NotEqual(real, flat);
-        Assert.True(real.Distinct().Count() > 1);
+        // The indices the frame actually uses, not the encoded bytes: a PNG always opens
+        // with its signature, so counting distinct output bytes proves nothing.
+        Assert.True(frame.Pixels.ToArray().Distinct().Count() > 1);
 
         // And a frame's indices are its own: the same bytes under a different leaf label
         // used to select a different palette, so the id decides the palette now.
@@ -161,6 +163,19 @@ public sealed class TextureLeafInventoryTests
         Assert.Equal(472, documented.Count);
         Assert.DoesNotContain(supplied, path => !documented.Contains(path));
         Assert.DoesNotContain(documented, path => !supplied.Contains(path, StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public void Refuses_a_supplied_leaf_without_a_path()
+    {
+        // A path is the identity every consumer reads, so a missing one fails here rather
+        // than becoming a record that throws later.
+        ArgumentException error = Assert.Throws<ArgumentException>(() => TextureLeafInventory.Enumerate(
+            [(2, null!, new byte[64])],
+            "fixture"));
+
+        Assert.Contains("without a path", error.Message, StringComparison.Ordinal);
+        Assert.Throws<ArgumentException>(() => TextureLeafInventory.Enumerate([(2, "  ", new byte[64])], "fixture"));
     }
 
     [Fact]
