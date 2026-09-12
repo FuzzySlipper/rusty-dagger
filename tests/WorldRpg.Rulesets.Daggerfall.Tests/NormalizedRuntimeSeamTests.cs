@@ -2102,6 +2102,28 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_new_game_with_a_registered_owner_reports_nothing_about_sections()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        RecordingSaveOwner owner = new("quests");
+
+        // A new game has no save for an owner's section to be absent from, so it reports
+        // nothing and simply starts the owner from its default state.
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults, [owner]);
+
+        Assert.Empty(session.RestoreNotices);
+        Assert.False(owner.Restored);
+        Assert.Single(DaggerfallSavePayload.Read(session.CaptureSave()).Payload.Owners);
+    }
+
+    [Fact]
     public void A_registered_owner_restores_its_own_section_and_writes_it_back()
     {
         string root = RepositoryRoot();

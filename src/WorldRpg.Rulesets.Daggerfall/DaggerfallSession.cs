@@ -135,10 +135,13 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
         // The mirror case: an owner this build has, restoring a save that carries no
         // section for it. It continues from fresh state, which is a difference worth
-        // reporting for the same reason an unread section is.
-        foreach (IDaggerfallSaveOwner owner in _saveOwners.OrderBy(value => value.OwnerId, StringComparer.Ordinal))
+        // reporting for the same reason an unread section is. A new game has no save to
+        // be missing anything from, so this is reported only when restoring one.
+        foreach (IDaggerfallSaveOwner owner in saved is null
+            ? Enumerable.Empty<IDaggerfallSaveOwner>()
+            : _saveOwners.OrderBy(value => value.OwnerId, StringComparer.Ordinal))
         {
-            if ((saved?.Owners ?? []).Any(section => StringComparer.Ordinal.Equals(section.OwnerId, owner.OwnerId)))
+            if ((saved!.Owners ?? []).Any(section => StringComparer.Ordinal.Equals(section.OwnerId, owner.OwnerId)))
             {
                 continue;
             }
