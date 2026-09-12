@@ -2318,6 +2318,50 @@ public sealed class NormalizedRuntimeSeamTests
     private static PrivateersHoldAppearance.ViewmodelVisual Viewmodel(PrivateersHoldAppearance presentation) => Assert.IsType<PrivateersHoldAppearance.ViewmodelVisual>(typeof(PrivateersHoldAppearance).GetField("viewmodel", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(presentation));
 
     [Fact]
+    public void An_impact_whose_target_was_defeated_after_the_decision_produces_no_hit_or_miss_fact()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId,
+            placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallMeleeTargetingModule targeting = new(perception.Service, targetingSpatial, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
+        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, definitions, authored, targeting);
+        FactBuffer<IProductFact> facts = new();
+
+        // The enemy decides a swing against the living player.
+        Assert.True(combat.TryBeginEnemyAttack(2000, DaggerfallActorIdentity.PlayerEntityId, 77, 400, .125, facts));
+        List<IProductFact> decided = [];
+        facts.Deliver(decided.Add);
+        Assert.Contains(decided, fact => fact is EnemyAttackStartedFact);
+
+        // The player is defeated before the damage frame is reached.
+        session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
+        combat.ApplyImpacts([new AttackImpactNotice(2000, DaggerfallActorIdentity.PlayerEntityId, 77, 400, Expired: false)], 77, facts);
+        List<IProductFact> impacts = [];
+        facts.Deliver(impacts.Add);
+
+        // A defeated target is dropped, not struck for zero: the clamp would otherwise
+        // still publish a hit fact for an impact that changed nothing.
+        Assert.DoesNotContain(impacts, fact => fact is AttackHitFact or AttackMissedFact);
+        Assert.Equal(0, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+
+        // The swing is consumed rather than left blocking its attacker forever.
+        session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(100), ExactTrackSetPolicy.ClampToBounds);
+        Assert.True(combat.TryBeginEnemyAttack(2000, DaggerfallActorIdentity.PlayerEntityId, 78, 1, .125, facts));
+    }
+
+    [Fact]
     public void The_immediate_resolver_refuses_an_enemy_swing()
     {
         List<string> releases = [];
@@ -2440,7 +2484,7 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void A_multi_step_update_decides_one_enemy_swing_without_damaging_inside_it()
+    public void A_multi_step_update_does_not_damage_inside_the_deciding_update()
     {
         List<string> releases = [];
         (DaggerfallSession session, _, _) = VisibleEnemySession(releases);
