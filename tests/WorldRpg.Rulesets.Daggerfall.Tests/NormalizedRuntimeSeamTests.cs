@@ -1592,6 +1592,40 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_resumed_session_carries_a_tombstone_forward_without_reissuing_it()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload session = CapturedSave(root);
+        ulong retired = DaggerfallUniqueItemAllocator.DefaultFirstEntityId + 5_000_000;
+        KindAllocatorState identity = session.Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
+        DaggerfallSavePayload saved = session with
+        {
+            Identities = new DurableIdentityState([
+                new KindAllocatorState(DurableIdentityKind.Item, retired + 1, identity.Reserved, [retired]),
+            ]),
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession resumed = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+
+        DaggerfallUniqueItemAllocator ledger = resumed.UniqueItemAllocator;
+
+        Assert.Contains(retired, ledger.RemovedEntityIds);
+        Assert.DoesNotContain(retired, ledger.ReservedEntityIds);
+        Assert.Equal(retired + 1, ledger.NextEntityId);
+        // Re-saving keeps the tombstone, and the next generated identity cannot reuse it.
+        DaggerfallSavePayload recaptured = DaggerfallSavePayload.Decode(resumed.CaptureSave());
+        Assert.Contains(retired, recaptured.Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item).Removed);
+        Assert.True(retired < recaptured.NextUniqueItemEntityId);
+    }
+
+    [Fact]
     public void Daggerfall_save_from_an_older_schema_is_rejected_instead_of_misread()
     {
         string root = RepositoryRoot();

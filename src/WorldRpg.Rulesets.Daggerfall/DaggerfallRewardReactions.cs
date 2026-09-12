@@ -203,12 +203,11 @@ internal sealed class DaggerfallUniqueItemAllocator
 
     internal IReadOnlyCollection<ulong> RemovedEntityIds => _identities.RemovedIdentities(LootKind);
 
-    internal static DaggerfallUniqueItemAllocator Restore(ulong nextEntityId, IEnumerable<ulong> reserved, IEnumerable<ulong> removed)
+    /// <summary>Recreates the session ledger from the identity state a save implies.</summary>
+    internal static DaggerfallUniqueItemAllocator Restore(DurableIdentityState state)
     {
-        ArgumentOutOfRangeException.ThrowIfZero(nextEntityId);
-        ArgumentNullException.ThrowIfNull(reserved);
-        ArgumentNullException.ThrowIfNull(removed);
-        return new DaggerfallUniqueItemAllocator(new DurableIdentityAllocator(LootKind, nextEntityId, reserved, removed));
+        ArgumentNullException.ThrowIfNull(state);
+        return new DaggerfallUniqueItemAllocator(DurableIdentityAllocator.Restore(state));
     }
 
     /// <summary>Captures this session's allocator evidence for the save payload.</summary>
