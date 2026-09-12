@@ -36,11 +36,12 @@ internal static class DaggerfallBaseContent
             List<DaggerfallHudResourceDefinition> hud = ReadHud(root, diagnostics);
             IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools = ReadLootCategoryPools(root, diagnostics);
             IReadOnlyList<DaggerfallDonorErratum> donorErrata = ReadDonorErrata(root, diagnostics);
+            DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, items.Count, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, actors, items, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates);
         }
         catch (JsonException exception)
         {
@@ -178,6 +179,120 @@ internal static class DaggerfallBaseContent
         int minimum = Integer(value, "minimum", diagnostics), maximum = Integer(value, "maximum", diagnostics);
         if (minimum < 0 || maximum < minimum || maximum > 1_000_000) diagnostics.Add($"{name} range [{minimum}, {maximum}] is invalid.");
         return new(minimum, maximum);
+    }
+
+    /// <summary>
+    /// Reads the item-template ledger and requires that every one of the 288 classic targets
+    /// carries a provenance and a disposition, that the summary agrees with the entries, and
+    /// that no target claims a native fact while the native source is absent.
+    /// </summary>
+    private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, int publishedItems, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("itemTemplateLedger", out JsonElement value) || value.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload must carry an itemTemplateLedger section: every native item template target needs a provenance and a disposition before any catalog publication claims one.");
+            return new DaggerfallItemTemplateLedger(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, 0, string.Empty, false, 0, 0, 0, 0, []);
+        }
+
+        JsonElement ledger = Object(value, "itemTemplateLedger", diagnostics);
+        JsonElement target = Object(Property(ledger, "target", diagnostics), "itemTemplateLedger.target", diagnostics);
+        JsonElement baseline = Object(Property(ledger, "baseline", diagnostics), "itemTemplateLedger.baseline", diagnostics);
+        JsonElement published = Object(Property(ledger, "publishedItems", diagnostics), "itemTemplateLedger.publishedItems", diagnostics);
+        JsonElement summary = Object(Property(ledger, "summary", diagnostics), "itemTemplateLedger.summary", diagnostics);
+        string status = Text(target, "status", diagnostics);
+        bool nativeDecoding = published.TryGetProperty("nativeDecoding", out JsonElement nativeDecodingValue) && nativeDecodingValue.ValueKind == JsonValueKind.True;
+
+        List<DaggerfallItemTemplateTarget> targets = [];
+        HashSet<int> indices = [];
+        int referenced = 0;
+        foreach (JsonElement entry in Array(ledger, "targets", diagnostics))
+        {
+            JsonElement item = Object(entry, "itemTemplateLedger.targets[]", diagnostics);
+            int index = Integer(item, "index", diagnostics);
+            string provenance = Text(item, "provenance", diagnostics);
+            string disposition = Text(item, "disposition", diagnostics);
+            string[] groups = [.. Array(item, "donorGroups", diagnostics).Select(group => group.ValueKind == JsonValueKind.String ? group.GetString() ?? string.Empty : string.Empty)];
+            if (index < 0 || index >= DaggerfallItemTemplateLedger.TargetCount)
+            {
+                diagnostics.Add($"Item template target index {index} is outside the classic 0..{DaggerfallItemTemplateLedger.TargetCount - 1} space.");
+            }
+            else if (!indices.Add(index))
+            {
+                diagnostics.Add($"Item template target index {index} is declared more than once.");
+            }
+
+            if (string.IsNullOrWhiteSpace(provenance))
+            {
+                diagnostics.Add($"Item template target {index} has no provenance.");
+            }
+
+            if (string.IsNullOrWhiteSpace(disposition))
+            {
+                diagnostics.Add($"Item template target {index} has no disposition.");
+            }
+
+            if (groups.Length != 0)
+            {
+                referenced++;
+            }
+
+            // A target can only be resolved by reading the native source: an absent source
+            // and a resolved target cannot both be true.
+            if (string.Equals(status, DaggerfallItemTemplateLedger.AbsentStatus, StringComparison.Ordinal)
+                && !string.Equals(disposition, DaggerfallItemTemplateLedger.UnresolvedDisposition, StringComparison.Ordinal))
+            {
+                diagnostics.Add($"Item template target {index} is '{disposition}' while the native item template source is '{status}'.");
+            }
+
+            targets.Add(new DaggerfallItemTemplateTarget(index, groups, provenance, disposition));
+        }
+
+        int unreferenced = targets.Count - referenced;
+        Require(summary, ledger, "targets", targets.Count, diagnostics);
+        Require(summary, ledger, "referencedByDonorGroups", referenced, diagnostics);
+        Require(summary, ledger, "unreferencedByAnyGroup", unreferenced, diagnostics);
+        Require(summary, ledger, "nativeTemplatesDecoded", nativeDecoding ? targets.Count(target => target.Disposition != DaggerfallItemTemplateLedger.UnresolvedDisposition) : 0, diagnostics);
+        if (!ReferenceEquals(indices, null) && indices.Count != DaggerfallItemTemplateLedger.TargetCount)
+        {
+            diagnostics.Add($"The item template ledger declares {indices.Count} distinct target indices where the classic space has {DaggerfallItemTemplateLedger.TargetCount}.");
+        }
+
+        int declaredPublished = Integer(published, "count", diagnostics);
+        if (declaredPublished != publishedItems)
+        {
+            diagnostics.Add($"The item template ledger records {declaredPublished} published items where the payload defines {publishedItems}.");
+        }
+
+        if (string.Equals(status, DaggerfallItemTemplateLedger.AbsentStatus, StringComparison.Ordinal) && nativeDecoding)
+        {
+            diagnostics.Add($"The item template ledger claims native decoding while its source status is '{status}'.");
+        }
+
+        return new DaggerfallItemTemplateLedger(
+            Text(target, "recordId", diagnostics),
+            Text(target, "path", diagnostics),
+            status,
+            Text(target, "reason", diagnostics),
+            Text(baseline, "rule", diagnostics),
+            Text(baseline, "path", diagnostics),
+            declaredPublished,
+            Text(published, "valueProvenance", diagnostics),
+            nativeDecoding,
+            Integer(summary, "targets", diagnostics),
+            Integer(summary, "referencedByDonorGroups", diagnostics),
+            Integer(summary, "unreferencedByAnyGroup", diagnostics),
+            Integer(summary, "nativeTemplatesDecoded", diagnostics),
+            targets);
+    }
+
+    /// <summary>Requires a declared summary count to match what the entries actually say.</summary>
+    private static void Require(JsonElement summary, JsonElement ledger, string name, int observed, DaggerfallContentDiagnostics diagnostics)
+    {
+        int declared = Integer(summary, name, diagnostics);
+        if (declared != observed)
+        {
+            diagnostics.Add($"The item template ledger summary declares {name} {declared} where its entries say {observed}.");
+        }
     }
 
     private static Dictionary<DaggerfallItemId, DaggerfallItemDefinition> ReadItems(JsonElement root, DaggerfallContentDiagnostics diagnostics)

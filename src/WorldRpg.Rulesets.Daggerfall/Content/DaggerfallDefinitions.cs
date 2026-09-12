@@ -91,7 +91,7 @@ internal sealed record DaggerfallVocabulary(IReadOnlyList<DaggerfallStatId> Attr
 }
 
 /// <summary>Immutable typed definitions loaded from the ordered daggerfall.base payload.</summary>
-internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValuesByMaterial, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources, IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools, IReadOnlyList<DaggerfallDonorErratum> donorErrata)
+internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValuesByMaterial, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources, IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools, IReadOnlyList<DaggerfallDonorErratum> donorErrata, DaggerfallItemTemplateLedger itemTemplates)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -106,5 +106,11 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal IReadOnlyList<DaggerfallHudResourceDefinition> HudResources { get; } = Array.AsReadOnly(hudResources.ToArray());
     internal IReadOnlyList<DaggerfallDeferredLootCategoryPool> LootCategoryPools { get; } = Array.AsReadOnly(lootCategoryPools.ToArray());
     internal IReadOnlyList<DaggerfallDonorErratum> DonorErrata { get; } = Array.AsReadOnly(donorErrata.ToArray());
+
+    /// <summary>
+    /// The native item template ledger: which targets exist, what each rests on, and which
+    /// are unresolved because the native source is not supplied.
+    /// </summary>
+    internal DaggerfallItemTemplateLedger ItemTemplates { get; } = itemTemplates;
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 }

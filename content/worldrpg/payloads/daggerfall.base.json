@@ -5256,5 +5256,2352 @@
       "CNT-010.file.CLASS18.CFG",
       "CNT-011"
     ]
+  },
+  "itemTemplateLedger": {
+    "target": {
+      "recordId": "CNT-011",
+      "path": "donor:FALL.EXE via Assets/Scripts/API/ItemsFile.cs",
+      "status": "absent",
+      "reason": "The native item template records live in this file, which the supplied source does not carry, so no native template field is decoded and no target is resolved."
+    },
+    "baseline": {
+      "rule": "DEC-11",
+      "path": "donor:Assets/Scripts/Game/Items/ItemEnums.cs \u002B ItemHelper.GetEnumArray",
+      "attribution": "Group attribution is the donor\u0027s own mapping from its item groups to its enumerations; it establishes which indices a group names, not what any template contains."
+    },
+    "publishedItems": {
+      "count": 31,
+      "valueProvenance": "catalog-migration",
+      "nativeDecoding": false,
+      "note": "Published item values were carried over by the catalog migration. They are not decoded native template facts, and no native index is claimed for them."
+    },
+    "summary": {
+      "targets": 288,
+      "referencedByDonorGroups": 279,
+      "unreferencedByAnyGroup": 9,
+      "nativeTemplatesDecoded": 0
+    },
+    "targets": [
+      {
+        "index": 0,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 1,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 2,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 3,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 4,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 5,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 6,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 7,
+        "donorGroups": [
+          "Artifacts",
+          "Gems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 8,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 9,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 10,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 11,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 12,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 13,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 14,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 15,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 16,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 17,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 18,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 19,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 20,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 21,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 22,
+        "donorGroups": [
+          "Artifacts",
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 23,
+        "donorGroups": [
+          "PlantIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 24,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 25,
+        "donorGroups": [
+          "PlantIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 26,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 27,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 28,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 29,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 30,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 31,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 32,
+        "donorGroups": [
+          "PlantIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 33,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 34,
+        "donorGroups": [
+          "CreatureIngredients3"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 35,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 36,
+        "donorGroups": [
+          "CreatureIngredients3"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 37,
+        "donorGroups": [
+          "CreatureIngredients3"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 38,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 39,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 40,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 41,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 42,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 43,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 44,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 45,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 46,
+        "donorGroups": [
+          "CreatureIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 47,
+        "donorGroups": [
+          "CreatureIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 48,
+        "donorGroups": [
+          "CreatureIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 49,
+        "donorGroups": [
+          "CreatureIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 50,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 51,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 52,
+        "donorGroups": [
+          "CreatureIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 53,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 54,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 55,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 56,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 57,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 58,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 59,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 60,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 61,
+        "donorGroups": [
+          "CreatureIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 62,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 63,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 64,
+        "donorGroups": [
+          "MiscellaneousIngredients1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 65,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 66,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 67,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 68,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 69,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 70,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 71,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 72,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 73,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 74,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 75,
+        "donorGroups": [
+          "MetalIngredients"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 76,
+        "donorGroups": [
+          "MiscellaneousIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 77,
+        "donorGroups": [
+          "MiscellaneousIngredients2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 78,
+        "donorGroups": [
+          "Drugs"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 79,
+        "donorGroups": [
+          "Drugs"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 80,
+        "donorGroups": [
+          "Drugs"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 81,
+        "donorGroups": [
+          "Drugs"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 82,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 83,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 84,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 85,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 86,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 87,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 88,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 89,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 90,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 91,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 92,
+        "donorGroups": [
+          "UselessItems1"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 93,
+        "donorGroups": [
+          "Transportation"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 94,
+        "donorGroups": [
+          "Transportation"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 95,
+        "donorGroups": [
+          "Transportation"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 96,
+        "donorGroups": [
+          "Transportation"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 97,
+        "donorGroups": [
+          "Transportation"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 98,
+        "donorGroups": [
+          "Transportation"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 99,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 100,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 101,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 102,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 103,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 104,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 105,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 106,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 107,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 108,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 109,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 110,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 111,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 112,
+        "donorGroups": [
+          "Armor"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 113,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 114,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 115,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 116,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 117,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 118,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 119,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 120,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 121,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 122,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 123,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 124,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 125,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 126,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 127,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 128,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 129,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 130,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 131,
+        "donorGroups": [
+          "Weapons"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 132,
+        "donorGroups": [
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 133,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 134,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 135,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 136,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 137,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 138,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 139,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 140,
+        "donorGroups": [
+          "Jewellery"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 141,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 142,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 143,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 144,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 145,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 146,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 147,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 148,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 149,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 150,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 151,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 152,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 153,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 154,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 155,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 156,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 157,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 158,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 159,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 160,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 161,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 162,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 163,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 164,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 165,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 166,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 167,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 168,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 169,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 170,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 171,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 172,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 173,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 174,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 175,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 176,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 177,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 178,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 179,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 180,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 181,
+        "donorGroups": [
+          "MensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 182,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 183,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 184,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 185,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 186,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 187,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 188,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 189,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 190,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 191,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 192,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 193,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 194,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 195,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 196,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 197,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 198,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 199,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 200,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 201,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 202,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 203,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 204,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 205,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 206,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 207,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 208,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 209,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 210,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 211,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 212,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 213,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 214,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 215,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 216,
+        "donorGroups": [
+          "WomensClothing"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 217,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 218,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 219,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 220,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 221,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 222,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 223,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 224,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 225,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 226,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 227,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 228,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 229,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 230,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 231,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 232,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 233,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 234,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 235,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 236,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 237,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 238,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 239,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 240,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 241,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 242,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 243,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 244,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 245,
+        "donorGroups": [
+          "Furniture"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 246,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 247,
+        "donorGroups": [
+          "UselessItems2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 248,
+        "donorGroups": [
+          "UselessItems2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 249,
+        "donorGroups": [
+          "UselessItems2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 250,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 251,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 252,
+        "donorGroups": [
+          "UselessItems2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 253,
+        "donorGroups": [
+          "UselessItems2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 254,
+        "donorGroups": [
+          "QuestItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 255,
+        "donorGroups": [
+          "QuestItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 256,
+        "donorGroups": [
+          "QuestItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 257,
+        "donorGroups": [
+          "QuestItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 258,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 259,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 260,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 261,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 262,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 263,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 264,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 265,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 266,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 267,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 268,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 269,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 270,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 271,
+        "donorGroups": [
+          "ReligiousItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 272,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 273,
+        "donorGroups": [],
+        "provenance": "no-donor-group",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 274,
+        "donorGroups": [
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 275,
+        "donorGroups": [
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 276,
+        "donorGroups": [
+          "Currency"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 277,
+        "donorGroups": [
+          "Books"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 278,
+        "donorGroups": [
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 279,
+        "donorGroups": [
+          "UselessItems2"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 280,
+        "donorGroups": [
+          "QuestItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 281,
+        "donorGroups": [
+          "QuestItems",
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 282,
+        "donorGroups": [
+          "QuestItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 283,
+        "donorGroups": [
+          "QuestItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 284,
+        "donorGroups": [
+          "Paintings"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 285,
+        "donorGroups": [
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 286,
+        "donorGroups": [
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      },
+      {
+        "index": 287,
+        "donorGroups": [
+          "Maps",
+          "MiscItems"
+        ],
+        "provenance": "donor-group-enumeration",
+        "disposition": "unresolved"
+      }
+    ]
   }
 }
