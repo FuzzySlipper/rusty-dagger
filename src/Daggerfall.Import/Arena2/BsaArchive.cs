@@ -117,6 +117,15 @@ public sealed class BsaArchive
             string name = entry.ReadNullTerminatedAscii(14);
             int signedLength = entry.ReadInt32();
             int length = CheckedLength(signedLength, source, entry.Position - sizeof(int), $"named BSA record {ordinal} length");
+            // A record that does not fit before the directory means the directory window
+            // itself is wrong, which is what a truncated archive looks like. Reporting the
+            // entry's own offset locates the defective directory rather than an offset that
+            // only arithmetic could reach.
+            if (length > directoryStart - payloadOffset)
+            {
+                throw new Arena2FormatException(source, entryOffset, $"named BSA record {ordinal} declares {length} bytes from {payloadOffset}, past the directory at {directoryStart}");
+            }
+
             records.Add(new BsaRecord(ordinal, name, null, payloadOffset, length));
             payloadOffset = CheckedEnd(payloadOffset, length, source, $"named BSA record {ordinal}");
         }
