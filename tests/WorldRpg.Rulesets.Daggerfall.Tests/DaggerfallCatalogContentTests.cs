@@ -1,6 +1,7 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 using System.Globalization;
+using WorldRpg.Kit.World;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -96,9 +97,9 @@ public sealed class DaggerfallCatalogContentTests
     public void SessionAllocatorIsMonotonicAndCollisionFreeAcrossRetries()
     {
         DaggerfallUniqueItemAllocator allocator = new(100);
-        Assert.Equal(100UL, allocator.Allocate());
-        Assert.Equal(101UL, allocator.Allocate());
-        Assert.Equal(102UL, allocator.Allocate());
+        Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 100), allocator.AllocateReference());
+        Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 101), allocator.AllocateReference());
+        Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 102), allocator.AllocateReference());
     }
 
     [Fact]

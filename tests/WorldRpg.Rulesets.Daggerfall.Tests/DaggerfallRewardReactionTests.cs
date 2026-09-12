@@ -9,6 +9,7 @@ using WorldRpg.Kit.Progression;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
+using WorldRpg.Kit.World;
 using Xunit;
 using EngineItemDefinition = Rusty.Engine.Mechanics.ItemDefinition;
 using EngineItemDefinitionId = Rusty.Engine.Mechanics.ItemDefinitionId;
@@ -23,8 +24,8 @@ public sealed class DaggerfallRewardReactionTests
     {
         DaggerfallUniqueItemAllocator allocator = new(1_000, [1_000, 1_001]);
 
-        Assert.Equal(1_002UL, allocator.Allocate());
-        Assert.Equal(1_003UL, allocator.Allocate());
+        Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 1_002), allocator.AllocateReference());
+        Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 1_003), allocator.AllocateReference());
     }
 
     [Fact]

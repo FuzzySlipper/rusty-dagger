@@ -108,33 +108,12 @@ internal sealed record DaggerfallSavePayload(
     }
 
     /// <summary>
-    /// The allocator state a save implies. Identities the save records as held are
-    /// live; every other identity the allocator issued is a tombstone, because the
-    /// monotonic cursor never moves backwards and an issued identity is never
-    /// reissued. An identity the allocator never issued stays above the cursor, so
-    /// "removed" and "never loaded" remain distinguishable rather than both
-    /// collapsing into one reserved list.
+    /// The allocator state a save carries. It is transported verbatim rather than
+    /// re-derived from the inventory: "allocated and not yet removed" is not the same
+    /// fact as "currently held by this save", and a transport that guesses the first
+    /// from the second invents tombstones for identities the player is carrying.
     /// </summary>
-    internal DurableIdentityState RestoreHint()
-    {
-        KindAllocatorState item = Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
-        HashSet<ulong> live = UniqueItemEntityIds().ToHashSet();
-        HashSet<ulong> retired = [.. live, .. item.Removed];
-        return new DurableIdentityState([
-            new KindAllocatorState(
-                DurableIdentityKind.Item,
-                item.NextIdentity,
-                item.Reserved.Where(value => !retired.Contains(value)).ToArray(),
-                retired.Order().ToArray()),
-        ]);
-    }
-
-    private IEnumerable<ulong> UniqueItemEntityIds()
-    {
-        foreach (DaggerfallUniqueSave item in Inventory.UniqueItems) yield return item.EntityId;
-        foreach (DaggerfallCorpseSave corpse in Corpses)
-            foreach (DaggerfallUniqueSave item in corpse.UniqueItems) yield return item.EntityId;
-    }
+    internal DurableIdentityState RestoredIdentities() => Identities.Validate().RequireKinds(PersistedKinds);
 
     /// <summary>Checks every ruleset/content reference before a restore session owns Engine resources.</summary>
     internal void ValidateForRestore(DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, IRandomService random)

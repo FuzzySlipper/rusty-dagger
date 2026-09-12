@@ -6,6 +6,7 @@ using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules;
@@ -283,10 +284,14 @@ internal sealed class DaggerfallCorpseLootModule
                 continue;
             }
             int ordinal = seeds.Count;
+            // Pick the drop's durable identity first, then derive the Engine handle
+            // from it; the seed carries both facts so the container coordinator can
+            // materialize the item without re-deciding what the identity means.
+            DurableIdentityReference identity = _uniqueItems.AllocateReference();
             seeds.Add(new InventoryContainerSeed(
                 new InventoryItemId(drop.ItemId),
                 UniqueIdentity: $"daggerfall.loot.a{fact.ActorId}.g{fact.OriginatingGeneration}.s{fact.OriginatingSequence}.{ordinal}",
-                UniqueEntityId: _uniqueItems.Allocate()));
+                UniqueEntityId: identity.Value));
         }
         return seeds;
     }
