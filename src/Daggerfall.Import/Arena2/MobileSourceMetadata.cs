@@ -92,16 +92,21 @@ public static class MobileSourceMetadata
         ImmutableArray<Arena2MobileSource> sources =
         [
             CreateMobile(0, "Rat", 255, new(new(401), 1), Attack([0, 1, 2, DamageBeatMarker, 3, 4, 5]),
-                new(Arena2MobileFrameGroup.RatIdle)),
+                new(Arena2MobileFrameGroup.RatIdle), new(null, "EnemyRatMove", "EnemyRatBark", "EnemyRatAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
             CreateMobile(1, "Imp", 256, null, Attack([0, 1, 2, DamageBeatMarker, 3, 1]),
-                new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F)),
+                new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F), new("D", "EnemyImpMove", "EnemyImpBark", "EnemyImpAttack", ParrySounds: false, BloodIndex: 0, MapChance: 1)),
             CreateMobile(3, "GiantBat", 258, null, Attack([0, 1, DamageBeatMarker, 2, 3]),
-                new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F)),
-            CreateMobile(4, "GrizzlyBear", 259, null, Attack([0, 1, 2, DamageBeatMarker, 3, 0])),
-            CreateMobile(7, "Orc", 262, null, Attack([0, 1, 2, DamageBeatMarker, 3, 4, DamageBeatMarker, 5, 0], Alternate(50, [4, DamageBeatMarker, 5, 0]))),
-            CreateMobile(15, "SkeletalWarrior", 270, new(new(306), 1), Attack([0, 1, 2, 3, DamageBeatMarker, 4, 5])),
-            CreateMobile(138, "Thief", 484, null, Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0], Alternate(33, [4, 4, DamageBeatMarker, 5, 0, 0]), Alternate(33, [4, DamageBeatMarker, 5, 0, 0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0]))),
-            CreateMobile(141, "Archer", 482, null, Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5], Alternate(50, [3, 4, DamageBeatMarker, 5, 0]))),
+                new(Arena2MobileFrameGroup.Move, MoveFramesPerSecond: 10F), new(null, "EnemyGiantBatMove", "EnemyGiantBatBark", "EnemyGiantBatAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(4, "GrizzlyBear", 259, null, Attack([0, 1, 2, DamageBeatMarker, 3, 0]),
+                links: new(null, "EnemyBearMove", "EnemyBearBark", "EnemyBearAttack", ParrySounds: false, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(7, "Orc", 262, null, Attack([0, 1, 2, DamageBeatMarker, 3, 4, DamageBeatMarker, 5, 0], Alternate(50, [4, DamageBeatMarker, 5, 0])),
+                links: new("A", "EnemyOrcMove", "EnemyOrcBark", "EnemyOrcAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+            CreateMobile(15, "SkeletalWarrior", 270, new(new(306), 1), Attack([0, 1, 2, 3, DamageBeatMarker, 4, 5]),
+                links: new("H", "EnemySkeletonMove", "EnemySkeletonBark", "EnemySkeletonAttack", ParrySounds: true, BloodIndex: 2, MapChance: 1)),
+            CreateMobile(138, "Thief", 484, null, Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0], Alternate(33, [4, 4, DamageBeatMarker, 5, 0, 0]), Alternate(33, [4, DamageBeatMarker, 5, 0, 0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0])),
+                links: new("O", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 2)),
+            CreateMobile(141, "Archer", 482, null, Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5], Alternate(50, [3, 4, DamageBeatMarker, 5, 0])),
+                links: new("C", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
         ];
 
         HashSet<Arena2MobileId> ids = [];
@@ -122,10 +127,18 @@ public static class MobileSourceMetadata
         ushort textureArchive,
         Arena2MobileCorpseSource? corpse,
         Arena2MobileAttackSequence attackSequence,
-        Arena2MobileAnimationSource? animation = null)
+        Arena2MobileAnimationSource? animation = null,
+        Arena2MobileForeignLinks? links = null)
     {
-        return new(new(id), sourceName, new(textureArchive), corpse, attackSequence, animation ?? Arena2MobileAnimationSource.Ordinary);
+        return new(new(id), sourceName, new(textureArchive), corpse, attackSequence, animation ?? Arena2MobileAnimationSource.Ordinary, links ?? Unlinked(id));
     }
+
+    /// <summary>
+    /// The donor's table carries these facts for every mobile it lists, so a supported
+    /// mobile without them still names what it is missing rather than claiming silence.
+    /// </summary>
+    private static Arena2MobileForeignLinks Unlinked(byte id) =>
+        throw new InvalidOperationException($"Supported source mobile {id} must carry the donor's loot, vocal, blood and map-chance facts.");
 
     private static Arena2MobileAttackSequence Attack(sbyte[] primaryFrames, params Arena2MobileAttackAlternate[] alternates)
     {
@@ -205,6 +218,51 @@ public sealed class Arena2MobileAttackSequence
     public ImmutableArray<Arena2MobileAttackAlternate> Alternates { get; }
 }
 
+/// <summary>
+/// The non-media links the donor's own enemy table carries for a mobile: the loot table
+/// key it rolls from, the vocal cue names it plays, its blood splash index and its map
+/// chance. These are source facts; which cue a game plays and how loot is authored belong
+/// to the ruleset and content tasks that consume them.
+/// </summary>
+public sealed record Arena2MobileForeignLinks(
+    string? LootTableKey,
+    string MoveSoundCue,
+    string BarkSoundCue,
+    string AttackSoundCue,
+    bool ParrySounds,
+    int BloodIndex,
+    int MapChance)
+{
+    /// <summary>The classic loot keys a donor table may name, from the archive's own tables.</summary>
+    public const int MaximumMapChance = 100;
+
+    public void Validate()
+    {
+        if (LootTableKey is not null && string.IsNullOrWhiteSpace(LootTableKey))
+        {
+            throw new ArgumentException("A mobile loot table key must be absent or non-empty.", nameof(LootTableKey));
+        }
+
+        foreach (string cue in (string[])[MoveSoundCue, BarkSoundCue, AttackSoundCue])
+        {
+            if (string.IsNullOrWhiteSpace(cue))
+            {
+                throw new ArgumentException("A mobile vocal cue must name the donor clip it plays.", nameof(cue));
+            }
+        }
+
+        if (BloodIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(BloodIndex), BloodIndex, "A mobile blood index cannot be negative.");
+        }
+
+        if (MapChance is < 0 or > MaximumMapChance)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MapChance), MapChance, $"A mobile map chance is a percentage from 0 to {MaximumMapChance}.");
+        }
+    }
+}
+
 /// <summary>One unselected source alternate attack sequence and its Dice100 threshold.</summary>
 public readonly record struct Arena2MobileAttackAlternate(byte Chance, ImmutableArray<sbyte> Frames);
 
@@ -217,7 +275,8 @@ public sealed class Arena2MobileSource
         Arena2TextureArchiveId textureArchive,
         Arena2MobileCorpseSource? corpse,
         Arena2MobileAttackSequence attackSequence,
-        Arena2MobileAnimationSource animation)
+        Arena2MobileAnimationSource animation,
+        Arena2MobileForeignLinks links)
     {
         Id = id;
         SourceName = sourceName;
@@ -227,6 +286,9 @@ public sealed class Arena2MobileSource
         ArgumentNullException.ThrowIfNull(animation);
         animation.Validate();
         Animation = animation;
+        ArgumentNullException.ThrowIfNull(links);
+        links.Validate();
+        Links = links;
     }
 
     /// <summary>Classic mobile ID.</summary>
@@ -250,6 +312,12 @@ public sealed class Arena2MobileSource
     /// that selects a rest group or fly cadence.
     /// </summary>
     public Arena2MobileAnimationSource Animation { get; }
+
+    /// <summary>
+    /// The donor's loot, vocal, blood and map-chance facts for this mobile. Which cue
+    /// plays and how loot is generated are decisions for the tasks that consume them.
+    /// </summary>
+    public Arena2MobileForeignLinks Links { get; }
 }
 
 /// <summary>

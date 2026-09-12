@@ -39,6 +39,15 @@ public sealed record ClassCfgRecord(
     uint WeaponArmorShields,
     byte[] UnknownBytes)
 {
+    /// <summary>
+    /// Skill-slot values past the terminal no-skill value, which name nothing in the
+    /// classic index space at all. The terminal value itself is legal in a slot and is
+    /// not reported here. A supplied enemy configuration carries 40 in one minor slot, so
+    /// the carrier is well formed and the index space is what the value exceeds; callers
+    /// decide whether that is a defect for their family.
+    /// </summary>
+    public int[] SkillIndicesBeyondTerminal => [.. SkillIndices.Where(index => index > ClassCfgDecoder.NoSkillIndex)];
+
     /// <summary>Every skill index the record names, in record order.</summary>
     public int[] SkillIndices =>
     [
@@ -104,25 +113,11 @@ public static class ClassCfgDecoder
             (uint)((bytes[13] << 16) | (bytes[15] << 8) | bytes[14]),
             bytes.Slice(44, 8).ToArray());
 
-        for (int index = 0; index < SkillIndexCount; index++)
-        {
-            int skill = record.SkillIndices[index];
-            if (skill > NoSkillIndex)
-            {
-                throw new Arena2FormatException(source, SkillIndexOffset(index), $"skill index {skill} is beyond the {SkillCount} classic skills and their terminal no-skill value");
-            }
-        }
-
+        // The skill bytes are bytes: the record shape is what this decoder owns, and
+        // whether an index names a skill in a given family is the family's question.
+        // OutOfSpaceSkillIndices reports them for a caller that must care.
         return record;
     }
-
-    /// <summary>The byte a skill index occupies: three primary, three major, six minor.</summary>
-    private static int SkillIndexOffset(int index) => index switch
-    {
-        < 3 => 16 + index,
-        < 6 => 19 + (index - 3),
-        _ => 22 + (index - 6),
-    };
 
     private static ushort ReadUInt16(ReadOnlySpan<byte> bytes, int offset) =>
         (ushort)(bytes[offset] | (bytes[offset + 1] << 8));

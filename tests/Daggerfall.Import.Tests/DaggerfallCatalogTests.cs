@@ -53,16 +53,23 @@ public sealed class DaggerfallCatalogTests
     }
 
     [Fact]
-    public void Rejects_a_career_record_naming_a_skill_beyond_the_index_space()
+    public void The_decoder_reports_a_skill_slot_outside_the_classic_space()
     {
+        // The carrier is well formed and the index space is what the value exceeds, so the
+        // decoder reads the record and reports the slot; a class carrier refuses it below,
+        // and the enemy family tolerates it because one supplied configuration carries one.
         byte[] bytes = ReadClass("CLASS00.CFG");
-        // The major-skill slot at byte 19 names skill 36, past the terminal no-skill value.
-        bytes[19] = 36;
+        bytes[19] = 40;
 
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => ClassCfgDecoder.Decode(bytes, "CLASS00.CFG"));
+        ClassCfgRecord record = ClassCfgDecoder.Decode(bytes, "CLASS00.CFG");
 
-        Assert.Equal(19, error.Offset);
-        Assert.Contains("skill index 36", error.Message, StringComparison.Ordinal);
+        Assert.Equal([40], record.SkillIndicesBeyondTerminal);
+        Assert.Equal(40, record.MajorSkill1);
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("CLASS00.CFG", bytes)], EnemyIds(), ItemIds()));
+        Assert.Contains("CLASS00.CFG", error.Message, StringComparison.Ordinal);
+        Assert.Contains("40", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]

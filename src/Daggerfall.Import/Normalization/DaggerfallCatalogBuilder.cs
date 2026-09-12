@@ -85,6 +85,12 @@ public static class DaggerfallCatalogBuilder
         foreach ((string fileName, byte[] bytes) in careers)
         {
             ClassCfgRecord decoded = ClassCfgDecoder.Decode(bytes, fileName);
+            // A career naming a skill the class index space does not have is a defect in a
+            // class carrier; the enemy family reads the same record shape and tolerates it.
+            if (decoded.SkillIndicesBeyondTerminal.Length != 0)
+            {
+                throw new InvalidOperationException($"Career carrier '{fileName}' names skill indices [{string.Join(", ", decoded.SkillIndicesBeyondTerminal)}], past the {ClassCfgDecoder.SkillCount} classic skills and their terminal no-skill value.");
+            }
             SourceInventoryRow carrier = RequireCareerFile(inventory, fileName);
             careerRecords.Add(new DaggerfallCareerRecord(
                 CareerKey(fileName),
