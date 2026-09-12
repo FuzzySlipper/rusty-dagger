@@ -55,6 +55,23 @@ public sealed class QuestSourceTests
     }
 
     [Fact]
+    public void The_documented_inventory_carries_exactly_the_supplied_quest_paths()
+    {
+        // The inventory is the authority for which source paths exist, so the corpus and
+        // the document are checked against each other: a supplied file the inventory does
+        // not carry, or a documented one that is not supplied, is drift either way.
+        string[] supplied = [.. ReadInventory().Files.Select(file => file.Path)];
+        HashSet<string> documented = [.. Daggerfall.Import.Publication.SourceManifestBuilder
+            .ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")))
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-017"))
+            .Select(row => Path.GetFileName(row.PathOrPattern))];
+
+        Assert.Equal(609, documented.Count);
+        Assert.DoesNotContain(supplied, path => !documented.Contains(path));
+        Assert.DoesNotContain(documented, path => !supplied.Contains(path, StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void Rejects_two_files_claiming_one_stem()
     {
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() =>
