@@ -3,6 +3,7 @@
 /node_modules/
 /GeneratedInputs
 __pycache__/
+.letta/
 /AGENTS.md
 src/ui/generated/
 src/sprite-ui/generated/
