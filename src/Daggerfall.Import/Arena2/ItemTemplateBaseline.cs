@@ -308,6 +308,14 @@ public sealed class ItemTemplateBaseline
 
                 if (equals <= 0)
                 {
+                    // An implicit member past the last representable value would wrap to a
+                    // negative number and then be dropped as a sentinel, so it is refused
+                    // rather than silently lost.
+                    if (next == int.MaxValue)
+                    {
+                        throw new Arena2FormatException(logicalSource, open, $"enumeration '{name}' gives member '{member}' an implicit value past the last representable one");
+                    }
+
                     members.Add((member, next));
                     next++;
                     continue;
@@ -322,7 +330,9 @@ public sealed class ItemTemplateBaseline
                 }
 
                 members.Add((member, parsed));
-                next = parsed + 1;
+                next = parsed == int.MaxValue
+                    ? throw new Arena2FormatException(logicalSource, open, $"enumeration '{name}' gives member '{member}' the value {parsed}, so the member after it would wrap past the last representable value")
+                    : parsed + 1;
             }
 
             if (!enums.TryAdd(name, (members, declarationComment)))
