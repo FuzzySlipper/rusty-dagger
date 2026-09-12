@@ -12,7 +12,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
     public RulesetId Id => Identity;
 
     public IGameSession CreateSession(GameSessionContext context)
-        => CreateSessionCore(context, saved: null);
+        => CreateSessionCore(context);
 
     public IGameSession CreateSession(GameSessionContext context, RulesetSavePayload saved)
     {
@@ -22,7 +22,7 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             throw new InvalidOperationException($"Daggerfall cannot interpret ruleset '{context.Composition.Ruleset.Value}'.");
         // Decode all detached ruleset data before session construction creates
         // any Engine-owned state.
-        DaggerfallSaveRead read = DaggerfallSavePayload.Read(saved);
+
         // Resolve only detached content definitions before admitting a fresh
         // session; malformed actor/inventory/corpse references never reach
         // Engine-backed construction.
@@ -30,21 +30,21 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
         ContentPack pack = context.Composition.RequireContentPack(PrivateersHoldPack);
         PrivateersHoldInputs inputs = PrivateersHoldContent.Read(context.Composition.Content, pack.Payload, definitions);
         DaggerfallTuning tuning = DaggerfallTuning.Read(context.Composition.Tuning.Payload.Span);
-        // Reference resolution reports what the selected content cannot explain rather
-        // than refusing an otherwise restorable save; only an uninterpretable payload
-        // reaches the caller as an error.
-        DaggerfallRestorePlan plan = read.Payload.ResolveRestore(definitions, inputs, tuning, context.Engine.Random);
-        return new DaggerfallSession(
+        // Reading and reference resolution happen before any Engine-owned state exists.
+        // What the selected content cannot explain is reported rather than refused; only
+        // an uninterpretable payload reaches the caller as an error.
+        return DaggerfallSession.Restore(
             context.Engine,
             context.CompositionIdentity,
             definitions,
             inputs,
             tuning,
-            plan.Payload,
-            [.. read.Notices, .. plan.Notices]);
+            saved,
+            context.Engine.Random);
     }
 
-    private static IGameSession CreateSessionCore(GameSessionContext context, DaggerfallSavePayload? saved)
+    /// <summary>A fresh session: no saved state exists, so nothing is resolved or reported.</summary>
+    private static IGameSession CreateSessionCore(GameSessionContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
         if (context.Composition.Ruleset != Identity)
@@ -56,8 +56,6 @@ public sealed class DaggerfallRuleset : ISaveableGameRuleset
             context.CompositionIdentity,
             definitions,
             PrivateersHoldContent.Read(context.Composition.Content, pack.Payload, definitions),
-            DaggerfallTuning.Read(context.Composition.Tuning.Payload.Span),
-            saved,
-            restoreNotices: []);
+            DaggerfallTuning.Read(context.Composition.Tuning.Payload.Span));
     }
 }

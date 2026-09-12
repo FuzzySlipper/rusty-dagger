@@ -1386,7 +1386,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Read(payload).Payload);
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
 
         DaggerfallSavePayload immediate = DaggerfallSavePayload.Read(resumed.CaptureSave()).Payload;
 
@@ -1421,7 +1421,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = new(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Read(payload).Payload);
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
         long before = resumed.State.Actors.All[2000].Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
 
         resumed.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 2, 1, .125));
@@ -1430,7 +1430,7 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Restore_payload_rejects_unknown_inventory_and_non_defeated_corpse_before_session_construction()
+    public void Restore_reports_saved_values_the_selected_content_disagrees_with_and_still_restores()
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
@@ -1446,15 +1446,40 @@ public sealed class NormalizedRuntimeSeamTests
 
         DaggerfallSavePayload badInventory = saved with
         {
-            Inventory = saved.Inventory with { Stacks = [new DaggerfallStackSave("not-an-item", 1)] },
-        };
-        DaggerfallSavePayload badCorpse = saved with
-        {
-            Corpses = [new DaggerfallCorpseSave(2000, 1, false, true, [], [])],
+            Inventory = saved.Inventory with
+            {
+                Stacks = [new DaggerfallStackSave("not-an-item", 1)],
+                UniqueItems = [new DaggerfallUniqueSave("not-an-item", DaggerfallUniqueItemAllocator.DefaultFirstEntityId)],
+                Equipment = [],
+            },
         };
         DaggerfallSavePayload badPitch = saved with { Player = saved.Player with { PitchRadians = 2f } };
-        DaggerfallSavePayload badHealth = saved with { Player = saved.Player with { Health = long.MaxValue } };
         DaggerfallSavePayload badProgression = saved with { Level = 2 };
+
+        // A saved value the content disagrees with is reported with what was observed,
+        // and the rest of the save still restores.
+        DaggerfallRestorePlan inventory = badInventory.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        Assert.Equal(2, inventory.Notices.Count(value => value.Code == "unexplained-item-template"));
+        Assert.Empty(inventory.Payload.Inventory.Stacks);
+        Assert.Empty(inventory.Payload.Inventory.UniqueItems);
+
+        DaggerfallRestorePlan pitch = badPitch.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        SaveRestoreNotice clamped = Assert.Single(pitch.Notices, value => value.Code == "player-pitch-outside-tuning");
+        Assert.Contains("2", clamped.Message, StringComparison.Ordinal);
+        Assert.True(pitch.Payload.Player.PitchRadians <= DaggerfallTuning.Defaults.PlayerControl.PitchMaximumRadians);
+
+        DaggerfallRestorePlan progression = badProgression.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+        Assert.Contains(progression.Notices, value => value.Code == "progression-level-recomputed");
+        Assert.Equal(saved.Level, progression.Payload.Level);
+
+        // An internally inconsistent save is still refused: a corpse for an actor that
+        // is not defeated is not a value the content disagrees with.
+        DaggerfallSavePayload badCorpse = saved with
+        {
+            Corpses = [new DaggerfallCorpseSave(saved.Actors[0].EntityId, 1, false, true, [], [])],
+        };
+        Assert.Throws<ArgumentException>(() => badCorpse.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        // An ownership collision is still refused rather than repaired.
         DaggerfallSavePayload collidingUnique = saved with
         {
             Inventory = saved.Inventory with
@@ -1463,12 +1488,6 @@ public sealed class NormalizedRuntimeSeamTests
                 Equipment = saved.Inventory.Equipment.Select(value => value with { ItemEntityId = 1 }).ToArray(),
             },
         };
-
-        Assert.Throws<ArgumentException>(() => badInventory.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badCorpse.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badPitch.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badHealth.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => badProgression.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
         Assert.Throws<ArgumentException>(() => collidingUnique.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
     }
 
@@ -1563,7 +1582,7 @@ public sealed class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession resumedSession = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+        using DaggerfallSession resumedSession = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
         DaggerfallSavePayload resumed = DaggerfallSavePayload.Read(resumedSession.CaptureSave()).Payload;
 
         DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(resumed.RestoredIdentities());
@@ -1642,7 +1661,7 @@ public sealed class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
-        using DaggerfallSession resumed = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+        using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
         DurableIdentityAllocator ledger = DurableIdentityAllocator.Restore(DaggerfallSavePayload.Read(resumed.CaptureSave()).Payload.RestoredIdentities());
 
         Assert.Equal(DurableIdentityClassification.Live, ledger.Classify(new DurableIdentityReference(DurableIdentityKind.Item, futureContent)));
@@ -1769,7 +1788,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession resumed = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+        using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
 
         DaggerfallUniqueItemAllocator ledger = resumed.UniqueItemAllocator;
 
@@ -1819,6 +1838,28 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_save_written_before_owner_sections_existed_is_still_readable()
+    {
+        string root = RepositoryRoot();
+        DaggerfallSavePayload saved = CapturedSave(root);
+        // Exactly what the previous revision wrote: same schema number, no Owners field.
+        string json = JsonSerializer.Serialize(saved, DaggerfallSaveJsonContext.Default.DaggerfallSavePayload);
+        int owners = json.IndexOf("\"Owners\"", StringComparison.Ordinal);
+        Assert.True(owners > 0);
+        string legacyShape = System.Text.RegularExpressions.Regex.Replace(json, ",\"Owners\":\\[[^\\]]*\\]", string.Empty);
+        Assert.DoesNotContain("\"Owners\"", legacyShape, StringComparison.Ordinal);
+        RulesetSavePayload encoded = new(DaggerfallRuleset.Identity, DaggerfallSavePayload.CurrentSchemaVersion, System.Text.Encoding.UTF8.GetBytes(legacyShape));
+
+        DaggerfallSaveRead read = DaggerfallSavePayload.Read(encoded);
+
+        // A field added under an unchanged schema version is absent-but-recoverable: the
+        // save is read rather than refused, and the difference is reported.
+        Assert.Empty(read.Payload.Owners);
+        Assert.Contains(read.Notices, value => value.Code == "owner-sections-absent");
+        Assert.Equal(saved.Player.Health, read.Payload.Player.Health);
+    }
+
+    [Fact]
     public void Daggerfall_save_versions_whose_meaning_cannot_be_recovered_are_still_refused()
     {
         string root = RepositoryRoot();
@@ -1862,7 +1903,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession session = new(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, plan.Payload, plan.Notices);
+        using DaggerfallSession session = DaggerfallSession.Restore(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(plan.Payload), RandomMinimum.Create());
 
         Assert.Contains(session.RestoreNotices, value => value.Code == "authored-actor-not-saved");
     }
@@ -1907,7 +1948,7 @@ public sealed class NormalizedRuntimeSeamTests
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
-        using DaggerfallSession session = new(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, plan.Payload, plan.Notices);
+        using DaggerfallSession session = DaggerfallSession.Restore(engine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(plan.Payload), RandomMinimum.Create());
 
         // A section this build cannot interpret is reported and preserved unchanged, so a
         // save written by a later owner is not silently discarded.
@@ -2538,7 +2579,7 @@ public sealed class NormalizedRuntimeSeamTests
         perception.Receipt = Receipt(new PerceptionPair(2000, 1, 1d, 1d, PerceptionPairKind.Visible, 1d));
         AppearanceFake resumedAppearance = new(releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, resumedAppearance, perception.Service);
-        using DaggerfallSession resumed = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+        using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
         long resumedHealth = PlayerHealth(resumed);
 
         resumedAppearance.AdvanceReceiptForAll = CrossedMarker(1);
