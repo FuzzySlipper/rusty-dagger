@@ -23,14 +23,16 @@ public sealed record QuestResourceRecord(ushort Id, int Offset, int Length, Read
 /// <summary>
 /// The envelope of one classic quest resource companion. The observed layout, verified
 /// across all 303 supplied files, is a directory followed by the records it indexes: a
-/// little-endian directory size in bytes, then that many bytes of six-byte entries — an
-/// id and the record's offset — ending with the <c>0xffff</c> sentinel entry whose offset
+/// little-endian directory size in bytes, then that many bytes of six-byte entries — a
+/// two-byte id and the record's offset — ending with the <c>0xffff</c> sentinel entry whose offset
 /// is the end of the file.
 /// </summary>
 /// <remarks>
-/// The record payloads are delivered as bytes. What an id means, how its text is parsed
-/// and which action or resource it names belong to the quest-source inventory and the
-/// worker that consumes these records, not to this envelope.
+/// The record payloads are delivered as bytes and no text encoding is asserted or
+/// validated here: a consumer that needs text decodes it itself, so a record whose bytes
+/// are not valid text is data rather than an envelope defect. What an id means, how its
+/// text is parsed and which action or resource it names belong to the quest-source
+/// inventory and the worker that consumes these records, not to this envelope.
 /// </remarks>
 public sealed record QuestResourceEnvelope(
     string Path,
@@ -106,7 +108,14 @@ public sealed record QuestResourceEnvelope(
             records.Add(new QuestResourceRecord(entries[index].Id, offset, length, bytes.Slice(offset, length).ToArray()));
         }
 
-        return new QuestResourceEnvelope(path, bytes.Length, directoryBytes, records, QuestResourceEnvelopeDisposition.Decoded, $"{records.Count} records.");
+        // One supplied file starts its first record a byte past the end of its directory.
+        // That is recoverable — every record is still located — but it is disclosed rather
+        // than normalized away, because the byte belongs to no record the directory names.
+        int orphanBytes = entries[0].Offset - (int)dataStart;
+        string gap = orphanBytes == 0
+            ? string.Empty
+            : $" The record region begins at {dataStart} and the first record at {entries[0].Offset}, so {orphanBytes} byte(s) belong to no record.";
+        return new QuestResourceEnvelope(path, bytes.Length, directoryBytes, records, QuestResourceEnvelopeDisposition.Decoded, $"{records.Count} records.{gap}");
     }
 
     private static QuestResourceEnvelope Invalid(string path, int length, int directoryBytes, IReadOnlyList<QuestResourceRecord> records, QuestResourceEnvelopeDisposition disposition, string note) =>
