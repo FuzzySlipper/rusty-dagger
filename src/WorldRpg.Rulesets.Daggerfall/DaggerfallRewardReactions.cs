@@ -213,5 +213,9 @@ internal sealed class DaggerfallUniqueItemAllocator
     /// <summary>Captures this session's allocator evidence for the save payload.</summary>
     internal DurableIdentityState CaptureState() => _identities.CaptureState();
 
-    internal ulong Allocate() => _identities.Allocate(LootKind).Value;
+    /// <summary>Issues one durable reference. The Engine handle is derived from it at the named edge.</summary>
+    internal DurableIdentityReference AllocateReference() => _identities.Allocate(LootKind);
+
+    /// <summary>Records that one generated identity no longer exists in this world.</summary>
+    internal void Remove(DurableIdentityReference identity) => _identities.Remove(identity);
 }

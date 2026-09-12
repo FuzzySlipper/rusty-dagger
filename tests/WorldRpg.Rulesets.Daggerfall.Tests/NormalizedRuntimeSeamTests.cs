@@ -1516,12 +1516,13 @@ public sealed class NormalizedRuntimeSeamTests
             Identities = allocator.CaptureState(),
         });
 
-        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(saved.RestoreHint());
+        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(saved.RestoredIdentities());
         foreach (ulong identity in generated)
         {
             Assert.True(identity < saved.NextUniqueItemEntityId);
             Assert.Equal(DurableIdentityClassification.Live, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, identity)));
-            Assert.DoesNotContain(identity, saved.ReservedUniqueItemEntityIds);
+            // An issued identity stays accounted for, so no later allocation reissues it.
+            Assert.Contains(identity, saved.ReservedUniqueItemEntityIds);
             Assert.DoesNotContain(identity, saved.RemovedUniqueItemEntityIds);
         }
 
@@ -1531,35 +1532,48 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Restore_hint_distinguishes_removed_identities_from_never_issued_ones()
+    public void A_tombstoned_identity_round_trips_as_removed_rather_than_live_or_never_issued()
     {
         string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
         DaggerfallSavePayload session = CapturedSave(root);
-        ulong held = session.Inventory.UniqueItems.First().EntityId;
-        ulong retired = DaggerfallUniqueItemAllocator.DefaultFirstEntityId + 5_000_000;
         KindAllocatorState identity = session.Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
-        // One identity the session no longer holds, below the cursor: removed. The
-        // cursor itself now sits past it, and nothing above the cursor was issued.
-        DaggerfallSavePayload saved = RoundTrip(session with
+        // Issue one generated identity, then remove it, the way a destroyed or
+        // consumed item will be recorded once that path exists.
+        DaggerfallUniqueItemAllocator ledger = new(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, identity.Reserved);
+        ulong retired = ledger.AllocateReference().Value;
+        ledger.Remove(new DurableIdentityReference(DurableIdentityKind.Item, retired));
+        DaggerfallSavePayload saved = session with
         {
             Identities = new DurableIdentityState([
-                new KindAllocatorState(
-                    DurableIdentityKind.Item,
-                    retired + 1,
-                    identity.Reserved.Where(value => value != held).ToArray(),
-                    [held, retired]),
+                new KindAllocatorState(DurableIdentityKind.Item, retired + 1, identity.Reserved, [retired]),
             ]),
-        });
-        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(saved.RestoreHint());
+        };
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession resumedSession = new(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, saved);
+        DaggerfallSavePayload resumed = DaggerfallSavePayload.Decode(resumedSession.CaptureSave());
 
-        Assert.Equal(DurableIdentityClassification.Removed, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, held)));
+        DurableIdentityAllocator restored = DurableIdentityAllocator.Restore(resumed.RestoredIdentities());
+
         Assert.Equal(DurableIdentityClassification.Removed, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, retired)));
         Assert.Equal(DurableIdentityClassification.NeverIssued, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, retired + 1)));
-        Assert.Equal(DurableIdentityClassification.WrongKind, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Container, held)));
-        Assert.DoesNotContain(held, restored.ReservedIdentities(DurableIdentityKind.Item));
-        Assert.Contains(held, restored.RemovedIdentities(DurableIdentityKind.Item));
+        Assert.Equal(DurableIdentityClassification.WrongKind, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Container, retired)));
         Assert.Contains(retired, restored.RemovedIdentities(DurableIdentityKind.Item));
+        Assert.DoesNotContain(retired, restored.ReservedIdentities(DurableIdentityKind.Item));
         Assert.True(restored.NextIdentity(DurableIdentityKind.Item) > retired);
+        // The player's held loadout identities are live on both sides of the round trip.
+        Assert.NotEmpty(resumed.Inventory.UniqueItems);
+        foreach (DaggerfallUniqueSave item in resumed.Inventory.UniqueItems)
+            Assert.Equal(DurableIdentityClassification.Live, restored.Classify(new DurableIdentityReference(DurableIdentityKind.Item, item.EntityId)));
+        // And a resumed session's own re-save is still a valid save: the resume leg
+        // must not turn held identities into tombstones.
+        resumed.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
     }
 
     [Fact]

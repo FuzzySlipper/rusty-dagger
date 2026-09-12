@@ -169,7 +169,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 authored);
             _uniqueItems = saved is null
                 ? new DaggerfallUniqueItemAllocator(DaggerfallUniqueItemAllocator.DefaultFirstEntityId, DaggerfallSavePayload.ContentEntityIds(inputs, playerDefinition.Loadout))
-                : DaggerfallUniqueItemAllocator.Restore(saved.RestoreHint());
+                : DaggerfallUniqueItemAllocator.Restore(saved.RestoredIdentities());
             _corpseLoot = new DaggerfallCorpseLootModule(
                 engine.Perception,
                 _spatial,
@@ -561,6 +561,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession
     /// <summary>The session's durable identity ledger for generated unique loot.</summary>
     internal DaggerfallUniqueItemAllocator UniqueItemAllocator => _uniqueItems;
 
+    /// <summary>Records that one generated unique item no longer exists, so its identity is tombstoned.</summary>
+    internal void RemoveUniqueItemIdentity(ulong entityId) =>
+        _uniqueItems.Remove(new DurableIdentityReference(DurableIdentityKind.Item, entityId));
+
     private DaggerfallVitalValues InitialVitals(DaggerfallActorDefinition definition, long entityId)
     {
         if (definition.Id.Value == "player") return definition.PlayerInitialVitals;
@@ -581,12 +585,6 @@ internal sealed class DaggerfallSession : ISaveableGameSession
                 throw new InvalidOperationException($"Initial Mechanics entity id '{entityId}' collides with another player, placement, or item entity.");
     }
 
-    private static IEnumerable<ulong> UniqueItemEntityIds(DaggerfallSavePayload saved)
-    {
-        foreach (DaggerfallUniqueSave item in saved.Inventory.UniqueItems) yield return item.EntityId;
-        foreach (DaggerfallCorpseSave corpse in saved.Corpses)
-            foreach (DaggerfallUniqueSave item in corpse.UniqueItems) yield return item.EntityId;
-    }
 }
 
 internal static class DaggerfallInput

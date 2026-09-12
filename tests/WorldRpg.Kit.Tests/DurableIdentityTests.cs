@@ -16,9 +16,9 @@ public sealed class DurableIdentityTests
         Assert.Equal(new DurableIdentityReference(DurableIdentityKind.Item, 1_002), first);
         Assert.Equal(1_003UL, second.Value);
         Assert.Equal(1_004UL, identities.NextIdentity(DurableIdentityKind.Item));
-        // Issued identities live below the cursor; the reservation set holds only
-        // the authored identities the allocator must never hand out.
-        Assert.Equal([500UL, 1_000UL, 1_001UL], identities.ReservedIdentities(DurableIdentityKind.Item).Order());
+        // The reservation set is the ledger's record of everything it must never
+        // hand out again: the authored identities plus every identity it issued.
+        Assert.Equal([500UL, 1_000UL, 1_001UL, 1_002UL, 1_003UL], identities.ReservedIdentities(DurableIdentityKind.Item).Order());
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class DurableIdentityTests
     {
         DurableIdentityAllocator identities = new(DurableIdentityKind.Item, 1_000);
 
-        // Neither an authored reservation nor a value above the cursor was issued.
+        // An authored reservation and a value above the cursor were never issued.
         Assert.Throws<InvalidOperationException>(() =>
             identities.Remove(new DurableIdentityReference(DurableIdentityKind.Item, 1_000)));
         Assert.Throws<InvalidOperationException>(() =>

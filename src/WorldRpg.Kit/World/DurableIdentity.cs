@@ -250,30 +250,30 @@ public sealed class DurableIdentityAllocator
             if (NextIdentity == 0 || NextIdentity == ulong.MaxValue)
                 throw new InvalidOperationException($"The {Kind} durable identity space is exhausted.");
             ulong allocated = NextIdentity++;
+            // An issued identity joins the authored reservations: this set is the
+            // ledger's record of everything it must never hand out again.
+            _reserved.Add(allocated);
             return allocated;
         }
 
         internal void Remove(ulong value)
         {
             if (_removed.Contains(value)) return;
-            // Issued identities are live for as long as their cursor is above them,
-            // so only a value this allocator issued can be removed. Authored
-            // reservations sit outside that range and are not removable here.
-            if (_reserved.Contains(value) || value >= NextIdentity)
+            if (!_reserved.Contains(value) || value >= NextIdentity)
             {
                 throw new InvalidOperationException($"Durable {Kind} identity {value} was never issued by this allocator and cannot be removed.");
             }
 
+            _reserved.Remove(value);
             _removed.Add(value);
         }
 
         internal DurableIdentityClassification Classify(ulong value)
         {
-            // Removal is recorded, so it survives even though the identity stays
-            // below the cursor. An authored reservation is live wherever it sits.
+            // Membership is the record: a tombstone is removed, anything the ledger
+            // must still account for is live, and an absent value was never issued.
             if (_removed.Contains(value)) return DurableIdentityClassification.Removed;
-            if (_reserved.Contains(value)) return DurableIdentityClassification.Live;
-            return value < NextIdentity
+            return _reserved.Contains(value)
                 ? DurableIdentityClassification.Live
                 : DurableIdentityClassification.NeverIssued;
         }
