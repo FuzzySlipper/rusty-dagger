@@ -1456,14 +1456,6 @@ public sealed class NormalizedRuntimeSeamTests
                 Equipment = saved.Inventory.Equipment.Select(value => value with { ItemEntityId = 1 }).ToArray(),
             },
         };
-        DaggerfallSavePayload missingStableReservation = saved with
-        {
-            Identities = new DurableIdentityState(saved.Identities.Kinds
-                .Select(state => state.Kind == DurableIdentityKind.Item
-                    ? state with { Reserved = state.Reserved.Where(value => value != 1).ToArray() }
-                    : state)
-                .ToArray()),
-        };
 
         Assert.Throws<ArgumentException>(() => badInventory.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
         Assert.Throws<ArgumentException>(() => badCorpse.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
@@ -1471,7 +1463,6 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Throws<ArgumentException>(() => badHealth.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
         Assert.Throws<ArgumentException>(() => badProgression.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
         Assert.Throws<ArgumentException>(() => collidingUnique.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
-        Assert.Throws<ArgumentException>(() => missingStableReservation.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
     }
 
     [Fact]
@@ -1572,23 +1563,66 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void Restore_rejects_an_authored_identity_that_the_allocator_did_not_reserve()
+    public void Restore_rejects_a_held_identity_that_the_content_cannot_explain()
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
         PrivateersHoldInputs inputs = ReadInputs(root);
         DaggerfallSavePayload saved = CapturedSave(root);
-        DaggerfallSavePayload unreserved = saved with
+        ulong unissued = saved.NextUniqueItemEntityId;
+        // Held, not authored content, and at the cursor: no session ever issued it.
+        DaggerfallSavePayload dangling = saved with
         {
-            Identities = new DurableIdentityState(saved.Identities.Kinds
-                .Select(state => state.Kind == DurableIdentityKind.Item
-                    ? state with { Reserved = state.Reserved.Where(value => value != 1).ToArray() }
-                    : state)
-                .ToArray()),
+            Inventory = saved.Inventory with
+            {
+                UniqueItems = [new DaggerfallUniqueSave(saved.Inventory.UniqueItems[0].ItemId, unissued)],
+                Equipment = [],
+            },
         };
 
-        Assert.Throws<ArgumentException>(() => unreserved.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
+        Assert.Throws<ArgumentException>(() => dangling.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
         Assert.Empty(DaggerfallSavePayload.Decode(DaggerfallSavePayload.Encode(saved)).RemovedUniqueItemEntityIds);
+    }
+
+    [Fact]
+    public void Restore_accepts_a_fresh_save_and_a_save_whose_generated_loot_is_still_held()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload session = CapturedSave(root);
+        // A fresh save holds the authored loadout, whose identities are authored content.
+        session.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        ulong generated = DaggerfallUniqueItemAllocator.DefaultFirstEntityId;
+        ulong[] held = [.. session.Inventory.UniqueItems.Select(item => item.EntityId), generated];
+        DaggerfallSavePayload lootBearing = session with
+        {
+            Identities = new DurableIdentityState([
+                new KindAllocatorState(DurableIdentityKind.Item, generated + 1, session.ReservedUniqueItemEntityIds, []),
+            ]),
+            Inventory = session.Inventory with
+            {
+                UniqueItems = held
+                    .Select(value => new DaggerfallUniqueSave(session.Inventory.UniqueItems[0].ItemId, value))
+                    .ToArray(),
+                Equipment = [],
+            },
+        };
+
+        lootBearing.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        // A held identity that is neither authored content nor issued is dangling.
+        DaggerfallSavePayload dangling = lootBearing with
+        {
+            Inventory = lootBearing.Inventory with
+            {
+                UniqueItems = lootBearing.Inventory.UniqueItems
+                    .Select(item => item with { EntityId = generated + 1 })
+                    .ToArray(),
+            },
+        };
+        Assert.Throws<ArgumentException>(() => dangling.ValidateForRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create()));
     }
 
     [Fact]
