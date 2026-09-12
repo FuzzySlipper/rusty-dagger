@@ -212,6 +212,24 @@ public static class ImportPublicationManifestSerializer
         byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(canonical, Options);
         return [.. bytes, (byte)'\n'];
     }
+
+    /// <summary>Reads a published manifest, so a consumer can cite what a publication actually read.</summary>
+    public static CanonicalImportManifest Deserialize(ReadOnlySpan<byte> bytes)
+    {
+        CanonicalImportManifest manifest;
+        try
+        {
+            manifest = JsonSerializer.Deserialize<CanonicalImportManifest>(bytes, Options)
+                ?? throw new FormatException("The publication manifest is empty.");
+        }
+        catch (JsonException exception)
+        {
+            throw new FormatException("The publication manifest is not a supported strict JSON document.", exception);
+        }
+
+        manifest.Validate();
+        return manifest;
+    }
 }
 
 /// <summary>

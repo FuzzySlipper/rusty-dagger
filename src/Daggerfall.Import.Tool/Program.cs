@@ -52,48 +52,30 @@ internal static class Program
 
     /// <summary>
     /// Reconciles the documented inventory against a real source tree and writes the
-    /// machine-readable source manifest later normalizers consume. A source is
-    /// imported when one of this tool's admitted source closures claims it; everything
-    /// else the tree supplies is recorded as unused rather than ignored.
+    /// machine-readable source manifest later normalizers consume. Which sources count
+    /// as imported comes from a published manifest, so the record states what a
+    /// consumer actually read rather than a second guess at it.
     /// </summary>
     private static int RunSourceManifestCommand(IReadOnlyList<string> args)
     {
-        bool update = args.Count == 8 && args[7] == "--update-inventory";
-        if ((args.Count != 7 && !update) || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--output")
+        bool update = args.Contains("--update-inventory", StringComparer.Ordinal);
+        if (args.Count != (update ? 10 : 9) || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--output" || args[7] != "--publication")
         {
-            throw new ArgumentException("usage: daggerfall-import-tool source-manifest --arena2 SOURCE_DIR --inventory INVENTORY.csv --output DIR [--update-inventory]");
+            throw new ArgumentException("usage: daggerfall-import-tool source-manifest --arena2 SOURCE_DIR --inventory INVENTORY.csv --output DIR --publication PUBLISHED_DIR [--update-inventory]");
         }
 
         string arena2 = args[2];
         string inventoryFile = args[4];
         string output = args[6];
+        string publication = args[8];
         byte[] inventoryBytes = File.ReadAllBytes(inventoryFile);
         IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(inventoryBytes);
-        HashSet<string> imported = new(DungeonSourceNames.Concat(ClassicMediaSourceNames), StringComparer.Ordinal);
-        HashSet<string> excluded = inventory
-            .Where(row => StringComparer.Ordinal.Equals(row.Disposition, "excluded"))
-            .Select(row => row.PathOrPattern.Split('/')[^1])
-            .ToHashSet(StringComparer.Ordinal);
-        SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", Path.GetFileName(inventoryFile), arena2, imported, [], excluded),
+        CanonicalImportManifest published = ImportPublicationManifestSerializer.Deserialize(
+            File.ReadAllBytes(Path.Combine(publication, ImportPublicationManifestSerializer.ManifestRelativePath)));
+        SourceManifest complete = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", Path.GetFileName(inventoryFile), arena2,
+                ImportedNames(published.Sources.Select(source => source.SourcePath)), [], ExcludedNames(inventory)),
             inventoryBytes);
-
-        List<SourceManifestRecord> records = [.. manifest.Records];
-        foreach (SourceManifestRecord archive in manifest.Records.Where(record =>
-            record.Disposition is not (SourceRecordDisposition.SourceGap or SourceRecordDisposition.Excluded)
-            && record.SourcePath.EndsWith(".BSA", StringComparison.OrdinalIgnoreCase)))
-        {
-            records.AddRange(SourceManifestBuilder.DecodeArchiveRecords(
-                archive, File.ReadAllBytes(Path.Combine(arena2, Path.GetFileName(archive.SourcePath)))));
-        }
-
-        SourceManifest complete = manifest with
-        {
-            Records = records,
-            Families = manifest.Families
-                .Select(family => SourceManifestFamilyCount.From(family.FamilyId, records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, family.FamilyId))))
-                .ToArray(),
-        };
         byte[] bytes = SourceManifestSerializer.Serialize(complete);
         string manifestPath = Path.Combine(output, SourceManifestSerializer.ManifestRelativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
@@ -105,26 +87,38 @@ internal static class Program
         Console.WriteLine($"  imported {total.Imported}, unused {total.Unused}, source-gap {total.SourceGap}, required-pending {total.RequiredPending}, unresolved {total.Unresolved}, excluded {total.Excluded}, duplicate {total.Duplicate}, malformed {total.Malformed}");
         foreach (SourceManifestFamilyCount family in readback.Families.Where(family => family.Discovered > 0))
         {
-            Console.WriteLine($"  {family.FamilyId}: {family.Discovered} = {family.Imported} imported, {family.Unused} unused, {family.SourceGap} source-gap, {family.RequiredPending} pending, {family.Unresolved} unresolved, {family.Excluded} excluded");
+            Console.WriteLine($"  {family.FamilyId}: {family.Discovered} = {family.Imported} imported, {family.Unused} unused, {family.SourceGap} source-gap, {family.RequiredPending} pending, {family.Unresolved} unresolved, {family.Excluded} excluded, {family.Malformed} malformed");
         }
 
         Console.WriteLine($"manifest: {manifestPath}");
         Console.WriteLine($"digest: {ContentDigest.Compute(bytes).Value}");
-
-        // Report where the documented inventory and the supplied tree disagree, and
-        // rewrite the documented dispositions only when asked: drift is reported, not
-        // treated as a reason to refuse the scan.
-        IReadOnlyList<string> drift = SourceInventoryReconciler.Reconcile(inventoryFile, readback.Records, update);
-        foreach (string line in drift)
+        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(inventoryFile, readback.Records, update);
+        foreach (string line in reconciliation.Drift)
         {
             Console.WriteLine($"inventory drift: {line}");
         }
 
-        Console.WriteLine(drift.Count == 0
+        foreach (string line in reconciliation.Unreconciled.Take(20))
+        {
+            Console.WriteLine($"inventory unresolved: {line}");
+        }
+
+        Console.WriteLine(reconciliation.IsClean
             ? "inventory: documented dispositions match the supplied tree"
-            : update ? $"inventory: {drift.Count} documented dispositions updated" : $"inventory: {drift.Count} documented dispositions disagree; rerun with --update-inventory to record them");
+            : update
+                ? $"inventory: {reconciliation.Drift.Count} documented dispositions updated, {reconciliation.Unreconciled.Count} documented rows unresolved"
+                : $"inventory: {reconciliation.Drift.Count} documented dispositions disagree and {reconciliation.Unreconciled.Count} rows are unresolved; rerun with --update-inventory to record the dispositions");
         return 0;
     }
+
+    /// <summary>A consumer claims a source by the path it read; the manifest records the leaf.</summary>
+    private static HashSet<string> ImportedNames(IEnumerable<string> sourcePaths) =>
+        sourcePaths.Select(path => path.Split('/')[^1]).ToHashSet(StringComparer.Ordinal);
+
+    private static HashSet<string> ExcludedNames(IReadOnlyList<SourceInventoryRow> inventory) => inventory
+        .Where(row => StringComparer.Ordinal.Equals(row.Disposition, "excluded"))
+        .Select(row => row.PathOrPattern.Split('/')[^1])
+        .ToHashSet(StringComparer.Ordinal);
 
     /// <summary>
     /// Adds the source manifest to a publication closure, so the record identities and
@@ -139,33 +133,10 @@ internal static class Program
         }
 
         byte[] inventoryBytes = File.ReadAllBytes(options.InventoryFile);
-        IReadOnlyList<SourceInventoryRow> inventory = SourceManifestBuilder.ReadInventory(inventoryBytes);
-        HashSet<string> imported = plan.Manifest.Sources
-            .Select(source => source.SourcePath.Split('/')[^1])
-            .ToHashSet(StringComparer.Ordinal);
-        HashSet<string> excluded = inventory
-            .Where(row => StringComparer.Ordinal.Equals(row.Disposition, "excluded"))
-            .Select(row => row.PathOrPattern.Split('/')[^1])
-            .ToHashSet(StringComparer.Ordinal);
-        SourceManifest manifest = SourceManifestBuilder.Build(
-            new SourceManifestRequest("local/arena2", Path.GetFileName(options.InventoryFile), options.Arena2Directory, imported, [], excluded),
+        SourceManifest complete = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", Path.GetFileName(options.InventoryFile), options.Arena2Directory,
+                ImportedNames(plan.Manifest.Sources.Select(source => source.SourcePath)), [], ExcludedNames(SourceManifestBuilder.ReadInventory(inventoryBytes))),
             inventoryBytes);
-        List<SourceManifestRecord> records = [.. manifest.Records];
-        foreach (SourceManifestRecord archive in manifest.Records.Where(record =>
-            record.Disposition is not (SourceRecordDisposition.SourceGap or SourceRecordDisposition.Excluded)
-            && record.SourcePath.EndsWith(".BSA", StringComparison.OrdinalIgnoreCase)))
-        {
-            records.AddRange(SourceManifestBuilder.DecodeArchiveRecords(
-                archive, File.ReadAllBytes(Path.Combine(options.Arena2Directory, Path.GetFileName(archive.SourcePath)))));
-        }
-
-        SourceManifest complete = manifest with
-        {
-            Records = records,
-            Families = manifest.Families
-                .Select(family => SourceManifestFamilyCount.From(family.FamilyId, records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, family.FamilyId))))
-                .ToArray(),
-        };
         byte[] bytes = SourceManifestSerializer.Serialize(complete);
         ImportProvenance provenance = plan.Manifest.Sources.Count == 0
             ? throw new InvalidOperationException("A publication with no sources cannot carry a source manifest.")

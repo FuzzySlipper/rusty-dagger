@@ -5,12 +5,23 @@ namespace Daggerfall.Import.Publication;
 /// is reported rather than refused, and only the disposition column is ever written:
 /// row order, stable ids and every other documented field are preserved.
 /// </summary>
+/// <summary>What reconciliation found: disagreeing dispositions, and rows it could not resolve at all.</summary>
+public sealed record SourceInventoryReconciliation(IReadOnlyList<string> Drift, IReadOnlyList<string> Unreconciled)
+{
+    public bool IsClean => Drift.Count == 0 && Unreconciled.Count == 0;
+}
+
 public static class SourceInventoryReconciler
 {
     public const string DispositionHeader = "disposition";
 
-    /// <summary>Reports each documented file row whose disposition disagrees with the scan.</summary>
-    public static IReadOnlyList<string> Reconcile(string inventoryFile, IReadOnlyList<SourceManifestRecord> records, bool update)
+    /// <summary>
+    /// Reports each documented file row whose disposition disagrees with the scan, and
+    /// every documented row the scan never resolved to a record. A row that silently
+    /// falls out of reconciliation would let the inventory and the tree disagree while
+    /// the tool still reports that they match.
+    /// </summary>
+    public static SourceInventoryReconciliation Reconcile(string inventoryFile, IReadOnlyList<SourceManifestRecord> records, bool update)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inventoryFile);
         ArgumentNullException.ThrowIfNull(records);
@@ -21,11 +32,18 @@ public static class SourceInventoryReconciler
         string newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
         string[] lines = text.Split(newline);
         List<string> drift = [];
+        List<string> unresolved = [];
         for (int index = 1; index < lines.Length; index++)
         {
             string[] fields = lines[index].Split(',');
-            if (fields.Length != 11 || fields[1] != "file" || !computed.TryGetValue(fields[0], out SourceRecordDisposition disposition))
+            if (fields.Length != 11 || fields[1] != "file")
             {
+                continue;
+            }
+
+            if (!computed.TryGetValue(fields[0], out SourceRecordDisposition disposition))
+            {
+                unresolved.Add($"{fields[0]}: the scan produced no record for this documented row");
                 continue;
             }
 
@@ -49,7 +67,7 @@ public static class SourceInventoryReconciler
             File.WriteAllText(inventoryFile, string.Join(newline, lines));
         }
 
-        return drift;
+        return new SourceInventoryReconciliation(drift, unresolved);
     }
 
     /// <summary>The hyphenated spelling the inventory already uses for its dispositions.</summary>

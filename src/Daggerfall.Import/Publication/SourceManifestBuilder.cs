@@ -16,6 +16,9 @@ public sealed record SourceInventoryRow(
     string Disposition,
     string Notes);
 
+/// <summary>Decoded archive identities, or why the archive could not be read.</summary>
+public sealed record SourceArchiveDecode(IReadOnlyList<SourceManifestRecord> Records, string? Failure);
+
 /// <summary>
 /// What to scan: the logical root the records are cited under, the logical name of
 /// the inventory they reconcile against, the directory that supplies the bytes, and
@@ -100,20 +103,30 @@ public static class SourceManifestBuilder
             .Where(row => row.RowType == "family")
             .GroupBy(row => row.FamilyId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.First().PathOrPattern, StringComparer.Ordinal);
+        // A consumer claims a source by the path it reads, which is relative to the
+        // source root; a leaf name is accepted too so a caller can name either.
         HashSet<string> imported = new(request.ImportedNames, StringComparer.Ordinal);
         HashSet<string> pending = new(request.RequiredPendingNames, StringComparer.Ordinal);
         HashSet<string> excluded = new(request.ExcludedNames, StringComparer.Ordinal);
+        static bool Claimed(HashSet<string> names, string relative) =>
+            names.Contains(relative) || names.Contains(relative.Split('/')[^1]);
 
-        string[] entries = Directory.Exists(request.SourceDirectory)
-            ? Directory.GetFileSystemEntries(request.SourceDirectory)
-            : throw new DirectoryNotFoundException($"The admitted source directory '{request.SourceDirectory}' does not exist.");
-        Dictionary<string, string> byExactName = new(StringComparer.Ordinal);
-        Dictionary<string, string> byLooseName = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string entry in entries)
+        if (!Directory.Exists(request.SourceDirectory))
         {
-            string name = Path.GetFileName(entry);
-            byExactName.TryAdd(name, entry);
-            byLooseName.TryAdd(name, entry);
+            throw new DirectoryNotFoundException($"The admitted source directory '{request.SourceDirectory}' does not exist.");
+        }
+
+        string[] entries = Directory.GetFileSystemEntries(request.SourceDirectory);
+        // Documented paths are relative to the source root, so a family that lives in
+        // a subdirectory (the book texts do) must match there rather than being
+        // reported as unsupplied.
+        Dictionary<string, string> byExactPath = new(StringComparer.Ordinal);
+        Dictionary<string, string> byLoosePath = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string file in Directory.EnumerateFiles(request.SourceDirectory, "*", SearchOption.AllDirectories))
+        {
+            string relative = Path.GetRelativePath(request.SourceDirectory, file).Replace('\\', '/');
+            byExactPath.TryAdd(relative, relative);
+            byLoosePath.TryAdd(relative, relative);
         }
 
         List<SourceManifestRecord> records = [];
@@ -125,10 +138,9 @@ public static class SourceManifestBuilder
             string familyPath = familyPaths.TryGetValue(familyId, out string? documented) ? documented : request.SourceRoot;
             if (pattern.Contains('*') || pattern.Contains('?'))
             {
-                string[] matches = entries
-                    .Select(entry => Path.GetFileName(entry))
-                    .Where(name => name.Length != 0 && Matches(pattern, name))
-                    .OrderBy(name => name, StringComparer.Ordinal)
+                string[] matches = byExactPath.Keys
+                    .Where(relative => Matches(pattern, relative))
+                    .OrderBy(relative => relative, StringComparer.Ordinal)
                     .ToArray();
                 if (matches.Length == 0)
                 {
@@ -143,17 +155,17 @@ public static class SourceManifestBuilder
                 continue;
             }
 
-            if (byExactName.TryGetValue(pattern, out string? exact))
+            if (byExactPath.TryGetValue(pattern, out string? exact))
             {
-                records.Add(Describe(row.Id, familyId, familyPath, Path.GetFileName(exact)));
+                records.Add(Describe(row.Id, familyId, familyPath, exact));
                 continue;
             }
 
-            if (byLooseName.TryGetValue(pattern, out string? loose))
+            if (byLoosePath.TryGetValue(pattern, out string? loose))
             {
                 // The inventory's casing is what a case-insensitive host reports; the
                 // record keeps the casing the source tree actually uses.
-                records.Add(Describe(row.Id, familyId, familyPath, Path.GetFileName(loose), $"Documented as '{pattern}'; supplied as '{Path.GetFileName(loose)}'."));
+                records.Add(Describe(row.Id, familyId, familyPath, loose, $"Documented as '{pattern}'; supplied as '{loose}'."));
                 continue;
             }
 
@@ -200,21 +212,21 @@ public static class SourceManifestBuilder
         SourceManifestRecord Gap(string id, string familyId, string familyPath, string sourcePath, string note) =>
             new(id, familyId, familyPath, sourcePath, 0, null, null, null, SourceRecordDisposition.SourceGap, note);
 
-        SourceManifestRecord Describe(string id, string familyId, string familyPath, string name, string? note = null)
+        SourceManifestRecord Describe(string id, string familyId, string familyPath, string relative, string? note = null)
         {
-            string path = Path.Combine(request.SourceDirectory, name);
-            string logical = $"{request.SourceRoot}/{name}";
+            string path = Path.Combine(request.SourceDirectory, relative.Replace('/', Path.DirectorySeparatorChar));
+            string logical = $"{request.SourceRoot}/{relative}";
             if (Directory.Exists(path))
             {
                 return new SourceManifestRecord(id, familyId, familyPath, logical, 0, null, null, null, SourceRecordDisposition.Excluded, "Documented entry is a supplied directory, not a source record.");
             }
 
             byte[] bytes = File.ReadAllBytes(path);
-            SourceRecordDisposition disposition = excluded.Contains(name) ? SourceRecordDisposition.Excluded
-                : imported.Contains(name) ? SourceRecordDisposition.Imported
-                : pending.Contains(name) ? SourceRecordDisposition.RequiredPending
+            SourceRecordDisposition disposition = Claimed(excluded, relative) ? SourceRecordDisposition.Excluded
+                : Claimed(imported, relative) ? SourceRecordDisposition.Imported
+                : Claimed(pending, relative) ? SourceRecordDisposition.RequiredPending
                 : SourceRecordDisposition.Unused;
-            if (!claimed.Add(name))
+            if (!claimed.Add(relative))
             {
                 disposition = SourceRecordDisposition.Duplicate;
                 note = $"Supplied file already recorded under another inventory row; content is not counted twice.";
@@ -235,7 +247,7 @@ public static class SourceManifestBuilder
     }
 
     /// <summary>Decodes one archive's records so their identities are recorded too.</summary>
-    public static IReadOnlyList<SourceManifestRecord> DecodeArchiveRecords(SourceManifestRecord archive, ReadOnlySpan<byte> bytes)
+    public static SourceArchiveDecode DecodeArchiveRecords(SourceManifestRecord archive, ReadOnlySpan<byte> bytes)
     {
         ArgumentNullException.ThrowIfNull(archive);
         BsaArchive parsed;
@@ -243,9 +255,11 @@ public static class SourceManifestBuilder
         {
             parsed = BsaArchive.Parse(bytes, archive.SourcePath);
         }
-        catch (Arena2FormatException)
+        catch (Arena2FormatException failure)
         {
-            return [];
+            // The record's disposition has to say the archive could not be read; an
+            // empty record list would look exactly like an archive with no records.
+            return new SourceArchiveDecode([], failure.Message);
         }
 
         List<SourceManifestRecord> records = [];
@@ -265,8 +279,54 @@ public static class SourceManifestBuilder
                 $"Decoded from '{archive.SourcePath}'; no normalizer cites this record individually yet."));
         }
 
-        return records;
+        return new SourceArchiveDecode(records, Failure: null);
     }
+
+    /// <summary>
+    /// The whole scan a consumer needs: the inventory reconciled against the tree,
+    /// archive identities decoded, a corrupt archive recorded as malformed, and the
+    /// family counts recomputed from what was actually found. One entry point keeps
+    /// the standalone command and the publication closure from drifting apart.
+    /// </summary>
+    public static SourceManifest Scan(SourceManifestRequest request, ReadOnlySpan<byte> inventoryCsv)
+    {
+        SourceManifest manifest = Build(request, inventoryCsv);
+        List<SourceManifestRecord> records = [];
+        foreach (SourceManifestRecord record in manifest.Records)
+        {
+            if (record.Disposition is SourceRecordDisposition.SourceGap or SourceRecordDisposition.Excluded
+                || !record.SourcePath.EndsWith(".BSA", StringComparison.OrdinalIgnoreCase))
+            {
+                records.Add(record);
+                continue;
+            }
+
+            SourceArchiveDecode decoded = DecodeArchiveRecords(
+                record,
+                File.ReadAllBytes(Path.Combine(request.SourceDirectory, RelativePath(request.SourceRoot, record.SourcePath))));
+            if (decoded.Failure is string failure)
+            {
+                records.Add(record with { Disposition = SourceRecordDisposition.Malformed, Note = failure });
+                continue;
+            }
+
+            records.Add(record);
+            records.AddRange(decoded.Records);
+        }
+
+        return manifest with
+        {
+            Records = records,
+            Families = manifest.Families
+                .Select(family => SourceManifestFamilyCount.From(
+                    family.FamilyId,
+                    records.Where(record => StringComparer.Ordinal.Equals(record.FamilyId, family.FamilyId))))
+                .ToArray(),
+        };
+    }
+
+    private static string RelativePath(string sourceRoot, string sourcePath) =>
+        sourcePath.StartsWith($"{sourceRoot}/", StringComparison.Ordinal) ? sourcePath[(sourceRoot.Length + 1)..] : sourcePath;
 
     private static string DescribeDisposition(SourceRecordDisposition disposition) => disposition switch
     {

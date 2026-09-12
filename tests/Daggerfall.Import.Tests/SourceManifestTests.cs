@@ -124,7 +124,7 @@ public sealed class SourceManifestTests : IDisposable
             Encoding.UTF8.GetBytes(inventory));
         SourceManifestRecord archive = Record(manifest, "CNT-005.file.ARCHIVE.BSA");
 
-        IReadOnlyList<SourceManifestRecord> decoded = SourceManifestBuilder.DecodeArchiveRecords(archive, archiveBytes);
+        IReadOnlyList<SourceManifestRecord> decoded = SourceManifestBuilder.DecodeArchiveRecords(archive, archiveBytes).Records;
 
         Assert.Equal(2, decoded.Count);
         Assert.Equal(["CNT-005.file.ARCHIVE.BSA.record.0000", "CNT-005.file.ARCHIVE.BSA.record.0001"], decoded.Select(record => record.Id));
@@ -226,19 +226,86 @@ public sealed class SourceManifestTests : IDisposable
         SourceManifestRecord supplied = Record("CNT-001.file.A.CIF");
         SourceManifestRecord gap = Record("CNT-001.file.GONE.CIF") with { Disposition = SourceRecordDisposition.SourceGap, Digest = null, ByteLength = 0 };
 
-        IReadOnlyList<string> before = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false);
+        SourceInventoryReconciliation before = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false);
 
-        Assert.Equal(2, before.Count);
+        Assert.Equal(2, before.Drift.Count);
+        Assert.False(before.IsClean);
         Assert.Contains("uninspected", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
-        IReadOnlyList<string> updated = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: true);
-        Assert.Equal(before, updated);
+        SourceInventoryReconciliation updated = SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: true);
+        Assert.Equal(before.Drift, updated.Drift);
         string text = File.ReadAllText(inventoryFile);
         Assert.Contains("\r\n", text, StringComparison.Ordinal);
         Assert.Contains("scope,imported,a note without commas", text, StringComparison.Ordinal);
         Assert.Contains("scope,source-gap,note", text, StringComparison.Ordinal);
         // Every other field survives untouched, including a family row's free text.
         Assert.Contains("current-structural,keep me", text, StringComparison.Ordinal);
-        Assert.Empty(SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false));
+        Assert.True(SourceInventoryReconciler.Reconcile(inventoryFile, [supplied, gap], update: false).IsClean);
+    }
+
+    [Fact]
+    public void A_documented_file_in_a_subdirectory_is_supplied_not_a_gap()
+    {
+        Directory.CreateDirectory(Path.Combine(root, "books"));
+        Write(Path.Combine("books", "BOK00000.TXT"), "a book"u8);
+        string inventory = Inventory(
+            "CNT-015,family,CNT-015,books,local/arena2/books,90,,BOK,scope,current-structural,note",
+            "CNT-015.file.books/BOK00000.TXT,file,CNT-015,source-file,local/arena2/books/BOK00000.TXT,1,6,BOK,scope,uninspected,note");
+
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        SourceManifestRecord record = Record(manifest, "CNT-015.file.books/BOK00000.TXT");
+        // The documented path is relative to the source root, so a family that lives in
+        // a subdirectory is supplied; reporting it as a gap would assert the opposite.
+        Assert.Equal(SourceRecordDisposition.Unused, record.Disposition);
+        Assert.Equal("local/arena2/books/BOK00000.TXT", record.SourcePath);
+        Assert.NotNull(record.Digest);
+        Assert.Equal(6L, record.ByteLength);
+    }
+
+    [Fact]
+    public void An_archive_that_cannot_be_read_is_malformed_rather_than_empty()
+    {
+        Write("BROKEN.BSA", "not an archive at all"u8);
+        string inventory = Inventory(
+            "CNT-005,family,CNT-005,blocks,local/arena2/BROKEN.BSA,1,,BROKEN,scope,current-structural,note",
+            "CNT-005.file.BROKEN.BSA,file,CNT-005,source-file,local/arena2/BROKEN.BSA,1,5,BROKEN,scope,uninspected,note");
+
+        SourceManifest manifest = SourceManifestBuilder.Scan(
+            new SourceManifestRequest("local/arena2", "inventory.csv", root, [], [], []),
+            Encoding.UTF8.GetBytes(inventory));
+
+        // An unreadable archive must not look like an archive with no records.
+        SourceManifestRecord record = Record(manifest, "CNT-005.file.BROKEN.BSA");
+        Assert.Equal(SourceRecordDisposition.Malformed, record.Disposition);
+        Assert.Contains("BROKEN.BSA", record.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_documented_row_the_scan_never_resolved_is_reported_not_skipped()
+    {
+        string inventoryFile = Path.Combine(root, "inventory.csv");
+        File.WriteAllText(inventoryFile, Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,imported,note",
+            "CNT-001.file.B.CIF,file,CNT-001,source-file,local/arena2/B.CIF,1,5,B,scope,uninspected,note"));
+
+        // The scan resolved only A, so B's row must be reported as unresolved rather
+        // than quietly counted as agreeing.
+        SourceInventoryReconciliation reconciliation = SourceInventoryReconciler.Reconcile(
+            inventoryFile, [Record("CNT-001.file.A.CIF")], update: false);
+
+        Assert.Empty(reconciliation.Drift);
+        Assert.Contains(reconciliation.Unreconciled, line => line.Contains("CNT-001.file.B.CIF", StringComparison.Ordinal));
+        Assert.False(reconciliation.IsClean);
+    }
+
+    [Fact]
+    public void A_malformed_manifest_read_fails_as_a_format_error()
+    {
+        Assert.Throws<FormatException>(() => SourceManifestSerializer.Deserialize("not json"u8));
+        Assert.Throws<FormatException>(() => SourceManifestSerializer.Deserialize("[]"u8));
     }
 
     private static SourceManifestRecord Record(string id) => new(
