@@ -133,11 +133,6 @@ public sealed record DaggerfallCareerRecord(
         NormalizedImportDocument.ValidateUnique(MinorSkills, value => value, $"career '{Id}' minor skill");
         NormalizedImportDocument.ValidateUnique(SkillReferences, value => value, $"career '{Id}' skill");
         RequireReferences(SkillReferences, skillKeys, $"career '{Id}' names skill");
-        RequireReferences(ResistanceElements, elementKeys, $"career '{Id}' resists element");
-        RequireReferences(ImmunityElements, elementKeys, $"career '{Id}' is immune to element");
-        RequireElements(ResistanceElements, ResistanceFlags, "resists");
-        RequireElements(ImmunityElements, ImmunityFlags, "is immune to");
-        RequireReferences(Attributes, attributeKeys, $"career '{Id}' names attribute");
         foreach ((string name, int value) in FlagBytes)
         {
             if (value is < 0 or > DaggerfallCatalogs.MaximumFlagByte)
@@ -146,6 +141,11 @@ public sealed record DaggerfallCareerRecord(
             }
         }
 
+        RequireReferences(ResistanceElements, elementKeys, $"career '{Id}' resists element");
+        RequireReferences(ImmunityElements, elementKeys, $"career '{Id}' is immune to element");
+        RequireElements(ResistanceElements, ResistanceFlags, "resists");
+        RequireElements(ImmunityElements, ImmunityFlags, "is immune to");
+        RequireReferences(Attributes, attributeKeys, $"career '{Id}' names attribute");
         Source.Validate(inventoryRecordIds);
     }
 
@@ -209,7 +209,8 @@ public sealed record DaggerfallCatalogs(
     IReadOnlyList<string> CareerNameCollisions,
     IReadOnlyList<DaggerfallReferenceKey> Enemies,
     IReadOnlyList<DaggerfallReferenceKey> ItemTemplates,
-    IReadOnlyList<DaggerfallPendingCatalog> Pending)
+    IReadOnlyList<DaggerfallPendingCatalog> Pending,
+    IReadOnlyList<string> Sources)
 {
     public const int CurrentSchemaVersion = 1;
 
@@ -249,6 +250,11 @@ public sealed record DaggerfallCatalogs(
         ArgumentNullException.ThrowIfNull(Enemies);
         ArgumentNullException.ThrowIfNull(ItemTemplates);
         ArgumentNullException.ThrowIfNull(Pending);
+
+        if (Attributes.Count == 0 || Skills.Count == 0 || Resistances.Count == 0 || Races.Count == 0 || Careers.Count == 0)
+        {
+            throw new InvalidOperationException("The catalogs must carry the classic attribute, skill and element key spaces, the races and the careers; an empty catalog resolves nothing.");
+        }
 
         ValidateIndexed(Attributes, "attribute", inventoryRecordIds);
         ValidateIndexed(Skills, "skill", inventoryRecordIds);
@@ -300,7 +306,37 @@ public sealed record DaggerfallCatalogs(
         {
             pending.Validate();
         }
+
+        // The pack carries the set of inventory records it drew from, so a consumer can
+        // check a citation without owning the inventory, and a citation outside the set
+        // is a defect rather than a typo nobody can see.
+        ArgumentNullException.ThrowIfNull(Sources);
+        NormalizedImportDocument.ValidateUnique(Sources, value => value, "catalog source record");
+        string[] cited = [.. CitedSources().Order(StringComparer.Ordinal)];
+        if (!Sources.Order(StringComparer.Ordinal).SequenceEqual(cited, StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException($"The catalog sources [{string.Join(", ", Sources)}] must be exactly the records it cites [{string.Join(", ", cited)}].");
+        }
+
+        foreach (string source in Sources)
+        {
+            if (!inventoryRecordIds.Contains(source))
+            {
+                throw new InvalidOperationException($"Catalog source '{source}' is not a record the documented inventory carries.");
+            }
+        }
     }
+
+    /// <summary>Every inventory record id the catalog records cite.</summary>
+    public IEnumerable<string> CitedSources() =>
+        Attributes.Concat<DaggerfallIndexedKey>(Skills)
+            .Concat(Resistances)
+            .Select(key => key.Source.RecordId)
+            .Concat(Races.Select(race => race.Source.RecordId))
+            .Concat(Careers.Select(career => career.Source.RecordId))
+            .Concat(Enemies.Select(enemy => enemy.Source.RecordId))
+            .Concat(ItemTemplates.Select(item => item.Source.RecordId))
+            .Distinct(StringComparer.Ordinal);
 
     private static void ValidateReferenced(IReadOnlyList<DaggerfallReferenceKey> keys, string kind, IReadOnlySet<string> inventoryRecordIds)
     {

@@ -105,6 +105,62 @@ public sealed class DaggerfallCatalogTests
     }
 
     [Fact]
+    public void Refuses_a_career_file_whose_name_is_only_a_suffix_of_a_documented_one()
+    {
+        // A suffix match would have cited SS00.CFG as the CLASS00 carrier, publishing
+        // provenance the inventory does not support.
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [("SS00.CFG", ReadClass("CLASS00.CFG"))], EnemyIds(), ItemIds()));
+
+        Assert.Contains("SS00.CFG", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_to_publish_an_empty_catalog()
+    {
+        IReadOnlySet<string> inventoryIds = ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal);
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+
+        // A run against an empty or wrong directory must fail rather than publish
+        // catalogs that resolve nothing.
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            (catalogs with { Careers = [] }).Validate(inventoryIds));
+        Assert.Contains("empty catalog", error.Message, StringComparison.Ordinal);
+
+        InvalidOperationException builderError = Assert.Throws<InvalidOperationException>(() => DaggerfallCatalogBuilder.Build(
+            ReadInventory(), VocabularyAttributes(), VocabularySkills(), [], EnemyIds(), ItemIds()));
+        Assert.Contains("empty catalog", builderError.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Reports_a_flag_byte_out_of_range_as_a_byte_not_as_an_element_mismatch()
+    {
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+        DaggerfallCareerRecord career = catalogs.Careers[0];
+        DaggerfallCatalogs bad = catalogs with
+        {
+            Careers = [career with { ResistanceFlags = 256 }, .. catalogs.Careers.Skip(1)],
+        };
+
+        ArgumentOutOfRangeException error = Assert.Throws<ArgumentOutOfRangeException>(() =>
+            bad.Validate(ReadInventory().Select(row => row.Id).ToHashSet(StringComparer.Ordinal)));
+
+        Assert.Contains("one byte", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void The_published_pack_lists_exactly_the_source_records_it_cites()
+    {
+        System.Text.Json.Nodes.JsonArray sources = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!
+            ["catalogs"]!["sources"]!.AsArray();
+        DaggerfallCatalogs catalogs = BuildFromRepository();
+
+        Assert.Equal(
+            catalogs.CitedSources().Order(StringComparer.Ordinal),
+            sources.Select(value => value!.GetValue<string>()).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
     public void Refuses_a_career_carrier_the_documented_inventory_does_not_carry()
     {
         IReadOnlyList<SourceInventoryRow> inventory = [.. ReadInventory().Where(row => row.Id != "CNT-010.file.CLASS18.CFG")];

@@ -5230,6 +5230,31 @@
         "ownerTask": 7938,
         "reason": "MAPS.BSA region, location and map-table records are supplied by that task; this contract declares the namespace and validates references into it."
       }
+    ],
+    "sources": [
+      "CNT-007",
+      "CNT-009",
+      "CNT-010",
+      "CNT-010.file.CLASS00.CFG",
+      "CNT-010.file.CLASS01.CFG",
+      "CNT-010.file.CLASS02.CFG",
+      "CNT-010.file.CLASS03.CFG",
+      "CNT-010.file.CLASS04.CFG",
+      "CNT-010.file.CLASS05.CFG",
+      "CNT-010.file.CLASS06.CFG",
+      "CNT-010.file.CLASS07.CFG",
+      "CNT-010.file.CLASS08.CFG",
+      "CNT-010.file.CLASS09.CFG",
+      "CNT-010.file.CLASS10.CFG",
+      "CNT-010.file.CLASS11.CFG",
+      "CNT-010.file.CLASS12.CFG",
+      "CNT-010.file.CLASS13.CFG",
+      "CNT-010.file.CLASS14.CFG",
+      "CNT-010.file.CLASS15.CFG",
+      "CNT-010.file.CLASS16.CFG",
+      "CNT-010.file.CLASS17.CFG",
+      "CNT-010.file.CLASS18.CFG",
+      "CNT-011"
     ]
   }
 }

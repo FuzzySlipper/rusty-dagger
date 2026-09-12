@@ -121,7 +121,11 @@ public static class DaggerfallCatalogBuilder
             [
                 new DaggerfallPendingCatalog("factions", FactionCatalogOwnerTask, "FACTION.TXT identities, relations and bindings are supplied by that task; this contract declares the namespace and validates references into it."),
                 new DaggerfallPendingCatalog("regionReferences", RegionCatalogOwnerTask, "MAPS.BSA region, location and map-table records are supplied by that task; this contract declares the namespace and validates references into it."),
-            ]);
+            ],
+            []);
+        // The published sources are exactly what the records cite; Validate refuses a set
+        // that disagrees, so this cannot drift from the citations a consumer reads.
+        catalogs = catalogs with { Sources = [.. catalogs.CitedSources().Order(StringComparer.Ordinal)] };
         catalogs.Validate(inventoryIds);
         return catalogs;
     }
@@ -178,7 +182,7 @@ public static class DaggerfallCatalogBuilder
         inventory.FirstOrDefault(value =>
             value.RowType == "file"
             && StringComparer.Ordinal.Equals(value.FamilyId, CareerFamily)
-            && value.PathOrPattern.EndsWith(fileName, StringComparison.OrdinalIgnoreCase))
+            && StringComparer.OrdinalIgnoreCase.Equals(Path.GetFileName(value.PathOrPattern), fileName))
         ?? throw new InvalidOperationException($"The documented inventory does not carry career file '{fileName}'.");
 
     /// <summary>A stable key from a documented display name.</summary>

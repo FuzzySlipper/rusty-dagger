@@ -97,6 +97,74 @@ public sealed class DaggerfallReferenceCatalogTests
         return new ProductContent(files);
     }
 
+    [Theory]
+    [InlineData("duplicate career id")]
+    [InlineData("duplicate race id")]
+    [InlineData("duplicate race donor value")]
+    [InlineData("non-positive race donor value")]
+    [InlineData("non-positive pending owner")]
+    [InlineData("career with no primary skill")]
+    [InlineData("career naming nine attributes")]
+    [InlineData("career naming one skill twice")]
+    [InlineData("citation outside the published sources")]
+    public void Rejects_a_pack_whose_catalogs_do_not_hold_together(string mutation)
+    {
+        // Each of these is a pack a hand edit can produce and the builder never would.
+        // Every one must be a content diagnostic naming the cause, never an unhandled
+        // argument failure escaping the read.
+        DaggerfallContentException error = Mutate(pack =>
+        {
+            JsonObject catalogs = pack["catalogs"]!.AsObject();
+            JsonArray careers = catalogs["careers"]!.AsArray();
+            switch (mutation)
+            {
+                case "duplicate career id":
+                    careers[1]!["id"] = careers[0]!["id"]!.GetValue<string>();
+                    break;
+                case "duplicate race id":
+                    catalogs["races"]!.AsArray()[1]!["id"] = catalogs["races"]!.AsArray()[0]!["id"]!.GetValue<string>();
+                    break;
+                case "duplicate race donor value":
+                    catalogs["races"]!.AsArray()[1]!["donorRaceId"] = catalogs["races"]!.AsArray()[0]!["donorRaceId"]!.GetValue<int>();
+                    break;
+                case "non-positive race donor value":
+                    catalogs["races"]!.AsArray()[0]!["donorRaceId"] = 0;
+                    break;
+                case "non-positive pending owner":
+                    catalogs["pending"]!.AsArray()[0]!["ownerTask"] = 0;
+                    break;
+                case "career with no primary skill":
+                    careers[0]!["primarySkills"] = new JsonArray();
+                    break;
+                case "career naming nine attributes":
+                    JsonArray attributes = careers[0]!["attributes"]!.AsArray();
+                    attributes.Add(attributes[0]!.GetValue<string>());
+                    break;
+                case "career naming one skill twice":
+                    careers[0]!["majorSkills"]!.AsArray()[0] = careers[0]!["primarySkills"]!.AsArray()[0]!.GetValue<string>();
+                    break;
+                case "citation outside the published sources":
+                    careers[0]!["source"]!["recordId"] = "CNT-999";
+                    break;
+            }
+        });
+
+        Assert.NotNull(error.Message);
+    }
+
+    [Fact]
+    public void The_published_pack_states_the_source_records_it_drew_from()
+    {
+        DaggerfallDefinitions definitions = ReadPack();
+
+        // A consumer can check a citation without owning the inventory, and the runtime
+        // refuses a citation outside this set.
+        Assert.Equal(23, definitions.Catalogs.SourceRecords.Count);
+        Assert.Contains("CNT-009", definitions.Catalogs.SourceRecords);
+        Assert.Contains("CNT-010.file.CLASS00.CFG", definitions.Catalogs.SourceRecords);
+        Assert.All(definitions.Catalogs.Careers, career => Assert.Contains(career.Source.SourceRecordId, definitions.Catalogs.SourceRecords));
+    }
+
     [Fact]
     public void Rejects_a_career_naming_a_skill_the_catalog_does_not_carry()
     {
