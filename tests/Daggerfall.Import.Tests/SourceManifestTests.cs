@@ -387,6 +387,38 @@ public sealed class SourceManifestTests : IDisposable
         Assert.Contains("with a comma", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void A_refused_update_reports_that_it_was_refused_rather_than_claiming_a_write()
+    {
+        string inventoryFile = Path.Combine(root, "blocked.csv");
+        string contents = Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,wrong-value,note",
+            "CNT-001.file.NOPE.ZZZ,file,CNT-001,source-file,local/arena2/NOPE.ZZZ,1,5,NOPE,scope,uninspected,note");
+        File.WriteAllText(inventoryFile, contents);
+
+        // One row genuinely drifts and another cannot be resolved, so the update is
+        // refused. The result must say so: a caller reporting "updated" here would
+        // carry the wrong value forward believing it had been reconciled.
+        SourceInventoryReconciliation blocked = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
+
+        Assert.False(blocked.Updated);
+        Assert.True(blocked.UpdateBlocked);
+        Assert.Single(blocked.Drift);
+        Assert.Single(blocked.Unreconciled);
+        Assert.Equal(contents, File.ReadAllText(inventoryFile));
+
+        // With nothing unresolved, the same request is carried out and says so.
+        File.WriteAllText(inventoryFile, Inventory(
+            "CNT-001,family,CNT-001,cif,local/arena2/A.CIF,1,,A,scope,current-structural,note",
+            "CNT-001.file.A.CIF,file,CNT-001,source-file,local/arena2/A.CIF,1,5,A,scope,wrong-value,note"));
+        SourceInventoryReconciliation written = SourceInventoryReconciler.Reconcile(inventoryFile, [Record("CNT-001.file.A.CIF")], update: true);
+
+        Assert.True(written.Updated);
+        Assert.False(written.UpdateBlocked);
+        Assert.Contains("scope,imported,note", File.ReadAllText(inventoryFile), StringComparison.Ordinal);
+    }
+
     private static SourceManifestRecord Record(string id) => new(
         id, "CNT-001", "local/arena2/A.CIF", "local/arena2/A.CIF", 5,
         ContentDigest.Compute("alpha"u8), null, null, SourceRecordDisposition.Imported, "note");

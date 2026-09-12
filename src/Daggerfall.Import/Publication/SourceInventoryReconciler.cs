@@ -1,9 +1,17 @@
 namespace Daggerfall.Import.Publication;
 
-/// <summary>What reconciliation found: disagreeing dispositions, and rows it could not resolve at all.</summary>
-public sealed record SourceInventoryReconciliation(IReadOnlyList<string> Drift, IReadOnlyList<string> Unreconciled)
+/// <summary>
+/// What reconciliation found and what it did: disagreeing dispositions, rows it could
+/// not resolve, and whether the inventory was actually rewritten. A caller reporting
+/// an update has to read <see cref="Updated"/> rather than infer it from the request,
+/// or it will announce a write that was refused.
+/// </summary>
+public sealed record SourceInventoryReconciliation(IReadOnlyList<string> Drift, IReadOnlyList<string> Unreconciled, bool Updated)
 {
     public bool IsClean => Drift.Count == 0 && Unreconciled.Count == 0;
+
+    /// <summary>True when an update was asked for and refused because a row was unreadable.</summary>
+    public bool UpdateBlocked => !Updated && Unreconciled.Count != 0;
 }
 
 /// <summary>
@@ -77,12 +85,13 @@ public static class SourceInventoryReconciler
 
         // An unparseable row is not a disposition to rewrite, so it blocks an update
         // rather than being silently dropped by one.
-        if (update && drift.Count != 0 && unresolved.Count == 0)
+        bool updated = update && drift.Count != 0 && unresolved.Count == 0;
+        if (updated)
         {
             File.WriteAllText(inventoryFile, string.Join(newline, lines));
         }
 
-        return new SourceInventoryReconciliation(drift, unresolved);
+        return new SourceInventoryReconciliation(drift, unresolved, updated);
     }
 
     /// <summary>The hyphenated spelling the inventory already uses for its dispositions.</summary>

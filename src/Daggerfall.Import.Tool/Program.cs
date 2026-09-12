@@ -106,12 +106,20 @@ internal static class Program
             Console.WriteLine($"inventory unresolved: {line}");
         }
 
-        Console.WriteLine(reconciliation.IsClean
-            ? "inventory: documented dispositions match the supplied tree"
-            : update
-                ? $"inventory: {reconciliation.Drift.Count} documented dispositions updated, {reconciliation.Unreconciled.Count} documented rows unresolved"
-                : $"inventory: {reconciliation.Drift.Count} documented dispositions disagree and {reconciliation.Unreconciled.Count} rows are unresolved; rerun with --update-inventory to record the dispositions");
-        return 0;
+        // The status line is chosen from what reconciliation actually did, so it cannot
+        // announce an update that was refused. A requested update that did not happen is
+        // a failure the caller has to see, not a success with a caveat.
+        string status = reconciliation switch
+        {
+            { IsClean: true } => "inventory: documented dispositions match the supplied tree",
+            { Updated: true } => $"inventory: documented dispositions updated: {reconciliation.Drift.Count}",
+            { UpdateBlocked: true } => $"inventory: NOT rewritten — unresolved documented rows: {reconciliation.Unreconciled.Count}, disagreements remaining: {reconciliation.Drift.Count}",
+            { Unreconciled.Count: > 0 } => $"inventory: unresolved documented rows: {reconciliation.Unreconciled.Count}, disagreements: {reconciliation.Drift.Count}; --update-inventory cannot resolve an unresolved row",
+            _ => $"inventory: disagreements to record: {reconciliation.Drift.Count} (rerun with --update-inventory)",
+        };
+        Console.Error.WriteLine(status);
+        return reconciliation.UpdateBlocked ? 1 : 0;
+
     }
 
     /// <summary>A consumer claims a source by the path it read; the manifest records the leaf.</summary>
