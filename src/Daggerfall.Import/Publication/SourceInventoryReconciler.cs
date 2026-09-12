@@ -6,12 +6,19 @@ namespace Daggerfall.Import.Publication;
 /// an update has to read <see cref="Updated"/> rather than infer it from the request,
 /// or it will announce a write that was refused.
 /// </summary>
-public sealed record SourceInventoryReconciliation(IReadOnlyList<string> Drift, IReadOnlyList<string> Unreconciled, bool Updated)
+public sealed record SourceInventoryReconciliation(
+    IReadOnlyList<string> Drift,
+    IReadOnlyList<string> Unreconciled,
+    bool Updated,
+    bool UpdateRequested)
 {
     public bool IsClean => Drift.Count == 0 && Unreconciled.Count == 0;
 
-    /// <summary>True when an update was asked for and refused because a row was unreadable.</summary>
-    public bool UpdateBlocked => !Updated && Unreconciled.Count != 0;
+    /// <summary>
+    /// True when an update was asked for and refused because a row was unreadable. A
+    /// report-only run refuses nothing, so it must not claim to have been blocked.
+    /// </summary>
+    public bool UpdateBlocked => UpdateRequested && !Updated && Unreconciled.Count != 0;
 }
 
 /// <summary>
@@ -91,7 +98,7 @@ public static class SourceInventoryReconciler
             File.WriteAllText(inventoryFile, string.Join(newline, lines));
         }
 
-        return new SourceInventoryReconciliation(drift, unresolved, updated);
+        return new SourceInventoryReconciliation(drift, unresolved, updated, update);
     }
 
     /// <summary>The hyphenated spelling the inventory already uses for its dispositions.</summary>

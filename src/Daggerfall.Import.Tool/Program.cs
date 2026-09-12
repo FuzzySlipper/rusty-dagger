@@ -113,7 +113,7 @@ internal static class Program
         {
             { IsClean: true } => "inventory: documented dispositions match the supplied tree",
             { Updated: true } => $"inventory: documented dispositions updated: {reconciliation.Drift.Count}",
-            { UpdateBlocked: true } => $"inventory: NOT rewritten — unresolved documented rows: {reconciliation.Unreconciled.Count}, disagreements remaining: {reconciliation.Drift.Count}",
+            { UpdateBlocked: true } => $"inventory: the inventory file was NOT rewritten — unresolved documented rows: {reconciliation.Unreconciled.Count}, disagreements remaining: {reconciliation.Drift.Count}",
             { Unreconciled.Count: > 0 } => $"inventory: unresolved documented rows: {reconciliation.Unreconciled.Count}, disagreements: {reconciliation.Drift.Count}; --update-inventory cannot resolve an unresolved row",
             _ => $"inventory: disagreements to record: {reconciliation.Drift.Count} (rerun with --update-inventory)",
         };
