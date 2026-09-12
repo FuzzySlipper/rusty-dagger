@@ -10,3 +10,7 @@ src/sprite-ui/generated/
 src/WorldRpg.SpriteWorkbench/workbench-content/
 **/bin/
 **/obj/
+
+# Throwaway probe files a review lane runs inside the tree and deletes afterwards.
+# A probe that fails still fails the suite; this only keeps it out of commits.
+tests/**/Temp*Tests.cs
