@@ -4,6 +4,7 @@ using Rusty.Engine;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.World;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Policies;
 
@@ -18,12 +19,23 @@ internal sealed record DaggerfallSavePayload(
     int Level,
     DaggerfallInventorySave Inventory,
     DaggerfallCorpseSave[] Corpses,
-    ulong NextUniqueItemEntityId,
-    ulong[] ReservedUniqueItemEntityIds,
+    DurableIdentityState Identities,
     DaggerfallCombatCooldownSave[] CombatCooldowns,
     DaggerfallContinuationSave? Continuation)
 {
-    internal const uint CurrentSchemaVersion = 1;
+    internal const uint CurrentSchemaVersion = 2;
+
+    /// <summary>The one durable identity kind Daggerfall currently allocates dynamically.</summary>
+    internal static readonly DurableIdentityKind[] PersistedKinds = [DurableIdentityKind.Item];
+
+    internal ulong NextUniqueItemEntityId => Identities.RequireKinds(PersistedKinds).Kinds
+        .Single(state => state.Kind == DurableIdentityKind.Item).NextIdentity;
+
+    internal ulong[] ReservedUniqueItemEntityIds => Identities.RequireKinds(PersistedKinds).Kinds
+        .Single(state => state.Kind == DurableIdentityKind.Item).Reserved;
+
+    internal ulong[] RemovedUniqueItemEntityIds => Identities.RequireKinds(PersistedKinds).Kinds
+        .Single(state => state.Kind == DurableIdentityKind.Item).Removed;
 
     internal static RulesetSavePayload Encode(DaggerfallSavePayload value) =>
         new(DaggerfallRuleset.Identity, CurrentSchemaVersion,
@@ -54,10 +66,12 @@ internal sealed record DaggerfallSavePayload(
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(Inventory);
         ArgumentNullException.ThrowIfNull(Corpses);
-        ArgumentNullException.ThrowIfNull(ReservedUniqueItemEntityIds);
+        ArgumentNullException.ThrowIfNull(Identities);
         ArgumentNullException.ThrowIfNull(CombatCooldowns);
         if (Experience < 0 || Level < 1) throw new ArgumentOutOfRangeException(nameof(Experience));
-        if (NextUniqueItemEntityId == 0) throw new ArgumentOutOfRangeException(nameof(NextUniqueItemEntityId));
+        Identities.Validate().RequireKinds(PersistedKinds);
+        KindAllocatorState identityState = Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
+        if (identityState.NextIdentity == 0) throw new ArgumentOutOfRangeException(nameof(Identities));
         Player.Validate();
         HashSet<long> ids = [];
         foreach (DaggerfallActorSave actor in Actors)
@@ -86,6 +100,35 @@ internal sealed record DaggerfallSavePayload(
         }
         Continuation?.Validate();
         return this;
+    }
+
+    /// <summary>
+    /// The allocator state a save implies. Identities the save records as held are
+    /// live; every other identity the allocator issued is a tombstone, because the
+    /// monotonic cursor never moves backwards and an issued identity is never
+    /// reissued. An identity the allocator never issued stays above the cursor, so
+    /// "removed" and "never loaded" remain distinguishable rather than both
+    /// collapsing into one reserved list.
+    /// </summary>
+    internal DurableIdentityState RestoreHint()
+    {
+        KindAllocatorState item = Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
+        HashSet<ulong> live = UniqueItemEntityIds().ToHashSet();
+        HashSet<ulong> retired = [.. live, .. item.Removed];
+        return new DurableIdentityState([
+            new KindAllocatorState(
+                DurableIdentityKind.Item,
+                item.NextIdentity,
+                item.Reserved.Where(value => !retired.Contains(value)).ToArray(),
+                retired.Order().ToArray()),
+        ]);
+    }
+
+    private IEnumerable<ulong> UniqueItemEntityIds()
+    {
+        foreach (DaggerfallUniqueSave item in Inventory.UniqueItems) yield return item.EntityId;
+        foreach (DaggerfallCorpseSave corpse in Corpses)
+            foreach (DaggerfallUniqueSave item in corpse.UniqueItems) yield return item.EntityId;
     }
 
     /// <summary>Checks every ruleset/content reference before a restore session owns Engine resources.</summary>
@@ -135,18 +178,36 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException("A looted corpse cannot retain inventory contents.");
         }
 
-        HashSet<ulong> allUnique = [];
-        ValidateInventory(Inventory, definitions, allUnique, "player", requireEquipmentSlots: true);
+        HashSet<ulong> live = [];
+        ValidateInventory(Inventory, definitions, live, "player", requireEquipmentSlots: true);
         foreach (DaggerfallCorpseSave corpse in Corpses)
-            ValidateInventory(new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, allUnique, $"corpse {corpse.ActorId}", requireEquipmentSlots: false);
-        HashSet<ulong> reserved = ReservedUniqueItemEntityIds.ToHashSet();
-        HashSet<ulong> stableEntityIds = inputs.Project.Actors.Keys.Select(value => checked((ulong)value)).ToHashSet();
-        stableEntityIds.Add((ulong)DaggerfallActorIdentity.PlayerEntityId);
-        if (allUnique.Overlaps(stableEntityIds))
-            throw new ArgumentException("Saved unique items cannot collide with player, actor, or corpse-owner identities.");
-        stableEntityIds.UnionWith(allUnique);
-        if (!stableEntityIds.IsSubsetOf(reserved))
-            throw new ArgumentException("Allocator reservations must include every stable and current unique entity identity.");
+            ValidateInventory(new DaggerfallInventorySave(corpse.Stacks, corpse.UniqueItems, []), definitions, live, $"corpse {corpse.ActorId}", requireEquipmentSlots: false);
+        KindAllocatorState identityState = Identities.Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
+        HashSet<ulong> removed = identityState.Removed.ToHashSet();
+        HashSet<ulong> contentIdentities = ContentEntityIds(inputs, definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
+        if (live.Overlaps(contentIdentities))
+            throw new ArgumentException("Saved unique items cannot collide with player, actor, corpse-owner, or authored loadout identities.");
+        if (removed.Overlaps(contentIdentities) || removed.Overlaps(live))
+            throw new ArgumentException("A removed identity cannot be authored content or a currently held unique item.");
+        if (!live.Concat(removed).All(identityState.Reserved.Contains))
+            throw new ArgumentException("Every static, current, and removed unique entity identity must be reserved by the allocator state.");
+    }
+
+    /// <summary>
+    /// Every durable identity authored content claims: the player, each placement,
+    /// and each unique loadout item. The allocator reserves them before any dynamic
+    /// allocation, which is what keeps later dynamic entities from colliding with
+    /// content that a subsequent site load materializes.
+    /// </summary>
+    internal static HashSet<ulong> ContentEntityIds(PrivateersHoldInputs inputs, IReadOnlyList<DaggerfallLoadoutEntry> loadout)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        ArgumentNullException.ThrowIfNull(loadout);
+        HashSet<ulong> ids = [(ulong)DaggerfallActorIdentity.PlayerEntityId];
+        foreach (AuthoredActor actor in inputs.Project.Actors.Values) ids.Add(checked((ulong)actor.EntityId));
+        foreach (DaggerfallLoadoutEntry entry in loadout)
+            if (entry.UniqueEntityId is ulong entityId) ids.Add(entityId);
+        return ids;
     }
 
     private static void ValidateTracks(DaggerfallPlayerSave value, DaggerfallActorDefinition definition, string owner)
@@ -271,5 +332,7 @@ internal sealed record DaggerfallContinuationSave(CharacterContinuationCheckpoin
 
 [JsonSourceGenerationOptions(WriteIndented = false)]
 [JsonSerializable(typeof(DaggerfallSavePayload))]
+[JsonSerializable(typeof(DurableIdentityState))]
+[JsonSerializable(typeof(KindAllocatorState))]
 [JsonSerializable(typeof(CharacterContinuationCheckpoint))]
 internal partial class DaggerfallSaveJsonContext : JsonSerializerContext;
