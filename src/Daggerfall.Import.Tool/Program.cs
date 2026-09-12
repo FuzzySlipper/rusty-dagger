@@ -94,7 +94,7 @@ internal static class Program
         SourceInventoryRow family = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(args[4]))
             .FirstOrDefault(row => row.RowType == "family" && StringComparer.Ordinal.Equals(row.Id, ItemTemplateFamily))
             ?? throw new InvalidOperationException($"The documented inventory does not carry family '{ItemTemplateFamily}'.");
-        string targetStatus = string.Equals(family.Disposition, "source-gap", StringComparison.Ordinal) ? "absent" : "present";
+        string targetStatus = ItemTemplateLedgerBuilder.StatusFor(family.Disposition);
         ItemTemplateBaseline baseline = ItemTemplateBaseline.FromDonorSources(
             File.ReadAllText(Path.Combine(donor, "ItemEnums.cs")),
             File.ReadAllText(Path.Combine(donor, "ItemHelper.cs")),
