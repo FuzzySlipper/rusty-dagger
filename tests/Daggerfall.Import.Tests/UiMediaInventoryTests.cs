@@ -70,6 +70,20 @@ public sealed class UiMediaInventoryTests
     }
 
     [Fact]
+    public void Binds_a_file_whatever_case_the_consumer_names_it_in()
+    {
+        // The family is matched case-insensitively, so a consumer naming MAIN00I0.IMG binds
+        // a path stored as main00i0.img rather than half-matching it.
+        UiMediaInventory inventory = UiMediaInventory.Enumerate(
+            [("main00i0.img", ValidImage())],
+            new HashSet<string>(["MAIN00I0.IMG"], StringComparer.Ordinal),
+            "the fixture consumer",
+            "fixture");
+
+        Assert.Equal(UiMediaDisposition.Admitted, inventory.Files.Single().Disposition);
+    }
+
+    [Fact]
     public void Refuses_a_file_in_none_of_the_documented_families()
     {
         Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => UiMediaInventory.Enumerate(
@@ -91,7 +105,10 @@ public sealed class UiMediaInventoryTests
             "fixture");
 
         Assert.Equal(UiMediaDecode.Unread, inventory.Files.Single(file => file.Path == "MAIN00I0.IMG").Decode);
-        Assert.Equal(UiMediaDisposition.RequiredPending, inventory.Files.Single(file => file.Path == "MAIN01I0.IMG").Decode == UiMediaDecode.Unread ? UiMediaDisposition.RequiredPending : UiMediaDisposition.RequiredPending);
+        // The neighbour must still read: an assertion that only restates the expected
+        // disposition cannot fail and would not notice one bad file affecting another.
+        Assert.Equal(UiMediaDecode.Header, inventory.Files.Single(file => file.Path == "MAIN01I0.IMG").Decode);
+        Assert.Equal(320, inventory.Files.Single(file => file.Path == "MAIN01I0.IMG").Width);
         Assert.Single(inventory.Unread);
     }
 

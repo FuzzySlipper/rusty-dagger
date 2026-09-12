@@ -132,10 +132,21 @@ public sealed class CharacterMediaInventory
         ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
         List<CharacterMediaRecord> files = [];
+        HashSet<string> seen = new(StringComparer.Ordinal);
         foreach ((string path, ReadOnlyMemory<byte> bytes) in sources.OrderBy(entry => entry.Path, StringComparer.Ordinal))
         {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("A character media file was supplied without a path, which is the identity the enumeration records and the consumer binds against.", nameof(sources));
+            }
+
+            if (!seen.Add(path))
+            {
+                throw new ArgumentException($"'{path}' was supplied more than once, so its record would be ambiguous.", nameof(sources));
+            }
+
             (string family, string use) = FamilyOf(path, source);
-            bool isBound = bound.Contains(path);
+            bool isBound = bound.Contains(path) || bound.Any(name => StringComparer.OrdinalIgnoreCase.Equals(name, path));
             string key = KeyOf(path);
             int width = 0, height = 0, frames = 1;
             CharacterMediaDecode decode = CharacterMediaDecode.NotRead;
