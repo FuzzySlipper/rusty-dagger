@@ -1,4 +1,5 @@
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Normalized;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -200,6 +201,52 @@ public sealed class CharacterMediaInventoryTests
         Assert.Contains("NIGHTSKY.COL", refused.Message, StringComparison.Ordinal);
         Assert.Contains("does not supply", refused.Message, StringComparison.Ordinal);
     }
+
+    [Fact]
+    public void Publishes_each_race_layers_with_the_donor_race_value_mapped_to_its_media_index()
+    {
+        CharacterMediaInventory inventory = ReadInventory();
+        HashSet<string> supplied = [CharacterMediaReferences.ArtPalette, CharacterMediaReferences.NightskyPalette];
+        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, supplied);
+
+        // The eight playable races carry the donor's one-based values, as the catalog does.
+        DaggerfallRaceKey[] races =
+        [
+            new("breton", 1, Source()), new("redguard", 2, Source()), new("nord", 3, Source()), new("dark-elf", 4, Source()),
+            new("high-elf", 5, Source()), new("wood-elf", 6, Source()), new("khajiit", 7, Source()), new("argonian", 8, Source()),
+        ];
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(inventory, supplied, races);
+
+        // Donor value minus one is the media index: Breton's background is SCBG00, Redguard's SCBG01.
+        Assert.Equal("SCBG00I0.IMG", presentation.Layers.Single(layer => layer.Race == "breton" && layer.Layer == "background").SourceFile);
+        Assert.Equal("SCBG01I0.IMG", presentation.Layers.Single(layer => layer.Race == "redguard" && layer.Layer == "background").SourceFile);
+        Assert.Equal("BODY00I0.IMG", presentation.Layers.Single(layer => layer.Race == "breton" && layer.Layer == "body.male.unclothed").SourceFile);
+        Assert.Equal("BODY17I1.IMG", presentation.Layers.Single(layer => layer.Race == "argonian" && layer.Layer == "body.female.clothed").SourceFile);
+
+        // Every layer resolves to a published canvas, and the section refuses one that does not.
+        HashSet<string> published = [.. set.Canvases.Select(reference => reference.MediaId)];
+        presentation.Validate(published);
+        DaggerfallCharacterPresentation broken = presentation with
+        {
+            Layers = [.. presentation.Layers, new DaggerfallCharacterLayer("breton", 1, "head.male.99", "character.head.male.00.99", "FACE00I0.CIF", CharacterMediaReferences.ArtPalette, MediaBinding.Admitted)],
+        };
+        InvalidOperationException dangling = Assert.Throws<InvalidOperationException>(() => broken.Validate(published));
+        Assert.Contains("resolve to nothing", dangling.Message, StringComparison.Ordinal);
+
+        // Every race the corpus draws contributes its background, four bodies and twenty heads, and
+        // every layer names a palette rather than defaulting to one.
+        Assert.Equal(8 * (1 + 4 + (2 * DaggerfallCharacterPresentationBuilder.HeadsPerRaceAndGender)), presentation.Layers.Count);
+        Assert.All(presentation.Layers, layer => Assert.Equal(CharacterMediaReferences.ArtPalette, layer.Palette));
+
+        // A race value with no paper-doll subclass is recorded rather than mapped onto the next index.
+        DaggerfallCharacterPresentation beyond = DaggerfallCharacterPresentationBuilder.Build(
+            inventory, supplied, [.. races, new DaggerfallRaceKey("vampire", 9, Source())]);
+        Assert.DoesNotContain(beyond.Layers, layer => layer.Race == "vampire");
+        Assert.Contains(beyond.RacesWithoutMedia, entry => entry.Race == "vampire" && entry.Reason.Contains("no subclass", StringComparison.Ordinal));
+    }
+
+    /// <summary>The documented source every race in this fixture comes from.</summary>
+    private static DaggerfallCatalogSource Source() => new("CNT-021", "docs/coverage/content-source-manifest.csv");
 
     [Fact]
     public void Reports_the_same_records_whatever_order_the_sources_arrive_in()
