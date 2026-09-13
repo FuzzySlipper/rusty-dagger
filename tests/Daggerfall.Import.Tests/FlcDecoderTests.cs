@@ -75,14 +75,63 @@ public sealed class FlcDecoderTests
         }
     }
 
+    [Fact]
+    public void Decodes_every_frame_of_each_portrait_into_palette_indices()
+    {
+        foreach (string name in new[] { "MAGE.CEL", "ROGUE.CEL", "WARRIOR.CEL" })
+        {
+            byte[] bytes = File.ReadAllBytes(Corpus(name));
+            IReadOnlyList<FlcDecoder.FlcFrameImage> frames = FlcDecoder.DecodeFrames(bytes, name, out Arena2Palette? palette);
+
+            Assert.True(FlcDecoder.TryRead(bytes, name, out FlcContainer? container, out _));
+            Assert.Equal(container!.FrameCount, frames.Count);
+            Assert.All(frames, frame => Assert.Equal(container.Width * container.Height, frame.Pixels.Length));
+
+            // The container's own palette chunk is what the frames index into, at scale one: the
+            // measured first colour of MAGE.CEL is (0, 0, 208), which is the palette's first triple.
+            Assert.NotNull(palette);
+            Assert.Equal(256, palette!.Colors.Length);
+            if (name == "MAGE.CEL")
+            {
+                // Measured from the file: its palette chunk opens with one packet, a zero skip and a
+                // count byte of zero meaning all 256 colours, so the first triple is black and the
+                // second is (208, 208, 208).
+                Assert.Equal(new Rgb24(0, 0, 0), palette.Colors.Span[0]);
+                Assert.Equal(new Rgb24(208, 208, 208), palette.Colors.Span[1]);
+            }
+            else
+            {
+                Assert.Contains(palette.Colors.ToArray(), color => color.Red != 0 || color.Green != 0 || color.Blue != 0);
+            }
+
+            // The first frame is the run-length image and every later frame is a delta against it, so
+            // only the first is a full frame and no frame is left blank.
+            Assert.True(frames[0].FullFrame);
+            Assert.All(frames.Skip(1), frame => Assert.False(frame.FullFrame));
+            Assert.All(frames, frame => Assert.Contains(frame.Pixels, pixel => pixel != 0));
+
+            // Decoding is deterministic: the same bytes give the same indices.
+            IReadOnlyList<FlcDecoder.FlcFrameImage> again = FlcDecoder.DecodeFrames(bytes, name, out _);
+            Assert.Equal(frames.Count, again.Count);
+            for (int index = 0; index < frames.Count; index++)
+            {
+                Assert.Equal(frames[index].Pixels, again[index].Pixels);
+            }
+
+            // A delta changes the canvas it follows rather than replacing it, which is why a frame is a
+            // snapshot: the frames differ from one another.
+            Assert.NotEqual(frames[0].Pixels, frames[^1].Pixels);
+        }
+    }
+
     /// <summary>The chunk types the donor's reader switches on, which these files all use.</summary>
-    private const ushort PstampChunkType = 18;
+    private const ushort PstampChunkType = FlcDecoder.PstampChunkType;
 
-    private const ushort Color256ChunkType = 4;
+    private const ushort Color256ChunkType = FlcDecoder.Color256ChunkType;
 
-    private const ushort ByteRunChunkType = 15;
+    private const ushort ByteRunChunkType = FlcDecoder.ByteRunChunkType;
 
-    private const ushort DeltaFlcChunkType = 7;
+    private const ushort DeltaFlcChunkType = FlcDecoder.DeltaFlcChunkType;
 
     [Fact]
     public void Refuses_bytes_that_only_look_like_a_container()
