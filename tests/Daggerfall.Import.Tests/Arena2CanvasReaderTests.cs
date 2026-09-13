@@ -167,6 +167,43 @@ public sealed class Arena2CanvasReaderTests
     }
 
     [Fact]
+    public void Reads_the_palette_a_64768_byte_screen_carries_after_its_canvas()
+    {
+        // Six supplied screens are a 320x200 canvas plus 768 palette bytes, and the classic reader
+        // reads that trailing palette for exactly those names, scaling its six-bit channels by four.
+        string[] screens = ["CHGN00I0.IMG", "DIE_00I0.IMG", "PICK02I0.IMG", "PICK03I0.IMG", "PRIS00I0.IMG", "TITL00I0.IMG"];
+        foreach (string screen in screens)
+        {
+            byte[] bytes = File.ReadAllBytes(Corpus(screen));
+            Assert.Equal(ImgDecoder.EmbeddedPaletteScreenBytes, bytes.Length);
+            Assert.True(ImgDecoder.TryReadEmbeddedPalette(bytes, screen, out Arena2Palette? palette, out string reason), $"{screen}: {reason}");
+
+            // The scaled colour is the raw trailing byte times four, and the canvas is not the palette.
+            Assert.Equal((byte)Math.Min(255, bytes[^768] * 4), palette!.Colors.Span[0].Red);
+            Assert.Equal((byte)Math.Min(255, bytes[^767] * 4), palette.Colors.Span[0].Green);
+            Assert.Contains("x4", palette.Source, StringComparison.Ordinal);
+
+            IndexedImg canvas = ImgDecoder.DecodeHeaderless(bytes, screen);
+            Assert.Equal((320, 200), (canvas.Width, canvas.Height));
+            Assert.Equal(64000, canvas.Pixels.Length);
+        }
+
+        // A 320x200 canvas reached from another length carries no palette, and saying it does would
+        // paint it with bytes that are not there.
+        byte[] bare = new byte[Arena2FormatConstants.HeaderlessUiImgBytes];
+        Assert.False(ImgDecoder.TryReadEmbeddedPalette(bare, "bare.img", out Arena2Palette? none, out string refused));
+        Assert.Null(none);
+        Assert.Contains("carries no 768-byte embedded palette", refused, StringComparison.Ordinal);
+
+        // Scaling saturates rather than wrapping, so a factor that would exceed a byte clamps: the
+        // first channel the art palette carries above the six-bit range proves it.
+        Arena2Palette art = PaletteDecoder.Decode(File.ReadAllBytes(Corpus("ART_PAL.COL")), "ART_PAL.COL");
+        int bright = art.Colors.Span.IndexOf(art.Colors.Span.ToArray().First(color => color.Red > 63));
+        Assert.True(bright >= 0, "the art palette should carry a channel above the six-bit range");
+        Assert.Equal(255, PaletteDecoder.ScaleChannels(art, 300).Colors.Span[bright].Red);
+    }
+
+    [Fact]
     public void Reads_an_img_record_whose_compression_field_is_not_implemented()
     {
         // The classic IMG reader reads a record's shape and never consults its compression field,

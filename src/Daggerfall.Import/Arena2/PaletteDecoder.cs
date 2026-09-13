@@ -76,4 +76,30 @@ public static class PaletteDecoder
 
         return new Arena2Palette(source, colors);
     }
+
+    /// <summary>
+    /// Scales every channel by a fixed factor, saturating at 255.
+    /// </summary>
+    /// <remarks>
+    /// The classic reader scales two palettes this way: the one embedded after a 64768-byte screen
+    /// (donor <c>ImgFile.ReadPalette</c>) and the map palette it keys to the exact name MAP.PAL
+    /// (donor <c>DFPalette.Load</c>). Both are six-bit, so their channels run to 63 and an unscaled
+    /// palette is a quarter as bright as the game. Scaling belongs to the caller that knows the
+    /// source is six-bit rather than to the decoder, which cannot tell.
+    /// </remarks>
+    public static Arena2Palette ScaleChannels(Arena2Palette palette, int factor)
+    {
+        ArgumentNullException.ThrowIfNull(palette);
+        ArgumentOutOfRangeException.ThrowIfLessThan(factor, 1);
+        Rgb24[] colors = new Rgb24[palette.Colors.Length];
+        for (int index = 0; index < colors.Length; index++)
+        {
+            Rgb24 color = palette.Colors.Span[index];
+            colors[index] = new Rgb24(Scaled(color.Red), Scaled(color.Green), Scaled(color.Blue));
+        }
+
+        return new Arena2Palette($"{palette.Source} x{factor}", colors);
+
+        byte Scaled(byte channel) => (byte)Math.Min(255, channel * factor);
+    }
 }
