@@ -37,6 +37,7 @@ internal static class DaggerfallBaseContent
             IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools = ReadLootCategoryPools(root, diagnostics);
             IReadOnlyList<DaggerfallDonorErratum> donorErrata = ReadDonorErrata(root, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, actors, items, diagnostics);
+            ValidateActorIdentities(actors, catalogs, diagnostics);
             DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
@@ -271,6 +272,33 @@ internal static class DaggerfallBaseContent
         return false;
     }
 
+    /// <summary>
+    /// Checks the race and career an actor names against the published catalogs.
+    /// </summary>
+    /// <remarks>
+    /// An identity nobody publishes would resolve to no art at all, which is the failure the
+    /// character presentation set exists to make impossible rather than to discover while a sheet is
+    /// being drawn.
+    /// </remarks>
+    private static void ValidateActorIdentities(
+        IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors,
+        DaggerfallCatalogSet catalogs,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        foreach (DaggerfallActorDefinition actor in actors.Values)
+        {
+            if (actor.Race is { } race && !catalogs.Races.Any(candidate => candidate.Id == race))
+            {
+                diagnostics.Add($"Actor '{actor.Id.Value}' names race '{race}', which the catalogs do not publish.");
+            }
+
+            if (actor.Career is { } career && !catalogs.Careers.Any(candidate => candidate.Id == career))
+            {
+                diagnostics.Add($"Actor '{actor.Id.Value}' names career '{career}', which the catalogs do not publish.");
+            }
+        }
+    }
+
     /// <summary>A stable semantic catalog digest for donor regression tests; it intentionally ignores JSON whitespace and object member ordering.</summary>
     internal static string Fingerprint(DaggerfallDefinitions definitions)
     {
@@ -340,7 +368,7 @@ internal static class DaggerfallBaseContent
                 if (grounding.ValueKind is not (JsonValueKind.True or JsonValueKind.False)) diagnostics.Add($"Actor '{id.Value}' groundOnSpawn must be boolean.");
                 else groundOnSpawn = grounding.GetBoolean();
             }
-            DaggerfallActorDefinition definition = new(id, Text(actor, "kind", diagnostics), stats, health, new(DaggerfallMechanicsIds.Health, id.Value == "player" ? DaggerfallMechanicsIds.Stamina : null), rewards, armor, mobileId, OptionalInteger(actor, "hitPointsPerLevel", diagnostics), attacks, OptionalText(actor, "team", diagnostics), OptionalText(actor, "minMetalToHit", diagnostics), OptionalText(actor, "lootTableKey", diagnostics), OptionalInteger(actor, "level", diagnostics), OptionalInteger(actor, "weight", diagnostics), actionId, ReadLoadout(actor, items, diagnostics), presentation, groundOnSpawn);
+            DaggerfallActorDefinition definition = new(id, Text(actor, "kind", diagnostics), stats, health, new(DaggerfallMechanicsIds.Health, id.Value == "player" ? DaggerfallMechanicsIds.Stamina : null), rewards, armor, mobileId, OptionalInteger(actor, "hitPointsPerLevel", diagnostics), attacks, OptionalText(actor, "team", diagnostics), OptionalText(actor, "minMetalToHit", diagnostics), OptionalText(actor, "lootTableKey", diagnostics), OptionalInteger(actor, "level", diagnostics), OptionalInteger(actor, "weight", diagnostics), actionId, ReadLoadout(actor, items, diagnostics), presentation, groundOnSpawn, OptionalText(actor, "race", diagnostics), OptionalText(actor, "career", diagnostics));
             if (!actors.TryAdd(id, definition)) diagnostics.Add($"Duplicate actor definition '{id.Value}'.");
         }
         if (actors.Count == 0) diagnostics.Add("Base payload must define at least one actor.");
@@ -721,6 +749,7 @@ internal static class DaggerfallBaseContent
     {
         foreach (DaggerfallActorDefinition actor in actors.Values)
         {
+
             if (actor.Kind is not ("player" or "monster" or "enemy-class")) diagnostics.Add($"Actor '{actor.Id.Value}' has unsupported kind '{actor.Kind}'.");
             if (actor.Kind == "player" && (actor.Id.Value != "player" || actor.MobileId is not null)) diagnostics.Add("Only actor 'player' may have kind player and it cannot have a mobile id.");
             if (actor.Kind == "enemy-class" && (actor.Id.Value, actor.MobileId) is not (("thief", 138) or ("archer", 141))) diagnostics.Add("Enemy classes must be thief mobile 138 or archer mobile 141.");

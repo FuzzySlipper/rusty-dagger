@@ -18,7 +18,62 @@ internal sealed record CharacterSheetPresentation(
     CharacterStatPresentation[] Skills,
     CharacterResourcePresentation[] Resources,
     CharacterProgressionPresentation Progression,
-    CharacterEquipmentPresentation[] Equipment);
+    CharacterEquipmentPresentation[] Equipment,
+    CharacterIdentityPresentation? Identity = null);
+
+/// <summary>One presentation layer a character is drawn from, by the identity a consumer resolves.</summary>
+/// <param name="Layer">The layer's role, as the publication names it.</param>
+/// <param name="MediaId">The published identity of the canvas.</param>
+internal sealed record CharacterMediaIdentity(string Layer, string MediaId);
+
+/// <summary>
+/// The media identities the character's race and career resolve to, published so a sheet draws from
+/// the same records everything else resolves rather than reconstructing file names.
+/// </summary>
+/// <param name="Race">The race identity the layers belong to, or empty when the actor names none.</param>
+/// <param name="DonorRaceId">The donor's race value for that race, or zero.</param>
+/// <param name="Portrait">The career's portrait identity, or empty when the career has none or none is named.</param>
+/// <param name="Media">Every layer the race publishes, in the order the publication names them.</param>
+internal sealed record CharacterIdentityPresentation(string Race, int DonorRaceId, string Portrait, CharacterMediaIdentity[] Media)
+{
+    /// <summary>
+    /// Resolves an actor's declared race and career through the published presentation set.
+    /// </summary>
+    /// <remarks>
+    /// An actor that declares no race has no paper doll, and this says so by returning nothing rather
+    /// than by choosing a race: the identities are authored facts, and a default would draw every
+    /// unstated character as whatever the default happened to be.
+    /// </remarks>
+    /// <summary>The published name of a layer, which is what the section keys it by.</summary>
+    private static string LayerName(DaggerfallCharacterLayerDefinition layer) => layer.Kind switch
+    {
+        DaggerfallCharacterLayerKind.Background => "background",
+        DaggerfallCharacterLayerKind.BodyUnclothed => $"body.{Gender(layer.Gender)}.unclothed",
+        DaggerfallCharacterLayerKind.BodyClothed => $"body.{Gender(layer.Gender)}.clothed",
+        _ => $"head.{Gender(layer.Gender)}.{layer.HeadIndex}",
+    };
+
+    private static string Gender(DaggerfallCharacterGender? gender) => gender == DaggerfallCharacterGender.Female ? "female" : "male";
+
+    internal static CharacterIdentityPresentation? From(DaggerfallDefinitions definitions, DaggerfallActorDefinition? actor)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        if (actor?.Race is not { Length: > 0 } race)
+        {
+            return null;
+        }
+
+        DaggerfallRaceLayers layers = definitions.CharacterPresentation.RequireRace(race);
+        string portrait = actor.Career is { Length: > 0 } career && definitions.CharacterPresentation.Careers.ContainsKey(career)
+            ? definitions.CharacterPresentation.RequirePortrait(career).MediaId
+            : string.Empty;
+        return new CharacterIdentityPresentation(
+            race,
+            layers.DonorRaceId,
+            portrait,
+            [.. layers.Layers.Select(layer => new CharacterMediaIdentity(LayerName(layer), layer.MediaId))]);
+    }
+}
 
 /// <summary>
 /// Daggerfall's character-sheet policy. Mechanics supplies live stat and
@@ -39,7 +94,8 @@ internal sealed class DaggerfallCharacterPresentation(
             Stats(player, definitions.Vocabulary.Skills),
             definitions.HudResources.Select(resource => Resource(player, resource)).ToArray(),
             new CharacterProgressionPresentation(progression.Level, progression.Experience),
-            Equipment());
+            Equipment(),
+            CharacterIdentityPresentation.From(definitions, playerDefinition));
     }
 
     private CharacterStatPresentation[] Stats(PlayerActorState player, IReadOnlyList<DaggerfallStatId> ids) => ids

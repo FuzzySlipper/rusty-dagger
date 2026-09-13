@@ -109,7 +109,18 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("current", builder.Number(resource.Current)), ("maximum", builder.Number(resource.Maximum)))).ToArray())),
             ("progression", builder.Object(("level", builder.Number(value.Progression.Level)), ("experience", builder.Number(value.Progression.Experience)))),
             ("equipment", builder.Array(value.Equipment.Select(item => builder.Object(("label", builder.String(item.Label)),
-                ("slots", builder.Array(item.Slots.Select(builder.String).ToArray())), ("details", builder.String(item.Details)))).ToArray())));
+                ("slots", builder.Array(item.Slots.Select(builder.String).ToArray())), ("details", builder.String(item.Details)))).ToArray())),
+            // The media the sheet draws from, so a consumer resolves published identities rather than
+            // reconstructing a race's file names. An actor that declares no race publishes none.
+            ("identity", value.Identity is { } identity
+                ? builder.Object(
+                    ("race", builder.String(identity.Race)),
+                    ("donorRaceId", builder.Number(identity.DonorRaceId)),
+                    ("portrait", builder.String(identity.Portrait)),
+                    ("media", builder.Array(identity.Media.Select(medium => builder.Object(
+                        ("layer", builder.String(medium.Layer)),
+                        ("mediaId", builder.String(medium.MediaId)))).ToArray())))
+                : builder.Null()));
     }
 
     private static uint Composition(UiValueBuilder builder, ResolvedCompositionIdentity identity) => builder.Object(
