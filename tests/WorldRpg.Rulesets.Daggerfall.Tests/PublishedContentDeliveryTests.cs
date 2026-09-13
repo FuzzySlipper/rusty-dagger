@@ -53,18 +53,14 @@ public sealed class PublishedContentDeliveryTests
         // Every entry the inventory lists is present and hashes to what it says, and every published
         // artifact is listed: an index that drifts from its content is worse than none, because a
         // consumer trusts it.
-        // The inventory names artifacts relative to the group it publishes into, while the admitted
-        // snapshot names them relative to the content root, so the group appears in one and not the
-        // other. That difference is the open question on this work - which root is the declared group -
-        // and this test states it rather than hiding it: the closure below is checked across it.
         HashSet<string> listed = [];
         foreach (JsonElement artifact in inventory.GetProperty("artifacts").EnumerateArray())
         {
             string path = artifact.GetProperty("path").GetString()!;
-            byte[] bytes = content.ReadBytes(GroupPrefix + path).ToArray();
+            byte[] bytes = content.ReadBytes(path).ToArray();
             Assert.Equal(artifact.GetProperty("byteLength").GetInt64(), bytes.Length);
             Assert.Equal(artifact.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
-            listed.Add(GroupPrefix + path);
+            listed.Add(path);
         }
 
         HashSet<string> published = [.. content.ReadDirectory("worldrpg/media", recursive: true)
@@ -73,9 +69,6 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         Assert.Equal(58, listed.Count);
     }
-
-    /// <summary>The group's path prefix in the admitted snapshot, which the inventory does not carry.</summary>
-    private const string GroupPrefix = "worldrpg/";
 
     private static ProductContent AdmittedContent()
     {
