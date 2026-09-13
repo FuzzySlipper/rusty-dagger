@@ -33,9 +33,9 @@ public sealed class CharacterMediaInventoryTests
         // FACES.CIF is the fixed-cell grid the classic reader names, so the six files retained
         // with a reason are the three CEL and three BSS files whose readers this repository
         // does not have.
-        Assert.Equal(81, inventory.Files.Count(file => file.Decode != Arena2CanvasKind.Unread));
-        Assert.Equal(6, inventory.Unsupported.Count());
-        Assert.Equal(3, inventory.Unsupported.Count(file => file.Family == "CEL"));
+        Assert.Equal(84, inventory.Files.Count(file => file.Decode != Arena2CanvasKind.Unread));
+        Assert.Equal(3, inventory.Unsupported.Count());
+        Assert.Equal(0, inventory.Unsupported.Count(file => file.Family == "CEL"));
         Assert.Equal(3, inventory.Unsupported.Count(file => file.Family == "BSS"));
         Assert.All(inventory.Unsupported, file => Assert.Equal(Arena2CanvasKind.Unread, file.Decode));
         Assert.All(inventory.Unsupported, file => Assert.False(string.IsNullOrWhiteSpace(file.Note)));
@@ -103,18 +103,20 @@ public sealed class CharacterMediaInventoryTests
     {
         CharacterMediaInventory inventory = ReadInventory();
 
-        // A CEL is not a damaged file: the classic reader reads it with an FLC animation reader
-        // this repository does not have, and the note names that reader.
-        CharacterMediaRecord portrait = inventory.Family("CEL").First();
-        Assert.Contains("FLC animation reader", portrait.Note, StringComparison.Ordinal);
-        Assert.Contains("does not have", portrait.Note, StringComparison.Ordinal);
+        // A BSS is not a damaged file: the classic reader reads it with a BSS reader this repository
+        // does not have, and the note names that reader. The class portraits used to be here and now
+        // read, so the family left behind is the one still missing a reader.
+        CharacterMediaRecord sprite = inventory.Family("BSS").First();
+        Assert.Contains("BSS reader", sprite.Note, StringComparison.Ordinal);
+        Assert.Contains("does not have", sprite.Note, StringComparison.Ordinal);
+        Assert.All(inventory.Family("CEL"), portrait => Assert.True(portrait.Decode != Arena2CanvasKind.Unread));
     }
 
     [Fact]
     public void Keeps_a_binding_whether_or_not_the_file_reads()
     {
-        // Binding and decodability are separate facts: a consumer that binds an unread file
-        // still binds it, and the record says both.
+        // Binding and decodability are separate facts: a consumer that binds a file still binds it
+        // whatever a reader makes of it, and the record says both.
         CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(
             [("MAGE.CEL", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/MAGE.CEL")))],
             new HashSet<string>(["MAGE.CEL"], StringComparer.Ordinal),
@@ -123,7 +125,10 @@ public sealed class CharacterMediaInventoryTests
 
         CharacterMediaRecord record = Assert.Single(inventory.Files);
         Assert.Equal(MediaBinding.Admitted, record.Binding);
-        Assert.Equal(Arena2CanvasKind.Unread, record.Decode);
+
+        // The portrait reads, and its 15 frames are its canvases; the binding is unaffected by that.
+        Assert.Equal(Arena2CanvasKind.FlcAnimation, record.Decode);
+        Assert.Equal(15, record.CanvasCount);
         Assert.Equal("the fixture consumer", record.Consumer);
     }
 
@@ -159,10 +164,9 @@ public sealed class CharacterMediaInventoryTests
         // ... and they are not omitted either: every unread file is accounted for with the donor
         // reader its format would need, three CEL and three BSS, and every canvas carries the
         // binding the inventory recorded so a published reference says who claims it.
-        Assert.Equal(6, set.Unavailable.Count);
-        Assert.Equal(3, set.Unavailable.Count(entry => entry.Family == "CEL"));
+        Assert.Equal(3, set.Unavailable.Count);
         Assert.Equal(3, set.Unavailable.Count(entry => entry.Family == "BSS"));
-        Assert.All(set.Unavailable, entry => Assert.Contains(entry.Family == "CEL" ? "FlcFile.cs" : "BssFile.cs", entry.Reason, StringComparison.Ordinal));
+        Assert.All(set.Unavailable, entry => Assert.Contains("BssFile.cs", entry.Reason, StringComparison.Ordinal));
         Assert.All(set.Unavailable, entry => Assert.Equal(inventory.Files.Single(file => file.Path == entry.Path).Binding, entry.Binding));
         Assert.All(references, reference => Assert.Equal(inventory.Files.Single(file => file.Path == reference.Path).Binding, reference.Binding));
 
@@ -265,14 +269,16 @@ public sealed class CharacterMediaInventoryTests
         // Every supplied file is accounted for, including the six nothing reads and the readable
         // files no layer uses: a family cannot go missing between the inventory and the pack.
         Assert.Equal(87, presentation.Files.Count);
-        Assert.Equal(6, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreadable));
-        Assert.Equal(81, presentation.Files.Count(file => file.Outcome != CharacterFileOutcome.Unreadable));
+        Assert.Equal(3, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreadable));
+        Assert.Equal(84, presentation.Files.Count(file => file.Outcome != CharacterFileOutcome.Unreadable));
         Assert.Equal(57, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
-        Assert.Equal(24, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
+        Assert.Equal(27, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
         Assert.All(presentation.Files.Where(file => file.Outcome == CharacterFileOutcome.Unreadable),
             file => Assert.Contains("does not have", file.Reason, StringComparison.Ordinal));
         Assert.Contains(presentation.Files, file => file.Path == "CMPA00I0.BSS" && file.Outcome == CharacterFileOutcome.Unreadable);
-        Assert.Contains(presentation.Files, file => file.Path == "MAGE.CEL" && file.Outcome == CharacterFileOutcome.Unreadable);
+        // The class portraits read now, and no layer uses them yet: the career references that would
+        // are the next increment, so they are readable and unreferenced rather than unavailable.
+        Assert.Contains(presentation.Files, file => file.Path == "MAGE.CEL" && file.Outcome == CharacterFileOutcome.Unreferenced);
         // The faction face grid is the section's non-racial family: sixty-one cells a social or
         // escort view resolves by faction index, so it is referenced rather than unreferenced.
         Assert.Contains(presentation.Files, file => file.Path == "FACES.CIF" && file.Outcome == CharacterFileOutcome.Referenced);
