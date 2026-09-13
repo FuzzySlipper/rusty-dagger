@@ -222,6 +222,10 @@ public sealed class MapsRegionGroupTests
         Assert.Contains(locations.Locations, location => location.LocationType != 0);
         Assert.Contains(locations.Locations, location => !location.Discovered);
 
+        // No dungeon in this corpus disagreed, so the gap list is empty - and the shape that would
+        // hold one is exercised by the fixture below rather than left to be discovered.
+        Assert.Empty(locations.DungeonsWithoutRecords);
+
         // The empty tables are named, and they are the same three every time: a region slot whose
         // map data was never written, which is what the donor discards and what this must not report
         // as a damaged file.
@@ -248,6 +252,44 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(
             locations.RegionsWithoutTables.Select(gap => (gap.Region, string.Join(',', gap.EmptyTables))),
             again.RegionsWithoutTables.Select(gap => (gap.Region, string.Join(',', gap.EmptyTables))));
+    }
+
+    [Fact]
+    public void Records_a_dungeon_whose_records_disagree_instead_of_dropping_it()
+    {
+        // A region with one location of dungeon type, a valid exterior item table and a dungeon item
+        // table whose declared count runs past its bytes: the location has a dungeon record that
+        // cannot be read, so it must appear as a gap rather than vanish from the publication.
+        byte[] exterior = new byte[6 + (1 * 4)];
+        BitConverter.GetBytes((uint)0).CopyTo(exterior, 4);
+        byte[] dungeons = [0x02, 0x00, 0x00, 0x00];
+        byte[] maps = MapTable(1, dungeonType: 1);
+        DaggerfallLocations published = DaggerfallLocationBuilder.Build(BsaArchive.Parse(
+            Archive(("MAPNAMES.000", MapNames(1)), ("MAPTABLE.000", maps), ("MAPPITEM.000", exterior), ("MAPDITEM.000", dungeons)),
+            "fixture"));
+
+        Assert.Single(published.Locations);
+        Assert.Empty(published.Dungeons);
+        Assert.Single(published.DungeonsWithoutRecords);
+        // The reason is the failing read's own refusal, which names the source: which table disagreed is the
+        // diagnostic, and the gap records it rather than a summary that would lose it.
+        Assert.Contains("fixture", published.DungeonsWithoutRecords[0].Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>A map table of the given location count, each entry carrying the given dungeon type.</summary>
+    private static byte[] MapTable(int locations, byte dungeonType)
+    {
+        byte[] table = new byte[locations * 17];
+        for (int index = 0; index < locations; index++)
+        {
+            int offset = index * 17;
+            BitConverter.GetBytes(index + 1).CopyTo(table, offset);
+            // The entry's dungeon type byte follows the map id and the two position words: twelve bytes
+            // in, which is where the decoder reads it, not at the seventeen-byte stride.
+            table[offset + 12] = dungeonType;
+        }
+
+        return table;
     }
 
     private static byte[] MapNames(int count)

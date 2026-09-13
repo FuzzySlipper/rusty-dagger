@@ -252103,6 +252103,7 @@
         "reason": "The donor\u0027s MapsFile discards a region whose tables are not all readable, so this region has no locations to publish."
       }
     ],
+    "dungeonsWithoutRecords": [],
     "sources": [
       "arena2/MAPS.BSA"
     ]
