@@ -149,10 +149,10 @@ public sealed class ResidualSourceInventory
             PathOverrides.TryGetValue(name, out (string? DonorReader, string? Note) overrides);
             string donorReader = overrides.DonorReader ?? entry.DonorReader;
             string reader = ReaderFor(entry.Reader, name);
-            string failure = reader.Length == 0 ? string.Empty : Probe(reader, bytes.Span, path);
+            ProbeOutcome probe = reader.Length == 0 ? new ProbeOutcome(false, string.Empty) : Probe(reader, bytes.Span, path);
             SourceRecordDisposition disposition = reader.Length == 0
                 ? SourceRecordDisposition.Unresolved
-                : failure.Length == 0 ? SourceRecordDisposition.Unused : SourceRecordDisposition.Malformed;
+                : probe.Read ? SourceRecordDisposition.Unused : SourceRecordDisposition.Malformed;
             files.Add(new ResidualSourceRecord(
                 path,
                 family,
@@ -160,7 +160,7 @@ public sealed class ResidualSourceInventory
                 donorReader,
                 DocumentedFamilies.Contains(family, StringComparer.Ordinal),
                 disposition,
-                Note(entry, reader, donorReader, failure, overrides.Note)));
+                Note(entry, reader, donorReader, probe, overrides.Note)));
         }
 
         return new ResidualSourceInventory(source, files);
@@ -169,29 +169,44 @@ public sealed class ResidualSourceInventory
     /// <summary>
     /// The reader this repository would reuse for one path: the family's reader, except that a
     /// weapon CIF belongs to the weapon CIF reader rather than to the general canvas probe, which
-    /// says so instead of reading it.
+    /// says so instead of reading it. The test mirrors the donor's own substring test
+    /// (<c>CifRciFile.ReadRecords</c> dispatches on <c>fn.Contains("WEAPO")</c>); comparing
+    /// case-insensitively is this repository's superset, which cannot misfire on the corpus's
+    /// uppercase names.
     /// </summary>
     private static string ReaderFor(string familyReader, string name) =>
         familyReader == "Arena2CanvasReader" && name.Contains("WEAPO", StringComparison.OrdinalIgnoreCase)
             ? "WeaponCifArchive"
             : familyReader;
 
-    private static string Note(FamilyEntry entry, string reader, string donorReader, string failure, string? pathNote)
+    /// <summary>What a probe established: whether a reader read the file, and what it left unsaid.</summary>
+    /// <param name="Read">Whether the family's reader read the bytes.</param>
+    /// <param name="Message">The refusal when it did not, or what it left unread when it did.</param>
+    private readonly record struct ProbeOutcome(bool Read, string Message)
+    {
+        internal static ProbeOutcome Read_(string disclosure) => new(true, disclosure);
+
+        internal static ProbeOutcome Refused(string failure) => new(false, failure);
+    }
+
+    private static string Note(FamilyEntry entry, string reader, string donorReader, ProbeOutcome probe, string? pathNote)
     {
         string donor = donorReader.Length == 0
             ? "No donor reader reaches this family, so its contents are a source fact without an established meaning."
             : $"The donor reads this family through {donorReader}.";
-        string verdict = failure.Length == 0
-            ? reader.Length == 0
+        string verdict = !probe.Read
+            ? $"{reader} refused it: {probe.Message}"
+            : reader.Length == 0
                 ? "This repository has no reader for it, so nothing here determines its contents."
-                : $"Read by {reader}; no consumer claims it yet, which is why it is unused rather than required-pending."
-            : $"{reader} refused it: {failure}";
+                // What a reader left unread still travels with the record: a file that reads is
+                // not a file whose remainder may be dropped.
+                : $"Read by {reader}; no consumer claims it yet, which is why it is unused rather than required-pending.{(probe.Message.Length == 0 ? string.Empty : $" {probe.Message}")}";
         string purpose = $"Holds {entry.Purpose}.";
         return pathNote is null ? $"{purpose} {donor} {verdict}" : $"{purpose} {pathNote} {donor} {verdict}";
     }
 
-    /// <summary>Reads a path with the reader its family names, returning the refusal or nothing.</summary>
-    private static string Probe(string reader, ReadOnlySpan<byte> bytes, string path)
+    /// <summary>Reads a path with the reader its family names, returning what it read or refused.</summary>
+    private static ProbeOutcome Probe(string reader, ReadOnlySpan<byte> bytes, string path)
     {
         try
         {
@@ -199,23 +214,23 @@ public sealed class ResidualSourceInventory
             {
                 case "Arena2CanvasReader":
                     Arena2CanvasSet canvases = Arena2CanvasReader.Read(bytes, path);
-                    return canvases.Read ? string.Empty : canvases.Reason;
+                    return canvases.Read ? ProbeOutcome.Read_(canvases.Reason) : ProbeOutcome.Refused(canvases.Reason);
                 case "WeaponCifArchive":
                     WeaponCifArchive.Parse(bytes, path);
-                    return string.Empty;
+                    return ProbeOutcome.Read_(string.Empty);
                 case "PaletteDecoder":
                     PaletteDecoder.Decode(bytes, path);
-                    return string.Empty;
+                    return ProbeOutcome.Read_(string.Empty);
                 case "BsaArchive":
                     BsaArchive.Parse(bytes, path);
-                    return string.Empty;
+                    return ProbeOutcome.Read_(string.Empty);
                 default:
                     throw new InvalidOperationException($"Family reader '{reader}' has no probe, so its families would be classified without reading them.");
             }
         }
         catch (Arena2FormatException failure)
         {
-            return failure.Message;
+            return ProbeOutcome.Refused(failure.Message);
         }
     }
 }
