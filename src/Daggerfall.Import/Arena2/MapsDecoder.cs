@@ -53,6 +53,26 @@ public sealed record MapsRegionTable(string Name, int Ordinal, int Length, int D
 /// <param name="Tables">The group's tables, in the donor's own order.</param>
 public sealed record MapsRegionGroup(int Region, IReadOnlyList<MapsRegionTable> Tables);
 
+/// <summary>
+/// One location a region's tables describe: its name, the map it draws, where it sits, and whether
+/// the map is a dungeon.
+/// </summary>
+/// <param name="Region">The source region index the location belongs to, preserved from the table name.</param>
+/// <param name="Index">The location's ordinal in the region's names table.</param>
+/// <param name="Name">The exact name the names table carries.</param>
+/// <param name="MapId">The map the location draws.</param>
+/// <param name="Longitude">The location's authored longitude.</param>
+/// <param name="Latitude">The location's authored latitude.</param>
+/// <param name="DungeonType">The location's dungeon type byte, which is zero when it has no dungeon.</param>
+public sealed record MapsLocationRecord(
+    int Region,
+    int Index,
+    string Name,
+    int MapId,
+    int Longitude,
+    int Latitude,
+    byte DungeonType);
+
 public static class MapsDecoder
 {
     private static readonly string[] RdbBlockLetters = ["N", "W", "L", "S", "B", "M"];
@@ -219,6 +239,33 @@ public static class MapsDecoder
         ReadOnlyMemory<byte> data = archive.GetPayload(record);
         CheckedLittleEndianReader reader = new(data.Span, archive.Source);
         return CheckedCount(reader.ReadUInt32(), archive.Source, 0, what);
+    }
+
+    /// <summary>
+    /// Reads every location a region's own tables describe, one record per name.
+    /// </summary>
+    /// <remarks>
+    /// The names table decides how many locations a region has and the map table is indexed by
+    /// position in it, so the two are read together: a location's name and its map, position and
+    /// dungeon type come from the same index, and the region index the table names carry is preserved
+    /// on every record. The block references a dungeon location owns are a further read of the same
+    /// index and are not claimed here.
+    /// </remarks>
+    /// <param name="archive">The MAPS.BSA archive.</param>
+    /// <param name="region">The source region index to read.</param>
+    public static IReadOnlyList<MapsLocationRecord> DecodeRegionLocations(BsaArchive archive, int region)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        IReadOnlyList<string> names = DecodeLocationNames(archive, region);
+        ReadOnlyMemory<byte> mapTable = GetNamedPayload(archive, "MAPTABLE", region);
+        List<MapsLocationRecord> locations = new(names.Count);
+        for (int index = 0; index < names.Count; index++)
+        {
+            (int mapId, int longitude, int latitude, byte dungeonType) = DecodeMapTable(mapTable, archive.Source, index);
+            locations.Add(new MapsLocationRecord(region, index, names[index], mapId, longitude, latitude, dungeonType));
+        }
+
+        return locations;
     }
 
     /// <summary>Reads the exact location names stored in a MAPNAMES region record.</summary>

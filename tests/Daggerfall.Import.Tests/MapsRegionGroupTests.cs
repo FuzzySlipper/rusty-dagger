@@ -80,6 +80,39 @@ public sealed class MapsRegionGroupTests
         Assert.Contains("discards the region", empty.Reason, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Reads_every_location_a_region_describes_with_its_map_and_position()
+    {
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        IReadOnlyList<MapsRegionGroup> groups = MapsDecoder.DecodeRegionGroups(archive);
+
+        int total = 0;
+        foreach (MapsRegionGroup group in groups)
+        {
+            // A region that the donor discards for a zero-length table has nothing to read; every
+            // other region yields one record per name, indexed from zero and preserving its region.
+            if (group.Tables.Any(table => table.Length == 0)) continue;
+            IReadOnlyList<MapsLocationRecord> locations = MapsDecoder.DecodeRegionLocations(archive, group.Region);
+            MapsRegionTable names = group.Tables.Single(table => table.Name.StartsWith("MAPNAMES", StringComparison.Ordinal));
+            Assert.Equal(names.DeclaredRecords, locations.Count);
+            Assert.Equal(Enumerable.Range(0, locations.Count), locations.Select(location => location.Index));
+            Assert.All(locations, location => Assert.Equal(group.Region, location.Region));
+            Assert.All(locations, location => Assert.False(string.IsNullOrWhiteSpace(location.Name)));
+            Assert.All(locations, location => Assert.True(location.MapId >= 0));
+            Assert.All(locations, location => Assert.InRange(location.Longitude, 0, 0x1F_FFFF >> 8));
+            Assert.All(locations, location => Assert.InRange(location.Latitude, 0, 0x00FF_FFFF >> 8));
+            total += locations.Count;
+
+            // The same read twice is the same records: the decode is deterministic.
+            Assert.Equal(locations, MapsDecoder.DecodeRegionLocations(archive, group.Region));
+        }
+
+        // The corpus's sixty-two regions describe fifteen thousand two hundred and fifty-one locations
+        // between them, measured from the tables rather than assumed: the number moves if the source
+        // does, and a test that asserts a guess would only ever fail.
+        Assert.Equal(15251, total);
+    }
+
     private static byte[] MapNames(int count)
     {
         byte[] bytes = new byte[sizeof(uint) + (count * 32)];
