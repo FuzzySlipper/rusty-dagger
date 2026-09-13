@@ -182,6 +182,13 @@ public static class CharacterMediaReferences
         // The one fixed-cell grid in these families is the faction face table: sixty-one cells a
         // social or escort view indexes by faction, which is a different role from a paper-doll head
         // and is named as one.
+        // A class portrait is an animation: one identity per frame, named for the class it depicts so
+        // a career resolves its portrait rather than reconstructing a file name.
+        if (file.Family == "CEL")
+        {
+            return $"character.portrait.{name.ToLowerInvariant()}.{canvasIndex}";
+        }
+
         if (name == "FACES")
         {
             return $"character.faction-face.{canvasIndex:00}";

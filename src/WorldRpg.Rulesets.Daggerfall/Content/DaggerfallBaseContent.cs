@@ -74,7 +74,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("characterPresentation", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish a characterPresentation section.");
-            return new DaggerfallCharacterPresentationSet(0, new Dictionary<string, DaggerfallRaceLayers>(StringComparer.Ordinal), [], [], []);
+            return new DaggerfallCharacterPresentationSet(0, new Dictionary<string, DaggerfallRaceLayers>(StringComparer.Ordinal), [], new Dictionary<string, DaggerfallCareerPortraitDefinition>(StringComparer.Ordinal), [], [], []);
         }
 
         int schemaVersion = Integer(section, "schemaVersion", diagnostics);
@@ -191,7 +191,43 @@ internal static class DaggerfallBaseContent
             faces.Add(new DaggerfallFactionFaceDefinition(index, mediaId, sourceFile, palette));
         }
 
-        return new DaggerfallCharacterPresentationSet(schemaVersion, races, [.. faces.OrderBy(face => face.Index)], without, files);
+        // A career's portrait is resolved by career identity, and each one's career must be one the
+        // catalogs publish - a portrait for a career the pack does not have would resolve to nothing.
+        HashSet<string> catalogCareers = [.. catalogs.Careers.Select(career => career.Id)];
+        Dictionary<string, DaggerfallCareerPortraitDefinition> careers = new(StringComparer.Ordinal);
+        foreach (JsonElement portrait in Array(section, "careers", diagnostics))
+        {
+            string careerId = Text(portrait, "careerId", diagnostics);
+            string mediaId = Text(portrait, "mediaId", diagnostics);
+            string sourceFile = Text(portrait, "sourceFile", diagnostics);
+            string palette = Text(portrait, "palette", diagnostics);
+            int frames = Integer(portrait, "frameCount", diagnostics);
+            _ = Text(portrait, "binding", diagnostics);
+            if (careerId.Length != 0 && !catalogCareers.Contains(careerId))
+            {
+                diagnostics.Add($"Character presentation portrait names career '{careerId}', which the catalogs do not publish.");
+            }
+
+            if (sourceFile.Length != 0 && !accounted.Contains(sourceFile))
+            {
+                diagnostics.Add($"Character presentation portrait for '{careerId}' names source file '{sourceFile}', which the publication does not account for.");
+            }
+
+            if (frames <= 0)
+            {
+                diagnostics.Add($"Character presentation portrait for '{careerId}' declares {frames} frames.");
+            }
+
+            careers[careerId] = new DaggerfallCareerPortraitDefinition(careerId, mediaId, sourceFile, palette, frames);
+        }
+
+        List<DaggerfallCareerWithoutPortrait> careersWithout = [];
+        foreach (JsonElement entry in Array(section, "careersWithoutPortrait", diagnostics))
+        {
+            careersWithout.Add(new DaggerfallCareerWithoutPortrait(Text(entry, "careerId", diagnostics), Text(entry, "reason", diagnostics)));
+        }
+
+        return new DaggerfallCharacterPresentationSet(schemaVersion, races, [.. faces.OrderBy(face => face.Index)], careers, careersWithout, without, files);
     }
 
     /// <summary>
