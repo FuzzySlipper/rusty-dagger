@@ -89,6 +89,34 @@ public sealed class DaggerfallWorldTimeTests
     }
 
     [Fact]
+    public void Emits_only_remainders_a_save_accepts()
+    {
+        // The floor's tolerance can leave the remainder a nanosecond below zero, and a save refuses a
+        // negative remainder. That would make a just-saved game unloadable, so the clock clamps at the
+        // source and this asserts the property directly rather than the one value that showed it.
+        DaggerfallWorldTime time = new(DaggerfallCalendar.Start, 0d, 12d);
+        time.Advance(0.083333333325d);
+        Assert.Equal(1, time.Calendar.Second);
+        Assert.InRange(time.RemainderSeconds, 0d, 0.9999999999d);
+
+        // A duration chosen to land as close to a whole second as the tolerance allows, then one that
+        // does not: neither may leave a negative remainder.
+        DaggerfallWorldTime near = new(DaggerfallCalendar.Start, 0d, 1d);
+        near.Advance(0.9999999999999d);
+        Assert.InRange(near.RemainderSeconds, 0d, 1d);
+        near.Advance(1.0000000001d);
+        Assert.InRange(near.RemainderSeconds, 0d, 1d);
+
+        // A save carrying what the clock reported is a save the payload accepts, which is the property
+        // the two sides have to agree on.
+        DaggerfallCalendarSave saved = new(
+            time.Calendar.Year, time.Calendar.Month, time.Calendar.Day,
+            time.Calendar.Hour, time.Calendar.Minute, time.Calendar.Second,
+            time.RemainderSeconds);
+        Assert.InRange(saved.RemainderSeconds, 0d, 1d);
+    }
+
+    [Fact]
     public void Refuses_a_duration_or_scale_that_is_not_one()
     {
         DaggerfallWorldTime time = new(DaggerfallCalendar.Start, 0d, 12d);
