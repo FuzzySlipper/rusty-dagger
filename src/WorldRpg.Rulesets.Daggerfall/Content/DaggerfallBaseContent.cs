@@ -40,10 +40,11 @@ internal static class DaggerfallBaseContent
             ValidateActorIdentities(actors, catalogs, diagnostics);
             DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
+            DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations);
         }
         catch (JsonException exception)
         {
@@ -273,6 +274,131 @@ internal static class DaggerfallBaseContent
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Reads the published locations, so a section the import wrote is validated where it is loaded
+    /// rather than trusted.
+    /// </summary>
+    /// <remarks>
+    /// The site and world consumers this section is published for are later tasks, and the task that
+    /// published it deliberately created no runtime archive reader. What this adds is the check that
+    /// was missing: a malformed section used to load silently, because an unknown property is
+    /// tolerated by design. The rules here are the ones that make a location resolvable - a region
+    /// and name, a non-negative map, a dungeon that names a location the section carries and lists
+    /// blocks, and a gap that names what it could not read.
+    /// </remarks>
+    private static DaggerfallLocationSet ReadLocations(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("locations", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload must publish a locations section.");
+            return new DaggerfallLocationSet(0, [], 0, 0, 0);
+        }
+
+        int schemaVersion = Integer(section, "schemaVersion", diagnostics);
+        if (schemaVersion != LocationSchemaVersion)
+        {
+            diagnostics.Add($"Published locations must declare schemaVersion {LocationSchemaVersion}.");
+        }
+
+        int locations = 0;
+        HashSet<(int Region, int Index)> keys = [];
+        foreach (JsonElement location in Array(section, "locations", diagnostics))
+        {
+            int region = Integer(location, "region", diagnostics);
+            int index = Integer(location, "index", diagnostics);
+            string name = Text(location, "name", diagnostics);
+            int mapId = Integer(location, "mapId", diagnostics);
+            _ = Integer(location, "longitude", diagnostics);
+            _ = Integer(location, "latitude", diagnostics);
+            _ = Integer(location, "dungeonType", diagnostics);
+            _ = Integer(location, "locationType", diagnostics);
+            if (!keys.Add((region, index)))
+            {
+                diagnostics.Add($"Published locations carry region {region} index {index} twice, so one of them is unreachable.");
+            }
+
+            if (name.Length == 0 || mapId < 0)
+            {
+                diagnostics.Add($"Published location {index} of region {region} names '{name}' on map {mapId}, which cannot be resolved.");
+            }
+
+            locations++;
+        }
+
+        int dungeons = 0;
+        foreach (JsonElement dungeon in Array(section, "dungeons", diagnostics))
+        {
+            int region = Integer(dungeon, "region", diagnostics);
+            int index = Integer(dungeon, "index", diagnostics);
+            string name = Text(dungeon, "name", diagnostics);
+            _ = Integer(dungeon, "exteriorLocationId", diagnostics);
+            _ = Integer(dungeon, "dungeonLocationId", diagnostics);
+            int blocks = 0;
+            foreach (JsonElement block in Array(dungeon, "blocks", diagnostics))
+            {
+                if (block.ValueKind != JsonValueKind.String || block.GetString() is not { Length: > 0 })
+                {
+                    diagnostics.Add($"Published dungeon '{name}' names a block with no name.");
+                }
+
+                blocks++;
+            }
+
+            if (!keys.Contains((region, index)))
+            {
+                diagnostics.Add($"Published dungeon '{name}' names region {region} location {index}, which no location record carries.");
+            }
+
+            if (blocks == 0)
+            {
+                diagnostics.Add($"Published dungeon '{name}' lists no blocks, so it describes no structure.");
+            }
+
+            dungeons++;
+        }
+
+        int gaps = 0;
+        foreach (JsonElement gap in Array(section, "regionsWithoutTables", diagnostics))
+        {
+            _ = Integer(gap, "region", diagnostics);
+            int empty = 0;
+            foreach (JsonElement table in Array(gap, "emptyTables", diagnostics))
+            {
+                if (table.ValueKind != JsonValueKind.String || table.GetString() is not { Length: > 0 })
+                {
+                    diagnostics.Add("A published region gap names an empty table with no name.");
+                }
+
+                empty++;
+            }
+
+            if (empty == 0)
+            {
+                diagnostics.Add("A published region gap names no empty tables, so nothing says why the region has none.");
+            }
+
+            gaps++;
+        }
+
+        foreach (JsonElement gap in Array(section, "dungeonsWithoutRecords", diagnostics))
+        {
+            int region = Integer(gap, "region", diagnostics);
+            int index = Integer(gap, "index", diagnostics);
+            string name = Text(gap, "name", diagnostics);
+            if (Text(gap, "reason", diagnostics).Length == 0)
+            {
+                diagnostics.Add($"Published dungeon gap '{name}' states no reason.");
+            }
+
+            if (!keys.Contains((region, index)))
+            {
+                diagnostics.Add($"Published dungeon gap '{name}' names region {region} location {index}, which no location record carries.");
+            }
+        }
+
+        return new DaggerfallLocationSet(schemaVersion, [.. keys], locations, dungeons, gaps);
     }
 
     /// <summary>
@@ -1310,6 +1436,7 @@ internal static class DaggerfallBaseContent
     /// <summary>The published catalog shape this reader understands.</summary>
     private const int CatalogSchemaVersion = 1;
     private const int CharacterPresentationSchemaVersion = 1;
+    private const int LocationSchemaVersion = 1;
 
     internal static JsonElement Object(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {

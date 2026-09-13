@@ -56,6 +56,23 @@ internal sealed record DaggerfallAttackRange(int MinimumDamage, int MaximumDamag
 internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds, string? Material = null, int DamageBonus = 0);
 internal sealed record DaggerfallRewardPolicy(int ExperienceReward);
 internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
+/// <summary>
+/// The published locations, summarised: the section's shape version, the locations it carries, and
+/// how many dungeons and gaps it records. A later consumer reads the section itself; this is what the
+/// loader verified.
+/// </summary>
+/// <param name="SchemaVersion">The section's shape version.</param>
+/// <param name="Keys">Every (region, index) the section carries, which is what a dungeon must name.</param>
+/// <param name="Locations">How many locations it publishes.</param>
+/// <param name="Dungeons">How many dungeons it publishes.</param>
+/// <param name="RegionGaps">How many regions it records as having no usable tables.</param>
+internal sealed record DaggerfallLocationSet(
+    int SchemaVersion,
+    IReadOnlyCollection<(int Region, int Index)> Keys,
+    int Locations,
+    int Dungeons,
+    int RegionGaps);
+
 internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, bool GroundOnSpawn = false, string? Race = null, string? Career = null)
 {
     internal DaggerfallVitalValues PlayerInitialVitals => DaggerfallVitalValues.Player(Stats);
@@ -92,7 +109,8 @@ internal sealed record DaggerfallVocabulary(IReadOnlyList<DaggerfallStatId> Attr
 
 /// <summary>Immutable typed definitions loaded from the ordered daggerfall.base payload.</summary>
 internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValuesByMaterial, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources, IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools, IReadOnlyList<DaggerfallDonorErratum> donorErrata, DaggerfallItemTemplateLedger itemTemplates,
-    DaggerfallCharacterPresentationSet characterPresentation)
+    DaggerfallCharacterPresentationSet characterPresentation,
+    DaggerfallLocationSet locations)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
@@ -119,5 +137,11 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// race's background, bodies and heads through.
     /// </summary>
     internal DaggerfallCharacterPresentationSet CharacterPresentation { get; } = characterPresentation;
+
+    /// <summary>
+    /// The published locations, validated where they are loaded: the site and world consumers are
+    /// later tasks, and what this holds until then is the guarantee that the section reads.
+    /// </summary>
+    internal DaggerfallLocationSet Locations { get; } = locations;
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 }

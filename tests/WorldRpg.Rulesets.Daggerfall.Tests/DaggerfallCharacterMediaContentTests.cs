@@ -122,6 +122,30 @@ public sealed class DaggerfallCharacterMediaContentTests
         Assert.Contains("not a layer name this reader knows", named.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void Loads_the_published_locations_and_refuses_a_dungeon_that_names_none()
+    {
+        // The section is validated where it loads: a malformed one used to load silently, because an
+        // unknown property is tolerated by design.
+        DaggerfallDefinitions definitions = Read();
+        DaggerfallLocationSet locations = definitions.Locations;
+        Assert.Equal(1, locations.SchemaVersion);
+        Assert.Equal(15251, locations.Locations);
+        Assert.Equal(3959, locations.Dungeons);
+        Assert.Equal(17, locations.RegionGaps);
+        // Privateer's Hold's region carries many locations, so the check is that the region is present.
+        Assert.Contains(locations.Keys, key => key.Region == 17);
+
+        // A dungeon naming a location the section does not carry is a diagnostic, not a silent load.
+        // The corruption moves one dungeon's index rather than a region, because moving a region moves
+        // its locations with it and the section stays consistent.
+        System.Text.Json.Nodes.JsonNode pack = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(PackPath()))!;
+        pack["locations"]!["dungeons"]![0]!["index"] = 999999;
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(
+            () => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(pack.ToJsonString())));
+        Assert.Contains("which no location record carries", error.Message, StringComparison.Ordinal);
+    }
+
     private static DaggerfallDefinitions Read() => DaggerfallBaseContent.Read(File.ReadAllBytes(PackPath()));
 
     private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
