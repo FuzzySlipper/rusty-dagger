@@ -22,9 +22,17 @@ internal sealed record DaggerfallSavePayload(
     DurableIdentityState Identities,
     DaggerfallCombatCooldownSave[] CombatCooldowns,
     DaggerfallContinuationSave? Continuation,
-    DaggerfallOwnerSave[] Owners)
+    DaggerfallOwnerSave[] Owners,
+    DaggerfallCalendarSave? Calendar = null)
 {
-    internal const uint CurrentSchemaVersion = 2;
+    internal const uint CurrentSchemaVersion = 3;
+
+    /// <summary>
+    /// The schema before the world's calendar was persisted, whose saves are read with a calendar that
+    /// starts where the corpus starts rather than being refused: losing the clock is recoverable, and
+    /// refusing the save is not.
+    /// </summary>
+    internal const uint CalendarlessSchemaVersion = 2;
 
     /// <summary>The schema whose identity fields map onto the current shape without loss.</summary>
     internal const uint MigratableSchemaVersion = 1;
@@ -57,6 +65,20 @@ internal sealed record DaggerfallSavePayload(
         if (payload.SchemaVersion == CurrentSchemaVersion)
         {
             return ReadCurrent(payload);
+        }
+
+        if (payload.SchemaVersion == CalendarlessSchemaVersion)
+        {
+            // The older bytes read as the current shape with no calendar, so the world's clock starts
+            // where the corpus starts and the drift is reported rather than refused: a lost clock is
+            // recoverable, and refusing a save the player made is not.
+            DaggerfallSaveRead calendarless = ReadCurrent(payload);
+            return new DaggerfallSaveRead(calendarless.Payload,
+            [
+                .. calendarless.Notices,
+                new SaveRestoreNotice("save-schema-calendarless",
+                    $"The save was written as Daggerfall schema {CalendarlessSchemaVersion} and was read as schema {CurrentSchemaVersion}: it carries no calendar, so the world's clock starts where the corpus starts rather than at the time the save was written."),
+            ]);
         }
 
         if (payload.SchemaVersion == MigratableSchemaVersion)
@@ -644,6 +666,23 @@ internal sealed record DaggerfallCorpseSave(long ActorId, ulong OriginatingSeque
         new DaggerfallInventorySave(Stacks, UniqueItems, []).Validate();
     }
 }
+
+/// <summary>The world's calendar as a save carries it: a date and a time of day in explicit units.</summary>
+/// <param name="Year">The year.</param>
+/// <param name="Month">The month, zero-based.</param>
+/// <param name="Day">The day of the month, zero-based.</param>
+/// <param name="Hour">The hour of the day.</param>
+/// <param name="Minute">The minute of the hour.</param>
+/// <param name="Second">The second of the minute.</param>
+/// <param name="RemainderSeconds">The part of a game second not yet applied, which a resume must not lose.</param>
+internal sealed record DaggerfallCalendarSave(
+    int Year,
+    int Month,
+    int Day,
+    int Hour,
+    int Minute,
+    int Second,
+    double RemainderSeconds);
 
 internal sealed record DaggerfallPlayerSave(float X, float Y, float Z, float YawRadians, float PitchRadians, long Health, long Stamina, long Magicka)
 {

@@ -10,6 +10,7 @@ internal sealed record DaggerfallTuning(
     DaggerfallMeleeTargetingTuning MeleeTargeting,
     DaggerfallEnemyBehaviorTuning EnemyBehavior,
     DaggerfallLootInteractionTuning LootInteraction,
+    DaggerfallTimeTuning Time,
     DaggerfallStaminaRecoveryTuning StaminaRecovery,
     DaggerfallPresentationAudioTuning PresentationAudio)
 {
@@ -28,6 +29,7 @@ internal sealed record DaggerfallTuning(
         new DaggerfallMeleeTargetingTuning(2.25d, .5d),
         new DaggerfallEnemyBehaviorTuning(12d, .5d, 1.25d, 3f, 32),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
+        new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
         new DaggerfallPresentationAudioTuning(1F, 1F, 0F, 1F));
 
@@ -39,6 +41,7 @@ internal sealed record DaggerfallTuning(
         MeleeTargeting = MeleeTargeting.Validate(),
         EnemyBehavior = EnemyBehavior.Validate(),
         LootInteraction = LootInteraction.Validate(),
+        Time = Time.Validate(),
         StaminaRecovery = StaminaRecovery.Validate(),
         PresentationAudio = PresentationAudio.Validate(),
     };
@@ -54,6 +57,7 @@ internal sealed record DaggerfallTuning(
         JsonElement enemyBehavior = root.GetProperty("enemyBehavior");
         JsonElement lootInteraction = root.GetProperty("lootInteraction");
         JsonElement staminaRecovery = root.GetProperty("staminaRecovery");
+        JsonElement time = root.GetProperty("time");
         JsonElement presentationAudio = root.GetProperty("presentationAudio");
         return new DaggerfallTuning(
             new PlayerControlTuning(
@@ -89,6 +93,7 @@ internal sealed record DaggerfallTuning(
             new DaggerfallLootInteractionTuning(
                 lootInteraction.GetProperty("maximumDistance").GetDouble(),
                 lootInteraction.GetProperty("minimumFacingCosine").GetDouble()),
+            new DaggerfallTimeTuning(time.GetProperty("gameSecondsPerRealSecond").GetDouble()),
             new DaggerfallStaminaRecoveryTuning(
                 staminaRecovery.GetProperty("pointsPerSecond").GetDouble(),
                 staminaRecovery.GetProperty("delayAfterAttackSeconds").GetDouble()),
@@ -108,6 +113,24 @@ internal sealed record DaggerfallTuning(
         StrafeSpeed: controller.GetProperty("strafeSpeed").GetSingle(),
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
+}
+
+/// <summary>
+/// How fast the world's clock runs against admitted real time.
+/// </summary>
+/// <remarks>
+/// The donor's own scale: <c>Assets/Scripts/Internal/WorldTime.cs</c> applies
+/// <c>DaggerfallDateTime.RaiseTime(Time.deltaTime * TimeScale)</c> with a default of twelve, so one
+/// admitted real second is twelve game seconds. It is tuning rather than a constant because it is
+/// adjustable, and the calendar is the thing it is applied to.
+/// </remarks>
+internal sealed record DaggerfallTimeTuning(double GameSecondsPerRealSecond)
+{
+    internal DaggerfallTimeTuning Validate()
+    {
+        if (!double.IsFinite(GameSecondsPerRealSecond) || GameSecondsPerRealSecond <= 0d) throw new ArgumentOutOfRangeException(nameof(GameSecondsPerRealSecond));
+        return this;
+    }
 }
 
 /// <summary>Product-selected real-time stamina recovery; this is not the donor's per-rest-hour fatigue formula.</summary>
