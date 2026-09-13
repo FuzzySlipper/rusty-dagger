@@ -29,6 +29,7 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Main05I0Img,
     byte[] Inve00I0Img,
     byte[] Info00I0Img,
+    byte[] Die00I0Img,
     byte[] Texture207,
     byte[] Texture216,
     byte[] Texture234,
@@ -176,6 +177,12 @@ public enum ClassicUiImage
     HudVitalMagicka,
     InventoryChrome,
     CharacterSheetChrome,
+
+    /// <summary>
+    /// The screen the product shows when the player dies: a full-screen image that carries its own
+    /// palette, unlike the other UI images, which is why the publication asks the source for one.
+    /// </summary>
+    ScreenDeath,
 }
 
 /// <summary>A discoverable frame cadence and repeat policy; it owns no playback.</summary>
@@ -461,6 +468,10 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicUiImage.HudVitalMagicka, "hud.vital.magicka", "MAIN05I0.IMG", false),
         new(ClassicUiImage.InventoryChrome, "window.inventory.chrome", "INVE00I0.IMG", true),
         new(ClassicUiImage.CharacterSheetChrome, "window.character-sheet.chrome", "INFO00I0.IMG", true),
+
+        // The one screen named so far is a mode's rather than a window's: the product shows it when the
+        // player dies, and nothing named it before because no consumer had asked for it.
+        new(ClassicUiImage.ScreenDeath, "screen.death", "DIE_00I0.IMG", true),
     ];
 
     private static readonly InventoryIconSource[] InventoryIconSources =
@@ -694,8 +705,10 @@ public sealed record Arena2ClassicMediaPublication(
         List<ClassicUiImageManifest> semantic = [];
         foreach (ClassicUiImagePresentation mapping in profile.UiImages.Values.OrderBy(value => value.Image))
         {
-            IndexedImg image = sources.DecodeUi(mapping.SourceFile);
-            byte[] png = EncodePalettePng(image.Width, image.Height, image.Pixels.Span, palette);
+            (IndexedImg image, Arena2Palette? ownPalette) = sources.DecodeUi(mapping.SourceFile);
+
+            // A screen is drawn with the palette it carries; everything else uses the publication's.
+            byte[] png = EncodePalettePng(image.Width, image.Height, image.Pixels.Span, ownPalette ?? palette);
             RequireArtifactQuota(png, options, mapping.MediaId);
             result.Add(new(mapping.MediaId, NormalizedMediaKind.UserInterface, $"media/ui/{Slug(mapping.MediaId)}.png", png, image.Width, image.Height, null, "image/png"));
             ClassicUiImageManifest manifest = new(mapping.Image, mapping.MediaId, mapping.SourceFile, image.XOffset, image.YOffset, image.IsHeaderless);
@@ -1388,6 +1401,7 @@ public sealed record Arena2ClassicMediaPublication(
             Main04I0Img = inputs.Main04I0Img;
             Main05I0Img = inputs.Main05I0Img;
             Inve00I0Img = inputs.Inve00I0Img;
+            Die00I0Img = inputs.Die00I0Img;
             Info00I0Img = inputs.Info00I0Img;
             Texture207 = inputs.Texture207;
             Texture216 = inputs.Texture216;
@@ -1415,6 +1429,8 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Main04I0Img { get; }
         public byte[] Main05I0Img { get; }
         public byte[] Inve00I0Img { get; }
+
+        public byte[] Die00I0Img { get; }
         public byte[] Info00I0Img { get; }
         public byte[] Texture207 { get; }
         public byte[] Texture216 { get; }
@@ -1432,7 +1448,7 @@ public sealed record Arena2ClassicMediaPublication(
                 ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif),
                 ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
-                ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img),
+                ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img),
                 ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
                 ("TEXTURE.234", inputs.Texture234), ("TEXTURE.245", inputs.Texture245), ("FONT0003.FNT", inputs.Font0003Fnt),
             ];
@@ -1464,15 +1480,34 @@ public sealed record Arena2ClassicMediaPublication(
             _ => throw new ArgumentOutOfRangeException(nameof(fileName), "The requested source is not an admitted classic weapon CIF."),
         };
 
-        public IndexedImg DecodeUi(string fileName) => fileName switch
+        /// <summary>
+        /// Decodes a UI image and, when the source carries one, the palette it is meant to be drawn
+        /// with.
+        /// </summary>
+        /// <remarks>
+        /// A screen is headerless like the window chrome and, unlike it, is followed by its own
+        /// palette. The length decides that - the corpus's six screens are the only files of that
+        /// shape - so the source answers rather than the caller deciding per image.
+        /// </remarks>
+        public (IndexedImg Image, Arena2Palette? Palette) DecodeUi(string fileName) => fileName switch
         {
-            "MAIN00I0.IMG" => ImgDecoder.Decode(Main00I0Img, "arena2/MAIN00I0.IMG"),
-            "MAIN03I0.IMG" => ImgDecoder.Decode(Main03I0Img, "arena2/MAIN03I0.IMG"),
-            "MAIN04I0.IMG" => ImgDecoder.Decode(Main04I0Img, "arena2/MAIN04I0.IMG"),
-            "MAIN05I0.IMG" => ImgDecoder.Decode(Main05I0Img, "arena2/MAIN05I0.IMG"),
-            "INVE00I0.IMG" => ImgDecoder.DecodeHeaderless(Inve00I0Img, "arena2/INVE00I0.IMG"),
-            "INFO00I0.IMG" => ImgDecoder.DecodeHeaderless(Info00I0Img, "arena2/INFO00I0.IMG"),
+            "MAIN00I0.IMG" => (ImgDecoder.Decode(Main00I0Img, "arena2/MAIN00I0.IMG"), null),
+            "MAIN03I0.IMG" => (ImgDecoder.Decode(Main03I0Img, "arena2/MAIN03I0.IMG"), null),
+            "MAIN04I0.IMG" => (ImgDecoder.Decode(Main04I0Img, "arena2/MAIN04I0.IMG"), null),
+            "MAIN05I0.IMG" => (ImgDecoder.Decode(Main05I0Img, "arena2/MAIN05I0.IMG"), null),
+            "INVE00I0.IMG" => (ImgDecoder.DecodeHeaderless(Inve00I0Img, "arena2/INVE00I0.IMG"), null),
+            "INFO00I0.IMG" => (ImgDecoder.DecodeHeaderless(Info00I0Img, "arena2/INFO00I0.IMG"), null),
+            "DIE_00I0.IMG" => Screen(Die00I0Img, "arena2/DIE_00I0.IMG"),
             _ => throw new ArgumentOutOfRangeException(nameof(fileName)),
         };
+
+        private static (IndexedImg Image, Arena2Palette? Palette) Screen(byte[] bytes, string source)
+        {
+            int canvasBytes = ImgDecoder.EmbeddedPaletteScreenBytes - ImgDecoder.EmbeddedPaletteBytes;
+            IndexedImg image = ImgDecoder.DecodeHeaderless([.. bytes.AsSpan(0, Math.Min(canvasBytes, bytes.Length))], source);
+            return ImgDecoder.TryReadEmbeddedPalette(bytes, source, out Arena2Palette? palette, out _)
+                ? (image, palette)
+                : (image, null);
+        }
     }
 }
