@@ -220,15 +220,17 @@ public sealed class ResidualSourceInventory
 
         // An imported path has a consumer whether or not this pass can name it, so a readable one
         // keeps that disposition rather than being called unused. A path this repository cannot
-        // read keeps the reader's verdict, because "no reader" and "a consumer claims it" are both
-        // true and the note carries the second one.
-        if (reader.Length == 0) return SourceRecordDisposition.Unresolved;
-        if (!probe.Read) return SourceRecordDisposition.Malformed;
+        // read keeps the reader's verdict, and the note carries the import either way: "no reader"
+        // and "a consumer claims it" are both true, and the second one must not be lost just
+        // because the first is the disposition.
         if (documented == SourceRecordDisposition.Imported)
         {
             documentedNote = " The documented inventory already imports it, so a consumer claims it.";
-            return SourceRecordDisposition.Imported;
         }
+
+        if (reader.Length == 0) return SourceRecordDisposition.Unresolved;
+        if (!probe.Read) return SourceRecordDisposition.Malformed;
+        if (documented == SourceRecordDisposition.Imported) return SourceRecordDisposition.Imported;
         if (documented is { } value)
         {
             documentedNote = $" The documented inventory dispositions it '{documentedToken}'.";
