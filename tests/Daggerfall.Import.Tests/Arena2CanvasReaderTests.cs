@@ -278,12 +278,16 @@ public sealed class Arena2CanvasReaderTests
     [Fact]
     public void Names_the_reader_a_format_needs_rather_than_calling_it_unreadable()
     {
-        // A CEL and a BSS are formats the classic reader reads with readers this repository
-        // does not have, and the reason names that reader instead of implying the source is bad.
+        // A CEL now reads: the classic reader reaches it through its FLC animation reader, and this
+        // repository has one, so the portraits are canvases like any other family.
         Arena2CanvasSet cel = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("MAGE.CEL")), "MAGE.CEL");
-        Assert.Equal(Arena2CanvasKind.Unread, cel.Kind);
-        Assert.Contains("FLC animation reader", cel.Reason, StringComparison.Ordinal);
+        Assert.Equal(Arena2CanvasKind.FlcAnimation, cel.Kind);
+        Assert.True(cel.Read);
+        Assert.Equal(15, cel.Count);
+        Assert.Equal("Read as an FLC animation of 15 frames of 110 by 119 pixels.", cel.Description);
 
+        // A BSS is still a format whose reader this repository does not have, and the reason names
+        // that reader instead of implying the source is bad.
         Arena2CanvasSet bss = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("CMPA00I0.BSS")), "CMPA00I0.BSS");
         Assert.Equal(Arena2CanvasKind.Unread, bss.Kind);
         Assert.Contains("BSS reader", bss.Reason, StringComparison.Ordinal);

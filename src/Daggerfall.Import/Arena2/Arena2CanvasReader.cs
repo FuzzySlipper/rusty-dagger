@@ -20,6 +20,9 @@ public enum Arena2CanvasKind
 
     /// <summary>No reader in this repository read the file.</summary>
     Unread,
+
+    /// <summary>An FLC animation container, whose frames are its canvases.</summary>
+    FlcAnimation,
 }
 
 /// <summary>One addressable canvas inside a supplied media file.</summary>
@@ -65,6 +68,7 @@ public sealed record Arena2CanvasSet(Arena2CanvasKind Kind, IReadOnlyList<Arena2
             Arena2CanvasKind.HeaderlessCanvas => $"a headerless canvas of {Shape(Canvases[0])}",
             Arena2CanvasKind.GfxFrames => $"a GFX container of {Count} frames of {Shape(Canvases[0])}",
             Arena2CanvasKind.RciGrid => $"an RCI grid of {Count} canvases of {Shape(Canvases[0])}",
+            Arena2CanvasKind.FlcAnimation => $"an FLC animation of {Count} frames of {Shape(Canvases[0])}",
             _ => throw new InvalidOperationException($"{Kind} names no read shape."),
         };
     }
@@ -160,9 +164,25 @@ public static class Arena2CanvasReader
                 refusals.Add(failure.Message);
             }
         }
-        else if (extension is ".CEL" or ".BSS")
+        else if (extension == ".CEL")
         {
-            refusals.Add($"the classic reader reads {extension} through its {(extension == ".CEL" ? "FLC animation" : "BSS")} reader, which this repository does not have.");
+            // The classic reader reads a class portrait through its FLC animation reader, and the
+            // container's frames are the canvases: one run-length image and a delta each after it.
+            try
+            {
+                IReadOnlyList<FlcDecoder.FlcFrameImage> frames = FlcDecoder.DecodeFrames(bytes, path, out _);
+                return Read(
+                    [.. frames.Select(frame => new Arena2Canvas(frame.Index, 0, 0, 0, frame.Width, frame.Height))],
+                    Arena2CanvasKind.FlcAnimation);
+            }
+            catch (Arena2FormatException failure)
+            {
+                refusals.Add(failure.Message);
+            }
+        }
+        else if (extension == ".BSS")
+        {
+            refusals.Add("the classic reader reads .BSS through its BSS reader, which this repository does not have.");
         }
         else if (ImgDecoder.TryDecodeHeaderless(bytes, path, out IndexedImg? headerless, out string lengthReason))
         {
