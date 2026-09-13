@@ -14,7 +14,9 @@ public sealed class PresentationState(string initialOutcome)
     /// <summary>Admitted seconds a message stays published before the line clears.</summary>
     public const double LifetimeSeconds = 6d;
 
-    private double _remaining;
+    // An initial message is a message like any other, so it starts its lifetime with the session
+    // rather than sitting on screen until something replaces it.
+    private double _remaining = initialOutcome.Length == 0 ? 0d : LifetimeSeconds;
 
     /// <summary>The message currently published, or empty when nothing was reported.</summary>
     public string LastOutcome { get; private set; } = initialOutcome;

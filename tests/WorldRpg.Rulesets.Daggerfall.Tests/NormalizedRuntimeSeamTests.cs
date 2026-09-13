@@ -3447,6 +3447,11 @@ public sealed class NormalizedRuntimeSeamTests
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = reopened.Container, revision = reopened.Revision, item = remaining.Key }), 9);
         Assert.Equal(stepsBeforeDeath, spatial.StepCalls);
         Assert.Equal(afterDeath, session.State.Inventory.Read().WorldRevision);
+
+        // A dead product advertises no closable interaction: its own gate would ignore the close, so
+        // offering the token would be a control that silently does nothing.
+        Assert.Equal("dead", engine.PublishedField("mode"));
+        Assert.Null(engine.PublishedNested("focus", "container"));
         Assert.Equal(ulong.Parse(remaining.Quantity), ulong.Parse(session.OpenLoot!.Items.Single(item => item.Key == remaining.Key).Quantity));
 
     }
