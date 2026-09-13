@@ -291,6 +291,13 @@ public static class MapsDecoder
     /// </remarks>
     private static bool LinksDungeon(ReadOnlyMemory<byte> data, string source, uint exteriorLocationId)
     {
+        // A table with no bytes links nothing: the donor returns with "has dungeon" false before it
+        // reads a count, so an empty table is a location without a dungeon rather than damage.
+        if (data.Length == 0)
+        {
+            return false;
+        }
+
         CheckedLittleEndianReader header = new(data.Span, source);
         int dungeons = CheckedCount(header.ReadUInt32(), source, 0, "MAPDITEM dungeon count");
         for (int index = 0; index < dungeons; index++)
@@ -418,7 +425,17 @@ public static class MapsDecoder
         int locationIndex = FindExactLocation(names, locationName, archive.Source);
         (int mapId, int longitude, int latitude, byte dungeonType, int _, bool _) = DecodeMapTable(GetNamedPayload(archive, "MAPTABLE", region), archive.Source, locationIndex);
         uint exteriorLocationId = DecodeExteriorLocationId(GetNamedPayload(archive, "MAPPITEM", region), archive.Source, names.Count, locationIndex);
-        (uint locationId, IReadOnlyList<MapsDungeonBlock> blocks) = DecodeDungeonRecord(GetNamedPayload(archive, "MAPDITEM", region), archive.Source, exteriorLocationId);
+        ReadOnlyMemory<byte> dungeonItems = GetNamedPayload(archive, "MAPDITEM", region);
+
+        // The same bytes read in bulk report a location with no linked dungeon, so this reports it the
+        // same way rather than refusing what the bulk path calls an ordinary outcome: no dungeon, no
+        // identity and no blocks, with the exterior location still named.
+        if (!LinksDungeon(dungeonItems, archive.Source, exteriorLocationId))
+        {
+            return new MapsDungeonLayout(region, locationIndex, locationName, mapId, 0, longitude, latitude, dungeonType, []);
+        }
+
+        (uint locationId, IReadOnlyList<MapsDungeonBlock> blocks) = DecodeDungeonRecord(dungeonItems, archive.Source, exteriorLocationId);
         return new MapsDungeonLayout(region, locationIndex, locationName, mapId, locationId, longitude, latitude, dungeonType, blocks);
     }
 

@@ -80,7 +80,17 @@ public sealed record DaggerfallLocations(
             if (location.MapId < 0) throw new InvalidOperationException($"Location '{location.Name}' carries map {location.MapId}.");
         }
 
-        HashSet<(int Region, int Index)> locations = [.. Locations.Select(location => (location.Region, location.Index))];
+        HashSet<(int Region, int Index)> locations = [];
+        foreach (DaggerfallLocationMap location in Locations)
+        {
+            // Two records claiming one region and index would collapse in the set below and quietly
+            // leave one of them unreachable, so the collision is refused where it is created.
+            if (!locations.Add((location.Region, location.Index)))
+            {
+                throw new InvalidOperationException($"Region {location.Region} carries two locations at index {location.Index}, so one of them would be unreachable.");
+            }
+        }
+
         foreach (DaggerfallRegionGap gap in RegionsWithoutTables)
         {
             if (gap.EmptyTables.Count == 0)
@@ -99,6 +109,14 @@ public sealed record DaggerfallLocations(
             if (dungeon.Blocks.Count == 0)
             {
                 throw new InvalidOperationException($"Dungeon '{dungeon.Name}' carries no blocks, so it describes no structure.");
+            }
+
+            foreach (string block in dungeon.Blocks)
+            {
+                if (string.IsNullOrWhiteSpace(block))
+                {
+                    throw new InvalidOperationException($"Dungeon '{dungeon.Name}' names a block with no name, so it describes no structure.");
+                }
             }
         }
     }
