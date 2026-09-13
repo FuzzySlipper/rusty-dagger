@@ -520,13 +520,26 @@ internal static class Program
     private static int RunClassicMediaCommand(IReadOnlyList<string> args)
     {
         bool update = args.Contains("--update", StringComparer.Ordinal);
-        if (args.Count != (update ? 6 : 5) || args[1] != "--arena2" || args[3] != "--out")
+        int groupIndex = -1;
+        for (int index = 0; index < args.Count; index++)
         {
-            throw new ArgumentException("usage: daggerfall-import-tool classic-media --arena2 SOURCE_DIR --out CONTENT_DIR [--update]");
+            if (args[index] == "--group") { groupIndex = index; break; }
+        }
+
+        string group = groupIndex >= 0 ? args[groupIndex + 1] : "worldrpg";
+        int expected = (update ? 6 : 5) + (groupIndex >= 0 ? 2 : 0);
+        if (args.Count != expected || args[1] != "--arena2" || args[3] != "--out")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool classic-media --arena2 SOURCE_DIR --out CONTENT_ROOT [--group NAME] [--update]");
         }
 
         string arena2 = args[2];
-        string outRoot = args[4];
+
+        // Paths are content-root relative, which is the naming the product's admitted content carries:
+        // the group is part of the path, so a consumer holds one name for an artifact and the inventory
+        // the generator writes uses that same name rather than the group-relative one it used to.
+        string outRoot = Path.Combine(args[4], group);
+        Console.WriteLine($"group: {group} under {args[4]}");
         AdmittedArena2Sources sources = new(arena2);
         LoadClassicMediaSources(sources);
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(sources.ClassicMediaInputs);
@@ -556,7 +569,7 @@ internal static class Program
                 .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
                 .Select(artifact => (JsonNode)new JsonObject
                 {
-                    ["path"] = artifact.RelativePath,
+                    ["path"] = $"{group}/{artifact.RelativePath}",
                     ["byteLength"] = artifact.Bytes.Length,
                     ["sha256"] = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(artifact.Bytes.Span)),
                 })]),
