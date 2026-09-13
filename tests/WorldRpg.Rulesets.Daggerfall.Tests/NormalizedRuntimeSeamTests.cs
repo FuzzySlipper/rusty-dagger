@@ -2772,6 +2772,36 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.NotNull(control.LastMeleeTargeting);
     }
 
+    [Fact]
+    public void Stamina_recovery_is_held_back_outside_ordinary_play_and_resumes_with_it()
+    {
+        using DaggerfallSession session = FreshSession();
+        ActorMechanicsState mechanics = session.State.Actors.Player.Mechanics;
+        TrackId stamina = TrackId.Parse("stamina");
+
+        // Ordinary play recovers stamina over admitted world time, which is the calibration: without
+        // it the held-back assertion below would pass on a mechanic that never runs at all.
+        long maximum = mechanics.ReadTrack(stamina).Bounds.Maximum.Raw;
+        mechanics.SetTrack(stamina, new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        // Recovery is per second against an integer track, so one step of a sixtieth recovers less
+        // than one unit: the calibration has to give the mechanic enough admitted time to show.
+        for (ulong step = 1; step <= 120; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        long recovered = mechanics.ReadTrack(stamina).Current.Raw;
+        Assert.True(recovered > 1, $"ordinary play should recover stamina, but it stayed at {recovered}");
+
+        // A modal holds the world still, so the same amount of admitted time recovers nothing.
+        mechanics.SetTrack(stamina, new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        session.ApplyProductMode(ProductMode.Modal);
+        for (ulong step = 121; step <= 240; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.Equal(1, mechanics.ReadTrack(stamina).Current.Raw);
+
+        // And ordinary play resumes it, so the gate is a gate rather than a stopped mechanic.
+        session.ApplyProductMode(ProductMode.Playing);
+        for (ulong step = 241; step <= 360; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.True(mechanics.ReadTrack(stamina).Current.Raw > 1);
+        Assert.True(mechanics.ReadTrack(stamina).Current.Raw <= maximum);
+    }
+
     /// <summary>A session that has not swung, so its weapon is ready.</summary>
     private static DaggerfallSession FreshSession()
     {
