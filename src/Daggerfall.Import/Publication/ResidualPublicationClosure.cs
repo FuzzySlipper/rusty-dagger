@@ -13,6 +13,12 @@ public enum ResidualPublicationOutcome
 
     /// <summary>Nothing in this repository reads it, so there is nothing to publish.</summary>
     UnpublishedNoReader,
+
+    /// <summary>
+    /// The documented inventory imports it while nothing here reads it, so a consumer claims data
+    /// this repository cannot produce: the gap is real and the claim is not lost with it.
+    /// </summary>
+    UnreadableButClaimed,
 }
 
 /// <summary>
@@ -67,6 +73,9 @@ public sealed class ResidualPublicationClosure
     /// <summary>The paths nothing in this repository reads.</summary>
     public IEnumerable<ResidualPublicationDecision> WithoutReader => Decisions.Where(decision => decision.Outcome == ResidualPublicationOutcome.UnpublishedNoReader);
 
+    /// <summary>The paths a consumer claims and nothing here can produce.</summary>
+    public IEnumerable<ResidualPublicationDecision> ClaimedButUnreadable => Decisions.Where(decision => decision.Outcome == ResidualPublicationOutcome.UnreadableButClaimed);
+
     /// <summary>
     /// Decides every classified path, from the classification alone.
     /// </summary>
@@ -85,8 +94,14 @@ public sealed class ResidualPublicationClosure
                     $"Read by {file.Reader}, and no consumer names it, so publishing it would be an artifact nothing asks for."),
                 SourceRecordDisposition.Unresolved => (ResidualPublicationOutcome.UnpublishedNoReader,
                     "Nothing in this repository reads it, so there is nothing to publish."),
+                // An imported path the reader refused keeps both facts: the consumer's claim and the
+                // reader's verdict. Collapsing it into "no reader" would hide a source the pack needs
+                // and cannot get, which is the one state worth escalating rather than reporting flat.
+                SourceRecordDisposition.Malformed when file.Note.Contains("already imports it", StringComparison.Ordinal) =>
+                    (ResidualPublicationOutcome.UnreadableButClaimed,
+                        $"The documented inventory imports this path while no reader here produces it: {file.Note}"),
                 SourceRecordDisposition.Malformed => (ResidualPublicationOutcome.UnpublishedNoReader,
-                    $"The reader its family names refused it: {file.Note}"),
+                    $"The reader this family names refused the path: {file.Note}"),
                 SourceRecordDisposition.RequiredPending => (ResidualPublicationOutcome.Published,
                     "The documented inventory requires this path, so a consumer claims it."),
                 SourceRecordDisposition.Duplicate or SourceRecordDisposition.Excluded or SourceRecordDisposition.SourceGap or SourceRecordDisposition.None =>
