@@ -217,7 +217,12 @@ public sealed class WorldRpgProduct : IEngineProduct
         _session = replacement;
         previous.Dispose();
         _started = true;
-        Record(SetMode(ProductMode.Playing, "the product replaced its session"));
+        // The replacement is always the decision here, but the *mode* only moved if it was not
+        // already ordinary play: Changed answers the mode question, not the session one.
+        ProductMode from = _mode;
+        _mode = ProductMode.Playing;
+        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(ProductMode.Playing);
+        Record(new(from, ProductMode.Playing, from == ProductMode.Playing ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied, "the product replaced its session"));
     }
 
     public void Shutdown()
