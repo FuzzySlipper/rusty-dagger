@@ -211,6 +211,59 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
         return advanced;
     }
 
+    /// <summary>The consequence identity that means no consequence stopped an advance.</summary>
+    public const int NoConsequence = -1;
+
+    /// <summary>
+    /// Advances by an interval, stopping at the first consequence it meets.
+    /// </summary>
+    /// <remarks>
+    /// Every kind of elapsed time the game has - ordinary play, rest, travel and prison - comes through
+    /// here as one interval, because they differ in who owns the interval rather than in how the
+    /// calendar moves, and the caller's own deadlines decide where it stops. The consequence that
+    /// fires is the earliest one inside the interval; two at the same second are ordered by identity so
+    /// that the same interval and the same deadlines always stop in the same place. A consequence at
+    /// exactly the end of the interval is still a stop, and one beyond it is not reached.
+    /// </remarks>
+    /// <param name="seconds">The elapsed seconds to advance by.</param>
+    /// <param name="consequences">The deadlines the caller owns, as an identity and seconds from now.</param>
+    public DaggerfallCalendarAdvance AdvanceToFirstConsequence(
+        long seconds,
+        IReadOnlyList<(int Identity, long SecondsFromNow)> consequences)
+    {
+        ArgumentNullException.ThrowIfNull(consequences);
+        if (seconds <= 0)
+        {
+            return new DaggerfallCalendarAdvance(this, 0, seconds < 0 ? seconds : 0, NoConsequence, default);
+        }
+
+        // An identity below zero would be indistinguishable from "no consequence", so it is refused
+        // rather than silently reported as none.
+        int fired = NoConsequence;
+        long applied = seconds;
+        foreach ((int identity, long secondsFromNow) in consequences)
+        {
+            if (identity < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(consequences), identity, "A consequence identity is not negative.");
+            }
+
+            if (secondsFromNow < 0 || secondsFromNow > seconds)
+            {
+                continue;
+            }
+
+            if (secondsFromNow < applied || (secondsFromNow == applied && (fired == NoConsequence || identity < fired)))
+            {
+                applied = secondsFromNow;
+                fired = identity;
+            }
+        }
+
+        DaggerfallCalendar advanced = Advance(applied, out DaggerfallCalendarElapsed crossed);
+        return new DaggerfallCalendarAdvance(advanced, applied, seconds - applied, fired, crossed);
+    }
+
     /// <summary>This instant as seconds from the calendar's own start, which is what arithmetic uses.</summary>
     public long ToAbsoluteSeconds() => (DayNumber * SecondsPerDay) + SecondOfDay;
 
@@ -239,6 +292,25 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
 
     private static int Months(DaggerfallCalendar advanced, DaggerfallCalendar origin) =>
         (int)(((advanced.Year - origin.Year) * MonthsPerYear) + advanced.Month - origin.Month);
+}
+
+/// <summary>
+/// One advance up to the first consequence it meets, and what is left of the interval.
+/// </summary>
+/// <param name="Calendar">The calendar at the point the advance stopped.</param>
+/// <param name="AppliedSeconds">How much of the interval was applied before stopping.</param>
+/// <param name="RemainingSeconds">How much of the interval the caller still owns.</param>
+/// <param name="Consequence">The identity of the consequence that stopped it, or none.</param>
+/// <param name="Crossed">What the applied part crossed, in boundary order.</param>
+public readonly record struct DaggerfallCalendarAdvance(
+    DaggerfallCalendar Calendar,
+    long AppliedSeconds,
+    long RemainingSeconds,
+    int Consequence,
+    DaggerfallCalendarElapsed Crossed)
+{
+    /// <summary>Whether a consequence stopped the advance before the interval was spent.</summary>
+    public bool Interrupted => Consequence != DaggerfallCalendar.NoConsequence;
 }
 
 /// <summary>What one advance crossed, in the order the calendar crosses it.</summary>
