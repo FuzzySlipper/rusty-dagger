@@ -446,6 +446,11 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         // player can see the mode they are in.
         bool playing = _mode == ProductMode.Playing;
         bool modal = _mode == ProductMode.Modal;
+        // The slice that opens an interaction admits no attack. A key pressed in the same admitted
+        // update as the interaction key is a coincidence of timing rather than an instruction, and
+        // whichever order the Engine delivers them in, swinging on the frame a container opens is
+        // the "unintended attack" this task exists to prevent.
+        bool opensInteraction = playing && ContainsInteractionAction(input);
         foreach (ProductInputEvent inputEvent in input)
         {
             firstStep.Add(inputEvent);
@@ -454,7 +459,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse(inputEvent.PayloadData.Span);
             switch (action?.Action)
             {
-                case "attack": if (playing) firstStep.Request(DaggerfallInput.Attack); break;
+                case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
                 case "inventory": break;
                 case "inventory-move": if (playing || modal) _inventoryUi.Move(action!); break;
                 case "character": break;
@@ -485,6 +490,19 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             Update(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
     }
 
+    /// <summary>Whether this admitted slice asks to open the loot interaction.</summary>
+    private static bool ContainsInteractionAction(ReadOnlySpan<ProductInputEvent> input)
+    {
+        foreach (ProductInputEvent inputEvent in input)
+        {
+            if (inputEvent.ValueKind != InputValueKind.ProductPayload
+                || !inputEvent.PayloadContract.Span.SequenceEqual("dagger.ui.action.v1"u8)) continue;
+            if (DaggerfallUiAction.Parse(inputEvent.PayloadData.Span)?.Action == "loot") return true;
+        }
+
+        return false;
+    }
+
     /// <summary>The input system's held state, readable so the mode request and tests agree on it.</summary>
     internal ProductMode Mode => _mode;
 
@@ -497,7 +515,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     {
         get
         {
-            if (ReadTrack(State.Actors.Player.Mechanics, DaggerfallMechanicsIds.Health) <= 0) return ProductMode.Dead;
+            // The Kit actor state already owns the question of whether the player is defeated.
+            if (State.Actors.Player.IsDefeated) return ProductMode.Dead;
             if (_mode == ProductMode.Dead) return null;
             bool open = _lootUi.Read() is not null;
             return open == (_mode == ProductMode.Modal) ? null : open ? ProductMode.Modal : ProductMode.Playing;

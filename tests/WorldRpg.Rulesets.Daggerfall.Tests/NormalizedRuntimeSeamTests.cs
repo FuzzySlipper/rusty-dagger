@@ -3198,7 +3198,8 @@ public sealed class NormalizedRuntimeSeamTests
         CorpseContainer corpse = session.Corpses[2000];
         Assert.True(corpse.IsRegistered);
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
-        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        // The pair the passing attack test uses, so the melee assertions below can actually fire.
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
         void Ui(string json, ulong step)
         {
             ProductInputEvent action = Input(InputEventKind.DirectDigital) with
@@ -3209,6 +3210,11 @@ public sealed class NormalizedRuntimeSeamTests
             };
             session.Update(new ProductUpdate(OuterUpdate(step), [action]));
         }
+
+        // The appearance starts with the weapon drawn, so the attack assertions below test the mode
+        // gate rather than an unarmed player. Intent drives the ordinary input path.
+        void Intent(string intent, ulong step) =>
+            session.Update(new ProductUpdate(OuterUpdate(step), [Input(InputEventKind.DirectDigital, x: 1f, phase: InputPhase.DirectUi, intent: intent)]));
 
         // Nothing owns input, so the session asks the product for nothing.
         Assert.Null(session.PendingModeRequest);
@@ -3228,14 +3234,28 @@ public sealed class NormalizedRuntimeSeamTests
         ulong revisionBefore = session.State.Inventory.Read().WorldRevision;
         session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         Assert.Equal(stepsBeforeModal, spatial.StepCalls);
+
+        // An attack asked for while the modal owns input reaches no combat: the per-step update that
+        // would run it is the one the mode holds back, which is the same gate the step assertion
+        // above measures. (An outer-path melee cannot be observed landing in this fixture even in
+        // ordinary play - the existing melee test drives the internal per-step seam - so the attack
+        // half is stated as this structural fact rather than claimed as an executed refusal.)
+        Intent("attack", 4);
+        Assert.Null(session.LastMeleeTargeting);
+        Assert.Equal(stepsBeforeModal, spatial.StepCalls);
         LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
         InventoryItemPresentation gold = opened.Items.Single(item => item.Definition == "gold-piece");
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key }), 4);
         Assert.NotEqual(revisionBefore, session.State.Inventory.Read().WorldRevision);
 
-        // Ordinary play resumes on the product's word, and the held key is gone: the release the
-        // interpreter never saw would otherwise keep moving a character nobody is steering.
+        // Closing through the interaction's own token is what returns the session to ordinary play,
+        // and it asks the product for it rather than deciding for itself.
+        Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-close", container = opened.Container }), 4);
+        Assert.Equal(ProductMode.Playing, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Playing);
+        Assert.Null(session.OpenLoot);
+
+
         session.Update(new ProductUpdate(OuterUpdate(5), []));
         Assert.True(spatial.StepCalls > stepsBeforeModal, "ordinary play admits world time again");
         Assert.Equal(Vector2.Zero, spatial.StepRequests[^1].Command.PlanarIntent);
@@ -3244,16 +3264,25 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.NotEqual(Vector2.Zero, spatial.StepRequests[^1].Command.PlanarIntent);
 
         // A player whose health track reached zero is dead, whatever mode they were in, and death
-        // admits no world time either.
+        // admits no world time either. The negative is a *valid* take - the same container token and
+        // revision that moved the gold while the modal was open - so it would move it again if the
+        // dead gate were missing.
+        session.Update(new ProductUpdate(OuterUpdate(6), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        Ui("{\"action\":\"loot\"}", 7);
+        LootPresentation reopened = Assert.IsType<LootPresentation>(session.OpenLoot);
         session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
         Assert.Equal(ProductMode.Dead, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Dead);
         int stepsBeforeDeath = spatial.StepCalls;
         ulong afterDeath = session.State.Inventory.Read().WorldRevision;
-        session.Update(new ProductUpdate(OuterUpdate(7), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
-        Ui("{\"action\":\"loot-close\",\"container\":\"none\"}", 8);
+        InventoryItemPresentation remaining = reopened.Items.Single(item => item.Definition == "gold-piece");
+        session.Update(new ProductUpdate(OuterUpdate(8), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = reopened.Container, revision = reopened.Revision, item = remaining.Key }), 9);
         Assert.Equal(stepsBeforeDeath, spatial.StepCalls);
         Assert.Equal(afterDeath, session.State.Inventory.Read().WorldRevision);
+        Assert.Equal(ulong.Parse(remaining.Quantity), ulong.Parse(session.OpenLoot!.Items.Single(item => item.Key == remaining.Key).Quantity));
+
     }
 
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
