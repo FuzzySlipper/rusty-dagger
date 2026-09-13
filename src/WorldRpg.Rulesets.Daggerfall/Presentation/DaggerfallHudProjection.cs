@@ -21,6 +21,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         PresentationState presentation,
         ProductMode mode,
         PlayerControlState controls,
+        PresentationSlots slots,
         InventoryPresentation? inventory = null,
         LootPresentation? loot = null,
         CharacterSheetPresentation? character = null)
@@ -40,6 +41,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("yawRadians", builder.Number(controls.YawRadians)),
                 ("pitchRadians", builder.Number(controls.PitchRadians)),
                 ("interaction", builder.String(mode == ProductMode.Modal ? "modal" : mode == ProductMode.Playing ? "aiming" : "held")))),
+            // Status rows come from the owners that publish them rather than from this projection
+            // guessing what an effect, an escort or a quest wants to say.
+            ("slots", builder.Array(slots.Read().Select(slot => builder.Object(
+                ("owner", builder.String(slot.Owner)),
+                ("id", builder.String(slot.Id)),
+                ("label", builder.String(slot.Label)),
+                ("detail", builder.String(slot.Detail)),
+                ("order", builder.Number(slot.Order)))).ToArray())),
             // The modal's own token is what a close has to name, so the UI never invents focus.
             ("focus", loot is null
                 ? builder.Null()
