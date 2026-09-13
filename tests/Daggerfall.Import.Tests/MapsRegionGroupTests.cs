@@ -113,6 +113,43 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(15251, total);
     }
 
+    [Fact]
+    public void Agrees_with_the_single_location_resolver_about_privateers_hold()
+    {
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+
+        // Find the starting dungeon by name across every region rather than being told where it is,
+        // and require exactly one: two locations claiming the name would make every later reference
+        // ambiguous.
+        List<MapsLocationRecord> matches = [];
+        foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
+        {
+            if (group.Tables.Any(table => table.Length == 0)) continue;
+            matches.AddRange(MapsDecoder.DecodeRegionLocations(archive, group.Region)
+                .Where(location => location.Name.Contains("Privateer", StringComparison.OrdinalIgnoreCase)));
+        }
+
+        MapsLocationRecord hold = Assert.Single(matches);
+
+        // The measured position of the starting dungeon, pinned so a shift in the source shows up as
+        // a failure rather than as a different dungeon being tested.
+        Assert.Equal(17, hold.Region);
+        Assert.Equal("Privateer's Hold", hold.Name);
+        Assert.NotEqual(0, hold.DungeonType);
+
+        // The established per-location resolver and this region-wide enumeration were written
+        // separately, so agreeing about the same location is a real cross-check rather than the same
+        // read twice: map, position, dungeon type and the block list all have to line up.
+        MapsDungeonLayout layout = MapsDecoder.DecodeDungeonLayout(archive, hold.Region, hold.Name);
+        Assert.Equal(hold.MapId, layout.MapId);
+        Assert.Equal(hold.Longitude, layout.Longitude);
+        Assert.Equal(hold.Latitude, layout.Latitude);
+        Assert.Equal(hold.DungeonType, layout.DungeonType);
+        Assert.NotEmpty(layout.Blocks);
+        Assert.Equal(hold.Region, layout.Region);
+        Assert.Equal(hold.Index, layout.LocationIndex);
+    }
+
     private static byte[] MapNames(int count)
     {
         byte[] bytes = new byte[sizeof(uint) + (count * 32)];
