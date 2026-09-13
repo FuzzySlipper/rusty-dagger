@@ -67,6 +67,47 @@ public sealed class DaggerfallCalendarTests
     }
 
     [Fact]
+    public void Reads_the_holiday_a_date_is_for_the_region_that_keeps_it()
+    {
+        // The classic table: fifty-three holidays, each on one day of the year and each kept either
+        // everywhere or in a single region, whose identity is the table's value minus one.
+        Assert.Equal(53, DaggerfallCalendar.HolidayCount);
+        Assert.Equal(53, DaggerfallCalendar.HolidayDays.Count);
+
+        // The first holiday is the year's first day and every region keeps it; the twelfth day is the
+        // third holiday, kept by region 0x01 - the first region - and by no other.
+        DaggerfallCalendar firstDay = new(405, 0, 0, 0, 0, 0);
+        Assert.Equal(1, firstDay.DayOfYear);
+        Assert.Equal(1, firstDay.GetHolidayId(0));
+        Assert.Equal(1, firstDay.GetHolidayId(60));
+
+        DaggerfallCalendar twelfthDay = new(405, 0, 11, 0, 0, 0);
+        Assert.Equal(12, twelfthDay.DayOfYear);
+        Assert.Equal(3, twelfthDay.GetHolidayId(0));
+        Assert.Equal(0, twelfthDay.GetHolidayId(1));
+
+        // A day that is not a holiday is none, in every region, and a day past the table's last entry
+        // is never one even when the table has no entry beyond it.
+        DaggerfallCalendar ordinary = new(405, 0, 3, 0, 0, 0);
+        Assert.Equal(0, ordinary.GetHolidayId(0));
+        Assert.Equal(0, ordinary.GetHolidayId(24));
+        Assert.Equal(0, new DaggerfallCalendar(405, 11, 29, 0, 0, 0).GetHolidayId(0));
+        Assert.Equal(360, new DaggerfallCalendar(405, 11, 29, 0, 0, 0).DayOfYear);
+
+        // The region the holiday table names is the donor's own convention: its value is the region
+        // index plus one, so the holiday kept by region 0x19 is found at index 0x19 - 1 and nowhere
+        // else. Holiday 2 carries 0x19.
+        DaggerfallCalendar secondHoliday = new(405, 0, 1, 0, 0, 0);
+        Assert.Equal(2, secondHoliday.DayOfYear);
+        Assert.Equal(2, secondHoliday.GetHolidayId(0x19 - 1));
+        Assert.Equal(0, secondHoliday.GetHolidayId(0x19));
+        Assert.Equal(0, secondHoliday.GetHolidayId(0x19 - 2));
+
+        // A negative region is not a region.
+        Assert.Throws<ArgumentOutOfRangeException>(() => firstDay.GetHolidayId(-1));
+    }
+
+    [Fact]
     public void Reads_the_season_and_the_daylight_the_hour_implies()
     {
         // Seasons divide the twelve months three at a time, and daylight is the donor's dawn-to-dusk.
