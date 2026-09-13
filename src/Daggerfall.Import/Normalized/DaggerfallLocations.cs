@@ -10,6 +10,8 @@ namespace Daggerfall.Import.Normalized;
 /// <param name="Longitude">The location's authored longitude.</param>
 /// <param name="Latitude">The location's authored latitude.</param>
 /// <param name="DungeonType">The location's dungeon type byte, zero when it has none.</param>
+/// <param name="LocationType">The location's type, from the map table's bitfield.</param>
+/// <param name="Discovered">Whether the location is discovered.</param>
 public sealed record DaggerfallLocationMap(
     int Region,
     int Index,
@@ -17,7 +19,9 @@ public sealed record DaggerfallLocationMap(
     int MapId,
     int Longitude,
     int Latitude,
-    byte DungeonType);
+    byte DungeonType,
+    int LocationType,
+    bool Discovered);
 
 /// <summary>
 /// A region group the donor discards because a table has no bytes, with the tables that are empty.
@@ -139,7 +143,9 @@ public static class DaggerfallLocationBuilder
                     location.MapId,
                     location.Longitude,
                     location.Latitude,
-                    location.DungeonType));
+                    location.DungeonType,
+                    location.LocationType,
+                    location.Discovered));
             }
 
             foreach (MapsDungeonLocation dungeon in MapsDecoder.DecodeRegionDungeons(archive, group.Region))

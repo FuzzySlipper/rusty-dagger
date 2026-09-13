@@ -110,7 +110,9 @@ public sealed record MapsLocationRecord(
     int MapId,
     int Longitude,
     int Latitude,
-    byte DungeonType);
+    byte DungeonType,
+    int LocationType,
+    bool Discovered);
 
 public static class MapsDecoder
 {
@@ -126,6 +128,12 @@ public static class MapsDecoder
 
     /// <summary>Bytes one MAPTABLE entry occupies, one per location.</summary>
     private const int MapTableEntryBytes = 17;
+
+    /// <summary>The bits of a map table entry's bitfield that carry longitude, as the donor masks them.</summary>
+    private const uint LongitudeMask = 0x1FF_FFFFu;
+
+    /// <summary>The bits of the following word that carry latitude.</summary>
+    private const int LatitudeMask = 0x00FF_FFFF;
 
     /// <summary>
     /// Reads every region group the archive carries, with each group's four tables and whether their
@@ -326,8 +334,8 @@ public static class MapsDecoder
         List<MapsLocationRecord> locations = new(names.Count);
         for (int index = 0; index < names.Count; index++)
         {
-            (int mapId, int longitude, int latitude, byte dungeonType) = DecodeMapTable(mapTable, archive.Source, index);
-            locations.Add(new MapsLocationRecord(region, index, names[index], mapId, longitude, latitude, dungeonType));
+            (int mapId, int longitude, int latitude, byte dungeonType, int locationType, bool discovered) = DecodeMapTable(mapTable, archive.Source, index);
+            locations.Add(new MapsLocationRecord(region, index, names[index], mapId, longitude, latitude, dungeonType, locationType, discovered));
         }
 
         return locations;
@@ -408,7 +416,7 @@ public static class MapsDecoder
         ArgumentException.ThrowIfNullOrWhiteSpace(locationName);
         IReadOnlyList<string> names = DecodeLocationNames(archive, region);
         int locationIndex = FindExactLocation(names, locationName, archive.Source);
-        (int mapId, int longitude, int latitude, byte dungeonType) = DecodeMapTable(GetNamedPayload(archive, "MAPTABLE", region), archive.Source, locationIndex);
+        (int mapId, int longitude, int latitude, byte dungeonType, int _, bool _) = DecodeMapTable(GetNamedPayload(archive, "MAPTABLE", region), archive.Source, locationIndex);
         uint exteriorLocationId = DecodeExteriorLocationId(GetNamedPayload(archive, "MAPPITEM", region), archive.Source, names.Count, locationIndex);
         (uint locationId, IReadOnlyList<MapsDungeonBlock> blocks) = DecodeDungeonRecord(GetNamedPayload(archive, "MAPDITEM", region), archive.Source, exteriorLocationId);
         return new MapsDungeonLayout(region, locationIndex, locationName, mapId, locationId, longitude, latitude, dungeonType, blocks);
@@ -446,7 +454,7 @@ public static class MapsDecoder
         throw new Arena2FormatException(source, 0, $"MAPS location '{locationName}' was not found");
     }
 
-    private static (int MapId, int Longitude, int Latitude, byte DungeonType) DecodeMapTable(ReadOnlyMemory<byte> data, string source, int locationIndex)
+    private static (int MapId, int Longitude, int Latitude, byte DungeonType, int LocationType, bool Discovered) DecodeMapTable(ReadOnlyMemory<byte> data, string source, int locationIndex)
     {
         const int entryBytes = 17;
         int offset = CheckedMultiply(locationIndex, entryBytes, source, "MAPTABLE entry");
@@ -455,7 +463,16 @@ public static class MapsDecoder
         uint longitudeBits = reader.ReadUInt32();
         int latitudeBits = reader.ReadInt32();
         byte dungeonType = reader.ReadByte();
-        return (mapId, (int)((longitudeBits & 0x1F_FFFFu) >> 8), (latitudeBits & 0x00FF_FFFF) >> 8, dungeonType);
+        // The donor's own masks: longitude is the low twenty-five bits of the bitfield, latitude the
+        // low twenty-four of the next word, and the same word carries the location type and whether
+        // the location is discovered.
+        return (
+            mapId,
+            (int)((longitudeBits & LongitudeMask) >> 8),
+            (latitudeBits & LatitudeMask) >> 8,
+            dungeonType,
+            (int)((4 * longitudeBits) >> 27),
+            ((longitudeBits >> 24) & 0x40) != 0);
     }
 
     private static uint DecodeExteriorLocationId(ReadOnlyMemory<byte> data, string source, int locationCount, int locationIndex)

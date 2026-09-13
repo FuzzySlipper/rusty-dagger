@@ -100,7 +100,10 @@ public sealed class MapsRegionGroupTests
             Assert.All(locations, location => Assert.Equal(group.Region, location.Region));
             Assert.All(locations, location => Assert.False(string.IsNullOrWhiteSpace(location.Name)));
             Assert.All(locations, location => Assert.True(location.MapId >= 0));
-            Assert.All(locations, location => Assert.InRange(location.Longitude, 0, 0x1F_FFFF >> 8));
+            // The donor's own field widths, not the decoder's: longitude is the low twenty-five bits
+            // of the map table's bitfield, which is four bits wider than the mask this reader first
+            // used. Every corpus record fits under both, so only the donor's width is the truth.
+            Assert.All(locations, location => Assert.InRange(location.Longitude, 0, 0x1FF_FFFF >> 8));
             Assert.All(locations, location => Assert.InRange(location.Latitude, 0, 0x00FF_FFFF >> 8));
             total += locations.Count;
 
@@ -138,9 +141,11 @@ public sealed class MapsRegionGroupTests
         Assert.Equal("Privateer's Hold", hold.Name);
         Assert.NotEqual(0, hold.DungeonType);
 
-        // The established per-location resolver and this region-wide enumeration were written
-        // separately, so agreeing about the same location is a real cross-check rather than the same
-        // read twice: map, position, dungeon type and the block list all have to line up.
+        // The two paths share the private table decoders, so what this checks is not a second reading
+        // of the same bytes: it is that finding a location by name and finding it by region-index
+        // enumeration land on the same location, and that the region-wide record carries the same
+        // values the established resolver reports for it. The lane was right that the earlier comment
+        // overstated the independence, and it is corrected here rather than defended.
         MapsDungeonLayout layout = MapsDecoder.DecodeDungeonLayout(archive, hold.Region, hold.Name);
         Assert.Equal(hold.MapId, layout.MapId);
         Assert.Equal(hold.Longitude, layout.Longitude);
@@ -211,6 +216,11 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(15251, locations.Locations.Count);
         Assert.Equal(45, locations.Locations.Select(location => location.Region).Distinct().Count());
         Assert.Equal(3959, locations.Dungeons.Count);
+
+        // The location type and the discovered flag come from the same word as the position, and both
+        // carry something other than a constant, so neither is a field that was added and never read.
+        Assert.Contains(locations.Locations, location => location.LocationType != 0);
+        Assert.Contains(locations.Locations, location => !location.Discovered);
 
         // The empty tables are named, and they are the same three every time: a region slot whose
         // map data was never written, which is what the donor discards and what this must not report
