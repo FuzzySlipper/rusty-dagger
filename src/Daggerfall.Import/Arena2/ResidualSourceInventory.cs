@@ -16,6 +16,7 @@ public sealed record ResidualSourceRecord(
     string Reader,
     string DonorReader,
     bool Documented,
+    bool ClaimedByInventory,
     SourceRecordDisposition Disposition,
     string Note);
 
@@ -180,6 +181,10 @@ public sealed class ResidualSourceInventory
                 reader,
                 donorReader,
                 DocumentedFamilies.Contains(family, StringComparer.Ordinal),
+                // The consumer's claim is a fact of the manifest rather than a reading of the note: a
+                // caller asking "does something want this?" must not have to parse English, and a
+                // reworded note must not be able to demote a claimed path silently.
+                string.Equals(documentedToken, nameof(SourceRecordDisposition.Imported), StringComparison.OrdinalIgnoreCase),
                 disposition,
                 Note(entry, reader, donorReader, probe, disposition, documentedNote, overrideNote)));
         }
@@ -223,7 +228,8 @@ public sealed class ResidualSourceInventory
         // read keeps the reader's verdict, and the note carries the import either way: "no reader"
         // and "a consumer claims it" are both true, and the second one must not be lost just
         // because the first is the disposition.
-        if (documented == SourceRecordDisposition.Imported)
+        bool claimed = documented == SourceRecordDisposition.Imported;
+        if (claimed)
         {
             documentedNote = " The documented inventory already imports it, so a consumer claims it.";
         }
