@@ -114,6 +114,18 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(
             Path.GetFileName(packPaths["inventory.icon.iron-dagger"]),
             Path.GetFileName(identified["inventory.icon.iron-dagger"].Path));
+
+        // Every identity both sides name must be the same file, so a republish that moved one side and
+        // not the other cannot pass on one sampled row. The one identity the pack does not name yet is
+        // the death screen: the committed bundle publication predates it, and republishing that bundle
+        // is what adds it - so this line fails, loudly, the day it does.
+        Assert.Equal(
+            [.. identified.Keys.Where(packPaths.ContainsKey).Order(StringComparer.Ordinal)],
+            [.. packPaths.Keys.Where(identified.ContainsKey).Order(StringComparer.Ordinal)]);
+        Assert.Equal(["screen.death"], identified.Keys.Except(packPaths.Keys).Order(StringComparer.Ordinal));
+        Assert.All(
+            identified.Keys.Where(packPaths.ContainsKey),
+            id => Assert.Equal(Path.GetFileName(packPaths[id]), Path.GetFileName(identified[id].Path)));
     }
 
     [Fact]
