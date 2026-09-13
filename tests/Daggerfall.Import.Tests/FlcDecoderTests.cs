@@ -44,8 +44,45 @@ public sealed class FlcDecoderTests
             }
 
             Assert.True(container.Frames[^1].Offset + container.Frames[^1].Size <= bytes.Length);
+
+            // What the frames are made of, measured from the files: one thumbnail the donor skips, one
+            // 256-colour palette, one full frame, and a delta for every remaining frame. That is what
+            // a decoder has to read, and it is why the last frame's chunk types are not all alike.
+            ushort[] chunkTypes = [.. container.Frames.SelectMany(frame => frame.Chunks).Select(chunk => chunk.Type)];
+            Assert.Equal(1, chunkTypes.Count(type => type == PstampChunkType));
+            Assert.Equal(1, chunkTypes.Count(type => type == Color256ChunkType));
+            Assert.Equal(1, chunkTypes.Count(type => type == ByteRunChunkType));
+            Assert.Equal(frames - 1, chunkTypes.Count(type => type == DeltaFlcChunkType));
+
+            // The palette chunk measures 778 bytes: its six-byte chunk header, a four-byte prefix and
+            // the 768 bytes a 256-colour palette takes. Which four bytes those are, and how the donor
+            // reads around them, is for the decoding increment to read out of ReadPalette rather than
+            // guess - the size is measured here and asserted only as measured.
+            FlcChunk palette = container.Frames.SelectMany(frame => frame.Chunks).Single(chunk => chunk.Type == Color256ChunkType);
+            Assert.Equal(778, palette.Size);
+            Assert.Equal(772, palette.Size - 6);
+            foreach (FlcFrame frame in container.Frames)
+            {
+                Assert.Equal(frame.ChunkCount, frame.Chunks.Count);
+                Assert.Equal(frame.Offset + FlcDecoder.FrameHeaderBytes, frame.Chunks[0].Offset);
+                for (int index = 1; index < frame.Chunks.Count; index++)
+                {
+                    Assert.Equal(frame.Chunks[index - 1].Offset + frame.Chunks[index - 1].Size, frame.Chunks[index].Offset);
+                }
+
+                Assert.Equal(frame.Offset + frame.Size, frame.Chunks[^1].Offset + frame.Chunks[^1].Size);
+            }
         }
     }
+
+    /// <summary>The chunk types the donor's reader switches on, which these files all use.</summary>
+    private const ushort PstampChunkType = 18;
+
+    private const ushort Color256ChunkType = 4;
+
+    private const ushort ByteRunChunkType = 15;
+
+    private const ushort DeltaFlcChunkType = 7;
 
     [Fact]
     public void Refuses_bytes_that_only_look_like_a_container()
