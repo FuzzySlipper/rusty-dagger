@@ -179,6 +179,19 @@ public sealed class ResidualSourceInventoryTests
         ResidualSourceRecord record = Assert.Single(inventory.Files);
         Assert.Equal(SourceRecordDisposition.Unused, record.Disposition);
         Assert.Contains("does not know ('not-a-disposition')", record.Note, StringComparison.Ordinal);
+
+        // An imported path this repository cannot read keeps the reader's verdict *and* the import
+        // disclosure: losing the consumer because the reader failed would hide a fact the manifest
+        // establishes. No corpus path is in this state, so the fixture is the only place it shows.
+        ResidualSourceInventory unreadable = ResidualSourceInventory.Enumerate(
+            [("MYSTERY.IMG", new byte[8])],
+            "fixture",
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["MYSTERY.IMG"] = "imported" });
+
+        ResidualSourceRecord refused = Assert.Single(unreadable.Files);
+        Assert.Equal(SourceRecordDisposition.Malformed, refused.Disposition);
+        Assert.Contains("already imports it", refused.Note, StringComparison.Ordinal);
+        Assert.Contains("refused it", refused.Note, StringComparison.Ordinal);
     }
 
     [Fact]
