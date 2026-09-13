@@ -34,7 +34,7 @@ internal sealed class DaggerfallOutcomePresentation(PresentationState presentati
                 presentation.SetOutcome($"Defeated {definition.Id} for {died.AppliedDamage} damage; gained {definition.Rewards.ExperienceReward} XP");
                 break;
             case LootAwardedFact loot:
-                presentation.SetOutcome($"{presentation.LastOutcome}; looted {loot.Quantity} {loot.ItemId}");
+                presentation.AppendOutcome($"looted {loot.Quantity} {loot.ItemId}");
                 break;
             case CorpseSearchedEmptyFact:
                 presentation.SetOutcome("Corpse is empty");

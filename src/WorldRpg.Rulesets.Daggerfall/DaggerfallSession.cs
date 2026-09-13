@@ -482,6 +482,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             return;
         }
 
+        // The message line ages with the world it reports on, so it is advanced here rather than
+        // while a mode holds the world still.
+        Presentation.Advance(deltaSeconds * facts.AdmittedStepCount);
+
         // One admitted update owns one input slice. Later catch-up steps derive
         // only committed held keyboard/mapped-direction intent; direct axes,
         // direct digital movement, pointer deltas, and semantic actions do not replay.
