@@ -46,6 +46,49 @@ public sealed class DaggerfallWorldTimeTests
     }
 
     [Fact]
+    public void Takes_every_kind_of_interval_through_one_operation()
+    {
+        // A rest of five game minutes with nothing to interrupt it: the interval is the caller's unit,
+        // so the clock does not scale it a second time.
+        DaggerfallWorldTime time = new(DaggerfallCalendar.Start, 0d, 12d);
+        DaggerfallCalendarAdvance rest = time.AdvanceInterval(300, []);
+        Assert.False(rest.Interrupted);
+        Assert.Equal((300, 0), (rest.AppliedSeconds, rest.RemainingSeconds));
+        Assert.Equal(new DaggerfallCalendar(405, 5, 0, 0, 5, 0), time.Calendar);
+
+        // Travel that something interrupts after ten game minutes: the advance stops there, the caller
+        // is told which consequence fired, and the rest of the journey is still theirs to resume.
+        DaggerfallCalendarAdvance travel = time.AdvanceInterval(3600, [(11, 600), (12, 900)]);
+        Assert.True(travel.Interrupted);
+        Assert.Equal(11, travel.Consequence);
+        Assert.Equal((600, 3000), (travel.AppliedSeconds, travel.RemainingSeconds));
+        Assert.Equal(new DaggerfallCalendar(405, 5, 0, 0, 15, 0), time.Calendar);
+
+        // An interval that is interrupted immediately leaves the clock where it was and the whole
+        // interval outstanding, which is how a caller applies a consequence it already owes.
+        DaggerfallCalendarAdvance due = time.AdvanceInterval(60, [(3, 0)]);
+        Assert.Equal((3, 0, 60), (due.Consequence, due.AppliedSeconds, due.RemainingSeconds));
+        Assert.Equal(new DaggerfallCalendar(405, 5, 0, 0, 15, 0), time.Calendar);
+
+        // The two kinds interleave on one clock: an interval of one game second applies exactly one,
+        // and a fraction smaller than a second stays unapplied until admitted play buys enough to make
+        // it whole - a calendar counts seconds, so three quarters of one cannot move it and must not be
+        // rounded into a second the world did not have.
+        DaggerfallWorldTime carrying = new(DaggerfallCalendar.Start, 0.75d, 12d);
+        DaggerfallCalendarAdvance interval = carrying.AdvanceInterval(1, []);
+        Assert.Equal(1, interval.AppliedSeconds);
+        Assert.Equal(new DaggerfallCalendar(405, 5, 0, 0, 0, 1), carrying.Calendar);
+        Assert.Equal(0.75d, carrying.RemainderSeconds, 10);
+
+        carrying.Advance(0.05d);
+        Assert.Equal(new DaggerfallCalendar(405, 5, 0, 0, 0, 2), carrying.Calendar);
+        Assert.Equal(0.35d, carrying.RemainderSeconds, 10);
+
+        // A negative interval is refused: nothing in the corpus shortens the world's clock.
+        Assert.Throws<ArgumentOutOfRangeException>(() => time.AdvanceInterval(-1, []));
+    }
+
+    [Fact]
     public void Refuses_a_duration_or_scale_that_is_not_one()
     {
         DaggerfallWorldTime time = new(DaggerfallCalendar.Start, 0d, 12d);

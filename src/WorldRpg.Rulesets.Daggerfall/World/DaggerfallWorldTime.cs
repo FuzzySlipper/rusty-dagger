@@ -26,6 +26,43 @@ internal sealed class DaggerfallWorldTime(
     /// <summary>The part of a game second not yet applied to the calendar.</summary>
     internal double RemainderSeconds => _remainder;
 
+    /// <summary>
+    /// Advances by an interval its owner supplies in game seconds, stopping at the first consequence.
+    /// </summary>
+    /// <remarks>
+    /// This is the one operation every kind of elapsed time goes through. Ordinary play arrives as an
+    /// admitted real duration and is scaled; rest, travel and prison arrive as game seconds their owner
+    /// already decided - the donor's rest raises <c>minutesPerTick * 60</c>, its travel the journey's
+    /// minutes, its training three hours - so the two paths meet here in the unit the calendar counts.
+    /// The fraction of a game second this clock holds is applied first, so an interval does not lose or
+    /// repeat the part of a second that was already bought.
+    /// <para>
+    /// What the caller gets back is where the advance stopped, which consequence stopped it and how
+    /// much of the interval is still theirs. Applying the consequence and resuming is the caller's
+    /// work: nothing here dispatches anything.
+    /// </para>
+    /// </remarks>
+    /// <param name="gameSeconds">The interval, in game seconds.</param>
+    /// <param name="consequences">The deadlines the caller owns, as an identity and game seconds from now.</param>
+    internal DaggerfallCalendarAdvance AdvanceInterval(
+        long gameSeconds,
+        IReadOnlyList<(int Identity, long SecondsFromNow)> consequences)
+    {
+        ArgumentNullException.ThrowIfNull(consequences);
+        if (gameSeconds < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(gameSeconds), gameSeconds, "An interval is not negative; nothing in the corpus shortens the world's clock.");
+        }
+
+        // The clock's own unapplied fraction is spent first, so the interval is applied to a calendar
+        // that already accounts for everything the world was given.
+        long whole = (long)Math.Floor(_remainder + 1e-9);
+        _remainder -= whole;
+        DaggerfallCalendarAdvance advance = Calendar.AdvanceToFirstConsequence(gameSeconds + whole, consequences);
+        Calendar = advance.Calendar;
+        return advance with { AppliedSeconds = advance.AppliedSeconds - whole, RemainingSeconds = advance.RemainingSeconds };
+    }
+
     /// <summary>Advances the clock by an admitted real duration at the given scale.</summary>
     internal void Advance(double realSeconds)
     {
