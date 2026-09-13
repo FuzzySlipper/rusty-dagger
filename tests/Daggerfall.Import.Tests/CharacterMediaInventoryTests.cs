@@ -147,12 +147,23 @@ public sealed class CharacterMediaInventoryTests
     {
         CharacterMediaInventory inventory = ReadInventory();
         HashSet<string> supplied = [CharacterMediaReferences.ArtPalette, CharacterMediaReferences.NightskyPalette];
-        IReadOnlyList<CharacterCanvasReference> references = CharacterMediaReferences.Derive(inventory, supplied);
+        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, supplied);
+        IReadOnlyList<CharacterCanvasReference> references = set.Canvases;
 
         // One reference per readable canvas, and none for a file nothing reads: the six unread
         // files supply no canvas to publish rather than one invented for them.
         Assert.Equal(inventory.Files.Where(file => file.Decode != Arena2CanvasKind.Unread).Sum(file => file.CanvasCount), references.Count);
         Assert.DoesNotContain(references, reference => inventory.Files.Single(file => file.Path == reference.Path).Decode == Arena2CanvasKind.Unread);
+
+        // ... and they are not omitted either: every unread file is accounted for with the donor
+        // reader its format would need, three CEL and three BSS, and every canvas carries the
+        // binding the inventory recorded so a published reference says who claims it.
+        Assert.Equal(6, set.Unavailable.Count);
+        Assert.Equal(3, set.Unavailable.Count(entry => entry.Family == "CEL"));
+        Assert.Equal(3, set.Unavailable.Count(entry => entry.Family == "BSS"));
+        Assert.All(set.Unavailable, entry => Assert.Contains(entry.Family == "CEL" ? "FlcFile.cs" : "BssFile.cs", entry.Reason, StringComparison.Ordinal));
+        Assert.All(set.Unavailable, entry => Assert.Equal(inventory.Files.Single(file => file.Path == entry.Path).Binding, entry.Binding));
+        Assert.All(references, reference => Assert.Equal(inventory.Files.Single(file => file.Path == reference.Path).Binding, reference.Binding));
 
         // The classic reader's palette rule: NITE files read with NIGHTSKY.COL, everything else with
         // ART_PAL.COL, and the four NITE files in this corpus prove the rule is applied rather than

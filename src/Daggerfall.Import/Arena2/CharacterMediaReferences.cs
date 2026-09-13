@@ -8,6 +8,7 @@ namespace Daggerfall.Import.Arena2;
 /// <param name="Family">The documented family the file belongs to.</param>
 /// <param name="Key">The identity key the inventory recorded for the file.</param>
 /// <param name="Consumer">The consumer the inventory recorded, or empty when none is bound yet.</param>
+/// <param name="Binding">Whether a published consumer binds the file, or it is still required-pending.</param>
 /// <param name="CanvasIndex">The canvas's index within its file, which is its record or cell.</param>
 /// <param name="Palette">The palette file the classic reader pairs with this canvas.</param>
 /// <param name="Companions">The other presentation layers this canvas belongs with.</param>
@@ -17,14 +18,41 @@ public sealed record CharacterCanvasReference(
     string Family,
     string Key,
     string Consumer,
+    MediaBinding Binding,
     int CanvasIndex,
     string Palette,
     IReadOnlyList<string> Companions,
     string Reason);
 
+/// <summary>One supplied file whose format nothing here reads, kept explicit rather than dropped.</summary>
+/// <param name="Path">The supplied source file.</param>
+/// <param name="Family">The documented family it belongs to.</param>
+/// <param name="Key">The identity key the inventory recorded.</param>
+/// <param name="Binding">Whether a published consumer binds it, or it is still required-pending.</param>
+/// <param name="DonorReader">The donor class that reads this format, or empty when none is known.</param>
+/// <param name="Reason">Why the file supplies no canvas, naming the reader that would be needed.</param>
+public sealed record CharacterMediaUnavailable(
+    string Path,
+    string Family,
+    string Key,
+    MediaBinding Binding,
+    string DonorReader,
+    string Reason);
+
+/// <summary>
+/// Everything a character-media publication has to account for: the canvases it can emit, and the
+/// supplied files it cannot, each with the reason.
+/// </summary>
+/// <param name="Canvases">One reference per readable canvas.</param>
+/// <param name="Unavailable">One entry per supplied file whose format nothing here reads.</param>
+public sealed record CharacterMediaReferenceSet(
+    IReadOnlyList<CharacterCanvasReference> Canvases,
+    IReadOnlyList<CharacterMediaUnavailable> Unavailable);
+
 /// <summary>
 /// Derives the palette — and, where the classic naming rule establishes them, the companion layers —
-/// of every readable character-media canvas, and refuses a canvas whose palette is not supplied.
+/// of every readable character-media canvas, accounts for every supplied file it cannot publish, and
+/// refuses a canvas whose palette is not supplied.
 /// </summary>
 /// <remarks>
 /// The inventory records no palette per canvas and no cross-check derives one, which it states as a
@@ -51,6 +79,17 @@ public static class CharacterMediaReferences
     /// <summary>The palettes a complete character-media publication needs.</summary>
     public static readonly string[] RequiredPalettes = [ArtPalette, NightskyPalette];
 
+    /// <summary>
+    /// The donor class that reads each format this repository has no reader for. Naming the reader is
+    /// what makes an unavailable family a recorded gap rather than an omission: the canvases are
+    /// absent because a specific class is missing here, not because nobody looked.
+    /// </summary>
+    private static readonly Dictionary<string, string> DonorReaders = new(StringComparer.Ordinal)
+    {
+        ["CEL"] = "Assets/Scripts/API/FlcFile.cs",
+        ["BSS"] = "Assets/Scripts/API/BssFile.cs",
+    };
+
     /// <summary>The classic reader's palette rule for one of these files.</summary>
     public static string PaletteFor(string path)
     {
@@ -67,18 +106,33 @@ public static class CharacterMediaReferences
     /// A canvas needs a palette the caller does not supply, or its family's companion layers are
     /// never derived. Both name the file and the missing reference rather than defaulting.
     /// </exception>
-    public static IReadOnlyList<CharacterCanvasReference> Derive(
+    public static CharacterMediaReferenceSet Derive(
         CharacterMediaInventory inventory,
         IReadOnlySet<string> suppliedPalettes)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(suppliedPalettes);
         List<CharacterCanvasReference> references = [];
+        List<CharacterMediaUnavailable> unavailable = [];
         foreach (CharacterMediaRecord file in inventory.Files)
         {
-            // A file nothing reads has no canvas to publish; the inventory already carries it with
-            // its format named, and this refuses to invent one.
-            if (file.Decode == Arena2CanvasKind.Unread) continue;
+            // A file nothing reads has no canvas to publish, and it is not dropped either: it is
+            // accounted for with the reader its format would need, so a family cannot go missing
+            // because it was inconvenient.
+            if (file.Decode == Arena2CanvasKind.Unread)
+            {
+                string donorReader = DonorReaders.GetValueOrDefault(file.Family, string.Empty);
+                unavailable.Add(new CharacterMediaUnavailable(
+                    file.Path,
+                    file.Family,
+                    file.Key,
+                    file.Binding,
+                    donorReader,
+                    donorReader.Length == 0
+                        ? "Nothing in this repository reads this format, and no donor reader is recorded for it."
+                        : $"The donor reads this format with {donorReader}, which this repository does not have, so its canvases are unavailable rather than approximated."));
+                continue;
+            }
 
             string palette = PaletteFor(file.Path);
             if (!suppliedPalettes.Contains(palette))
@@ -90,11 +144,11 @@ public static class CharacterMediaReferences
             (IReadOnlyList<string> companions, string reason) = Companions(file);
             for (int index = 0; index < file.CanvasCount; index++)
             {
-                references.Add(new CharacterCanvasReference(file.Path, file.Family, file.Key, file.Consumer, index, palette, companions, reason));
+                references.Add(new CharacterCanvasReference(file.Path, file.Family, file.Key, file.Consumer, file.Binding, index, palette, companions, reason));
             }
         }
 
-        return references;
+        return new CharacterMediaReferenceSet(references, unavailable);
     }
 
     /// <summary>
