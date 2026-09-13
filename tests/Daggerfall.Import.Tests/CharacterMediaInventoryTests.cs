@@ -267,13 +267,21 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal(87, presentation.Files.Count);
         Assert.Equal(6, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreadable));
         Assert.Equal(81, presentation.Files.Count(file => file.Outcome != CharacterFileOutcome.Unreadable));
-        Assert.Equal(56, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
-        Assert.Equal(25, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
+        Assert.Equal(57, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
+        Assert.Equal(24, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
         Assert.All(presentation.Files.Where(file => file.Outcome == CharacterFileOutcome.Unreadable),
             file => Assert.Contains("does not have", file.Reason, StringComparison.Ordinal));
         Assert.Contains(presentation.Files, file => file.Path == "CMPA00I0.BSS" && file.Outcome == CharacterFileOutcome.Unreadable);
         Assert.Contains(presentation.Files, file => file.Path == "MAGE.CEL" && file.Outcome == CharacterFileOutcome.Unreadable);
-        Assert.Contains(presentation.Files, file => file.Path == "FACES.CIF" && file.Outcome == CharacterFileOutcome.Unreferenced);
+        // The faction face grid is the section's non-racial family: sixty-one cells a social or
+        // escort view resolves by faction index, so it is referenced rather than unreferenced.
+        Assert.Contains(presentation.Files, file => file.Path == "FACES.CIF" && file.Outcome == CharacterFileOutcome.Referenced);
+        Assert.Equal(61, presentation.Faces.Count);
+        Assert.Equal(Enumerable.Range(0, 61), presentation.Faces.Select(face => face.Index));
+        Assert.All(presentation.Faces, face => Assert.Equal("FACES.CIF", face.SourceFile));
+        Assert.Equal("character.faction-face.00", presentation.Faces[0].MediaId);
+        Assert.Equal("character.faction-face.60", presentation.Faces[60].MediaId);
+        Assert.Equal(CharacterMediaReferences.ArtPalette, presentation.Faces[0].Palette);
         Assert.All(presentation.Layers, layer => Assert.Equal(CharacterMediaReferences.ArtPalette, layer.Palette));
 
         // A race value with no paper-doll subclass is recorded rather than mapped onto the next index.

@@ -43,6 +43,16 @@ public enum CharacterFileOutcome
 /// <param name="Reason">Why the outcome holds, naming the reader for an unreadable format.</param>
 public sealed record DaggerfallCharacterFile(string Path, string Family, int CanvasCount, CharacterFileOutcome Outcome, string Reason);
 
+/// <summary>
+/// One published faction face: the identity a social or escort view resolves by faction index.
+/// </summary>
+/// <param name="Index">The donor's faction face index.</param>
+/// <param name="MediaId">The published identity.</param>
+/// <param name="SourceFile">The supplied source file, whose cells are the faces.</param>
+/// <param name="Palette">The palette the cells are read with.</param>
+/// <param name="Binding">Whether a consumer binds it, or it is still required-pending.</param>
+public sealed record DaggerfallFactionFace(int Index, string MediaId, string SourceFile, string Palette, MediaBinding Binding);
+
 /// <summary>A race the corpus supplies no presentation media for, kept explicit.</summary>
 /// <param name="Race">The catalog race identity.</param>
 /// <param name="DonorRaceId">The donor's own race value.</param>
@@ -60,6 +70,7 @@ public sealed record DaggerfallRaceWithoutMedia(string Race, int DonorRaceId, st
 public sealed record DaggerfallCharacterPresentation(
     int SchemaVersion,
     IReadOnlyList<DaggerfallCharacterLayer> Layers,
+    IReadOnlyList<DaggerfallFactionFace> Faces,
     IReadOnlyList<DaggerfallCharacterFile> Files,
     IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia,
     IReadOnlyList<string> Sources)
@@ -188,7 +199,14 @@ public static class DaggerfallCharacterPresentationBuilder
         // Every supplied file is accounted for: the ones a layer draws from, the ones that read and
         // nothing uses, and the ones no reader here can open. A file that is in none of those three
         // would be a family going missing quietly.
-        HashSet<string> referenced = [.. layers.Select(layer => System.IO.Path.GetFileName(layer.SourceFile))];
+        // The faction faces are the section's non-racial layer family: a social or escort view
+        // resolves them by faction index, and the donor reads them from one fixed-cell grid.
+        List<DaggerfallFactionFace> faces = [.. set.Canvases
+            .Where(canvas => System.IO.Path.GetFileName(canvas.Path).Equals("FACES.CIF", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(canvas => canvas.CanvasIndex)
+            .Select(canvas => new DaggerfallFactionFace(canvas.CanvasIndex, canvas.MediaId, System.IO.Path.GetFileName(canvas.Path), canvas.Palette, canvas.Binding))];
+
+        HashSet<string> referenced = [.. layers.Select(layer => System.IO.Path.GetFileName(layer.SourceFile)), .. faces.Select(face => face.SourceFile)];
         Dictionary<string, CharacterMediaUnavailable> unavailable = set.Unavailable.ToDictionary(entry => System.IO.Path.GetFileName(entry.Path), StringComparer.Ordinal);
         List<DaggerfallCharacterFile> files = [];
         foreach (CharacterMediaRecord file in inventory.Files.OrderBy(file => file.Path, StringComparer.Ordinal))
@@ -210,6 +228,7 @@ public static class DaggerfallCharacterPresentationBuilder
         return new DaggerfallCharacterPresentation(
             DaggerfallCharacterPresentation.CurrentSchemaVersion,
             [.. layers.OrderBy(layer => layer.DonorRaceId).ThenBy(layer => layer.Layer, StringComparer.Ordinal)],
+            faces,
             files,
             without,
             [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]);

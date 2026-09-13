@@ -179,6 +179,14 @@ public static class CharacterMediaReferences
         ArgumentOutOfRangeException.ThrowIfNegative(canvasIndex);
         string name = System.IO.Path.GetFileNameWithoutExtension(file.Path).ToUpperInvariant();
         string family = file.Family.ToLowerInvariant();
+        // The one fixed-cell grid in these families is the faction face table: sixty-one cells a
+        // social or escort view indexes by faction, which is a different role from a paper-doll head
+        // and is named as one.
+        if (name == "FACES")
+        {
+            return $"character.faction-face.{canvasIndex:00}";
+        }
+
         if (TryRaceAndGender(name, out int race, out bool female))
         {
             string gender = female ? "female" : "male";

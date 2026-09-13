@@ -9768,6 +9768,435 @@
         "binding": "requiredPending"
       }
     ],
+    "faces": [
+      {
+        "index": 0,
+        "mediaId": "character.faction-face.00",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 1,
+        "mediaId": "character.faction-face.01",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 2,
+        "mediaId": "character.faction-face.02",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 3,
+        "mediaId": "character.faction-face.03",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 4,
+        "mediaId": "character.faction-face.04",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 5,
+        "mediaId": "character.faction-face.05",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 6,
+        "mediaId": "character.faction-face.06",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 7,
+        "mediaId": "character.faction-face.07",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 8,
+        "mediaId": "character.faction-face.08",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 9,
+        "mediaId": "character.faction-face.09",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 10,
+        "mediaId": "character.faction-face.10",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 11,
+        "mediaId": "character.faction-face.11",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 12,
+        "mediaId": "character.faction-face.12",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 13,
+        "mediaId": "character.faction-face.13",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 14,
+        "mediaId": "character.faction-face.14",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 15,
+        "mediaId": "character.faction-face.15",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 16,
+        "mediaId": "character.faction-face.16",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 17,
+        "mediaId": "character.faction-face.17",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 18,
+        "mediaId": "character.faction-face.18",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 19,
+        "mediaId": "character.faction-face.19",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 20,
+        "mediaId": "character.faction-face.20",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 21,
+        "mediaId": "character.faction-face.21",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 22,
+        "mediaId": "character.faction-face.22",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 23,
+        "mediaId": "character.faction-face.23",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 24,
+        "mediaId": "character.faction-face.24",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 25,
+        "mediaId": "character.faction-face.25",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 26,
+        "mediaId": "character.faction-face.26",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 27,
+        "mediaId": "character.faction-face.27",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 28,
+        "mediaId": "character.faction-face.28",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 29,
+        "mediaId": "character.faction-face.29",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 30,
+        "mediaId": "character.faction-face.30",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 31,
+        "mediaId": "character.faction-face.31",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 32,
+        "mediaId": "character.faction-face.32",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 33,
+        "mediaId": "character.faction-face.33",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 34,
+        "mediaId": "character.faction-face.34",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 35,
+        "mediaId": "character.faction-face.35",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 36,
+        "mediaId": "character.faction-face.36",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 37,
+        "mediaId": "character.faction-face.37",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 38,
+        "mediaId": "character.faction-face.38",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 39,
+        "mediaId": "character.faction-face.39",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 40,
+        "mediaId": "character.faction-face.40",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 41,
+        "mediaId": "character.faction-face.41",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 42,
+        "mediaId": "character.faction-face.42",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 43,
+        "mediaId": "character.faction-face.43",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 44,
+        "mediaId": "character.faction-face.44",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 45,
+        "mediaId": "character.faction-face.45",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 46,
+        "mediaId": "character.faction-face.46",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 47,
+        "mediaId": "character.faction-face.47",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 48,
+        "mediaId": "character.faction-face.48",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 49,
+        "mediaId": "character.faction-face.49",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 50,
+        "mediaId": "character.faction-face.50",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 51,
+        "mediaId": "character.faction-face.51",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 52,
+        "mediaId": "character.faction-face.52",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 53,
+        "mediaId": "character.faction-face.53",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 54,
+        "mediaId": "character.faction-face.54",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 55,
+        "mediaId": "character.faction-face.55",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 56,
+        "mediaId": "character.faction-face.56",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 57,
+        "mediaId": "character.faction-face.57",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 58,
+        "mediaId": "character.faction-face.58",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 59,
+        "mediaId": "character.faction-face.59",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "index": 60,
+        "mediaId": "character.faction-face.60",
+        "sourceFile": "FACES.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      }
+    ],
     "files": [
       {
         "path": "BODY00I0.IMG",
@@ -10263,8 +10692,8 @@
         "path": "FACES.CIF",
         "family": "FACE",
         "canvasCount": 61,
-        "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027FACE\u0027 family has no paper-doll role in this section yet."
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
       },
       {
         "path": "MAGE.CEL",
