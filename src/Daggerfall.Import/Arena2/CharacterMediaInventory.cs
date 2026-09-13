@@ -157,6 +157,31 @@ public sealed class CharacterMediaInventory
     /// <summary>The identity key a file contributes: its name without extension, upper-cased.</summary>
     private static string KeyOf(string path) => System.IO.Path.GetFileNameWithoutExtension(path).ToUpperInvariant();
 
+    /// <summary>
+    /// Whether a supplied file is in one of the documented families.
+    /// </summary>
+    /// <remarks>
+    /// The rule is the inventory's own, so a caller selecting sources cannot drift from the rule the
+    /// inventory applies: a class portrait or story sprite is named by its extension rather than by a
+    /// family prefix, and a caller that filtered by prefix alone would drop those six files without
+    /// noticing - which is a family going missing rather than a file being excluded.
+    /// </remarks>
+    public static bool IsDocumentedFamily(string path) =>
+        TryFamily(System.IO.Path.GetFileName(path), out _, out _);
+
+    private static bool TryFamily(string name, out string prefix, out string use)
+    {
+        string extension = System.IO.Path.GetExtension(name).ToUpperInvariant();
+        (string Prefix, int Count, string Use) family = extension switch
+        {
+            ".CEL" or ".BSS" => DocumentedFamilies.Single(entry => entry.Prefix == extension[1..]),
+            _ => DocumentedFamilies.FirstOrDefault(entry => entry.Prefix != "CEL" && entry.Prefix != "BSS" && name.StartsWith(entry.Prefix, StringComparison.OrdinalIgnoreCase)),
+        };
+        prefix = family.Prefix!;
+        use = family.Use!;
+        return family.Prefix is not null;
+    }
+
     private static (string Family, string Use) FamilyOf(string path, string source)
     {
         string name = System.IO.Path.GetFileName(path);

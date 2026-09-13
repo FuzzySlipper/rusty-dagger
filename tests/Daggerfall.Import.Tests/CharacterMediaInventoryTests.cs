@@ -236,6 +236,19 @@ public sealed class CharacterMediaInventoryTests
         // Every race the corpus draws contributes its background, four bodies and twenty heads, and
         // every layer names a palette rather than defaulting to one.
         Assert.Equal(8 * (1 + 4 + (2 * DaggerfallCharacterPresentationBuilder.HeadsPerRaceAndGender)), presentation.Layers.Count);
+
+        // Every supplied file is accounted for, including the six nothing reads and the readable
+        // files no layer uses: a family cannot go missing between the inventory and the pack.
+        Assert.Equal(87, presentation.Files.Count);
+        Assert.Equal(6, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreadable));
+        Assert.Equal(81, presentation.Files.Count(file => file.Outcome != CharacterFileOutcome.Unreadable));
+        Assert.Equal(56, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
+        Assert.Equal(25, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
+        Assert.All(presentation.Files.Where(file => file.Outcome == CharacterFileOutcome.Unreadable),
+            file => Assert.Contains("does not have", file.Reason, StringComparison.Ordinal));
+        Assert.Contains(presentation.Files, file => file.Path == "CMPA00I0.BSS" && file.Outcome == CharacterFileOutcome.Unreadable);
+        Assert.Contains(presentation.Files, file => file.Path == "MAGE.CEL" && file.Outcome == CharacterFileOutcome.Unreadable);
+        Assert.Contains(presentation.Files, file => file.Path == "FACES.CIF" && file.Outcome == CharacterFileOutcome.Unreferenced);
         Assert.All(presentation.Layers, layer => Assert.Equal(CharacterMediaReferences.ArtPalette, layer.Palette));
 
         // A race value with no paper-doll subclass is recorded rather than mapped onto the next index.
