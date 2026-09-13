@@ -343,7 +343,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
                 playbacks.Add(playback);
                 sequence.Playback = playback;
             }
-            return new(entry, atlas, appearance, sequences, entry.Frames.Select(frame => checked((uint)frame.FrameIndex)).ToHashSet());
+            return new(entry, atlas, appearance, sequences, entry.Frames.Select(frame => checked((uint)frame.FrameIndex)).ToHashSet(), resource.Handle);
         }
         catch (Exception creationError)
         {
@@ -354,6 +354,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             foreach (SpritePlayback playback in playbacks.AsEnumerable().Reverse()) TryDispose(playback, cleanupFailures);
             if (appearance is not null) TryDispose(appearance, cleanupFailures);
             TryDispose(atlas, cleanupFailures);
+            TryDispose(resource.Handle, cleanupFailures);
             if (cleanupFailures.Count > 0)
             {
                 throw new AggregateException("Sprite preview construction failed and cleanup reported one or more errors.", [creationError, ..cleanupFailures]);
@@ -610,19 +611,23 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
 
     private sealed class Preview
     {
-        internal Preview(SpriteInspectionEntry entry, SpriteAtlas atlas, Appearance appearance, List<PreviewSequence> sequences, HashSet<uint> frameIds)
+        internal Preview(SpriteInspectionEntry entry, SpriteAtlas atlas, Appearance appearance, List<PreviewSequence> sequences, HashSet<uint> frameIds, RenderResource texture)
         {
             Entry = entry;
             Atlas = atlas;
             Appearance = appearance;
             Sequences = sequences;
             FrameIds = frameIds;
+            Texture = texture;
         }
         internal SpriteInspectionEntry Entry { get; }
         internal SpriteAtlas Atlas { get; }
         internal Appearance Appearance { get; }
         internal List<PreviewSequence> Sequences { get; }
         internal HashSet<uint> FrameIds { get; }
+
+        /// <summary>The texture this preview opened; Engine resources are owned by their opener.</summary>
+        internal RenderResource Texture { get; }
         internal int OrientationCount => Math.Max(1, Sequences.Max(sequence => sequence.Orientation) + 1);
         internal PreviewSequence? FindSequence(string? name) => name is null ? null : Sequences.SingleOrDefault(sequence => sequence.Name == name);
         internal PreviewSequence ResolveSequence(string? requested, int orientation)
@@ -664,6 +669,7 @@ public sealed class SpriteWorkbenchProduct : IEngineProduct
             foreach (PreviewSequence sequence in Sequences.AsEnumerable().Reverse()) if (sequence.Playback is { } playback) TryDispose(playback, failures);
             TryDispose(Appearance, failures);
             TryDispose(Atlas, failures);
+            TryDispose(Texture, failures);
         }
     }
 

@@ -79,7 +79,9 @@ public sealed class SpriteWorkbenchProductTests
     [Fact]
     public void Construction_rejects_duplicate_or_invalid_admitted_content_paths()
     {
-        Assert.Throws<FormatException>(() => Harness.Create(new HarnessOptions(AddDuplicateAdmittedPath: true)));
+        // A repeated admitted path is refused by the Engine content snapshot's own path index, which
+        // reports a duplicate key; an invalid logical path is refused by this product's admission check.
+        Assert.Throws<ArgumentException>(() => Harness.Create(new HarnessOptions(AddDuplicateAdmittedPath: true)));
         Assert.Throws<FormatException>(() => Harness.Create(new HarnessOptions(AddInvalidAdmittedPath: true)));
     }
 
@@ -684,8 +686,15 @@ public sealed class SpriteWorkbenchProductTests
         public RenderResourceInfo OpenResource(RenderResourceRequest request)
         {
             OpenResourceRequests.Add(request);
-            return new(new RenderResourceHandle((ulong)OpenResourceRequests.Count), RenderResourceKind.Texture, 1);
+            return new(new RenderResource(new RenderResourceHandle((ulong)OpenResourceRequests.Count), static () => { }), RenderResourceKind.Texture, 1);
         }
+        public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request)
+        {
+            OpenResourceContentRequests.Add(request);
+            return new(new RenderResource(new RenderResourceHandle((ulong)OpenResourceContentRequests.Count), static () => { }), RenderResourceKind.Texture, 1);
+        }
+        internal List<RenderResourceContentRequest> OpenResourceContentRequests { get; } = [];
+        public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => CreateAppearance(default);
 
         public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), static () => { });
         public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
@@ -698,6 +707,13 @@ public sealed class SpriteWorkbenchProductTests
         public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance(request.Color);
         public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance(request.Color);
         public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) { }
+        public MeshResource CreateMeshResource(MeshResourceCreateRequest request) => throw new NotSupportedException();
+        public Appearance CreateMeshAppearance(MeshResource resource) => throw new NotSupportedException();
+        public MeshPartition PartitionMesh(MeshPartitionRequest request) => throw new NotSupportedException();
+        public MeshPartitionReadout ReadMeshPartition(MeshPartition partition) => throw new NotSupportedException();
+        public MeshResource TakeMeshPartitionPart(MeshPartitionPartRequest request) => throw new NotSupportedException();
+        public void SetSpriteViewport(SpriteViewportUpdateRequest request) => ViewportRequests.Add(request);
+        internal List<SpriteViewportUpdateRequest> ViewportRequests { get; } = [];
         public Appearance CreateSprite(SpriteAppearanceRequest request) => CreateAppearance(request.Tint);
         public Appearance ReplaceSprite(SpriteAppearanceReplaceRequest request) => CreateAppearance(request.Replacement.Tint);
 

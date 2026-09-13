@@ -73,6 +73,11 @@ dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj
 dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
 dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
 dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
+
+# The workbench's suite belongs here for the same reason: its fake lagged the Engine contract until the
+# project no longer compiled, and since nothing ran the project the rot was invisible. It is a product
+# in this repository, so its suite is part of the tree that must run.
+dotnet test tests/WorldRpg.SpriteWorkbench.Tests/WorldRpg.SpriteWorkbench.Tests.csproj
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
 
 if [[ "$aot" == true ]]; then
