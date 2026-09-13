@@ -114,6 +114,14 @@ public sealed class ResidualSourceInventoryTests
         ResidualSourceRecord save = inventory.Family("SAV").Single();
         Assert.Equal("BsaArchive", save.Reader);
         Assert.Contains("classic save folder rather than from Arena2", save.Note, StringComparison.Ordinal);
+
+        // What a reader left unread travels with the record: TFAC00I0.RCI reads its 503 cells and
+        // its seven-byte tail is the reason this classification exists, so dropping the disclosure
+        // on the reading path would lose the fact exactly where it was found.
+        ResidualSourceRecord bank = inventory.Family("RCI").Single(file => file.Path == "TFAC00I0.RCI");
+        Assert.Equal(SourceRecordDisposition.Unused, bank.Disposition);
+        Assert.Contains("7 byte(s)", bank.Note, StringComparison.Ordinal);
+        Assert.Contains("belong to no canvas", bank.Note, StringComparison.Ordinal);
     }
 
     [Fact]
