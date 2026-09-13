@@ -57,8 +57,8 @@
       <ProductUiStylesheet Include="$(MSBuildThisFileDirectory)../ui/*.css" />
       <!-- The classic UI art is published content the product reads by name and delivers in its
            projection, so no copy of it is staged here. The authored inventory skins are the
-           exception until their delivery medium settles: they are two megabytes each, which is a
-           lazy fetch rather than something to push through a UI snapshot. -->
+           exception until their delivery medium settles (task #8263): they are two megabytes each,
+           which is a lazy fetch rather than something to push through a UI snapshot. -->
       <AuthoredInventorySkin Include="$(MSBuildThisFileDirectory)../../content/worldrpg/imports/privateers-hold/media/ui/authored/*.png" />
     </ItemGroup>
     <Copy SourceFiles="@(ProductUiStylesheet)" DestinationFolder="$(RustyEngineProductUiRoot)" />

@@ -2913,6 +2913,11 @@ public sealed class NormalizedRuntimeSeamTests
         throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 
+    // The facts around this one pin the projection: what it carries, how often, how it is chunked and
+    // what it refuses. The DOM half - adopting a block, retrying a revision it lacks, repainting panels
+    // when art arrives late, showing the death screen - has no behaviour harness in this repository, and
+    // the death screen's on-screen rendering additionally needs a live damage path that does not exist
+    // yet (task #8262). Those are checked by a real host run, not here.
     [Fact]
     public void The_projection_carries_the_published_ui_art_the_dom_draws()
     {
@@ -2942,8 +2947,65 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(
             $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/ui/screen-death.png")))}",
             images["screen.death"]);
-        Assert.Contains("inventory.icon.iron-dagger", images.Keys);
-        Assert.Contains("window.character-sheet.chrome", images.Keys);
+        // The set is exactly what this presentation draws - the screens it shows plus the icons the
+        // pack names - so an artifact silently added to or dropped from the payload fails here.
+        string[] expected =
+        [
+            "screen.death",
+            "window.character-sheet.chrome",
+            .. inputs.ClassicPresentation.InventoryIcons.Values,
+        ];
+        Assert.Equal([.. expected.Order(StringComparer.Ordinal)], [.. images.Keys.Order(StringComparer.Ordinal)]);
+
+        // One icon byte for byte, from the path the inventory states, so a wrong file under a right
+        // identity cannot pass on a prefix check.
+        using JsonDocument inventory = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)));
+        string iconPath = inventory.RootElement.GetProperty("artifacts").EnumerateArray()
+            .Where(artifact => artifact.TryGetProperty("mediaId", out JsonElement mediaId) && mediaId.GetString() == "inventory.icon.iron-dagger")
+            .Single()
+            .GetProperty("path").GetString()!;
+        Assert.Equal(
+            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", iconPath)))}",
+            images["inventory.icon.iron-dagger"]);
+    }
+
+    [Fact]
+    public void A_republished_byte_moves_the_art_revision_and_a_stale_digest_refuses_by_name()
+    {
+        string root = RepositoryRoot();
+        List<string> releases = [];
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        string[] icons = [.. inputs.ClassicPresentation.InventoryIcons.Values];
+
+        ContentFake original = new(releases);
+        PopulateContent(original, inputs);
+        string baseline = DaggerfallUiArt.Read(original, icons).Revision;
+
+        JsonNode inventory = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)))!;
+        JsonObject screen = inventory["artifacts"]!.AsArray().Select(node => node!.AsObject())
+            .Single(artifact => (string?)artifact["mediaId"] == "screen.death");
+        string path = (string)screen["path"]!;
+        byte[] edited = File.ReadAllBytes(Path.Combine(root, "content", path));
+        edited[^1] ^= 0xFF;
+
+        // A republication whose inventory agrees with the new bytes is a different revision, so a
+        // hardcoded revision constant cannot satisfy this.
+        ContentFake republished = new(releases);
+        PopulateContent(republished, inputs);
+        republished.Add(path, edited);
+        screen["byteLength"] = edited.Length;
+        screen["sha256"] = Convert.ToHexStringLower(SHA256.HashData(edited));
+        republished.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
+        Assert.NotEqual(baseline, DaggerfallUiArt.Read(republished, icons).Revision);
+
+        // Bytes that disagree with the digest the inventory states are refused, and the refusal names
+        // both the identity and where it looked.
+        ContentFake stale = new(releases);
+        PopulateContent(stale, inputs);
+        stale.Add(path, edited);
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => DaggerfallUiArt.Read(stale, icons));
+        Assert.Contains("screen.death", failure.Message, StringComparison.Ordinal);
+        Assert.Contains(path, failure.Message, StringComparison.Ordinal);
     }
 
     [Fact]

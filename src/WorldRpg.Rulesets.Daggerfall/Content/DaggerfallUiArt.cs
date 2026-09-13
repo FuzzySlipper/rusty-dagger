@@ -23,8 +23,10 @@ internal sealed class DaggerfallUiArt
 
     /// <summary>
     /// The images every session shows, by the pack's own media identity: the mode screen the product
-    /// enters and the window chrome the DOM draws. An artifact belongs here when the DOM draws it;
-    /// art the group publishes for a later consumer is indexed without being pushed at every session.
+    /// enters and the window chrome the DOM draws. An artifact belongs here when the DOM draws it, so
+    /// the group's remaining art - the classic inventory chrome, the HUD chrome, and the numbered
+    /// screens and paper-doll layers later tasks add - is indexed by the inventory and read on demand
+    /// by whoever draws it, rather than pushed through every session's snapshot.
     /// </summary>
     private static readonly string[] AlwaysShown =
     [
