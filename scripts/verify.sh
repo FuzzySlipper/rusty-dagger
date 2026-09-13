@@ -64,6 +64,15 @@ dotnet build src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj --conf
 # error sat unnoticed until someone ran the tool by hand.
 dotnet build src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj --configuration Release
 dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj --no-restore
+
+# The behavior suites, because compiling projects is not the same as exercising them: a pin move that
+# changed an engine interface broke the ruleset suite's content fake while every build here stayed
+# green, and a field added to an import record broke the tool the same way. A verification script that
+# only compiles reports on a tree that no longer runs.
+dotnet test tests/Daggerfall.Import.Tests/Daggerfall.Import.Tests.csproj
+dotnet test tests/WorldRpg.Rulesets.Daggerfall.Tests/WorldRpg.Rulesets.Daggerfall.Tests.csproj
+dotnet test tests/WorldRpg.Kit.Tests/WorldRpg.Kit.Tests.csproj
+dotnet test tests/WorldRpg.Host.Tests/WorldRpg.Host.Tests.csproj
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
 
 if [[ "$aot" == true ]]; then
