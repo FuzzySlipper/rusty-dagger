@@ -1392,6 +1392,19 @@ public sealed class NormalizedRuntimeSeamTests
         DaggerfallSavePayload immediate = DaggerfallSavePayload.Read(resumed.CaptureSave()).Payload;
 
         Assert.Equal(DaggerfallSavePayload.Read(payload).Payload.Continuation, immediate.Continuation);
+
+        // The world's clock survives the round trip, including the part of a game second it had not
+        // applied: a resumed world that restarted the second would march its deadlines to a different
+        // beat than one that was never saved.
+        DaggerfallCalendarSave savedClock = DaggerfallSavePayload.Read(payload).Payload.Calendar!;
+        Assert.Equal(savedClock, immediate.Calendar);
+        Assert.NotNull(immediate.Calendar);
+
+        // This fixture's update does not move the world - it is not a playing step - so the value it
+        // carries is where the corpus starts. What the assertion above establishes is that the clock and
+        // its unapplied fraction survive the round trip; that an advancing world resumes to the same
+        // instant is covered by the clock's own fraction test.
+        Assert.Equal(World.DaggerfallCalendar.Start.Year, immediate.Calendar!.Year);
         DaggerfallInventorySave originalInventory = DaggerfallSavePayload.Read(payload).Payload.Inventory;
         Assert.Equal(originalInventory.Stacks, immediate.Inventory.Stacks);
         Assert.Equal(originalInventory.UniqueItems, immediate.Inventory.UniqueItems);
