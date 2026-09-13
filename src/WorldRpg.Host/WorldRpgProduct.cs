@@ -217,7 +217,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         _session = replacement;
         previous.Dispose();
         _started = true;
-        SetMode(ProductMode.Playing, "the product replaced its session");
+        Record(SetMode(ProductMode.Playing, "the product replaced its session"));
     }
 
     public void Shutdown()
@@ -235,6 +235,10 @@ public sealed class WorldRpgProduct : IEngineProduct
         // A modal or a death still forwards the update, because the presentation that shows them
         // has to keep publishing; the session decides what the mode means for its own world.
         if (!_started || _shutdown || _mode == ProductMode.Paused) return ProductUpdateResult.None;
+        // Settle what the session asked for before it runs again: a resumed save whose player is
+        // already dead asks for death on the first look, and that must land before the world takes
+        // a step rather than after it.
+        AdoptSessionRequest();
         ProductUpdateResult result = _session.Update(update);
         AdoptSessionRequest();
         return result;
@@ -269,6 +273,15 @@ public sealed class WorldRpgProduct : IEngineProduct
         {
             // Opening an interaction the player cannot see would hide the pause they asked for.
             return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "a modal interaction needs ordinary play; resume the paused product first"));
+        }
+
+        if (requested is ProductMode.Modal or ProductMode.Dead && _session is not IModeAwareGameSession)
+        {
+            // This product holds a paused world by dropping updates itself, but a modal and a death
+            // still forward one so the presentation keeps publishing. A session that cannot apply
+            // the mode would interpret those updates as ordinary play, so entering the mode would
+            // claim the world is held while it advances.
+            return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the running session cannot apply a mode; it does not implement IModeAwareGameSession"));
         }
 
         if (requested == ProductMode.Playing && _mode == ProductMode.Modal && !closesModal)

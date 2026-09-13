@@ -104,6 +104,58 @@ public sealed class WorldRpgProductModeTests
         Assert.Equal(ProductModeChangeOutcome.Refused, product.ModeHistory[^1].Outcome);
     }
 
+    [Fact]
+    public void A_session_that_cannot_apply_a_mode_is_never_told_the_world_is_held()
+    {
+        // Pausing is this product's own doing, because it drops the update. A modal and a death
+        // still forward one, so a session that cannot apply the mode would run them as ordinary
+        // play while ModeHistory claimed the world was held.
+        PlainRuleset ruleset = new();
+        using WorldRpgProduct product = new(Context(), ruleset, new GameBundleId("test.bundle"));
+        product.Start();
+
+        Assert.Equal(ProductModeChangeOutcome.Refused, product.EnterModal().Outcome);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal(ProductModeChangeOutcome.Refused, product.MarkDead().Outcome);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Contains("IModeAwareGameSession", product.ModeHistory[^1].Reason, StringComparison.Ordinal);
+
+        // Pausing still holds the world, because the product admits no update at all.
+        product.Pause();
+        int seen = ruleset.Session.Updates;
+        product.Update(Update(1));
+        Assert.Equal(seen, ruleset.Session.Updates);
+    }
+
+    [Fact]
+    public void A_resumed_session_that_is_already_dead_is_adopted_before_the_world_steps()
+    {
+        // A restored save can carry a dead player. The session asks for death on the first look,
+        // and that request has to settle before the world takes a step rather than after it.
+        ModeRecordingRuleset ruleset = new() { Request = ProductMode.Dead };
+        using WorldRpgProduct product = Product(ruleset);
+        product.Start();
+
+        product.Update(Update(1));
+
+        Assert.Equal(ProductMode.Dead, product.Mode);
+        Assert.Equal(1, ruleset.Updates);
+        Assert.Equal(ProductMode.Dead, ruleset.LastApplied);
+    }
+
+    [Fact]
+    public void Replacing_a_session_is_recorded_even_before_the_product_started()
+    {
+        ModeRecordingRuleset ruleset = new();
+        using WorldRpgProduct product = Product(ruleset);
+
+        product.Restart();
+
+        Assert.Equal("the product replaced its session", product.ModeHistory[^1].Reason);
+        Assert.Equal(ProductModeChangeOutcome.Applied, product.ModeHistory[^1].Outcome);
+        Assert.Equal(ProductMode.Playing, product.Mode);
+    }
+
     private static ProductUpdate Update(ulong step) =>
         new(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d), ReadOnlySpan<ProductInputEvent>.Empty);
 
@@ -160,6 +212,35 @@ public sealed class WorldRpgProductModeTests
         }
 
         public void Dispose() => Disposed = true;
+    }
+
+    /// <summary>A ruleset whose session does not implement the mode seam at all.</summary>
+    private sealed class PlainRuleset : IGameRuleset
+    {
+        public RulesetId Id => new("test");
+
+        internal PlainSession Session { get; } = new();
+
+        public IGameSession CreateSession(GameSessionContext context) => Session;
+    }
+
+    private sealed class PlainSession : IGameSession
+    {
+        internal int Updates { get; private set; }
+
+        public void PublishInitial()
+        {
+        }
+
+        public ProductUpdateResult Update(ProductUpdate update)
+        {
+            Updates++;
+            return ProductUpdateResult.None;
+        }
+
+        public void Dispose()
+        {
+        }
     }
 
     private static ProductContent Content() => new(ContentFiles());
