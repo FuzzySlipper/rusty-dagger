@@ -4,6 +4,7 @@ namespace Daggerfall.Import.Arena2;
 /// One canvas a character-media publisher would emit, with the palette it needs and the companions
 /// it belongs with.
 /// </summary>
+/// <param name="MediaId">The stable identity of this canvas as a published artifact.</param>
 /// <param name="Path">The supplied source file, which is the artifact's source identity.</param>
 /// <param name="Family">The documented family the file belongs to.</param>
 /// <param name="Key">The identity key the inventory recorded for the file.</param>
@@ -14,6 +15,7 @@ namespace Daggerfall.Import.Arena2;
 /// <param name="Companions">The other presentation layers this canvas belongs with.</param>
 /// <param name="Reason">Where the palette and companion facts come from, and what is still unknown.</param>
 public sealed record CharacterCanvasReference(
+    string MediaId,
     string Path,
     string Family,
     string Key,
@@ -144,11 +146,53 @@ public static class CharacterMediaReferences
             (IReadOnlyList<string> companions, string reason) = Companions(file);
             for (int index = 0; index < file.CanvasCount; index++)
             {
-                references.Add(new CharacterCanvasReference(file.Path, file.Family, file.Key, file.Consumer, file.Binding, index, palette, companions, reason));
+                references.Add(new CharacterCanvasReference(
+                    MediaId(file, index),
+                    file.Path,
+                    file.Family,
+                    file.Key,
+                    file.Consumer,
+                    file.Binding,
+                    index,
+                    palette,
+                    companions,
+                    reason));
             }
         }
 
         return new CharacterMediaReferenceSet(references, unavailable);
+    }
+
+    /// <summary>
+    /// The stable identity of one canvas as a published artifact.
+    /// </summary>
+    /// <remarks>
+    /// The identity is derived from the file's own name rather than assigned by position, so adding
+    /// a family or reordering the corpus cannot silently rename an artifact a consumer already
+    /// references. A paper-doll file names its race, gender and layer; anything else in these
+    /// families names its family and its own number, and a canvas index distinguishes the canvases a
+    /// multi-record or grid file carries.
+    /// </remarks>
+    public static string MediaId(CharacterMediaRecord file, int canvasIndex)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentOutOfRangeException.ThrowIfNegative(canvasIndex);
+        string name = System.IO.Path.GetFileNameWithoutExtension(file.Path);
+        string family = file.Family.ToLowerInvariant();
+        if (TryRaceAndGender(name, out int race, out bool female))
+        {
+            string gender = female ? "female" : "male";
+            string layer = name[^2..] switch
+            {
+                "I0" when name.StartsWith("BODY", StringComparison.Ordinal) => "body-unclothed",
+                "I1" when name.StartsWith("BODY", StringComparison.Ordinal) => "body-clothed",
+                "I0" => "head",
+                _ => "layer",
+            };
+            return $"character.{layer}.{gender}.{race:00}.{canvasIndex}";
+        }
+
+        return $"character.{family}.{name.ToLowerInvariant()}.{canvasIndex}";
     }
 
     /// <summary>

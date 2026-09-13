@@ -185,6 +185,15 @@ public sealed class CharacterMediaInventoryTests
         Assert.Empty(other.Companions);
         Assert.Contains("no paper-doll companion rule", other.Reason, StringComparison.Ordinal);
 
+        // Every canvas has one stable identity, derived from the file rather than from position, and
+        // the concrete paper-doll names follow the donor's layers rather than the file's spelling.
+        Assert.Equal(references.Count, references.Select(reference => reference.MediaId).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal("character.body-unclothed.male.00.0", references.First(reference => reference.Path == "BODY00I0.IMG").MediaId);
+        Assert.Equal("character.body-clothed.female.00.0", references.First(reference => reference.Path == "BODY10I1.IMG").MediaId);
+        Assert.Equal("character.head.female.00.3", references.First(reference => reference.Path == "FACE10I0.CIF" && reference.CanvasIndex == 3).MediaId);
+        Assert.All(references, reference => Assert.StartsWith("character.", reference.MediaId, StringComparison.Ordinal));
+        Assert.DoesNotContain(references, reference => reference.MediaId.Contains(' ', StringComparison.Ordinal));
+
         // A canvas whose palette is not supplied is refused by name, not painted with a default.
         InvalidOperationException refused = Assert.Throws<InvalidOperationException>(
             () => CharacterMediaReferences.Derive(inventory, new HashSet<string>(StringComparer.Ordinal) { CharacterMediaReferences.ArtPalette }));
