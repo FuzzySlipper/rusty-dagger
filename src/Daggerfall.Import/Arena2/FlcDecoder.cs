@@ -66,6 +66,21 @@ public static class FlcDecoder
     /// <summary>The chunk type of the prefix chunk a container may carry before its first frame.</summary>
     public const ushort PrefixChunkType = 0xF100;
 
+    /// <summary>A 256-colour palette chunk.</summary>
+    public const ushort Color256ChunkType = 4;
+
+    /// <summary>A 64-colour palette chunk, whose channels are scaled by four.</summary>
+    public const ushort Color64ChunkType = 11;
+
+    /// <summary>A whole-frame run-length image.</summary>
+    public const ushort ByteRunChunkType = 15;
+
+    /// <summary>A frame delta against the previous frame.</summary>
+    public const ushort DeltaFlcChunkType = 7;
+
+    /// <summary>A thumbnail the donor skips.</summary>
+    public const ushort PstampChunkType = 18;
+
     /// <summary>
     /// Reads the container header and walks its frames.
     /// </summary>
@@ -199,4 +214,216 @@ public static class FlcDecoder
 
     /// <summary>Where the first frame offset sits, after the header fields the donor reads.</summary>
     private const int FirstFrameOffsetBytes = 80;
+
+    /// <summary>One decoded frame: the canvas indices a frame holds, in top-down order.</summary>
+    /// <param name="Index">The frame's ordinal.</param>
+    /// <param name="Width">The frame's width.</param>
+    /// <param name="Height">The frame's height.</param>
+    /// <param name="Pixels">One palette index per pixel, row by row from the top.</param>
+    /// <param name="FullFrame">Whether this frame carried the run-length image rather than a delta.</param>
+    public sealed record FlcFrameImage(int Index, int Width, int Height, byte[] Pixels, bool FullFrame);
+
+    /// <summary>
+    /// Decodes every frame into palette indices, with the palette the container carries.
+    /// </summary>
+    /// <remarks>
+    /// The donor's reader addresses its buffer from the bottom up; this emits rows from the top, as
+    /// every other canvas in this repository does, because the flip is an artefact of the donor's
+    /// drawing surface rather than part of the image.
+    /// <para>
+    /// Frames accumulate: the run-length frame paints the whole canvas and each delta updates it, so
+    /// a delta cannot be decoded on its own and the returned frames are snapshots rather than
+    /// patches. Packets address pixels in pairs, which is why a delta packet's count advances x by
+    /// twice its value.
+    /// </para>
+    /// </remarks>
+    /// <param name="bytes">The container's bytes.</param>
+    /// <param name="source">Logical source identity, for diagnostics.</param>
+    /// <param name="palette">The palette the container carries, when it carries one.</param>
+    public static IReadOnlyList<FlcFrameImage> DecodeFrames(ReadOnlySpan<byte> bytes, string source, out Arena2Palette? palette)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        if (!TryRead(bytes, source, out FlcContainer? container, out string reason))
+        {
+            throw new Arena2FormatException(source, 0, reason);
+        }
+
+        byte[] buffer = new byte[container!.Width * container.Height];
+        List<FlcFrameImage> images = [];
+        palette = null;
+        foreach (FlcFrame frame in container.Frames)
+        {
+            bool full = false;
+            foreach (FlcChunk chunk in frame.Chunks)
+            {
+                ReadOnlySpan<byte> payload = bytes[(chunk.Offset + 6)..(chunk.Offset + chunk.Size)];
+                switch (chunk.Type)
+                {
+                    case Color256ChunkType:
+                        palette = ReadPalette(payload, source, frame.Index, scale: 1);
+                        break;
+                    case Color64ChunkType:
+                        palette = ReadPalette(payload, source, frame.Index, scale: 4);
+                        break;
+                    case ByteRunChunkType:
+                        ReadByteRun(payload, buffer, container, source);
+                        full = true;
+                        break;
+                    case DeltaFlcChunkType:
+                        ReadDelta(payload, buffer, container, source);
+                        break;
+                    default:
+                        // Every other chunk type either describes the frame rather than its pixels or
+                        // is not one Daggerfall's portraits use; both are skipped by their own size,
+                        // which the container walk already validated.
+                        break;
+                }
+            }
+
+            images.Add(new FlcFrameImage(frame.Index, container.Width, container.Height, [.. buffer], full));
+        }
+
+        return images;
+    }
+
+    /// <summary>Reads the palette a container carries, in the donor's packet form.</summary>
+    private static Arena2Palette ReadPalette(ReadOnlySpan<byte> payload, string source, int frame, int scale)
+    {
+        CheckedLittleEndianReader reader = new(payload.ToArray(), source);
+        int packets = reader.ReadUInt16();
+        Rgb24[] colors = new Rgb24[256];
+        int index = 0;
+        for (int packet = 0; packet < packets; packet++)
+        {
+            reader.ReadBytes(reader.ReadByte() * 3);
+            int count = reader.ReadByte();
+            if (count == 0) count = 256;
+            for (int color = 0; color < count; color++)
+            {
+                byte red = reader.ReadByte();
+                byte green = reader.ReadByte();
+                byte blue = reader.ReadByte();
+                if (index < colors.Length)
+                {
+                    colors[index++] = new Rgb24(Scaled(red), Scaled(green), Scaled(blue));
+                }
+            }
+        }
+
+        return new Arena2Palette($"{source} frame {frame} COLOR_{(scale == 4 ? 64 : 256)} chunk", colors);
+
+        byte Scaled(byte channel) => (byte)Math.Min(255, channel * scale);
+    }
+
+    /// <summary>Reads a run-length frame:each row is a run of replicated or copied pixels.</summary>
+    private static void ReadByteRun(ReadOnlySpan<byte> payload, byte[] buffer, FlcContainer container, string source)
+    {
+        int position = 0;
+        for (int y = 0; y < container.Height; y++)
+        {
+            _ = payload[position++];
+            int x = 0;
+            int row = (container.Height - 1 - y) * container.Width;
+            while (x < container.Width)
+            {
+                if (position >= payload.Length)
+                {
+                    throw new Arena2FormatException(source, 0,
+                        $"a run-length frame wants another packet for row {y} but its chunk ends after {payload.Length} bytes");
+                }
+
+                sbyte packet = (sbyte)payload[position++];
+                int count = Math.Abs((int)packet);
+                int painted = Math.Min(count, container.Width - x);
+                if (packet < 0)
+                {
+                    // A negative packet copies one byte per pixel, and every byte of it belongs to the
+                    // stream even when the row ends first: a packet that runs past the row is still
+                    // consumed whole, or the next row starts in the middle of its pixels.
+                    if (position + count > payload.Length)
+                    {
+                        throw new Arena2FormatException(source, 0,
+                            $"a run-length packet at row {y} wants {count} bytes but its chunk has {payload.Length - position} left");
+                    }
+
+                    for (int pixel = 0; pixel < painted; pixel++)
+                    {
+                        buffer[row + x + pixel] = payload[position + pixel];
+                    }
+
+                    position += count;
+                }
+                else
+                {
+                    byte value = payload[position++];
+                    for (int pixel = 0; pixel < painted; pixel++)
+                    {
+                        buffer[row + x + pixel] = value;
+                    }
+                }
+
+                x += count;
+            }
+        }
+    }
+
+    /// <summary>Reads a delta frame: line runs, then paired packets that update the last frame.</summary>
+    private static void ReadDelta(ReadOnlySpan<byte> payload, byte[] buffer, FlcContainer container, string source)
+    {
+        int lines = payload[0] | (payload[1] << 8);
+        int position = 2;
+        int y = 0;
+
+        // The donor keeps one packet count across the frame's lines rather than resetting it per line,
+        // and that is not a detail to improve on: a line ending in the last-pixel opcode reuses the
+        // previous line's count, and treating it as zero walks the packet stream out of step.
+        int packets = 0;
+        for (int line = 0; line < lines; line++)
+        {
+            while (true)
+            {
+                int opcode = payload[position] | (payload[position + 1] << 8);
+                position += 2;
+                if ((opcode & 0x8000) != 0)
+                {
+                    if ((opcode & 0x4000) != 0)
+                    {
+                        y += Math.Abs((short)opcode);
+                        continue;
+                    }
+
+                    break;
+                }
+
+                packets = opcode;
+                break;
+            }
+
+            int x = 0;
+            for (int packet = 0; packet < packets; packet++)
+            {
+                x += payload[position++];
+                sbyte size = (sbyte)payload[position++];
+                int count = Math.Abs((int)size);
+                if (size > 0 && position + (count * 2) > payload.Length)
+                {
+                    throw new Arena2FormatException(source, 0,
+                        $"a delta packet at line {y} wants {count * 2} pixel bytes but the chunk has {payload.Length - position} left");
+                }
+
+                int row = (container.Height - 1 - y) * container.Width;
+                for (int index = 0; index < count * 2 && x + index < container.Width; index++)
+                {
+                    // A delta packet's sign is the opposite of a run-length frame's: positive copies one
+                    // byte per pixel from the packet, negative repeats the two bytes its pair is made of.
+                    buffer[row + x + index] = size > 0 ? payload[position + index] : payload[position + (index % 2)];
+                }
+
+                position += size > 0 ? count * 2 : 2;
+                x += count * 2;
+            }
+
+            if (y < container.Height) y++;
+        }
+    }
 }
