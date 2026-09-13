@@ -102,13 +102,7 @@ public sealed record Arena2MediaBundlePublication(
     public const string ClassicMediaManifestRelativePath = "media/classic/manifest.json";
     public const string NormalizedDocumentRelativePath = "normalized.json";
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = JsonNumberHandling.Strict,
-        Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
+    private static readonly JsonSerializerOptions JsonOptions = PublishedJson.Section;
 
     /// <summary>
     /// Creates a complete content-addressed publication. Source records from

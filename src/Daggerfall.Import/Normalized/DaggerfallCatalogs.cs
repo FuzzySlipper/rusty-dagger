@@ -381,12 +381,7 @@ public sealed record DaggerfallCatalogs(
 /// </summary>
 public static class DaggerfallCatalogSerializer
 {
-    private static readonly System.Text.Json.JsonSerializerOptions Options = new()
-    {
-        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.Strict,
-    };
+    private static readonly System.Text.Json.JsonSerializerOptions Options = Publication.PublishedJson.Section;
 
     public static byte[] Serialize(DaggerfallCatalogs catalogs, IReadOnlySet<string> inventoryRecordIds)
     {
