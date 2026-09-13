@@ -64,6 +64,45 @@ public sealed record MapsRegionGroup(int Region, IReadOnlyList<MapsRegionTable> 
 /// <param name="Longitude">The location's authored longitude.</param>
 /// <param name="Latitude">The location's authored latitude.</param>
 /// <param name="DungeonType">The location's dungeon type byte, which is zero when it has no dungeon.</param>
+/// <summary>What happened when one dungeon location's records were read.</summary>
+public enum MapsDungeonState
+{
+    /// <summary>The location's exterior and dungeon records read, and its blocks are listed.</summary>
+    Read,
+
+    /// <summary>
+    /// The location is a dungeon type and no dungeon record links it, which is the donor's own
+    /// outcome for a location that has none: it sets <c>HasDungeon</c> false and returns rather than
+    /// treating the absence as damage.
+    /// </summary>
+    NoDungeon,
+
+    /// <summary>The location is a dungeon and its records disagree, so its blocks are unusable as they stand.</summary>
+    Malformed,
+}
+
+/// <summary>
+/// One dungeon location's block references: which exterior location it pairs with, which dungeon it
+/// addresses, and the blocks that dungeon is built from.
+/// </summary>
+/// <param name="Region">The source region index.</param>
+/// <param name="Index">The location's ordinal in the region's names table.</param>
+/// <param name="Name">The exact name the names table carries.</param>
+/// <param name="ExteriorLocationId">The exterior location this dungeon is paired with.</param>
+/// <param name="DungeonLocationId">The dungeon record's own identity.</param>
+/// <param name="Blocks">The blocks the dungeon is built from, in record order.</param>
+/// <param name="State">Whether the records read or disagreed.</param>
+/// <param name="Reason">Why the state holds, naming the values that disagree.</param>
+public sealed record MapsDungeonLocation(
+    int Region,
+    int Index,
+    string Name,
+    uint ExteriorLocationId,
+    uint DungeonLocationId,
+    IReadOnlyList<MapsDungeonBlock> Blocks,
+    MapsDungeonState State,
+    string Reason);
+
 public sealed record MapsLocationRecord(
     int Region,
     int Index,
@@ -234,6 +273,32 @@ public static class MapsDecoder
         }
     }
 
+    /// <summary>
+    /// Whether a dungeon record links an exterior location.
+    /// </summary>
+    /// <remarks>
+    /// The donor's own dungeon lookup sets its "has dungeon" flag false and returns when no entry
+    /// matches, so the absence of a link is a location without a dungeon rather than a damaged table,
+    /// and it is reported as one. This walks the same offset table the record decoder does.
+    /// </remarks>
+    private static bool LinksDungeon(ReadOnlyMemory<byte> data, string source, uint exteriorLocationId)
+    {
+        CheckedLittleEndianReader header = new(data.Span, source);
+        int dungeons = CheckedCount(header.ReadUInt32(), source, 0, "MAPDITEM dungeon count");
+        for (int index = 0; index < dungeons; index++)
+        {
+            CheckedLittleEndianReader entry = At(data.Span, source, CheckedAdd(sizeof(uint), CheckedMultiply(index, 8, source, "MAPDITEM table"), source, "MAPDITEM table"), "MAPDITEM table entry");
+            _ = entry.ReadUInt32();
+            _ = entry.ReadUInt16();
+            if (entry.ReadUInt16() == exteriorLocationId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static int ReadDeclaredCount(BsaArchive archive, BsaRecord record, string what)
     {
         ReadOnlyMemory<byte> data = archive.GetPayload(record);
@@ -266,6 +331,49 @@ public static class MapsDecoder
         }
 
         return locations;
+    }
+
+    /// <summary>
+    /// Reads the block references of every dungeon a region describes.
+    /// </summary>
+    /// <remarks>
+    /// A location is a dungeon when its map table says so, and its blocks come from the dungeon item
+    /// table through the exterior location it pairs with. A record that disagrees with the rest of
+    /// the region is reported as malformed with the values named rather than being allowed to fail
+    /// the whole region: one damaged dungeon is not a reason to lose sixty others.
+    /// </remarks>
+    /// <param name="archive">The MAPS.BSA archive.</param>
+    /// <param name="region">The source region index to read.</param>
+    public static IReadOnlyList<MapsDungeonLocation> DecodeRegionDungeons(BsaArchive archive, int region)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        IReadOnlyList<MapsLocationRecord> locations = DecodeRegionLocations(archive, region);
+        ReadOnlyMemory<byte> exterior = GetNamedPayload(archive, "MAPPITEM", region);
+        ReadOnlyMemory<byte> dungeons = GetNamedPayload(archive, "MAPDITEM", region);
+        List<MapsDungeonLocation> result = [];
+        foreach (MapsLocationRecord location in locations.Where(location => location.DungeonType != 0))
+        {
+            try
+            {
+                uint exteriorLocationId = DecodeExteriorLocationId(exterior, archive.Source, locations.Count, location.Index);
+                if (!LinksDungeon(dungeons, archive.Source, exteriorLocationId))
+                {
+                    result.Add(new MapsDungeonLocation(region, location.Index, location.Name, exteriorLocationId, 0, [], MapsDungeonState.NoDungeon,
+                        $"Dungeon type {location.DungeonType} pairs with exterior location {exteriorLocationId}, which no dungeon record links, so the location has none."));
+                    continue;
+                }
+
+                (uint locationId, IReadOnlyList<MapsDungeonBlock> blocks) = DecodeDungeonRecord(dungeons, archive.Source, exteriorLocationId);
+                result.Add(new MapsDungeonLocation(region, location.Index, location.Name, exteriorLocationId, locationId, blocks, MapsDungeonState.Read,
+                    $"Dungeon type {location.DungeonType} pairs with exterior location {exteriorLocationId} and {blocks.Count} blocks."));
+            }
+            catch (Arena2FormatException failure)
+            {
+                result.Add(new MapsDungeonLocation(region, location.Index, location.Name, 0, 0, [], MapsDungeonState.Malformed, failure.Message));
+            }
+        }
+
+        return result;
     }
 
     /// <summary>Reads the exact location names stored in a MAPNAMES region record.</summary>

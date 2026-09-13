@@ -150,6 +150,54 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(hold.Index, layout.LocationIndex);
     }
 
+    [Fact]
+    public void Reads_the_block_references_of_every_dungeon_a_region_describes()
+    {
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        List<MapsDungeonLocation> dungeons = [];
+        foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
+        {
+            if (group.Tables.Any(table => table.Length == 0)) continue;
+            dungeons.AddRange(MapsDecoder.DecodeRegionDungeons(archive, group.Region));
+        }
+
+        // Every dungeon either read or says why it did not, and no region loses the rest of its
+        // dungeons because one record disagreed.
+        Assert.All(dungeons, dungeon => Assert.False(string.IsNullOrWhiteSpace(dungeon.Reason)));
+        Assert.All(dungeons.Where(dungeon => dungeon.State == MapsDungeonState.Read), dungeon => Assert.NotEmpty(dungeon.Blocks));
+        Assert.All(dungeons.Where(dungeon => dungeon.State == MapsDungeonState.Read), dungeon => Assert.NotEqual(0u, dungeon.DungeonLocationId));
+        Assert.All(dungeons.Where(dungeon => dungeon.State == MapsDungeonState.NoDungeon), dungeon => Assert.Empty(dungeon.Blocks));
+
+        // The starting dungeon's blocks agree with the resolver that came first, and its first block is
+        // the one the layout marks as the entrance.
+        MapsLocationRecord hold = Assert.Single(
+            MapsDecoder.DecodeRegionLocations(archive, 17),
+            location => location.Name.Contains("Privateer", StringComparison.OrdinalIgnoreCase));
+        MapsDungeonLocation blocks = Assert.Single(MapsDecoder.DecodeRegionDungeons(archive, 17), dungeon => dungeon.Index == hold.Index);
+        MapsDungeonLayout layout = MapsDecoder.DecodeDungeonLayout(archive, 17, hold.Name);
+        Assert.Equal(MapsDungeonState.Read, blocks.State);
+        Assert.Equal(layout.Blocks, blocks.Blocks);
+        Assert.Contains(layout.Blocks, block => block.IsStart);
+
+        // Every dungeon carries a disposition, and a region read twice describes the same dungeons:
+        // the region with the starting dungeon is the one compared, since it is known to have one.
+        Assert.All(dungeons, dungeon => Assert.True(dungeon.State is MapsDungeonState.Read or MapsDungeonState.NoDungeon or MapsDungeonState.Malformed));
+
+        // A location whose dungeon type is non-zero need not have a dungeon: the donor's own lookup
+        // sets "has dungeon" false and returns when no record links the location, so those are
+        // reported as having none rather than as a damaged table - which is what they looked like
+        // until the donor was read.
+        Assert.Contains(dungeons, dungeon => dungeon.State == MapsDungeonState.NoDungeon);
+        Assert.Contains(dungeons, dungeon => dungeon.State == MapsDungeonState.Read);
+        Assert.DoesNotContain(dungeons, dungeon => dungeon.State == MapsDungeonState.Malformed);
+
+        // Reading the same region twice describes the same dungeons: the records are values, so the
+        // comparison is by content rather than by the list instance each read returns.
+        Assert.Equal(
+            MapsDecoder.DecodeRegionDungeons(archive, 17).Select(dungeon => (dungeon.Region, dungeon.Index, dungeon.Name, dungeon.ExteriorLocationId, dungeon.DungeonLocationId, dungeon.State, dungeon.Blocks.Count)),
+            MapsDecoder.DecodeRegionDungeons(archive, 17).Select(dungeon => (dungeon.Region, dungeon.Index, dungeon.Name, dungeon.ExteriorLocationId, dungeon.DungeonLocationId, dungeon.State, dungeon.Blocks.Count)));
+    }
+
     private static byte[] MapNames(int count)
     {
         byte[] bytes = new byte[sizeof(uint) + (count * 32)];
