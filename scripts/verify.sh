@@ -57,6 +57,12 @@ dotnet restore src/WorldRpg.Host/WorldRpg.Host.csproj
 dotnet restore tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj
 dotnet build src/WorldRpg.Host/WorldRpg.Host.csproj --configuration Release --no-restore
 dotnet build src/WorldRpg.SpriteWorkbench/WorldRpg.SpriteWorkbench.csproj --configuration Release
+
+# The importer's tool is a product of its own and nothing else in this script compiles it, so a
+# change to the import API could leave it broken while every test and build here stayed green. That
+# happened: a new field in an import record was passed by the tests and missed by the tool, and the
+# error sat unnoticed until someone ran the tool by hand.
+dotnet build src/Daggerfall.Import.Tool/Daggerfall.Import.Tool.csproj --configuration Release
 dotnet test tests/WorldRpg.Architecture.Tests/WorldRpg.Architecture.Tests.csproj --no-restore
 dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
 
