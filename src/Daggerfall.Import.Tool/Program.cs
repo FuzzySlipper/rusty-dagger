@@ -58,6 +58,11 @@ internal static class Program
                 return RunResidualPathCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "character-presentation")
+            {
+                return RunCharacterPresentationCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -395,6 +400,94 @@ internal static class Program
         Console.WriteLine($"pack: catalogs updated in {packFile}");
         return 0;
     }
+
+    /// <summary>
+    /// Builds the character presentation section from the character media the corpus supplies and
+    /// writes it into the base pack when asked, so a character or social consumer resolves a race's
+    /// layers by identity instead of reconstructing file names.
+    /// </summary>
+    private static int RunCharacterPresentationCommand(IReadOnlyList<string> args)
+    {
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        if (args.Count != (update ? 8 : 7) || args[1] != "--arena2" || args[3] != "--inventory" || args[5] != "--pack")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool character-presentation --arena2 SOURCE_DIR --inventory INVENTORY.csv --pack PACK.json [--update]");
+        }
+
+        string arena2 = args[2];
+        string packFile = args[6];
+        string[] families = [.. CharacterMediaInventory.DocumentedFamilies.Select(family => family.Prefix)];
+        List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [.. Directory
+            .EnumerateFiles(arena2)
+            .Select(path => Path.GetFileName(path))
+            .Where(name => families.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .Select(name => (name, (ReadOnlyMemory<byte>)File.ReadAllBytes(Path.Combine(arena2, name))))];
+        HashSet<string> palettes = [.. Directory.EnumerateFiles(arena2, "*.COL").Select(path => Path.GetFileName(path))];
+
+        // Nothing binds character media yet, so every file is required-pending rather than admitted:
+        // the references say so per layer instead of implying a consumer that does not exist.
+        CharacterMediaInventory characters = CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "no consumer binds it yet", Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)));
+        IReadOnlyList<DaggerfallRaceKey> races = ReadPackRaces(packFile);
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, palettes, races);
+        HashSet<string> mediaIds = [.. CharacterMediaReferences.Derive(characters, palettes).Canvases.Select(reference => reference.MediaId)];
+        presentation.Validate(mediaIds);
+
+        Console.WriteLine($"character presentation: {characters.Files.Count} supplied files, {mediaIds.Count} published canvases, {presentation.Layers.Count} layers over {races.Count} races, {presentation.RacesWithoutMedia.Count} recorded gaps");
+        foreach (string race in presentation.Layers.Select(layer => layer.Race).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            Console.WriteLine($"  {race}: {presentation.Layers.Count(layer => layer.Race == race)} layers");
+        }
+
+        foreach (DaggerfallRaceWithoutMedia gap in presentation.RacesWithoutMedia.Take(4))
+        {
+            Console.WriteLine($"  gap {gap.Race}: {gap.Reason}");
+        }
+
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these references into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        pack["characterPresentation"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(presentation, SectionOptions));
+        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: characterPresentation updated in {packFile}");
+        return 0;
+    }
+
+    /// <summary>The races the catalog section publishes, which are what the layers are keyed by.</summary>
+    private static IReadOnlyList<DaggerfallRaceKey> ReadPackRaces(string packFile)
+    {
+        JsonNode root = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        return [.. root["catalogs"]!["races"]!.AsArray().Select(value =>
+        {
+            JsonObject race = value!.AsObject();
+            JsonObject source = race["source"]!.AsObject();
+            return new DaggerfallRaceKey(
+                race["id"]!.GetValue<string>(),
+                race["donorRaceId"]!.GetValue<int>(),
+                new DaggerfallCatalogSource(source["recordId"]!.GetValue<string>(), source["path"]!.GetValue<string>()));
+        })];
+    }
+
+    /// <summary>
+    /// The published section's shape: camelCase, indented, and enum-like values by name.
+    /// </summary>
+    /// <remarks>
+    /// A binding is stored as "requiredPending" rather than 1 because the pack is authored content a
+    /// person reads and a consumer parses by meaning: an ordinal would tie the published data to the
+    /// order of an enum in code. The catalog section sets the same precedent - its elements are
+    /// names, not indices - while genuinely numeric values stay numbers.
+    /// </remarks>
+    private static readonly JsonSerializerOptions SectionOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.Strict,
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
 
     private static (List<string> Attributes, List<string> Skills) ReadVocabulary(string packFile)
     {
