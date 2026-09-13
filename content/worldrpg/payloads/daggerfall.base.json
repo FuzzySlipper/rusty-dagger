@@ -7976,7 +7976,8 @@
         "mediaId": "character.scbg.scbg00i0.0",
         "sourceFile": "SCBG00I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -7985,7 +7986,8 @@
         "mediaId": "character.body-clothed.female.00.0",
         "sourceFile": "BODY10I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -7994,7 +7996,8 @@
         "mediaId": "character.body-unclothed.female.00.0",
         "sourceFile": "BODY10I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8003,7 +8006,8 @@
         "mediaId": "character.body-clothed.male.00.0",
         "sourceFile": "BODY00I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8012,7 +8016,8 @@
         "mediaId": "character.body-unclothed.male.00.0",
         "sourceFile": "BODY00I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8021,7 +8026,8 @@
         "mediaId": "character.head.female.00.0",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8030,7 +8036,8 @@
         "mediaId": "character.head.female.00.1",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8039,7 +8046,8 @@
         "mediaId": "character.head.female.00.2",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8048,7 +8056,8 @@
         "mediaId": "character.head.female.00.3",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8057,7 +8066,8 @@
         "mediaId": "character.head.female.00.4",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8066,7 +8076,8 @@
         "mediaId": "character.head.female.00.5",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8075,7 +8086,8 @@
         "mediaId": "character.head.female.00.6",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8084,7 +8096,8 @@
         "mediaId": "character.head.female.00.7",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8093,7 +8106,8 @@
         "mediaId": "character.head.female.00.8",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8102,7 +8116,8 @@
         "mediaId": "character.head.female.00.9",
         "sourceFile": "FACE10I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8111,7 +8126,8 @@
         "mediaId": "character.head.male.00.0",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8120,7 +8136,8 @@
         "mediaId": "character.head.male.00.1",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8129,7 +8146,8 @@
         "mediaId": "character.head.male.00.2",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8138,7 +8156,8 @@
         "mediaId": "character.head.male.00.3",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8147,7 +8166,8 @@
         "mediaId": "character.head.male.00.4",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8156,7 +8176,8 @@
         "mediaId": "character.head.male.00.5",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8165,7 +8186,8 @@
         "mediaId": "character.head.male.00.6",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8174,7 +8196,8 @@
         "mediaId": "character.head.male.00.7",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8183,7 +8206,8 @@
         "mediaId": "character.head.male.00.8",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "breton",
@@ -8192,7 +8216,8 @@
         "mediaId": "character.head.male.00.9",
         "sourceFile": "FACE00I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8201,7 +8226,8 @@
         "mediaId": "character.scbg.scbg01i0.0",
         "sourceFile": "SCBG01I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8210,7 +8236,8 @@
         "mediaId": "character.body-clothed.female.01.0",
         "sourceFile": "BODY11I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8219,7 +8246,8 @@
         "mediaId": "character.body-unclothed.female.01.0",
         "sourceFile": "BODY11I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8228,7 +8256,8 @@
         "mediaId": "character.body-clothed.male.01.0",
         "sourceFile": "BODY01I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8237,7 +8266,8 @@
         "mediaId": "character.body-unclothed.male.01.0",
         "sourceFile": "BODY01I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8246,7 +8276,8 @@
         "mediaId": "character.head.female.01.0",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8255,7 +8286,8 @@
         "mediaId": "character.head.female.01.1",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8264,7 +8296,8 @@
         "mediaId": "character.head.female.01.2",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8273,7 +8306,8 @@
         "mediaId": "character.head.female.01.3",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8282,7 +8316,8 @@
         "mediaId": "character.head.female.01.4",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8291,7 +8326,8 @@
         "mediaId": "character.head.female.01.5",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8300,7 +8336,8 @@
         "mediaId": "character.head.female.01.6",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8309,7 +8346,8 @@
         "mediaId": "character.head.female.01.7",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8318,7 +8356,8 @@
         "mediaId": "character.head.female.01.8",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8327,7 +8366,8 @@
         "mediaId": "character.head.female.01.9",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8336,7 +8376,8 @@
         "mediaId": "character.head.male.01.0",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8345,7 +8386,8 @@
         "mediaId": "character.head.male.01.1",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8354,7 +8396,8 @@
         "mediaId": "character.head.male.01.2",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8363,7 +8406,8 @@
         "mediaId": "character.head.male.01.3",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8372,7 +8416,8 @@
         "mediaId": "character.head.male.01.4",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8381,7 +8426,8 @@
         "mediaId": "character.head.male.01.5",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8390,7 +8436,8 @@
         "mediaId": "character.head.male.01.6",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8399,7 +8446,8 @@
         "mediaId": "character.head.male.01.7",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8408,7 +8456,8 @@
         "mediaId": "character.head.male.01.8",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "redguard",
@@ -8417,7 +8466,8 @@
         "mediaId": "character.head.male.01.9",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8426,7 +8476,8 @@
         "mediaId": "character.scbg.scbg02i0.0",
         "sourceFile": "SCBG02I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8435,7 +8486,8 @@
         "mediaId": "character.body-clothed.female.02.0",
         "sourceFile": "BODY12I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8444,7 +8496,8 @@
         "mediaId": "character.body-unclothed.female.02.0",
         "sourceFile": "BODY12I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8453,7 +8506,8 @@
         "mediaId": "character.body-clothed.male.02.0",
         "sourceFile": "BODY02I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8462,7 +8516,8 @@
         "mediaId": "character.body-unclothed.male.02.0",
         "sourceFile": "BODY02I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8471,7 +8526,8 @@
         "mediaId": "character.head.female.02.0",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8480,7 +8536,8 @@
         "mediaId": "character.head.female.02.1",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8489,7 +8546,8 @@
         "mediaId": "character.head.female.02.2",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8498,7 +8556,8 @@
         "mediaId": "character.head.female.02.3",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8507,7 +8566,8 @@
         "mediaId": "character.head.female.02.4",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8516,7 +8576,8 @@
         "mediaId": "character.head.female.02.5",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8525,7 +8586,8 @@
         "mediaId": "character.head.female.02.6",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8534,7 +8596,8 @@
         "mediaId": "character.head.female.02.7",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8543,7 +8606,8 @@
         "mediaId": "character.head.female.02.8",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8552,7 +8616,8 @@
         "mediaId": "character.head.female.02.9",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8561,7 +8626,8 @@
         "mediaId": "character.head.male.02.0",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8570,7 +8636,8 @@
         "mediaId": "character.head.male.02.1",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8579,7 +8646,8 @@
         "mediaId": "character.head.male.02.2",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8588,7 +8656,8 @@
         "mediaId": "character.head.male.02.3",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8597,7 +8666,8 @@
         "mediaId": "character.head.male.02.4",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8606,7 +8676,8 @@
         "mediaId": "character.head.male.02.5",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8615,7 +8686,8 @@
         "mediaId": "character.head.male.02.6",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8624,7 +8696,8 @@
         "mediaId": "character.head.male.02.7",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8633,7 +8706,8 @@
         "mediaId": "character.head.male.02.8",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "nord",
@@ -8642,7 +8716,8 @@
         "mediaId": "character.head.male.02.9",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8651,7 +8726,8 @@
         "mediaId": "character.scbg.scbg03i0.0",
         "sourceFile": "SCBG03I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8660,7 +8736,8 @@
         "mediaId": "character.body-clothed.female.03.0",
         "sourceFile": "BODY13I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8669,7 +8746,8 @@
         "mediaId": "character.body-unclothed.female.03.0",
         "sourceFile": "BODY13I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8678,7 +8756,8 @@
         "mediaId": "character.body-clothed.male.03.0",
         "sourceFile": "BODY03I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8687,7 +8766,8 @@
         "mediaId": "character.body-unclothed.male.03.0",
         "sourceFile": "BODY03I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8696,7 +8776,8 @@
         "mediaId": "character.head.female.03.0",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8705,7 +8786,8 @@
         "mediaId": "character.head.female.03.1",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8714,7 +8796,8 @@
         "mediaId": "character.head.female.03.2",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8723,7 +8806,8 @@
         "mediaId": "character.head.female.03.3",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8732,7 +8816,8 @@
         "mediaId": "character.head.female.03.4",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8741,7 +8826,8 @@
         "mediaId": "character.head.female.03.5",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8750,7 +8836,8 @@
         "mediaId": "character.head.female.03.6",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8759,7 +8846,8 @@
         "mediaId": "character.head.female.03.7",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8768,7 +8856,8 @@
         "mediaId": "character.head.female.03.8",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8777,7 +8866,8 @@
         "mediaId": "character.head.female.03.9",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8786,7 +8876,8 @@
         "mediaId": "character.head.male.03.0",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8795,7 +8886,8 @@
         "mediaId": "character.head.male.03.1",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8804,7 +8896,8 @@
         "mediaId": "character.head.male.03.2",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8813,7 +8906,8 @@
         "mediaId": "character.head.male.03.3",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8822,7 +8916,8 @@
         "mediaId": "character.head.male.03.4",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8831,7 +8926,8 @@
         "mediaId": "character.head.male.03.5",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8840,7 +8936,8 @@
         "mediaId": "character.head.male.03.6",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8849,7 +8946,8 @@
         "mediaId": "character.head.male.03.7",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8858,7 +8956,8 @@
         "mediaId": "character.head.male.03.8",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "dark-elf",
@@ -8867,7 +8966,8 @@
         "mediaId": "character.head.male.03.9",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8876,7 +8976,8 @@
         "mediaId": "character.scbg.scbg04i0.0",
         "sourceFile": "SCBG04I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8885,7 +8986,8 @@
         "mediaId": "character.body-clothed.female.04.0",
         "sourceFile": "BODY14I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8894,7 +8996,8 @@
         "mediaId": "character.body-unclothed.female.04.0",
         "sourceFile": "BODY14I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8903,7 +9006,8 @@
         "mediaId": "character.body-clothed.male.04.0",
         "sourceFile": "BODY04I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8912,7 +9016,8 @@
         "mediaId": "character.body-unclothed.male.04.0",
         "sourceFile": "BODY04I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8921,7 +9026,8 @@
         "mediaId": "character.head.female.04.0",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8930,7 +9036,8 @@
         "mediaId": "character.head.female.04.1",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8939,7 +9046,8 @@
         "mediaId": "character.head.female.04.2",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8948,7 +9056,8 @@
         "mediaId": "character.head.female.04.3",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8957,7 +9066,8 @@
         "mediaId": "character.head.female.04.4",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8966,7 +9076,8 @@
         "mediaId": "character.head.female.04.5",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8975,7 +9086,8 @@
         "mediaId": "character.head.female.04.6",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8984,7 +9096,8 @@
         "mediaId": "character.head.female.04.7",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -8993,7 +9106,8 @@
         "mediaId": "character.head.female.04.8",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9002,7 +9116,8 @@
         "mediaId": "character.head.female.04.9",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9011,7 +9126,8 @@
         "mediaId": "character.head.male.04.0",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9020,7 +9136,8 @@
         "mediaId": "character.head.male.04.1",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9029,7 +9146,8 @@
         "mediaId": "character.head.male.04.2",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9038,7 +9156,8 @@
         "mediaId": "character.head.male.04.3",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9047,7 +9166,8 @@
         "mediaId": "character.head.male.04.4",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9056,7 +9176,8 @@
         "mediaId": "character.head.male.04.5",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9065,7 +9186,8 @@
         "mediaId": "character.head.male.04.6",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9074,7 +9196,8 @@
         "mediaId": "character.head.male.04.7",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9083,7 +9206,8 @@
         "mediaId": "character.head.male.04.8",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "high-elf",
@@ -9092,7 +9216,8 @@
         "mediaId": "character.head.male.04.9",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9101,7 +9226,8 @@
         "mediaId": "character.scbg.scbg05i0.0",
         "sourceFile": "SCBG05I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9110,7 +9236,8 @@
         "mediaId": "character.body-clothed.female.05.0",
         "sourceFile": "BODY15I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9119,7 +9246,8 @@
         "mediaId": "character.body-unclothed.female.05.0",
         "sourceFile": "BODY15I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9128,7 +9256,8 @@
         "mediaId": "character.body-clothed.male.05.0",
         "sourceFile": "BODY05I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9137,7 +9266,8 @@
         "mediaId": "character.body-unclothed.male.05.0",
         "sourceFile": "BODY05I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9146,7 +9276,8 @@
         "mediaId": "character.head.female.05.0",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9155,7 +9286,8 @@
         "mediaId": "character.head.female.05.1",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9164,7 +9296,8 @@
         "mediaId": "character.head.female.05.2",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9173,7 +9306,8 @@
         "mediaId": "character.head.female.05.3",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9182,7 +9316,8 @@
         "mediaId": "character.head.female.05.4",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9191,7 +9326,8 @@
         "mediaId": "character.head.female.05.5",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9200,7 +9336,8 @@
         "mediaId": "character.head.female.05.6",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9209,7 +9346,8 @@
         "mediaId": "character.head.female.05.7",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9218,7 +9356,8 @@
         "mediaId": "character.head.female.05.8",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9227,7 +9366,8 @@
         "mediaId": "character.head.female.05.9",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9236,7 +9376,8 @@
         "mediaId": "character.head.male.05.0",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9245,7 +9386,8 @@
         "mediaId": "character.head.male.05.1",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9254,7 +9396,8 @@
         "mediaId": "character.head.male.05.2",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9263,7 +9406,8 @@
         "mediaId": "character.head.male.05.3",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9272,7 +9416,8 @@
         "mediaId": "character.head.male.05.4",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9281,7 +9426,8 @@
         "mediaId": "character.head.male.05.5",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9290,7 +9436,8 @@
         "mediaId": "character.head.male.05.6",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9299,7 +9446,8 @@
         "mediaId": "character.head.male.05.7",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9308,7 +9456,8 @@
         "mediaId": "character.head.male.05.8",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "wood-elf",
@@ -9317,7 +9466,8 @@
         "mediaId": "character.head.male.05.9",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9326,7 +9476,8 @@
         "mediaId": "character.scbg.scbg06i0.0",
         "sourceFile": "SCBG06I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9335,7 +9486,8 @@
         "mediaId": "character.body-clothed.female.06.0",
         "sourceFile": "BODY16I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9344,7 +9496,8 @@
         "mediaId": "character.body-unclothed.female.06.0",
         "sourceFile": "BODY16I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9353,7 +9506,8 @@
         "mediaId": "character.body-clothed.male.06.0",
         "sourceFile": "BODY06I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9362,7 +9516,8 @@
         "mediaId": "character.body-unclothed.male.06.0",
         "sourceFile": "BODY06I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9371,7 +9526,8 @@
         "mediaId": "character.head.female.06.0",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9380,7 +9536,8 @@
         "mediaId": "character.head.female.06.1",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9389,7 +9546,8 @@
         "mediaId": "character.head.female.06.2",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9398,7 +9556,8 @@
         "mediaId": "character.head.female.06.3",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9407,7 +9566,8 @@
         "mediaId": "character.head.female.06.4",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9416,7 +9576,8 @@
         "mediaId": "character.head.female.06.5",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9425,7 +9586,8 @@
         "mediaId": "character.head.female.06.6",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9434,7 +9596,8 @@
         "mediaId": "character.head.female.06.7",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9443,7 +9606,8 @@
         "mediaId": "character.head.female.06.8",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9452,7 +9616,8 @@
         "mediaId": "character.head.female.06.9",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9461,7 +9626,8 @@
         "mediaId": "character.head.male.06.0",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9470,7 +9636,8 @@
         "mediaId": "character.head.male.06.1",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9479,7 +9646,8 @@
         "mediaId": "character.head.male.06.2",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9488,7 +9656,8 @@
         "mediaId": "character.head.male.06.3",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9497,7 +9666,8 @@
         "mediaId": "character.head.male.06.4",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9506,7 +9676,8 @@
         "mediaId": "character.head.male.06.5",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9515,7 +9686,8 @@
         "mediaId": "character.head.male.06.6",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9524,7 +9696,8 @@
         "mediaId": "character.head.male.06.7",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9533,7 +9706,8 @@
         "mediaId": "character.head.male.06.8",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "khajiit",
@@ -9542,7 +9716,8 @@
         "mediaId": "character.head.male.06.9",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9551,7 +9726,8 @@
         "mediaId": "character.scbg.scbg07i0.0",
         "sourceFile": "SCBG07I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9560,7 +9736,8 @@
         "mediaId": "character.body-clothed.female.07.0",
         "sourceFile": "BODY17I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9569,7 +9746,8 @@
         "mediaId": "character.body-unclothed.female.07.0",
         "sourceFile": "BODY17I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9578,7 +9756,8 @@
         "mediaId": "character.body-clothed.male.07.0",
         "sourceFile": "BODY07I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9587,7 +9766,8 @@
         "mediaId": "character.body-unclothed.male.07.0",
         "sourceFile": "BODY07I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9596,7 +9776,8 @@
         "mediaId": "character.head.female.07.0",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9605,7 +9786,8 @@
         "mediaId": "character.head.female.07.1",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9614,7 +9796,8 @@
         "mediaId": "character.head.female.07.2",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9623,7 +9806,8 @@
         "mediaId": "character.head.female.07.3",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9632,7 +9816,8 @@
         "mediaId": "character.head.female.07.4",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9641,7 +9826,8 @@
         "mediaId": "character.head.female.07.5",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9650,7 +9836,8 @@
         "mediaId": "character.head.female.07.6",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9659,7 +9846,8 @@
         "mediaId": "character.head.female.07.7",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9668,7 +9856,8 @@
         "mediaId": "character.head.female.07.8",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9677,7 +9866,8 @@
         "mediaId": "character.head.female.07.9",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9686,7 +9876,8 @@
         "mediaId": "character.head.male.07.0",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9695,7 +9886,8 @@
         "mediaId": "character.head.male.07.1",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9704,7 +9896,8 @@
         "mediaId": "character.head.male.07.2",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9713,7 +9906,8 @@
         "mediaId": "character.head.male.07.3",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9722,7 +9916,8 @@
         "mediaId": "character.head.male.07.4",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9731,7 +9926,8 @@
         "mediaId": "character.head.male.07.5",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9740,7 +9936,8 @@
         "mediaId": "character.head.male.07.6",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9749,7 +9946,8 @@
         "mediaId": "character.head.male.07.7",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9758,7 +9956,8 @@
         "mediaId": "character.head.male.07.8",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "race": "argonian",
@@ -9767,7 +9966,8 @@
         "mediaId": "character.head.male.07.9",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       }
     ],
     "faces": [
@@ -9776,427 +9976,488 @@
         "mediaId": "character.faction-face.00",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 1,
         "mediaId": "character.faction-face.01",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 2,
         "mediaId": "character.faction-face.02",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 3,
         "mediaId": "character.faction-face.03",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 4,
         "mediaId": "character.faction-face.04",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 5,
         "mediaId": "character.faction-face.05",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 6,
         "mediaId": "character.faction-face.06",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 7,
         "mediaId": "character.faction-face.07",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 8,
         "mediaId": "character.faction-face.08",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 9,
         "mediaId": "character.faction-face.09",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 10,
         "mediaId": "character.faction-face.10",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 11,
         "mediaId": "character.faction-face.11",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 12,
         "mediaId": "character.faction-face.12",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 13,
         "mediaId": "character.faction-face.13",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 14,
         "mediaId": "character.faction-face.14",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 15,
         "mediaId": "character.faction-face.15",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 16,
         "mediaId": "character.faction-face.16",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 17,
         "mediaId": "character.faction-face.17",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 18,
         "mediaId": "character.faction-face.18",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 19,
         "mediaId": "character.faction-face.19",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 20,
         "mediaId": "character.faction-face.20",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 21,
         "mediaId": "character.faction-face.21",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 22,
         "mediaId": "character.faction-face.22",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 23,
         "mediaId": "character.faction-face.23",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 24,
         "mediaId": "character.faction-face.24",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 25,
         "mediaId": "character.faction-face.25",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 26,
         "mediaId": "character.faction-face.26",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 27,
         "mediaId": "character.faction-face.27",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 28,
         "mediaId": "character.faction-face.28",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 29,
         "mediaId": "character.faction-face.29",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 30,
         "mediaId": "character.faction-face.30",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 31,
         "mediaId": "character.faction-face.31",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 32,
         "mediaId": "character.faction-face.32",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 33,
         "mediaId": "character.faction-face.33",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 34,
         "mediaId": "character.faction-face.34",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 35,
         "mediaId": "character.faction-face.35",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 36,
         "mediaId": "character.faction-face.36",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 37,
         "mediaId": "character.faction-face.37",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 38,
         "mediaId": "character.faction-face.38",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 39,
         "mediaId": "character.faction-face.39",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 40,
         "mediaId": "character.faction-face.40",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 41,
         "mediaId": "character.faction-face.41",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 42,
         "mediaId": "character.faction-face.42",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 43,
         "mediaId": "character.faction-face.43",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 44,
         "mediaId": "character.faction-face.44",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 45,
         "mediaId": "character.faction-face.45",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 46,
         "mediaId": "character.faction-face.46",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 47,
         "mediaId": "character.faction-face.47",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 48,
         "mediaId": "character.faction-face.48",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 49,
         "mediaId": "character.faction-face.49",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 50,
         "mediaId": "character.faction-face.50",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 51,
         "mediaId": "character.faction-face.51",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 52,
         "mediaId": "character.faction-face.52",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 53,
         "mediaId": "character.faction-face.53",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 54,
         "mediaId": "character.faction-face.54",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 55,
         "mediaId": "character.faction-face.55",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 56,
         "mediaId": "character.faction-face.56",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 57,
         "mediaId": "character.faction-face.57",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 58,
         "mediaId": "character.faction-face.58",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 59,
         "mediaId": "character.faction-face.59",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "index": 60,
         "mediaId": "character.faction-face.60",
         "sourceFile": "FACES.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       }
     ],
     "careers": [
@@ -10206,7 +10467,8 @@
         "sourceFile": "MAGE.CEL",
         "palette": "ART_PAL.COL",
         "frameCount": 15,
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "careerId": "class08",
@@ -10214,7 +10476,8 @@
         "sourceFile": "ROGUE.CEL",
         "palette": "ART_PAL.COL",
         "frameCount": 10,
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       },
       {
         "careerId": "class16",
@@ -10222,7 +10485,8 @@
         "sourceFile": "WARRIOR.CEL",
         "palette": "ART_PAL.COL",
         "frameCount": 15,
-        "binding": "requiredPending"
+        "binding": "requiredPending",
+        "consumer": "an unstated consumer"
       }
     ],
     "careersWithoutPortrait": [

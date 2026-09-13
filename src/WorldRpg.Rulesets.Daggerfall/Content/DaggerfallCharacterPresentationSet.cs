@@ -39,7 +39,8 @@ internal sealed record DaggerfallCharacterLayerDefinition(
     int HeadIndex,
     string MediaId,
     string SourceFile,
-    string Palette);
+    string Palette,
+    string Consumer);
 
 /// <summary>
 /// One race's published layers, resolved by gender and role rather than by position.
@@ -71,7 +72,7 @@ internal sealed record DaggerfallRaceLayers(string RaceId, int DonorRaceId, IRea
 /// <param name="MediaId">The published identity.</param>
 /// <param name="SourceFile">The supplied source file whose cells are the faces.</param>
 /// <param name="Palette">The palette the cells are read with.</param>
-internal sealed record DaggerfallFactionFaceDefinition(int Index, string MediaId, string SourceFile, string Palette);
+internal sealed record DaggerfallFactionFaceDefinition(int Index, string MediaId, string SourceFile, string Palette, string Consumer);
 
 /// <summary>One career's class portrait, resolved by career identity.</summary>
 /// <param name="CareerId">The catalog career identity.</param>
@@ -79,7 +80,7 @@ internal sealed record DaggerfallFactionFaceDefinition(int Index, string MediaId
 /// <param name="SourceFile">The supplied source file, an animation whose frames are the portrait.</param>
 /// <param name="Palette">The palette the frames carry.</param>
 /// <param name="FrameCount">How many frames the portrait animates through.</param>
-internal sealed record DaggerfallCareerPortraitDefinition(string CareerId, string MediaId, string SourceFile, string Palette, int FrameCount);
+internal sealed record DaggerfallCareerPortraitDefinition(string CareerId, string MediaId, string SourceFile, string Palette, int FrameCount, string Consumer);
 
 /// <summary>One career the pack records as having no portrait, and why.</summary>
 /// <param name="CareerId">The catalog career identity.</param>

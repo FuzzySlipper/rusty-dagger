@@ -52,6 +52,11 @@ public sealed class DaggerfallCharacterMediaContentTests
         // for - they belong to no race and are not paper-doll heads.
         Assert.Equal(61, presentation.FactionFaces.Count);
         Assert.Equal("character.faction-face.00", presentation.FactionFaces[0].MediaId);
+
+        // The loaded references carry the consumer the publication recorded, so a consumer of this set
+        // sees who claims a reference instead of inferring it from a binding.
+        Assert.All(presentation.RequireRace("breton").Layers, layer => Assert.False(string.IsNullOrWhiteSpace(layer.Consumer)));
+        Assert.False(string.IsNullOrWhiteSpace(presentation.RequirePortrait("class00").Consumer));
         Assert.Equal("character.faction-face.60", presentation.FactionFaces[60].MediaId);
         Assert.All(presentation.FactionFaces, face => Assert.Equal("FACES.CIF", face.SourceFile));
         Assert.All(presentation.FactionFaces, face => Assert.Equal("ART_PAL.COL", face.Palette));
