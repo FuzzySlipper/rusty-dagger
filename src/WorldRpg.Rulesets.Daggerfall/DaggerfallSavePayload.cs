@@ -72,7 +72,9 @@ internal sealed record DaggerfallSavePayload(
             // The older bytes read as the current shape with no calendar, so the world's clock starts
             // where the corpus starts and the drift is reported rather than refused: a lost clock is
             // recoverable, and refusing a save the player made is not.
-            DaggerfallSaveRead calendarless = ReadCurrent(payload);
+            DaggerfallSaveRead calendarless = new(
+                DeserializeCurrent(payload) with { SchemaVersion = CurrentSchemaVersion },
+                []);
             return new DaggerfallSaveRead(calendarless.Payload,
             [
                 .. calendarless.Notices,
@@ -95,18 +97,31 @@ internal sealed record DaggerfallSavePayload(
         throw new ArgumentException($"Daggerfall save schema {payload.SchemaVersion} is not supported.", nameof(payload));
     }
 
-    private static DaggerfallSaveRead ReadCurrent(RulesetSavePayload payload)
+    /// <summary>
+    /// Reads the bytes of a save written at any schema this code can interpret.
+    /// </summary>
+    /// <remarks>
+    /// The bytes carry the schema they were written at, so a caller migrating an older save stamps the
+    /// current version onto what it read before validating it. Without that stamp the older number
+    /// inside the payload is what the validator sees, and a migration that claims to read an older
+    /// save refuses it instead.
+    /// </remarks>
+    private static DaggerfallSavePayload DeserializeCurrent(RulesetSavePayload payload)
     {
-        DaggerfallSavePayload value;
         try
         {
-            value = JsonSerializer.Deserialize(payload.Bytes.Span, DaggerfallSaveJsonContext.Default.DaggerfallSavePayload)
+            return JsonSerializer.Deserialize(payload.Bytes.Span, DaggerfallSaveJsonContext.Default.DaggerfallSavePayload)
                 ?? throw new ArgumentException("The Daggerfall save payload is empty.", nameof(payload));
         }
         catch (JsonException exception)
         {
             throw new ArgumentException("The Daggerfall save payload is malformed.", nameof(payload), exception);
         }
+    }
+
+    private static DaggerfallSaveRead ReadCurrent(RulesetSavePayload payload)
+    {
+        DaggerfallSavePayload value = DeserializeCurrent(payload);
 
         // A save written before the payload carried owner sections simply has none. A
         // field added under an unchanged schema version is absent-but-recoverable, so it
@@ -138,6 +153,17 @@ internal sealed record DaggerfallSavePayload(
     internal DaggerfallSavePayload Validate()
     {
         if (SchemaVersion != CurrentSchemaVersion) throw new ArgumentException("The embedded Daggerfall schema version is unsupported.");
+        if (Calendar is { } clock)
+        {
+            // A remainder of a whole second or more duplicates time; a negative one loses it. Either
+            // way the caller's interval accounting would be wrong by that much, which is a silently
+            // wrong artifact rather than a recoverable difference.
+            if (!double.IsFinite(clock.RemainderSeconds) || clock.RemainderSeconds < 0d || clock.RemainderSeconds >= 1d)
+            {
+                throw new ArgumentException($"The save's calendar carries {clock.RemainderSeconds} unapplied seconds, which is not a fraction of a second.");
+            }
+        }
+
         ArgumentNullException.ThrowIfNull(Player);
         ArgumentNullException.ThrowIfNull(Actors);
         ArgumentNullException.ThrowIfNull(Inventory);
