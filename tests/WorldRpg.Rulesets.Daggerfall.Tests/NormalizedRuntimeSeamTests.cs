@@ -12,6 +12,7 @@ using WorldRpg.Host;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Controls;
+using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.Facts;
 using WorldRpg.Kit.Inventory;
 using WorldRpg.Kit.Progression;
@@ -3324,6 +3325,14 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(opened.Container, engine.PublishedNested("focus", "container"));
         Assert.Equal("loot-close", engine.PublishedNested("focus", "close"));
         Assert.Equal("modal", engine.PublishedNested("view", "interaction"));
+
+        // A status row an owner publishes reaches the projection without the projection knowing
+        // what it means: this is the slot path effects, escorts and quests will use.
+        session.Slots.Publish(new PresentationSlot("effect.poison", "tick", "Poisoned", "3 damage", 10));
+        session.ApplyProductMode(ProductMode.Playing);
+        session.ApplyProductMode(ProductMode.Modal);
+        Assert.Equal("Poisoned", engine.PublishedArrayItem("slots", 0, "label"));
+        Assert.Equal("effect.poison", engine.PublishedArrayItem("slots", 0, "owner"));
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key }), 4);
         Assert.NotEqual(revisionBefore, session.State.Inventory.Read().WorldRevision);
 
@@ -3657,6 +3666,9 @@ public sealed class NormalizedRuntimeSeamTests
 
         /// <summary>Read one named field of a nested object of the last published projection.</summary>
         internal string? PublishedNested(string parent, string key) => ((UiServiceFake)(object)ui).Nested(parent, key);
+
+        /// <summary>Read one named field of one element of a published array.</summary>
+        internal string? PublishedArrayItem(string array, int index, string key) => ((UiServiceFake)(object)ui).ArrayItemField(array, index, key);
         private IContentService content = null!;
         private ISpatialService spatial = null!;
         private IGraphicsService appearance = null!;
@@ -3768,6 +3780,21 @@ public sealed class NormalizedRuntimeSeamTests
                 foreach (uint edge in Edges(projection, projection.Value.Root))
                 {
                     if (Key(projection, projection.Value.Nodes.Span[checked((int)edge)]) == key) return edge;
+                }
+
+                return null;
+            }
+
+            /// <summary>The string one named field of one published array element carries, or null.</summary>
+            internal string? ArrayItemField(string array, int index, string key)
+            {
+                if (LastProjection is not { } projection || Object(array) is not { } arrayIndex) return null;
+                List<uint> items = [.. Edges(projection, arrayIndex)];
+                if (index >= items.Count) return null;
+                foreach (uint edge in Edges(projection, items[index]))
+                {
+                    StructuredValueNode node = projection.Value.Nodes.Span[checked((int)edge)];
+                    if (Key(projection, node) == key && node.Kind == StructuredValueKind.String) return Text(projection, node);
                 }
 
                 return null;

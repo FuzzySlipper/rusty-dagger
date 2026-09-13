@@ -494,6 +494,12 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             Update(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
     }
 
+    /// <summary>
+    /// The status rows owners outside this session publish: effects, escorts and quests put what
+    /// they want shown here, and the projection carries it without knowing what it means.
+    /// </summary>
+    internal PresentationSlots Slots { get; } = new();
+
     /// <summary>Whether this admitted slice asks to open the loot interaction.</summary>
     private static bool ContainsInteractionAction(ReadOnlySpan<ProductInputEvent> input)
     {
@@ -715,7 +721,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression));
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
