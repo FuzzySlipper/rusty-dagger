@@ -93,6 +93,16 @@ public sealed record DaggerfallCharacterPresentation(
     }
 }
 
+/// <summary>Compares a source file name the way the inventory admits one: without regard to case.</summary>
+internal sealed class FileAndCanvas : IEqualityComparer<(string File, int Canvas)>
+{
+    public bool Equals((string File, int Canvas) left, (string File, int Canvas) right) =>
+        left.Canvas == right.Canvas && string.Equals(left.File, right.File, StringComparison.OrdinalIgnoreCase);
+
+    public int GetHashCode((string File, int Canvas) value) =>
+        HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(value.File), value.Canvas);
+}
+
 /// <summary>
 /// Builds the character presentation section from the character-media inventory and the catalog's
 /// races.
@@ -127,7 +137,7 @@ public static class DaggerfallCharacterPresentationBuilder
         // Looked up by source file and canvas index rather than by a second derivation of the media
         // id: the derivation owns naming, and a builder that re-derived it would be a second place
         // for the two to disagree.
-        Dictionary<(string File, int Canvas), CharacterCanvasReference> canvases = [];
+        Dictionary<(string File, int Canvas), CharacterCanvasReference> canvases = new(new FileAndCanvas());
         foreach (CharacterCanvasReference reference in set.Canvases)
         {
             canvases.Add((System.IO.Path.GetFileName(reference.Path), reference.CanvasIndex), reference);

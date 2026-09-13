@@ -105,8 +105,8 @@ public static class CharacterMediaReferences
     /// <param name="inventory">The character-media inventory to publish from.</param>
     /// <param name="suppliedPalettes">The palette files the caller supplies, by file name.</param>
     /// <exception cref="InvalidOperationException">
-    /// A canvas needs a palette the caller does not supply, or its family's companion layers are
-    /// never derived. Both name the file and the missing reference rather than defaulting.
+    /// A canvas needs a palette the caller does not supply, naming the file and the palette rather
+    /// than painting it with a default.
     /// </exception>
     public static CharacterMediaReferenceSet Derive(
         CharacterMediaInventory inventory,
@@ -177,15 +177,16 @@ public static class CharacterMediaReferences
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentOutOfRangeException.ThrowIfNegative(canvasIndex);
-        string name = System.IO.Path.GetFileNameWithoutExtension(file.Path);
+        string name = System.IO.Path.GetFileNameWithoutExtension(file.Path).ToUpperInvariant();
         string family = file.Family.ToLowerInvariant();
         if (TryRaceAndGender(name, out int race, out bool female))
         {
             string gender = female ? "female" : "male";
+            bool body = name.StartsWith("BODY", StringComparison.Ordinal);
             string layer = name[^2..] switch
             {
-                "I0" when name.StartsWith("BODY", StringComparison.Ordinal) => "body-unclothed",
-                "I1" when name.StartsWith("BODY", StringComparison.Ordinal) => "body-clothed",
+                "I0" when body => "body-unclothed",
+                "I1" when body => "body-clothed",
                 "I0" => "head",
                 _ => "layer",
             };
@@ -200,7 +201,9 @@ public static class CharacterMediaReferences
     /// </summary>
     private static (IReadOnlyList<string> Companions, string Reason) Companions(CharacterMediaRecord file)
     {
-        string name = System.IO.Path.GetFileNameWithoutExtension(file.Path);
+        // The same normalisation the identity uses, so a lower-case corpus name cannot be one thing
+        // to the identity and another to the companion rule.
+        string name = System.IO.Path.GetFileNameWithoutExtension(file.Path).ToUpperInvariant();
         string palette = PaletteFor(file.Path);
         string paletteFact = $"Read with '{palette}' by the classic reader's palette rule for this family.";
 
@@ -220,17 +223,29 @@ public static class CharacterMediaReferences
         return ([], $"{paletteFact} This family has no paper-doll companion rule, so no companion is claimed rather than one being guessed.");
     }
 
-    /// <summary>Reads the race and gender a paper-doll file name encodes, when it encodes them.</summary>
+    /// <summary>
+    /// Reads the race and gender a paper-doll file name encodes, when it encodes them.
+    /// </summary>
+    /// <param name="nameWithoutExtension">The file's stem, which the caller has upper-cased.</param>
     private static bool TryRaceAndGender(string nameWithoutExtension, out int race, out bool female)
     {
         race = 0;
         female = false;
-        if (nameWithoutExtension.Length < 6) return false;
+        // The paper-doll names are exactly a layer prefix, a two-digit race, and a one-digit variant:
+        // a longer or oddly-suffixed name is not one of them, and treating it as one would give a
+        // canvas an identity claiming a race and layer the donor does not have.
+        if (nameWithoutExtension.Length != 8) return false;
         string prefix = nameWithoutExtension[..4];
-        if (prefix is not ("BODY" or "FACE")) return false;
-        if (!int.TryParse(nameWithoutExtension.AsSpan(4, 2), out int number) || number is < 0 or > 15) return false;
+        bool body = prefix == "BODY";
+        if (!body && prefix != "FACE") return false;
+        if (nameWithoutExtension[6] != 'I') return false;
+        char variant = nameWithoutExtension[7];
+        if (body ? variant is not ('0' or '1') : variant != '0') return false;
+        if (!int.TryParse(nameWithoutExtension.AsSpan(4, 2), out int number)) return false;
         female = number >= 10;
         race = female ? number - 10 : number;
-        return true;
+        // The donor's media covers the eight playable races: values at or above eighteen would name a
+        // race and gender pair the paper-doll art does not have.
+        return race is >= 0 and <= 7;
     }
 }

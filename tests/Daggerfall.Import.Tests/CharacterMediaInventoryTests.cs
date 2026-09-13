@@ -195,6 +195,31 @@ public sealed class CharacterMediaInventoryTests
         Assert.All(references, reference => Assert.StartsWith("character.", reference.MediaId, StringComparison.Ordinal));
         Assert.DoesNotContain(references, reference => reference.MediaId.Contains(' ', StringComparison.Ordinal));
 
+        // The inventory admits a lower-case name, so the derivation's identity and companion rules
+        // have to as well: one supplied trio cannot be a paper-doll layer to one rule and an
+        // unknown file to another.
+        CharacterMediaInventory lowerCase = CharacterMediaInventory.Enumerate(
+            [("body00i0.img", ValidImage()), ("face00i0.cif", ValidImage()), ("scbg00i0.img", ValidImage())],
+            new HashSet<string>(StringComparer.Ordinal),
+            "none",
+            "fixture");
+        CharacterMediaReferenceSet lowerSet = CharacterMediaReferences.Derive(lowerCase, supplied);
+        CharacterCanvasReference body = lowerSet.Canvases.Single(reference => reference.Path == "body00i0.img");
+        Assert.Equal("character.body-unclothed.male.00.0", body.MediaId);
+        Assert.Equal(["BODY00I1.IMG", "FACE00I0.CIF", "SCBG00I0.IMG"], body.Companions);
+
+        // A name that merely resembles a paper-doll file is not one: the identity falls back to the
+        // family rather than claiming a race and layer the donor does not have.
+        CharacterMediaInventory shapes = CharacterMediaInventory.Enumerate(
+            [("BODY08I0.IMG", ValidImage()), ("BODY18I0.IMG", ValidImage()), ("FACE000I0.CIF", ValidImage())],
+            new HashSet<string>(StringComparer.Ordinal),
+            "none",
+            "fixture");
+        CharacterMediaReferenceSet shapeSet = CharacterMediaReferences.Derive(shapes, supplied);
+        Assert.Equal("character.body.body08i0.0", shapeSet.Canvases.Single(reference => reference.Path == "BODY08I0.IMG").MediaId);
+        Assert.Equal("character.body.body18i0.0", shapeSet.Canvases.Single(reference => reference.Path == "BODY18I0.IMG").MediaId);
+        Assert.Equal("character.face.face000i0.0", shapeSet.Canvases.Single(reference => reference.Path == "FACE000I0.CIF").MediaId);
+
         // A canvas whose palette is not supplied is refused by name, not painted with a default.
         InvalidOperationException refused = Assert.Throws<InvalidOperationException>(
             () => CharacterMediaReferences.Derive(inventory, new HashSet<string>(StringComparer.Ordinal) { CharacterMediaReferences.ArtPalette }));

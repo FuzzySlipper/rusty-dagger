@@ -236,6 +236,31 @@ public sealed class ResidualSourceInventoryTests
     }
 
     [Fact]
+    public void A_claimed_path_no_reader_covers_is_reported_as_claimed_rather_than_readerless()
+    {
+        // The classification can reach an imported path two ways: a reader refused it, or no reader
+        // covers its family at all. Both keep the consumer's claim, and the closure has to escalate
+        // both - the note's wording is not the fact.
+        ResidualSourceInventory readerless = ResidualSourceInventory.Enumerate(
+            [("NOTELESS.TBL", new byte[16])],
+            "fixture",
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["NOTELESS.TBL"] = "imported" });
+
+        ResidualSourceRecord covered = Assert.Single(readerless.Files);
+        Assert.Equal(SourceRecordDisposition.Unresolved, covered.Disposition);
+        Assert.True(covered.ClaimedByInventory);
+
+        ResidualPublicationDecision decision = Assert.Single(ResidualPublicationClosure.From(readerless).Decisions);
+        Assert.Equal(ResidualPublicationOutcome.UnreadableButClaimed, decision.Outcome);
+        Assert.Contains("no reader here covers it", decision.Reason, StringComparison.Ordinal);
+
+        // A path nobody claims stays in the plain readerless bucket.
+        ResidualSourceInventory unclaimed = ResidualSourceInventory.Enumerate([("NOTELESS.TBL", new byte[16])], "fixture");
+        Assert.False(Assert.Single(unclaimed.Files).ClaimedByInventory);
+        Assert.Equal(ResidualPublicationOutcome.UnpublishedNoReader, Assert.Single(ResidualPublicationClosure.From(unclaimed).Decisions).Outcome);
+    }
+
+    [Fact]
     public void Refuses_a_repeated_path_or_an_unknown_family()
     {
         // A path is the identity, so classifying one twice would give one file two verdicts; an

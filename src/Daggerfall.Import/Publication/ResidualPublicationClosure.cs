@@ -5,7 +5,10 @@ namespace Daggerfall.Import.Publication;
 /// <summary>What happened to one classified residual path when the publication ran.</summary>
 public enum ResidualPublicationOutcome
 {
-    /// <summary>A consumer claims it, so its artifacts are published.</summary>
+    /// <summary>
+    /// A consumer claims it, so its artifacts belong in the publication: the documented inventory
+    /// imports it, or requires it and has not consumed it yet.
+    /// </summary>
     Published,
 
     /// <summary>It reads, and nothing in the product names a consumer for it.</summary>
@@ -90,6 +93,11 @@ public sealed class ResidualPublicationClosure
             {
                 SourceRecordDisposition.Imported => (ResidualPublicationOutcome.Published,
                     "The documented inventory imports this path, so a consumer claims it."),
+                // A path the documented inventory imports while no reader here covers it is the same
+                // escalation as a refused read: a consumer claims data this repository cannot produce.
+                SourceRecordDisposition.Unresolved when file.ClaimedByInventory =>
+                    (ResidualPublicationOutcome.UnreadableButClaimed,
+                        $"The documented inventory imports this path while no reader here covers it: {file.Note}"),
                 SourceRecordDisposition.Unused => (ResidualPublicationOutcome.UnpublishedNoConsumer,
                     $"Read by {file.Reader}, and no consumer names it, so publishing it would be an artifact nothing asks for."),
                 SourceRecordDisposition.Unresolved => (ResidualPublicationOutcome.UnpublishedNoReader,
@@ -97,7 +105,7 @@ public sealed class ResidualPublicationClosure
                 // An imported path the reader refused keeps both facts: the consumer's claim and the
                 // reader's verdict. Collapsing it into "no reader" would hide a source the pack needs
                 // and cannot get, which is the one state worth escalating rather than reporting flat.
-                SourceRecordDisposition.Malformed when file.Note.Contains("already imports it", StringComparison.Ordinal) =>
+                SourceRecordDisposition.Malformed when file.ClaimedByInventory =>
                     (ResidualPublicationOutcome.UnreadableButClaimed,
                         $"The documented inventory imports this path while no reader here produces it: {file.Note}"),
                 SourceRecordDisposition.Malformed => (ResidualPublicationOutcome.UnpublishedNoReader,
