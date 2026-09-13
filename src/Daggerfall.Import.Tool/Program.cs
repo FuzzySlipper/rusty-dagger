@@ -53,6 +53,11 @@ internal static class Program
                 return RunTextureLeafCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "residual-paths")
+            {
+                return RunResidualPathCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -127,6 +132,55 @@ internal static class Program
         }
 
         Console.WriteLine($"inventory: {documented.Count} documented texture leaves match the corpus, {inventory.NotSupplied.Count()} not supplied");
+        return 0;
+    }
+
+    /// <summary>
+    /// Classifies every residual (CNT-027) source path against the documented inventory: which
+    /// bounded family it belongs to, what reads it, and what happened to it.
+    /// </summary>
+    private static int RunResidualPathCommand(IReadOnlyList<string> args)
+    {
+        if (args.Count != 5 || args[1] != "--arena2" || args[3] != "--inventory")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool residual-paths --arena2 SOURCE_DIR --inventory INVENTORY.csv");
+        }
+
+        string arena2 = args[2];
+        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(args[4]));
+        string[] documented =
+        [
+            .. rows
+                .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-027"))
+                .Select(row => Path.GetFileName(row.PathOrPattern))
+                .Order(StringComparer.Ordinal),
+        ];
+        List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
+        foreach (string name in documented)
+        {
+            string path = Path.Combine(arena2, name);
+            if (!File.Exists(path))
+            {
+                throw new InvalidOperationException($"The documented residual path '{name}' is not supplied by '{arena2}'.");
+            }
+
+            sources.Add((name, File.ReadAllBytes(path)));
+        }
+
+        ResidualSourceInventory inventory = ResidualSourceInventory.Enumerate(sources, Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)));
+        Console.WriteLine($"residual paths: {inventory.Files.Count} documented and classified, {inventory.Unused.Count()} readable with no consumer, {inventory.Malformed.Count()} refused by their family's reader, {inventory.Unresolved.Count()} with no reader in this repository");
+        foreach (IGrouping<string, ResidualSourceRecord> family in inventory.Files.GroupBy(file => file.Family, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
+        {
+            ResidualSourceRecord first = family.First();
+            Console.WriteLine($"  {family.Key,-4} {family.Count(),3}  reader=[{(first.Reader.Length == 0 ? "none" : first.Reader)}] donor=[{(first.DonorReader.Length == 0 ? "none" : first.DonorReader)}]{(first.Documented ? string.Empty : "  (not in the documented family list)")}");
+        }
+
+        foreach (ResidualSourceRecord refused in inventory.Malformed)
+        {
+            Console.WriteLine($"  refused {refused.Path}: {refused.Note}");
+        }
+
+        Console.WriteLine($"families: {inventory.UndocumentedFamilies.Count} supplied but undocumented [{string.Join(", ", inventory.UndocumentedFamilies)}], {inventory.MissingDocumentedFamilies.Count} documented but not supplied [{string.Join(", ", inventory.MissingDocumentedFamilies)}]");
         return 0;
     }
 
