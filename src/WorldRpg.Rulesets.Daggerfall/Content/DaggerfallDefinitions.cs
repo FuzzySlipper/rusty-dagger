@@ -66,12 +66,14 @@ internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Qua
 /// <param name="Locations">How many locations it publishes.</param>
 /// <param name="Dungeons">How many dungeons it publishes.</param>
 /// <param name="RegionGaps">How many regions it records as having no usable tables.</param>
+/// <param name="Regions">How many regions it records table provenance for, which is every region group.</param>
 internal sealed record DaggerfallLocationSet(
     int SchemaVersion,
     IReadOnlyCollection<(int Region, int Index)> Keys,
     int Locations,
     int Dungeons,
-    int RegionGaps);
+    int RegionGaps,
+    int Regions);
 
 internal sealed record DaggerfallActorDefinition(DaggerfallActorId Id, string Kind, DaggerfallStatBases Stats, DaggerfallVitalRange Health, DaggerfallCombatProfile Combat, DaggerfallRewardPolicy Rewards, int Armor, int? MobileId, int? HitPointsPerLevel, IReadOnlyList<DaggerfallAttackRange> Attacks, string? Team, string? MinimumMaterial, string? LootTableKey, int? Level, int? Weight, string? ActionId, IReadOnlyList<DaggerfallLoadoutEntry> Loadout, DaggerfallActorPresentationDefinition Presentation, bool GroundOnSpawn = false, string? Race = null, string? Career = null)
 {
