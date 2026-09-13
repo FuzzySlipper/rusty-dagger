@@ -100,19 +100,20 @@ public static class DaggerfallSoundCatalogBuilder
         {
             Arena2PcmClip clip = archive.GetClip(ordinal);
             bool admitted = Admitted.TryGetValue(ordinal, out string? mediaId);
+            string name = DaggerfallSoundNames.For(ordinal);
             if (clip.PcmUnsigned8.Length == 0)
             {
-                clips.Add(new DaggerfallSoundClip(ordinal, clip.NumericId, 0, DaggerfallSoundClipDisposition.Unsupported, string.Empty,
-                    "The archive carries a record with no sample bytes, so there is nothing to convert."));
+                clips.Add(new DaggerfallSoundClip(ordinal, clip.NumericId, 0, DaggerfallSoundClipDisposition.Unsupported, name,
+                    $"The archive carries a record with no sample bytes, so there is nothing to convert{(name.Length == 0 ? string.Empty : $"; the donor names clip {ordinal} '{name}'")}."));
                 continue;
             }
 
             clips.Add(new DaggerfallSoundClip(ordinal, clip.NumericId, clip.PcmUnsigned8.Length,
                 admitted ? DaggerfallSoundClipDisposition.Admitted : DaggerfallSoundClipDisposition.ReadableNoConsumer,
-                admitted ? mediaId! : string.Empty,
+                name,
                 admitted
-                    ? $"A published artifact carries clip {ordinal} as '{mediaId}'."
-                    : $"The clip decodes and no published artifact carries it; clip {ordinal} of the donor's enum is not one this product uses yet."));
+                    ? $"A published artifact carries clip {ordinal} as '{mediaId}'{(name.Length == 0 ? string.Empty : $"; the donor names it '{name}'")}."
+                    : $"The clip decodes and no published artifact carries it{(name.Length == 0 ? "; the donor names it nothing" : $"; the donor names it '{name}', which no consumer here uses yet")}."));
         }
 
         DaggerfallSoundCatalog catalog = new(DaggerfallSoundCatalog.CurrentSchemaVersion, clips, [archive.Source]);

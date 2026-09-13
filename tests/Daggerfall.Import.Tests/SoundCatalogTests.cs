@@ -40,14 +40,35 @@ public sealed class SoundCatalogTests
         Assert.Equal(0, unsupported.ByteLength);
         Assert.Contains("no sample bytes", unsupported.Reason, StringComparison.Ordinal);
         Assert.Equal(459, catalog.Clips.Count);
+        // An admitted clip carries the donor's name as its usage candidate and the product's identity in
+        // its reason, which is the pair a consumer needs: what the original called it, and what this
+        // product publishes it as.
         Assert.All(catalog.Clips.Where(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted),
-            clip => Assert.StartsWith("audio.", clip.UsageCandidate, StringComparison.Ordinal));
+            clip => Assert.Contains("audio.", clip.Reason, StringComparison.Ordinal));
+
+        // The donor's own names are the usage candidates, transcribed from its clip enum: three
+        // hundred and seventy-three of the four hundred and fifty-nine clips are named there, and the
+        // six this product publishes are named differently on purpose - the donor's 'SwingHighPitch'
+        // is published as 'audio.melee.dagger.swing', so both the original name and the product's
+        // identity are carried rather than one replacing the other.
+        // The donor's enum has three hundred and seventy-four named entries and one of them is 'None',
+        // which is not a clip at all, so the table carries three hundred and seventy-three.
+        Assert.Equal(373, DaggerfallSoundNames.Count);
+        Assert.Equal("SwingHighPitch", catalog.Clips[106].UsageCandidate);
+        Assert.Contains("'audio.melee.dagger.swing'", catalog.Clips[106].Reason, StringComparison.Ordinal);
+        Assert.Equal("Hit1", catalog.Clips[108].UsageCandidate);
+        Assert.Equal("Hit5", catalog.Clips[112].UsageCandidate);
+
+        // The record with no sample bytes is the one the donor itself marks as invalid, which is what
+        // makes its disposition a fact about the archive rather than a shortcoming of this reader.
+        Assert.Equal("Invalid", unsupported.UsageCandidate);
+        Assert.Equal(5, unsupported.Ordinal);
+        Assert.Contains("'Invalid'", unsupported.Reason, StringComparison.Ordinal);
 
         // A representative clip decodes to samples, which is what "readable" has to mean rather than a
         // record that merely exists in the directory.
         Arena2PcmClip swing = archive.GetClip(106);
         Assert.False(swing.PcmUnsigned8.IsEmpty);
-        Assert.Equal("audio.melee.dagger.swing", catalog.Clips[106].UsageCandidate);
         Assert.NotEmpty(archive.CreateWave(106));
 
         // The catalog is deterministic: the same archive catalogues the same way twice.
