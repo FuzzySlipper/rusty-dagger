@@ -256,8 +256,12 @@ public sealed class WorldRpgProduct : IEngineProduct
     }
 
     /// <summary>
-    /// Applies one requested mode under the product's precedence: death outranks an open modal,
-    /// which outranks a pause, and only a session replacement leaves death.
+    /// Applies one requested mode under the product's precedence, which is the whole table:
+    /// death outranks an open modal, which outranks a pause; a pause cancels an open modal; a
+    /// resume does not close one, because only the interaction that owns input ends it; a modal
+    /// needs ordinary play, so a paused product must resume first; a modal or a death needs a
+    /// session that can apply it; death is left only by a session replacement; and a request that
+    /// names the current mode is already in it rather than an error.
     /// </summary>
     private ProductModeChange Apply(ProductMode requested, string reason, bool closesModal = false)
     {

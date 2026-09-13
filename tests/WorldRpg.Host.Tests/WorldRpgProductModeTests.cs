@@ -75,6 +75,12 @@ public sealed class WorldRpgProductModeTests
         Assert.Equal(sessionsBefore + 1, ruleset.Created);
         Assert.True(ruleset.Replaced!.Disposed);
         Assert.Equal(ProductMode.Playing, ruleset.LastApplied);
+
+        // The replacement is built from the composition the product resolved, not from a default or
+        // a second resolution: same identity fingerprint and bundle as the session it replaced.
+        Assert.NotNull(ruleset.ReplacedComposition);
+        Assert.Equal(ruleset.FirstComposition!.Identity.Fingerprint, ruleset.ReplacedComposition!.Identity.Fingerprint);
+        Assert.Equal(ruleset.FirstComposition.Identity.Bundle, ruleset.ReplacedComposition.Identity.Bundle);
     }
 
     [Fact]
@@ -172,6 +178,10 @@ public sealed class WorldRpgProductModeTests
 
         internal int Created { get; private set; }
 
+        internal ResolvedGameComposition? FirstComposition { get; private set; }
+
+        internal ResolvedGameComposition? ReplacedComposition { get; private set; }
+
         internal int Updates { get; private set; }
 
         internal ModeRecordingSession? Replaced { get; private set; }
@@ -183,6 +193,8 @@ public sealed class WorldRpgProductModeTests
         public IGameSession CreateSession(GameSessionContext context)
         {
             Created++;
+            FirstComposition ??= context.Composition;
+            if (Created > 1) ReplacedComposition = context.Composition;
             Replaced = _current;
             _current = new ModeRecordingSession(this);
             return _current;
