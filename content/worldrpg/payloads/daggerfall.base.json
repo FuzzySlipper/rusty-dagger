@@ -131,7 +131,9 @@
           "quantity": 25
         }
       ],
-      "action": "melee-attack"
+      "action": "melee-attack",
+      "race": "breton",
+      "career": "class00"
     },
     {
       "id": "thief",

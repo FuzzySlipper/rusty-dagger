@@ -1,4 +1,5 @@
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -74,6 +75,24 @@ public sealed class DaggerfallCharacterMediaContentTests
         Assert.Equal(16, presentation.CareersWithoutPortrait.Count);
         Assert.Contains(presentation.CareersWithoutPortrait, entry => entry.Reason.Contains("no class portrait named for", StringComparison.Ordinal));
         Assert.Throws<InvalidOperationException>(() => presentation.RequirePortrait("class03"));
+
+        // The player's own declared race and career resolve through the same records, which is what
+        // the sheet publishes: an actor naming no race draws no paper doll rather than a default one.
+        DaggerfallActorDefinition player = definitions.Actors[definitions.Actors.Keys.Single(id => id.Value == "player")];
+        Assert.Equal("breton", player.Race);
+        Assert.Equal("class00", player.Career);
+        CharacterIdentityPresentation identity = CharacterIdentityPresentation.From(definitions, player)!;
+        Assert.Equal("breton", identity.Race);
+        Assert.Equal(1, identity.DonorRaceId);
+        Assert.Equal("character.portrait.mage.0", identity.Portrait);
+        Assert.Equal(25, identity.Media.Length);
+        Assert.Contains(identity.Media, medium => medium.Layer == "background" && medium.MediaId == "character.scbg.scbg00i0.0");
+        Assert.Contains(identity.Media, medium => medium.Layer == "head.female.3" && medium.MediaId == "character.head.female.00.3");
+
+        // An actor that declares no race presents none, and one naming a career the corpus does not
+        // depict publishes no portrait rather than another class's art.
+        Assert.Null(CharacterIdentityPresentation.From(definitions, player with { Race = null }));
+        Assert.Equal(string.Empty, CharacterIdentityPresentation.From(definitions, player with { Career = "class03" })!.Portrait);
 
         // The publication accounts for every supplied character file, and this pack draws every race.
         Assert.Equal(87, presentation.Files.Count);
