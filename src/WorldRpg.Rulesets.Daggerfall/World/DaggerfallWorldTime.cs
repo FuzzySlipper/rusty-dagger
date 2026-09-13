@@ -80,5 +80,14 @@ internal sealed class DaggerfallWorldTime(
 
         Calendar = Calendar.Advance(whole, out _);
         _remainder -= whole;
+
+        // The floor's tolerance can leave a remainder a hair below zero - a nanosecond at most - and the
+        // save refuses a negative remainder, so the clock would emit a state it cannot load again. The
+        // value is clamped at its source instead: what this clock reports is always a valid fraction,
+        // and the refusal of a crafted remainder stays exactly as strict.
+        if (_remainder < 0d)
+        {
+            _remainder = 0d;
+        }
     }
 }

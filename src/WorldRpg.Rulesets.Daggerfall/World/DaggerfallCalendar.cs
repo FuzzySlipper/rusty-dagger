@@ -291,10 +291,10 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
         // instant - the classic corpus starts in month five of year 405, so the first four months of
         // that year are behind it - and truncation would answer with a negative second and a day in
         // the previous month instead of the date that instant actually is.
-        long day = (long)Math.Floor((double)seconds / SecondsPerDay);
-        int secondOfDay = (int)(seconds - (day * SecondsPerDay));
-        long years = (long)Math.Floor((double)day / DaysPerYear);
-        int dayOfYear = (int)(day - (years * DaysPerYear));
+        (long day, long secondOfDayExact) = DivFloor(seconds, SecondsPerDay);
+        int secondOfDay = (int)secondOfDayExact;
+        (long years, long dayOfYearExact) = DivFloor(day, DaysPerYear);
+        int dayOfYear = (int)dayOfYearExact;
         int year = checked(FirstYear + (int)years);
         int month = FirstMonth + (dayOfYear / DaysPerMonth);
         // A start month later than the first wraps the year forward rather than producing a month
@@ -329,6 +329,27 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
             || (start < dusk && end >= dusk)
             || (start >= dawn && end >= SecondsPerDay + dawn)
             || (start >= dusk && end >= SecondsPerDay + dusk);
+    }
+
+    /// <summary>
+    /// Divides, flooring rather than truncating.
+    /// </summary>
+    /// <remarks>
+    /// Integer division here rather than a double: the floor of a quotient is exact for every 64-bit
+    /// value, where converting to a double first is not beyond 2^53 and would answer an instant near the
+    /// top of the range with the wrong second.
+    /// </remarks>
+    private static (long Quotient, long Remainder) DivFloor(long value, long divisor)
+    {
+        long quotient = value / divisor;
+        long remainder = value % divisor;
+        if (remainder < 0)
+        {
+            quotient -= 1;
+            remainder += divisor;
+        }
+
+        return (quotient, remainder);
     }
 
     private static int Days(long days) => checked((int)days);
