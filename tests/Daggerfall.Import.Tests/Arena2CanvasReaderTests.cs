@@ -286,11 +286,12 @@ public sealed class Arena2CanvasReaderTests
         Assert.Equal(15, cel.Count);
         Assert.Equal("Read as an FLC animation of 15 frames of 110 by 119 pixels.", cel.Description);
 
-        // A BSS is still a format whose reader this repository does not have, and the reason names
-        // that reader instead of implying the source is bad.
+        // A story sprite reads too: its own container shape, thirty-two frames of forty-eight by
+        // forty pixels, which its header's arithmetic accounts for to the byte.
         Arena2CanvasSet bss = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("CMPA00I0.BSS")), "CMPA00I0.BSS");
-        Assert.Equal(Arena2CanvasKind.Unread, bss.Kind);
-        Assert.Contains("BSS reader", bss.Reason, StringComparison.Ordinal);
+        Assert.Equal(Arena2CanvasKind.BssFrames, bss.Kind);
+        Assert.Equal(32, bss.Count);
+        Assert.Equal("Read as a BSS container of 32 frames of 48 by 40 pixels.", bss.Description);
 
         Arena2CanvasSet weapon = Arena2CanvasReader.Read(new byte[64], "WEAPON01.CIF");
         Assert.Contains("weapon CIF reader owns", weapon.Reason, StringComparison.Ordinal);

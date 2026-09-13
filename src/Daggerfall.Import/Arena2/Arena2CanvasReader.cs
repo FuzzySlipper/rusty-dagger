@@ -23,6 +23,9 @@ public enum Arena2CanvasKind
 
     /// <summary>An FLC animation container, whose frames are its canvases.</summary>
     FlcAnimation,
+
+    /// <summary>A BSS sprite container, whose frames are its canvases.</summary>
+    BssFrames,
 }
 
 /// <summary>One addressable canvas inside a supplied media file.</summary>
@@ -69,6 +72,7 @@ public sealed record Arena2CanvasSet(Arena2CanvasKind Kind, IReadOnlyList<Arena2
             Arena2CanvasKind.GfxFrames => $"a GFX container of {Count} frames of {Shape(Canvases[0])}",
             Arena2CanvasKind.RciGrid => $"an RCI grid of {Count} canvases of {Shape(Canvases[0])}",
             Arena2CanvasKind.FlcAnimation => $"an FLC animation of {Count} frames of {Shape(Canvases[0])}",
+            Arena2CanvasKind.BssFrames => $"a BSS container of {Count} frames of {Shape(Canvases[0])}",
             _ => throw new InvalidOperationException($"{Kind} names no read shape."),
         };
     }
@@ -182,7 +186,25 @@ public static class Arena2CanvasReader
         }
         else if (extension == ".BSS")
         {
-            refusals.Add("the classic reader reads .BSS through its BSS reader, which this repository does not have.");
+            // A story sprite is its own container shape: a header of offsets and a frame count, then
+            // uncompressed indices, so its frames are the canvases like an animation's.
+            try
+            {
+                if (!BssDecoder.TryRead(bytes, path, out BssContainer? bss, out string bssReason))
+                {
+                    refusals.Add(bssReason);
+                }
+                else
+                {
+                    return Read(
+                        [.. Enumerable.Range(0, bss!.FrameCount).Select(frame => new Arena2Canvas(frame, 0, bss.XOffset, bss.YOffset, bss.Width, bss.Height))],
+                        Arena2CanvasKind.BssFrames);
+                }
+            }
+            catch (Arena2FormatException failure)
+            {
+                refusals.Add(failure.Message);
+            }
         }
         else if (ImgDecoder.TryDecodeHeaderless(bytes, path, out IndexedImg? headerless, out string lengthReason))
         {
