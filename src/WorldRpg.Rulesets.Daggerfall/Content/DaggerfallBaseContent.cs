@@ -74,7 +74,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("characterPresentation", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish a characterPresentation section.");
-            return new DaggerfallCharacterPresentationSet(0, new Dictionary<string, DaggerfallRaceLayers>(StringComparer.Ordinal), [], []);
+            return new DaggerfallCharacterPresentationSet(0, new Dictionary<string, DaggerfallRaceLayers>(StringComparer.Ordinal), [], [], []);
         }
 
         int schemaVersion = Integer(section, "schemaVersion", diagnostics);
@@ -168,7 +168,30 @@ internal static class DaggerfallBaseContent
                 Text(entry, "reason", diagnostics)));
         }
 
-        return new DaggerfallCharacterPresentationSet(schemaVersion, races, without, files);
+        // The faction faces are the section's non-racial layers: a social or escort view resolves
+        // them by the donor's faction index, so the reader keys them by index rather than by race.
+        List<DaggerfallFactionFaceDefinition> faces = [];
+        foreach (JsonElement face in Array(section, "faces", diagnostics))
+        {
+            string mediaId = Text(face, "mediaId", diagnostics);
+            string sourceFile = Text(face, "sourceFile", diagnostics);
+            string palette = Text(face, "palette", diagnostics);
+            int index = Integer(face, "index", diagnostics);
+            _ = Text(face, "binding", diagnostics);
+            if (sourceFile.Length != 0 && !accounted.Contains(sourceFile))
+            {
+                diagnostics.Add($"Character presentation faction face {index} names source file '{sourceFile}', which the publication does not account for.");
+            }
+
+            if (mediaId.Length != 0 && !mediaId.StartsWith("character.faction-face.", StringComparison.Ordinal))
+            {
+                diagnostics.Add($"Character presentation faction face {index} names media '{mediaId}', which is not a faction face identity.");
+            }
+
+            faces.Add(new DaggerfallFactionFaceDefinition(index, mediaId, sourceFile, palette));
+        }
+
+        return new DaggerfallCharacterPresentationSet(schemaVersion, races, [.. faces.OrderBy(face => face.Index)], without, files);
     }
 
     /// <summary>

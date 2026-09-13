@@ -47,6 +47,14 @@ public sealed class DaggerfallCharacterMediaContentTests
             Assert.NotEmpty(race.Heads(DaggerfallCharacterGender.Female));
         }
 
+        // The faction faces resolve by the donor's index, which is what a social or escort view asks
+        // for - they belong to no race and are not paper-doll heads.
+        Assert.Equal(61, presentation.FactionFaces.Count);
+        Assert.Equal("character.faction-face.00", presentation.FactionFaces[0].MediaId);
+        Assert.Equal("character.faction-face.60", presentation.FactionFaces[60].MediaId);
+        Assert.All(presentation.FactionFaces, face => Assert.Equal("FACES.CIF", face.SourceFile));
+        Assert.All(presentation.FactionFaces, face => Assert.Equal("ART_PAL.COL", face.Palette));
+
         // The publication accounts for every supplied character file, and this pack draws every race.
         Assert.Equal(87, presentation.Files.Count);
         Assert.Contains("CMPA00I0.BSS", presentation.Files);

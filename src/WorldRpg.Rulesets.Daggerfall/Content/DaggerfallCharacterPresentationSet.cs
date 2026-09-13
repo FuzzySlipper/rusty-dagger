@@ -66,6 +66,13 @@ internal sealed record DaggerfallRaceLayers(string RaceId, int DonorRaceId, IRea
         ?? throw new InvalidOperationException($"Race '{RaceId}' publishes no {kind} layer for {(gender is null ? "any gender" : gender.ToString()!.ToLowerInvariant())}.");
 }
 
+/// <summary>One published faction face a social or escort view resolves by faction index.</summary>
+/// <param name="Index">The donor's faction face index.</param>
+/// <param name="MediaId">The published identity.</param>
+/// <param name="SourceFile">The supplied source file whose cells are the faces.</param>
+/// <param name="Palette">The palette the cells are read with.</param>
+internal sealed record DaggerfallFactionFaceDefinition(int Index, string MediaId, string SourceFile, string Palette);
+
 /// <summary>One race the pack records as having no presentation media, and why.</summary>
 /// <param name="RaceId">The catalog race identity.</param>
 /// <param name="DonorRaceId">The donor's own race value.</param>
@@ -85,6 +92,7 @@ internal sealed record DaggerfallRaceWithoutMedia(string RaceId, int DonorRaceId
 internal sealed class DaggerfallCharacterPresentationSet(
     int schemaVersion,
     IReadOnlyDictionary<string, DaggerfallRaceLayers> races,
+    IReadOnlyList<DaggerfallFactionFaceDefinition> factionFaces,
     IReadOnlyList<DaggerfallRaceWithoutMedia> racesWithoutMedia,
     IReadOnlyList<string> files)
 {
@@ -93,6 +101,12 @@ internal sealed class DaggerfallCharacterPresentationSet(
 
     /// <summary>Every race the pack publishes layers for, by catalog race identity.</summary>
     internal IReadOnlyDictionary<string, DaggerfallRaceLayers> Races { get; } = races;
+
+    /// <summary>
+    /// The published faction faces, ordered by the donor's faction index, which is what a social or
+    /// escort view resolves rather than a race layer.
+    /// </summary>
+    internal IReadOnlyList<DaggerfallFactionFaceDefinition> FactionFaces { get; } = factionFaces;
 
     /// <summary>Races the pack records as having no presentation media, with the reason.</summary>
     internal IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia { get; } = racesWithoutMedia;
