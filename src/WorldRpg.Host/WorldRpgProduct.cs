@@ -7,27 +7,39 @@ namespace WorldRpg.Host;
 /// <summary>Reference host lifecycle and explicit built-in ruleset selection.</summary>
 public sealed class WorldRpgProduct : IEngineProduct
 {
-    private readonly IGameSession _session;
+    /// <summary>How many recent mode decisions are kept for diagnosis.</summary>
+    public const int ModeHistoryLimit = 16;
+
+    private readonly ProductCreateContext _context;
+    private readonly ResolvedGameComposition _composition;
+    private readonly IGameRuleset _ruleset;
+    private readonly List<ProductModeChange> _modeHistory = [];
+    private IGameSession _session;
     private readonly ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
-    private bool _paused;
     private bool _shutdown;
+    private ProductMode _mode = ProductMode.Playing;
 
     public WorldRpgProduct(ProductCreateContext context)
-        : this(CreateSession(context, ruleset: null, HostDefaults.DefaultBundle))
+        : this(context, HostDefaults.DefaultBundle, ruleset: null)
     {
     }
 
     /// <summary>Creates a product through the same selected-bundle seam with an explicit compiled ruleset.</summary>
     public WorldRpgProduct(ProductCreateContext context, IGameRuleset ruleset, GameBundleId bundle)
-        : this(CreateSession(context, ruleset, bundle))
+        : this(context, bundle, ruleset)
     {
     }
 
-    private WorldRpgProduct((IGameSession Session, ResolvedCompositionIdentity Identity) created)
+    private WorldRpgProduct(ProductCreateContext context, GameBundleId bundle, IGameRuleset? ruleset)
     {
-        _session = created.Session;
-        _compositionIdentity = created.Identity;
+        ArgumentNullException.ThrowIfNull(context);
+        (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(context, ruleset, bundle);
+        _context = context;
+        _composition = composition;
+        _ruleset = selected;
+        _compositionIdentity = composition.Identity;
+        _session = selected.CreateSession(new GameSessionContext(context.Engine, composition));
         try { _session.PublishInitial(); }
         catch
         {
@@ -35,6 +47,29 @@ public sealed class WorldRpgProduct : IEngineProduct
             throw;
         }
     }
+
+    /// <summary>
+    /// Adopts a session a resume already built and validated, keeping the composition that a
+    /// later session replacement rebuilds from.
+    /// </summary>
+    private WorldRpgProduct(ProductCreateContext context, IGameRuleset ruleset, ResolvedGameComposition composition, IGameSession session)
+    {
+        _context = context;
+        _composition = composition;
+        _ruleset = ruleset;
+        _compositionIdentity = composition.Identity;
+        _session = session;
+    }
+
+    /// <summary>The mode the product runs its session under.</summary>
+    public ProductMode Mode => _mode;
+
+    /// <summary>
+    /// Recent mode decisions, oldest first and capped at <see cref="ModeHistoryLimit"/>. The
+    /// lifecycle methods the Engine calls return nothing, so a caller that needs to know why a
+    /// transition did nothing reads the decision here.
+    /// </summary>
+    public IReadOnlyList<ProductModeChange> ModeHistory => _modeHistory;
 
     /// <summary>Captures this compiled ruleset state into an Engine-persisted envelope.</summary>
     public PersistenceSaveReceipt Save(WorldRpgSaveStore store, string key, PersistenceRevisionGuard guard = PersistenceRevisionGuard.Any, ulong expectedRevision = 0)
@@ -105,7 +140,7 @@ public sealed class WorldRpgProduct : IEngineProduct
             // diagnostics already do.
             IReadOnlyList<SaveRestoreNotice> notices = session is IRestoringGameSession restoring ? restoring.RestoreNotices : [];
             return new(
-                new WorldRpgProduct((session, composition.Identity)),
+                new WorldRpgProduct(context, selected, composition, session),
                 loaded.Revision,
                 [.. notices.Select(value => new WorldRpgSaveDiagnostic(value.Code, value.Message, IsBlocking: false))]);
         }
@@ -113,12 +148,6 @@ public sealed class WorldRpgProduct : IEngineProduct
         {
             return new(null, loaded.Revision, [new("payload", $"The validated save payload was rejected: {error.Message}")]);
         }
-    }
-
-    private static (IGameSession Session, ResolvedCompositionIdentity Identity) CreateSession(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle)
-    {
-        (ResolvedGameComposition composition, IGameRuleset selected) = ResolveSelection(context, ruleset, bundle);
-        return (selected.CreateSession(new GameSessionContext(context.Engine, composition)), composition.Identity);
     }
 
     private static (ResolvedGameComposition Composition, IGameRuleset Selected) ResolveSelection(ProductCreateContext context, IGameRuleset? ruleset, GameBundleId bundle)
@@ -134,7 +163,7 @@ public sealed class WorldRpgProduct : IEngineProduct
     {
         if (_shutdown) return;
         _started = true;
-        _paused = false;
+        Apply(ProductMode.Playing, "the product started and ordinary play resumes");
         _session.PublishInitial();
     }
 
@@ -145,15 +174,50 @@ public sealed class WorldRpgProduct : IEngineProduct
         _session.PublishInitial();
     }
 
-    public void Pause() { if (_started && !_shutdown) _paused = true; }
-    public void Resume() { if (_started && !_shutdown) _paused = false; }
+    /// <summary>Pauses ordinary play. A modal that owns input is cancelled by the pause.</summary>
+    public void Pause() => Apply(ProductMode.Paused, "the host paused the product");
 
+    /// <summary>Resumes ordinary play from a pause.</summary>
+    public void Resume() => Apply(ProductMode.Playing, "the host resumed the product");
+
+    /// <summary>Gives input to a modal interaction.</summary>
+    public ProductModeChange EnterModal() => Apply(ProductMode.Modal, "the product opened a modal interaction");
+
+    /// <summary>Returns input to ordinary play when a modal interaction ends.</summary>
+    public ProductModeChange ExitModal() => Apply(ProductMode.Playing, "the product closed its modal interaction", closesModal: true);
+
+    /// <summary>Marks the player dead. Death outranks a pause and an open modal.</summary>
+    public ProductModeChange MarkDead() => Apply(ProductMode.Dead, "the ruleset reported the player dead");
+
+    /// <summary>
+    /// Replaces the running session with a fresh one from the same composition and returns to
+    /// ordinary play. Held input does not survive the replacement, because the replacement starts
+    /// with no input interpreter state to carry it.
+    /// </summary>
     public void Restart()
     {
-        if (_shutdown) return;
-        _paused = false;
+        if (_shutdown)
+        {
+            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is shut down"));
+            return;
+        }
+
+        IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
+        IGameSession previous = _session;
+        try
+        {
+            replacement.PublishInitial();
+        }
+        catch
+        {
+            replacement.Dispose();
+            throw;
+        }
+
+        _session = replacement;
+        previous.Dispose();
         _started = true;
-        _session.PublishInitial();
+        SetMode(ProductMode.Playing, "the product replaced its session");
     }
 
     public void Shutdown()
@@ -167,9 +231,98 @@ public sealed class WorldRpgProduct : IEngineProduct
 
     public ProductUpdateResult Update(ProductUpdate update)
     {
-        if (!_started || _paused || _shutdown) return ProductUpdateResult.None;
-        return _session.Update(update);
+        // A pause admits no update at all, so neither input nor world time reaches the session.
+        // A modal or a death still forwards the update, because the presentation that shows them
+        // has to keep publishing; the session decides what the mode means for its own world.
+        if (!_started || _shutdown || _mode == ProductMode.Paused) return ProductUpdateResult.None;
+        ProductUpdateResult result = _session.Update(update);
+        AdoptSessionRequest();
+        return result;
     }
+
+    /// <summary>
+    /// Applies a mode the ruleset asked for. The session asks because it can open an interaction
+    /// the product cannot see; the product still decides, so a refused request leaves the mode
+    /// where it was and says so in <see cref="ModeHistory"/>.
+    /// </summary>
+    private void AdoptSessionRequest()
+    {
+        if (_session is not IModeAwareGameSession aware || aware.PendingModeRequest is not { } requested) return;
+        Apply(requested, "the ruleset asked for this mode");
+    }
+
+    /// <summary>
+    /// Applies one requested mode under the product's precedence: death outranks an open modal,
+    /// which outranks a pause, and only a session replacement leaves death.
+    /// </summary>
+    private ProductModeChange Apply(ProductMode requested, string reason, bool closesModal = false)
+    {
+        if (_shutdown) return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is shut down"));
+        if (!_started) return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product has not started"));
+        if (requested == _mode) return Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, reason));
+        if (_mode == ProductMode.Dead)
+        {
+            return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "a dead player leaves that mode only by a session replacement, not by a mode change"));
+        }
+
+        if (requested == ProductMode.Modal && _mode == ProductMode.Paused)
+        {
+            // Opening an interaction the player cannot see would hide the pause they asked for.
+            return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "a modal interaction needs ordinary play; resume the paused product first"));
+        }
+
+        if (requested == ProductMode.Playing && _mode == ProductMode.Modal && !closesModal)
+        {
+            // Resuming is not closing: only the interaction that owns input ends it.
+            return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "a resume does not close a modal interaction; closing it is what returns to ordinary play"));
+        }
+
+        return Record(SetMode(requested, reason));
+    }
+
+    private ProductModeChange SetMode(ProductMode mode, string reason)
+    {
+        ProductMode from = _mode;
+        _mode = mode;
+        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(mode);
+        return new(from, mode, ProductModeChangeOutcome.Applied, reason);
+    }
+
+    private ProductModeChange Record(ProductModeChange change)
+    {
+        // A session that keeps asking for a mode the product refuses would otherwise fill the
+        // history with one identical line per update.
+        if (_modeHistory.Count == 0 || _modeHistory[^1] != change)
+        {
+            _modeHistory.Add(change);
+            if (_modeHistory.Count > ModeHistoryLimit) _modeHistory.RemoveAt(0);
+        }
+
+        return change;
+    }
+}
+
+/// <summary>What one product mode decision did.</summary>
+public enum ProductModeChangeOutcome
+{
+    /// <summary>The product entered the requested mode.</summary>
+    Applied,
+
+    /// <summary>The request named the mode the product already had.</summary>
+    AlreadyInMode,
+
+    /// <summary>Precedence refused the request; the product kept the mode it had.</summary>
+    Refused,
+}
+
+/// <summary>
+/// One product mode decision: where the product was, where the request pointed, what happened and
+/// why. A change whose outcome is not <see cref="ProductModeChangeOutcome.Applied"/> changed nothing.
+/// </summary>
+public sealed record ProductModeChange(ProductMode From, ProductMode To, ProductModeChangeOutcome Outcome, string Reason)
+{
+    /// <summary>Whether the product entered a different mode.</summary>
+    public bool Changed => Outcome == ProductModeChangeOutcome.Applied;
 }
 
 /// <summary>

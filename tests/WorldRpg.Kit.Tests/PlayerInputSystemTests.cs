@@ -240,6 +240,30 @@ public sealed class PlayerInputSystemTests
         Assert.Throws<ArgumentOutOfRangeException>(() => input.Apply(new PlayerControlState(new WorldPoint(0f, 0f, 0f), 0f, 0f), new ProductUpdateState(invalid)));
     }
 
+    [Fact]
+    public void Neutralize_drops_held_input_that_a_mode_change_would_otherwise_carry()
+    {
+        PlayerInputSystem input = new(TestTuning(), new PlayerControlBindings([], KeyboardControl.KeyW, KeyboardControl.KeyS, KeyboardControl.KeyA, KeyboardControl.KeyD));
+        PlayerControlState player = new(new WorldPoint(0f, 0f, 0f), yawRadians: 0f, pitchRadians: 0f);
+
+        ProductUpdateState pressed = new(1f);
+        pressed.Add(Input(InputEventKind.Key, edge: InputEdge.Pressed, key: KeyboardControl.KeyW));
+        input.Apply(player, pressed);
+        Assert.Equal(new Vector2(0f, 1f), pressed.PlanarIntent);
+
+        // An update the player sends without touching the key still moves them, because the key
+        // is held. That is the state a mode change has to drop: no release event ever arrives.
+        ProductUpdateState stillHeld = new(1f);
+        input.Apply(player, stillHeld);
+        Assert.Equal(new Vector2(0f, 1f), stillHeld.PlanarIntent);
+
+        input.Neutralize();
+
+        ProductUpdateState afterModeChange = new(1f);
+        input.Apply(player, afterModeChange);
+        Assert.Equal(Vector2.Zero, afterModeChange.PlanarIntent);
+    }
+
     private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl key = KeyboardControl.None, float x = 0f, float y = 0f, InputPhase phase = InputPhase.None, string intent = "") => new(
         kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, key, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, System.Text.Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
 

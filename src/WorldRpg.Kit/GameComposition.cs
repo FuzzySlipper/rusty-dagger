@@ -354,6 +354,45 @@ public sealed class GameSessionContext(IEngineContext engine, ResolvedGameCompos
 public interface IGameRuleset { RulesetId Id { get; } IGameSession CreateSession(GameSessionContext context); }
 public interface IGameSession : IDisposable { void PublishInitial(); ProductUpdateResult Update(ProductUpdate update); }
 
+/// <summary>
+/// The mode a product runs a game session under. The product decides the mode; a session decides
+/// what the mode means for its own world, input and presentation.
+/// </summary>
+public enum ProductMode
+{
+    /// <summary>Ordinary play: gameplay input is interpreted and world time advances.</summary>
+    Playing,
+
+    /// <summary>Paused: no update reaches the world, so neither input nor time advances.</summary>
+    Paused,
+
+    /// <summary>A modal interaction owns input: presentation stays live and the world holds still.</summary>
+    Modal,
+
+    /// <summary>The player is dead: presentation stays live and gameplay input and time do not.</summary>
+    Dead,
+}
+
+/// <summary>
+/// Optional session seam for a ruleset whose world behaves differently per product mode. A session
+/// that does not implement this keeps its playing behaviour, which is why the seam is optional
+/// rather than part of <see cref="IGameSession"/>.
+/// </summary>
+public interface IModeAwareGameSession
+{
+    /// <summary>Applies the mode the product has decided. Called on change, not once per update.</summary>
+    void ApplyProductMode(ProductMode mode);
+
+    /// <summary>
+    /// The mode the session asks the product to enter, or null when it asks for nothing. The
+    /// session asks because it can open an interaction the product cannot see, such as a loot
+    /// window triggered by a gameplay key. The product still decides: it may refuse the request,
+    /// which is what keeps one authority over focus, pause and death.
+    /// </summary>
+    ProductMode? PendingModeRequest { get; }
+}
+
+
 /// <summary>Opaque ruleset-owned save bytes plus the ruleset schema that interprets them.</summary>
 public sealed class RulesetSavePayload
 {
