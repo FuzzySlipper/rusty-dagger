@@ -148,6 +148,39 @@ public sealed class ResidualSourceInventoryTests
     }
 
     [Fact]
+    public void The_closure_report_decides_every_path_from_its_classification()
+    {
+        ResidualSourceInventory inventory = ReadInventory();
+        ResidualPublicationClosure closure = ResidualPublicationClosure.From(inventory);
+
+        // Nothing is published without a consumer and nothing is dropped silently: the two paths the
+        // manifest imports are published, the readable remainder is unpublished for want of a
+        // consumer, and the unreadable remainder is unpublished for want of a reader.
+        Assert.Equal(183, closure.Decisions.Count);
+        Assert.Equal(
+            ["ART_PAL.COL", "PAL.PAL"],
+            closure.Published.Select(decision => decision.Path).Order(StringComparer.Ordinal));
+        Assert.Equal(120, closure.WithoutConsumer.Count());
+        Assert.Equal(61, closure.WithoutReader.Count());
+        Assert.All(closure.Published, decision => Assert.Contains("a consumer claims it", decision.Reason, StringComparison.Ordinal));
+        Assert.All(closure.WithoutConsumer, decision => Assert.Contains("no consumer names it", decision.Reason, StringComparison.Ordinal));
+        Assert.All(closure.WithoutReader, decision => Assert.Contains("nothing to publish", decision.Reason, StringComparison.Ordinal));
+
+        // The report carries the classification's own facts rather than re-deriving them.
+        Assert.All(closure.Decisions, decision =>
+        {
+            ResidualSourceRecord file = inventory.Files.Single(candidate => candidate.Path == decision.Path);
+            Assert.Equal(file.Family, decision.Family);
+            Assert.Equal(file.Reader, decision.Reader);
+            Assert.Equal(file.Disposition, decision.Classification);
+        });
+
+        // A family that reads but is claimed by nobody stays visible with its reason, which is the
+        // whole point of the report: Silent omission is the failure this prevents.
+        Assert.Contains(closure.WithoutConsumer, decision => decision.Path == "FRAM00I0.IMG" && decision.Family == "IMG");
+    }
+
+    [Fact]
     public void Classifies_the_documented_families_the_corpus_does_not_supply()
     {
         // Five families the task names have no residual file today. They are classified rather
