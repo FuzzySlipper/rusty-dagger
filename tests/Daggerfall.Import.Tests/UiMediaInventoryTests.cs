@@ -23,19 +23,22 @@ public sealed class UiMediaInventoryTests
             UiMediaInventory.DocumentedFamilies.Select(family => (family.Prefix, family.Count)));
         Assert.All(inventory.Files, file => Assert.False(string.IsNullOrWhiteSpace(file.Family)));
         // A file count is not a canvas count: the supplied CIF and the two GFX members carry
-        // 27 canvases between them, so the families supply 86 canvases across 63 files.
-        Assert.Equal(86, inventory.Files.Sum(file => file.CanvasCount));
+        // 27 canvases between them, so the families supply 87 canvases across 63 files.
+        Assert.Equal(87, inventory.Files.Sum(file => file.CanvasCount));
         Assert.All(inventory.Files.Where(file => file.Decode != Arena2CanvasKind.Unread), file =>
         {
             Assert.True(file.CanvasCount > 0);
             Assert.All(file.Canvases, canvas => Assert.True(canvas.Width > 0 && canvas.Height > 0));
             Assert.Contains("Read as", file.Note, StringComparison.Ordinal);
         });
-        // One supplied file remains unread: TALK00I0.IMG declares compression 0x0800, which is
-        // none of the four values the classic reader's own compression enum defines.
-        UiMediaRecord unread = Assert.Single(inventory.Unread);
-        Assert.Equal("TALK00I0.IMG", unread.Path);
-        Assert.Contains("compression 2048", unread.Note, StringComparison.Ordinal);
+        // Every supplied file reads. TALK00I0.IMG declares compression 0x0800, and the classic
+        // IMG reader never consults that field — it reads the record's shape and nothing else — so
+        // the file is one 320x200 record rather than the unreadable file an earlier revision
+        // reported it as.
+        Assert.Empty(inventory.Unread);
+        UiMediaRecord talk = inventory.Files.Single(file => file.Path == "TALK00I0.IMG");
+        Assert.Equal(Arena2CanvasKind.ImgRecord, talk.Decode);
+        Assert.Equal((320, 200), (talk.Canvases[0].Width, talk.Canvases[0].Height));
     }
 
     [Fact]

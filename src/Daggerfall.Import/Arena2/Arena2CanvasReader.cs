@@ -34,7 +34,10 @@ public sealed record Arena2Canvas(int Record, int Frame, int XOffset, int YOffse
 /// <summary>Every canvas one supplied media file carries, and how they were read.</summary>
 /// <param name="Kind">The container shape the file was read as.</param>
 /// <param name="Canvases">Every addressable canvas, in file order.</param>
-/// <param name="Reason">Why no reader read the file, when none did.</param>
+/// <param name="Reason">
+/// Why no reader read the file when none did, or what a reader left unread when one did — an RCI
+/// remainder, for instance, which is not part of any canvas but is still a source fact.
+/// </param>
 public sealed record Arena2CanvasSet(Arena2CanvasKind Kind, IReadOnlyList<Arena2Canvas> Canvases, string Reason)
 {
     /// <summary>Whether a reader read the file.</summary>
@@ -43,9 +46,9 @@ public sealed record Arena2CanvasSet(Arena2CanvasKind Kind, IReadOnlyList<Arena2
     /// <summary>How many canvases the file supplies.</summary>
     public int Count => Canvases.Count;
 
-    /// <summary>A sentence naming what was read, or the reason nothing was.</summary>
+    /// <summary>A sentence naming what was read and what was left unread, or why nothing was read.</summary>
     public string Description => Read
-        ? $"Read as {ReadShape()}."
+        ? Reason.Length == 0 ? $"Read as {ReadShape()}." : $"Read as {ReadShape()}. {Reason}"
         : $"No reader read it: {Reason}";
 
     private string ReadShape()
@@ -112,7 +115,11 @@ public static class Arena2CanvasReader
         {
             try
             {
-                return Read(RciDecoder.DecodeGrid(bytes, path, cell.Width, cell.Height), Arena2CanvasKind.RciGrid);
+                RciGrid grid = RciDecoder.DecodeGrid(bytes, path, cell.Width, cell.Height);
+                string remainder = grid.TrailingBytes == 0
+                    ? string.Empty
+                    : $"{grid.TrailingBytes} byte(s) after the last whole {cell.Width}x{cell.Height} cell belong to no canvas, which is what the classic reader's whole-number division leaves behind.";
+                return new(Arena2CanvasKind.RciGrid, [.. grid.Canvases], remainder);
             }
             catch (Arena2FormatException failure)
             {
