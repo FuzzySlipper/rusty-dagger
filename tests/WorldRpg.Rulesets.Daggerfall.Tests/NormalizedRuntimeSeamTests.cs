@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Numerics;
 using System.Reflection;
@@ -1252,17 +1253,7 @@ public sealed class NormalizedRuntimeSeamTests
         List<string> releases = [];
         ContentFake content = new(releases);
         PrivateersHoldInputs inputs = ReadInputs(root);
-        content.Add(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256);
-        content.Add(inputs.StaticMesh.Path, inputs.StaticMesh.Sha256);
-        foreach (NormalizedMaterial material in inputs.Materials) content.Add(material.TexturePath, material.TextureSha256);
-        foreach (NormalizedActorSprite sprite in inputs.ActorSprites.Values)
-        {
-            content.Add(sprite.TexturePath, sprite.TextureSha256);
-            if (sprite.Corpse is { } corpse) content.Add(corpse.TexturePath, corpse.TextureSha256);
-        }
-        foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
-        foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
-        foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) content.Add(weapon.TexturePath, weapon.TextureSha256);
+        PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
         ProductInputConfiguration input = new(default, default, ReadOnlyMemory<ProductInputDescriptor>.Empty, ReadOnlyMemory<ProductInputMapping>.Empty);
@@ -2922,6 +2913,105 @@ public sealed class NormalizedRuntimeSeamTests
         throw new InvalidOperationException("Could not locate the Rusty Dagger repository root.");
     }
 
+    [Fact]
+    public void The_projection_carries_the_published_ui_art_the_dom_draws()
+    {
+        string root = RepositoryRoot();
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        PopulateContent(content, inputs);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.PublishInitial();
+        Dictionary<string, object?> hud = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Dictionary<string, object?> art = Assert.IsType<Dictionary<string, object?>>(hud["uiArt"]);
+        Assert.Equal(hud["uiArtRevision"], art["revision"]);
+
+        Dictionary<string, object?> images = Assert.IsType<object?[]>(art["images"])
+            .Cast<Dictionary<string, object?>>()
+            .ToDictionary(image => Assert.IsType<string>(image["id"]), image => (object?)Assert.IsType<string>(image["image"]), StringComparer.Ordinal);
+        // One artifact per identity the DOM draws: the chrome and authored skins this presentation
+        // shows, plus every inventory icon the content pack names for its items.
+        Assert.Equal(6 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
+        Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
+
+        // The bytes are the published artifacts, read from admitted content by their content name.
+        Assert.Equal(
+            $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/ui/screen-death.png")))}",
+            images["screen.death"]);
+        Assert.Contains("inventory.icon.iron-dagger", images.Keys);
+    }
+
+    [Fact]
+    public void Art_the_dom_holds_travels_once_and_comes_back_when_the_dom_asks_for_it()
+    {
+        string root = RepositoryRoot();
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        PopulateContent(content, inputs);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.PublishInitial();
+        Dictionary<string, object?> first = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        string revision = Assert.IsType<string>(first["uiArtRevision"]);
+        Assert.Contains("uiArt", first.Keys);
+
+        // The block does not ride every admitted update: it is worth hundreds of kilobytes.
+        session.Update(new ProductUpdate(OuterUpdate(2), [Input(InputEventKind.DirectDigital)]));
+        Dictionary<string, object?> second = Assert.IsType<Dictionary<string, object?>>(engine.Published());
+        Assert.DoesNotContain("uiArt", second.Keys);
+        Assert.Equal(revision, second["uiArtRevision"]);
+
+        // A DOM that reloaded holds nothing and names the revision it is missing.
+        ProductInputEvent ask = Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes($"{{\"action\":\"art-request\",\"revision\":\"{revision}\"}}"),
+        };
+        int before = engine.PublishedHistory().Count;
+        session.Update(new ProductUpdate(OuterUpdate(3), [ask]));
+        // An admitted update publishes per step and once more at its end, so the block is answered by
+        // whichever snapshot follows the request rather than necessarily by the update's last one.
+        Assert.Contains(engine.PublishedHistory().Skip(before), snapshot =>
+            snapshot is Dictionary<string, object?> fields
+            && fields.ContainsKey("uiArt")
+            && string.Equals(Assert.IsType<string>(fields["uiArtRevision"]), revision, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void An_artifact_the_published_inventory_does_not_describe_refuses_the_session_by_name()
+    {
+        string root = RepositoryRoot();
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        PopulateContent(content, inputs);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        EngineContextFake engine = EngineContextFake.Create(content, SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases).Service, new AppearanceFake(releases));
+
+        // A group whose inventory no longer describes the death screen must refuse to start rather
+        // than run with a blank screen, and the refusal has to name what was looked for and where.
+        JsonNode inventory = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content", DaggerfallUiArt.InventoryPath)))!;
+        JsonArray artifacts = inventory["artifacts"]!.AsArray();
+        for (int index = artifacts.Count - 1; index >= 0; index--)
+        {
+            if (string.Equals(artifacts[index]!["mediaId"]?.GetValue<string>(), "screen.death", StringComparison.Ordinal)) artifacts.RemoveAt(index);
+        }
+
+        content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(inventory.ToJsonString()));
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(
+            () => new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults));
+        Assert.Contains("screen.death", failure.Message, StringComparison.Ordinal);
+        Assert.Contains(DaggerfallUiArt.InventoryPath, failure.Message, StringComparison.Ordinal);
+    }
+
     private static void PopulateContent(ContentFake content, PrivateersHoldInputs inputs)
     {
         content.Add(inputs.SpatialArtifact.Path, inputs.SpatialArtifact.Sha256);
@@ -2935,6 +3025,33 @@ public sealed class NormalizedRuntimeSeamTests
         foreach (NormalizedAudioClip clip in inputs.Audio) content.Add(clip.Path, clip.Sha256);
         foreach (NormalizedClassicEffect effect in inputs.ClassicPresentation.Effects) content.Add(effect.TexturePath, effect.TextureSha256);
         foreach (NormalizedClassicWeapon weapon in inputs.ClassicPresentation.Weapons.Values) content.Add(weapon.TexturePath, weapon.TextureSha256);
+        // The session resolves the DOM's art by media identity through the published group inventory,
+        // so this fake serves the real group: its generated inventory and every artifact it describes.
+        foreach ((string path, byte[] bytes) in PublishedUiArt(RepositoryRoot())) content.Add(path, bytes);
+    }
+
+    /// <summary>The published UI art group as admitted content: the inventory and the artifacts it names.</summary>
+    private static IEnumerable<(string Path, byte[] Bytes)> PublishedUiArt(string root)
+    {
+        string inventoryPath = Path.Combine(root, "content", DaggerfallUiArt.InventoryPath);
+        byte[] inventory = File.ReadAllBytes(inventoryPath);
+        yield return (DaggerfallUiArt.InventoryPath, inventory);
+        using JsonDocument document = JsonDocument.Parse(inventory);
+        foreach (JsonElement artifact in document.RootElement.GetProperty("artifacts").EnumerateArray())
+        {
+            string path = artifact.GetProperty("path").GetString()!;
+            yield return (path, File.ReadAllBytes(Path.Combine(root, "content", path)));
+        }
+    }
+
+    private static ContentSha256 Digest(ReadOnlySpan<byte> bytes)
+    {
+        byte[] hash = SHA256.HashData(bytes);
+        return new ContentSha256(
+            BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(0, 8)),
+            BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(8, 8)),
+            BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(16, 8)),
+            BinaryPrimitives.ReadUInt64BigEndian(hash.AsSpan(24, 8)));
     }
 
     private static ContentFake MediaContent(List<string> releases)
@@ -3608,6 +3725,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         private readonly List<string> releases;
         private readonly Dictionary<string, ContentSha256> values = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, byte[]> bodies = new(StringComparer.Ordinal);
         private readonly Dictionary<ulong, KeyValuePair<string, ContentSha256>> references = [];
         private ulong nextHandle = 1;
 
@@ -3615,6 +3733,15 @@ public sealed class NormalizedRuntimeSeamTests
         internal ContentFake(List<string> releaseLog) => releases = releaseLog;
 
         internal void Add(string contentPath, ContentSha256 contentHash) => values[contentPath] = contentHash;
+
+        /// <summary>Admits one file with the bytes an admitted read returns for it.</summary>
+        internal void Add(string contentPath, byte[] body) => Add(contentPath, Digest(body), body);
+
+        internal void Add(string contentPath, ContentSha256 contentHash, byte[] body)
+        {
+            values[contentPath] = contentHash;
+            bodies[contentPath] = body;
+        }
 
         public ContentReference OpenReference(ContentOpenRequest request) => ResolveReference(new ContentResolveRequest(request.Path, values[request.Path]));
 
@@ -3630,10 +3757,18 @@ public sealed class NormalizedRuntimeSeamTests
         public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference)
         {
             KeyValuePair<string, ContentSha256> item = references[reference.Handle.Value];
-            return new[] { new ContentReferenceInfo(item.Key, item.Value, 1) };
+            ulong length = bodies.TryGetValue(item.Key, out byte[]? body) ? (ulong)body.Length : 1;
+            return new[] { new ContentReferenceInfo(item.Key, item.Value, length) };
         }
 
-        public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request) => ReadOnlyMemory<byte>.Empty;
+        public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request)
+        {
+            string path = references[request.Reference.Handle.Value].Key;
+            if (!bodies.TryGetValue(path, out byte[]? body)) return ReadOnlyMemory<byte>.Empty;
+            if (request.Offset > (ulong)body.Length) throw new InvalidOperationException($"Read of '{path}' starts past its admitted bytes.");
+            int available = checked((int)Math.Min(request.MaxBytes, (ulong)body.Length - request.Offset));
+            return body.AsMemory(checked((int)request.Offset), available);
+        }
         internal int ResolveCalls { get; private set; }
     }
 
@@ -3806,6 +3941,12 @@ public sealed class NormalizedRuntimeSeamTests
         /// <summary>Read one named field of the last published projection, or null when none was.</summary>
         internal string? PublishedField(string key) => ((UiServiceFake)(object)ui).Field(key);
 
+        /// <summary>The whole published projection decoded into plain values, or null before one is published.</summary>
+        internal object? Published() => ((UiServiceFake)(object)ui).Decoded();
+
+        /// <summary>Every snapshot published so far, decoded in order: one admitted update can publish more than one.</summary>
+        internal IReadOnlyList<object?> PublishedHistory() => ((UiServiceFake)(object)ui).History;
+
         /// <summary>Read one named field of a nested object of the last published projection.</summary>
         internal string? PublishedNested(string parent, string key) => ((UiServiceFake)(object)ui).Nested(parent, key);
 
@@ -3898,8 +4039,12 @@ public sealed class NormalizedRuntimeSeamTests
             private object? Publish(object?[]? arguments)
             {
                 LastProjection = arguments is [UiProjection projection, ..] ? projection : null;
+                History.Add(LastProjection is { } published ? Decode(published, published.Value.Root) : null);
                 return null;
             }
+
+            /// <summary>Every snapshot this session published, decoded in order.</summary>
+            internal List<object?> History { get; } = [];
 
             /// <summary>The string one named field of the published object carries, or null.</summary>
             internal string? Field(string key)
@@ -3953,6 +4098,26 @@ public sealed class NormalizedRuntimeSeamTests
                 }
 
                 return null;
+            }
+
+            /// <summary>The whole published value decoded into objects, arrays, strings and numbers.</summary>
+            internal object? Decoded() => LastProjection is { } projection ? Decode(projection, projection.Value.Root) : null;
+
+            private static object? Decode(UiProjection projection, uint index)
+            {
+                StructuredValueNode node = projection.Value.Nodes.Span[checked((int)index)];
+                return node.Kind switch
+                {
+                    StructuredValueKind.Null => null,
+                    StructuredValueKind.String => Text(projection, node),
+                    StructuredValueKind.Number => node.NumberValue,
+                    StructuredValueKind.Array => Edges(projection, index).Select(edge => Decode(projection, edge)).ToArray(),
+                    StructuredValueKind.Object => Edges(projection, index).ToDictionary(
+                        edge => Key(projection, projection.Value.Nodes.Span[checked((int)edge)]),
+                        edge => Decode(projection, edge),
+                        StringComparer.Ordinal),
+                    _ => (object?)node.Kind,
+                };
             }
 
             private static IEnumerable<uint> Edges(UiProjection projection, uint index)

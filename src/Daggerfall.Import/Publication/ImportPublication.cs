@@ -10,7 +10,7 @@ public sealed class ImportPublicationArtifact
 {
     private readonly byte[] bytes;
 
-    public ImportPublicationArtifact(string relativePath, ReadOnlySpan<byte> bytes, IReadOnlyList<string>? dependsOnPaths = null)
+    public ImportPublicationArtifact(string relativePath, ReadOnlySpan<byte> bytes, IReadOnlyList<string>? dependsOnPaths = null, string? mediaId = null)
     {
         NormalizedImportDocument.RequireLogicalPath(relativePath, nameof(relativePath));
         if (bytes.IsEmpty)
@@ -18,8 +18,14 @@ public sealed class ImportPublicationArtifact
             throw new ArgumentException("A published artifact cannot be empty.", nameof(bytes));
         }
 
+        if (mediaId is not null)
+        {
+            NormalizedImportDocument.RequireLogicalId(mediaId, nameof(mediaId));
+        }
+
         RelativePath = relativePath;
         this.bytes = bytes.ToArray();
+        MediaId = mediaId;
         DependsOnPaths = (dependsOnPaths ?? [])
             .OrderBy(path => path, StringComparer.Ordinal)
             .ToArray();
@@ -31,6 +37,12 @@ public sealed class ImportPublicationArtifact
     }
 
     public string RelativePath { get; }
+
+    /// <summary>
+    /// The media identity this artifact carries, when it is one a consumer asks for by name rather
+    /// than a file it discovers. Placement belongs to the publication; the identity is the pack's.
+    /// </summary>
+    public string? MediaId { get; }
 
     public ReadOnlyMemory<byte> Bytes => bytes;
 

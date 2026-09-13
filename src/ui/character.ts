@@ -32,6 +32,8 @@ export interface CharacterProjection {
   readonly equipment: readonly CharacterEquipment[];
 }
 
+import { image } from './art.js';
+
 export interface CharacterView {
   update(value: CharacterProjection): void;
   dispose(): void;
@@ -45,7 +47,10 @@ export function mountCharacter(root: HTMLElement): CharacterView {
   chrome.className = 'dagger-character-chrome';
   chrome.alt = '';
   chrome.setAttribute('aria-hidden', 'true');
-  chrome.src = new URL('./character-art/window-character-sheet-chrome.png', import.meta.url).href;
+  // The sheet's chrome is published art, so a session that has it sets it and one that does not
+  // leaves the element empty until the snapshot that carries it arrives.
+  const chromeArt = image('window.character-sheet.chrome');
+  if (chromeArt !== null) chrome.src = chromeArt;
   const heading = document.createElement('header');
   heading.className = 'dagger-character-title';
   const eyebrow = document.createElement('p');
@@ -70,6 +75,8 @@ export function mountCharacter(root: HTMLElement): CharacterView {
   return {
     update(value): void {
       if (disposed) return;
+      const published = image('window.character-sheet.chrome');
+      if (published !== null && chrome.src !== published) chrome.src = published;
       overview.replaceChildren(
         overviewRow('Player', value.name),
         overviewRow('Level', format(value.progression.level)),

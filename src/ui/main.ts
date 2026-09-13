@@ -1,5 +1,6 @@
 /// <reference path="./live-debug-panel.d.ts" />
 import { mountLiveDebugPanel, type LiveDebugPanelMount } from '@rusty-engine/live-debug';
+import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from './art.js';
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
 import { mountCharacter, isCharacterProjection, type CharacterProjection } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
@@ -15,16 +16,19 @@ interface ProductUiContext {
     focusGameplay(): void;
   };
   readonly projection?: { subscribe(listener: (projection: ProjectionEnvelope | null) => void): () => void };
-  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: { action: string } | InventoryAction | LootAction }): void };
+  readonly intents?: { claim(intent: string, value: { kind: 'product-payload'; contract: string; data: { action: string } | InventoryAction | LootAction | ArtRequestAction }): void };
 }
 
 interface DaggerHud {
   readonly resources: readonly { readonly id: string; readonly label: string; readonly current: number; readonly maximum: number }[];
   readonly lastOutcome: string;
+  readonly mode?: string;
   readonly composition: CompositionIdentity;
   readonly inventory?: InventoryProjection;
   readonly character?: CharacterProjection;
   readonly loot?: LootProjection | null;
+  readonly uiArtRevision?: string;
+  readonly uiArt?: UiArt | null;
 }
 
 interface CompositionIdentity {
@@ -36,6 +40,9 @@ interface CompositionIdentity {
   readonly contentFingerprint: string;
   readonly tuningFingerprint: string;
 }
+
+/** Snapshots between repeated requests for art this DOM has not received. */
+const ART_REQUEST_INTERVAL = 120;
 
 export function mountProductUi(root: HTMLElement, context: ProductUiContext): { dispose(): void } {
   const stylesheet = document.createElement('link');
@@ -60,6 +67,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     <section class="dagger-vitals" aria-live="polite">
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
+    <div class="dagger-death" role="alert" hidden><img class="dagger-death-screen" alt="You have died."></div>
     <button class="dagger-menu-toggle" type="button" aria-haspopup="dialog">Menu · Esc</button>
     <dialog class="dagger-menu" aria-labelledby="dagger-menu-title">
       <h1 id="dagger-menu-title" tabindex="-1">Game menu</h1>
@@ -97,6 +105,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const claim = (action: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action },
   });
+  const deathRoot = shell.querySelector<HTMLElement>('.dagger-death')!;
+  const deathScreen = shell.querySelector<HTMLImageElement>('.dagger-death-screen')!;
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
@@ -242,11 +252,49 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   menu.addEventListener('click', onMenuClick);
   menuToggle.addEventListener('click', openMenu);
   document.addEventListener('keydown', onKeyDown, true);
+  // The published art arrives inside a snapshot: bytes the session read from admitted content, keyed
+  // by the pack's media identity. The DOM holds the last block it saw and asks the product for the
+  // revision it is missing, which is what a reload needs and what a republished artifact produces.
+  let artRevision = heldRevision();
+  let artCooldown = 0;
+  let lastInventory: InventoryProjection | undefined;
+  let lastCharacter: CharacterProjection | undefined;
+  let deadMode = false;
+  const requestArt = (revision: string): void => context.intents?.claim('dagger.ui', {
+    kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'art-request', revision },
+  });
+  const redrawArt = (): void => {
+    deathRoot.hidden = !deadMode;
+    const death = image('screen.death');
+    if (deadMode && death !== null) deathScreen.src = death;
+    if (lastInventory) inventoryView.update(lastInventory);
+    if (lastCharacter) characterView.update(lastCharacter);
+    lootView.update(currentLoot);
+  };
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
     const value = projection.value;
-    if (value.inventory) inventoryView.update(value.inventory);
-    if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
+    const adopted = value.uiArt ? adopt(value.uiArt) : '';
+    if (adopted.length > 0 && adopted !== artRevision) {
+      artRevision = adopted;
+      redrawArt();
+    }
+
+    if (value.uiArtRevision && value.uiArtRevision !== artRevision) {
+      // Ask again on a slow retry rather than once, because the answer travels the same transport
+      // this request does: one snapshot that carried art would have cleared the cooldown instead.
+      if (artCooldown === 0) {
+        artCooldown = ART_REQUEST_INTERVAL;
+        requestArt(value.uiArtRevision);
+      } else {
+        artCooldown--;
+      }
+    } else {
+      artCooldown = 0;
+    }
+
+    if (value.inventory) inventoryView.update(lastInventory = value.inventory);
+    if (value.character && isCharacterProjection(value.character)) characterView.update(lastCharacter = value.character);
     currentLoot = value.loot ?? null;
     lootView.update(currentLoot);
     if (currentLoot && currentLoot.container !== lastLootContainer) {
@@ -263,6 +311,15 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       row.append(label, amount);
       return row;
     }));
+    // Death outranks every other mode, so the screen the mode owns replaces the HUD rather than
+    // joining it; the image is the published artifact this mode exists to show.
+    deadMode = value.mode === 'dead';
+    deathRoot.hidden = !deadMode;
+    if (deadMode) {
+      const death = image('screen.death');
+      if (death !== null) deathScreen.src = death;
+    }
+
     title.textContent = 'Exploring';
     outcome.textContent = value.lastOutcome;
     composition.replaceChildren(...diagnosticRows(value.composition));

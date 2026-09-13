@@ -519,30 +519,43 @@ internal static class Program
     /// </remarks>
     private static int RunClassicMediaCommand(IReadOnlyList<string> args)
     {
+        const string Usage = "usage: daggerfall-import-tool classic-media --arena2 SOURCE_DIR --out CONTENT_ROOT [--group NAME] [--ui-authored-assets FILE --ui-original DIR] [--update]";
         bool update = args.Contains("--update", StringComparer.Ordinal);
-        int groupIndex = -1;
-        for (int index = 0; index < args.Count; index++)
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
         {
-            if (args[index] == "--group") { groupIndex = index; break; }
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
         }
 
-        string group = groupIndex >= 0 ? args[groupIndex + 1] : "worldrpg";
-        int expected = (update ? 6 : 5) + (groupIndex >= 0 ? 2 : 0);
-        if (args.Count != expected || args[1] != "--arena2" || args[3] != "--out")
+        bool authored = values.ContainsKey("--ui-authored-assets") && values.ContainsKey("--ui-original");
+        string[] accepted = authored
+            ? ["--arena2", "--out", "--group", "--ui-authored-assets", "--ui-original"]
+            : ["--arena2", "--out", "--group"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
         {
-            throw new ArgumentException("usage: daggerfall-import-tool classic-media --arena2 SOURCE_DIR --out CONTENT_ROOT [--group NAME] [--update]");
+            throw new ArgumentException(Usage);
         }
 
-        string arena2 = args[2];
+        string group = values["--group"];
+        string arena2 = values["--arena2"];
 
         // Paths are content-root relative, which is the naming the product's admitted content carries:
         // the group is part of the path, so a consumer holds one name for an artifact and the inventory
         // the generator writes uses that same name rather than the group-relative one it used to.
-        string outRoot = Path.Combine(args[4], group);
-        Console.WriteLine($"group: {group} under {args[4]}");
+        string outRoot = Path.Combine(values["--out"], group);
+        Console.WriteLine($"group: {group} under {values["--out"]}");
         AdmittedArena2Sources sources = new(arena2);
         LoadClassicMediaSources(sources);
-        Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(sources.ClassicMediaInputs);
+        // The authored UI art is part of the same group the DOM reads, so its identity, bytes and
+        // inventory entry come from the one publication rather than a copy staged beside the UI.
+        Arena2ClassicMediaPublication publication = authored
+            ? Arena2ClassicMediaPublication.Create(sources.ClassicMediaInputs, LoadClassicMediaProfile(values["--ui-authored-assets"], values["--ui-original"]))
+            : Arena2ClassicMediaPublication.Create(sources.ClassicMediaInputs);
 
         // The catalog is published beside the clips it describes and its admitted entries are the
         // publication's own audio manifests, so "a published artifact carries this clip" is a
@@ -571,19 +584,28 @@ internal static class Program
         }
 
         // The inventory names each artifact with its byte length and digest, so a consumer can tell
-        // whether the content it admitted is the content this publication produced.
+        // whether the content it admitted is the content this publication produced. An artifact that
+        // carries a media identity states it here, which is how a consumer resolves a published name
+        // to bytes through generated data rather than a list kept beside it.
+        JsonObject InventoryEntry(ImportPublicationArtifact artifact)
+        {
+            JsonObject entry = new()
+            {
+                ["path"] = $"{group}/{artifact.RelativePath}",
+                ["byteLength"] = artifact.Bytes.Length,
+                ["sha256"] = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(artifact.Bytes.Span)),
+            };
+            if (artifact.MediaId is { } mediaId) entry["mediaId"] = mediaId;
+            return entry;
+        }
+
         JsonObject inventory = new()
         {
             ["schemaVersion"] = 1,
             ["generator"] = "daggerfall-import-tool classic-media",
             ["artifacts"] = new JsonArray([.. published
                 .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
-                .Select(artifact => (JsonNode)new JsonObject
-                {
-                    ["path"] = $"{group}/{artifact.RelativePath}",
-                    ["byteLength"] = artifact.Bytes.Length,
-                    ["sha256"] = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(artifact.Bytes.Span)),
-                })]),
+                .Select(artifact => (JsonNode)InventoryEntry(artifact))]),
         };
         File.WriteAllText(Path.Combine(outRoot, "media", "classic-media-inventory.json"), inventory.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"content: {published.Count} artifacts and their inventory written under {outRoot}");

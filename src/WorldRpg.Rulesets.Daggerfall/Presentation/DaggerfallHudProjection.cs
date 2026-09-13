@@ -10,10 +10,18 @@ using WorldRpg.Kit.Progression;
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>Daggerfall's ordered HUD resource selection and wire projection.</summary>
-internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity) : IDisposable
+internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<DaggerfallHudResourceDefinition> resources, ResolvedCompositionIdentity? compositionIdentity, DaggerfallUiArt? uiArt = null) : IDisposable
 {
     private readonly UiStream _hud = ui.OpenStream(new UiStreamRequest("dagger.hud", "dagger.ui.snapshot.v1"));
     private ulong _sequence;
+
+    // The art a snapshot carries is worth a few hundred kilobytes, so it travels when it is new or
+    // asked for rather than on every admitted update. The UI keeps the block and asks again with the
+    // revision it holds when it does not have the one the snapshot names.
+    private bool _artPending = true;
+
+    /// <summary>Publishes the current UI art on the next snapshot because the DOM asked for it.</summary>
+    internal void RequestArt() => _artPending = true;
 
     internal void Publish(
         PlayerActorState player,
@@ -69,8 +77,28 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         if (character is not null) fields = [.. fields, ("character", Character(builder, character))];
         if (compositionIdentity is not null)
             fields = [.. fields, ("composition", Composition(builder, compositionIdentity))];
+        if (uiArt is not null)
+        {
+            // The revision is cheap and always present, so the DOM can tell whether the copy it holds
+            // is the one this session shows.
+            fields = [.. fields, ("uiArtRevision", builder.String(uiArt.Revision))];
+            if (_artPending)
+            {
+                fields = [.. fields, ("uiArt", Art(builder, uiArt))];
+                _artPending = false;
+            }
+        }
+
         uint root = builder.Object(fields);
         ui.PublishProjection(new UiProjection(_hud, ++_sequence, builder.Build(root)));
+    }
+
+    private static uint Art(UiValueBuilder builder, DaggerfallUiArt art)
+    {
+        uint[] images = art.Images.Select(image => builder.Object(
+            ("id", builder.String(image.Id)),
+            ("image", builder.String(image.Image)))).ToArray();
+        return builder.Object(("revision", builder.String(art.Revision)), ("images", builder.Array(images)));
     }
 
     private static uint Inventory(UiValueBuilder builder, InventoryPresentation value)

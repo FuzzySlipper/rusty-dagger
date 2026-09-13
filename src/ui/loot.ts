@@ -12,6 +12,8 @@ export type LootAction =
   | { readonly action: 'loot-close'; readonly container: string };
 
 /** Stable DOM rows render C# values; a click only claims the selected item and revision. */
+import { image } from './art.js';
+
 export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void): {
   update(value: LootProjection | null): void; dispose(): void;
 } {
@@ -64,8 +66,9 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
         row.detail.textContent = item.details;
         row.button.textContent = item.key.startsWith('stack:') ? 'Take 1' : 'Take';
         row.button.setAttribute('aria-label', `${row.button.textContent} ${item.label}`);
-        row.icon.hidden = item.icon === null;
-        if (item.icon) row.icon.src = new URL(item.icon, import.meta.url).href;
+        const iconSource = image(item.icon);
+        row.icon.hidden = iconSource === null;
+        if (iconSource !== null) row.icon.src = iconSource;
       }
     },
     dispose(): void { shell.removeEventListener('click', onClick); shell.remove(); },
