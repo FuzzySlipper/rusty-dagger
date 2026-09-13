@@ -7963,5 +7963,1814 @@
         "disposition": "unresolved"
       }
     ]
+  },
+  "characterPresentation": {
+    "schemaVersion": 1,
+    "layers": [
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg00i0.0",
+        "sourceFile": "SCBG00I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body-clothed.female.00.0",
+        "sourceFile": "BODY10I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body-unclothed.female.00.0",
+        "sourceFile": "BODY10I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.00.0",
+        "sourceFile": "BODY00I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.00.0",
+        "sourceFile": "BODY00I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.0",
+        "mediaId": "character.head.female.00.0",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.1",
+        "mediaId": "character.head.female.00.1",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.2",
+        "mediaId": "character.head.female.00.2",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.3",
+        "mediaId": "character.head.female.00.3",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.4",
+        "mediaId": "character.head.female.00.4",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.5",
+        "mediaId": "character.head.female.00.5",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.6",
+        "mediaId": "character.head.female.00.6",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.7",
+        "mediaId": "character.head.female.00.7",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.8",
+        "mediaId": "character.head.female.00.8",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.female.9",
+        "mediaId": "character.head.female.00.9",
+        "sourceFile": "FACE10I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.00.0",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.00.1",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.00.2",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.00.3",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.00.4",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.00.5",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.00.6",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.00.7",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.00.8",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "breton",
+        "donorRaceId": 1,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.00.9",
+        "sourceFile": "FACE00I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg01i0.0",
+        "sourceFile": "SCBG01I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body-clothed.female.01.0",
+        "sourceFile": "BODY11I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body-unclothed.female.01.0",
+        "sourceFile": "BODY11I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.01.0",
+        "sourceFile": "BODY01I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.01.0",
+        "sourceFile": "BODY01I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.0",
+        "mediaId": "character.head.female.01.0",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.1",
+        "mediaId": "character.head.female.01.1",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.2",
+        "mediaId": "character.head.female.01.2",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.3",
+        "mediaId": "character.head.female.01.3",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.4",
+        "mediaId": "character.head.female.01.4",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.5",
+        "mediaId": "character.head.female.01.5",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.6",
+        "mediaId": "character.head.female.01.6",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.7",
+        "mediaId": "character.head.female.01.7",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.8",
+        "mediaId": "character.head.female.01.8",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.female.9",
+        "mediaId": "character.head.female.01.9",
+        "sourceFile": "FACE11I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.01.0",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.01.1",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.01.2",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.01.3",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.01.4",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.01.5",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.01.6",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.01.7",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.01.8",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "redguard",
+        "donorRaceId": 2,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.01.9",
+        "sourceFile": "FACE01I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg02i0.0",
+        "sourceFile": "SCBG02I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body-clothed.female.02.0",
+        "sourceFile": "BODY12I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body-unclothed.female.02.0",
+        "sourceFile": "BODY12I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.02.0",
+        "sourceFile": "BODY02I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.02.0",
+        "sourceFile": "BODY02I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.0",
+        "mediaId": "character.head.female.02.0",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.1",
+        "mediaId": "character.head.female.02.1",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.2",
+        "mediaId": "character.head.female.02.2",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.3",
+        "mediaId": "character.head.female.02.3",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.4",
+        "mediaId": "character.head.female.02.4",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.5",
+        "mediaId": "character.head.female.02.5",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.6",
+        "mediaId": "character.head.female.02.6",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.7",
+        "mediaId": "character.head.female.02.7",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.8",
+        "mediaId": "character.head.female.02.8",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.female.9",
+        "mediaId": "character.head.female.02.9",
+        "sourceFile": "FACE12I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.02.0",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.02.1",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.02.2",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.02.3",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.02.4",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.02.5",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.02.6",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.02.7",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.02.8",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "nord",
+        "donorRaceId": 3,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.02.9",
+        "sourceFile": "FACE02I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg03i0.0",
+        "sourceFile": "SCBG03I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body-clothed.female.03.0",
+        "sourceFile": "BODY13I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body-unclothed.female.03.0",
+        "sourceFile": "BODY13I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.03.0",
+        "sourceFile": "BODY03I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.03.0",
+        "sourceFile": "BODY03I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.0",
+        "mediaId": "character.head.female.03.0",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.1",
+        "mediaId": "character.head.female.03.1",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.2",
+        "mediaId": "character.head.female.03.2",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.3",
+        "mediaId": "character.head.female.03.3",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.4",
+        "mediaId": "character.head.female.03.4",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.5",
+        "mediaId": "character.head.female.03.5",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.6",
+        "mediaId": "character.head.female.03.6",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.7",
+        "mediaId": "character.head.female.03.7",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.8",
+        "mediaId": "character.head.female.03.8",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.female.9",
+        "mediaId": "character.head.female.03.9",
+        "sourceFile": "FACE13I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.03.0",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.03.1",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.03.2",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.03.3",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.03.4",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.03.5",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.03.6",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.03.7",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.03.8",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "dark-elf",
+        "donorRaceId": 4,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.03.9",
+        "sourceFile": "FACE03I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg04i0.0",
+        "sourceFile": "SCBG04I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body-clothed.female.04.0",
+        "sourceFile": "BODY14I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body-unclothed.female.04.0",
+        "sourceFile": "BODY14I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.04.0",
+        "sourceFile": "BODY04I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.04.0",
+        "sourceFile": "BODY04I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.0",
+        "mediaId": "character.head.female.04.0",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.1",
+        "mediaId": "character.head.female.04.1",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.2",
+        "mediaId": "character.head.female.04.2",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.3",
+        "mediaId": "character.head.female.04.3",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.4",
+        "mediaId": "character.head.female.04.4",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.5",
+        "mediaId": "character.head.female.04.5",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.6",
+        "mediaId": "character.head.female.04.6",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.7",
+        "mediaId": "character.head.female.04.7",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.8",
+        "mediaId": "character.head.female.04.8",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.female.9",
+        "mediaId": "character.head.female.04.9",
+        "sourceFile": "FACE14I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.04.0",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.04.1",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.04.2",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.04.3",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.04.4",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.04.5",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.04.6",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.04.7",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.04.8",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "high-elf",
+        "donorRaceId": 5,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.04.9",
+        "sourceFile": "FACE04I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg05i0.0",
+        "sourceFile": "SCBG05I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body-clothed.female.05.0",
+        "sourceFile": "BODY15I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body-unclothed.female.05.0",
+        "sourceFile": "BODY15I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.05.0",
+        "sourceFile": "BODY05I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.05.0",
+        "sourceFile": "BODY05I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.0",
+        "mediaId": "character.head.female.05.0",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.1",
+        "mediaId": "character.head.female.05.1",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.2",
+        "mediaId": "character.head.female.05.2",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.3",
+        "mediaId": "character.head.female.05.3",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.4",
+        "mediaId": "character.head.female.05.4",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.5",
+        "mediaId": "character.head.female.05.5",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.6",
+        "mediaId": "character.head.female.05.6",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.7",
+        "mediaId": "character.head.female.05.7",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.8",
+        "mediaId": "character.head.female.05.8",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.female.9",
+        "mediaId": "character.head.female.05.9",
+        "sourceFile": "FACE15I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.05.0",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.05.1",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.05.2",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.05.3",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.05.4",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.05.5",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.05.6",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.05.7",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.05.8",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "wood-elf",
+        "donorRaceId": 6,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.05.9",
+        "sourceFile": "FACE05I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg06i0.0",
+        "sourceFile": "SCBG06I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body.body16i1.0",
+        "sourceFile": "BODY16I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body.body16i0.0",
+        "sourceFile": "BODY16I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.06.0",
+        "sourceFile": "BODY06I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.06.0",
+        "sourceFile": "BODY06I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.0",
+        "mediaId": "character.face.face16i0.0",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.1",
+        "mediaId": "character.face.face16i0.1",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.2",
+        "mediaId": "character.face.face16i0.2",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.3",
+        "mediaId": "character.face.face16i0.3",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.4",
+        "mediaId": "character.face.face16i0.4",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.5",
+        "mediaId": "character.face.face16i0.5",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.6",
+        "mediaId": "character.face.face16i0.6",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.7",
+        "mediaId": "character.face.face16i0.7",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.8",
+        "mediaId": "character.face.face16i0.8",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.female.9",
+        "mediaId": "character.face.face16i0.9",
+        "sourceFile": "FACE16I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.06.0",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.06.1",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.06.2",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.06.3",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.06.4",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.06.5",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.06.6",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.06.7",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.06.8",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "khajiit",
+        "donorRaceId": 7,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.06.9",
+        "sourceFile": "FACE06I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "background",
+        "mediaId": "character.scbg.scbg07i0.0",
+        "sourceFile": "SCBG07I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "body.female.clothed",
+        "mediaId": "character.body.body17i1.0",
+        "sourceFile": "BODY17I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "body.female.unclothed",
+        "mediaId": "character.body.body17i0.0",
+        "sourceFile": "BODY17I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "body.male.clothed",
+        "mediaId": "character.body-clothed.male.07.0",
+        "sourceFile": "BODY07I1.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "body.male.unclothed",
+        "mediaId": "character.body-unclothed.male.07.0",
+        "sourceFile": "BODY07I0.IMG",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.0",
+        "mediaId": "character.face.face17i0.0",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.1",
+        "mediaId": "character.face.face17i0.1",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.2",
+        "mediaId": "character.face.face17i0.2",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.3",
+        "mediaId": "character.face.face17i0.3",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.4",
+        "mediaId": "character.face.face17i0.4",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.5",
+        "mediaId": "character.face.face17i0.5",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.6",
+        "mediaId": "character.face.face17i0.6",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.7",
+        "mediaId": "character.face.face17i0.7",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.8",
+        "mediaId": "character.face.face17i0.8",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.female.9",
+        "mediaId": "character.face.face17i0.9",
+        "sourceFile": "FACE17I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.0",
+        "mediaId": "character.head.male.07.0",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.1",
+        "mediaId": "character.head.male.07.1",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.2",
+        "mediaId": "character.head.male.07.2",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.3",
+        "mediaId": "character.head.male.07.3",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.4",
+        "mediaId": "character.head.male.07.4",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.5",
+        "mediaId": "character.head.male.07.5",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.6",
+        "mediaId": "character.head.male.07.6",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.7",
+        "mediaId": "character.head.male.07.7",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.8",
+        "mediaId": "character.head.male.07.8",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      },
+      {
+        "race": "argonian",
+        "donorRaceId": 8,
+        "layer": "head.male.9",
+        "mediaId": "character.head.male.07.9",
+        "sourceFile": "FACE07I0.CIF",
+        "palette": "ART_PAL.COL",
+        "binding": "requiredPending"
+      }
+    ],
+    "racesWithoutMedia": [],
+    "sources": [
+      "arena2"
+    ]
   }
 }
