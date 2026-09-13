@@ -225,6 +225,14 @@ public sealed class ResidualSourceInventoryTests
         Assert.Equal(SourceRecordDisposition.Malformed, refused.Disposition);
         Assert.Contains("already imports it", refused.Note, StringComparison.Ordinal);
         Assert.Contains("refused it", refused.Note, StringComparison.Ordinal);
+
+        // The closure keeps both facts too: this path is not simply "no reader", because a consumer
+        // claims it and the gap between the claim and what this repository reads is the point.
+        ResidualPublicationDecision decision = Assert.Single(ResidualPublicationClosure.From(unreadable).Decisions);
+        Assert.Equal(ResidualPublicationOutcome.UnreadableButClaimed, decision.Outcome);
+        Assert.Contains("imports this path while no reader", decision.Reason, StringComparison.Ordinal);
+        Assert.Contains("refused it", decision.Reason, StringComparison.Ordinal);
+        Assert.Single(ResidualPublicationClosure.From(unreadable).ClaimedButUnreadable);
     }
 
     [Fact]
