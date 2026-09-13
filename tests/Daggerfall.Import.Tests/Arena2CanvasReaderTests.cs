@@ -133,13 +133,77 @@ public sealed class Arena2CanvasReaderTests
     }
 
     [Fact]
-    public void Refuses_a_grid_that_is_not_a_whole_number_of_cells()
+    public void Reads_a_run_length_encoded_cif_record_sequence()
     {
-        Arena2FormatException error = Assert.Throws<Arena2FormatException>(
-            () => RciDecoder.DecodeGrid(new byte[100], "truncated-cells.rci", 64, 64));
+        // Five residual sprite CIFs encode every record with compression 2, which the classic CIF
+        // reader decodes through BaseImageFile.ReadRleData. The declared payload frames the next
+        // record, so the walk has to use that rather than the encoded stream's own length.
+        IReadOnlyList<IndexedImg> records = ImgDecoder.DecodeRecordSequence(File.ReadAllBytes(Corpus("FIRE00C6.CIF")), "FIRE00C6.CIF");
 
-        Assert.Contains("whole number of 4096-byte cells", error.Message, StringComparison.Ordinal);
-        Assert.Contains("supplies 100 bytes", error.Message, StringComparison.Ordinal);
+        Assert.Equal(6, records.Count);
+        Assert.All(records, record => Assert.Equal(ImgDecoder.RleCompressed, record.Compression));
+        Assert.All(records, record => Assert.Equal(record.Width * record.Height, record.Pixels.Length));
+
+        // A repeat code of 0x82 writes the following byte three times: 130 - 127.
+        byte[] repeat = [0, 0, 0, 0, 3, 0, 1, 0, 2, 0, 3, 0, 0x82, 0xAA, 0x00];
+        IndexedImg decoded = Assert.Single(ImgDecoder.DecodeRecordSequence(repeat, "repeat.cif"));
+        Assert.Equal(3, decoded.Width);
+        Assert.Equal([0xAA, 0xAA, 0xAA], decoded.Pixels.ToArray());
+
+        // A stream that stops inside its declared window before the shape is filled is refused
+        // with the shortfall, rather than returning a partly filled canvas.
+        byte[] shortStream = [0, 0, 0, 0, 4, 0, 1, 0, 2, 0, 2, 0, 0x00, 0xAA];
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(
+            () => ImgDecoder.DecodeRecordSequence(shortStream, "short.cif"));
+        Assert.Contains("does not encode 4 pixels", error.Message, StringComparison.Ordinal);
+
+        // A literal that would read past the declared window is refused before the walk can lose
+        // its place in the file.
+        byte[] overrun = [0, 0, 0, 0, 4, 0, 1, 0, 2, 0, 2, 0, 0x01, 0xAA];
+        Assert.Contains(
+            "exceeds the 2-byte payload",
+            Assert.Throws<Arena2FormatException>(() => ImgDecoder.DecodeRecordSequence(overrun, "overrun.cif")).Message,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Reads_an_img_record_whose_compression_field_is_not_implemented()
+    {
+        // The classic IMG reader reads a record's shape and never consults its compression field,
+        // so a declared value this repository does not implement is still a readable image. Two
+        // supplied files declare 2048 and are exactly twelve bytes plus their shape.
+        IndexedImg talk = ImgDecoder.Decode(File.ReadAllBytes(Corpus("TALK00I0.IMG")), "TALK00I0.IMG");
+        Assert.Equal((320, 200), (talk.Width, talk.Height));
+        Assert.Equal(2048, talk.Compression);
+        Assert.Equal(64000, talk.Pixels.Length);
+
+        IndexedImg frame = ImgDecoder.Decode(File.ReadAllBytes(Corpus("FRAM00I0.IMG")), "FRAM00I0.IMG");
+        Assert.Equal((96, 96), (frame.Width, frame.Height));
+        Assert.Equal(9216, frame.Pixels.Length);
+    }
+
+    [Fact]
+    public void Reads_the_whole_cells_of_a_grid_and_reports_the_remainder()
+    {
+        // The classic reader derives the cell count by whole-number division, so bytes after the
+        // last whole cell belong to no canvas. They are reported rather than refilled with a
+        // guessed shape or used to reject a file whose cells are all present.
+        RciGrid remainder = RciDecoder.DecodeGrid(new byte[(64 * 64) + 7], "remainder.rci", 64, 64);
+        Assert.Equal(1, remainder.CellCount);
+        Assert.Equal(7, remainder.TrailingBytes);
+
+        // A file that cannot fill one cell establishes no canvas at all.
+        Arena2FormatException shortFile = Assert.Throws<Arena2FormatException>(
+            () => RciDecoder.DecodeGrid(new byte[100], "truncated-cells.rci", 64, 64));
+        Assert.Contains("at least one 4096-byte cell", shortFile.Message, StringComparison.Ordinal);
+        Assert.Contains("supplies 100 bytes", shortFile.Message, StringComparison.Ordinal);
+
+        // The corpus's own face bank is 503 cells plus seven bytes, which is the case that keeps
+        // this a disclosure rather than a refusal.
+        Arena2CanvasSet bank = Arena2CanvasReader.Read(File.ReadAllBytes(Corpus("TFAC00I0.RCI")), "TFAC00I0.RCI");
+        Assert.Equal(Arena2CanvasKind.RciGrid, bank.Kind);
+        Assert.Equal(503, bank.Count);
+        Assert.Contains("7 byte(s)", bank.Reason, StringComparison.Ordinal);
     }
 
     [Fact]

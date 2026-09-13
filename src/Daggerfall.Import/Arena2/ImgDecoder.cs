@@ -8,8 +8,9 @@ namespace Daggerfall.Import.Arena2;
 /// <param name="Height">Canvas height in pixels.</param>
 /// <param name="Compression">Compression the record declares; a headerless canvas declares none.</param>
 /// <param name="PayloadLength">
-/// Pixel bytes the canvas carries: the payload length a record declares, or the pixel count of the
-/// shape a headerless file's length establishes. This is not the file length when the two differ.
+/// The payload length the record declares, or the pixel count of the shape a headerless file's
+/// length establishes. A record whose declaration disagrees with its shape keeps the declared
+/// value here, so the disagreement stays visible rather than being reconciled silently.
 /// </param>
 /// <param name="IsHeaderless">Whether the shape came from the file length rather than a record header.</param>
 /// <param name="Pixels">The canvas pixels, always <c>Width * Height</c> bytes.</param>
@@ -24,9 +25,12 @@ public sealed record IndexedImg(
     bool IsHeaderless,
     ReadOnlyMemory<byte> Pixels);
 
-/// <summary>Decoder for supported uncompressed Arena2 IMG records.</summary>
+/// <summary>Decoder for supported Arena2 IMG records and the record sequences a classic CIF carries.</summary>
 public static class ImgDecoder
 {
+    /// <summary>The compression value a classic CIF uses for a run-length encoded record.</summary>
+    public const ushort RleCompressed = 2;
+
     /// <summary>
     /// The headerless shapes the classic reader recognises by file length alone, from the
     /// donor's <c>ImgFile.GetHeaderlessFileImageDimensions</c>. A file whose length is one of
@@ -56,27 +60,42 @@ public static class ImgDecoder
         (112128, 512, 219),
     ];
 
-    /// <summary>Decodes a headered, uncompressed IMG record without pixel reordering.</summary>
+    /// <summary>
+    /// Decodes the single record an IMG file carries, without pixel reordering.
+    /// </summary>
+    /// <remarks>
+    /// The record's compression field does not decide how its pixels are read: the classic
+    /// reader's <c>ImgFile.ReadImage</c> reads <c>Width * Height</c> bytes and never consults the
+    /// field, so a declared value this repository does not implement is still a readable image.
+    /// Two supplied files declare 2048 and are exactly twelve bytes plus their shape —
+    /// <c>TALK00I0.IMG</c> at 320x200 and <c>FRAM00I0.IMG</c> at 96x96 — and refusing them would
+    /// refuse images the donor reads. The declared value travels in <see cref="IndexedImg.Compression"/>
+    /// so a caller that cares can still see it.
+    /// </remarks>
     public static IndexedImg Decode(ReadOnlySpan<byte> bytes, string source)
     {
         CheckedLittleEndianReader reader = new(bytes, source);
-        IndexedImg image = ReadRecord(ref reader, source);
+        RecordHeader header = ReadHeader(ref reader, source);
+        ReadOnlySpan<byte> pixels = reader.ReadBytes(header.Pixels);
         if (reader.Position != reader.Length)
         {
-            throw reader.Error($"IMG has trailing bytes after its {image.PayloadLength}-byte pixel payload");
+            throw reader.Error($"IMG has trailing bytes after its {header.Pixels}-byte pixel payload");
         }
 
-        return image;
+        return header.ToImage(source, header.PayloadLength, pixels);
     }
 
     /// <summary>
     /// Decodes the contiguous sequence of single-frame IMG records a classic CIF carries.
     /// </summary>
     /// <remarks>
-    /// This is the donor's non-weapon CIF path: records are read until the file ends, each one
-    /// a standard IMG record, with no separate directory. A record that would run past the end
-    /// of the file is refused rather than truncated, so a partial trailing record is a source
-    /// error and not a shorter sequence.
+    /// This is the donor's non-weapon CIF path: records are read until the file ends, each one a
+    /// standard IMG record, with no separate directory. A record is framed by the payload length
+    /// it declares, which is why a declaration that does not match the record's shape is refused
+    /// here rather than tolerated — the walk would otherwise lose its place in the file. Pixels
+    /// are read by the record's compression: uncompressed records carry their shape directly, and
+    /// compressed records are run-length decoded exactly as the donor's <c>BaseImageFile.ReadRleData</c>
+    /// does. A compression this repository does not implement is refused by name.
     /// </remarks>
     public static IReadOnlyList<IndexedImg> DecodeRecordSequence(ReadOnlySpan<byte> bytes, string source)
     {
@@ -84,7 +103,7 @@ public static class ImgDecoder
         List<IndexedImg> records = [];
         while (reader.Position < reader.Length)
         {
-            records.Add(ReadRecord(ref reader, source));
+            records.Add(ReadSequenceRecord(ref reader, source));
         }
 
         if (records.Count == 0)
@@ -160,8 +179,88 @@ public static class ImgDecoder
         return false;
     }
 
-    /// <summary>Reads one headered record, with its payload, from the current position.</summary>
-    private static IndexedImg ReadRecord(ref CheckedLittleEndianReader reader, string source)
+    /// <summary>Reads one record of a CIF sequence, framed by the payload length it declares.</summary>
+    private static IndexedImg ReadSequenceRecord(ref CheckedLittleEndianReader reader, string source)
+    {
+        int recordStart = reader.Position;
+        RecordHeader header = ReadHeader(ref reader, source);
+        if (header.Compression == 0)
+        {
+            if (header.PayloadLength != header.Pixels)
+            {
+                throw reader.Error($"uncompressed IMG payload length {header.PayloadLength} does not match {header.Width}x{header.Height}, so the record does not frame the next one");
+            }
+
+            ReadOnlySpan<byte> raw = reader.ReadBytes(header.Pixels);
+            return header.ToImage(source, header.PayloadLength, raw);
+        }
+
+        if (header.Compression != RleCompressed)
+        {
+            throw reader.Error($"unsupported IMG compression {header.Compression}");
+        }
+
+        byte[] pixels = DecodeRunLength(ref reader, header, source);
+        // The donor walks records by the declared payload length, so the stream's own length is
+        // not what decides where the next record begins.
+        reader.Seek(checked(recordStart + Arena2FormatConstants.ImgHeaderBytes + header.PayloadLength));
+        return header.ToImage(source, header.PayloadLength, pixels);
+    }
+
+    /// <summary>Run-length decodes one record within the payload window the record declares.</summary>
+    private static byte[] DecodeRunLength(ref CheckedLittleEndianReader reader, RecordHeader header, string source)
+    {
+        int windowEnd = checked(reader.Position + header.PayloadLength);
+        byte[] pixels = new byte[header.Pixels];
+        int written = 0;
+        while (written < header.Pixels)
+        {
+            if (reader.Position >= windowEnd)
+            {
+                throw reader.Error($"run-length record declares {header.PayloadLength} bytes but its stream does not encode {header.Pixels} pixels within them");
+            }
+
+            byte code = reader.ReadByte();
+            if (code > 127)
+            {
+                if (reader.Position >= windowEnd)
+                {
+                    throw reader.Error("run-length repeat is missing its pixel");
+                }
+
+                byte pixel = reader.ReadByte();
+                int repeat = code - 127;
+                if (written + repeat > header.Pixels)
+                {
+                    throw reader.Error($"run-length repeat of {repeat} exceeds the {header.Pixels} pixels the record declares");
+                }
+
+                pixels.AsSpan(written, repeat).Fill(pixel);
+                written += repeat;
+            }
+            else
+            {
+                int literal = code + 1;
+                if (reader.Position + literal > windowEnd)
+                {
+                    throw reader.Error($"run-length literal of {literal} bytes exceeds the {header.PayloadLength}-byte payload the record declares");
+                }
+
+                if (written + literal > header.Pixels)
+                {
+                    throw reader.Error($"run-length literal of {literal} bytes exceeds the {header.Pixels} pixels the record declares");
+                }
+
+                reader.ReadBytes(literal).CopyTo(pixels.AsSpan(written));
+                written += literal;
+            }
+        }
+
+        return pixels;
+    }
+
+    /// <summary>Reads the twelve-byte record header every IMG record and CIF record carries.</summary>
+    private static RecordHeader ReadHeader(ref CheckedLittleEndianReader reader, string source)
     {
         short xOffset = reader.ReadInt16();
         short yOffset = reader.ReadInt16();
@@ -169,32 +268,35 @@ public static class ImgDecoder
         ushort height = reader.ReadUInt16();
         ushort compression = reader.ReadUInt16();
         ushort payloadLength = reader.ReadUInt16();
-        if (compression != 0)
-        {
-            throw reader.Error($"unsupported IMG compression {compression}");
-        }
-
         if (width == 0 || height == 0)
         {
             throw reader.Error($"invalid IMG dimensions {width}x{height}");
         }
 
-        int pixelsLength;
+        int pixels;
         try
         {
-            pixelsLength = checked(width * height);
+            pixels = checked(width * height);
         }
         catch (OverflowException)
         {
             throw reader.Error($"IMG dimensions {width}x{height} overflow a 32-bit byte count");
         }
 
-        if (pixelsLength != payloadLength)
-        {
-            throw reader.Error($"uncompressed IMG payload length {payloadLength} does not match {width}x{height}");
-        }
+        return new RecordHeader(xOffset, yOffset, width, height, compression, payloadLength, pixels);
+    }
 
-        ReadOnlySpan<byte> pixels = reader.ReadBytes(pixelsLength);
-        return new IndexedImg(source, xOffset, yOffset, width, height, compression, payloadLength, false, pixels.ToArray());
+    /// <summary>One record's declared header, with its shape already checked.</summary>
+    private readonly record struct RecordHeader(
+        short XOffset,
+        short YOffset,
+        ushort Width,
+        ushort Height,
+        ushort Compression,
+        ushort PayloadLength,
+        int Pixels)
+    {
+        internal IndexedImg ToImage(string source, int declaredPayloadLength, ReadOnlySpan<byte> pixels) =>
+            new(source, XOffset, YOffset, Width, Height, Compression, declaredPayloadLength, false, pixels.ToArray());
     }
 }
