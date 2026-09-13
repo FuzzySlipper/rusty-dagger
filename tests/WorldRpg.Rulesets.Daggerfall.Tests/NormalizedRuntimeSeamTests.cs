@@ -2721,10 +2721,55 @@ public sealed class NormalizedRuntimeSeamTests
         ];
         foreach (ProductInputEvent[] slice in slices)
         {
-            using DaggerfallSession session = LootableSession();
+            using DaggerfallSession session = LootableSession(out _);
             session.Update(new ProductUpdate(OuterUpdate(1), slice));
             Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
         }
+    }
+
+    [Fact]
+    public void The_gate_that_drops_a_batched_attack_is_sensitive_once_the_weapon_is_ready()
+    {
+        static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+
+        // A ready weapon needs the setup melee's strike latch cleared: the fixture's own swing leaves
+        // CanStartPlayerAttack false until a Completed playback arrives, which is why every post-setup
+        // attack negative passed with or without the gate.
+        static void Ready(DaggerfallSession session, AppearanceFake appearance)
+        {
+            appearance.AdvanceReceiptForAll = CompletedMarker(1);
+            session.Update(new ProductUpdate(OuterUpdate(1), []));
+            session.Update(new ProductUpdate(OuterUpdate(2), []));
+            appearance.AdvanceReceiptForAll = null;
+        }
+
+        // The batched negative, in both delivery orders: an attack in the same admitted slice as the
+        // interaction reaches no combat, and this one is sensitive - with the gate deleted the melee
+        // runs and the evidence is recorded.
+        ProductInputEvent[][] slices =
+        [
+            [Ui("{\"action\":\"loot\"}"), Ui("{\"action\":\"attack\"}")],
+            [Ui("{\"action\":\"attack\"}"), Ui("{\"action\":\"loot\"}")],
+        ];
+        foreach (ProductInputEvent[] slice in slices)
+        {
+            using DaggerfallSession batched = LootableSession(out AppearanceFake appearance);
+            Ready(batched, appearance);
+            batched.Update(new ProductUpdate(OuterUpdate(3), slice));
+            Assert.Equal(ProductMode.Modal, batched.PendingModeRequest);
+            Assert.Null(batched.LastMeleeTargeting);
+        }
+
+        // The same-session positive control the negative needs: an attack alone reaches combat.
+        using DaggerfallSession control = LootableSession(out AppearanceFake controlAppearance);
+        Ready(control, controlAppearance);
+        control.Update(new ProductUpdate(OuterUpdate(3), [Ui("{\"action\":\"attack\"}")]));
+        Assert.NotNull(control.LastMeleeTargeting);
     }
 
     /// <summary>A session that has not swung, so its weapon is ready.</summary>
@@ -2742,8 +2787,8 @@ public sealed class NormalizedRuntimeSeamTests
         return new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
     }
 
-    /// <summary>A session with one lootable corpse within reach.</summary>
-    private static DaggerfallSession LootableSession()
+    /// <summary>A session with one lootable corpse within reach, and the appearance it drives.</summary>
+    private static DaggerfallSession LootableSession(out AppearanceFake appearance)
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
@@ -2753,7 +2798,8 @@ public sealed class NormalizedRuntimeSeamTests
         PopulateContent(content, inputs);
         SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
         PerceptionFake perception = PerceptionFake.Create();
-        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        appearance = new AppearanceFake(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
         DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
         session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
         session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
@@ -3395,6 +3441,12 @@ public sealed class NormalizedRuntimeSeamTests
     private static ProductUpdateFacts OuterUpdate(ulong simulationStep) => new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, simulationStep, simulationStep, 60, 1, 0, 1d / 60d);
 
     /// <summary>One advanced sprite frame whose authored damage frame was crossed.</summary>
+    /// <summary>A playback receipt that completes without crossing a marker, which is what clears a swing.</summary>
+    private static SpritePlaybackAdvanceLeaseReceipt CompletedMarker(uint frame) => new(
+        Array.Empty<SpritePlaybackMarkerCrossing>(),
+        new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Completed, 0D, 0, frame, true),
+        true);
+
     private static SpritePlaybackAdvanceLeaseReceipt CrossedMarker(uint frame, ulong crossing = 1) => new(
         new[] { new SpritePlaybackMarkerCrossing(1, 3, 1, 0, crossing) },
         new SpritePlaybackReadout(frame, 1, SpritePlaybackState.Playing, 0D, 0, frame, false),
