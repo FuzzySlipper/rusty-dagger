@@ -154,7 +154,7 @@ Engine-boundary reminder: product code owns application/gameplay state and polic
 | Static NPC records | `Game/StaticNPC.cs` | Static RMB/RDB NPC flats with questor injection, relocation hiding, quest removal. | Absent — no static-NPC/questor concept |
 | Civilian entity stats | `Game/Entities/CivilianEntity.cs` | Lightweight non-combat entity defaults for townsfolk. | Absent — `Kit/Actors/ActorsState.cs` covers player + hostile actors only |
 | Random encounter tables | `Utility/RandomEncounters.cs` | 20-entry per-dungeon-type spawn tables from FALL.EXE plus wilderness logic. | Absent — actors authored per scene in `Content/PrivateersHoldContent.cs`; no encounter tables or level-scaled spawning |
-| Enemy test/demo setup | `Game/SetupDemoEnemy.cs` | Inspector/test harness for enemy type, reaction, gender, spawn distance. | Partial — validation sprite pages under `content/validation/sprites/`; no in-engine spawn harness |
+| Enemy test/demo setup | `Game/SetupDemoEnemy.cs` | Inspector/test harness for enemy type, reaction, gender, spawn distance. | Absent — no in-engine spawn harness |
 
 ## 4. Guilds, factions, quests, dialogue, UI, character creation
 
