@@ -16,9 +16,210 @@ public sealed record MapsDungeonLayout(
     IReadOnlyList<MapsDungeonBlock> Blocks);
 
 /// <summary>Decoder for region-linked MAPS.BSA source records.</summary>
+/// <summary>What happened when one region table was read.</summary>
+public enum MapsTableState
+{
+    /// <summary>The table is present and its records agree with what the region declares.</summary>
+    Read,
+
+    /// <summary>The region group does not carry the table at all.</summary>
+    Missing,
+
+    /// <summary>
+    /// The table is present with no bytes. The donor's <c>MapsFile</c> treats any of a region's four
+    /// tables being zero-length as making the whole region unreadable and discards it, so an empty
+    /// table means the region is unavailable rather than that it has no locations.
+    /// </summary>
+    Empty,
+
+    /// <summary>The table is present and its contents disagree with the region, so its records are unusable as they stand.</summary>
+    Malformed,
+}
+
+/// <summary>
+/// One named table in a region's MAPS.BSA group: what it declares, and whether that agrees with
+/// the rest of the group.
+/// </summary>
+/// <param name="Name">The table's source name, including its region index.</param>
+/// <param name="Ordinal">The record's ordinal in the archive, which is its address.</param>
+/// <param name="Length">The table's payload length in bytes.</param>
+/// <param name="DeclaredRecords">The records the table's own bytes declare, or -1 when it declares none.</param>
+/// <param name="State">Whether the table read, is absent, or disagrees.</param>
+/// <param name="Reason">Why the state holds, naming the values that disagree.</param>
+public sealed record MapsRegionTable(string Name, int Ordinal, int Length, int DeclaredRecords, MapsTableState State, string Reason);
+
+/// <summary>One region group: the four tables a region index addresses.</summary>
+/// <param name="Region">The source region index the table names carry.</param>
+/// <param name="Tables">The group's tables, in the donor's own order.</param>
+public sealed record MapsRegionGroup(int Region, IReadOnlyList<MapsRegionTable> Tables);
+
 public static class MapsDecoder
 {
     private static readonly string[] RdbBlockLetters = ["N", "W", "L", "S", "B", "M"];
+
+    /// <summary>
+    /// The four tables a region group carries, in the order the donor's <c>MapsFile</c> reads them:
+    /// the exterior location items, the dungeon items, the map table indexed by location, and the
+    /// location names. The donor's region record declares them in the opposite order; the order here
+    /// is the one its reader uses.
+    /// </summary>
+    public static readonly string[] RegionTables = ["MAPPITEM", "MAPDITEM", "MAPTABLE", "MAPNAMES"];
+
+    /// <summary>Bytes one MAPTABLE entry occupies, one per location.</summary>
+    private const int MapTableEntryBytes = 17;
+
+    /// <summary>
+    /// Reads every region group the archive carries, with each group's four tables and whether their
+    /// records agree.
+    /// </summary>
+    /// <remarks>
+    /// Region indices are discovered from the record names rather than assumed to be a contiguous
+    /// range, because an assumption about which regions exist is exactly the kind of claim that goes
+    /// wrong silently. A group whose table is absent is reported as missing rather than skipped, and a
+    /// table whose records disagree with the rest of its group is reported as malformed with the
+    /// disagreeing values named - so a region cannot quietly lose a table, and a map table cannot
+    /// quietly describe a different number of locations than the region names.
+    /// </remarks>
+    public static IReadOnlyList<MapsRegionGroup> DecodeRegionGroups(BsaArchive archive)
+    {
+        ArgumentNullException.ThrowIfNull(archive);
+        Dictionary<int, Dictionary<string, BsaRecord>> groups = [];
+        foreach (BsaRecord record in archive.Records)
+        {
+            if (record.Name is not { } name) continue;
+            int separator = name.LastIndexOf('.');
+            if (separator <= 0) continue;
+            string stem = name[..separator];
+            if (!RegionTables.Contains(stem, StringComparer.Ordinal)) continue;
+            if (!int.TryParse(name.AsSpan(separator + 1), out int region)) continue;
+            if (!groups.TryGetValue(region, out Dictionary<string, BsaRecord>? group))
+            {
+                group = new Dictionary<string, BsaRecord>(StringComparer.Ordinal);
+                groups.Add(region, group);
+            }
+
+            group[stem] = record;
+        }
+
+        List<MapsRegionGroup> result = [];
+        foreach ((int region, Dictionary<string, BsaRecord> group) in groups.OrderBy(entry => entry.Key))
+        {
+            // The location count is the region's own declaration, and the other tables are checked
+            // against it rather than trusted independently.
+            int names = -1;
+            string namesReason = string.Empty;
+            bool namesRead = false;
+            if (group.TryGetValue("MAPNAMES", out BsaRecord? namesRecord) && namesRecord.Length != 0)
+            {
+                try
+                {
+                    names = ReadDeclaredCount(archive, namesRecord, "MAPNAMES location count");
+                    namesRead = true;
+                }
+                catch (Arena2FormatException error)
+                {
+                    namesReason = error.Message;
+                }
+            }
+
+            List<MapsRegionTable> tables = [];
+            foreach (string stem in RegionTables)
+            {
+                if (!group.TryGetValue(stem, out BsaRecord? record))
+                {
+                    tables.Add(new MapsRegionTable($"{stem}.{region:000}", -1, 0, -1, MapsTableState.Missing, "The region group does not carry this table."));
+                    continue;
+                }
+
+                if (record.Length == 0)
+                {
+                    tables.Add(new MapsRegionTable(record.Name ?? $"{stem}.{region:000}", record.Ordinal, 0, -1, MapsTableState.Empty,
+                        "The table has no bytes; the donor's MapsFile treats a region with any zero-length table as unreadable and discards the region."));
+                    continue;
+                }
+
+                (int declared, MapsTableState state, string reason) = stem switch
+                {
+                    "MAPNAMES" when namesRead => (names, MapsTableState.Read, "The declared location count reads as it stands."),
+                    "MAPNAMES" => (-1, MapsTableState.Malformed, namesReason),
+                    "MAPTABLE" => MapTable(record, names, namesRead),
+                    "MAPPITEM" => ExteriorItems(record, names, namesRead),
+                    "MAPDITEM" => DungeonItems(archive, record),
+                    _ => (-1, MapsTableState.Malformed, $"'{stem}' has no reader here."),
+                };
+                tables.Add(new MapsRegionTable(record.Name ?? $"{stem}.{region:000}", record.Ordinal, record.Length, declared, state, reason));
+            }
+
+            result.Add(new MapsRegionGroup(region, tables));
+        }
+
+        return result;
+    }
+
+    /// <summary>One MAPTABLE entry is one location, so its count is its length and must agree with the names.</summary>
+    private static (int Declared, MapsTableState State, string Reason) MapTable(BsaRecord record, int names, bool namesRead)
+    {
+        int entries = record.Length / MapTableEntryBytes;
+        if (record.Length % MapTableEntryBytes != 0)
+        {
+            return (entries, MapsTableState.Malformed,
+                $"MAPTABLE is {record.Length} bytes, which is not a whole number of {MapTableEntryBytes}-byte location entries.");
+        }
+
+        if (!namesRead)
+        {
+            return (entries, MapsTableState.Read, $"The map table carries {entries} location entries; the names table did not read, so it cannot be compared.");
+        }
+
+        // A table with room to spare still indexes every location: only too few entries make a
+        // location unaddressable, and that is the case worth refusing.
+        return entries >= names
+            ? (entries, MapsTableState.Read, entries == names
+                ? $"One {MapTableEntryBytes}-byte entry for each of the region's {names} locations."
+                : $"{entries} {MapTableEntryBytes}-byte entries for the region's {names} locations, so every location is addressable and the table has {entries - names} to spare.")
+            : (entries, MapsTableState.Malformed,
+                $"MAPTABLE carries {entries} location entries for the region's {names} locations, so {names - entries} of them cannot be addressed.");
+    }
+
+    /// <summary>The exterior item table is indexed by location, so it needs room for one offset each.</summary>
+    private static (int Declared, MapsTableState State, string Reason) ExteriorItems(BsaRecord record, int names, bool namesRead)
+    {
+        if (!namesRead)
+        {
+            return (-1, MapsTableState.Read, "The exterior item table's offsets are indexed by location, which the names table did not supply.");
+        }
+
+        int indexBytes = names * sizeof(uint);
+        return record.Length >= indexBytes
+            ? (names, MapsTableState.Read, $"An offset table of {names} entries at {indexBytes} bytes within {record.Length}.")
+            : (-1, MapsTableState.Malformed,
+                $"MAPPITEM is {record.Length} bytes but its offsets need {indexBytes} for the region's {names} locations.");
+    }
+
+    /// <summary>Reads the dungeon count the dungeon item table declares.</summary>
+    private static (int Declared, MapsTableState State, string Reason) DungeonItems(BsaArchive archive, BsaRecord record)
+    {
+        try
+        {
+            int dungeons = ReadDeclaredCount(archive, record, "MAPDITEM dungeon count");
+            int tableBytes = dungeons * 8;
+            return record.Length >= sizeof(uint) + tableBytes
+                ? (dungeons, MapsTableState.Read, $"A {dungeons}-entry dungeon table at {tableBytes} bytes within {record.Length}.")
+                : (-1, MapsTableState.Malformed,
+                    $"MAPDITEM declares {dungeons} dungeons, whose {tableBytes}-byte table does not fit its {record.Length} bytes.");
+        }
+        catch (Arena2FormatException error)
+        {
+            return (-1, MapsTableState.Malformed, error.Message);
+        }
+    }
+
+    private static int ReadDeclaredCount(BsaArchive archive, BsaRecord record, string what)
+    {
+        ReadOnlyMemory<byte> data = archive.GetPayload(record);
+        CheckedLittleEndianReader reader = new(data.Span, archive.Source);
+        return CheckedCount(reader.ReadUInt32(), archive.Source, 0, what);
+    }
 
     /// <summary>Reads the exact location names stored in a MAPNAMES region record.</summary>
     public static IReadOnlyList<string> DecodeLocationNames(BsaArchive archive, int region)
