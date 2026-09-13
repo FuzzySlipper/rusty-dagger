@@ -36,6 +36,7 @@ import { image } from './art.js';
 
 export interface CharacterView {
   update(value: CharacterProjection): void;
+  refresh(): void;
   dispose(): void;
 }
 
@@ -71,10 +72,12 @@ export function mountCharacter(root: HTMLElement): CharacterView {
   shell.append(chrome, heading, overview, columns);
   root.append(shell);
   let disposed = false;
+  let held: CharacterProjection | null = null;
 
-  return {
+  const view: CharacterView = {
     update(value): void {
       if (disposed) return;
+      held = value;
       const published = image('window.character-sheet.chrome');
       if (published !== null && chrome.src !== published) chrome.src = published;
       overview.replaceChildren(
@@ -99,12 +102,18 @@ export function mountCharacter(root: HTMLElement): CharacterView {
       })));
       equipment.rows.replaceChildren(...value.equipment.map(item => equipmentRow(item)));
     },
+    // The sheet's chrome is published art that can arrive after the sheet's own state.
+    refresh(): void {
+      if (disposed || held === null) return;
+      view.update(held);
+    },
     dispose(): void {
       if (disposed) return;
       disposed = true;
       shell.remove();
     },
   };
+  return view;
 }
 
 export function isCharacterProjection(value: unknown): value is CharacterProjection {

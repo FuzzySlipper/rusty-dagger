@@ -15,15 +15,6 @@ export type ArtRequestAction = {
   readonly revision: string;
 };
 
-/// The pack's media identities for the art every session draws. The bytes arrive in the snapshot;
-/// only the names are static here, and they are the same identities the content publication emits.
-const SKINS: readonly (readonly [string, string])[] = [
-  ['--inventory-panel-art', 'inventory.skin.panel-slate.v1'],
-  ['--inventory-title-art', 'inventory.skin.titlebar-slate.v1'],
-  ['--inventory-slot-art', 'inventory.skin.grid-slot-slate.v1'],
-  ['--loot-panel-art', 'inventory.skin.panel-slate.v1'],
-];
-
 const images = new Map<string, string>();
 let revision = '';
 
@@ -41,11 +32,6 @@ export function adopt(value: unknown): string {
   images.clear();
   for (const [id, image] of next) images.set(id, image);
   revision = block.revision;
-  for (const [property, id] of SKINS) {
-    const source = images.get(id);
-    if (source !== undefined) document.documentElement.style.setProperty(property, `url("${source}")`);
-  }
-
   return revision;
 }
 

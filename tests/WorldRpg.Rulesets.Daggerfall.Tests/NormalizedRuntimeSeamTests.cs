@@ -2935,7 +2935,7 @@ public sealed class NormalizedRuntimeSeamTests
             .ToDictionary(image => Assert.IsType<string>(image["id"]), image => (object?)Assert.IsType<string>(image["image"]), StringComparer.Ordinal);
         // One artifact per identity the DOM draws: the chrome and authored skins this presentation
         // shows, plus every inventory icon the content pack names for its items.
-        Assert.Equal(6 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
+        Assert.Equal(2 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -2943,6 +2943,42 @@ public sealed class NormalizedRuntimeSeamTests
             $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/ui/screen-death.png")))}",
             images["screen.death"]);
         Assert.Contains("inventory.icon.iron-dagger", images.Keys);
+        Assert.Contains("window.character-sheet.chrome", images.Keys);
+    }
+
+    [Fact]
+    public void Art_larger_than_one_admitted_read_is_joined_from_bounded_chunks()
+    {
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        // An artifact past the Engine's per-read bound: the reader has to ask more than once and the
+        // bytes it publishes have to be the whole artifact, not the first slice.
+        byte[] large = new byte[(1024 * 1024) + 7];
+        for (int index = 0; index < large.Length; index++) large[index] = (byte)(index % 251);
+        byte[] chrome = [1, 2, 3, 4];
+        const string Screen = "worldrpg/media/ui/screen-death.png";
+        const string Chrome = "worldrpg/media/ui/window-character-sheet-chrome.png";
+        content.Add(Screen, large);
+        content.Add(Chrome, chrome);
+        content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(new JsonObject
+        {
+            ["schemaVersion"] = 1,
+            ["generator"] = "fixture",
+            ["artifacts"] = new JsonArray(Entry("screen.death", Screen, large), Entry("window.character-sheet.chrome", Chrome, chrome)),
+        }.ToJsonString()));
+
+        DaggerfallUiArt art = DaggerfallUiArt.Read(content, []);
+        Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(large)}", art.Images.Single(image => image.Id == "screen.death").Image);
+        Assert.Equal(2, content.Reads(Screen));
+        Assert.Equal(1, content.Reads(Chrome));
+
+        static JsonObject Entry(string mediaId, string path, byte[] bytes) => new()
+        {
+            ["path"] = path,
+            ["byteLength"] = bytes.Length,
+            ["sha256"] = Convert.ToHexStringLower(SHA256.HashData(bytes)),
+            ["mediaId"] = mediaId,
+        };
     }
 
     [Fact]
@@ -3726,6 +3762,7 @@ public sealed class NormalizedRuntimeSeamTests
         private readonly List<string> releases;
         private readonly Dictionary<string, ContentSha256> values = new(StringComparer.Ordinal);
         private readonly Dictionary<string, byte[]> bodies = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, int> reads = new(StringComparer.Ordinal);
         private readonly Dictionary<ulong, KeyValuePair<string, ContentSha256>> references = [];
         private ulong nextHandle = 1;
 
@@ -3754,6 +3791,9 @@ public sealed class NormalizedRuntimeSeamTests
             return new ContentReference(new ContentReferenceHandle(value), () => releases.Add("content"));
         }
 
+        /// <summary>How many admitted reads this fake served for one path, which shows how it was chunked.</summary>
+        internal int Reads(string path) => reads.GetValueOrDefault(path);
+
         public ReadOnlyMemory<ContentReferenceInfo> ReadReferenceInfo(ContentReference reference)
         {
             KeyValuePair<string, ContentSha256> item = references[reference.Handle.Value];
@@ -3764,6 +3804,10 @@ public sealed class NormalizedRuntimeSeamTests
         public ReadOnlyMemory<byte> ReadBytes(ContentReadBytesRequest request)
         {
             string path = references[request.Reference.Handle.Value].Key;
+            // The Engine serves at most one mebibyte per admitted read, so this fake does too: a fake
+            // that answered a larger request would hide a reader that asked for a whole artifact.
+            if (request.MaxBytes > 1024 * 1024) throw new InvalidOperationException($"Admitted content reads are bounded to one mebibyte, not {request.MaxBytes}.");
+            reads[path] = reads.GetValueOrDefault(path) + 1;
             if (!bodies.TryGetValue(path, out byte[]? body)) return ReadOnlyMemory<byte>.Empty;
             if (request.Offset > (ulong)body.Length) throw new InvalidOperationException($"Read of '{path}' starts past its admitted bytes.");
             int available = checked((int)Math.Min(request.MaxBytes, (ulong)body.Length - request.Offset));

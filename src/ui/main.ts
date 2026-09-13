@@ -257,8 +257,6 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   // revision it is missing, which is what a reload needs and what a republished artifact produces.
   let artRevision = heldRevision();
   let artCooldown = 0;
-  let lastInventory: InventoryProjection | undefined;
-  let lastCharacter: CharacterProjection | undefined;
   let deadMode = false;
   const requestArt = (revision: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'art-request', revision },
@@ -267,9 +265,11 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     deathRoot.hidden = !deadMode;
     const death = image('screen.death');
     if (deadMode && death !== null) deathScreen.src = death;
-    if (lastInventory) inventoryView.update(lastInventory);
-    if (lastCharacter) characterView.update(lastCharacter);
-    lootView.update(currentLoot);
+    // The panels memo their own state revision, so art that arrived after the state it draws has to
+    // ask them to paint again rather than re-send a projection they would ignore.
+    inventoryView.refresh();
+    characterView.refresh();
+    lootView.refresh();
   };
   const unsubscribe = context.projection?.subscribe((projection) => {
     if (projection?.contract !== 'dagger.ui.snapshot.v1' || !isHud(projection.value)) return;
@@ -293,8 +293,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       artCooldown = 0;
     }
 
-    if (value.inventory) inventoryView.update(lastInventory = value.inventory);
-    if (value.character && isCharacterProjection(value.character)) characterView.update(lastCharacter = value.character);
+    if (value.inventory) inventoryView.update(value.inventory);
+    if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
     currentLoot = value.loot ?? null;
     lootView.update(currentLoot);
     if (currentLoot && currentLoot.container !== lastLootContainer) {

@@ -47,9 +47,10 @@ const EQUIPMENT_SLOT_COUNT = 25;
 export function mountInventory(
   root: HTMLElement,
   claim: (action: InventoryAction) => void,
-): { update(value: InventoryProjection): void; dispose(): void } {
+): { update(value: InventoryProjection): void; refresh(): void; dispose(): void } {
   const shell = document.createElement('section');
   shell.className = 'dagger-inventory';
+  applyAuthoredArt(shell);
   shell.setAttribute('aria-label', 'Inventory and equipment');
 
   const heading = document.createElement('h2');
@@ -260,6 +261,12 @@ export function mountInventory(
       }
       render(value);
     },
+    // Published art can arrive after the state that names it, and the revision check above would
+    // otherwise leave the panel painted without it.
+    refresh(): void {
+      if (disposed || current === null) return;
+      render(current);
+    },
     dispose(): void {
       if (disposed) return;
       disposed = true;
@@ -413,6 +420,13 @@ function renderOverflow(container: HTMLElement, items: readonly InventoryItem[])
     row.append(button);
     return row;
   }));
+}
+
+function applyAuthoredArt(element: HTMLElement): void {
+  const art = (name: string): string => `url("${new URL(`./inventory-art/authored/${name}`, import.meta.url).href}")`;
+  element.style.setProperty('--inventory-panel-art', art('inventory-skin-panel-slate-v1.png'));
+  element.style.setProperty('--inventory-title-art', art('inventory-titlebar-slate-v1.png'));
+  element.style.setProperty('--inventory-slot-art', art('inventory-grid-slot-slate-v1.png'));
 }
 
 function emptyMark(): HTMLElement {
