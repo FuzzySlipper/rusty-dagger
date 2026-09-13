@@ -133,6 +133,10 @@ public sealed class DaggerfallCharacterMediaContentTests
         Assert.Equal(15251, locations.Locations);
         Assert.Equal(3959, locations.Dungeons);
         Assert.Equal(17, locations.RegionGaps);
+
+        // Every region group's table provenance is validated where the section loads, not only where it
+        // is built: the seventeen regions with no data carry their four table names and their state too.
+        Assert.Equal(62, locations.Regions);
         // Privateer's Hold's region carries many locations, so the check is that the region is present.
         Assert.Contains(locations.Keys, key => key.Region == 17);
 

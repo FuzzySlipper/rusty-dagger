@@ -293,7 +293,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("locations", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish a locations section.");
-            return new DaggerfallLocationSet(0, [], 0, 0, 0);
+            return new DaggerfallLocationSet(0, [], 0, 0, 0, 0);
         }
 
         int schemaVersion = Integer(section, "schemaVersion", diagnostics);
@@ -382,6 +382,35 @@ internal static class DaggerfallBaseContent
             gaps++;
         }
 
+        // Each region's provenance is the four tables the donor reads: a region that records fewer, or
+        // records one with no name, would leave a published fact with nowhere to trace it to.
+        int regions = 0;
+        foreach (JsonElement region in Array(section, "regions", diagnostics))
+        {
+            _ = Integer(region, "region", diagnostics);
+            int tables = 0;
+            foreach (JsonElement table in Array(region, "tables", diagnostics))
+            {
+                string name = Text(table, "name", diagnostics);
+                _ = Integer(table, "ordinal", diagnostics);
+                _ = Integer(table, "length", diagnostics);
+                _ = Integer(table, "declaredRecords", diagnostics);
+                if (Text(table, "state", diagnostics).Length == 0)
+                {
+                    diagnostics.Add($"A published region table '{name}' carries no state, so nothing says whether it read.");
+                }
+
+                tables++;
+            }
+
+            if (tables != 4)
+            {
+                diagnostics.Add($"A published region records {tables} tables; a region group carries four.");
+            }
+
+            regions++;
+        }
+
         foreach (JsonElement gap in Array(section, "dungeonsWithoutRecords", diagnostics))
         {
             int region = Integer(gap, "region", diagnostics);
@@ -398,7 +427,7 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallLocationSet(schemaVersion, [.. keys], locations, dungeons, gaps);
+        return new DaggerfallLocationSet(schemaVersion, [.. keys], locations, dungeons, gaps, regions);
     }
 
     /// <summary>
