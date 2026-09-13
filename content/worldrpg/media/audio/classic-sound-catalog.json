@@ -1,0 +1,4139 @@
+{
+  "schemaVersion": 1,
+  "clips": [
+    {
+      "ordinal": 0,
+      "numericId": 3,
+      "byteLength": 39363,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpookyHigh",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpookyHigh\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 1,
+      "numericId": 4,
+      "byteLength": 52541,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpookyMid",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpookyMid\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 2,
+      "numericId": 5,
+      "byteLength": 45587,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpookyLow",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpookyLow\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 3,
+      "numericId": 6,
+      "byteLength": 2259,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArrowShoot",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArrowShoot\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 4,
+      "numericId": 7,
+      "byteLength": 7148,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArrowHit",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArrowHit\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 5,
+      "numericId": 8,
+      "byteLength": 0,
+      "disposition": "unsupported",
+      "usageCandidate": "Invalid",
+      "mediaId": null,
+      "reason": "The archive carries a record with no sample bytes, so there is nothing to convert; the donor names clip 5 \u0027Invalid\u0027."
+    },
+    {
+      "ordinal": 6,
+      "numericId": 375,
+      "byteLength": 18018,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientCrickets",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientCrickets\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 7,
+      "numericId": 9,
+      "byteLength": 5123,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerDoorBash",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerDoorBash\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 8,
+      "numericId": 10,
+      "byteLength": 12515,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 9,
+      "numericId": 11,
+      "byteLength": 39035,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 10,
+      "numericId": 12,
+      "byteLength": 39657,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 11,
+      "numericId": 13,
+      "byteLength": 24375,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaFireDaemon",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaFireDaemon\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 12,
+      "numericId": 14,
+      "byteLength": 9477,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 13,
+      "numericId": 15,
+      "byteLength": 28945,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientCreepyBirdLaughs",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientCreepyBirdLaughs\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 14,
+      "numericId": 16,
+      "byteLength": 22506,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientCreepyBirdCall",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientCreepyBirdCall\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 15,
+      "numericId": 17,
+      "byteLength": 9116,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BodyFall",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BodyFall\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 16,
+      "numericId": 18,
+      "byteLength": 9565,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Ignite",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Ignite\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 17,
+      "numericId": 19,
+      "byteLength": 75935,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 18,
+      "numericId": 20,
+      "byteLength": 2184,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 19,
+      "numericId": 21,
+      "byteLength": 23173,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ActivateGears",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ActivateGears\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 20,
+      "numericId": 22,
+      "byteLength": 10827,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ActivateDoorClose",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ActivateDoorClose\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 21,
+      "numericId": 23,
+      "byteLength": 35702,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 22,
+      "numericId": 24,
+      "byteLength": 4830,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaFootstep1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaFootstep1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 23,
+      "numericId": 25,
+      "byteLength": 4414,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaFootstep2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaFootstep2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 24,
+      "numericId": 26,
+      "byteLength": 11892,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DungeonDoorClose",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DungeonDoorClose\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 25,
+      "numericId": 27,
+      "byteLength": 23320,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DungeonDoorOpen",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DungeonDoorOpen\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 26,
+      "numericId": 28,
+      "byteLength": 9201,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDripShortHigh",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDripShortHigh\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 27,
+      "numericId": 29,
+      "byteLength": 15459,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDripLongHigh",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDripLongHigh\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 28,
+      "numericId": 30,
+      "byteLength": 22143,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDrums",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDrums\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 29,
+      "numericId": 31,
+      "byteLength": 21664,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientWindMoan2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientWindMoan2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 30,
+      "numericId": 32,
+      "byteLength": 3112,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaHitSound",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaHitSound\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 31,
+      "numericId": 33,
+      "byteLength": 11602,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 32,
+      "numericId": 34,
+      "byteLength": 25278,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaFanfareLevelUp",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaFanfareLevelUp\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 33,
+      "numericId": 35,
+      "byteLength": 26655,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaFanfareStaffOfChaos",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaFanfareStaffOfChaos\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 34,
+      "numericId": 36,
+      "byteLength": 4407,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 35,
+      "numericId": 37,
+      "byteLength": 9235,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 36,
+      "numericId": 38,
+      "byteLength": 26870,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaFireDaemon2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaFireDaemon2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 37,
+      "numericId": 39,
+      "byteLength": 16296,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 38,
+      "numericId": 40,
+      "byteLength": 21035,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaGhost",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaGhost\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 39,
+      "numericId": 41,
+      "byteLength": 19211,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaGhoul",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaGhoul\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 40,
+      "numericId": 42,
+      "byteLength": 12310,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ActivateGrind",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ActivateGrind\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 41,
+      "numericId": 43,
+      "byteLength": 11817,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaHellHound",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaHellHound\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 42,
+      "numericId": 266,
+      "byteLength": 8542,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArgonianMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArgonianMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 43,
+      "numericId": 267,
+      "byteLength": 4831,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BretonFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BretonFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 44,
+      "numericId": 268,
+      "byteLength": 4509,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BretonFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BretonFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 45,
+      "numericId": 269,
+      "byteLength": 7167,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BretonFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BretonFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 46,
+      "numericId": 270,
+      "byteLength": 3032,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RedguardFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RedguardFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 47,
+      "numericId": 271,
+      "byteLength": 4831,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RedguardFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RedguardFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 48,
+      "numericId": 272,
+      "byteLength": 4407,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RedguardFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RedguardFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 49,
+      "numericId": 273,
+      "byteLength": 3032,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NordFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NordFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 50,
+      "numericId": 274,
+      "byteLength": 4573,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NordFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NordFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 51,
+      "numericId": 275,
+      "byteLength": 6413,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NordFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NordFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 52,
+      "numericId": 276,
+      "byteLength": 3031,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DarkElfFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DarkElfFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 53,
+      "numericId": 277,
+      "byteLength": 4830,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DarkElfFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DarkElfFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 54,
+      "numericId": 278,
+      "byteLength": 4407,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DarkElfFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DarkElfFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 55,
+      "numericId": 279,
+      "byteLength": 4829,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighElfFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighElfFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 56,
+      "numericId": 280,
+      "byteLength": 4508,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighElfFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighElfFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 57,
+      "numericId": 281,
+      "byteLength": 7166,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighElfFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighElfFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 58,
+      "numericId": 282,
+      "byteLength": 3031,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WoodElfFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WoodElfFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 59,
+      "numericId": 283,
+      "byteLength": 4572,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WoodElfFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WoodElfFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 60,
+      "numericId": 284,
+      "byteLength": 6412,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WoodElfFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WoodElfFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 61,
+      "numericId": 285,
+      "byteLength": 4996,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "KhajiitFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027KhajiitFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 62,
+      "numericId": 286,
+      "byteLength": 6894,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "KhajiitFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027KhajiitFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 63,
+      "numericId": 331,
+      "byteLength": 9201,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDripShort",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDripShort\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 64,
+      "numericId": 332,
+      "byteLength": 15459,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDripLong",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDripLong\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 65,
+      "numericId": 333,
+      "byteLength": 21664,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientWindMoan",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientWindMoan\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 66,
+      "numericId": 334,
+      "byteLength": 35437,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientWindMoanDeep",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientWindMoanDeep\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 67,
+      "numericId": 335,
+      "byteLength": 23320,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDoorOpen",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDoorOpen\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 68,
+      "numericId": 336,
+      "byteLength": 12310,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientGrind",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientGrind\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 69,
+      "numericId": 337,
+      "byteLength": 25898,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientStrumming",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientStrumming\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 70,
+      "numericId": 338,
+      "byteLength": 55297,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientWindBlow1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientWindBlow1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 71,
+      "numericId": 339,
+      "byteLength": 55297,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientWindBlow1a",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientWindBlow1a\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 72,
+      "numericId": 340,
+      "byteLength": 55297,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientWindBlow1b",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientWindBlow1b\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 73,
+      "numericId": 341,
+      "byteLength": 26406,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientMonsterRoar",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientMonsterRoar\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 74,
+      "numericId": 342,
+      "byteLength": 10938,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientGoldPieces",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientGoldPieces\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 75,
+      "numericId": 343,
+      "byteLength": 22506,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientBirdCall",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientBirdCall\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 76,
+      "numericId": 344,
+      "byteLength": 5041,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDoorClose",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDoorClose\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 77,
+      "numericId": 345,
+      "byteLength": 25053,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "FanfareSolo",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027FanfareSolo\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 78,
+      "numericId": 346,
+      "byteLength": 6237,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DrawWeapon",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DrawWeapon\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 79,
+      "numericId": 347,
+      "byteLength": 35955,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 80,
+      "numericId": 348,
+      "byteLength": 3594,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 81,
+      "numericId": 349,
+      "byteLength": 18284,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "CastSpell1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027CastSpell1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 82,
+      "numericId": 350,
+      "byteLength": 19838,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "CastSpell2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027CastSpell2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 83,
+      "numericId": 351,
+      "byteLength": 10482,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "CastSpell3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027CastSpell3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 84,
+      "numericId": 352,
+      "byteLength": 18091,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "CastSpell4",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027CastSpell4\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 85,
+      "numericId": 353,
+      "byteLength": 15999,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "CastSpell5",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027CastSpell5\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 86,
+      "numericId": 354,
+      "byteLength": 8370,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpellImpactMagic",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpellImpactMagic\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 87,
+      "numericId": 355,
+      "byteLength": 11353,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpellImpactPoison",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpellImpactPoison\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 88,
+      "numericId": 356,
+      "byteLength": 5068,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpellImpactShock",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpellImpactShock\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 89,
+      "numericId": 357,
+      "byteLength": 13557,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpellImpactFire",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpellImpactFire\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 90,
+      "numericId": 358,
+      "byteLength": 9145,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpellImpactCold",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpellImpactCold\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 91,
+      "numericId": 359,
+      "byteLength": 2226,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "FallDamage",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027FallDamage\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 92,
+      "numericId": 360,
+      "byteLength": 2171,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "FallHard",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027FallHard\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 93,
+      "numericId": 361,
+      "byteLength": 5047,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NormalDoorClose",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NormalDoorClose\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 94,
+      "numericId": 362,
+      "byteLength": 9052,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NormalDoorOpen",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NormalDoorOpen\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 95,
+      "numericId": 363,
+      "byteLength": 22151,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "LongSlam",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027LongSlam\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 96,
+      "numericId": 364,
+      "byteLength": 41428,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "LevelUp",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027LevelUp\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 97,
+      "numericId": 365,
+      "byteLength": 16622,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HorseClop",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HorseClop\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 98,
+      "numericId": 1,
+      "byteLength": 24832,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Spooky2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Spooky2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 99,
+      "numericId": 367,
+      "byteLength": 11495,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AnimalHorse",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AnimalHorse\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 100,
+      "numericId": 368,
+      "byteLength": 2922,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AnimalDog",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AnimalDog\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 101,
+      "numericId": 369,
+      "byteLength": 8079,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AnimalCat",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AnimalCat\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 102,
+      "numericId": 370,
+      "byteLength": 32548,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AnimalPig",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AnimalPig\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 103,
+      "numericId": 371,
+      "byteLength": 16878,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AnimalCow",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AnimalCow\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 104,
+      "numericId": 372,
+      "byteLength": 21395,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HorseAndCart",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HorseAndCart\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 105,
+      "numericId": 373,
+      "byteLength": 2824,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SwingLowPitch",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SwingLowPitch\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 106,
+      "numericId": 374,
+      "byteLength": 1287,
+      "disposition": "admitted",
+      "usageCandidate": "SwingHighPitch",
+      "mediaId": "audio.melee.dagger.swing",
+      "reason": "A published artifact carries clip 106 as \u0027audio.melee.dagger.swing\u0027; the donor names it \u0027SwingHighPitch\u0027."
+    },
+    {
+      "ordinal": 107,
+      "numericId": 376,
+      "byteLength": 30454,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Bells",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Bells\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 108,
+      "numericId": 378,
+      "byteLength": 2129,
+      "disposition": "admitted",
+      "usageCandidate": "Hit1",
+      "mediaId": "audio.melee.hit.1",
+      "reason": "A published artifact carries clip 108 as \u0027audio.melee.hit.1\u0027; the donor names it \u0027Hit1\u0027."
+    },
+    {
+      "ordinal": 109,
+      "numericId": 379,
+      "byteLength": 2416,
+      "disposition": "admitted",
+      "usageCandidate": "Hit2",
+      "mediaId": "audio.melee.hit.2",
+      "reason": "A published artifact carries clip 109 as \u0027audio.melee.hit.2\u0027; the donor names it \u0027Hit2\u0027."
+    },
+    {
+      "ordinal": 110,
+      "numericId": 380,
+      "byteLength": 2877,
+      "disposition": "admitted",
+      "usageCandidate": "Hit3",
+      "mediaId": "audio.melee.hit.3",
+      "reason": "A published artifact carries clip 110 as \u0027audio.melee.hit.3\u0027; the donor names it \u0027Hit3\u0027."
+    },
+    {
+      "ordinal": 111,
+      "numericId": 381,
+      "byteLength": 2626,
+      "disposition": "admitted",
+      "usageCandidate": "Hit4",
+      "mediaId": "audio.melee.hit.4",
+      "reason": "A published artifact carries clip 111 as \u0027audio.melee.hit.4\u0027; the donor names it \u0027Hit4\u0027."
+    },
+    {
+      "ordinal": 112,
+      "numericId": 382,
+      "byteLength": 3513,
+      "disposition": "admitted",
+      "usageCandidate": "Hit5",
+      "mediaId": "audio.melee.hit.5",
+      "reason": "A published artifact carries clip 112 as \u0027audio.melee.hit.5\u0027; the donor names it \u0027Hit5\u0027."
+    },
+    {
+      "ordinal": 113,
+      "numericId": 383,
+      "byteLength": 53379,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientDistantHowl",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientDistantHowl\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 114,
+      "numericId": 384,
+      "byteLength": 10322,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientWaterBubbles",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientWaterBubbles\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 115,
+      "numericId": 10000,
+      "byteLength": 19793,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyRatMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyRatMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 116,
+      "numericId": 10001,
+      "byteLength": 9978,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyRatBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyRatBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 117,
+      "numericId": 10002,
+      "byteLength": 2773,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyRatAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyRatAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 118,
+      "numericId": 10010,
+      "byteLength": 8102,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyImpMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyImpMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 119,
+      "numericId": 10011,
+      "byteLength": 11390,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyImpBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyImpBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 120,
+      "numericId": 10012,
+      "byteLength": 6238,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyImpAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyImpAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 121,
+      "numericId": 10020,
+      "byteLength": 22384,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySprigganMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySprigganMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 122,
+      "numericId": 10021,
+      "byteLength": 19291,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySprigganBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySprigganBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 123,
+      "numericId": 10022,
+      "byteLength": 15376,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySprigganAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySprigganAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 124,
+      "numericId": 10030,
+      "byteLength": 8102,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGiantBatMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGiantBatMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 125,
+      "numericId": 10031,
+      "byteLength": 9978,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGiantBatBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGiantBatBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 126,
+      "numericId": 10032,
+      "byteLength": 2773,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGiantBatAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGiantBatAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 127,
+      "numericId": 10040,
+      "byteLength": 37123,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyBearMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyBearMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 128,
+      "numericId": 10041,
+      "byteLength": 26321,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyBearBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyBearBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 129,
+      "numericId": 10042,
+      "byteLength": 7712,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyBearAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyBearAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 130,
+      "numericId": 10050,
+      "byteLength": 37123,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyTigerMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyTigerMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 131,
+      "numericId": 10051,
+      "byteLength": 21051,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyTigerBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyTigerBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 132,
+      "numericId": 10052,
+      "byteLength": 12087,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyTigerAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyTigerAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 133,
+      "numericId": 10060,
+      "byteLength": 24445,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySpiderMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySpiderMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 134,
+      "numericId": 10061,
+      "byteLength": 6802,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySpiderBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySpiderBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 135,
+      "numericId": 10062,
+      "byteLength": 11278,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySpiderAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySpiderAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 136,
+      "numericId": 10070,
+      "byteLength": 41059,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 137,
+      "numericId": 10071,
+      "byteLength": 26892,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 138,
+      "numericId": 10072,
+      "byteLength": 9477,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcShamanAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcShamanAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 139,
+      "numericId": 10080,
+      "byteLength": 16622,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyCentaurMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyCentaurMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 140,
+      "numericId": 10081,
+      "byteLength": 11925,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyCentaurBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyCentaurBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 141,
+      "numericId": 10082,
+      "byteLength": 4610,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyCentaurAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyCentaurAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 142,
+      "numericId": 10090,
+      "byteLength": 18343,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWerewolfMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWerewolfMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 143,
+      "numericId": 10091,
+      "byteLength": 16226,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWerewolfBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWerewolfBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 144,
+      "numericId": 10092,
+      "byteLength": 6885,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWerewolfAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWerewolfAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 145,
+      "numericId": 10100,
+      "byteLength": 27768,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyNymphMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyNymphMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 146,
+      "numericId": 10101,
+      "byteLength": 27043,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyNymphBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyNymphBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 147,
+      "numericId": 10102,
+      "byteLength": 4829,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyNymphAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyNymphAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 148,
+      "numericId": 10110,
+      "byteLength": 30813,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyEelMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyEelMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 149,
+      "numericId": 10111,
+      "byteLength": 23815,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyEelBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyEelBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 150,
+      "numericId": 10112,
+      "byteLength": 16561,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyEelAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyEelAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 151,
+      "numericId": 10120,
+      "byteLength": 41059,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcSergeantMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcSergeantMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 152,
+      "numericId": 10121,
+      "byteLength": 26892,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcSergeantBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcSergeantBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 153,
+      "numericId": 10122,
+      "byteLength": 9477,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcSergeantAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcSergeantAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 154,
+      "numericId": 10130,
+      "byteLength": 8102,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyHarpyMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyHarpyMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 155,
+      "numericId": 10131,
+      "byteLength": 5236,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyHarpyBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyHarpyBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 156,
+      "numericId": 10132,
+      "byteLength": 7780,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyHarpyAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyHarpyAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 157,
+      "numericId": 10140,
+      "byteLength": 18343,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWereboarMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWereboarMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 158,
+      "numericId": 10141,
+      "byteLength": 8193,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWereboarBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWereboarBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 159,
+      "numericId": 10142,
+      "byteLength": 4762,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWereboarAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWereboarAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 160,
+      "numericId": 10150,
+      "byteLength": 28507,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySkeletonMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySkeletonMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 161,
+      "numericId": 10151,
+      "byteLength": 26204,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySkeletonBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySkeletonBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 162,
+      "numericId": 10152,
+      "byteLength": 17170,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySkeletonAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySkeletonAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 163,
+      "numericId": 10160,
+      "byteLength": 27768,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGiantMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGiantMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 164,
+      "numericId": 10161,
+      "byteLength": 17715,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGiantBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGiantBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 165,
+      "numericId": 10162,
+      "byteLength": 7886,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGiantAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGiantAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 166,
+      "numericId": 10170,
+      "byteLength": 30815,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyZombieMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyZombieMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 167,
+      "numericId": 10171,
+      "byteLength": 17761,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyZombieBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyZombieBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 168,
+      "numericId": 10172,
+      "byteLength": 19179,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyZombieAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyZombieAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 169,
+      "numericId": 10180,
+      "byteLength": 49079,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGhostMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGhostMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 170,
+      "numericId": 10181,
+      "byteLength": 26854,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGhostBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGhostBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 171,
+      "numericId": 10182,
+      "byteLength": 11935,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGhostAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGhostAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 172,
+      "numericId": 10190,
+      "byteLength": 29305,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyMummyMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyMummyMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 173,
+      "numericId": 10191,
+      "byteLength": 28451,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyMummyBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyMummyBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 174,
+      "numericId": 10192,
+      "byteLength": 15561,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyMummyAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyMummyAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 175,
+      "numericId": 10200,
+      "byteLength": 24445,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyScorpionMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyScorpionMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 176,
+      "numericId": 10201,
+      "byteLength": 10429,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyScorpionBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyScorpionBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 177,
+      "numericId": 10202,
+      "byteLength": 7592,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyScorpionAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyScorpionAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 178,
+      "numericId": 10210,
+      "byteLength": 28658,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcShamanMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcShamanMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 179,
+      "numericId": 10211,
+      "byteLength": 26892,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcShamanBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcShamanBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 180,
+      "numericId": 10222,
+      "byteLength": 5883,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGargoyleAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGargoyleAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 181,
+      "numericId": 10220,
+      "byteLength": 27768,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGargoyleMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGargoyleMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 182,
+      "numericId": 10221,
+      "byteLength": 6428,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyGargoyleBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyGargoyleBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 183,
+      "numericId": 10230,
+      "byteLength": 49077,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWraithMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWraithMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 184,
+      "numericId": 10231,
+      "byteLength": 26205,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWraithBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWraithBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 185,
+      "numericId": 10232,
+      "byteLength": 11307,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyWraithAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyWraithAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 186,
+      "numericId": 10240,
+      "byteLength": 41059,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcWarlordMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcWarlordMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 187,
+      "numericId": 10241,
+      "byteLength": 26892,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcWarlordBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcWarlordBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 188,
+      "numericId": 10242,
+      "byteLength": 9477,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyOrcWarlordAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyOrcWarlordAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 189,
+      "numericId": 10250,
+      "byteLength": 28432,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFrostDaedraMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFrostDaedraMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 190,
+      "numericId": 10251,
+      "byteLength": 21480,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFrostDaedraBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFrostDaedraBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 191,
+      "numericId": 10252,
+      "byteLength": 14935,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFrostDaedraAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFrostDaedraAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 192,
+      "numericId": 10260,
+      "byteLength": 27831,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFireDaedraMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFireDaedraMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 193,
+      "numericId": 10261,
+      "byteLength": 21480,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFireDaedraBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFireDaedraBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 194,
+      "numericId": 10262,
+      "byteLength": 15081,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFireDaedraAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFireDaedraAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 195,
+      "numericId": 10270,
+      "byteLength": 41059,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLesserDaedraMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLesserDaedraMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 196,
+      "numericId": 10271,
+      "byteLength": 21876,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLesserDaedraBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLesserDaedraBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 197,
+      "numericId": 10272,
+      "byteLength": 19381,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLesserDaedraAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLesserDaedraAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 198,
+      "numericId": 10280,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFemaleVampireMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFemaleVampireMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 199,
+      "numericId": 10281,
+      "byteLength": 12659,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFemaleVampireBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFemaleVampireBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 200,
+      "numericId": 10282,
+      "byteLength": 10933,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFemaleVampireAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFemaleVampireAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 201,
+      "numericId": 10290,
+      "byteLength": 10818,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySeducerMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySeducerMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 202,
+      "numericId": 10291,
+      "byteLength": 23596,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySeducerBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySeducerBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 203,
+      "numericId": 10292,
+      "byteLength": 4830,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemySeducerAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemySeducerAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 204,
+      "numericId": 10300,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyVampireMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyVampireMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 205,
+      "numericId": 10301,
+      "byteLength": 23804,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyVampireBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyVampireBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 206,
+      "numericId": 10302,
+      "byteLength": 10085,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyVampireAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyVampireAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 207,
+      "numericId": 10310,
+      "byteLength": 27768,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyDaedraLordMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyDaedraLordMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 208,
+      "numericId": 10311,
+      "byteLength": 21686,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyDaedraLordBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyDaedraLordBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 209,
+      "numericId": 10312,
+      "byteLength": 3200,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyDaedraLordAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyDaedraLordAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 210,
+      "numericId": 10320,
+      "byteLength": 28507,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLichMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLichMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 211,
+      "numericId": 10321,
+      "byteLength": 26201,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLichBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLichBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 212,
+      "numericId": 10322,
+      "byteLength": 17168,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLichAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLichAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 213,
+      "numericId": 10330,
+      "byteLength": 28507,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLichKingMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLichKingMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 214,
+      "numericId": 10331,
+      "byteLength": 26201,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLichKingBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLichKingBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 215,
+      "numericId": 10332,
+      "byteLength": 17168,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLichKingAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLichKingAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 216,
+      "numericId": 10340,
+      "byteLength": 10789,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFaeryDragonMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFaeryDragonMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 217,
+      "numericId": 10341,
+      "byteLength": 21875,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFaeryDragonBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFaeryDragonBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 218,
+      "numericId": 10342,
+      "byteLength": 19330,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFaeryDragonAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFaeryDragonAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 219,
+      "numericId": 10350,
+      "byteLength": 27688,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFireAtronachMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFireAtronachMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 220,
+      "numericId": 10351,
+      "byteLength": 19010,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFireAtronachBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFireAtronachBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 221,
+      "numericId": 10352,
+      "byteLength": 16939,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFireAtronachAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFireAtronachAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 222,
+      "numericId": 10360,
+      "byteLength": 7672,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyIronAtronachMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyIronAtronachMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 223,
+      "numericId": 10361,
+      "byteLength": 19008,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyIronAtronachBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyIronAtronachBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 224,
+      "numericId": 10362,
+      "byteLength": 16938,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyIronAtronachAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyIronAtronachAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 225,
+      "numericId": 10370,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFleshAtronachMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFleshAtronachMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 226,
+      "numericId": 10371,
+      "byteLength": 19010,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFleshAtronachBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFleshAtronachBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 227,
+      "numericId": 10372,
+      "byteLength": 16939,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyFleshAtronachAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyFleshAtronachAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 228,
+      "numericId": 10380,
+      "byteLength": 7636,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyIceAtronachMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyIceAtronachMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 229,
+      "numericId": 10381,
+      "byteLength": 19009,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyIceAtronachBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyIceAtronachBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 230,
+      "numericId": 10382,
+      "byteLength": 16119,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyIceAtronachAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyIceAtronachAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 231,
+      "numericId": 10390,
+      "byteLength": 16622,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyCentaur2Move",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyCentaur2Move\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 232,
+      "numericId": 10391,
+      "byteLength": 11495,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyCentaur2Bark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyCentaur2Bark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 233,
+      "numericId": 10392,
+      "byteLength": 11495,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyCentaur2Attack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyCentaur2Attack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 234,
+      "numericId": 10400,
+      "byteLength": 8102,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyImp2Move",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyImp2Move\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 235,
+      "numericId": 10401,
+      "byteLength": 11390,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyImp2Bark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyImp2Bark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 236,
+      "numericId": 10402,
+      "byteLength": 6238,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyImp2Attack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyImp2Attack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 237,
+      "numericId": 10410,
+      "byteLength": 20596,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyDreughMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyDreughMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 238,
+      "numericId": 10411,
+      "byteLength": 26895,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyDreughBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyDreughBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 239,
+      "numericId": 10412,
+      "byteLength": 13379,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyDreughAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyDreughAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 240,
+      "numericId": 10420,
+      "byteLength": 26674,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLamiaMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLamiaMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 241,
+      "numericId": 10421,
+      "byteLength": 26895,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLamiaBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLamiaBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 242,
+      "numericId": 10422,
+      "byteLength": 8109,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyLamiaAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyLamiaAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 243,
+      "numericId": 11280,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyHumanMove",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyHumanMove\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 244,
+      "numericId": 11281,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyHumanBark",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyHumanBark\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 245,
+      "numericId": 11282,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EnemyHumanAttack",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EnemyHumanAttack\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 246,
+      "numericId": 11290,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 247,
+      "numericId": 11291,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 248,
+      "numericId": 11292,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 249,
+      "numericId": 11300,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 250,
+      "numericId": 11301,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 251,
+      "numericId": 11302,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 252,
+      "numericId": 11310,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 253,
+      "numericId": 11311,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 254,
+      "numericId": 11312,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 255,
+      "numericId": 11320,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 256,
+      "numericId": 11321,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 257,
+      "numericId": 11322,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 258,
+      "numericId": 11330,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 259,
+      "numericId": 11331,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 260,
+      "numericId": 11332,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 261,
+      "numericId": 11340,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 262,
+      "numericId": 11341,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 263,
+      "numericId": 11342,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 264,
+      "numericId": 11350,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 265,
+      "numericId": 11351,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 266,
+      "numericId": 11352,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 267,
+      "numericId": 11360,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 268,
+      "numericId": 11361,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 269,
+      "numericId": 11362,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 270,
+      "numericId": 11370,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 271,
+      "numericId": 11371,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 272,
+      "numericId": 11372,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 273,
+      "numericId": 11380,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 274,
+      "numericId": 11381,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 275,
+      "numericId": 11382,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 276,
+      "numericId": 11390,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 277,
+      "numericId": 11391,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 278,
+      "numericId": 11392,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 279,
+      "numericId": 11400,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 280,
+      "numericId": 11401,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 281,
+      "numericId": 11402,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 282,
+      "numericId": 11410,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 283,
+      "numericId": 11411,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 284,
+      "numericId": 11412,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 285,
+      "numericId": 11420,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 286,
+      "numericId": 11421,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 287,
+      "numericId": 11422,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 288,
+      "numericId": 11430,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 289,
+      "numericId": 11431,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 290,
+      "numericId": 11432,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 291,
+      "numericId": 11440,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 292,
+      "numericId": 11441,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 293,
+      "numericId": 11442,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 294,
+      "numericId": 11450,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 295,
+      "numericId": 11451,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 296,
+      "numericId": 11452,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 297,
+      "numericId": 11460,
+      "byteLength": 27769,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 298,
+      "numericId": 366,
+      "byteLength": 28730,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HorseClop2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HorseClop2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 299,
+      "numericId": 11462,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PainSound",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PainSound\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 300,
+      "numericId": 220,
+      "byteLength": 11646,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DiceRoll",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DiceRoll\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 301,
+      "numericId": 45,
+      "byteLength": 25365,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaMinotaur",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaMinotaur\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 302,
+      "numericId": 46,
+      "byteLength": 3204,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HaltWeak",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HaltWeak\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 303,
+      "numericId": 47,
+      "byteLength": 5091,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 304,
+      "numericId": 48,
+      "byteLength": 26045,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 305,
+      "numericId": 49,
+      "byteLength": 5235,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaHomonculus",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaHomonculus\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 306,
+      "numericId": 50,
+      "byteLength": 35437,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 307,
+      "numericId": 51,
+      "byteLength": 6503,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaIceGolem",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaIceGolem\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 308,
+      "numericId": 52,
+      "byteLength": 4716,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "FootstepMetal",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027FootstepMetal\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 309,
+      "numericId": 53,
+      "byteLength": 979,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepStone1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepStone1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 310,
+      "numericId": 54,
+      "byteLength": 1633,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepOutside1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepOutside1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 311,
+      "numericId": 55,
+      "byteLength": 3537,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepSnow1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepSnow1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 312,
+      "numericId": 56,
+      "byteLength": 7179,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerSwimming",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerSwimming\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 313,
+      "numericId": 57,
+      "byteLength": 1555,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepWood1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepWood1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 314,
+      "numericId": 58,
+      "byteLength": 7441,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaGoblin",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaGoblin\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 315,
+      "numericId": 59,
+      "byteLength": 3909,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 316,
+      "numericId": 60,
+      "byteLength": 3706,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ActivateLockUnlock",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ActivateLockUnlock\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 317,
+      "numericId": 61,
+      "byteLength": 6779,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 318,
+      "numericId": 62,
+      "byteLength": 25378,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaSkeleton",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaSkeleton\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 319,
+      "numericId": 63,
+      "byteLength": 19381,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaLich",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaLich\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 320,
+      "numericId": 64,
+      "byteLength": 19036,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaLizardMan",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaLizardMan\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 321,
+      "numericId": 65,
+      "byteLength": 19577,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaGhoul2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaGhoul2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 322,
+      "numericId": 66,
+      "byteLength": 3340,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 323,
+      "numericId": 67,
+      "byteLength": 2936,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 324,
+      "numericId": 68,
+      "byteLength": 1706,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 325,
+      "numericId": 69,
+      "byteLength": 12148,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ActivateOpenGate",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ActivateOpenGate\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 326,
+      "numericId": 70,
+      "byteLength": 17399,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaOpenDoor",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaOpenDoor\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 327,
+      "numericId": 71,
+      "byteLength": 26892,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaOrc",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaOrc\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 328,
+      "numericId": 72,
+      "byteLength": 19224,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ActivateRatchet",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ActivateRatchet\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 329,
+      "numericId": 73,
+      "byteLength": 21400,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaRat",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaRat\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 330,
+      "numericId": 74,
+      "byteLength": 775,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepStone2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepStone2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 331,
+      "numericId": 75,
+      "byteLength": 1946,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepOutside2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepOutside2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 332,
+      "numericId": 76,
+      "byteLength": 3537,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepSnow2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepSnow2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 333,
+      "numericId": 77,
+      "byteLength": 1161,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PlayerFootstepWood2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PlayerFootstepWood2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 334,
+      "numericId": 78,
+      "byteLength": 7795,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SplashSmallLow",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SplashSmallLow\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 335,
+      "numericId": 79,
+      "byteLength": 16274,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighPitchWail",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighPitchWail\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 336,
+      "numericId": 80,
+      "byteLength": 13402,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighPitchScream",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighPitchScream\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 337,
+      "numericId": 81,
+      "byteLength": 6539,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaSpider",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaSpider\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 338,
+      "numericId": 82,
+      "byteLength": 15999,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 339,
+      "numericId": 83,
+      "byteLength": 24552,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 340,
+      "numericId": 84,
+      "byteLength": 4252,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaFootstep3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaFootstep3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 341,
+      "numericId": 85,
+      "byteLength": 4054,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 342,
+      "numericId": 86,
+      "byteLength": 15428,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SplashLarge",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SplashLarge\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 343,
+      "numericId": 87,
+      "byteLength": 26133,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 344,
+      "numericId": 88,
+      "byteLength": 16553,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaStoneGolem",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaStoneGolem\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 345,
+      "numericId": 89,
+      "byteLength": 6046,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaStopThief",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaStopThief\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 346,
+      "numericId": 90,
+      "byteLength": 5744,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SplashSmall",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SplashSmall\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 347,
+      "numericId": 91,
+      "byteLength": 2519,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SwingMediumPitch",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SwingMediumPitch\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 348,
+      "numericId": 92,
+      "byteLength": 27045,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "StormLightningShort",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027StormLightningShort\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 349,
+      "numericId": 93,
+      "byteLength": 56313,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "StormLightningThunder",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027StormLightningThunder\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 350,
+      "numericId": 94,
+      "byteLength": 59192,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "StormThunderRoll",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027StormThunderRoll\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 351,
+      "numericId": 95,
+      "byteLength": 21876,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaTroll",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaTroll\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 352,
+      "numericId": 96,
+      "byteLength": 2972,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 353,
+      "numericId": 97,
+      "byteLength": 2416,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SwingMediumPitch2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SwingMediumPitch2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 354,
+      "numericId": 98,
+      "byteLength": 25424,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaVampire",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaVampire\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 355,
+      "numericId": 99,
+      "byteLength": 23468,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 356,
+      "numericId": 100,
+      "byteLength": 19241,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 357,
+      "numericId": 101,
+      "byteLength": 30508,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaWolf",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaWolf\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 358,
+      "numericId": 102,
+      "byteLength": 27050,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaWraith",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaWraith\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 359,
+      "numericId": 103,
+      "byteLength": 24681,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaZombie",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaZombie\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 360,
+      "numericId": 203,
+      "byteLength": 1433,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ButtonClick",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ButtonClick\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 361,
+      "numericId": 204,
+      "byteLength": 10938,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "GoldPieces",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027GoldPieces\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 362,
+      "numericId": 205,
+      "byteLength": 7892,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "PageTurn",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027PageTurn\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 363,
+      "numericId": 206,
+      "byteLength": 25630,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ParchmentScratching",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ParchmentScratching\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 364,
+      "numericId": 207,
+      "byteLength": 8803,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "MakeItem",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027MakeItem\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 365,
+      "numericId": 208,
+      "byteLength": 12753,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "MakePotion",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027MakePotion\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 366,
+      "numericId": 209,
+      "byteLength": 41428,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceBreton",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceBreton\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 367,
+      "numericId": 210,
+      "byteLength": 28121,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceRedguard",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceRedguard\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 368,
+      "numericId": 211,
+      "byteLength": 55297,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceNord",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceNord\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 369,
+      "numericId": 212,
+      "byteLength": 27476,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceDarkElf",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceDarkElf\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 370,
+      "numericId": 213,
+      "byteLength": 26302,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceHighElf",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceHighElf\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 371,
+      "numericId": 214,
+      "byteLength": 21017,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceWoodElf",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceWoodElf\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 372,
+      "numericId": 215,
+      "byteLength": 33111,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceKhajiit",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceKhajiit\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 373,
+      "numericId": 216,
+      "byteLength": 32748,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RaceArgonian",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RaceArgonian\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 374,
+      "numericId": 217,
+      "byteLength": 20561,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SelectClassDrums",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SelectClassDrums\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 375,
+      "numericId": 218,
+      "byteLength": 29305,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 376,
+      "numericId": 220,
+      "byteLength": 11646,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DiceRoll2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DiceRoll2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 377,
+      "numericId": 223,
+      "byteLength": 3207,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipShortBlade",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipShortBlade\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 378,
+      "numericId": 224,
+      "byteLength": 6237,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipLongBlade",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipLongBlade\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 379,
+      "numericId": 225,
+      "byteLength": 5189,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipTwoHandedBlade",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipTwoHandedBlade\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 380,
+      "numericId": 226,
+      "byteLength": 1613,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipStaff",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipStaff\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 381,
+      "numericId": 234,
+      "byteLength": 3395,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipClothing",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipClothing\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 382,
+      "numericId": 235,
+      "byteLength": 5559,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 383,
+      "numericId": 236,
+      "byteLength": 4365,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipJewellery",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipJewellery\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 384,
+      "numericId": 237,
+      "byteLength": 9479,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "OpenBook",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027OpenBook\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 385,
+      "numericId": 238,
+      "byteLength": 54963,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SnoringByFire",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SnoringByFire\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 386,
+      "numericId": 239,
+      "byteLength": 3684,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "MaleGasp",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027MaleGasp\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 387,
+      "numericId": 240,
+      "byteLength": 4770,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "FemaleGasp",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027FemaleGasp\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 388,
+      "numericId": 241,
+      "byteLength": 55297,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BlowingWindIntro",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BlowingWindIntro\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 389,
+      "numericId": 385,
+      "byteLength": 31346,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientRaining",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientRaining\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 390,
+      "numericId": 243,
+      "byteLength": 8463,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BretonMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BretonMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 391,
+      "numericId": 244,
+      "byteLength": 10086,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BretonMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BretonMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 392,
+      "numericId": 245,
+      "byteLength": 6169,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BretonMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BretonMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 393,
+      "numericId": 246,
+      "byteLength": 2240,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RedguardMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RedguardMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 394,
+      "numericId": 247,
+      "byteLength": 2286,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RedguardMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RedguardMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 395,
+      "numericId": 248,
+      "byteLength": 4619,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "RedguardMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027RedguardMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 396,
+      "numericId": 249,
+      "byteLength": 5833,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NordMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NordMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 397,
+      "numericId": 250,
+      "byteLength": 2119,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NordMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NordMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 398,
+      "numericId": 251,
+      "byteLength": 6168,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "NordMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027NordMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 399,
+      "numericId": 252,
+      "byteLength": 5472,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DarkElfMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DarkElfMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 400,
+      "numericId": 253,
+      "byteLength": 3057,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DarkElfMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DarkElfMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 401,
+      "numericId": 254,
+      "byteLength": 19749,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "DarkElfMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027DarkElfMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 402,
+      "numericId": 255,
+      "byteLength": 3919,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighElfMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighElfMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 403,
+      "numericId": 256,
+      "byteLength": 2372,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighElfMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighElfMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 404,
+      "numericId": 257,
+      "byteLength": 9492,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "HighElfMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027HighElfMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 405,
+      "numericId": 258,
+      "byteLength": 2243,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WoodElfMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WoodElfMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 406,
+      "numericId": 259,
+      "byteLength": 3055,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WoodElfMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WoodElfMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 407,
+      "numericId": 260,
+      "byteLength": 7614,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WoodElfMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WoodElfMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 408,
+      "numericId": 261,
+      "byteLength": 14610,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "KhajiitMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027KhajiitMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 409,
+      "numericId": 262,
+      "byteLength": 10984,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "KhajiitMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027KhajiitMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 410,
+      "numericId": 263,
+      "byteLength": 10984,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "KhajiitMalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027KhajiitMalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 411,
+      "numericId": 264,
+      "byteLength": 6094,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArgonianMalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArgonianMalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 412,
+      "numericId": 265,
+      "byteLength": 7980,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArgonianMalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArgonianMalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 413,
+      "numericId": 227,
+      "byteLength": 5188,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipMaceOrHammer",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipMaceOrHammer\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 414,
+      "numericId": 228,
+      "byteLength": 5191,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipFlail",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipFlail\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 415,
+      "numericId": 229,
+      "byteLength": 6236,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipAxe",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipAxe\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 416,
+      "numericId": 230,
+      "byteLength": 6112,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipBow",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipBow\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 417,
+      "numericId": 231,
+      "byteLength": 3199,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipLeather",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipLeather\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 418,
+      "numericId": 232,
+      "byteLength": 4952,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipChain",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipChain\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 419,
+      "numericId": 233,
+      "byteLength": 5050,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "EquipPlate",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027EquipPlate\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 420,
+      "numericId": 242,
+      "byteLength": 27476,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Burning",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Burning\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 421,
+      "numericId": 0,
+      "byteLength": 18848,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "LongBeep",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027LongBeep\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 422,
+      "numericId": 44,
+      "byteLength": 26406,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArenaIronGolem",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArenaIronGolem\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 423,
+      "numericId": 2,
+      "byteLength": 22961,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "SpookyHigh2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027SpookyHigh2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 424,
+      "numericId": 287,
+      "byteLength": 7599,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "KhajiitFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027KhajiitFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 425,
+      "numericId": 288,
+      "byteLength": 5586,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArgonianFemalePain1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArgonianFemalePain1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 426,
+      "numericId": 289,
+      "byteLength": 7980,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArgonianFemalePain2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArgonianFemalePain2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 427,
+      "numericId": 290,
+      "byteLength": 8253,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "ArgonianFemalePain3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027ArgonianFemalePain3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 428,
+      "numericId": 291,
+      "byteLength": 2184,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 429,
+      "numericId": 292,
+      "byteLength": 1758,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 430,
+      "numericId": 293,
+      "byteLength": 7031,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 431,
+      "numericId": 294,
+      "byteLength": 2039,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry4",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry4\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 432,
+      "numericId": 295,
+      "byteLength": 1623,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry5",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry5\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 433,
+      "numericId": 296,
+      "byteLength": 2108,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry6",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry6\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 434,
+      "numericId": 297,
+      "byteLength": 3664,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry7",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry7\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 435,
+      "numericId": 298,
+      "byteLength": 6524,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry8",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry8\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 436,
+      "numericId": 299,
+      "byteLength": 3594,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Parry9",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Parry9\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 437,
+      "numericId": 300,
+      "byteLength": 36148,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BirdCall1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BirdCall1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 438,
+      "numericId": 301,
+      "byteLength": 34073,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "BirdCall2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027BirdCall2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 439,
+      "numericId": 302,
+      "byteLength": 28844,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WaterGentle",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WaterGentle\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 440,
+      "numericId": 303,
+      "byteLength": 67331,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "WaterRough",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027WaterRough\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 441,
+      "numericId": 304,
+      "byteLength": 33970,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople1",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople1\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 442,
+      "numericId": 305,
+      "byteLength": 28935,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 443,
+      "numericId": 306,
+      "byteLength": 57493,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople3",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople3\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 444,
+      "numericId": 315,
+      "byteLength": 81712,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople4",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople4\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 445,
+      "numericId": 316,
+      "byteLength": 93717,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople5",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople5\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 446,
+      "numericId": 317,
+      "byteLength": 86971,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople6",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople6\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 447,
+      "numericId": 318,
+      "byteLength": 14679,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople7",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople7\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 448,
+      "numericId": 319,
+      "byteLength": 29963,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople8",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople8\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 449,
+      "numericId": 320,
+      "byteLength": 5730,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople9",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople9\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 450,
+      "numericId": 321,
+      "byteLength": 1969,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "AmbientPeople10",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027AmbientPeople10\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 451,
+      "numericId": 327,
+      "byteLength": 4077,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 452,
+      "numericId": 328,
+      "byteLength": 22521,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 453,
+      "numericId": 329,
+      "byteLength": 23173,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 454,
+      "numericId": 330,
+      "byteLength": 55297,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it nothing."
+    },
+    {
+      "ordinal": 455,
+      "numericId": 386,
+      "byteLength": 33002,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Vengeance",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Vengeance\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 456,
+      "numericId": 11146,
+      "byteLength": 5064,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Halt",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Halt\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 457,
+      "numericId": 11461,
+      "byteLength": 5064,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Halt2",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Halt2\u0027, which no consumer here uses yet."
+    },
+    {
+      "ordinal": 458,
+      "numericId": 10212,
+      "byteLength": 9477,
+      "disposition": "readableNoConsumer",
+      "usageCandidate": "Groan",
+      "mediaId": null,
+      "reason": "The clip decodes and no published artifact carries it; the donor names it \u0027Groan\u0027, which no consumer here uses yet."
+    }
+  ],
+  "sources": [
+    "arena2/DAGGER.SND"
+  ]
+}

@@ -33,6 +33,11 @@
       "sha256": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4"
     },
     {
+      "path": "worldrpg/media/audio/classic-sound-catalog.json",
+      "byteLength": 154009,
+      "sha256": "83eec6dbf5ef1f49009fd525711ecb8ff16bdb0b1f969aea5e2fb0f3c1887890"
+    },
+    {
       "path": "worldrpg/media/combat/weapon-axe-atlas.png",
       "byteLength": 107552,
       "sha256": "c798b0fc2b020f884ae0a2087bec37353ea92bd6801ff0c21eb7d6b29e383036"
