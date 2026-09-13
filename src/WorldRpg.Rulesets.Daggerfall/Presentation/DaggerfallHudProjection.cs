@@ -50,7 +50,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                 ("detail", builder.String(slot.Detail)),
                 ("order", builder.Number(slot.Order)))).ToArray())),
             // The modal's own token is what a close has to name, so the UI never invents focus.
-            ("focus", loot is null
+            // Focus exists only where the mode lets the interaction act: a dead or paused product
+            // ignores the close its own gate would refuse, so advertising one would offer the player
+            // a control that silently does nothing.
+            ("focus", loot is null || mode != ProductMode.Modal
                 ? builder.Null()
                 : builder.Object(
                     ("interaction", builder.String("loot")),

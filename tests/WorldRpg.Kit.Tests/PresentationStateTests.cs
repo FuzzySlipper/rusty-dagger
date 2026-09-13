@@ -24,6 +24,24 @@ public sealed class PresentationStateTests
     }
 
     [Fact]
+    public void An_initial_message_is_transient_like_any_other()
+    {
+        // A session starts with a greeting, and a greeting that never leaves the screen stops
+        // reporting what just happened on the very first update.
+        PresentationState presentation = new("Ready.");
+        presentation.Advance(PresentationState.LifetimeSeconds + 1d);
+        Assert.Equal(string.Empty, presentation.LastOutcome);
+
+        // An empty start stays empty, and the first real message still gets its full span.
+        PresentationState quiet = new(string.Empty);
+        quiet.Advance(100d);
+        Assert.Equal(string.Empty, quiet.LastOutcome);
+        quiet.SetOutcome("Hit the rat for 4 damage");
+        quiet.Advance(PresentationState.LifetimeSeconds + 1d);
+        Assert.Equal(string.Empty, quiet.LastOutcome);
+    }
+
+    [Fact]
     public void Repeating_a_message_restarts_its_lifetime_and_appending_never_starts_with_a_separator()
     {
         PresentationState presentation = new(string.Empty);
