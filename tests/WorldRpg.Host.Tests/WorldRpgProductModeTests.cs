@@ -74,6 +74,7 @@ public sealed class WorldRpgProductModeTests
         Assert.Equal(ProductMode.Playing, product.Mode);
         Assert.Equal(sessionsBefore + 1, ruleset.Created);
         Assert.True(ruleset.Replaced!.Disposed);
+        Assert.True(product.ModeHistory[^1].Changed);
         Assert.Equal(ProductMode.Playing, ruleset.LastApplied);
 
         // The replacement is built from the composition the product resolved, not from a default or
@@ -157,8 +158,10 @@ public sealed class WorldRpgProductModeTests
 
         product.Restart();
 
+        // The session was replaced, but the mode did not move: Changed answers the mode question.
         Assert.Equal("the product replaced its session", product.ModeHistory[^1].Reason);
-        Assert.Equal(ProductModeChangeOutcome.Applied, product.ModeHistory[^1].Outcome);
+        Assert.Equal(ProductModeChangeOutcome.AlreadyInMode, product.ModeHistory[^1].Outcome);
+        Assert.False(product.ModeHistory[^1].Changed);
         Assert.Equal(ProductMode.Playing, product.Mode);
     }
 
