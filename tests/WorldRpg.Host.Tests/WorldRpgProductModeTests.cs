@@ -40,6 +40,14 @@ public sealed class WorldRpgProductModeTests
         product.Pause();
         Assert.Equal(ProductMode.Paused, product.Mode);
 
+        // And the ordinary path, which every other test reaches through a modal: pausing play.
+        // `Pause` is a lifecycle method and returns nothing, so the decision is read from history.
+        product.Resume();
+        product.Pause();
+        Assert.True(product.ModeHistory[^1].Changed);
+        Assert.Equal(ProductModeChangeOutcome.Applied, product.ModeHistory[^1].Outcome);
+        Assert.Equal(ProductMode.Paused, product.Mode);
+
         // A modal needs ordinary play, and resuming is the way back to it.
         Assert.Equal(ProductModeChangeOutcome.Refused, product.EnterModal().Outcome);
         Assert.True(product.ModeHistory[^1].Reason.Contains("resume the paused product", StringComparison.Ordinal));
