@@ -69,6 +69,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         // The published group carries the fifty-eight media artifacts and the sound catalog that
         // describes the whole archive, and the inventory indexes both because both are content.
+        Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
         Assert.Equal(59, listed.Count);
     }
 
@@ -87,6 +88,14 @@ public sealed class PublishedContentDeliveryTests
         JsonElement[] admitted = [.. clips.Where(clip => clip.GetProperty("disposition").GetString() == "admitted")];
         Assert.Equal(6, admitted.Length);
         Assert.All(clips.Where(clip => clip.GetProperty("disposition").GetString() != "admitted"), clip => Assert.Equal(JsonValueKind.Null, clip.GetProperty("mediaId").ValueKind));
+
+        // Which archive clip each cue is belongs to the product rather than to the producer that just
+        // stated it, so the binding is pinned here as literals: a republish that swapped two identities
+        // would move the file and the importer's table together and otherwise stay green.
+        Assert.Equal([106, 108, 109, 110, 111, 112], admitted.Select(clip => clip.GetProperty("ordinal").GetInt32()));
+        Assert.Equal(
+            ["audio.melee.dagger.swing", "audio.melee.hit.1", "audio.melee.hit.2", "audio.melee.hit.3", "audio.melee.hit.4", "audio.melee.hit.5"],
+            admitted.Select(clip => clip.GetProperty("mediaId").GetString()));
 
         // Every admitted reference resolves inside admitted content: the classic media manifest the
         // pack reads carries exactly those media identities, so the catalog's references are the ones
