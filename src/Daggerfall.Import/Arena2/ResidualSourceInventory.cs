@@ -56,9 +56,9 @@ public sealed class ResidualSourceInventory
         ["CIF"] = new("Arena2CanvasReader", "CifRciFile", "multi-record sprite and UI graphics read as a contiguous sequence of IMG records"),
         ["RCI"] = new("Arena2CanvasReader", "CifRciFile.ReadRci", "headerless banks of equal fixed-size cells whose shape the classic reader selects by file name"),
         ["CFA"] = new("", "CfaFile", "run-length encoded multi-frame animations: the horse and cart, and the two moons"),
-        ["PAL"] = new("PaletteDecoder", "DFPalette", "256-colour palettes, either 768 raw bytes or 776 bytes behind an eight-byte header"),
+        ["PAL"] = new("PaletteDecoder", "", "256-colour palettes, either 768 raw bytes or 776 bytes behind an eight-byte header, of which the donor's palette reader accepts any by length while a call site reaches only MAP.PAL"),
         ["COL"] = new("PaletteDecoder", "DFPalette", "256-colour palettes with the eight-byte header the classic art uses"),
-        ["DAT"] = new("", "PaintFile", "assorted tables; the donor reads only PAINT.DAT here, and the rest are installer or save-folder residue"),
+        ["DAT"] = new("", "", "assorted tables, of which the donor reads the thirty-two SKY##.DAT sky animations through SkyFile and PAINT.DAT through PaintFile; it reaches nothing else in this family"),
         ["LGT"] = new("", "", "shading tables whose meaning is inferred from their bytes rather than established by any donor reader"),
         ["RAW"] = new("", "", "raw sprite, mask and palette bytes with no donor reader and no header to establish a shape"),
         ["000"] = new("", "", "one byte per pixel overlays with no header, no record table and no palette"),
@@ -68,6 +68,14 @@ public sealed class ResidualSourceInventory
         ["SAV"] = new("BsaArchive", "SaveGames", "a classic save archive of per-region map-discovery bits"),
         ["TBL"] = new("", "", "a single 256-byte table the donor never names"),
         ["TDE"] = new("", "", "notebook and journal text with no donor reader"),
+        // The task documents these five families and the residual corpus supplies none of them,
+        // which the drift lists report. They are classified rather than refused so a future
+        // residual file of one of these shapes lands in its documented family.
+        ["GFX"] = new("Arena2CanvasReader", "GfxFile", "classic GFX frame containers, of which the shipped corpus keeps its two under the UI media family"),
+        ["CEL"] = new("", "FlcFile", "classic animation frames the donor reads with its FLC reader"),
+        ["BSS"] = new("", "BssFile", "ambient story sprite banks the donor reads with its BSS reader"),
+        ["DEF"] = new("", "MagicItemsFile", "the magic item definition table the donor reads as MAGIC.DEF"),
+        ["RSC"] = new("", "TextFile", "packed text records the donor reads as TEXT.RSC"),
     };
 
     /// <summary>
@@ -76,14 +84,17 @@ public sealed class ResidualSourceInventory
     /// </summary>
     private static readonly Dictionary<string, (string? DonorReader, string? Note)> PathOverrides = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["PAINT.DAT"] = ("PaintFile", "The one DAT file the donor reads: 180 forty-byte records, one per random painting item variant."),
+        ["PAINT.DAT"] = ("PaintFile", "The donor reads this through PaintFile: 180 forty-byte records, one per random painting item variant."),
+        ["SKYPAL.DAT"] = ("", "The donor's sky reader accepts any name starting SKY and ending .DAT by its own guard, but no call site can build this one, so nothing opens it."),
         ["MPOP.RCI"] = ("CifRciFile.ReadRci", "Seventeen-pixel cells; the donor names this file in its RCI shape table but no 1.1.1 call site opens it."),
-        ["SPOP.RCI"] = ("CifRciFile.ReadRci", "Twenty-two-pixel cells; named in the donor's RCI shape table with no 1.1.1 call site."),
+        ["SPOP.RCI"] = ("CifRciFile.ReadRci", "Twenty-two-pixel cells; the donor opens this one for the parchment border (DaggerfallUI.cs names it as parchmentBorderRCIFile)."),
         ["NOTE.RCI"] = ("CifRciFile.ReadRci", "Forty-four by nine cells; named in the donor's RCI shape table with no 1.1.1 call site."),
         ["CHLD00I0.RCI"] = ("CifRciFile.ReadRci", "Sixty-four pixel cells; named in the donor's RCI shape table with no 1.1.1 call site."),
         ["MAPSAVE.SAV"] = ("SaveGames", "A named BSA archive of 62 records, but the donor builds this path from the classic save folder rather than from Arena2, so this copy is source-tree residue rather than a game asset."),
-        ["OLDMAP.PAL"] = ("DFPalette", "Six-bit like MAP.PAL, but the donor's x4 rescale is keyed to the exact name MAP.PAL, so palette depth is a property of the bytes and not of the name."),
-        ["CNFG05I0.CIF"] = ("", "Sibling of the CNFG images the donor's controls window names, and the only residual CIF no donor call site reaches."),
+        ["MAP.PAL"] = ("DFPalette", "The one palette file a donor call site reaches, as the world-map palette, and the one name its x4 rescale is keyed to."),
+        ["OLDMAP.PAL"] = ("", "Six-bit like MAP.PAL, but no call site reaches this file and the donor's x4 rescale is keyed to the exact name MAP.PAL, so palette depth is a property of the bytes and not of the name."),
+        ["CNFG05I0.CIF"] = ("", "Sibling of the CNFG images the donor's controls window names, and a residual CIF no donor call site reaches."),
+        ["PNTER.CIF"] = ("", "A residual CIF the donor never names anywhere, so nothing here establishes what it holds beyond its format."),
     };
 
     private ResidualSourceInventory(string source, IReadOnlyList<ResidualSourceRecord> files)
@@ -97,6 +108,9 @@ public sealed class ResidualSourceInventory
 
     /// <summary>Every supplied path, ordered by path.</summary>
     public IReadOnlyList<ResidualSourceRecord> Files { get; }
+
+    /// <summary>The paths the documented inventory already imports, so a consumer claims them.</summary>
+    public IEnumerable<ResidualSourceRecord> Imported => Files.Where(file => file.Disposition == SourceRecordDisposition.Imported);
 
     /// <summary>The paths a reader in this repository reads, with no consumer claiming them yet.</summary>
     public IEnumerable<ResidualSourceRecord> Unused => Files.Where(file => file.Disposition == SourceRecordDisposition.Unused);
@@ -121,7 +135,15 @@ public sealed class ResidualSourceInventory
     /// <summary>Classifies every supplied residual path.</summary>
     /// <param name="sources">File name and bytes for every residual path.</param>
     /// <param name="source">Logical source identity for error messages.</param>
-    public static ResidualSourceInventory Enumerate(IEnumerable<(string Path, ReadOnlyMemory<byte> Bytes)> sources, string source)
+    /// <param name="documented">
+    /// The disposition the documented inventory already records for a path, when the caller has
+    /// it. A path the inventory already imports keeps that disposition: calling a consumed file
+    /// unused because this pass cannot see the consumer would contradict the artifact that can.
+    /// </param>
+    public static ResidualSourceInventory Enumerate(
+        IEnumerable<(string Path, ReadOnlyMemory<byte> Bytes)> sources,
+        string source,
+        IReadOnlyDictionary<string, string>? documented = null)
     {
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
@@ -146,13 +168,12 @@ public sealed class ResidualSourceInventory
                 throw new Arena2FormatException(source, 0, $"'{name}' has extension '{family}', which is in none of the {Families.Count} bounded residual families, so it cannot be classified or silently omitted");
             }
 
-            PathOverrides.TryGetValue(name, out (string? DonorReader, string? Note) overrides);
-            string donorReader = overrides.DonorReader ?? entry.DonorReader;
+            (string? overrideDonor, string? overrideNote) = Override(name, entry.DonorReader);
+            string donorReader = overrideDonor ?? string.Empty;
             string reader = ReaderFor(entry.Reader, name);
             ProbeOutcome probe = reader.Length == 0 ? new ProbeOutcome(false, string.Empty) : Probe(reader, bytes.Span, path);
-            SourceRecordDisposition disposition = reader.Length == 0
-                ? SourceRecordDisposition.Unresolved
-                : probe.Read ? SourceRecordDisposition.Unused : SourceRecordDisposition.Malformed;
+            string? documentedToken = documented is not null && documented.TryGetValue(path, out string? token) ? token : null;
+            SourceRecordDisposition disposition = Decide(reader, probe, documentedToken, out string documentedNote);
             files.Add(new ResidualSourceRecord(
                 path,
                 family,
@@ -160,10 +181,55 @@ public sealed class ResidualSourceInventory
                 donorReader,
                 DocumentedFamilies.Contains(family, StringComparer.Ordinal),
                 disposition,
-                Note(entry, reader, donorReader, probe, overrides.Note)));
+                Note(entry, reader, donorReader, probe, disposition, documentedNote, overrideNote)));
         }
 
         return new ResidualSourceInventory(source, files);
+    }
+
+    /// <summary>
+    /// What one path's donor evidence is: an exact override, the donor's own sky name guard, or
+    /// the family's own verdict.
+    /// </summary>
+    private static (string? DonorReader, string? Note) Override(string name, string familyDonor) =>
+        PathOverrides.TryGetValue(name, out (string? DonorReader, string? Note) exact) ? exact
+        // The donor builds its sky names as SKY{index:00}.DAT and its reader accepts any name that
+        // starts SKY and ends .DAT, so the pattern is the donor's rather than an approximation.
+        : name.StartsWith("SKY", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".DAT", StringComparison.OrdinalIgnoreCase)
+            ? ("SkyFile", "One of the sky animations the donor reads from Arena2 through SkyFile, as 549120 bytes of palette followed by sixty-four frames of 512x220.")
+            : (familyDonor, null);
+
+    /// <summary>
+    /// The disposition one path carries, and what the documented inventory said about it.
+    /// </summary>
+    private static SourceRecordDisposition Decide(string reader, ProbeOutcome probe, string? documentedToken, out string documentedNote)
+    {
+        documentedNote = string.Empty;
+        SourceRecordDisposition? documented = null;
+        if (documentedToken is not null)
+        {
+            if (Enum.TryParse(documentedToken, ignoreCase: true, out SourceRecordDisposition parsed) && parsed != SourceRecordDisposition.None)
+            {
+                documented = parsed;
+            }
+            else
+            {
+                documentedNote = $" The documented inventory carries a disposition this classification does not know ('{documentedToken}'), so the reader decides here.";
+            }
+        }
+
+        // An imported path has a consumer whether or not this pass can name it, so the documented
+        // disposition wins over anything inferred from readability alone.
+        if (documented == SourceRecordDisposition.Imported) return SourceRecordDisposition.Imported;
+        if (reader.Length == 0) return SourceRecordDisposition.Unresolved;
+        if (!probe.Read) return SourceRecordDisposition.Malformed;
+        if (documented is { } value)
+        {
+            documentedNote = $" The documented inventory dispositions it '{documentedToken}'.";
+            return value;
+        }
+
+        return SourceRecordDisposition.Unused;
     }
 
     /// <summary>
@@ -189,20 +255,29 @@ public sealed class ResidualSourceInventory
         internal static ProbeOutcome Refused(string failure) => new(false, failure);
     }
 
-    private static string Note(FamilyEntry entry, string reader, string donorReader, ProbeOutcome probe, string? pathNote)
+    private static string Note(
+        FamilyEntry entry,
+        string reader,
+        string donorReader,
+        ProbeOutcome probe,
+        SourceRecordDisposition disposition,
+        string documentedNote,
+        string? pathNote)
     {
         string donor = donorReader.Length == 0
-            ? "No donor reader reaches this family, so its contents are a source fact without an established meaning."
-            : $"The donor reads this family through {donorReader}.";
-        string verdict = !probe.Read
-            ? $"{reader} refused it: {probe.Message}"
-            : reader.Length == 0
-                ? "This repository has no reader for it, so nothing here determines its contents."
-                // What a reader left unread still travels with the record: a file that reads is
-                // not a file whose remainder may be dropped.
-                : $"Read by {reader}; no consumer claims it yet, which is why it is unused rather than required-pending.{(probe.Message.Length == 0 ? string.Empty : $" {probe.Message}")}";
+            ? "No donor reader reaches this file, so what it holds is a source fact without an established meaning."
+            : $"The donor reads it through {donorReader}.";
+        string verdict = reader.Length == 0
+            ? "This repository has no reader for it, so nothing here determines its contents."
+            : disposition == SourceRecordDisposition.Malformed
+                ? $"{reader} refused it: {probe.Message}"
+                : disposition == SourceRecordDisposition.Imported
+                    ? $"Read by {reader}, and the documented inventory already imports it, so a consumer claims it."
+                    // What a reader left unread still travels with the record: a file that reads is
+                    // not a file whose remainder may be dropped.
+                    : $"Read by {reader}; no consumer named here claims it.{(probe.Message.Length == 0 ? string.Empty : $" {probe.Message}")}";
         string purpose = $"Holds {entry.Purpose}.";
-        return pathNote is null ? $"{purpose} {donor} {verdict}" : $"{purpose} {pathNote} {donor} {verdict}";
+        return pathNote is null ? $"{purpose} {donor} {verdict}{documentedNote}" : $"{purpose} {pathNote} {donor} {verdict}{documentedNote}";
     }
 
     /// <summary>Reads a path with the reader its family names, returning what it read or refused.</summary>
