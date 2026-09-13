@@ -31,6 +31,15 @@ public sealed record DaggerfallLocationMap(
 /// <param name="Reason">Why the region has no locations to publish.</param>
 public sealed record DaggerfallRegionGap(int Region, IReadOnlyList<string> EmptyTables, string Reason);
 
+/// <summary>
+/// A dungeon location the publication could not read, kept explicit rather than dropped.
+/// </summary>
+/// <param name="Region">The source region index.</param>
+/// <param name="Index">The location's ordinal in the region's names table.</param>
+/// <param name="Name">The location's exact name.</param>
+/// <param name="Reason">Why its records could not be read.</param>
+public sealed record DaggerfallDungeonGap(int Region, int Index, string Name, string Reason);
+
 /// <summary>One dungeon: the exterior location it pairs with, its identity, and its blocks.</summary>
 /// <param name="Region">The source region index.</param>
 /// <param name="Index">The location's ordinal in the region's names table.</param>
@@ -54,12 +63,14 @@ public sealed record DaggerfallDungeonRecord(
 /// <param name="Locations">Every location the corpus's regions describe.</param>
 /// <param name="Dungeons">Every dungeon among them, with its block references.</param>
 /// <param name="RegionsWithoutTables">Region groups the donor discards, with the tables that are empty named.</param>
+/// <param name="DungeonsWithoutRecords">Dungeon locations whose records disagreed, with the reason.</param>
 /// <param name="Sources">The source identity this section was read from.</param>
 public sealed record DaggerfallLocations(
     int SchemaVersion,
     IReadOnlyList<DaggerfallLocationMap> Locations,
     IReadOnlyList<DaggerfallDungeonRecord> Dungeons,
     IReadOnlyList<DaggerfallRegionGap> RegionsWithoutTables,
+    IReadOnlyList<DaggerfallDungeonGap> DungeonsWithoutRecords,
     IReadOnlyList<string> Sources)
 {
     public const int CurrentSchemaVersion = 1;
@@ -96,6 +107,21 @@ public sealed record DaggerfallLocations(
             if (gap.EmptyTables.Count == 0)
             {
                 throw new InvalidOperationException($"Region {gap.Region} is recorded as having no usable tables but names none of them.");
+            }
+        }
+
+        foreach (DaggerfallDungeonGap gap in DungeonsWithoutRecords)
+        {
+            // A dungeon the publication could not read is a gap like a region's empty tables: dropping
+            // it silently would leave a place that exists in the source and nowhere in the pack.
+            if (!locations.Contains((gap.Region, gap.Index)))
+            {
+                throw new InvalidOperationException($"Dungeon gap '{gap.Name}' in region {gap.Region} names location {gap.Index}, which no location record carries.");
+            }
+
+            if (string.IsNullOrWhiteSpace(gap.Reason))
+            {
+                throw new InvalidOperationException($"Dungeon gap '{gap.Name}' carries no reason, so nothing says why it is missing.");
             }
         }
 
@@ -138,6 +164,7 @@ public static class DaggerfallLocationBuilder
         ArgumentNullException.ThrowIfNull(archive);
         List<DaggerfallLocationMap> locations = [];
         List<DaggerfallDungeonRecord> dungeons = [];
+        List<DaggerfallDungeonGap> dungeonGaps = [];
         List<DaggerfallRegionGap> withoutTables = [];
         foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
         {
@@ -168,7 +195,17 @@ public static class DaggerfallLocationBuilder
 
             foreach (MapsDungeonLocation dungeon in MapsDecoder.DecodeRegionDungeons(archive, group.Region))
             {
-                if (dungeon.State != MapsDungeonState.Read) continue;
+                if (dungeon.State != MapsDungeonState.Read)
+                {
+                    // A no-dungeon location is an ordinary outcome and is not a gap; a record that
+                    // disagreed is, and it is published with its reason.
+                    if (dungeon.State == MapsDungeonState.Malformed)
+                    {
+                        dungeonGaps.Add(new DaggerfallDungeonGap(dungeon.Region, dungeon.Index, dungeon.Name, dungeon.Reason));
+                    }
+
+                    continue;
+                }
                 dungeons.Add(new DaggerfallDungeonRecord(
                     dungeon.Region,
                     dungeon.Index,
@@ -184,6 +221,7 @@ public static class DaggerfallLocationBuilder
             [.. locations.OrderBy(location => location.Region).ThenBy(location => location.Index)],
             [.. dungeons.OrderBy(dungeon => dungeon.Region).ThenBy(dungeon => dungeon.Index)],
             [.. withoutTables.OrderBy(gap => gap.Region)],
+            [.. dungeonGaps.OrderBy(gap => gap.Region).ThenBy(gap => gap.Index)],
             [archive.Source]);
         published.Validate();
         return published;
