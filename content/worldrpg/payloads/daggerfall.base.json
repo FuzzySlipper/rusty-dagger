@@ -10488,23 +10488,23 @@
       {
         "path": "CMPA00I0.BSS",
         "family": "BSS",
-        "canvasCount": 0,
-        "outcome": "unreadable",
-        "reason": "The donor reads this format with Assets/Scripts/API/BssFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+        "canvasCount": 32,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027BSS\u0027 family has no paper-doll role in this section yet."
       },
       {
         "path": "CMPA01I0.BSS",
         "family": "BSS",
-        "canvasCount": 0,
-        "outcome": "unreadable",
-        "reason": "The donor reads this format with Assets/Scripts/API/BssFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+        "canvasCount": 32,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027BSS\u0027 family has no paper-doll role in this section yet."
       },
       {
         "path": "CMPA02I0.BSS",
         "family": "BSS",
-        "canvasCount": 0,
-        "outcome": "unreadable",
-        "reason": "The donor reads this format with Assets/Scripts/API/BssFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+        "canvasCount": 32,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027BSS\u0027 family has no paper-doll role in this section yet."
       },
       {
         "path": "CUST00I0.IMG",
@@ -10698,9 +10698,9 @@
       {
         "path": "MAGE.CEL",
         "family": "CEL",
-        "canvasCount": 0,
-        "outcome": "unreadable",
-        "reason": "The donor reads this format with Assets/Scripts/API/FlcFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+        "canvasCount": 15,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CEL\u0027 family has no paper-doll role in this section yet."
       },
       {
         "path": "NITE00I0.IMG",
@@ -10733,9 +10733,9 @@
       {
         "path": "ROGUE.CEL",
         "family": "CEL",
-        "canvasCount": 0,
-        "outcome": "unreadable",
-        "reason": "The donor reads this format with Assets/Scripts/API/FlcFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+        "canvasCount": 10,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CEL\u0027 family has no paper-doll role in this section yet."
       },
       {
         "path": "SCBG00I0.IMG",
@@ -10803,20 +10803,14 @@
       {
         "path": "WARRIOR.CEL",
         "family": "CEL",
-        "canvasCount": 0,
-        "outcome": "unreadable",
-        "reason": "The donor reads this format with Assets/Scripts/API/FlcFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+        "canvasCount": 15,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CEL\u0027 family has no paper-doll role in this section yet."
       }
     ],
     "racesWithoutMedia": [],
     "sources": [
-      "arena2",
-      "CMPA00I0.BSS",
-      "CMPA01I0.BSS",
-      "CMPA02I0.BSS",
-      "MAGE.CEL",
-      "ROGUE.CEL",
-      "WARRIOR.CEL"
+      "arena2"
     ]
   }
 }
