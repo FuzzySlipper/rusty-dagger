@@ -3449,9 +3449,11 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(afterDeath, session.State.Inventory.Read().WorldRevision);
 
         // A dead product advertises no closable interaction: its own gate would ignore the close, so
-        // offering the token would be a control that silently does nothing.
+        // offering the token would be a control that silently does nothing. The contents panel is
+        // the same affordance and is withheld for the same reason.
         Assert.Equal("dead", engine.PublishedField("mode"));
         Assert.Null(engine.PublishedNested("focus", "container"));
+        Assert.Null(engine.PublishedNested("loot", "container"));
         Assert.Equal(ulong.Parse(remaining.Quantity), ulong.Parse(session.OpenLoot!.Items.Single(item => item.Key == remaining.Key).Quantity));
 
     }
