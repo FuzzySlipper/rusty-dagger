@@ -62,7 +62,10 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("close", builder.String("loot-close")))),
         ];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
-        fields = [.. fields, ("loot", loot is null ? builder.Null() : Loot(builder, loot))];
+        // Contents are an affordance the same way focus is: a dead or paused product refuses the take
+        // its gate would otherwise honour, so the panel is published only in the mode that lets the
+        // interaction act rather than offering buttons that silently do nothing.
+        fields = [.. fields, ("loot", loot is null || mode != ProductMode.Modal ? builder.Null() : Loot(builder, loot))];
         if (character is not null) fields = [.. fields, ("character", Character(builder, character))];
         if (compositionIdentity is not null)
             fields = [.. fields, ("composition", Composition(builder, compositionIdentity))];
