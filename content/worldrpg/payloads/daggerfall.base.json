@@ -10197,6 +10197,98 @@
         "binding": "requiredPending"
       }
     ],
+    "careers": [
+      {
+        "careerId": "class00",
+        "mediaId": "character.portrait.mage.0",
+        "sourceFile": "MAGE.CEL",
+        "palette": "ART_PAL.COL",
+        "frameCount": 15,
+        "binding": "requiredPending"
+      },
+      {
+        "careerId": "class08",
+        "mediaId": "character.portrait.rogue.0",
+        "sourceFile": "ROGUE.CEL",
+        "palette": "ART_PAL.COL",
+        "frameCount": 10,
+        "binding": "requiredPending"
+      },
+      {
+        "careerId": "class16",
+        "mediaId": "character.portrait.warrior.0",
+        "sourceFile": "WARRIOR.CEL",
+        "palette": "ART_PAL.COL",
+        "frameCount": 15,
+        "binding": "requiredPending"
+      }
+    ],
+    "careersWithoutPortrait": [
+      {
+        "careerId": "class01",
+        "reason": "The corpus supplies no class portrait named for \u0027Spellsword\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class02",
+        "reason": "The corpus supplies no class portrait named for \u0027Battlemage\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class03",
+        "reason": "The corpus supplies no class portrait named for \u0027Sorcerer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class04",
+        "reason": "The corpus supplies no class portrait named for \u0027Healer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class05",
+        "reason": "The corpus supplies no class portrait named for \u0027Nightblade\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class06",
+        "reason": "The corpus supplies no class portrait named for \u0027Bard\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class07",
+        "reason": "The corpus supplies no class portrait named for \u0027Burglar\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class09",
+        "reason": "The corpus supplies no class portrait named for \u0027Acrobat\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class10",
+        "reason": "The corpus supplies no class portrait named for \u0027Thief\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class11",
+        "reason": "The corpus supplies no class portrait named for \u0027Assassin\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class12",
+        "reason": "The corpus supplies no class portrait named for \u0027Monk\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class13",
+        "reason": "The corpus supplies no class portrait named for \u0027Archer\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class14",
+        "reason": "The corpus supplies no class portrait named for \u0027Ranger\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class15",
+        "reason": "The corpus supplies no class portrait named for \u0027Barbarian\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class17",
+        "reason": "The corpus supplies no class portrait named for \u0027Knight\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      },
+      {
+        "careerId": "class18",
+        "reason": "The corpus supplies no class portrait named for \u0027Knight\u0027; the three it supplies depict the classes they are named for, and none of them is this one."
+      }
+    ],
     "files": [
       {
         "path": "BODY00I0.IMG",
@@ -10699,8 +10791,8 @@
         "path": "MAGE.CEL",
         "family": "CEL",
         "canvasCount": 15,
-        "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CEL\u0027 family has no paper-doll role in this section yet."
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
       },
       {
         "path": "NITE00I0.IMG",
@@ -10734,8 +10826,8 @@
         "path": "ROGUE.CEL",
         "family": "CEL",
         "canvasCount": 10,
-        "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CEL\u0027 family has no paper-doll role in this section yet."
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
       },
       {
         "path": "SCBG00I0.IMG",
@@ -10804,8 +10896,8 @@
         "path": "WARRIOR.CEL",
         "family": "CEL",
         "canvasCount": 15,
-        "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CEL\u0027 family has no paper-doll role in this section yet."
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
       }
     ],
     "racesWithoutMedia": [],

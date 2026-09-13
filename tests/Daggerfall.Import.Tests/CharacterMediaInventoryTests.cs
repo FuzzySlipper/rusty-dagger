@@ -240,7 +240,13 @@ public sealed class CharacterMediaInventoryTests
             new("breton", 1, Source()), new("redguard", 2, Source()), new("nord", 3, Source()), new("dark-elf", 4, Source()),
             new("high-elf", 5, Source()), new("wood-elf", 6, Source()), new("khajiit", 7, Source()), new("argonian", 8, Source()),
         ];
-        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(inventory, supplied, races);
+        // The classic corpus supplies three class portraits, named for the classes they depict.
+        Dictionary<string, string> careers = new(StringComparer.Ordinal)
+        {
+            ["class00"] = "Mage", ["class01"] = "Rogue", ["class02"] = "Warrior",
+            ["class03"] = "Battle Mage", ["class04"] = "Nightblade",
+        };
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(inventory, supplied, races, careers);
 
         // Donor value minus one is the media index: Breton's background is SCBG00, Redguard's SCBG01.
         Assert.Equal("SCBG00I0.IMG", presentation.Layers.Single(layer => layer.Race == "breton" && layer.Layer == "background").SourceFile);
@@ -269,14 +275,14 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal(87, presentation.Files.Count(file => file.Outcome != CharacterFileOutcome.Unreadable));
         // Fifty-seven files a layer draws from and thirty that read and no layer uses yet; the two
         // counts account for every supplied file, which is the property worth holding.
-        Assert.Equal(57, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
-        Assert.Equal(30, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
+        Assert.Equal(60, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Referenced));
+        Assert.Equal(27, presentation.Files.Count(file => file.Outcome == CharacterFileOutcome.Unreferenced));
         Assert.Equal(87, presentation.Files.Count);
         Assert.All(presentation.Files, file => Assert.False(string.IsNullOrWhiteSpace(file.Reason)));
         Assert.Contains(presentation.Files, file => file.Path == "CMPA00I0.BSS" && file.Outcome == CharacterFileOutcome.Unreferenced);
         // The class portraits read now, and no layer uses them yet: the career references that would
         // are the next increment, so they are readable and unreferenced rather than unavailable.
-        Assert.Contains(presentation.Files, file => file.Path == "MAGE.CEL" && file.Outcome == CharacterFileOutcome.Unreferenced);
+        Assert.Contains(presentation.Files, file => file.Path == "MAGE.CEL" && file.Outcome == CharacterFileOutcome.Referenced);
         // The faction face grid is the section's non-racial family: sixty-one cells a social or
         // escort view resolves by faction index, so it is referenced rather than unreferenced.
         Assert.Contains(presentation.Files, file => file.Path == "FACES.CIF" && file.Outcome == CharacterFileOutcome.Referenced);
@@ -289,8 +295,18 @@ public sealed class CharacterMediaInventoryTests
         Assert.All(presentation.Layers, layer => Assert.Equal(CharacterMediaReferences.ArtPalette, layer.Palette));
 
         // A race value with no paper-doll subclass is recorded rather than mapped onto the next index.
+        // A career the corpus does not depict says so rather than borrowing another class's art.
+        Assert.Equal(3, presentation.Careers.Count);
+        Assert.Equal(["class00", "class01", "class02"], presentation.Careers.Select(portrait => portrait.CareerId));
+        Assert.Equal("character.portrait.mage.0", presentation.Careers[0].MediaId);
+        Assert.Equal(("MAGE.CEL", 15), (presentation.Careers[0].SourceFile, presentation.Careers[0].FrameCount));
+        Assert.Equal(("ROGUE.CEL", 10), (presentation.Careers[1].SourceFile, presentation.Careers[1].FrameCount));
+        Assert.Equal(("WARRIOR.CEL", 15), (presentation.Careers[2].SourceFile, presentation.Careers[2].FrameCount));
+        Assert.Equal(["class03", "class04"], presentation.CareersWithoutPortrait.Select(entry => entry.CareerId));
+        Assert.All(presentation.CareersWithoutPortrait, entry => Assert.Contains("no class portrait named for", entry.Reason, StringComparison.Ordinal));
+
         DaggerfallCharacterPresentation beyond = DaggerfallCharacterPresentationBuilder.Build(
-            inventory, supplied, [.. races, new DaggerfallRaceKey("vampire", 9, Source())]);
+            inventory, supplied, [.. races, new DaggerfallRaceKey("vampire", 9, Source())], careers);
         Assert.DoesNotContain(beyond.Layers, layer => layer.Race == "vampire");
         Assert.Contains(beyond.RacesWithoutMedia, entry => entry.Race == "vampire" && entry.Reason.Contains("no subclass", StringComparison.Ordinal));
     }

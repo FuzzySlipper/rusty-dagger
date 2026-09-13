@@ -430,11 +430,12 @@ internal static class Program
         // the references say so per layer instead of implying a consumer that does not exist.
         CharacterMediaInventory characters = CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), "no consumer binds it yet", Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)));
         IReadOnlyList<DaggerfallRaceKey> races = ReadPackRaces(packFile);
-        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, palettes, races);
+        IReadOnlyDictionary<string, string> careers = ReadPackCareers(packFile);
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, palettes, races, careers);
         HashSet<string> mediaIds = [.. CharacterMediaReferences.Derive(characters, palettes).Canvases.Select(reference => reference.MediaId)];
         presentation.Validate(mediaIds);
 
-        Console.WriteLine($"character presentation: {characters.Files.Count} supplied files, {mediaIds.Count} published canvases, {presentation.Layers.Count} layers over {races.Count} races, {presentation.RacesWithoutMedia.Count} recorded gaps");
+        Console.WriteLine($"character presentation: {characters.Files.Count} supplied files, {mediaIds.Count} published canvases, {presentation.Layers.Count} layers over {races.Count} races, {presentation.Faces.Count} faction faces, {presentation.Careers.Count} career portraits, {presentation.CareersWithoutPortrait.Count} careers without one");
         foreach (string race in presentation.Layers.Select(layer => layer.Race).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             Console.WriteLine($"  {race}: {presentation.Layers.Count(layer => layer.Race == race)} layers");
@@ -456,6 +457,19 @@ internal static class Program
         File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: characterPresentation updated in {packFile}");
         return 0;
+    }
+
+    /// <summary>
+    /// The careers the catalog section publishes, by identity, with the class name a portrait is
+    /// matched to: a career's identity is its record position, so its name is what names its art.
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> ReadPackCareers(string packFile)
+    {
+        JsonNode root = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        return root["catalogs"]!["careers"]!.AsArray().ToDictionary(
+            value => value!.AsObject()["id"]!.GetValue<string>(),
+            value => value!.AsObject()["name"]!.GetValue<string>(),
+            StringComparer.Ordinal);
     }
 
     /// <summary>The races the catalog section publishes, which are what the layers are keyed by.</summary>

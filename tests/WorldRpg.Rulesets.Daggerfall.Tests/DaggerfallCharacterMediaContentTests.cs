@@ -55,6 +55,26 @@ public sealed class DaggerfallCharacterMediaContentTests
         Assert.All(presentation.FactionFaces, face => Assert.Equal("FACES.CIF", face.SourceFile));
         Assert.All(presentation.FactionFaces, face => Assert.Equal("ART_PAL.COL", face.Palette));
 
+        // A career's portrait resolves by career identity, and the careers the corpus does not depict
+        // say so: the pack publishes three portraits and records the rest.
+        Assert.Equal(3, presentation.Careers.Count);
+        DaggerfallCareerPortraitDefinition portrait = presentation.RequirePortrait("class00");
+        Assert.Equal("character.portrait.mage.0", portrait.MediaId);
+        Assert.Equal(("MAGE.CEL", 15, "ART_PAL.COL"), (portrait.SourceFile, portrait.FrameCount, portrait.Palette));
+
+        // The portrait is matched by the career's class name, not by its identity: the catalog
+        // identifies a career by its record position.
+        Assert.Equal("Mage", definitions.Catalogs.Careers.Single(career => career.Id == "class00").Name);
+        Assert.Equal((10, 15), (presentation.RequirePortrait("class08").FrameCount, presentation.RequirePortrait("class16").FrameCount));
+        Assert.Equal("ROGUE.CEL", presentation.RequirePortrait("class08").SourceFile);
+        Assert.Equal("WARRIOR.CEL", presentation.RequirePortrait("class16").SourceFile);
+
+        // The other sixteen careers are recorded as having no portrait rather than left to be
+        // discovered by a missing lookup.
+        Assert.Equal(16, presentation.CareersWithoutPortrait.Count);
+        Assert.Contains(presentation.CareersWithoutPortrait, entry => entry.Reason.Contains("no class portrait named for", StringComparison.Ordinal));
+        Assert.Throws<InvalidOperationException>(() => presentation.RequirePortrait("class03"));
+
         // The publication accounts for every supplied character file, and this pack draws every race.
         Assert.Equal(87, presentation.Files.Count);
         Assert.Contains("CMPA00I0.BSS", presentation.Files);

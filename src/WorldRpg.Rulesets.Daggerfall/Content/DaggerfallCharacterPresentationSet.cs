@@ -73,6 +73,19 @@ internal sealed record DaggerfallRaceLayers(string RaceId, int DonorRaceId, IRea
 /// <param name="Palette">The palette the cells are read with.</param>
 internal sealed record DaggerfallFactionFaceDefinition(int Index, string MediaId, string SourceFile, string Palette);
 
+/// <summary>One career's class portrait, resolved by career identity.</summary>
+/// <param name="CareerId">The catalog career identity.</param>
+/// <param name="MediaId">The published identity of the portrait's first frame.</param>
+/// <param name="SourceFile">The supplied source file, an animation whose frames are the portrait.</param>
+/// <param name="Palette">The palette the frames carry.</param>
+/// <param name="FrameCount">How many frames the portrait animates through.</param>
+internal sealed record DaggerfallCareerPortraitDefinition(string CareerId, string MediaId, string SourceFile, string Palette, int FrameCount);
+
+/// <summary>One career the pack records as having no portrait, and why.</summary>
+/// <param name="CareerId">The catalog career identity.</param>
+/// <param name="Reason">Why it has no portrait.</param>
+internal sealed record DaggerfallCareerWithoutPortrait(string CareerId, string Reason);
+
 /// <summary>One race the pack records as having no presentation media, and why.</summary>
 /// <param name="RaceId">The catalog race identity.</param>
 /// <param name="DonorRaceId">The donor's own race value.</param>
@@ -93,6 +106,8 @@ internal sealed class DaggerfallCharacterPresentationSet(
     int schemaVersion,
     IReadOnlyDictionary<string, DaggerfallRaceLayers> races,
     IReadOnlyList<DaggerfallFactionFaceDefinition> factionFaces,
+    IReadOnlyDictionary<string, DaggerfallCareerPortraitDefinition> careers,
+    IReadOnlyList<DaggerfallCareerWithoutPortrait> careersWithoutPortrait,
     IReadOnlyList<DaggerfallRaceWithoutMedia> racesWithoutMedia,
     IReadOnlyList<string> files)
 {
@@ -108,11 +123,23 @@ internal sealed class DaggerfallCharacterPresentationSet(
     /// </summary>
     internal IReadOnlyList<DaggerfallFactionFaceDefinition> FactionFaces { get; } = factionFaces;
 
+    /// <summary>Every career the pack publishes a portrait for, by catalog career identity.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallCareerPortraitDefinition> Careers { get; } = careers;
+
+    /// <summary>Careers the pack records as having no portrait, with the reason.</summary>
+    internal IReadOnlyList<DaggerfallCareerWithoutPortrait> CareersWithoutPortrait { get; } = careersWithoutPortrait;
+
     /// <summary>Races the pack records as having no presentation media, with the reason.</summary>
     internal IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia { get; } = racesWithoutMedia;
 
     /// <summary>Every supplied character file the publication accounted for.</summary>
     internal IReadOnlyList<string> Files { get; } = files;
+
+    /// <summary>Resolves one career's portrait, naming the career when the pack publishes none.</summary>
+    internal DaggerfallCareerPortraitDefinition RequirePortrait(string careerId) =>
+        Careers.TryGetValue(careerId, out DaggerfallCareerPortraitDefinition? portrait)
+            ? portrait
+            : throw new InvalidOperationException($"Daggerfall character presentation publishes no portrait for career '{careerId}'.");
 
     /// <summary>Resolves one race's layers, naming the race when the pack does not publish them.</summary>
     internal DaggerfallRaceLayers RequireRace(string raceId) =>
