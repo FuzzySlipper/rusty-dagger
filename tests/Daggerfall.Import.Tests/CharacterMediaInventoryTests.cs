@@ -143,6 +143,45 @@ public sealed class CharacterMediaInventoryTests
     }
 
     [Fact]
+    public void Derives_each_canvas_palette_and_refuses_one_that_is_not_supplied()
+    {
+        CharacterMediaInventory inventory = ReadInventory();
+        HashSet<string> supplied = [CharacterMediaReferences.ArtPalette, CharacterMediaReferences.NightskyPalette];
+        IReadOnlyList<CharacterCanvasReference> references = CharacterMediaReferences.Derive(inventory, supplied);
+
+        // One reference per readable canvas, and none for a file nothing reads: the six unread
+        // files supply no canvas to publish rather than one invented for them.
+        Assert.Equal(inventory.Files.Where(file => file.Decode != Arena2CanvasKind.Unread).Sum(file => file.CanvasCount), references.Count);
+        Assert.DoesNotContain(references, reference => inventory.Files.Single(file => file.Path == reference.Path).Decode == Arena2CanvasKind.Unread);
+
+        // The classic reader's palette rule: NITE files read with NIGHTSKY.COL, everything else with
+        // ART_PAL.COL, and the four NITE files in this corpus prove the rule is applied rather than
+        // asserted for a family the corpus does not carry.
+        Assert.All(references, reference => Assert.Equal(CharacterMediaReferences.PaletteFor(reference.Path), reference.Palette));
+        Assert.Contains(references, reference => reference.Palette == CharacterMediaReferences.NightskyPalette && reference.Path.StartsWith("NITE", StringComparison.Ordinal));
+        Assert.Contains(references, reference => reference.Palette == CharacterMediaReferences.ArtPalette && reference.Path.StartsWith("BODY", StringComparison.Ordinal));
+
+        // Paper-doll companions follow the donor naming: a male body of race 0 belongs with its
+        // clothed variant, its head and its background, and a female head of race 0 with her bodies
+        // and the same race's background.
+        CharacterCanvasReference maleBody = references.First(reference => reference.Path == "BODY00I0.IMG");
+        Assert.Equal(["BODY00I1.IMG", "FACE00I0.CIF", "SCBG00I0.IMG"], maleBody.Companions);
+        CharacterCanvasReference femaleHead = references.First(reference => reference.Path == "FACE10I0.CIF");
+        Assert.Equal(["BODY10I0.IMG", "BODY10I1.IMG", "SCBG00I0.IMG"], femaleHead.Companions);
+
+        // A family with no paper-doll rule claims no companion rather than guessing one.
+        CharacterCanvasReference other = references.First(reference => reference.Path.StartsWith("CUST", StringComparison.Ordinal));
+        Assert.Empty(other.Companions);
+        Assert.Contains("no paper-doll companion rule", other.Reason, StringComparison.Ordinal);
+
+        // A canvas whose palette is not supplied is refused by name, not painted with a default.
+        InvalidOperationException refused = Assert.Throws<InvalidOperationException>(
+            () => CharacterMediaReferences.Derive(inventory, new HashSet<string>(StringComparer.Ordinal) { CharacterMediaReferences.ArtPalette }));
+        Assert.Contains("NIGHTSKY.COL", refused.Message, StringComparison.Ordinal);
+        Assert.Contains("does not supply", refused.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Reports_the_same_records_whatever_order_the_sources_arrive_in()
     {
         // The consumer/disposition report is deterministic: the same files in any input
