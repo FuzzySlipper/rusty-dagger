@@ -711,7 +711,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression));
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression));
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
