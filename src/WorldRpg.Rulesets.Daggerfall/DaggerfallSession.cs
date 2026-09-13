@@ -22,11 +22,12 @@ using KitUniqueInventoryItem = WorldRpg.Kit.Inventory.UniqueInventoryItem;
 namespace WorldRpg.Rulesets.Daggerfall;
 
 /// <summary>Concrete Daggerfall composition of catalog policy, module state, and named Engine capabilities.</summary>
-internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSession
+internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSession, IModeAwareGameSession
 {
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
     private readonly IRandomService _random;
     private readonly PlayerInputSystem _input;
+    private ProductMode _mode = ProductMode.Playing;
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
     private readonly CombatModule _combat;
@@ -381,8 +382,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         {
         Update(update.Facts, update.Input);
         // Sprite playback consumes the Engine-bound outer update identity.  It
-        // must not run for each private catch-up simulation step above.
-        if (update.Facts.LifecycleState == ProductLifecycleState.Running
+        // must not run for each private catch-up simulation step above, and it
+        // must not run while the world is holding still.
+        if (_mode == ProductMode.Playing
+            && update.Facts.LifecycleState == ProductLifecycleState.Running
             && update.Facts.Mode == ProductUpdateMode.Realtime
             && update.Facts.AdmittedStepCount > 0)
         {
@@ -437,6 +440,12 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
         float deltaSeconds = (float)facts.FixedDeltaSeconds;
         ProductUpdateState firstStep = new(deltaSeconds);
+        // A mode that is not ordinary play interprets no gameplay input and advances no world
+        // time. The modal's own semantic actions still apply, because a modal that cannot act is
+        // not a modal; everything else is dropped and the presentation still publishes so the
+        // player can see the mode they are in.
+        bool playing = _mode == ProductMode.Playing;
+        bool modal = _mode == ProductMode.Modal;
         foreach (ProductInputEvent inputEvent in input)
         {
             firstStep.Add(inputEvent);
@@ -445,17 +454,27 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse(inputEvent.PayloadData.Span);
             switch (action?.Action)
             {
-                case "attack": firstStep.Request(DaggerfallInput.Attack); break;
+                case "attack": if (playing) firstStep.Request(DaggerfallInput.Attack); break;
                 case "inventory": break;
-                case "inventory-move": _inventoryUi.Move(action!); break;
+                case "inventory-move": if (playing || modal) _inventoryUi.Move(action!); break;
                 case "character": break;
-                case "loot": firstStep.Request(DaggerfallInput.Interact); break;
-                case "loot-close": _lootUi.Close(action!.Container); break;
+                case "loot": if (playing) firstStep.Request(DaggerfallInput.Interact); break;
+                case "loot-close": if (playing || modal) _lootUi.Close(action!.Container); break;
                 case "loot-take":
-                    _pendingLoot ??= _lootUi.PrepareTake(action!, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl));
+                    if (playing || modal)
+                    {
+                        _pendingLoot ??= _lootUi.PrepareTake(action!, State.PlayerControl, _input.ResolveCurrentLook(State.PlayerControl));
+                    }
                     break;
                 default: Presentation.SetOutcome("Unrecognized player UI action."); break;
             }
+        }
+
+        if (!playing)
+        {
+            Presentation.SetOutcome(ModalMessage());
+            PublishPresentation();
+            return;
         }
 
         // One admitted update owns one input slice. Later catch-up steps derive
@@ -465,6 +484,48 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         for (uint step = 1; step < facts.AdmittedStepCount; step++)
             Update(new ProductUpdateState(deltaSeconds), facts.Generation, checked(facts.SimulationStep + step));
     }
+
+    /// <summary>The input system's held state, readable so the mode request and tests agree on it.</summary>
+    internal ProductMode Mode => _mode;
+
+    /// <summary>
+    /// The mode this session asks the product for. Death outranks everything and only a session
+    /// replacement leaves it; a modal exists exactly while a loot container is open, so the
+    /// request follows that container rather than the key that opened it.
+    /// </summary>
+    public ProductMode? PendingModeRequest
+    {
+        get
+        {
+            if (ReadTrack(State.Actors.Player.Mechanics, DaggerfallMechanicsIds.Health) <= 0) return ProductMode.Dead;
+            if (_mode == ProductMode.Dead) return null;
+            bool open = _lootUi.Read() is not null;
+            return open == (_mode == ProductMode.Modal) ? null : open ? ProductMode.Modal : ProductMode.Playing;
+        }
+    }
+
+    /// <summary>
+    /// Applies the mode the product decided. A mode change is a focus change, so held movement is
+    /// dropped: a key held when play paused, a modal opened or the player died must not keep moving
+    /// the character, and a release this interpreter never sees would leave it held forever.
+    /// </summary>
+    public void ApplyProductMode(ProductMode mode)
+    {
+        if (mode == _mode) return;
+        _mode = mode;
+        _input.Neutralize();
+        Presentation.SetOutcome(ModalMessage());
+        PublishPresentation();
+    }
+
+    /// <summary>What the outcome line says while a mode other than ordinary play holds the world.</summary>
+    private string ModalMessage() => _mode switch
+    {
+        ProductMode.Modal => _lootUi.Read() is not null ? _lootUi.Message : "Interaction open.",
+        ProductMode.Dead => "You have died.",
+        ProductMode.Paused => "Paused.",
+        _ => string.Empty,
+    };
 
     internal void Update(ProductUpdateState update) => Update(update, 0, 0);
 

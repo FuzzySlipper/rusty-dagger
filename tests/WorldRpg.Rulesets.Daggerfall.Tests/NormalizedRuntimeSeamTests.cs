@@ -3180,6 +3180,82 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     /// <summary>A session whose one placed enemy can see the player at the given distance.</summary>
+    [Fact]
+    public void Product_modes_gate_gameplay_input_and_world_time_while_the_modal_keeps_acting()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        CorpseContainer corpse = session.Corpses[2000];
+        Assert.True(corpse.IsRegistered);
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
+        void Ui(string json, ulong step)
+        {
+            ProductInputEvent action = Input(InputEventKind.DirectDigital) with
+            {
+                ValueKind = InputValueKind.ProductPayload,
+                PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+                PayloadData = Encoding.UTF8.GetBytes(json),
+            };
+            session.Update(new ProductUpdate(OuterUpdate(step), [action]));
+        }
+
+        // Nothing owns input, so the session asks the product for nothing.
+        Assert.Null(session.PendingModeRequest);
+
+        // The loot key opens a container, and that is what the session reports: it can open an
+        // interaction the product cannot see, so it asks rather than deciding.
+        Ui("{\"action\":\"loot\"}", 2);
+        Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
+
+        // The product decides, and the session applies it.
+        session.ApplyProductMode(ProductMode.Modal);
+        Assert.Equal(ProductMode.Modal, session.Mode);
+
+        // Held movement reaches no world step while a modal owns input, and the modal's own action
+        // still lands: the gold moves even though the world does not.
+        int stepsBeforeModal = spatial.StepCalls;
+        ulong revisionBefore = session.State.Inventory.Read().WorldRevision;
+        session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Assert.Equal(stepsBeforeModal, spatial.StepCalls);
+        LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
+        InventoryItemPresentation gold = opened.Items.Single(item => item.Definition == "gold-piece");
+        Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key }), 4);
+        Assert.NotEqual(revisionBefore, session.State.Inventory.Read().WorldRevision);
+
+        // Ordinary play resumes on the product's word, and the held key is gone: the release the
+        // interpreter never saw would otherwise keep moving a character nobody is steering.
+        session.ApplyProductMode(ProductMode.Playing);
+        session.Update(new ProductUpdate(OuterUpdate(5), []));
+        Assert.True(spatial.StepCalls > stepsBeforeModal, "ordinary play admits world time again");
+        Assert.Equal(Vector2.Zero, spatial.StepRequests[^1].Command.PlanarIntent);
+        session.Update(new ProductUpdate(OuterUpdate(6), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Assert.True(spatial.StepCalls > stepsBeforeModal, "ordinary play admits world steps again");
+        Assert.NotEqual(Vector2.Zero, spatial.StepRequests[^1].Command.PlanarIntent);
+
+        // A player whose health track reached zero is dead, whatever mode they were in, and death
+        // admits no world time either.
+        session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(0), ExactTrackSetPolicy.ClampToBounds);
+        Assert.Equal(ProductMode.Dead, session.PendingModeRequest);
+        session.ApplyProductMode(ProductMode.Dead);
+        int stepsBeforeDeath = spatial.StepCalls;
+        ulong afterDeath = session.State.Inventory.Read().WorldRevision;
+        session.Update(new ProductUpdate(OuterUpdate(7), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Ui("{\"action\":\"loot-close\",\"container\":\"none\"}", 8);
+        Assert.Equal(stepsBeforeDeath, spatial.StepCalls);
+        Assert.Equal(afterDeath, session.State.Inventory.Read().WorldRevision);
+    }
+
     private static (DaggerfallSession Session, AppearanceFake Appearance, PerceptionFake Perception) VisibleEnemySession(List<string> releases, double distance = 1d)
     {
         string root = RepositoryRoot();

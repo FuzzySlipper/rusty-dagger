@@ -192,6 +192,23 @@ public sealed class PlayerInputSystem
     /// <summary>Convenience path for callers that do not need to coordinate an Engine character proposal.</summary>
     public void Apply(PlayerControlState player, ProductUpdateState update) => Commit(Prepare(player, update), player, update);
 
+    /// <summary>
+    /// Drops held movement keys and mapped-direction intent without interpreting an input slice.
+    /// </summary>
+    /// <remarks>
+    /// This is what a focus or mode change needs: a key that was held when play paused, a modal
+    /// opened or the player died must not keep moving the character after focus returns, and a
+    /// release the interpreter never sees would otherwise leave the key held forever. The
+    /// revision advances, so input prepared against the previous focus is rejected as stale
+    /// instead of being committed after the change.
+    /// </remarks>
+    public void Neutralize()
+    {
+        _held.Clear();
+        _mappedDirections.Clear();
+        AdvanceRevision();
+    }
+
     private void AdvanceRevision() => _revision = checked(_revision + 1);
 
     private bool IsMovementKey(KeyboardControl key) => key == _controls.Forward || key == _controls.Backward || key == _controls.Left || key == _controls.Right;
