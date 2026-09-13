@@ -19,6 +19,30 @@ public sealed record DaggerfallCharacterLayer(
     string Palette,
     MediaBinding Binding);
 
+/// <summary>What the publication did with one supplied character file.</summary>
+public enum CharacterFileOutcome
+{
+    /// <summary>A layer in this section is drawn from the file's canvases.</summary>
+    Referenced,
+
+    /// <summary>The file reads and no layer in this section uses it.</summary>
+    Unreferenced,
+
+    /// <summary>Nothing in this repository reads the file's format.</summary>
+    Unreadable,
+}
+
+/// <summary>
+/// One supplied character file's place in the publication, so a file cannot disappear between the
+/// inventory and the pack without a record of which one and why.
+/// </summary>
+/// <param name="Path">The supplied source file.</param>
+/// <param name="Family">The documented family it belongs to.</param>
+/// <param name="CanvasCount">The canvases it carries, or zero when nothing reads it.</param>
+/// <param name="Outcome">Whether a layer uses it, it is unused, or it cannot be read.</param>
+/// <param name="Reason">Why the outcome holds, naming the reader for an unreadable format.</param>
+public sealed record DaggerfallCharacterFile(string Path, string Family, int CanvasCount, CharacterFileOutcome Outcome, string Reason);
+
 /// <summary>A race the corpus supplies no presentation media for, kept explicit.</summary>
 /// <param name="Race">The catalog race identity.</param>
 /// <param name="DonorRaceId">The donor's own race value.</param>
@@ -36,6 +60,7 @@ public sealed record DaggerfallRaceWithoutMedia(string Race, int DonorRaceId, st
 public sealed record DaggerfallCharacterPresentation(
     int SchemaVersion,
     IReadOnlyList<DaggerfallCharacterLayer> Layers,
+    IReadOnlyList<DaggerfallCharacterFile> Files,
     IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia,
     IReadOnlyList<string> Sources)
 {
@@ -150,9 +175,32 @@ public static class DaggerfallCharacterPresentationBuilder
             }
         }
 
+        // Every supplied file is accounted for: the ones a layer draws from, the ones that read and
+        // nothing uses, and the ones no reader here can open. A file that is in none of those three
+        // would be a family going missing quietly.
+        HashSet<string> referenced = [.. layers.Select(layer => System.IO.Path.GetFileName(layer.SourceFile))];
+        Dictionary<string, CharacterMediaUnavailable> unavailable = set.Unavailable.ToDictionary(entry => System.IO.Path.GetFileName(entry.Path), StringComparer.Ordinal);
+        List<DaggerfallCharacterFile> files = [];
+        foreach (CharacterMediaRecord file in inventory.Files.OrderBy(file => file.Path, StringComparer.Ordinal))
+        {
+            string name = System.IO.Path.GetFileName(file.Path);
+            if (unavailable.TryGetValue(name, out CharacterMediaUnavailable? unreadable))
+            {
+                files.Add(new DaggerfallCharacterFile(name, file.Family, 0, CharacterFileOutcome.Unreadable, unreadable.Reason));
+                continue;
+            }
+
+            files.Add(referenced.Contains(name)
+                ? new DaggerfallCharacterFile(name, file.Family, file.CanvasCount, CharacterFileOutcome.Referenced,
+                    "A layer in this section is drawn from this file's canvases.")
+                : new DaggerfallCharacterFile(name, file.Family, file.CanvasCount, CharacterFileOutcome.Unreferenced,
+                    $"The file reads and no layer here uses it: the '{file.Family}' family has no paper-doll role in this section yet."));
+        }
+
         return new DaggerfallCharacterPresentation(
             DaggerfallCharacterPresentation.CurrentSchemaVersion,
             [.. layers.OrderBy(layer => layer.DonorRaceId).ThenBy(layer => layer.Layer, StringComparer.Ordinal)],
+            files,
             without,
             [inventory.Source, .. set.Unavailable.Select(entry => entry.Path).Order(StringComparer.Ordinal)]);
     }

@@ -9768,9 +9768,626 @@
         "binding": "requiredPending"
       }
     ],
+    "files": [
+      {
+        "path": "BODY00I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY00I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY01I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY01I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY02I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY02I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY03I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY03I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY04I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY04I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY05I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY05I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY06I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY06I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY07I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY07I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY10I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY10I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY11I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY11I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY12I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY12I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY13I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY13I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY14I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY14I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY15I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY15I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY16I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY16I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY17I0.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "BODY17I1.IMG",
+        "family": "BODY",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "CHAR00I0.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR01I0.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR02I0.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR02I1.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR03I0.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR03I1.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR04I0.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR05I0.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CHAR05I1.IMG",
+        "family": "CHAR",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CMPA00I0.BSS",
+        "family": "BSS",
+        "canvasCount": 0,
+        "outcome": "unreadable",
+        "reason": "The donor reads this format with Assets/Scripts/API/BssFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+      },
+      {
+        "path": "CMPA01I0.BSS",
+        "family": "BSS",
+        "canvasCount": 0,
+        "outcome": "unreadable",
+        "reason": "The donor reads this format with Assets/Scripts/API/BssFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+      },
+      {
+        "path": "CMPA02I0.BSS",
+        "family": "BSS",
+        "canvasCount": 0,
+        "outcome": "unreadable",
+        "reason": "The donor reads this format with Assets/Scripts/API/BssFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+      },
+      {
+        "path": "CUST00I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST01I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST02I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST03I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST04I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST05I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST06I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST07I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST08I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "CUST09I0.IMG",
+        "family": "CUST",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "FACE00I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE01I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE02I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE03I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE04I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE05I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE06I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE07I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE10I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE11I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE12I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE13I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE14I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE15I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE16I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACE17I0.CIF",
+        "family": "FACE",
+        "canvasCount": 10,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "FACES.CIF",
+        "family": "FACE",
+        "canvasCount": 61,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027FACE\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "MAGE.CEL",
+        "family": "CEL",
+        "canvasCount": 0,
+        "outcome": "unreadable",
+        "reason": "The donor reads this format with Assets/Scripts/API/FlcFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+      },
+      {
+        "path": "NITE00I0.IMG",
+        "family": "NITE",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "NITE01I0.IMG",
+        "family": "NITE",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "NITE02I0.IMG",
+        "family": "NITE",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "NITE03I0.IMG",
+        "family": "NITE",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "ROGUE.CEL",
+        "family": "CEL",
+        "canvasCount": 0,
+        "outcome": "unreadable",
+        "reason": "The donor reads this format with Assets/Scripts/API/FlcFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+      },
+      {
+        "path": "SCBG00I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG01I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG02I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG03I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG04I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG05I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG06I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG07I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "referenced",
+        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+      },
+      {
+        "path": "SCBG08I0.IMG",
+        "family": "SCBG",
+        "canvasCount": 1,
+        "outcome": "unreferenced",
+        "reason": "The file reads and no layer here uses it: the \u0027SCBG\u0027 family has no paper-doll role in this section yet."
+      },
+      {
+        "path": "WARRIOR.CEL",
+        "family": "CEL",
+        "canvasCount": 0,
+        "outcome": "unreadable",
+        "reason": "The donor reads this format with Assets/Scripts/API/FlcFile.cs, which this repository does not have, so its canvases are unavailable rather than approximated."
+      }
+    ],
     "racesWithoutMedia": [],
     "sources": [
-      "arena2"
+      "arena2",
+      "CMPA00I0.BSS",
+      "CMPA01I0.BSS",
+      "CMPA02I0.BSS",
+      "MAGE.CEL",
+      "ROGUE.CEL",
+      "WARRIOR.CEL"
     ]
   }
 }

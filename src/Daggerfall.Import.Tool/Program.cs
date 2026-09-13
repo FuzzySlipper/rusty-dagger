@@ -416,11 +416,12 @@ internal static class Program
 
         string arena2 = args[2];
         string packFile = args[6];
-        string[] families = [.. CharacterMediaInventory.DocumentedFamilies.Select(family => family.Prefix)];
+        // The inventory's own family rule, not a prefix filter: a class portrait or story sprite is
+        // named by its extension, and a prefix test alone drops those files silently.
         List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [.. Directory
             .EnumerateFiles(arena2)
             .Select(path => Path.GetFileName(path))
-            .Where(name => families.Any(prefix => name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+            .Where(CharacterMediaInventory.IsDocumentedFamily)
             .OrderBy(name => name, StringComparer.Ordinal)
             .Select(name => (name, (ReadOnlyMemory<byte>)File.ReadAllBytes(Path.Combine(arena2, name))))];
         HashSet<string> palettes = [.. Directory.EnumerateFiles(arena2, "*.COL").Select(path => Path.GetFileName(path))];
