@@ -78,6 +78,7 @@ public sealed record DaggerfallSoundCatalog(
         // The ordinals are the stable identity a consumer keeps across releases, so they must be the
         // archive's own order without gaps or repeats: a renumbered catalog would silently repoint
         // every reference a consumer stored.
+        HashSet<string> mediaIds = new(StringComparer.Ordinal);
         for (int index = 0; index < Clips.Count; index++)
         {
             if (Clips[index].Ordinal != index)
@@ -91,7 +92,8 @@ public sealed record DaggerfallSoundCatalog(
             }
 
             bool admitted = Clips[index].Disposition == DaggerfallSoundClipDisposition.Admitted;
-            if (admitted != Clips[index].MediaId is not null)
+            bool named = Clips[index].MediaId is not null;
+            if (admitted != named)
             {
                 throw new InvalidOperationException($"Sound catalog clip {index} is {Clips[index].Disposition} and must {(admitted ? "name the media identity that carries it" : "name no media identity")}.");
             }
@@ -104,9 +106,17 @@ public sealed record DaggerfallSoundCatalog(
                 throw new InvalidOperationException($"Sound catalog clip {index} claims a published artifact carries it but holds no sample bytes.");
             }
 
+            // One artifact cannot stand for two clips. The builder refuses such a closure before it
+            // becomes a catalog, and the record refuses it again because this is the check a persisted
+            // catalog crosses: a consumer following an ordinal to a media identity would otherwise be
+            // sent to the same bytes for both clips and could not tell which one it asked for.
             if (Clips[index].MediaId is { } mediaId)
             {
-                NormalizedImportDocument.RequireLogicalId(mediaId, nameof(Clips));
+                NormalizedImportDocument.RequireLogicalId(mediaId, nameof(DaggerfallSoundClip.MediaId));
+                if (!mediaIds.Add(mediaId))
+                {
+                    throw new InvalidOperationException($"Sound catalog clip {index} names media identity '{mediaId}', which an earlier clip already names.");
+                }
             }
         }
     }
@@ -119,7 +129,11 @@ public sealed record DaggerfallSoundCatalog(
 /// </summary>
 public static class DaggerfallSoundCatalogJson
 {
-    /// <summary>The content-relative name the catalog is published under, beside the clips it describes.</summary>
+    /// <summary>
+    /// The name the catalog is published under within a content group, beside the clips it describes.
+    /// The group is the caller's, exactly as it is for every other artifact the publication emits: the
+    /// content-root-relative name a consumer holds is the group joined to this path.
+    /// </summary>
     public const string RelativePath = "media/audio/classic-sound-catalog.json";
 
     public static byte[] Write(DaggerfallSoundCatalog catalog)
