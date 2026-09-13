@@ -3245,6 +3245,13 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(stepsBeforeModal, spatial.StepCalls);
         LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
         InventoryItemPresentation gold = opened.Items.Single(item => item.Definition == "gold-piece");
+
+        // The projection the thin UI renders carries the mode the product decided and the token a
+        // close has to name, so the UI keeps no focus authority of its own.
+        Assert.Equal("modal", engine.PublishedField("mode"));
+        Assert.Equal(opened.Container, engine.PublishedNested("focus", "container"));
+        Assert.Equal("loot-close", engine.PublishedNested("focus", "close"));
+        Assert.Equal("modal", engine.PublishedNested("view", "interaction"));
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key }), 4);
         Assert.NotEqual(revisionBefore, session.State.Inventory.Read().WorldRevision);
 
@@ -3254,6 +3261,8 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(ProductMode.Playing, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Playing);
         Assert.Null(session.OpenLoot);
+        Assert.Equal("playing", engine.PublishedField("mode"));
+        Assert.Null(engine.PublishedNested("focus", "container"));
 
 
         session.Update(new ProductUpdate(OuterUpdate(5), []));
@@ -3570,6 +3579,12 @@ public sealed class NormalizedRuntimeSeamTests
     {
         internal IEngineContext Context { get; private set; } = null!;
         internal int UiOpenCalls { get; private set; }
+
+        /// <summary>Read one named field of the last published projection, or null when none was.</summary>
+        internal string? PublishedField(string key) => ((UiServiceFake)(object)ui).Field(key);
+
+        /// <summary>Read one named field of a nested object of the last published projection.</summary>
+        internal string? PublishedNested(string parent, string key) => ((UiServiceFake)(object)ui).Nested(parent, key);
         private IContentService content = null!;
         private ISpatialService spatial = null!;
         private IGraphicsService appearance = null!;
@@ -3639,6 +3654,7 @@ public sealed class NormalizedRuntimeSeamTests
         private class UiServiceFake : DispatchProxy
         {
             private EngineContextFake owner = null!;
+            internal UiProjection? LastProjection { get; private set; }
             internal static IUiService Create(EngineContextFake parent)
             {
                 IUiService service = DispatchProxy.Create<IUiService, UiServiceFake>();
@@ -3648,10 +3664,67 @@ public sealed class NormalizedRuntimeSeamTests
             protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
             {
                 nameof(IUiService.OpenStream) => Open(),
-                nameof(IUiService.PublishProjection) => null,
+                nameof(IUiService.PublishProjection) => Publish(arguments),
                 _ => throw new NotSupportedException(method?.Name),
             };
             private UiStream Open() { owner.UiOpenCalls++; return new UiStream(new UiStreamHandle(1), () => { }); }
+
+            private object? Publish(object?[]? arguments)
+            {
+                LastProjection = arguments is [UiProjection projection, ..] ? projection : null;
+                return null;
+            }
+
+            /// <summary>The string one named field of the published object carries, or null.</summary>
+            internal string? Field(string key)
+            {
+                if (LastProjection is not { } projection) return null;
+                foreach (uint edge in Edges(projection, projection.Value.Root))
+                {
+                    StructuredValueNode node = projection.Value.Nodes.Span[checked((int)edge)];
+                    if (Key(projection, node) != key) continue;
+                    return node.Kind == StructuredValueKind.String ? Text(projection, node) : null;
+                }
+
+                return null;
+            }
+
+            /// <summary>The node index of one named field of the published object, or null.</summary>
+            internal uint? Object(string key)
+            {
+                if (LastProjection is not { } projection) return null;
+                foreach (uint edge in Edges(projection, projection.Value.Root))
+                {
+                    if (Key(projection, projection.Value.Nodes.Span[checked((int)edge)]) == key) return edge;
+                }
+
+                return null;
+            }
+
+            /// <summary>The string one named field of one nested object carries, or null.</summary>
+            internal string? Nested(string parent, string key)
+            {
+                if (LastProjection is not { } projection || Object(parent) is not { } parentIndex) return null;
+                foreach (uint edge in Edges(projection, parentIndex))
+                {
+                    StructuredValueNode node = projection.Value.Nodes.Span[checked((int)edge)];
+                    if (Key(projection, node) == key && node.Kind == StructuredValueKind.String) return Text(projection, node);
+                }
+
+                return null;
+            }
+
+            private static IEnumerable<uint> Edges(UiProjection projection, uint index)
+            {
+                StructuredValueNode node = projection.Value.Nodes.Span[checked((int)index)];
+                for (uint offset = 0; offset < node.ChildCount; offset++) yield return projection.Value.Edges.Span[checked((int)(node.FirstEdge + offset))];
+            }
+
+            private static string Key(UiProjection projection, StructuredValueNode node) =>
+                System.Text.Encoding.UTF8.GetString(projection.Value.Utf8.Span[checked((int)node.KeyOffset)..checked((int)(node.KeyOffset + node.KeyLen))]);
+
+            private static string Text(UiProjection projection, StructuredValueNode node) =>
+                System.Text.Encoding.UTF8.GetString(projection.Value.Utf8.Span[checked((int)node.TextOffset)..checked((int)(node.TextOffset + node.TextLen))]);
         }
     }
 

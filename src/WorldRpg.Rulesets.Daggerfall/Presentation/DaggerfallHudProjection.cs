@@ -3,6 +3,7 @@ using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
+using WorldRpg.Kit.Controls;
 using WorldRpg.Kit.Presentation;
 using WorldRpg.Kit.Progression;
 
@@ -14,7 +15,15 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     private readonly UiStream _hud = ui.OpenStream(new UiStreamRequest("dagger.hud", "dagger.ui.snapshot.v1"));
     private ulong _sequence;
 
-    internal void Publish(PlayerActorState player, ProgressionState progression, PresentationState presentation, InventoryPresentation? inventory = null, LootPresentation? loot = null, CharacterSheetPresentation? character = null)
+    internal void Publish(
+        PlayerActorState player,
+        ProgressionState progression,
+        PresentationState presentation,
+        ProductMode mode,
+        PlayerControlState controls,
+        InventoryPresentation? inventory = null,
+        LootPresentation? loot = null,
+        CharacterSheetPresentation? character = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -23,6 +32,22 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
             ("resources", builder.Array(rows)),
             ("experience", builder.Number(progression.Experience)),
             ("lastOutcome", builder.String(presentation.LastOutcome)),
+            // The mode is the product's, and the session is the one place that is told it, so the
+            // projection that the thin UI renders carries it rather than the UI keeping one.
+            ("mode", builder.String(Mode(mode))),
+            // Compass and crosshair read the same authoritative look the camera does.
+            ("view", builder.Object(
+                ("yawRadians", builder.Number(controls.YawRadians)),
+                ("pitchRadians", builder.Number(controls.PitchRadians)),
+                ("interaction", builder.String(mode == ProductMode.Modal ? "modal" : mode == ProductMode.Playing ? "aiming" : "held")))),
+            // The modal's own token is what a close has to name, so the UI never invents focus.
+            ("focus", loot is null
+                ? builder.Null()
+                : builder.Object(
+                    ("interaction", builder.String("loot")),
+                    ("container", builder.String(loot.Container)),
+                    ("revision", builder.String(loot.Revision)),
+                    ("close", builder.String("loot-close")))),
         ];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         fields = [.. fields, ("loot", loot is null ? builder.Null() : Loot(builder, loot))];
@@ -86,6 +111,16 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         ActorTrackRead value = player.Mechanics.ReadTrack(TrackId.Parse(resource.Track.Value));
         return builder.Object(("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)), ("current", builder.Number(value.Current.Raw)), ("maximum", builder.Number(value.Bounds.Maximum.Raw)));
     }
+
+    /// <summary>The wire name of the mode the product decided, lowercased for a thin DOM consumer.</summary>
+    private static string Mode(ProductMode mode) => mode switch
+    {
+        ProductMode.Playing => "playing",
+        ProductMode.Paused => "paused",
+        ProductMode.Modal => "modal",
+        ProductMode.Dead => "dead",
+        _ => throw new ArgumentOutOfRangeException(nameof(mode), $"{mode} has no wire name."),
+    };
 
     public void Dispose() => _hud.Dispose();
 }
