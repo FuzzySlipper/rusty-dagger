@@ -35,4 +35,12 @@ public sealed class DaggerfallUiActionTests
     [InlineData("{\"action\":\"loot-close\"}", false)]
     public void Loot_actions_require_the_open_container_and_selected_revision(string json, bool accepted)
         => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
+    [Theory]
+    [InlineData("{\"action\":\"art-request\",\"revision\":\"2a1b\"}", true)]
+    [InlineData("{\"action\":\"art-request\"}", false)]
+    [InlineData("{\"action\":\"art-request\",\"revision\":\"  \"}", false)]
+    [InlineData("{\"action\":\"art-request\",\"revision\":\"2a1b\",\"item\":\"unique:1002\"}", false)]
+    [InlineData("{\"action\":\"art-request\",\"revision\":3}", false)]
+    public void Art_requests_name_the_revision_the_dom_is_missing(string json, bool accepted)
+        => Assert.Equal(accepted, DaggerfallUiAction.Parse(Encoding.UTF8.GetBytes(json)) is not null);
 }
