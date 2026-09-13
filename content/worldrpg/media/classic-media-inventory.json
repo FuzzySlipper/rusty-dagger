@@ -5,32 +5,38 @@
     {
       "path": "worldrpg/media/audio/audio-melee-dagger-swing.wav",
       "byteLength": 1331,
-      "sha256": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd"
+      "sha256": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
+      "mediaId": "audio.melee.dagger.swing"
     },
     {
       "path": "worldrpg/media/audio/audio-melee-hit-1.wav",
       "byteLength": 2173,
-      "sha256": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8"
+      "sha256": "f3ea121cbd10d9fca4c930c4a1af4a128a706db415eacac111b39b224d3048c8",
+      "mediaId": "audio.melee.hit.1"
     },
     {
       "path": "worldrpg/media/audio/audio-melee-hit-2.wav",
       "byteLength": 2460,
-      "sha256": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc"
+      "sha256": "3ff1249ae08cdce8e60e1f55a6a99cbaedba7d2b81c77ce62974f8496a90aebc",
+      "mediaId": "audio.melee.hit.2"
     },
     {
       "path": "worldrpg/media/audio/audio-melee-hit-3.wav",
       "byteLength": 2921,
-      "sha256": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1"
+      "sha256": "23e17b41bbe3e10c8b5f442af4b2fd1f8c2263a04c107376f017b95c4bcd76b1",
+      "mediaId": "audio.melee.hit.3"
     },
     {
       "path": "worldrpg/media/audio/audio-melee-hit-4.wav",
       "byteLength": 2670,
-      "sha256": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710"
+      "sha256": "5c61b90bd743f7f14f8be916beee202d7345174e7cf7a6d95cc452fec0ea1710",
+      "mediaId": "audio.melee.hit.4"
     },
     {
       "path": "worldrpg/media/audio/audio-melee-hit-5.wav",
       "byteLength": 3557,
-      "sha256": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4"
+      "sha256": "7baa35eb158a9cfe756a6aef3027bd0f00817d4f0c4ba27f1abb77fab6cb73d4",
+      "mediaId": "audio.melee.hit.5"
     },
     {
       "path": "worldrpg/media/audio/classic-sound-catalog.json",
@@ -40,262 +46,332 @@
     {
       "path": "worldrpg/media/combat/weapon-axe-atlas.png",
       "byteLength": 107552,
-      "sha256": "c798b0fc2b020f884ae0a2087bec37353ea92bd6801ff0c21eb7d6b29e383036"
+      "sha256": "c798b0fc2b020f884ae0a2087bec37353ea92bd6801ff0c21eb7d6b29e383036",
+      "mediaId": "weapon.axe"
     },
     {
       "path": "worldrpg/media/combat/weapon-bow-atlas.png",
       "byteLength": 48784,
-      "sha256": "46bde93e450f451bba9808d5c7503d24de592c1c091f78a25e365317622283eb"
+      "sha256": "46bde93e450f451bba9808d5c7503d24de592c1c091f78a25e365317622283eb",
+      "mediaId": "weapon.bow"
     },
     {
       "path": "worldrpg/media/combat/weapon-dagger-steel-atlas.png",
       "byteLength": 147440,
-      "sha256": "d8b5c9659660acf879d2a5b37ae0f60e2c061c3d0861f9fd9c35db30b4b9ecdc"
+      "sha256": "d8b5c9659660acf879d2a5b37ae0f60e2c061c3d0861f9fd9c35db30b4b9ecdc",
+      "mediaId": "weapon.dagger.steel"
     },
     {
       "path": "worldrpg/media/combat/weapon-flail-atlas.png",
       "byteLength": 144384,
-      "sha256": "a6110bed99e8f2256b45183fd3ff45893ee59077bbf79208d62e1526f568ff83"
+      "sha256": "a6110bed99e8f2256b45183fd3ff45893ee59077bbf79208d62e1526f568ff83",
+      "mediaId": "weapon.flail"
     },
     {
       "path": "worldrpg/media/combat/weapon-longblade-atlas.png",
       "byteLength": 43970,
-      "sha256": "00ef2ce36dfa20a270fce247a2a18def60f018d16629b12ff3e5fd7460798186"
+      "sha256": "00ef2ce36dfa20a270fce247a2a18def60f018d16629b12ff3e5fd7460798186",
+      "mediaId": "weapon.longblade"
     },
     {
       "path": "worldrpg/media/combat/weapon-mace-atlas.png",
       "byteLength": 72564,
-      "sha256": "3396f9e85fd9bc4f2dd33f58ebc944acc8b6f2c2dc3d94b93b9c30db1a57d023"
+      "sha256": "3396f9e85fd9bc4f2dd33f58ebc944acc8b6f2c2dc3d94b93b9c30db1a57d023",
+      "mediaId": "weapon.mace"
     },
     {
       "path": "worldrpg/media/combat/weapon-staff-atlas.png",
       "byteLength": 55623,
-      "sha256": "ea721afaa27c69aa6ae5a101070926e947cbd98b5492ea664e5c933d05da4f98"
+      "sha256": "ea721afaa27c69aa6ae5a101070926e947cbd98b5492ea664e5c933d05da4f98",
+      "mediaId": "weapon.staff"
     },
     {
       "path": "worldrpg/media/combat/weapon-unarmed-atlas.png",
       "byteLength": 76662,
-      "sha256": "340b964f9f9192d7449a676d024f334ab314b174e090a0e31f0e04d9e886a858"
+      "sha256": "340b964f9f9192d7449a676d024f334ab314b174e090a0e31f0e04d9e886a858",
+      "mediaId": "weapon.unarmed"
     },
     {
       "path": "worldrpg/media/combat/weapon-warhammer-atlas.png",
       "byteLength": 136646,
-      "sha256": "d54d736b20738bcd8acef94616489a67249cc6167d4be1c14d5c57c709c94afc"
+      "sha256": "d54d736b20738bcd8acef94616489a67249cc6167d4be1c14d5c57c709c94afc",
+      "mediaId": "weapon.warhammer"
     },
     {
       "path": "worldrpg/media/effects/effect-blood-0-atlas.png",
       "byteLength": 2824,
-      "sha256": "939e98d382d2ed3028cecf14a2dd3abf39a8ac89b8f6d270164c4837f2b48c0c"
+      "sha256": "939e98d382d2ed3028cecf14a2dd3abf39a8ac89b8f6d270164c4837f2b48c0c",
+      "mediaId": "effect.blood.0"
     },
     {
       "path": "worldrpg/media/effects/effect-blood-1-atlas.png",
       "byteLength": 2582,
-      "sha256": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6"
+      "sha256": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "mediaId": "effect.blood.1"
     },
     {
       "path": "worldrpg/media/effects/effect-blood-2-atlas.png",
       "byteLength": 391,
-      "sha256": "34251af6cbe56e83c00032fee9fef3a87aabe51839ed1cd1f4d5798c5d79a161"
+      "sha256": "34251af6cbe56e83c00032fee9fef3a87aabe51839ed1cd1f4d5798c5d79a161",
+      "mediaId": "effect.blood.2"
     },
     {
       "path": "worldrpg/media/effects/effect-sparkle-magic-atlas.png",
       "byteLength": 2465,
-      "sha256": "356ea79ec4078d0cd4a3ddeebff987ef79cb012076a3b71f36a959f9fcc36a20"
+      "sha256": "356ea79ec4078d0cd4a3ddeebff987ef79cb012076a3b71f36a959f9fcc36a20",
+      "mediaId": "effect.sparkle.magic"
     },
     {
       "path": "worldrpg/media/fonts/font-classic-0003-atlas.png",
       "byteLength": 2376,
-      "sha256": "0b4ecb2ac56683ac4eeee614b109d3327328aa1e1ec3914e369eb9845291e581"
+      "sha256": "0b4ecb2ac56683ac4eeee614b109d3327328aa1e1ec3914e369eb9845291e581",
+      "mediaId": "font.classic.0003"
+    },
+    {
+      "path": "worldrpg/media/ui/authored/inventory-grid-slot-slate-v1.png",
+      "byteLength": 1970798,
+      "sha256": "f19aca28a45f24c61cc55af1ee2be864a742ffcdb5f8f7fd46e4cd55b643a7b3",
+      "mediaId": "inventory.skin.grid-slot-slate.v1"
+    },
+    {
+      "path": "worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png",
+      "byteLength": 2387369,
+      "sha256": "a54e0ca6bcc5f9ec2df87cb967365b844f0f9a7572150005a7eddcd1d448805c",
+      "mediaId": "inventory.skin.panel-slate.v1"
+    },
+    {
+      "path": "worldrpg/media/ui/authored/inventory-titlebar-slate-v1.png",
+      "byteLength": 1671134,
+      "sha256": "80d2fe6b0c7f9fb089d3d2ca6fb6a0ec053331bb1874ceb94c3dad8341d584d2",
+      "mediaId": "inventory.skin.titlebar-slate.v1"
     },
     {
       "path": "worldrpg/media/ui/hud-chrome-main.png",
       "byteLength": 9484,
-      "sha256": "2f587e1597475b606d24a3dcafec155c85b4d5485db3336a24b32ebf897cb233"
+      "sha256": "2f587e1597475b606d24a3dcafec155c85b4d5485db3336a24b32ebf897cb233",
+      "mediaId": "hud.chrome.main"
     },
     {
       "path": "worldrpg/media/ui/hud-vital-fatigue.png",
       "byteLength": 226,
-      "sha256": "844f73ab04722a176ee69cc4c0cec0acccd012f0c01856649dca96b25cc88634"
+      "sha256": "844f73ab04722a176ee69cc4c0cec0acccd012f0c01856649dca96b25cc88634",
+      "mediaId": "hud.vital.fatigue"
     },
     {
       "path": "worldrpg/media/ui/hud-vital-health.png",
       "byteLength": 230,
-      "sha256": "d8ea5b3f369cc05c33d20ac5022eeb0711bedaac6afc7b97bfaba5956666d859"
+      "sha256": "d8ea5b3f369cc05c33d20ac5022eeb0711bedaac6afc7b97bfaba5956666d859",
+      "mediaId": "hud.vital.health"
     },
     {
       "path": "worldrpg/media/ui/hud-vital-magicka.png",
       "byteLength": 229,
-      "sha256": "602ea19d376f6ab701bddd4a9e1d0d2fd097bad36f9c59b735e41b316d8ca52e"
+      "sha256": "602ea19d376f6ab701bddd4a9e1d0d2fd097bad36f9c59b735e41b316d8ca52e",
+      "mediaId": "hud.vital.magicka"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-arrow.png",
       "byteLength": 369,
-      "sha256": "cb9f449c1fe00eb3de638827d1179d76c354efb3c4aaeeaf60bf2e4e5834266d"
+      "sha256": "cb9f449c1fe00eb3de638827d1179d76c354efb3c4aaeeaf60bf2e4e5834266d",
+      "mediaId": "inventory.icon.arrow"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-buckler.png",
       "byteLength": 1299,
-      "sha256": "6637cd45341c80a840865f2d77024fb0028d90ac6b0d9c0a00629d7fff844daa"
+      "sha256": "6637cd45341c80a840865f2d77024fb0028d90ac6b0d9c0a00629d7fff844daa",
+      "mediaId": "inventory.icon.buckler"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-gold-piece.png",
       "byteLength": 395,
-      "sha256": "fdf8435e0a6b2df47abf89f24005056646a658e746928866cc263cad9806643b"
+      "sha256": "fdf8435e0a6b2df47abf89f24005056646a658e746928866cc263cad9806643b",
+      "mediaId": "inventory.icon.gold-piece"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-battle-axe.png",
       "byteLength": 583,
-      "sha256": "c5e54f650acbbc9b14753923c1da99b81eea9cd7b2e32f2738f6ccb78ba84eb1"
+      "sha256": "c5e54f650acbbc9b14753923c1da99b81eea9cd7b2e32f2738f6ccb78ba84eb1",
+      "mediaId": "inventory.icon.iron-battle-axe"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-boots.png",
       "byteLength": 1045,
-      "sha256": "ed5dac4b1610c9df2e27691df8bf6212772bc5009f2d8766f12a24aa3e314378"
+      "sha256": "ed5dac4b1610c9df2e27691df8bf6212772bc5009f2d8766f12a24aa3e314378",
+      "mediaId": "inventory.icon.iron-boots"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-broadsword.png",
       "byteLength": 884,
-      "sha256": "ec5ea5b512b61134b70b8d0316a6ec4d34b4eef77c67160151f87f0217956eb2"
+      "sha256": "ec5ea5b512b61134b70b8d0316a6ec4d34b4eef77c67160151f87f0217956eb2",
+      "mediaId": "inventory.icon.iron-broadsword"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-claymore.png",
       "byteLength": 1198,
-      "sha256": "4fb318a47008c14585c4112ddebf3f9e905f977acdd082d64e84b659093cc653"
+      "sha256": "4fb318a47008c14585c4112ddebf3f9e905f977acdd082d64e84b659093cc653",
+      "mediaId": "inventory.icon.iron-claymore"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-cuirass.png",
       "byteLength": 918,
-      "sha256": "e15add29e1024495bfe21bb76b44d411a158666438a13b54e0dc2f43142a6527"
+      "sha256": "e15add29e1024495bfe21bb76b44d411a158666438a13b54e0dc2f43142a6527",
+      "mediaId": "inventory.icon.iron-cuirass"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-dagger.png",
       "byteLength": 439,
-      "sha256": "0800ac3518abf1cfd04ff320d8a6442f3c4fd4829f4b111cb2bd2975e86b1e82"
+      "sha256": "0800ac3518abf1cfd04ff320d8a6442f3c4fd4829f4b111cb2bd2975e86b1e82",
+      "mediaId": "inventory.icon.iron-dagger"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-dai-katana.png",
       "byteLength": 1108,
-      "sha256": "84dfc50bb236f16c2a1cc5096aa27315068130da37eafa00d6093e3977f41655"
+      "sha256": "84dfc50bb236f16c2a1cc5096aa27315068130da37eafa00d6093e3977f41655",
+      "mediaId": "inventory.icon.iron-dai-katana"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-flail.png",
       "byteLength": 1108,
-      "sha256": "cada73184ece07806fca91d9b6652349d0984ffbe8f5850c14fdda856ebc034a"
+      "sha256": "cada73184ece07806fca91d9b6652349d0984ffbe8f5850c14fdda856ebc034a",
+      "mediaId": "inventory.icon.iron-flail"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-gauntlets.png",
       "byteLength": 698,
-      "sha256": "d11dc752d0dce47332a89a1eed78c7077a0694aa94912ed77c25499c712d3bbd"
+      "sha256": "d11dc752d0dce47332a89a1eed78c7077a0694aa94912ed77c25499c712d3bbd",
+      "mediaId": "inventory.icon.iron-gauntlets"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-greaves.png",
       "byteLength": 903,
-      "sha256": "4a4da50b9d8050df85b0201bd1cde28d21b639e57d100d2a063375a31bbbbe10"
+      "sha256": "4a4da50b9d8050df85b0201bd1cde28d21b639e57d100d2a063375a31bbbbe10",
+      "mediaId": "inventory.icon.iron-greaves"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-helm.png",
       "byteLength": 543,
-      "sha256": "d140862a3cf9e3324cc8f87148ebd792c63ab36bfaea8effc9d8ae40e474a3ff"
+      "sha256": "d140862a3cf9e3324cc8f87148ebd792c63ab36bfaea8effc9d8ae40e474a3ff",
+      "mediaId": "inventory.icon.iron-helm"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-katana.png",
       "byteLength": 407,
-      "sha256": "281383b6f9de5153834fe194c6f1ede9f71d00a6a166bad620e20ec05bd48fd0"
+      "sha256": "281383b6f9de5153834fe194c6f1ede9f71d00a6a166bad620e20ec05bd48fd0",
+      "mediaId": "inventory.icon.iron-katana"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-left-pauldron.png",
       "byteLength": 738,
-      "sha256": "455fb7cc586340e08a6ab44881fd8f220dcaa8e8a900e7e05d4a5bb77b7e75b3"
+      "sha256": "455fb7cc586340e08a6ab44881fd8f220dcaa8e8a900e7e05d4a5bb77b7e75b3",
+      "mediaId": "inventory.icon.iron-left-pauldron"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-long-bow.png",
       "byteLength": 570,
-      "sha256": "30f922c85c14ad05e1cefd01aa349da2babe6a6067610b840ab0905a1810c894"
+      "sha256": "30f922c85c14ad05e1cefd01aa349da2babe6a6067610b840ab0905a1810c894",
+      "mediaId": "inventory.icon.iron-long-bow"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-longsword.png",
       "byteLength": 630,
-      "sha256": "174482cd1d03ffc2cf35af862d35fdeae2795286a09536287cff0cc51d064736"
+      "sha256": "174482cd1d03ffc2cf35af862d35fdeae2795286a09536287cff0cc51d064736",
+      "mediaId": "inventory.icon.iron-longsword"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-mace.png",
       "byteLength": 601,
-      "sha256": "342dc17ec3e38bfc1a9f44230dc9325877720352b12085795eb5dd5f41e837f9"
+      "sha256": "342dc17ec3e38bfc1a9f44230dc9325877720352b12085795eb5dd5f41e837f9",
+      "mediaId": "inventory.icon.iron-mace"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-right-pauldron.png",
       "byteLength": 485,
-      "sha256": "bb2a5feb800f3dfde58d59d0c656d55136d083c459faf28219f53ea70d59d9a0"
+      "sha256": "bb2a5feb800f3dfde58d59d0c656d55136d083c459faf28219f53ea70d59d9a0",
+      "mediaId": "inventory.icon.iron-right-pauldron"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-saber.png",
       "byteLength": 663,
-      "sha256": "6f8354537028fb747f40036215e048045adfb13a9e5cd70a415b1fa7883504c6"
+      "sha256": "6f8354537028fb747f40036215e048045adfb13a9e5cd70a415b1fa7883504c6",
+      "mediaId": "inventory.icon.iron-saber"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-short-bow.png",
       "byteLength": 465,
-      "sha256": "3ec6ddec0691ddfa9548def7840449bd4882b3d8f07fda3c1a1ed197ecc45370"
+      "sha256": "3ec6ddec0691ddfa9548def7840449bd4882b3d8f07fda3c1a1ed197ecc45370",
+      "mediaId": "inventory.icon.iron-short-bow"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-shortsword.png",
       "byteLength": 583,
-      "sha256": "1eecaa294c4d24b4580d331fea2675a4ecbe07be613b90293291b483fbf13e9a"
+      "sha256": "1eecaa294c4d24b4580d331fea2675a4ecbe07be613b90293291b483fbf13e9a",
+      "mediaId": "inventory.icon.iron-shortsword"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-staff.png",
       "byteLength": 1180,
-      "sha256": "4a0f554d6b9c0457a9ecc1358d7c40b30bbee66d4fea3687cb7fd1359e4ab09c"
+      "sha256": "4a0f554d6b9c0457a9ecc1358d7c40b30bbee66d4fea3687cb7fd1359e4ab09c",
+      "mediaId": "inventory.icon.iron-staff"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-tanto.png",
       "byteLength": 203,
-      "sha256": "7ce75bbf0934cf906d613355d60d6ce34c5701629e4fba85e781f7228dfe042b"
+      "sha256": "7ce75bbf0934cf906d613355d60d6ce34c5701629e4fba85e781f7228dfe042b",
+      "mediaId": "inventory.icon.iron-tanto"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-wakazashi.png",
       "byteLength": 290,
-      "sha256": "8d1b4d930bc167eb70a872ecd078a5a11a46a7a95d9408dc9ab8c8ef80721aa9"
+      "sha256": "8d1b4d930bc167eb70a872ecd078a5a11a46a7a95d9408dc9ab8c8ef80721aa9",
+      "mediaId": "inventory.icon.iron-wakazashi"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-war-axe.png",
       "byteLength": 979,
-      "sha256": "c31d72b3682e3b365f95c6f52b02dc821cda3c138cb8e341f791a8bbdd538259"
+      "sha256": "c31d72b3682e3b365f95c6f52b02dc821cda3c138cb8e341f791a8bbdd538259",
+      "mediaId": "inventory.icon.iron-war-axe"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-iron-warhammer.png",
       "byteLength": 1048,
-      "sha256": "8311337f61c7046b66e3787239fcd0499323d33c1c3a51a7578862b3d827f46f"
+      "sha256": "8311337f61c7046b66e3787239fcd0499323d33c1c3a51a7578862b3d827f46f",
+      "mediaId": "inventory.icon.iron-warhammer"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-kite-shield.png",
       "byteLength": 2038,
-      "sha256": "4a8f426efb381dd35bdebc97dbc5af603e2193c60f0f7ca9bc6ea005a5169e3d"
+      "sha256": "4a8f426efb381dd35bdebc97dbc5af603e2193c60f0f7ca9bc6ea005a5169e3d",
+      "mediaId": "inventory.icon.kite-shield"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-round-shield.png",
       "byteLength": 1767,
-      "sha256": "a2387bda301b9f301e39b863e8db362fcce4a299b641db52c6cbad85cf58b662"
+      "sha256": "a2387bda301b9f301e39b863e8db362fcce4a299b641db52c6cbad85cf58b662",
+      "mediaId": "inventory.icon.round-shield"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-tower-shield.png",
       "byteLength": 2457,
-      "sha256": "fc3880adee522189498dbf116f52d4d2542b1222ca6507ad8cfb95650bcaf041"
+      "sha256": "fc3880adee522189498dbf116f52d4d2542b1222ca6507ad8cfb95650bcaf041",
+      "mediaId": "inventory.icon.tower-shield"
     },
     {
       "path": "worldrpg/media/ui/screen-death.png",
       "byteLength": 63124,
-      "sha256": "792feeb481c4e587acc6f4d627d331336c0c50d13c59b996252c88ed14b34289"
+      "sha256": "792feeb481c4e587acc6f4d627d331336c0c50d13c59b996252c88ed14b34289",
+      "mediaId": "screen.death"
     },
     {
       "path": "worldrpg/media/ui/window-character-sheet-chrome.png",
       "byteLength": 35236,
-      "sha256": "10b005fc1385cd2612ead1dfd0bf79374e9b8a2ca7c4731ca1b83305330de818"
+      "sha256": "10b005fc1385cd2612ead1dfd0bf79374e9b8a2ca7c4731ca1b83305330de818",
+      "mediaId": "window.character-sheet.chrome"
     },
     {
       "path": "worldrpg/media/ui/window-inventory-chrome.png",
       "byteLength": 25725,
-      "sha256": "24b3fd3f6c5e7ade04ff18d79e623aa4247853878b15dfc7d79ad744c1526cd9"
+      "sha256": "24b3fd3f6c5e7ade04ff18d79e623aa4247853878b15dfc7d79ad744c1526cd9",
+      "mediaId": "window.inventory.chrome"
     }
   ]
 }

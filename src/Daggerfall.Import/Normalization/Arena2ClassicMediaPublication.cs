@@ -566,7 +566,7 @@ public sealed record Arena2ClassicMediaPublication(
             effectiveOptions.MaximumArtifactBytes);
         ImportPublicationArtifact[] artifacts = generated
             .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
-            .Select(artifact => new ImportPublicationArtifact(artifact.RelativePath, artifact.Bytes))
+            .Select(artifact => new ImportPublicationArtifact(artifact.RelativePath, artifact.Bytes, mediaId: artifact.Id))
             .ToArray();
         LogicalSourceRecord? authoredManifestSource = CreateAuthoredManifestSource(resolved.AuthoredUiManifest, effectiveOptions.MaximumSourceBytes);
         return new(

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
+using WorldRpg.Rulesets.Daggerfall.Content;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -67,10 +68,52 @@ public sealed class PublishedContentDeliveryTests
             .Select(file => Encoding.UTF8.GetString(file.Path.Span))
             .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
-        // The published group carries the fifty-eight media artifacts and the sound catalog that
+        // The published group carries the sixty-one media artifacts and the sound catalog that
         // describes the whole archive, and the inventory indexes both because both are content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(59, listed.Count);
+        Assert.Equal(62, listed.Count);
+    }
+
+    /// <summary>
+    /// The inventory states the media identity of every artifact that has one, which is how a consumer
+    /// resolves a published name to bytes: the UI art the DOM draws is named here rather than staged
+    /// beside the UI, and the identity is the one the pack's own manifest publishes for the same bytes.
+    /// </summary>
+    [Fact]
+    public void The_generated_inventory_states_the_media_identity_of_each_published_artifact()
+    {
+        ProductContent content = AdmittedContent();
+        JsonElement inventory = JsonDocument.Parse(content.ReadBytes(DaggerfallUiArt.InventoryPath).ToArray()).RootElement;
+        Dictionary<string, (string Path, long ByteLength)> identified = new(StringComparer.Ordinal);
+        foreach (JsonElement artifact in inventory.GetProperty("artifacts").EnumerateArray())
+        {
+            if (!artifact.TryGetProperty("mediaId", out JsonElement mediaId)) continue;
+            string path = artifact.GetProperty("path").GetString()!;
+            long byteLength = artifact.GetProperty("byteLength").GetInt64();
+            Assert.True(identified.TryAdd(mediaId.GetString()!, (path, byteLength)), $"The inventory names '{mediaId}' twice.");
+            // Every stated identity resolves to admitted bytes of the stated length under that name.
+            Assert.Equal(byteLength, content.ReadBytes(path).Length);
+        }
+
+        // The six classic UI images the group publishes, the authored skins, and every item icon the
+        // pack names for its catalog: the death screen is the artifact this delivery path exists for.
+        Assert.Equal(("worldrpg/media/ui/screen-death.png", 63124L), identified["screen.death"]);
+        Assert.Equal("worldrpg/media/ui/window-character-sheet-chrome.png", identified["window.character-sheet.chrome"].Path);
+        Assert.Equal("worldrpg/media/ui/inventory-icons/inventory-icon-iron-dagger.png", identified["inventory.icon.iron-dagger"].Path);
+        Assert.Equal("worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png", identified["inventory.skin.panel-slate.v1"].Path);
+        Assert.Equal(61, identified.Count);
+
+        // The identities the group states are the identities the pack publishes for the same images,
+        // so a consumer that asks by media name cannot be answered with a different artifact.
+        JsonElement classic = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/imports/privateers-hold/media/classic/manifest.json"))).RootElement;
+        Dictionary<string, string> packPaths = [];
+        foreach (JsonElement resource in classic.GetProperty("media").GetProperty("resources").EnumerateArray())
+            packPaths[resource.GetProperty("id").GetString()!] = resource.GetProperty("relativePath").GetString()!;
+        Assert.Equal("media/ui/inventory-icons/inventory-icon-iron-dagger.png", packPaths["inventory.icon.iron-dagger"]);
+        Assert.Equal("media/ui/window-character-sheet-chrome.png", packPaths["window.character-sheet.chrome"]);
+        Assert.Equal(
+            Path.GetFileName(packPaths["inventory.icon.iron-dagger"]),
+            Path.GetFileName(identified["inventory.icon.iron-dagger"].Path));
     }
 
     [Fact]

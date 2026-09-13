@@ -482,7 +482,11 @@ internal static class PrivateersHoldContent
                 string itemId = DaggerfallBaseContent.Text(icon, "itemId", diagnostics);
                 string mediaId = DaggerfallBaseContent.Text(icon, "mediaId", diagnostics);
                 if (resources.TryGetValue(mediaId, out ClassicMediaResource? resource) && resource.Kind == "userInterface")
-                    icons[itemId] = $"inventory-art/inventory-icons/{Path.GetFileName(resource.Path)}";
+                {
+                    // The media identity travels to the DOM; the bytes arrive through the published UI
+                    // art, so an item icon is a name the pack owns rather than a file bundled beside the UI.
+                    icons[itemId] = mediaId;
+                }
                 else diagnostics.Add($"Inventory icon '{itemId}' refers to missing inventory media.");
             }
             return (Array.AsReadOnly(audio.ToArray()), new NormalizedClassicPresentation(weapons, effects) { InventoryIcons = new ReadOnlyDictionary<string, string>(icons) });

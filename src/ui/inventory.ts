@@ -1,3 +1,5 @@
+import { image } from './art.js';
+
 export interface InventoryProjection {
   readonly revision: string;
   readonly items: readonly InventoryItem[];
@@ -49,7 +51,6 @@ export function mountInventory(
   const shell = document.createElement('section');
   shell.className = 'dagger-inventory';
   shell.setAttribute('aria-label', 'Inventory and equipment');
-  applyAuthoredArt(shell);
 
   const heading = document.createElement('h2');
   heading.className = 'dagger-inventory-title';
@@ -356,9 +357,11 @@ function renderPlace(
   }
   button.dataset.inventoryItem = item.key;
   button.setAttribute('aria-label', `${emptyLabel}, ${item.label}, ${item.quantity}`);
-  if (item.icon !== null) {
+  const iconSource = image(item.icon);
+  if (iconSource !== null) {
+    // The icon is a published media identity; its bytes came from admitted content with the snapshot.
     const icon = document.createElement('img');
-    icon.src = new URL(item.icon, import.meta.url).href;
+    icon.src = iconSource;
     icon.alt = '';
     icon.draggable = false;
     button.append(icon);
@@ -392,9 +395,10 @@ function renderOverflow(container: HTMLElement, items: readonly InventoryItem[])
     button.dataset.inventoryItem = item.key;
     button.draggable = true;
     button.setAttribute('aria-label', `${item.label}, ${item.quantity}, pack overflow`);
-    if (item.icon !== null) {
+    const iconSource = image(item.icon);
+    if (iconSource !== null) {
       const icon = document.createElement('img');
-      icon.src = new URL(item.icon, import.meta.url).href;
+      icon.src = iconSource;
       icon.alt = '';
       icon.draggable = false;
       button.append(icon);
@@ -416,13 +420,6 @@ function emptyMark(): HTMLElement {
   mark.className = 'dagger-inventory-empty-mark';
   mark.setAttribute('aria-hidden', 'true');
   return mark;
-}
-
-function applyAuthoredArt(element: HTMLElement): void {
-  const art = (name: string): string => `url("${new URL(`./inventory-art/authored/${name}`, import.meta.url).href}")`;
-  element.style.setProperty('--inventory-panel-art', art('inventory-skin-panel-slate-v1.png'));
-  element.style.setProperty('--inventory-title-art', art('inventory-titlebar-slate-v1.png'));
-  element.style.setProperty('--inventory-slot-art', art('inventory-grid-slot-slate-v1.png'));
 }
 
 function formatNumber(value: number): string {

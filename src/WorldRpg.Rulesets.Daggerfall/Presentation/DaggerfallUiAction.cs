@@ -49,6 +49,9 @@ internal static class DaggerfallUiAction
                 return fields.SetEquals(["action", "revision", "item", "container"])
                     && !string.IsNullOrWhiteSpace(revision) && !string.IsNullOrWhiteSpace(item) && !string.IsNullOrWhiteSpace(container)
                     ? new(action, revision, item, Container: container) : null;
+            if (action == "art-request")
+                return fields.SetEquals(["action", "revision"]) && !string.IsNullOrWhiteSpace(revision)
+                    ? new(action, revision) : null;
             if (action == "loot-close")
                 return fields.SetEquals(["action", "container"]) && !string.IsNullOrWhiteSpace(container)
                     ? new(action, Container: container) : null;

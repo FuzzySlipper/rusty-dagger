@@ -284,7 +284,13 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             _inventoryUi = new DaggerfallInventoryPresentation(inventory, equipmentCoordinator, definitions, inputs.ClassicPresentation.InventoryIcons);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
             _characterUi = new DaggerfallCharacterPresentation(definitions, playerDefinition, equipmentCoordinator);
-            _hud = new DaggerfallHudProjection(engine.Ui, definitions.HudResources, compositionIdentity);
+            // The DOM's art comes from admitted content by media identity, so a session reads the
+            // published closure once and publishes it to the UI that draws it.
+            _hud = new DaggerfallHudProjection(
+                engine.Ui,
+                definitions.HudResources,
+                compositionIdentity,
+                DaggerfallUiArt.Read(engine.Content, inputs.ClassicPresentation.InventoryIcons.Values));
             partiallyConstructed.Add(_hud);
             _appearance = new PrivateersHoldAppearance(engine.Content, engine.Graphics, inputs, engine.Audio, tuning.PresentationAudio, _random);
             partiallyConstructed.Add(_appearance);
@@ -470,6 +476,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             switch (action?.Action)
             {
                 case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
+                // A reloaded DOM holds no art and asks for the revision it is missing; the projection
+                // answers on its next snapshot rather than a second delivery channel existing.
+                case "art-request": _hud.RequestArt(); break;
                 case "inventory": break;
                 case "inventory-move": if (playing || modal) _inventoryUi.Move(action!); break;
                 case "character": break;
