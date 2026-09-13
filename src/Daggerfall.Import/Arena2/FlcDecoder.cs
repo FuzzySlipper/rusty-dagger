@@ -1,12 +1,19 @@
 namespace Daggerfall.Import.Arena2;
 
+/// <summary>One sub-chunk inside a frame: its type, its size, and where it sits.</summary>
+/// <param name="Type">The chunk's type.</param>
+/// <param name="Offset">The chunk's byte offset in the container.</param>
+/// <param name="Size">The chunk's declared size in bytes, including its own header.</param>
+public sealed record FlcChunk(ushort Type, int Offset, int Size);
+
 /// <summary>One frame in an FLC container: where it starts, its chunk type, and its declared size.</summary>
 /// <param name="Index">The frame's ordinal in the container.</param>
 /// <param name="Offset">The frame's byte offset in the file.</param>
 /// <param name="ChunkType">The frame's chunk type, which is the container's frame marker.</param>
 /// <param name="Size">The frame's declared size in bytes, including its own header.</param>
 /// <param name="ChunkCount">How many sub-chunks the frame declares.</param>
-public sealed record FlcFrame(int Index, int Offset, ushort ChunkType, int Size, int ChunkCount);
+/// <param name="Chunks">The frame's sub-chunks, in order, which say what the frame is made of.</param>
+public sealed record FlcFrame(int Index, int Offset, ushort ChunkType, int Size, int ChunkCount, IReadOnlyList<FlcChunk> Chunks);
 
 /// <summary>
 /// The header of an FLC container: the animation's shape, and its frames in order.
@@ -149,7 +156,39 @@ public static class FlcDecoder
                 return false;
             }
 
-            framesRead.Add(new FlcFrame(framesRead.Count, position, (ushort)type, size, chunks));
+            // A frame's own header is followed by its sub-chunks, which are what a decoder actually
+            // reads: the frame marker says where a frame is, not what it contains.
+            List<FlcChunk> subChunks = [];
+            int chunkPosition = position + FrameHeaderBytes;
+            int frameEnd = position + size;
+            for (int index = 0; index < chunks; index++)
+            {
+                if (chunkPosition > frameEnd - 6)
+                {
+                    reason = $"'{source}' frame {framesRead.Count} declares {chunks} chunks but its {index + 1}th chunk header does not fit before byte {frameEnd}";
+                    return false;
+                }
+
+                CheckedLittleEndianReader chunk = new(bytes[chunkPosition..(chunkPosition + 6)].ToArray(), source);
+                int chunkSize = chunk.ReadInt32();
+                int chunkType = chunk.ReadUInt16();
+                if (chunkSize < 6 || chunkPosition + chunkSize > frameEnd)
+                {
+                    reason = $"'{source}' frame {framesRead.Count} chunk {index} at byte {chunkPosition} declares {chunkSize} bytes, which does not fit the frame ending at {frameEnd}";
+                    return false;
+                }
+
+                subChunks.Add(new FlcChunk((ushort)chunkType, chunkPosition, chunkSize));
+                chunkPosition += chunkSize;
+            }
+
+            if (chunkPosition != frameEnd)
+            {
+                reason = $"'{source}' frame {framesRead.Count} ends at {frameEnd} but its chunks end at {chunkPosition}, so {frameEnd - chunkPosition} bytes belong to no chunk";
+                return false;
+            }
+
+            framesRead.Add(new FlcFrame(framesRead.Count, position, (ushort)type, size, chunks, subChunks));
             position += size;
         }
 
