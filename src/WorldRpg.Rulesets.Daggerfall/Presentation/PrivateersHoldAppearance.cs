@@ -19,7 +19,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly IAudioService? audio;
     private readonly IRandomService? random;
     private readonly DaggerfallPresentationAudioTuning audioTuning;
-    private readonly Dictionary<string, AudioClipHandle> audioClips = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, AudioClip> audioClips = new(StringComparer.Ordinal);
     private readonly IReadOnlyList<string> hitCues;
     private readonly IReadOnlyDictionary<string, NormalizedClassicEffect> classicEffects;
     private readonly NormalizedClassicPresentation classicPresentation;
@@ -41,6 +41,9 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     private readonly List<AttackImpactNotice> attackImpacts = [];
     private readonly List<SpriteAtlas> atlases = [];
     private readonly List<Material> materials = [];
+    // Engine resources are owning objects: a render resource opened here is released here, because the
+    // materials, atlases and sprites that name it hold non-owning references.
+    private readonly List<RenderResource> ownedResources = [];
     private readonly List<IDisposable> priorRetired = [];
     private readonly List<IDisposable> nextRetired = [];
     private AppearanceFact[] lastPublishedSnapshot = [];
@@ -70,6 +73,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             {
                 VerifyContent(content, new ContentArtifact(material.TexturePath, material.TextureSha256));
                 RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(material.TexturePath, TextureFilter.Nearest, TextureWrap.Repeat));
+                ownedResources.Add(texture.Handle);
                 materials.Add(appearance.CreateMaterial(new MaterialRequest(new Color(1F, 1F, 1F, 1F), texture.Handle, 1F, new Color(1F, 1F, 1F, 1F), Vector3.Zero, 0F, false)));
             }
             appearance.UpdateStaticMeshMaterials(new StaticMeshMaterialUpdateRequest(world, inputs.Materials.Select((material, index) => new MeshMaterialBinding(material.Slot, materials[index])).ToArray()));
@@ -82,7 +86,10 @@ internal sealed class PrivateersHoldAppearance : IDisposable
             foreach (NormalizedAudioClip clip in inputs.Audio)
             {
                 VerifyContent(content, new ContentArtifact(clip.Path, clip.Sha256));
-                audioClips.Add(clip.Id, audio?.OpenClip(new AudioClipRequest(clip.Path)) ?? default);
+
+                // An opened clip is an owned Engine resource now, so it is retained for the lifetime of
+                // this appearance and released with it rather than discarded after the emit.
+                if (audio is not null) audioClips.Add(clip.Id, audio.OpenClip(new AudioClipRequest(clip.Path)));
             }
         }
         catch { Dispose(); throw; }
@@ -356,6 +363,10 @@ internal sealed class PrivateersHoldAppearance : IDisposable
         atlases.Clear();
         foreach (Material material in materials.AsEnumerable().Reverse()) Dispose(material, ref failures);
         materials.Clear();
+        foreach (RenderResource resource in ownedResources.AsEnumerable().Reverse()) Dispose(resource, ref failures);
+        ownedResources.Clear();
+        foreach (AudioClip clip in audioClips.Values.Reverse()) Dispose(clip, ref failures);
+        audioClips.Clear();
         if (failures is { Count: > 0 }) throw new AggregateException(failures);
     }
 
@@ -378,6 +389,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         VerifyContent(content, artifact);
         RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(artifact.Path));
+        ownedResources.Add(texture.Handle);
         if (!classicTextures.TryAdd(artifact.Path, texture))
             throw new InvalidOperationException($"Classic presentation repeats normalized texture path '{artifact.Path}'.");
     }
@@ -441,6 +453,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     {
         VerifyContent(content, new ContentArtifact(sprite.TexturePath, sprite.TextureSha256));
         RenderResourceInfo texture = appearance.OpenResource(new RenderResourceRequest(sprite.TexturePath));
+        ownedResources.Add(texture.Handle);
         SpriteAtlasFrame[] frames = SpriteAtlasAdapter.ToAtlasFrames(sprite.AtlasWidth, sprite.AtlasHeight,
             sprite.Frames.Select(frame => new NormalizedSpriteFrame(frame.Id, frame.X, frame.Y, frame.Width, frame.Height, frame.DisplaySize)).ToArray());
         SpriteAtlas atlas = appearance.CreateSpriteAtlas(new SpriteAtlasCreateRequest(texture.Handle, frames));
@@ -699,7 +712,7 @@ internal sealed class PrivateersHoldAppearance : IDisposable
 
     private void Emit(string clipId, PresentationEventIdentity identity, ulong marker)
     {
-        if (audio is null || !audioClips.TryGetValue(clipId, out AudioClipHandle clip)) return;
+        if (audio is null || !audioClips.TryGetValue(clipId, out AudioClip? clip)) return;
         string signalId = $"daggerfall.media.{identity.Generation}.{identity.SimulationStep}.{identity.Attacker}.{identity.Target}.{identity.Outcome}.{marker}.{clipId}";
         audio.Emit(new AudioEmitRequest(signalId, new AudioSourceDescriptor(clip, AudioBus.Sfx, audioTuning.Volume, audioTuning.Pitch, false, audioTuning.SpatialBlend, audioTuning.Attenuation, 0F, AudioEmitterKind.Global2d, Vector3.Zero, 0, Vector3.Zero)));
     }

@@ -500,6 +500,11 @@ public sealed class NormalizedRuntimeSeamTests
 
         Assert.True(releases.IndexOf("appearance") < releases.IndexOf("atlas"));
         Assert.True(releases.IndexOf("atlas") < releases.IndexOf("material"));
+
+        // Engine resources are owned by whoever opens them now, so the appearance releases each one it
+        // opened (the material texture and the actor sprite texture) after the materials that name them.
+        Assert.Equal(2, appearance.ReleasedResources);
+        Assert.True(releases.IndexOf("material") < releases.IndexOf("resource"));
     }
 
     [Fact]
@@ -980,12 +985,16 @@ public sealed class NormalizedRuntimeSeamTests
         EnemyAttackStartedFact hit = new(11, 12, true, 8, 13);
         AudioRecorder firstAudio = AudioRecorder.Create();
         AppearanceFake firstAppearance = new(releases);
-        using (PrivateersHoldAppearance first = new(content, firstAppearance, MediaInputs(includeAlternate: false), firstAudio.Service, random: KeyedRandomFake.Create(5).Service))
+        PrivateersHoldInputs hitInputs = MediaInputs(includeAlternate: false);
+        using (PrivateersHoldAppearance first = new(content, firstAppearance, hitInputs, firstAudio.Service, random: KeyedRandomFake.Create(5).Service))
         {
             first.React(hit);
             AudioEmitRequest emitted = Assert.Single(firstAudio.Emits);
-            Assert.Equal((ulong)6, emitted.Descriptor.Clip.Value);
+            Assert.Equal((ulong)6, emitted.Descriptor.Clip.Handle.Value);
         }
+
+        // The clips an appearance opens are its own now, so closing it releases every one of them.
+        Assert.Equal(hitInputs.Audio.Count, firstAudio.ReleasedClips);
 
         AudioRecorder secondAudio = AudioRecorder.Create();
         using (PrivateersHoldAppearance second = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false), secondAudio.Service, random: KeyedRandomFake.Create(5).Service))
@@ -994,7 +1003,7 @@ public sealed class NormalizedRuntimeSeamTests
         }
 
         Assert.Equal(firstAudio.Emits.Single().SignalId, secondAudio.Emits.Single().SignalId);
-        Assert.Equal(firstAudio.Emits.Single().Descriptor.Clip, secondAudio.Emits.Single().Descriptor.Clip);
+        Assert.Equal(firstAudio.Emits.Single().Descriptor.Clip.Handle, secondAudio.Emits.Single().Descriptor.Clip.Handle);
     }
 
     [Fact]
@@ -1013,7 +1022,7 @@ public sealed class NormalizedRuntimeSeamTests
         using PrivateersHoldAppearance presentation = new(content, new AppearanceFake(releases), MediaInputs(includeAlternate: false, audio: authoredAudio), audio.Service, random: KeyedRandomFake.Create(2).Service);
         presentation.React(new EnemyAttackStartedFact(11, 12, true, 8, 13));
 
-        Assert.Equal((ulong)3, Assert.Single(audio.Emits).Descriptor.Clip.Value);
+        Assert.Equal((ulong)3, Assert.Single(audio.Emits).Descriptor.Clip.Handle.Value);
     }
 
     [Fact]
@@ -3862,7 +3871,7 @@ public sealed class NormalizedRuntimeSeamTests
         {
             protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
             {
-                nameof(IAudioService.OpenClip) => new AudioClipHandle(1),
+                nameof(IAudioService.OpenClip) => new AudioClip(new AudioClipHandle(1), static () => { }),
                 nameof(IAudioService.Emit) => new AudioSignalHandle(1),
                 _ => throw new NotSupportedException(method?.Name),
             };
@@ -3997,6 +4006,7 @@ public sealed class NormalizedRuntimeSeamTests
     {
         internal IAudioService Service { get; private set; } = null!;
         internal List<AudioEmitRequest> Emits { get; } = [];
+        internal int ReleasedClips { get; private set; }
         private ulong nextHandle = 1;
 
         internal static AudioRecorder Create()
@@ -4009,7 +4019,7 @@ public sealed class NormalizedRuntimeSeamTests
 
         protected override object? Invoke(MethodInfo? method, object?[]? arguments) => method?.Name switch
         {
-            nameof(IAudioService.OpenClip) => new AudioClipHandle(nextHandle++),
+            nameof(IAudioService.OpenClip) => new AudioClip(new AudioClipHandle(nextHandle++), () => ReleasedClips++),
             nameof(IAudioService.Emit) => Emit((AudioEmitRequest)arguments![0]!),
             _ => throw new NotSupportedException(method?.Name),
         };
@@ -4057,8 +4067,24 @@ public sealed class NormalizedRuntimeSeamTests
         {
             if (RejectLateResourceOpen) throw new InvalidOperationException("Render resource selection is sealed after product creation.");
             OpenResourceRequests.Add(request);
-            return new(new RenderResourceHandle(checked((ulong)OpenResourceRequests.Count)), default, 0);
+            return new(OwnResource(checked((ulong)OpenResourceRequests.Count)), default, 0);
         }
+        public RenderResourceInfo OpenResourceFromContent(RenderResourceContentRequest request)
+        {
+            if (RejectLateResourceOpen) throw new InvalidOperationException("Render resource selection is sealed after product creation.");
+            OpenResourceContentRequests.Add(request);
+            return new(OwnResource(checked((ulong)OpenResourceContentRequests.Count)), default, 0);
+        }
+        internal List<RenderResourceContentRequest> OpenResourceContentRequests { get; } = [];
+
+        /// <summary>Counts how many opened render resources the caller released.</summary>
+        internal int ReleasedResources { get; private set; }
+
+        private RenderResource OwnResource(ulong handle) => new(new RenderResourceHandle(handle), () =>
+        {
+            ReleasedResources++;
+            releases.Add("resource");
+        });
         public Material CreateMaterial(MaterialRequest request) => new(new MaterialHandle(1), () => releases.Add("material"));
         public Material CreateAuthoredMaterial(AuthoredMaterialAppearanceRequest request) => CreateMaterial(default);
         public void UpdateMaterial(MaterialUpdateRequest request) { }
@@ -4072,6 +4098,7 @@ public sealed class NormalizedRuntimeSeamTests
         public MeshPartitionReadout ReadMeshPartition(MeshPartition partition) => throw new NotSupportedException();
         public MeshResource TakeMeshPartitionPart(MeshPartitionPartRequest request) => throw new NotSupportedException();
         public Appearance CreateStaticMeshFromContent(StaticMeshContentAppearanceRequest request) => CreateAppearance();
+        public Appearance CreateStaticMeshFromContentReference(StaticMeshContentReferenceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMesh(Appearance appearance, StaticMeshAppearanceRequest request) => CreateAppearance();
         public Appearance ReplaceStaticMeshFromContent(Appearance appearance, StaticMeshContentAppearanceRequest request) => CreateAppearance();
         public void UpdateStaticMeshMaterials(StaticMeshMaterialUpdateRequest request) => StaticMeshBindings.AddRange(request.Bindings.ToArray());
