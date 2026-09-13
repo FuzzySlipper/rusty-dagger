@@ -1,4 +1,5 @@
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Normalized;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -196,6 +197,47 @@ public sealed class MapsRegionGroupTests
         Assert.Equal(
             MapsDecoder.DecodeRegionDungeons(archive, 17).Select(dungeon => (dungeon.Region, dungeon.Index, dungeon.Name, dungeon.ExteriorLocationId, dungeon.DungeonLocationId, dungeon.State, dungeon.Blocks.Count)),
             MapsDecoder.DecodeRegionDungeons(archive, 17).Select(dungeon => (dungeon.Region, dungeon.Index, dungeon.Name, dungeon.ExteriorLocationId, dungeon.DungeonLocationId, dungeon.State, dungeon.Blocks.Count)));
+    }
+
+    [Fact]
+    public void Publishes_every_region_s_locations_and_dungeons_with_the_gaps_named()
+    {
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Corpus("MAPS.BSA")), "arena2/MAPS.BSA");
+        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(archive);
+        locations.Validate();
+
+        // Measured from the source: forty-five regions carry data, seventeen are region slots with no
+        // tables, and between them the corpus describes this many places and this many dungeons.
+        Assert.Equal(15251, locations.Locations.Count);
+        Assert.Equal(45, locations.Locations.Select(location => location.Region).Distinct().Count());
+        Assert.Equal(3959, locations.Dungeons.Count);
+
+        // The empty tables are named, and they are the same three every time: a region slot whose
+        // map data was never written, which is what the donor discards and what this must not report
+        // as a damaged file.
+        Assert.Equal(17, locations.RegionsWithoutTables.Count);
+        string[] emptyTables = ["MAPNAMES", "MAPPITEM", "MAPTABLE"];
+        Assert.All(locations.RegionsWithoutTables, gap => Assert.Equal(
+            emptyTables,
+            gap.EmptyTables.Select(name => name[..name.IndexOf('.', StringComparison.Ordinal)]).Order(StringComparer.Ordinal)));
+
+        // Every dungeon names a location that exists, which is what Validate checks, and the starting
+        // dungeon is among them with the blocks the resolver reports.
+        DaggerfallDungeonRecord hold = Assert.Single(locations.Dungeons, dungeon => dungeon.Name.Contains("Privateer", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(17, hold.Region);
+        Assert.Equal(5, hold.Blocks.Count);
+
+        // The publication is deterministic: the same archive builds byte-identical records.
+        DaggerfallLocations again = DaggerfallLocationBuilder.Build(archive);
+        // A record holding a collection compares by that collection's identity, not its contents, so
+        // the comparison is over projected values - the same trap that caught two earlier assertions.
+        Assert.Equal(locations.Locations, again.Locations);
+        Assert.Equal(
+            locations.Dungeons.Select(dungeon => (dungeon.Region, dungeon.Index, dungeon.Name, dungeon.ExteriorLocationId, dungeon.DungeonLocationId, string.Join(',', dungeon.Blocks))),
+            again.Dungeons.Select(dungeon => (dungeon.Region, dungeon.Index, dungeon.Name, dungeon.ExteriorLocationId, dungeon.DungeonLocationId, string.Join(',', dungeon.Blocks))));
+        Assert.Equal(
+            locations.RegionsWithoutTables.Select(gap => (gap.Region, string.Join(',', gap.EmptyTables))),
+            again.RegionsWithoutTables.Select(gap => (gap.Region, string.Join(',', gap.EmptyTables))));
     }
 
     private static byte[] MapNames(int count)

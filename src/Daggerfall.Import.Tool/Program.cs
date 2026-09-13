@@ -63,6 +63,11 @@ internal static class Program
                 return RunCharacterPresentationCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "locations")
+            {
+                return RunLocationsCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -463,6 +468,41 @@ internal static class Program
     /// The careers the catalog section publishes, by identity, with the class name a portrait is
     /// matched to: a career's identity is its record position, so its name is what names its art.
     /// </summary>
+    /// <summary>
+    /// Reads every region's locations and dungeons from MAPS.BSA and writes them into the base pack
+    /// when asked, so a site or world consumer resolves a place by the region the source names.
+    /// </summary>
+    private static int RunLocationsCommand(IReadOnlyList<string> args)
+    {
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        if (args.Count != (update ? 6 : 5) || args[1] != "--arena2" || args[3] != "--pack")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool locations --arena2 SOURCE_DIR --pack PACK.json [--update]");
+        }
+
+        string arena2 = args[2];
+        string packFile = args[4];
+        BsaArchive archive = BsaArchive.Parse(File.ReadAllBytes(Path.Combine(arena2, "MAPS.BSA")), "arena2/MAPS.BSA");
+        DaggerfallLocations locations = DaggerfallLocationBuilder.Build(archive);
+
+        Console.WriteLine($"locations: {locations.Locations.Count} locations over {locations.Locations.Select(location => location.Region).Distinct().Count()} regions, {locations.Dungeons.Count} dungeons, {locations.RegionsWithoutTables.Count} regions without usable tables");
+        foreach (IGrouping<string, DaggerfallRegionGap> gap in locations.RegionsWithoutTables.GroupBy(gap => string.Join('+', gap.EmptyTables.Select(name => name[..name.IndexOf('.', StringComparison.Ordinal)]))))
+        {
+            Console.WriteLine($"  {gap.Count()} regions have no {gap.Key}");
+        }
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish these locations into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        pack["locations"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(locations, PublishedJson.Section));
+        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: locations updated in {packFile}");
+        return 0;
+    }
+
     private static IReadOnlyDictionary<string, string> ReadPackCareers(string packFile)
     {
         JsonNode root = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
