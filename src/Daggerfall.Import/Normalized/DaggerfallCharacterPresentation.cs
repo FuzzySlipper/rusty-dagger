@@ -17,7 +17,8 @@ public sealed record DaggerfallCharacterLayer(
     string MediaId,
     string SourceFile,
     string Palette,
-    MediaBinding Binding);
+    MediaBinding Binding,
+    string Consumer);
 
 /// <summary>What the publication did with one supplied character file.</summary>
 public enum CharacterFileOutcome
@@ -51,7 +52,8 @@ public sealed record DaggerfallCharacterFile(string Path, string Family, int Can
 /// <param name="SourceFile">The supplied source file, whose cells are the faces.</param>
 /// <param name="Palette">The palette the cells are read with.</param>
 /// <param name="Binding">Whether a consumer binds it, or it is still required-pending.</param>
-public sealed record DaggerfallFactionFace(int Index, string MediaId, string SourceFile, string Palette, MediaBinding Binding);
+/// <param name="Consumer">The consumer the inventory recorded, which states that none binds it yet when none does.</param>
+public sealed record DaggerfallFactionFace(int Index, string MediaId, string SourceFile, string Palette, MediaBinding Binding, string Consumer);
 
 /// <summary>
 /// One career's portrait: the class art the character-creation and sheet views draw.
@@ -62,7 +64,8 @@ public sealed record DaggerfallFactionFace(int Index, string MediaId, string Sou
 /// <param name="Palette">The palette the frames carry.</param>
 /// <param name="FrameCount">How many frames the portrait animates through.</param>
 /// <param name="Binding">Whether a consumer binds it, or it is still required-pending.</param>
-public sealed record DaggerfallCareerPortrait(string CareerId, string MediaId, string SourceFile, string Palette, int FrameCount, MediaBinding Binding);
+/// <param name="Consumer">The consumer the inventory recorded, which states that none binds it yet when none does.</param>
+public sealed record DaggerfallCareerPortrait(string CareerId, string MediaId, string SourceFile, string Palette, int FrameCount, MediaBinding Binding, string Consumer);
 
 /// <summary>A career the corpus supplies no portrait for, kept explicit.</summary>
 /// <param name="CareerId">The catalog career identity.</param>
@@ -155,6 +158,18 @@ public static class DaggerfallCharacterPresentationBuilder
     /// <summary>Heads the donor's face CIF supplies per race and gender.</summary>
     public const int HeadsPerRaceAndGender = 10;
 
+    /// <summary>
+    /// The consumer a reference publishes: the one the inventory recorded, or the inventory's own
+    /// label for a file no consumer binds yet.
+    /// </summary>
+    /// <remarks>
+    /// A published artifact states who claims it, and "nobody yet" is a statement rather than an empty
+    /// field: an empty one cannot be told apart from a builder that forgot to carry the fact, which is
+    /// what the requirement lane found when the records dropped the consumer entirely.
+    /// </remarks>
+    private static string ConsumerOf(CharacterCanvasReference canvas) =>
+        canvas.Consumer is { Length: > 0 } consumer ? consumer : CharacterMediaInventory.UnstatedConsumer;
+
     public static DaggerfallCharacterPresentation Build(
         CharacterMediaInventory inventory,
         IReadOnlySet<string> suppliedPalettes,
@@ -212,7 +227,7 @@ public static class DaggerfallCharacterPresentationBuilder
                     continue;
                 }
 
-                layers.Add(new DaggerfallCharacterLayer(race.Id, race.DonorRaceId, layer, canvas.MediaId, canvas.Path, canvas.Palette, canvas.Binding));
+                layers.Add(new DaggerfallCharacterLayer(race.Id, race.DonorRaceId, layer, canvas.MediaId, canvas.Path, canvas.Palette, canvas.Binding, ConsumerOf(canvas)));
             }
         }
 
@@ -224,7 +239,7 @@ public static class DaggerfallCharacterPresentationBuilder
         List<DaggerfallFactionFace> faces = [.. set.Canvases
             .Where(canvas => System.IO.Path.GetFileName(canvas.Path).Equals("FACES.CIF", StringComparison.OrdinalIgnoreCase))
             .OrderBy(canvas => canvas.CanvasIndex)
-            .Select(canvas => new DaggerfallFactionFace(canvas.CanvasIndex, canvas.MediaId, System.IO.Path.GetFileName(canvas.Path), canvas.Palette, canvas.Binding))];
+            .Select(canvas => new DaggerfallFactionFace(canvas.CanvasIndex, canvas.MediaId, System.IO.Path.GetFileName(canvas.Path), canvas.Palette, canvas.Binding, ConsumerOf(canvas)))];
 
         // A career's portrait is the class animation named for it, which is how the classic corpus
         // stores the three it supplies; a career the corpus does not depict says so rather than
@@ -252,7 +267,7 @@ public static class DaggerfallCharacterPresentationBuilder
             if (portraits.TryGetValue(name.Replace(" ", string.Empty, StringComparison.Ordinal), out List<CharacterCanvasReference>? frames))
             {
                 CharacterCanvasReference first = frames.OrderBy(frame => frame.CanvasIndex).First();
-                careerPortraits.Add(new DaggerfallCareerPortrait(career, first.MediaId, System.IO.Path.GetFileName(first.Path), first.Palette, frames.Count, first.Binding));
+                careerPortraits.Add(new DaggerfallCareerPortrait(career, first.MediaId, System.IO.Path.GetFileName(first.Path), first.Palette, frames.Count, first.Binding, ConsumerOf(first)));
                 continue;
             }
 

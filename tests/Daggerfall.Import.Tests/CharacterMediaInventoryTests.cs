@@ -272,7 +272,7 @@ public sealed class CharacterMediaInventoryTests
         presentation.Validate(published);
         DaggerfallCharacterPresentation broken = presentation with
         {
-            Layers = [.. presentation.Layers, new DaggerfallCharacterLayer("breton", 1, "head.male.99", "character.head.male.00.99", "FACE00I0.CIF", CharacterMediaReferences.ArtPalette, MediaBinding.Admitted)],
+            Layers = [.. presentation.Layers, new DaggerfallCharacterLayer("breton", 1, "head.male.99", "character.head.male.00.99", "FACE00I0.CIF", CharacterMediaReferences.ArtPalette, MediaBinding.Admitted, CharacterMediaInventory.UnstatedConsumer)],
         };
         InvalidOperationException dangling = Assert.Throws<InvalidOperationException>(() => broken.Validate(published));
         Assert.Contains("resolve to nothing", dangling.Message, StringComparison.Ordinal);
@@ -305,6 +305,13 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal("character.faction-face.00", presentation.Faces[0].MediaId);
         Assert.Equal("character.faction-face.60", presentation.Faces[60].MediaId);
         Assert.Equal(CharacterMediaReferences.ArtPalette, presentation.Faces[0].Palette);
+
+        // Every published reference states who claims it. Nothing binds character media yet, and that
+        // is a statement rather than an empty field: an empty one cannot be told apart from a builder
+        // that forgot to carry the fact.
+        Assert.All(presentation.Layers, layer => Assert.Equal(CharacterMediaInventory.UnstatedConsumer, layer.Consumer));
+        Assert.All(presentation.Faces, face => Assert.Equal(CharacterMediaInventory.UnstatedConsumer, face.Consumer));
+        Assert.All(presentation.Careers, portrait => Assert.Equal(CharacterMediaInventory.UnstatedConsumer, portrait.Consumer));
         Assert.All(presentation.Layers, layer => Assert.Equal(CharacterMediaReferences.ArtPalette, layer.Palette));
 
         // A race value with no paper-doll subclass is recorded rather than mapped onto the next index.

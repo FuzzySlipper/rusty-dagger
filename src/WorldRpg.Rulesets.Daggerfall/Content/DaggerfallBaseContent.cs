@@ -112,6 +112,7 @@ internal static class DaggerfallBaseContent
             string sourceFile = Text(layer, "sourceFile", diagnostics);
             string palette = Text(layer, "palette", diagnostics);
             _ = Text(layer, "binding", diagnostics);
+            string consumer = Text(layer, "consumer", diagnostics);
 
             if (raceId.Length != 0 && !catalogRaces.Contains(raceId))
             {
@@ -143,7 +144,7 @@ internal static class DaggerfallBaseContent
             }
 
             donorRaceIds[raceId] = donorRaceId;
-            layers.Add(new DaggerfallCharacterLayerDefinition(kind, gender, headIndex, mediaId, sourceFile, palette));
+            layers.Add(new DaggerfallCharacterLayerDefinition(kind, gender, headIndex, mediaId, sourceFile, palette, consumer));
         }
 
         Dictionary<string, DaggerfallRaceLayers> races = new(StringComparer.Ordinal);
@@ -179,6 +180,7 @@ internal static class DaggerfallBaseContent
             string palette = Text(face, "palette", diagnostics);
             int index = Integer(face, "index", diagnostics);
             _ = Text(face, "binding", diagnostics);
+            string consumer = Text(face, "consumer", diagnostics);
             if (sourceFile.Length != 0 && !accounted.Contains(sourceFile))
             {
                 diagnostics.Add($"Character presentation faction face {index} names source file '{sourceFile}', which the publication does not account for.");
@@ -189,7 +191,7 @@ internal static class DaggerfallBaseContent
                 diagnostics.Add($"Character presentation faction face {index} names media '{mediaId}', which is not a faction face identity.");
             }
 
-            faces.Add(new DaggerfallFactionFaceDefinition(index, mediaId, sourceFile, palette));
+            faces.Add(new DaggerfallFactionFaceDefinition(index, mediaId, sourceFile, palette, consumer));
         }
 
         // A career's portrait is resolved by career identity, and each one's career must be one the
@@ -204,6 +206,7 @@ internal static class DaggerfallBaseContent
             string palette = Text(portrait, "palette", diagnostics);
             int frames = Integer(portrait, "frameCount", diagnostics);
             _ = Text(portrait, "binding", diagnostics);
+            string consumer = Text(portrait, "consumer", diagnostics);
             if (careerId.Length != 0 && !catalogCareers.Contains(careerId))
             {
                 diagnostics.Add($"Character presentation portrait names career '{careerId}', which the catalogs do not publish.");
@@ -219,7 +222,7 @@ internal static class DaggerfallBaseContent
                 diagnostics.Add($"Character presentation portrait for '{careerId}' declares {frames} frames.");
             }
 
-            careers[careerId] = new DaggerfallCareerPortraitDefinition(careerId, mediaId, sourceFile, palette, frames);
+            careers[careerId] = new DaggerfallCareerPortraitDefinition(careerId, mediaId, sourceFile, palette, frames, consumer);
         }
 
         List<DaggerfallCareerWithoutPortrait> careersWithout = [];
