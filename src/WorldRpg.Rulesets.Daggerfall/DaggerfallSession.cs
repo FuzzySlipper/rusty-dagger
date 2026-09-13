@@ -3,6 +3,7 @@ using System.Numerics;
 using Rusty.Engine.Entities;
 using Rusty.Engine.Mechanics;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.World;
 using WorldRpg.Rulesets.Daggerfall.Facts;
 using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Rulesets.Daggerfall.Modules.Behavior;
@@ -50,6 +51,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
     private readonly List<SaveRestoreNotice> _restoreNotices;
     private IReadOnlyList<DaggerfallOwnerSave> _carriedOwnerSections;
+    private readonly World.DaggerfallWorldTime _time;
+
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
     private bool _disposed;
@@ -217,6 +220,12 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             ActorsState actors = new(player, actorStates);
             State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState(), inventory, equipmentCoordinator, containers);
             Presentation = new PresentationState("Ready");
+            _time = new DaggerfallWorldTime(
+                saved?.Calendar is { } restored
+                    ? new DaggerfallCalendar(restored.Year, restored.Month, restored.Day, restored.Hour, restored.Minute, restored.Second)
+                    : DaggerfallCalendar.Start,
+                saved?.Calendar?.RemainderSeconds ?? 0d,
+                tuning.Time.GameSecondsPerRealSecond);
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
@@ -368,7 +377,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                         ? captured
                         : throw new InvalidOperationException($"Save owner '{owner.OwnerId}' captured no section; a durable owner must write the state it owns.")))
                 .Concat(_carriedOwnerSections)
-                .OrderBy(section => section.OwnerId, StringComparer.Ordinal)]));
+                .OrderBy(section => section.OwnerId, StringComparer.Ordinal)],
+            new DaggerfallCalendarSave(_time.Calendar.Year, _time.Calendar.Month, _time.Calendar.Day, _time.Calendar.Hour, _time.Calendar.Minute, _time.Calendar.Second, _time.RemainderSeconds)));
     }
 
     public ProductUpdateResult Update(ProductUpdate update)
@@ -485,6 +495,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         // The message line ages with the world it reports on, so it is advanced here rather than
         // while a mode holds the world still.
         Presentation.Advance(deltaSeconds * facts.AdmittedStepCount);
+
+        // The world's clock runs on the same admitted duration the message line ages by, scaled by the
+        // tuning the corpus authors, so there is one clock and it is this one.
+        _time.Advance(deltaSeconds * facts.AdmittedStepCount);
 
         // One admitted update owns one input slice. Later catch-up steps derive
         // only committed held keyboard/mapped-direction intent; direct axes,
