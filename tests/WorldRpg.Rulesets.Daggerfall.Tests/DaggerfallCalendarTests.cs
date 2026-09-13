@@ -115,6 +115,51 @@ public sealed class DaggerfallCalendarTests
     }
 
     [Fact]
+    public void Converts_an_instant_before_the_first_day_back_to_itself()
+    {
+        // The classic corpus starts in month five of year 405, so the first four months of that year
+        // are behind the calendar's first day. Truncating division answered those with a negative
+        // second and a day in the previous month; floor division answers with the date they are.
+        Assert.Equal(new DaggerfallCalendar(405, 4, 29, 23, 59, 59), DaggerfallCalendar.FromAbsoluteSeconds(-1));
+
+        // Every instant in the first four months round-trips to itself, which is what "the calendar can
+        // describe a date before its own first day" has to mean.
+        foreach (DaggerfallCalendar date in new[]
+        {
+            new DaggerfallCalendar(405, 0, 0, 0, 0, 0),
+            new DaggerfallCalendar(405, 2, 15, 12, 30, 30),
+            new DaggerfallCalendar(405, 4, 29, 23, 59, 59),
+            new DaggerfallCalendar(404, 11, 29, 6, 0, 0),
+        })
+        {
+            Assert.Equal(date, DaggerfallCalendar.FromAbsoluteSeconds(date.ToAbsoluteSeconds()));
+        }
+
+        // An interval no date can describe is refused rather than returned as a year that does not
+        // exist, and a negative interval owes nothing rather than a negative amount of time.
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallCalendar.Start.Advance(DaggerfallCalendar.MaximumIntervalSeconds + 1, out _));
+        DaggerfallCalendarAdvance backwards = new DaggerfallCalendar(405, 5, 0, 0, 0, 0).AdvanceToFirstConsequence(-60, [(1, 0)]);
+        Assert.Equal((0L, 0L), (backwards.AppliedSeconds, backwards.RemainingSeconds));
+    }
+
+    [Fact]
+    public void Reports_daylight_crossed_even_when_the_advance_encloses_it()
+    {
+        // Noon to the next noon passes dusk and dawn, so the flag is set even though both ends are
+        // daytime: comparing the endpoints alone would miss both boundaries.
+        DaggerfallCalendarAdvance full = new DaggerfallCalendar(405, 5, 0, 12, 0, 0).AdvanceToFirstConsequence(DaggerfallCalendar.SecondsPerDay, []);
+        Assert.True(full.Crossed.DaylightChanged);
+
+        // The same for an advance that stays inside the day but steps over dusk.
+        DaggerfallCalendarAdvance dusk = new DaggerfallCalendar(405, 5, 0, DaggerfallCalendar.DuskHour - 1, 0, 0).AdvanceToFirstConsequence(7200, []);
+        Assert.True(dusk.Crossed.DaylightChanged);
+
+        // An advance inside one stretch of daylight crosses none.
+        DaggerfallCalendarAdvance inside = new DaggerfallCalendar(405, 5, 0, 9, 0, 0).AdvanceToFirstConsequence(600, []);
+        Assert.False(inside.Crossed.DaylightChanged);
+    }
+
+    [Fact]
     public void Reads_the_holiday_a_date_is_for_the_region_that_keeps_it()
     {
         // The classic table: fifty-three holidays, each on one day of the year and each kept either

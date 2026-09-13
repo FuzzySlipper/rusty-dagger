@@ -1393,6 +1393,22 @@ public sealed class NormalizedRuntimeSeamTests
 
         Assert.Equal(DaggerfallSavePayload.Read(payload).Payload.Continuation, immediate.Continuation);
 
+        // A save written before the payload carried a calendar is read rather than refused: the older
+        // bytes carry their own older schema number inside them, so a migration that only compares the
+        // outer version refuses the very save it claims to read. This rewrites a real payload to the
+        // earlier version, both where the envelope says it and where the bytes say it.
+        System.Text.Json.Nodes.JsonNode older = System.Text.Json.Nodes.JsonNode.Parse(payload.Bytes.Span)!;
+        older["SchemaVersion"] = DaggerfallSavePayload.CalendarlessSchemaVersion;
+        // A save written before the field existed carries no calendar member at all, which is the shape
+        // the migration has to read; keeping the member here would test a payload that never existed.
+        Assert.True(((System.Text.Json.Nodes.JsonObject)older).Remove("Calendar"));
+        DaggerfallSaveRead migrated = DaggerfallSavePayload.Read(new RulesetSavePayload(
+            DaggerfallRuleset.Identity,
+            DaggerfallSavePayload.CalendarlessSchemaVersion,
+            System.Text.Encoding.UTF8.GetBytes(older.ToJsonString())));
+        Assert.Null(migrated.Payload.Calendar);
+        Assert.Contains(migrated.Notices, notice => notice.Code == "save-schema-calendarless");
+
         // The world's clock survives the round trip, including the part of a game second it had not
         // applied: a resumed world that restarted the second would march its deadlines to a different
         // beat than one that was never saved.

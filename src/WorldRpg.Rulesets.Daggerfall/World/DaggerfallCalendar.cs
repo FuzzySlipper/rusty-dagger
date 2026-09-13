@@ -197,6 +197,11 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     {
         elapsed = default;
         if (seconds <= 0) return this;
+        if (seconds > MaximumIntervalSeconds)
+        {
+            throw new ArgumentOutOfRangeException(nameof(seconds), seconds,
+                $"An interval beyond {MaximumIntervalSeconds} seconds cannot be represented as a date, so it is refused rather than returned as a year no calendar describes.");
+        }
 
         long total = ToAbsoluteSeconds() + seconds;
         DaggerfallCalendar advanced = FromAbsoluteSeconds(total);
@@ -207,9 +212,19 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
             advanced.Year - Year,
             advanced.Day < Day ? 1 : 0,
             advanced.Hour < Hour || (advanced.Hour == Hour && advanced.Minute < Minute) ? 1 : 0,
-            advanced.IsDay != IsDay);
+            CrossesDaylight(seconds));
         return advanced;
     }
+
+    /// <summary>
+    /// The largest interval an advance accepts, which is a million years of game seconds.
+    /// </summary>
+    /// <remarks>
+    /// The calendar's fields are 32-bit and its elapsed counts are 32-bit, so an interval beyond this
+    /// could not be represented even in principle. Refusing it is the difference between a caller's
+    /// arithmetic error and a returned year that no date can describe.
+    /// </remarks>
+    public const long MaximumIntervalSeconds = (long)SecondsPerYear * 1_000_000;
 
     /// <summary>The consequence identity that means no consequence stopped an advance.</summary>
     public const int NoConsequence = -1;
@@ -234,7 +249,9 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
         ArgumentNullException.ThrowIfNull(consequences);
         if (seconds <= 0)
         {
-            return new DaggerfallCalendarAdvance(this, 0, seconds < 0 ? seconds : 0, NoConsequence, default);
+            // Nothing is owed by a negative interval: reporting it back as remaining would hand the
+            // caller a negative amount of time to resume with, which no interval can be.
+            return new DaggerfallCalendarAdvance(this, 0, 0, NoConsequence, default);
         }
 
         // An identity below zero would be indistinguishable from "no consequence", so it is refused
@@ -270,14 +287,19 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
     /// <summary>The instant a count of seconds from the calendar's start names.</summary>
     public static DaggerfallCalendar FromAbsoluteSeconds(long seconds)
     {
-        int day = (int)(seconds / SecondsPerDay);
-        int secondOfDay = (int)(seconds % SecondsPerDay);
-        int year = FirstYear + (day / DaysPerYear);
-        int dayOfYear = day % DaysPerYear;
+        // Floor division rather than truncation: an instant before the calendar's first day is a real
+        // instant - the classic corpus starts in month five of year 405, so the first four months of
+        // that year are behind it - and truncation would answer with a negative second and a day in
+        // the previous month instead of the date that instant actually is.
+        long day = (long)Math.Floor((double)seconds / SecondsPerDay);
+        int secondOfDay = (int)(seconds - (day * SecondsPerDay));
+        long years = (long)Math.Floor((double)day / DaysPerYear);
+        int dayOfYear = (int)(day - (years * DaysPerYear));
+        int year = checked(FirstYear + (int)years);
         int month = FirstMonth + (dayOfYear / DaysPerMonth);
         // A start month later than the first wraps the year forward rather than producing a month
         // beyond December, which is where a single division would land.
-        year += month / MonthsPerYear;
+        year = checked(year + (month / MonthsPerYear));
         month %= MonthsPerYear;
         return new DaggerfallCalendar(
             year,
@@ -288,7 +310,28 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
             secondOfDay % SecondsPerMinute);
     }
 
-    private static int Days(long days) => (int)days;
+    /// <summary>
+    /// Whether an advance of this many seconds covers dawn or dusk, including when both ends of it are
+    /// on the same side of the boundary: a jump from noon past the next noon passes both.
+    /// </summary>
+    private bool CrossesDaylight(long seconds)
+    {
+        if (seconds >= SecondsPerDay)
+        {
+            return true;
+        }
+
+        int start = SecondOfDay;
+        int end = start + (int)seconds;
+        int dawn = DawnHour * MinutesPerHour * SecondsPerMinute;
+        int dusk = DuskHour * MinutesPerHour * SecondsPerMinute;
+        return (start < dawn && end >= dawn)
+            || (start < dusk && end >= dusk)
+            || (start >= dawn && end >= SecondsPerDay + dawn)
+            || (start >= dusk && end >= SecondsPerDay + dusk);
+    }
+
+    private static int Days(long days) => checked((int)days);
 
     private static int Months(DaggerfallCalendar advanced, DaggerfallCalendar origin) =>
         (int)(((advanced.Year - origin.Year) * MonthsPerYear) + advanced.Month - origin.Month);
