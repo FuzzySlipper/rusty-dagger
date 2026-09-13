@@ -70,12 +70,20 @@ public sealed class ResidualSourceInventoryTests
 
         // Everything a reader reads is unused rather than pending: the residual publication emits
         // a family only once a named consumer exists, and none does yet.
-        Assert.Equal(122, inventory.Unused.Count());
-        Assert.All(inventory.Unused, file => Assert.Contains("no consumer claims it yet", file.Note, StringComparison.Ordinal));
+        // The documented inventory already imports two of these paths - the two palettes the
+        // classic media publication and the dungeon normalizer decode - so they are imported here
+        // rather than called unused, which would contradict the artifact that knows the consumer.
+        Assert.Equal(
+            ["ART_PAL.COL", "PAL.PAL"],
+            inventory.Imported.Select(file => file.Path).Order(StringComparer.Ordinal));
+        Assert.All(inventory.Imported, file => Assert.Contains("a consumer claims it", file.Note, StringComparison.Ordinal));
+
+        Assert.Equal(120, inventory.Unused.Count());
+        Assert.All(inventory.Unused, file => Assert.Contains("no consumer named here claims it", file.Note, StringComparison.Ordinal));
         Assert.All(inventory.Unused, file => Assert.NotEqual(string.Empty, file.Reader));
 
         // Every family this repository has a reader for reads all of its supplied files: the six
-        // run-length encoded sprite CIFs and the two images whose records declare an unimplemented
+        // five run-length encoded sprite CIFs and the two images whose records declare an unimplemented
         // compression value all read, because the classic readers either decode compression 2 or
         // never consult the field. A file no reader reads would be malformed here, so an empty set
         // is the assertion that the readers and the corpus agree.
@@ -91,9 +99,24 @@ public sealed class ResidualSourceInventoryTests
 
         Assert.Equal(61, inventory.Unresolved.Count());
         Assert.All(inventory.Unresolved, file => Assert.Equal(string.Empty, file.Reader));
+        // A path with no reader is not a path a reader refused: saying "refused it:" with an empty
+        // reader is the kind of text that reads as a fact and is not one.
+        Assert.All(inventory.Unresolved, file => Assert.DoesNotContain("refused it", file.Note, StringComparison.Ordinal));
+        Assert.All(inventory.Unresolved, file => Assert.Contains("no reader for it", file.Note, StringComparison.Ordinal));
         Assert.Contains(inventory.Unresolved, file => file.Path == "MRED00I0.CFA" && file.DonorReader == "CfaFile");
-        Assert.Contains(inventory.Unresolved, file => file.Path == "HAZE.000" && file.Note.Contains("No donor reader reaches this family", StringComparison.Ordinal));
+        Assert.Contains(inventory.Unresolved, file => file.Path == "HAZE.000" && file.DonorReader == string.Empty);
         Assert.Contains(inventory.Unresolved, file => file.Path == "PAINT.DAT" && file.DonorReader == "PaintFile");
+        // The donor reads the sky animations from Arena2 through SkyFile, which the DAT family's
+        // own verdict cannot say for the thirty-two files that use it.
+        Assert.All(
+            inventory.Family("DAT").Where(file => file.Path.StartsWith("SKY", StringComparison.Ordinal) && file.Path.EndsWith(".DAT", StringComparison.Ordinal) && file.Path != "SKYPAL.DAT"),
+            file => Assert.Equal("SkyFile", file.DonorReader));
+        Assert.Equal(string.Empty, inventory.Family("DAT").Single(file => file.Path == "SKYPAL.DAT").DonorReader);
+        Assert.Equal(string.Empty, inventory.Family("PAL").Single(file => file.Path == "OLDPAL.PAL").DonorReader);
+
+        // Clause 6 asks for a named representative of every family whose reader exists.
+        Assert.Contains(inventory.Family("RCI"), file => file.Path == "BUTTONS.RCI" && file.Reader == "Arena2CanvasReader");
+        Assert.Contains(inventory.Family("COL"), file => file.Path == "DANKBMAP.COL" && file.Reader == "PaletteDecoder");
     }
 
     [Fact]
@@ -125,6 +148,40 @@ public sealed class ResidualSourceInventoryTests
     }
 
     [Fact]
+    public void Classifies_the_documented_families_the_corpus_does_not_supply()
+    {
+        // Five families the task names have no residual file today. They are classified rather
+        // than refused, so a future file of one of those shapes lands in its documented family
+        // instead of being reported as an unknown extension.
+        ResidualSourceInventory inventory = ResidualSourceInventory.Enumerate(
+            [("X.GFX", new byte[16]), ("X.DEF", new byte[16]), ("X.RSC", new byte[16]), ("X.CEL", new byte[16]), ("X.BSS", new byte[16])],
+            "fixture");
+
+        Assert.All(inventory.Files, file => Assert.True(file.Documented));
+        Assert.Equal("Arena2CanvasReader", inventory.Family("GFX").Single().Reader);
+        Assert.Equal("MagicItemsFile", inventory.Family("DEF").Single().DonorReader);
+        Assert.Equal("TextFile", inventory.Family("RSC").Single().DonorReader);
+        Assert.Equal("FlcFile", inventory.Family("CEL").Single().DonorReader);
+        Assert.Equal("BssFile", inventory.Family("BSS").Single().DonorReader);
+        Assert.Empty(inventory.UndocumentedFamilies);
+    }
+
+    [Fact]
+    public void Reports_a_documented_disposition_it_does_not_know_rather_than_guessing()
+    {
+        // The manifest's vocabulary is the product's; a token this classification cannot read
+        // leaves the reader-based verdict standing and says so, rather than being ignored.
+        ResidualSourceInventory inventory = ResidualSourceInventory.Enumerate(
+            [("BUTN00I0.IMG", File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/BUTN00I0.IMG")))],
+            "fixture",
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["BUTN00I0.IMG"] = "not-a-disposition" });
+
+        ResidualSourceRecord record = Assert.Single(inventory.Files);
+        Assert.Equal(SourceRecordDisposition.Unused, record.Disposition);
+        Assert.Contains("does not know ('not-a-disposition')", record.Note, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Refuses_a_repeated_path_or_an_unknown_family()
     {
         // A path is the identity, so classifying one twice would give one file two verdicts; an
@@ -140,23 +197,27 @@ public sealed class ResidualSourceInventoryTests
     }
 
     /// <summary>The residual paths the manifest documents, which are the paths this classification covers.</summary>
-    private static string[] DocumentedResidualPaths() =>
+    private static string[] DocumentedResidualPaths() => [.. DocumentedResidualRows().Select(row => Path.GetFileName(row.PathOrPattern))];
+
+    private static IReadOnlyList<SourceInventoryRow> DocumentedResidualRows() =>
     [
         .. SourceManifestBuilder.ReadInventory(File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")))
-            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-027"))
-            .Select(row => Path.GetFileName(row.PathOrPattern)),
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-027")),
     ];
 
     private static ResidualSourceInventory ReadInventory()
     {
         string arena2 = Path.Combine(RepositoryRoot(), "local/arena2");
         List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
-        foreach (string path in DocumentedResidualPaths())
+        Dictionary<string, string> documented = [];
+        foreach (SourceInventoryRow row in DocumentedResidualRows())
         {
-            sources.Add((path, File.ReadAllBytes(Path.Combine(arena2, path))));
+            string name = Path.GetFileName(row.PathOrPattern);
+            documented[name] = row.Disposition;
+            sources.Add((name, File.ReadAllBytes(Path.Combine(arena2, name))));
         }
 
-        return ResidualSourceInventory.Enumerate(sources, "local/arena2");
+        return ResidualSourceInventory.Enumerate(sources, "local/arena2", documented);
     }
 
     private static string RepositoryRoot()

@@ -148,27 +148,27 @@ internal static class Program
 
         string arena2 = args[2];
         IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(args[4]));
-        string[] documented =
-        [
-            .. rows
-                .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-027"))
-                .Select(row => Path.GetFileName(row.PathOrPattern))
-                .Order(StringComparer.Ordinal),
-        ];
+        Dictionary<string, string> documented = [];
         List<(string Path, ReadOnlyMemory<byte> Bytes)> sources = [];
-        foreach (string name in documented)
+        foreach (SourceInventoryRow row in rows
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-027"))
+            .OrderBy(row => row.PathOrPattern, StringComparer.Ordinal))
         {
+            string name = Path.GetFileName(row.PathOrPattern);
             string path = Path.Combine(arena2, name);
             if (!File.Exists(path))
             {
                 throw new InvalidOperationException($"The documented residual path '{name}' is not supplied by '{arena2}'.");
             }
 
+            // The documented disposition travels with the path: a file the inventory already
+            // imports has a consumer this classification cannot see for itself.
+            documented[name] = row.Disposition;
             sources.Add((name, File.ReadAllBytes(path)));
         }
 
-        ResidualSourceInventory inventory = ResidualSourceInventory.Enumerate(sources, Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)));
-        Console.WriteLine($"residual paths: {inventory.Files.Count} documented and classified, {inventory.Unused.Count()} readable with no consumer, {inventory.Malformed.Count()} refused by their family's reader, {inventory.Unresolved.Count()} with no reader in this repository");
+        ResidualSourceInventory inventory = ResidualSourceInventory.Enumerate(sources, Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2)), documented);
+        Console.WriteLine($"residual paths: {inventory.Files.Count} documented and classified, {inventory.Imported.Count()} already imported, {inventory.Unused.Count()} readable with no consumer, {inventory.Malformed.Count()} refused by their family's reader, {inventory.Unresolved.Count()} with no reader in this repository");
         foreach (IGrouping<string, ResidualSourceRecord> family in inventory.Files.GroupBy(file => file.Family, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
         {
             ResidualSourceRecord first = family.First();
