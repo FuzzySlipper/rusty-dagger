@@ -298,15 +298,18 @@ public static class FlcDecoder
             reader.ReadBytes(reader.ReadByte() * 3);
             int count = reader.ReadByte();
             if (count == 0) count = 256;
+            if (index + count > colors.Length)
+            {
+                throw new Arena2FormatException(source, 0,
+                    $"the palette chunk of frame {frame} declares {index + count} colours, more than the {colors.Length} a palette holds");
+            }
+
             for (int color = 0; color < count; color++)
             {
                 byte red = reader.ReadByte();
                 byte green = reader.ReadByte();
                 byte blue = reader.ReadByte();
-                if (index < colors.Length)
-                {
-                    colors[index++] = new Rgb24(Scaled(red), Scaled(green), Scaled(blue));
-                }
+                colors[index++] = new Rgb24(Scaled(red), Scaled(green), Scaled(blue));
             }
         }
 
@@ -321,6 +324,7 @@ public static class FlcDecoder
         int position = 0;
         for (int y = 0; y < container.Height; y++)
         {
+            position = Require(payload, position, 1, source, $"the packet count of row {y}");
             _ = payload[position++];
             int x = 0;
             int row = (container.Height - 1 - y) * container.Width;
@@ -332,6 +336,7 @@ public static class FlcDecoder
                         $"a run-length frame wants another packet for row {y} but its chunk ends after {payload.Length} bytes");
                 }
 
+                position = Require(payload, position, 1, source, $"a packet header of row {y}");
                 sbyte packet = (sbyte)payload[position++];
                 int count = Math.Abs((int)packet);
                 int painted = Math.Min(count, container.Width - x);
@@ -355,6 +360,7 @@ public static class FlcDecoder
                 }
                 else
                 {
+                    position = Require(payload, position, 1, source, $"the repeated pixel of row {y}");
                     byte value = payload[position++];
                     for (int pixel = 0; pixel < painted; pixel++)
                     {
@@ -370,8 +376,9 @@ public static class FlcDecoder
     /// <summary>Reads a delta frame: line runs, then paired packets that update the last frame.</summary>
     private static void ReadDelta(ReadOnlySpan<byte> payload, byte[] buffer, FlcContainer container, string source)
     {
-        int lines = payload[0] | (payload[1] << 8);
-        int position = 2;
+        int position = Require(payload, 0, 2, source, "a delta frame's line count");
+        int lines = payload[position] | (payload[position + 1] << 8);
+        position += 2;
         int y = 0;
 
         // The donor keeps one packet count across the frame's lines rather than resetting it per line,
@@ -382,35 +389,52 @@ public static class FlcDecoder
         {
             while (true)
             {
+                position = Require(payload, position, 2, source, $"an opcode of delta line {line}");
                 int opcode = payload[position] | (payload[position + 1] << 8);
                 position += 2;
                 if ((opcode & 0x8000) != 0)
                 {
                     if ((opcode & 0x4000) != 0)
                     {
-                        y += Math.Abs((short)opcode);
+                        int row = y + Math.Abs((short)opcode);
+                        if (row >= container.Height)
+                        {
+                            throw new Arena2FormatException(source, 0,
+                                $"a delta line skip at line {line} reaches row {row}, past the frame's {container.Height} rows");
+                        }
+
+                        y = row;
                         continue;
                     }
 
                     break;
                 }
 
-                packets = opcode;
-                break;
+                // The donor reads a further opcode for the reserved range rather than taking it as a
+                // packet count: 0x4000 to 0x7FFF is neither a skip nor a count, and treating it as a
+                // count walks the packet stream out of step.
+                if ((opcode & 0x4000) == 0)
+                {
+                    packets = opcode;
+                    break;
+                }
+            }
+
+            if (y >= container.Height)
+            {
+                throw new Arena2FormatException(source, 0,
+                    $"delta line {line} writes row {y}, past the frame's {container.Height} rows");
             }
 
             int x = 0;
             for (int packet = 0; packet < packets; packet++)
             {
+                position = Require(payload, position, 2, source, $"a packet of delta line {line}");
                 x += payload[position++];
                 sbyte size = (sbyte)payload[position++];
                 int count = Math.Abs((int)size);
-                if (size > 0 && position + (count * 2) > payload.Length)
-                {
-                    throw new Arena2FormatException(source, 0,
-                        $"a delta packet at line {y} wants {count * 2} pixel bytes but the chunk has {payload.Length - position} left");
-                }
-
+                int bytes = size > 0 ? count * 2 : 2;
+                position = Require(payload, position, bytes, source, $"the pixels of a delta packet at line {line}");
                 int row = (container.Height - 1 - y) * container.Width;
                 for (int index = 0; index < count * 2 && x + index < container.Width; index++)
                 {
@@ -419,11 +443,32 @@ public static class FlcDecoder
                     buffer[row + x + index] = size > 0 ? payload[position + index] : payload[position + (index % 2)];
                 }
 
-                position += size > 0 ? count * 2 : 2;
+                position += bytes;
                 x += count * 2;
             }
 
-            if (y < container.Height) y++;
+            y++;
         }
     }
+
+    /// <summary>
+    /// Refuses a read that would leave the chunk, naming what was being read.
+    /// </summary>
+    /// <remarks>
+    /// Every read of a decoded chunk goes through this rather than indexing the span directly, so a
+    /// truncated frame is refused with the file and the row named instead of reaching the caller as an
+    /// index error. The guards are before the read by construction: the position this returns is the
+    /// only one a caller may use.
+    /// </remarks>
+    private static int Require(ReadOnlySpan<byte> payload, int position, int width, string source, string what)
+    {
+        if (width < 0 || position < 0 || position + width > payload.Length)
+        {
+            throw new Arena2FormatException(source, 0,
+                $"a frame chunk needs {width} byte(s) for {what} at {position}, but the chunk has {payload.Length}");
+        }
+
+        return position;
+    }
+
 }

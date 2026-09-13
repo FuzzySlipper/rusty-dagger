@@ -124,6 +124,74 @@ public sealed class FlcDecoderTests
         }
     }
 
+    [Fact]
+    public void Refuses_a_truncated_frame_instead_of_reading_past_it()
+    {
+        // The boundary lane found every one of these reaching the caller as an index error rather than
+        // a refusal. A malformed chunk the container walk accepts is a source fact, and it has to be
+        // reported as one: each case below names the file and what was being read.
+        byte[] run = ByteRunFixture(payload: []);
+        Arena2FormatException empty = Assert.Throws<Arena2FormatException>(() => FlcDecoder.DecodeFrames(run, "truncated.cel", out _));
+        Assert.Contains("truncated.cel", empty.Message, StringComparison.Ordinal);
+        Assert.Contains("packet count of row 0", empty.Message, StringComparison.Ordinal);
+
+        // A repeat packet whose value byte is missing.
+        byte[] repeat = ByteRunFixture(payload: [0x00, 0x01]);
+        Assert.Contains("repeated pixel of row 0", Assert.Throws<Arena2FormatException>(() => FlcDecoder.DecodeFrames(repeat, "truncated.cel", out _)).Message, StringComparison.Ordinal);
+
+        // A delta frame with no opcode at all, and one whose repeat packet needs two bytes and has one.
+        Assert.Contains("opcode of delta line 0", Assert.Throws<Arena2FormatException>(
+            () => FlcDecoder.DecodeFrames(DeltaFixture(payload: [0x01, 0x00]), "truncated.cel", out _)).Message, StringComparison.Ordinal);
+        Assert.Contains("byte(s) for the pixels of a delta packet", Assert.Throws<Arena2FormatException>(
+            () => FlcDecoder.DecodeFrames(DeltaFixture(payload: [0x01, 0x00, 0x01, 0x00, 0x00, 0x80]), "truncated.cel", out _)).Message, StringComparison.Ordinal);
+
+        // A line skip that would land past the frame's rows, which used to write outside the buffer.
+        byte[] skip = DeltaFixture(payload: [0x01, 0x00, 0x02, 0xC0, 0x00]);
+        Assert.Contains("past the frame's", Assert.Throws<Arena2FormatException>(() => FlcDecoder.DecodeFrames(skip, "truncated.cel", out _)).Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>A one-frame container whose single frame carries one run-length chunk.</summary>
+    private static byte[] ByteRunFixture(byte[] payload)
+    {
+        byte[] chunk = [.. Chunk(FlcDecoder.ByteRunChunkType, payload)];
+        return Container([.. chunk]);
+    }
+
+    /// <summary>A one-frame container whose single frame carries one delta chunk.</summary>
+    private static byte[] DeltaFixture(byte[] payload)
+    {
+        byte[] chunk = [.. Chunk(FlcDecoder.DeltaFlcChunkType, payload)];
+        return Container([.. chunk]);
+    }
+
+    private static byte[] Chunk(ushort type, byte[] payload)
+    {
+        byte[] chunk = new byte[6 + payload.Length];
+        BitConverter.GetBytes(chunk.Length).CopyTo(chunk, 0);
+        BitConverter.GetBytes(type).CopyTo(chunk, 4);
+        payload.CopyTo(chunk, 6);
+        return chunk;
+    }
+
+    /// <summary>A container of one frame of four by two, with the given chunks and no prefix chunk.</summary>
+    private static byte[] Container(byte[] chunks)
+    {
+        const int header = 128;
+        byte[] file = new byte[header + 16 + chunks.Length];
+        BitConverter.GetBytes(file.Length).CopyTo(file, 0);
+        BitConverter.GetBytes(0xAF12).CopyTo(file, 4);
+        BitConverter.GetBytes((short)1).CopyTo(file, 6);
+        BitConverter.GetBytes((short)4).CopyTo(file, 8);
+        BitConverter.GetBytes((short)2).CopyTo(file, 10);
+        BitConverter.GetBytes((short)8).CopyTo(file, 12);
+        BitConverter.GetBytes(header).CopyTo(file, 80);
+        BitConverter.GetBytes(16 + chunks.Length).CopyTo(file, header);
+        BitConverter.GetBytes(FlcDecoder.FrameChunkType).CopyTo(file, header + 4);
+        BitConverter.GetBytes((short)1).CopyTo(file, header + 6);
+        chunks.CopyTo(file, header + 16);
+        return file;
+    }
+
     /// <summary>The chunk types the donor's reader switches on, which these files all use.</summary>
     private const ushort PstampChunkType = FlcDecoder.PstampChunkType;
 
