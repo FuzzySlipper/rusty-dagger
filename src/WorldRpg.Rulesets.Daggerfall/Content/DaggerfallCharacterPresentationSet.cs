@@ -1,0 +1,108 @@
+namespace WorldRpg.Rulesets.Daggerfall.Content;
+
+/// <summary>Which paper-doll layer a published reference names.</summary>
+internal enum DaggerfallCharacterLayerKind
+{
+    /// <summary>The race's paper-doll background.</summary>
+    Background,
+
+    /// <summary>A body without clothing, which the equipment layers draw over.</summary>
+    BodyUnclothed,
+
+    /// <summary>A body with clothing already drawn.</summary>
+    BodyClothed,
+
+    /// <summary>One of the race and gender's selectable heads.</summary>
+    Head,
+}
+
+/// <summary>Whether a layer belongs to the male or the female paper doll.</summary>
+internal enum DaggerfallCharacterGender
+{
+    Male,
+    Female,
+}
+
+/// <summary>
+/// One published presentation layer: the media identity a character sheet or social view resolves,
+/// the source file it came from, and the palette it is read with.
+/// </summary>
+/// <param name="Kind">Which layer this is.</param>
+/// <param name="Gender">Which paper doll the layer belongs to, or null for a background.</param>
+/// <param name="HeadIndex">Which head this is within its race and gender, or -1 when it is not a head.</param>
+/// <param name="MediaId">The published identity a consumer references.</param>
+/// <param name="SourceFile">The supplied source file the artifact comes from.</param>
+/// <param name="Palette">The palette the canvas is read with.</param>
+internal sealed record DaggerfallCharacterLayerDefinition(
+    DaggerfallCharacterLayerKind Kind,
+    DaggerfallCharacterGender? Gender,
+    int HeadIndex,
+    string MediaId,
+    string SourceFile,
+    string Palette);
+
+/// <summary>
+/// One race's published layers, resolved by gender and role rather than by position.
+/// </summary>
+/// <param name="RaceId">The catalog race identity the layers belong to.</param>
+/// <param name="DonorRaceId">The donor's own race value.</param>
+/// <param name="Layers">Every layer the pack publishes for the race.</param>
+internal sealed record DaggerfallRaceLayers(string RaceId, int DonorRaceId, IReadOnlyList<DaggerfallCharacterLayerDefinition> Layers)
+{
+    /// <summary>The race's background, which every paper doll draws first.</summary>
+    internal DaggerfallCharacterLayerDefinition Background =>
+        Single(DaggerfallCharacterLayerKind.Background, null);
+
+    /// <summary>The body a gender wears its equipment over.</summary>
+    internal DaggerfallCharacterLayerDefinition Body(DaggerfallCharacterGender gender, bool clothed) =>
+        Single(clothed ? DaggerfallCharacterLayerKind.BodyClothed : DaggerfallCharacterLayerKind.BodyUnclothed, gender);
+
+    /// <summary>The heads a gender can choose from, in the order the source supplies them.</summary>
+    internal IReadOnlyList<DaggerfallCharacterLayerDefinition> Heads(DaggerfallCharacterGender gender) =>
+        [.. Layers.Where(layer => layer.Kind == DaggerfallCharacterLayerKind.Head && layer.Gender == gender).OrderBy(layer => layer.HeadIndex)];
+
+    private DaggerfallCharacterLayerDefinition Single(DaggerfallCharacterLayerKind kind, DaggerfallCharacterGender? gender) =>
+        Layers.SingleOrDefault(layer => layer.Kind == kind && layer.Gender == gender)
+        ?? throw new InvalidOperationException($"Race '{RaceId}' publishes no {kind} layer for {(gender is null ? "any gender" : gender.ToString()!.ToLowerInvariant())}.");
+}
+
+/// <summary>One race the pack records as having no presentation media, and why.</summary>
+/// <param name="RaceId">The catalog race identity.</param>
+/// <param name="DonorRaceId">The donor's own race value.</param>
+/// <param name="Reason">Why the race has no layers.</param>
+internal sealed record DaggerfallRaceWithoutMedia(string RaceId, int DonorRaceId, string Reason);
+
+/// <summary>
+/// The published character presentation references, resolved by race, gender and layer.
+/// </summary>
+/// <remarks>
+/// This is the consumer side of the character-media publication: a character sheet or social view
+/// asks for a race's background, body or heads and gets the published media identity instead of
+/// reconstructing a file name from a donor naming convention. Races the corpus cannot draw are
+/// carried with their reason rather than being absent, so a caller cannot mistake "no media" for
+/// "not looked up".
+/// </remarks>
+internal sealed class DaggerfallCharacterPresentationSet(
+    int schemaVersion,
+    IReadOnlyDictionary<string, DaggerfallRaceLayers> races,
+    IReadOnlyList<DaggerfallRaceWithoutMedia> racesWithoutMedia,
+    IReadOnlyList<string> files)
+{
+    /// <summary>The section's shape version.</summary>
+    internal int SchemaVersion { get; } = schemaVersion;
+
+    /// <summary>Every race the pack publishes layers for, by catalog race identity.</summary>
+    internal IReadOnlyDictionary<string, DaggerfallRaceLayers> Races { get; } = races;
+
+    /// <summary>Races the pack records as having no presentation media, with the reason.</summary>
+    internal IReadOnlyList<DaggerfallRaceWithoutMedia> RacesWithoutMedia { get; } = racesWithoutMedia;
+
+    /// <summary>Every supplied character file the publication accounted for.</summary>
+    internal IReadOnlyList<string> Files { get; } = files;
+
+    /// <summary>Resolves one race's layers, naming the race when the pack does not publish them.</summary>
+    internal DaggerfallRaceLayers RequireRace(string raceId) =>
+        Races.TryGetValue(raceId, out DaggerfallRaceLayers? race)
+            ? race
+            : throw new InvalidOperationException($"Daggerfall character presentation publishes no layers for race '{raceId}'.");
+}

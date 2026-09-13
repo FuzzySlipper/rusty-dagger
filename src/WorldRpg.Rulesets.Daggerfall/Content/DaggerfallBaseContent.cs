@@ -38,10 +38,11 @@ internal static class DaggerfallBaseContent
             IReadOnlyList<DaggerfallDonorErratum> donorErrata = ReadDonorErrata(root, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, actors, items, diagnostics);
             DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
+            DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation);
         }
         catch (JsonException exception)
         {
@@ -53,6 +54,162 @@ internal static class DaggerfallBaseContent
             diagnostics.Add($"Base payload is malformed: {exception.Message}");
             throw diagnostics.Exception();
         }
+    }
+
+    /// <summary>
+    /// Reads the published character presentation references, resolving each layer by race, gender
+    /// and role rather than by position.
+    /// </summary>
+    /// <remarks>
+    /// The layer names are the published contract, so the reader derives the role from the name and
+    /// refuses a name it does not know instead of guessing a role from order. Every layer's source
+    /// file must be one the section accounted for, which is what makes a reference to a file the
+    /// corpus does not carry fail with that file named rather than resolving to nothing.
+    /// </remarks>
+    private static DaggerfallCharacterPresentationSet ReadCharacterPresentation(
+        JsonElement root,
+        DaggerfallCatalogSet catalogs,
+        DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("characterPresentation", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("Base payload must publish a characterPresentation section.");
+            return new DaggerfallCharacterPresentationSet(0, new Dictionary<string, DaggerfallRaceLayers>(StringComparer.Ordinal), [], []);
+        }
+
+        int schemaVersion = Integer(section, "schemaVersion", diagnostics);
+        if (schemaVersion != CharacterPresentationSchemaVersion)
+        {
+            diagnostics.Add($"Published character presentation must declare schemaVersion {CharacterPresentationSchemaVersion}.");
+        }
+
+        List<string> files = [];
+        foreach (JsonElement file in Array(section, "files", diagnostics))
+        {
+            string path = Text(file, "path", diagnostics);
+            if (path.Length != 0) files.Add(path);
+        }
+        HashSet<string> accounted = new(files, StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, List<DaggerfallCharacterLayerDefinition>> byRace = new(StringComparer.Ordinal);
+        Dictionary<string, int> donorRaceIds = new(StringComparer.Ordinal);
+        HashSet<string> catalogRaces = [.. catalogs.Races.Select(race => race.Id)];
+        HashSet<string> racesWithoutMedia = [];
+        foreach (JsonElement entry in Array(section, "racesWithoutMedia", diagnostics))
+        {
+            string raceId = Text(entry, "race", diagnostics);
+            _ = OptionalInteger(entry, "donorRaceId", diagnostics);
+            _ = Text(entry, "reason", diagnostics);
+            racesWithoutMedia.Add(raceId);
+        }
+
+        foreach (JsonElement layer in Array(section, "layers", diagnostics))
+        {
+            string raceId = Text(layer, "race", diagnostics);
+            int donorRaceId = Integer(layer, "donorRaceId", diagnostics);
+            string name = Text(layer, "layer", diagnostics);
+            string mediaId = Text(layer, "mediaId", diagnostics);
+            string sourceFile = Text(layer, "sourceFile", diagnostics);
+            string palette = Text(layer, "palette", diagnostics);
+            _ = Text(layer, "binding", diagnostics);
+
+            if (raceId.Length != 0 && !catalogRaces.Contains(raceId))
+            {
+                diagnostics.Add($"Character presentation layer names race '{raceId}', which the catalogs do not publish.");
+            }
+
+            // A layer whose source file the section does not account for is a reference to a file the
+            // corpus does not carry, and it says so with the file named.
+            if (sourceFile.Length != 0 && !accounted.Contains(sourceFile))
+            {
+                diagnostics.Add($"Character presentation layer '{name}' for race '{raceId}' names source file '{sourceFile}', which the publication does not account for.");
+            }
+
+            if (mediaId.Length != 0 && !mediaId.StartsWith("character.", StringComparison.Ordinal))
+            {
+                diagnostics.Add($"Character presentation layer '{name}' names media '{mediaId}', which is not a character media identity.");
+            }
+
+            if (!TryLayer(name, out DaggerfallCharacterLayerKind kind, out DaggerfallCharacterGender? gender, out int headIndex))
+            {
+                diagnostics.Add($"Character presentation layer '{name}' for race '{raceId}' is not a layer name this reader knows.");
+                continue;
+            }
+
+            if (!byRace.TryGetValue(raceId, out List<DaggerfallCharacterLayerDefinition>? layers))
+            {
+                layers = [];
+                byRace.Add(raceId, layers);
+            }
+
+            donorRaceIds[raceId] = donorRaceId;
+            layers.Add(new DaggerfallCharacterLayerDefinition(kind, gender, headIndex, mediaId, sourceFile, palette));
+        }
+
+        Dictionary<string, DaggerfallRaceLayers> races = new(StringComparer.Ordinal);
+        foreach ((string raceId, List<DaggerfallCharacterLayerDefinition> layers) in byRace)
+        {
+            DaggerfallRaceLayers race = new(raceId, donorRaceIds[raceId], [.. layers]);
+            races.Add(raceId, race);
+            foreach (DaggerfallCharacterGender gender in new[] { DaggerfallCharacterGender.Male, DaggerfallCharacterGender.Female })
+            {
+                if (race.Heads(gender).Count == 0)
+                {
+                    diagnostics.Add($"Race '{raceId}' publishes no heads for {gender.ToString().ToLowerInvariant()}.");
+                }
+            }
+        }
+
+        List<DaggerfallRaceWithoutMedia> without = [];
+        foreach (JsonElement entry in Array(section, "racesWithoutMedia", diagnostics))
+        {
+            without.Add(new DaggerfallRaceWithoutMedia(
+                Text(entry, "race", diagnostics),
+                OptionalInteger(entry, "donorRaceId", diagnostics) ?? 0,
+                Text(entry, "reason", diagnostics)));
+        }
+
+        return new DaggerfallCharacterPresentationSet(schemaVersion, races, without, files);
+    }
+
+    /// <summary>
+    /// Reads the role a published layer name encodes: a background, a gendered body, or a numbered head.
+    /// </summary>
+    private static bool TryLayer(string name, out DaggerfallCharacterLayerKind kind, out DaggerfallCharacterGender? gender, out int headIndex)
+    {
+        kind = DaggerfallCharacterLayerKind.Background;
+        gender = null;
+        headIndex = -1;
+        if (name == "background") return true;
+        string[] parts = name.Split('.');
+        if (parts.Length == 3 && parts[0] == "body" && (parts[2] is "unclothed" or "clothed") && TryGender(parts[1], out DaggerfallCharacterGender bodyGender))
+        {
+            kind = parts[2] == "clothed" ? DaggerfallCharacterLayerKind.BodyClothed : DaggerfallCharacterLayerKind.BodyUnclothed;
+            gender = bodyGender;
+            return true;
+        }
+
+        if (parts.Length == 3 && parts[0] == "head" && TryGender(parts[1], out DaggerfallCharacterGender headGender) && int.TryParse(parts[2], out int index) && index >= 0)
+        {
+            kind = DaggerfallCharacterLayerKind.Head;
+            gender = headGender;
+            headIndex = index;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGender(string value, out DaggerfallCharacterGender gender)
+    {
+        gender = DaggerfallCharacterGender.Male;
+        if (value == "male") return true;
+        if (value == "female")
+        {
+            gender = DaggerfallCharacterGender.Female;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>A stable semantic catalog digest for donor regression tests; it intentionally ignores JSON whitespace and object member ordering.</summary>
@@ -1061,6 +1218,7 @@ internal static class DaggerfallBaseContent
     }
     /// <summary>The published catalog shape this reader understands.</summary>
     private const int CatalogSchemaVersion = 1;
+    private const int CharacterPresentationSchemaVersion = 1;
 
     internal static JsonElement Object(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {
