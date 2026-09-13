@@ -73,7 +73,7 @@ public sealed class ResidualSourceInventory
         // residual file of one of these shapes lands in its documented family.
         ["GFX"] = new("Arena2CanvasReader", "GfxFile", "classic GFX frame containers, of which the shipped corpus keeps its two under the UI media family"),
         ["CEL"] = new("", "FlcFile", "classic animation frames the donor reads with its FLC reader"),
-        ["BSS"] = new("", "BssFile", "ambient story sprite banks the donor reads with its BSS reader"),
+        ["BSS"] = new("", "BssFile", "compass sprite banks, which is what the donor opens with its BSS reader"),
         ["DEF"] = new("", "MagicItemsFile", "the magic item definition table the donor reads as MAGIC.DEF"),
         ["RSC"] = new("", "TextFile", "packed text records the donor reads as TEXT.RSC"),
     };
@@ -196,7 +196,7 @@ public sealed class ResidualSourceInventory
         // The donor builds its sky names as SKY{index:00}.DAT and its reader accepts any name that
         // starts SKY and ends .DAT, so the pattern is the donor's rather than an approximation.
         : name.StartsWith("SKY", StringComparison.OrdinalIgnoreCase) && name.EndsWith(".DAT", StringComparison.OrdinalIgnoreCase)
-            ? ("SkyFile", "One of the sky animations the donor reads from Arena2 through SkyFile, as 549120 bytes of palette followed by sixty-four frames of 512x220.")
+            ? ("SkyFile", "One of the sky animations the donor reads from Arena2 through SkyFile, as thirty-two 776-byte palettes at the start and sixty-four frames of 512x220 from offset 549120.")
             : (familyDonor, null);
 
     /// <summary>
@@ -218,11 +218,17 @@ public sealed class ResidualSourceInventory
             }
         }
 
-        // An imported path has a consumer whether or not this pass can name it, so the documented
-        // disposition wins over anything inferred from readability alone.
-        if (documented == SourceRecordDisposition.Imported) return SourceRecordDisposition.Imported;
+        // An imported path has a consumer whether or not this pass can name it, so a readable one
+        // keeps that disposition rather than being called unused. A path this repository cannot
+        // read keeps the reader's verdict, because "no reader" and "a consumer claims it" are both
+        // true and the note carries the second one.
         if (reader.Length == 0) return SourceRecordDisposition.Unresolved;
         if (!probe.Read) return SourceRecordDisposition.Malformed;
+        if (documented == SourceRecordDisposition.Imported)
+        {
+            documentedNote = " The documented inventory already imports it, so a consumer claims it.";
+            return SourceRecordDisposition.Imported;
+        }
         if (documented is { } value)
         {
             documentedNote = $" The documented inventory dispositions it '{documentedToken}'.";
