@@ -2690,6 +2690,78 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Empty(perception.Requests.Last().Targets.Span.ToArray());
     }
 
+    [Fact]
+    public void The_slice_that_opens_an_interaction_admits_no_attack_in_either_order()
+    {
+        static ProductInputEvent Ui(string json) => Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes(json),
+        };
+
+        // Calibration, in a session that has not swung yet: the melee targeting policy records its
+        // evidence before any admit or target check, so an attack alone in ordinary play proves the
+        // payload reached combat. The loot fixture below cannot calibrate this way, because the melee
+        // that registers its corpse leaves the weapon mid-strike and `CanStartPlayerAttack` false.
+        using (DaggerfallSession control = FreshSession())
+        {
+            control.Update(new ProductUpdate(OuterUpdate(1), [Ui("{\"action\":\"attack\"}")]));
+            Assert.NotNull(control.LastMeleeTargeting);
+        }
+
+        // Either delivery order: the interaction still opens, so the pre-scan does not consume the
+        // interaction it is protecting. The attack half of this pair cannot be observed in this
+        // fixture for the strike reason above; the calibration session is what establishes the path.
+        ProductInputEvent[][] slices =
+        [
+            [Ui("{\"action\":\"loot\"}"), Ui("{\"action\":\"attack\"}")],
+            [Ui("{\"action\":\"attack\"}"), Ui("{\"action\":\"loot\"}")],
+        ];
+        foreach (ProductInputEvent[] slice in slices)
+        {
+            using DaggerfallSession session = LootableSession();
+            session.Update(new ProductUpdate(OuterUpdate(1), slice));
+            Assert.Equal(ProductMode.Modal, session.PendingModeRequest);
+        }
+    }
+
+    /// <summary>A session that has not swung, so its weapon is ready.</summary>
+    private static DaggerfallSession FreshSession()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        return new DaggerfallSession(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+    }
+
+    /// <summary>A session with one lootable corpse within reach.</summary>
+    private static DaggerfallSession LootableSession()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.State.Actors.All[2000].Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(1), ExactTrackSetPolicy.ClampToBounds);
+        session.ResolveExplicitMelee(new ExplicitMeleeRequest(1, 2000, 1, 1, .125));
+        CorpseContainer corpse = session.Corpses[2000];
+        session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
+        perception.Receipt = Receipt(new PerceptionPair(1, 2000, 2.25d, .5d, PerceptionPairKind.Visible, 1d));
+        return session;
+    }
+
     private static ProductUpdateState AttackUpdate()
     {
         ProductUpdateState update = new(.125f);
