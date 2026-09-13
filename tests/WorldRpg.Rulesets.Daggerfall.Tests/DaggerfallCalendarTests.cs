@@ -67,6 +67,54 @@ public sealed class DaggerfallCalendarTests
     }
 
     [Fact]
+    public void Stops_at_the_first_consequence_the_interval_meets()
+    {
+        // A rest of an hour with a consequence in twenty minutes: the calendar advances twenty minutes,
+        // reports which consequence stopped it, and leaves the rest of the interval to the caller -
+        // which is what keeps each consumer owning its own periodic work rather than a scheduler.
+        DaggerfallCalendar start = new(405, 5, 0, 8, 0, 0);
+        DaggerfallCalendarAdvance advance = start.AdvanceToFirstConsequence(3600, [(7, 1200), (3, 4000)]);
+        Assert.True(advance.Interrupted);
+        Assert.Equal(7, advance.Consequence);
+        Assert.Equal(1200, advance.AppliedSeconds);
+        Assert.Equal(2400, advance.RemainingSeconds);
+        Assert.Equal(new DaggerfallCalendar(405, 5, 0, 8, 20, 0), advance.Calendar);
+
+        // Two consequences at the same second are ordered by identity, so the same interval and the
+        // same deadlines always stop in the same place.
+        Assert.Equal(3, start.AdvanceToFirstConsequence(3600, [(7, 1200), (3, 1200)]).Consequence);
+        Assert.Equal(3, start.AdvanceToFirstConsequence(3600, [(3, 1200), (7, 1200)]).Consequence);
+
+        // A consequence exactly at the end of the interval is still a stop; one beyond it is not reached,
+        // and an interval with none spends itself.
+        Assert.Equal(9, start.AdvanceToFirstConsequence(600, [(9, 600)]).Consequence);
+        DaggerfallCalendarAdvance none = start.AdvanceToFirstConsequence(600, [(9, 601)]);
+        Assert.False(none.Interrupted);
+        Assert.Equal(DaggerfallCalendar.NoConsequence, none.Consequence);
+        Assert.Equal((600, 0), (none.AppliedSeconds, none.RemainingSeconds));
+        Assert.Equal(new DaggerfallCalendar(405, 5, 0, 8, 10, 0), none.Calendar);
+
+        // A consequence already due stops the advance without moving the calendar, and the remaining
+        // interval is the whole of it.
+        DaggerfallCalendarAdvance due = start.AdvanceToFirstConsequence(3600, [(1, 0)]);
+        Assert.Equal((1, 0, 3600), (due.Consequence, due.AppliedSeconds, due.RemainingSeconds));
+        Assert.Equal(start, due.Calendar);
+
+        // A non-positive interval changes nothing and reaches no consequence, and a negative identity is
+        // refused rather than reported as none.
+        Assert.Equal(DaggerfallCalendar.NoConsequence, start.AdvanceToFirstConsequence(0, [(1, 0)]).Consequence);
+        Assert.Equal(0, start.AdvanceToFirstConsequence(-60, [(1, 0)]).AppliedSeconds);
+        Assert.Throws<ArgumentOutOfRangeException>(() => start.AdvanceToFirstConsequence(600, [(-1, 60)]));
+
+        // The applied part still reports what it crossed, in the calendar's own order: an interval that
+        // runs into the next day reports the day boundary rather than only the hour.
+        DaggerfallCalendarAdvance midnight = new DaggerfallCalendar(405, 5, 0, 23, 59, 30)
+            .AdvanceToFirstConsequence(120, [(4, 120)]);
+        Assert.Equal(1, midnight.Crossed.Days);
+        Assert.Equal(new DaggerfallCalendar(405, 5, 1, 0, 1, 30), midnight.Calendar);
+    }
+
+    [Fact]
     public void Reads_the_holiday_a_date_is_for_the_region_that_keeps_it()
     {
         // The classic table: fifty-three holidays, each on one day of the year and each kept either
