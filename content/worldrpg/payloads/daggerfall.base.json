@@ -252104,6 +252104,2054 @@
       }
     ],
     "dungeonsWithoutRecords": [],
+    "regions": [
+      {
+        "region": 0,
+        "tables": [
+          {
+            "name": "MAPPITEM.000",
+            "ordinal": 0,
+            "length": 360616,
+            "declaredRecords": 344,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.000",
+            "ordinal": 1,
+            "length": 45704,
+            "declaredRecords": 152,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.000",
+            "ordinal": 2,
+            "length": 5848,
+            "declaredRecords": 344,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.000",
+            "ordinal": 3,
+            "length": 11012,
+            "declaredRecords": 344,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 1,
+        "tables": [
+          {
+            "name": "MAPPITEM.001",
+            "ordinal": 4,
+            "length": 932414,
+            "declaredRecords": 912,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.001",
+            "ordinal": 5,
+            "length": 92760,
+            "declaredRecords": 310,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.001",
+            "ordinal": 6,
+            "length": 15504,
+            "declaredRecords": 912,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.001",
+            "ordinal": 7,
+            "length": 29188,
+            "declaredRecords": 912,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 2,
+        "tables": [
+          {
+            "name": "MAPPITEM.002",
+            "ordinal": 8,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.002",
+            "ordinal": 9,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.002",
+            "ordinal": 10,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.002",
+            "ordinal": 11,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 3,
+        "tables": [
+          {
+            "name": "MAPPITEM.003",
+            "ordinal": 12,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.003",
+            "ordinal": 13,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.003",
+            "ordinal": 14,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.003",
+            "ordinal": 15,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 4,
+        "tables": [
+          {
+            "name": "MAPPITEM.004",
+            "ordinal": 16,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.004",
+            "ordinal": 17,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.004",
+            "ordinal": 18,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.004",
+            "ordinal": 19,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 5,
+        "tables": [
+          {
+            "name": "MAPPITEM.005",
+            "ordinal": 20,
+            "length": 1029682,
+            "declaredRecords": 778,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.005",
+            "ordinal": 21,
+            "length": 45285,
+            "declaredRecords": 151,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.005",
+            "ordinal": 22,
+            "length": 13226,
+            "declaredRecords": 778,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.005",
+            "ordinal": 23,
+            "length": 24900,
+            "declaredRecords": 778,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 6,
+        "tables": [
+          {
+            "name": "MAPPITEM.006",
+            "ordinal": 24,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.006",
+            "ordinal": 25,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.006",
+            "ordinal": 26,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.006",
+            "ordinal": 27,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 7,
+        "tables": [
+          {
+            "name": "MAPPITEM.007",
+            "ordinal": 28,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.007",
+            "ordinal": 29,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.007",
+            "ordinal": 30,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.007",
+            "ordinal": 31,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 8,
+        "tables": [
+          {
+            "name": "MAPPITEM.008",
+            "ordinal": 32,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.008",
+            "ordinal": 33,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.008",
+            "ordinal": 34,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.008",
+            "ordinal": 35,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 9,
+        "tables": [
+          {
+            "name": "MAPPITEM.009",
+            "ordinal": 36,
+            "length": 53951,
+            "declaredRecords": 67,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.009",
+            "ordinal": 37,
+            "length": 14583,
+            "declaredRecords": 49,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.009",
+            "ordinal": 38,
+            "length": 1139,
+            "declaredRecords": 67,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.009",
+            "ordinal": 39,
+            "length": 2148,
+            "declaredRecords": 67,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 10,
+        "tables": [
+          {
+            "name": "MAPPITEM.010",
+            "ordinal": 40,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.010",
+            "ordinal": 41,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.010",
+            "ordinal": 42,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.010",
+            "ordinal": 43,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 11,
+        "tables": [
+          {
+            "name": "MAPPITEM.011",
+            "ordinal": 44,
+            "length": 148371,
+            "declaredRecords": 197,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.011",
+            "ordinal": 45,
+            "length": 39067,
+            "declaredRecords": 129,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.011",
+            "ordinal": 46,
+            "length": 3349,
+            "declaredRecords": 197,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.011",
+            "ordinal": 47,
+            "length": 6308,
+            "declaredRecords": 197,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 12,
+        "tables": [
+          {
+            "name": "MAPPITEM.012",
+            "ordinal": 48,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.012",
+            "ordinal": 49,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.012",
+            "ordinal": 50,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.012",
+            "ordinal": 51,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 13,
+        "tables": [
+          {
+            "name": "MAPPITEM.013",
+            "ordinal": 52,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.013",
+            "ordinal": 53,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.013",
+            "ordinal": 54,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.013",
+            "ordinal": 55,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 14,
+        "tables": [
+          {
+            "name": "MAPPITEM.014",
+            "ordinal": 56,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.014",
+            "ordinal": 57,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.014",
+            "ordinal": 58,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.014",
+            "ordinal": 59,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 15,
+        "tables": [
+          {
+            "name": "MAPPITEM.015",
+            "ordinal": 60,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.015",
+            "ordinal": 61,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.015",
+            "ordinal": 62,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.015",
+            "ordinal": 63,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 16,
+        "tables": [
+          {
+            "name": "MAPPITEM.016",
+            "ordinal": 64,
+            "length": 2030853,
+            "declaredRecords": 1833,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.016",
+            "ordinal": 65,
+            "length": 204735,
+            "declaredRecords": 685,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.016",
+            "ordinal": 66,
+            "length": 31161,
+            "declaredRecords": 1833,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.016",
+            "ordinal": 67,
+            "length": 58660,
+            "declaredRecords": 1833,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 17,
+        "tables": [
+          {
+            "name": "MAPPITEM.017",
+            "ordinal": 68,
+            "length": 1992647,
+            "declaredRecords": 1331,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.017",
+            "ordinal": 69,
+            "length": 79182,
+            "declaredRecords": 268,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.017",
+            "ordinal": 70,
+            "length": 22627,
+            "declaredRecords": 1331,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.017",
+            "ordinal": 71,
+            "length": 42596,
+            "declaredRecords": 1331,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 18,
+        "tables": [
+          {
+            "name": "MAPPITEM.018",
+            "ordinal": 72,
+            "length": 549835,
+            "declaredRecords": 445,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.018",
+            "ordinal": 73,
+            "length": 41995,
+            "declaredRecords": 141,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.018",
+            "ordinal": 74,
+            "length": 7565,
+            "declaredRecords": 445,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.018",
+            "ordinal": 75,
+            "length": 14244,
+            "declaredRecords": 445,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 19,
+        "tables": [
+          {
+            "name": "MAPPITEM.019",
+            "ordinal": 76,
+            "length": 24967,
+            "declaredRecords": 25,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.019",
+            "ordinal": 77,
+            "length": 2384,
+            "declaredRecords": 8,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.019",
+            "ordinal": 78,
+            "length": 425,
+            "declaredRecords": 25,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.019",
+            "ordinal": 79,
+            "length": 804,
+            "declaredRecords": 25,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 20,
+        "tables": [
+          {
+            "name": "MAPPITEM.020",
+            "ordinal": 80,
+            "length": 669681,
+            "declaredRecords": 549,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.020",
+            "ordinal": 81,
+            "length": 33457,
+            "declaredRecords": 111,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.020",
+            "ordinal": 82,
+            "length": 9333,
+            "declaredRecords": 549,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.020",
+            "ordinal": 83,
+            "length": 17572,
+            "declaredRecords": 549,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 21,
+        "tables": [
+          {
+            "name": "MAPPITEM.021",
+            "ordinal": 84,
+            "length": 1097839,
+            "declaredRecords": 719,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.021",
+            "ordinal": 85,
+            "length": 51341,
+            "declaredRecords": 173,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.021",
+            "ordinal": 86,
+            "length": 12223,
+            "declaredRecords": 719,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.021",
+            "ordinal": 87,
+            "length": 23012,
+            "declaredRecords": 719,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 22,
+        "tables": [
+          {
+            "name": "MAPPITEM.022",
+            "ordinal": 88,
+            "length": 570892,
+            "declaredRecords": 368,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.022",
+            "ordinal": 89,
+            "length": 21531,
+            "declaredRecords": 73,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.022",
+            "ordinal": 90,
+            "length": 6256,
+            "declaredRecords": 368,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.022",
+            "ordinal": 91,
+            "length": 11780,
+            "declaredRecords": 368,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 23,
+        "tables": [
+          {
+            "name": "MAPPITEM.023",
+            "ordinal": 92,
+            "length": 1405369,
+            "declaredRecords": 851,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.023",
+            "ordinal": 93,
+            "length": 56073,
+            "declaredRecords": 187,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.023",
+            "ordinal": 94,
+            "length": 14467,
+            "declaredRecords": 851,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.023",
+            "ordinal": 95,
+            "length": 27236,
+            "declaredRecords": 851,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 24,
+        "tables": [
+          {
+            "name": "MAPPITEM.024",
+            "ordinal": 96,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.024",
+            "ordinal": 97,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.024",
+            "ordinal": 98,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.024",
+            "ordinal": 99,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 25,
+        "tables": [
+          {
+            "name": "MAPPITEM.025",
+            "ordinal": 100,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.025",
+            "ordinal": 101,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.025",
+            "ordinal": 102,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.025",
+            "ordinal": 103,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 26,
+        "tables": [
+          {
+            "name": "MAPPITEM.026",
+            "ordinal": 104,
+            "length": 50738,
+            "declaredRecords": 80,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.026",
+            "ordinal": 105,
+            "length": 17586,
+            "declaredRecords": 58,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.026",
+            "ordinal": 106,
+            "length": 1360,
+            "declaredRecords": 80,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.026",
+            "ordinal": 107,
+            "length": 2564,
+            "declaredRecords": 80,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 27,
+        "tables": [
+          {
+            "name": "MAPPITEM.027",
+            "ordinal": 108,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.027",
+            "ordinal": 109,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.027",
+            "ordinal": 110,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.027",
+            "ordinal": 111,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 28,
+        "tables": [
+          {
+            "name": "MAPPITEM.028",
+            "ordinal": 112,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.028",
+            "ordinal": 113,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.028",
+            "ordinal": 114,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.028",
+            "ordinal": 115,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 29,
+        "tables": [
+          {
+            "name": "MAPPITEM.029",
+            "ordinal": 116,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.029",
+            "ordinal": 117,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.029",
+            "ordinal": 118,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.029",
+            "ordinal": 119,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 30,
+        "tables": [
+          {
+            "name": "MAPPITEM.030",
+            "ordinal": 120,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPDITEM.030",
+            "ordinal": 121,
+            "length": 4,
+            "declaredRecords": 0,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.030",
+            "ordinal": 122,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          },
+          {
+            "name": "MAPNAMES.030",
+            "ordinal": 123,
+            "length": 0,
+            "declaredRecords": -1,
+            "state": "Empty"
+          }
+        ]
+      },
+      {
+        "region": 31,
+        "tables": [
+          {
+            "name": "MAPPITEM.031",
+            "ordinal": 124,
+            "length": 1681,
+            "declaredRecords": 3,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.031",
+            "ordinal": 125,
+            "length": 279,
+            "declaredRecords": 1,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.031",
+            "ordinal": 126,
+            "length": 51,
+            "declaredRecords": 3,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.031",
+            "ordinal": 127,
+            "length": 100,
+            "declaredRecords": 3,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 32,
+        "tables": [
+          {
+            "name": "MAPPITEM.032",
+            "ordinal": 128,
+            "length": 574010,
+            "declaredRecords": 380,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.032",
+            "ordinal": 129,
+            "length": 23193,
+            "declaredRecords": 79,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.032",
+            "ordinal": 130,
+            "length": 6460,
+            "declaredRecords": 380,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.032",
+            "ordinal": 131,
+            "length": 12164,
+            "declaredRecords": 380,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 33,
+        "tables": [
+          {
+            "name": "MAPPITEM.033",
+            "ordinal": 132,
+            "length": 315709,
+            "declaredRecords": 211,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.033",
+            "ordinal": 133,
+            "length": 10049,
+            "declaredRecords": 35,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.033",
+            "ordinal": 134,
+            "length": 3587,
+            "declaredRecords": 211,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.033",
+            "ordinal": 135,
+            "length": 6756,
+            "declaredRecords": 211,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 34,
+        "tables": [
+          {
+            "name": "MAPPITEM.034",
+            "ordinal": 136,
+            "length": 187493,
+            "declaredRecords": 159,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.034",
+            "ordinal": 137,
+            "length": 12586,
+            "declaredRecords": 42,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.034",
+            "ordinal": 138,
+            "length": 2703,
+            "declaredRecords": 159,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.034",
+            "ordinal": 139,
+            "length": 5092,
+            "declaredRecords": 159,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 35,
+        "tables": [
+          {
+            "name": "MAPPITEM.035",
+            "ordinal": 140,
+            "length": 174868,
+            "declaredRecords": 128,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.035",
+            "ordinal": 141,
+            "length": 6839,
+            "declaredRecords": 23,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.035",
+            "ordinal": 142,
+            "length": 2176,
+            "declaredRecords": 128,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.035",
+            "ordinal": 143,
+            "length": 4100,
+            "declaredRecords": 128,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 36,
+        "tables": [
+          {
+            "name": "MAPPITEM.036",
+            "ordinal": 144,
+            "length": 282238,
+            "declaredRecords": 190,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.036",
+            "ordinal": 145,
+            "length": 13225,
+            "declaredRecords": 45,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.036",
+            "ordinal": 146,
+            "length": 3230,
+            "declaredRecords": 190,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.036",
+            "ordinal": 147,
+            "length": 6084,
+            "declaredRecords": 190,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 37,
+        "tables": [
+          {
+            "name": "MAPPITEM.037",
+            "ordinal": 148,
+            "length": 392482,
+            "declaredRecords": 310,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.037",
+            "ordinal": 149,
+            "length": 29701,
+            "declaredRecords": 99,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.037",
+            "ordinal": 150,
+            "length": 5270,
+            "declaredRecords": 310,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.037",
+            "ordinal": 151,
+            "length": 9924,
+            "declaredRecords": 310,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 38,
+        "tables": [
+          {
+            "name": "MAPPITEM.038",
+            "ordinal": 152,
+            "length": 264981,
+            "declaredRecords": 191,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.038",
+            "ordinal": 153,
+            "length": 12125,
+            "declaredRecords": 41,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.038",
+            "ordinal": 154,
+            "length": 3247,
+            "declaredRecords": 191,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.038",
+            "ordinal": 155,
+            "length": 6116,
+            "declaredRecords": 191,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 39,
+        "tables": [
+          {
+            "name": "MAPPITEM.039",
+            "ordinal": 156,
+            "length": 416353,
+            "declaredRecords": 279,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.039",
+            "ordinal": 157,
+            "length": 19086,
+            "declaredRecords": 64,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.039",
+            "ordinal": 158,
+            "length": 4743,
+            "declaredRecords": 279,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.039",
+            "ordinal": 159,
+            "length": 8932,
+            "declaredRecords": 279,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 40,
+        "tables": [
+          {
+            "name": "MAPPITEM.040",
+            "ordinal": 160,
+            "length": 791374,
+            "declaredRecords": 560,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.040",
+            "ordinal": 161,
+            "length": 41105,
+            "declaredRecords": 137,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.040",
+            "ordinal": 162,
+            "length": 9520,
+            "declaredRecords": 560,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.040",
+            "ordinal": 163,
+            "length": 17924,
+            "declaredRecords": 560,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 41,
+        "tables": [
+          {
+            "name": "MAPPITEM.041",
+            "ordinal": 164,
+            "length": 384077,
+            "declaredRecords": 291,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.041",
+            "ordinal": 165,
+            "length": 18530,
+            "declaredRecords": 62,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.041",
+            "ordinal": 166,
+            "length": 4947,
+            "declaredRecords": 291,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.041",
+            "ordinal": 167,
+            "length": 9316,
+            "declaredRecords": 291,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 42,
+        "tables": [
+          {
+            "name": "MAPPITEM.042",
+            "ordinal": 168,
+            "length": 334447,
+            "declaredRecords": 233,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.042",
+            "ordinal": 169,
+            "length": 15522,
+            "declaredRecords": 52,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.042",
+            "ordinal": 170,
+            "length": 3961,
+            "declaredRecords": 233,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.042",
+            "ordinal": 171,
+            "length": 7460,
+            "declaredRecords": 233,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 43,
+        "tables": [
+          {
+            "name": "MAPPITEM.043",
+            "ordinal": 172,
+            "length": 228514,
+            "declaredRecords": 232,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.043",
+            "ordinal": 173,
+            "length": 19379,
+            "declaredRecords": 65,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.043",
+            "ordinal": 174,
+            "length": 3944,
+            "declaredRecords": 232,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.043",
+            "ordinal": 175,
+            "length": 7428,
+            "declaredRecords": 232,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 44,
+        "tables": [
+          {
+            "name": "MAPPITEM.044",
+            "ordinal": 176,
+            "length": 141249,
+            "declaredRecords": 123,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.044",
+            "ordinal": 177,
+            "length": 9315,
+            "declaredRecords": 31,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.044",
+            "ordinal": 178,
+            "length": 2091,
+            "declaredRecords": 123,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.044",
+            "ordinal": 179,
+            "length": 3940,
+            "declaredRecords": 123,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 45,
+        "tables": [
+          {
+            "name": "MAPPITEM.045",
+            "ordinal": 180,
+            "length": 66303,
+            "declaredRecords": 53,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.045",
+            "ordinal": 181,
+            "length": 2743,
+            "declaredRecords": 9,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.045",
+            "ordinal": 182,
+            "length": 901,
+            "declaredRecords": 53,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.045",
+            "ordinal": 183,
+            "length": 1700,
+            "declaredRecords": 53,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 46,
+        "tables": [
+          {
+            "name": "MAPPITEM.046",
+            "ordinal": 184,
+            "length": 149290,
+            "declaredRecords": 144,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.046",
+            "ordinal": 185,
+            "length": 10828,
+            "declaredRecords": 36,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.046",
+            "ordinal": 186,
+            "length": 2448,
+            "declaredRecords": 144,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.046",
+            "ordinal": 187,
+            "length": 4612,
+            "declaredRecords": 144,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 47,
+        "tables": [
+          {
+            "name": "MAPPITEM.047",
+            "ordinal": 188,
+            "length": 163767,
+            "declaredRecords": 143,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.047",
+            "ordinal": 189,
+            "length": 14218,
+            "declaredRecords": 48,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.047",
+            "ordinal": 190,
+            "length": 2431,
+            "declaredRecords": 143,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.047",
+            "ordinal": 191,
+            "length": 4580,
+            "declaredRecords": 143,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 48,
+        "tables": [
+          {
+            "name": "MAPPITEM.048",
+            "ordinal": 192,
+            "length": 460356,
+            "declaredRecords": 334,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.048",
+            "ordinal": 193,
+            "length": 24767,
+            "declaredRecords": 83,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.048",
+            "ordinal": 194,
+            "length": 5678,
+            "declaredRecords": 334,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.048",
+            "ordinal": 195,
+            "length": 10692,
+            "declaredRecords": 334,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 49,
+        "tables": [
+          {
+            "name": "MAPPITEM.049",
+            "ordinal": 196,
+            "length": 81335,
+            "declaredRecords": 49,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.049",
+            "ordinal": 197,
+            "length": 2797,
+            "declaredRecords": 9,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.049",
+            "ordinal": 198,
+            "length": 833,
+            "declaredRecords": 49,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.049",
+            "ordinal": 199,
+            "length": 1572,
+            "declaredRecords": 49,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 50,
+        "tables": [
+          {
+            "name": "MAPPITEM.050",
+            "ordinal": 200,
+            "length": 234070,
+            "declaredRecords": 156,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.050",
+            "ordinal": 201,
+            "length": 11736,
+            "declaredRecords": 40,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.050",
+            "ordinal": 202,
+            "length": 2652,
+            "declaredRecords": 156,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.050",
+            "ordinal": 203,
+            "length": 4996,
+            "declaredRecords": 156,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 51,
+        "tables": [
+          {
+            "name": "MAPPITEM.051",
+            "ordinal": 204,
+            "length": 1224574,
+            "declaredRecords": 902,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.051",
+            "ordinal": 205,
+            "length": 71993,
+            "declaredRecords": 239,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.051",
+            "ordinal": 206,
+            "length": 15334,
+            "declaredRecords": 902,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.051",
+            "ordinal": 207,
+            "length": 28868,
+            "declaredRecords": 902,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 52,
+        "tables": [
+          {
+            "name": "MAPPITEM.052",
+            "ordinal": 208,
+            "length": 530707,
+            "declaredRecords": 363,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.052",
+            "ordinal": 209,
+            "length": 27672,
+            "declaredRecords": 94,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.052",
+            "ordinal": 210,
+            "length": 6171,
+            "declaredRecords": 363,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.052",
+            "ordinal": 211,
+            "length": 11620,
+            "declaredRecords": 363,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 53,
+        "tables": [
+          {
+            "name": "MAPPITEM.053",
+            "ordinal": 212,
+            "length": 233642,
+            "declaredRecords": 214,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.053",
+            "ordinal": 213,
+            "length": 18853,
+            "declaredRecords": 63,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.053",
+            "ordinal": 214,
+            "length": 3638,
+            "declaredRecords": 214,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.053",
+            "ordinal": 215,
+            "length": 6852,
+            "declaredRecords": 214,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 54,
+        "tables": [
+          {
+            "name": "MAPPITEM.054",
+            "ordinal": 216,
+            "length": 52890,
+            "declaredRecords": 36,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.054",
+            "ordinal": 217,
+            "length": 4303,
+            "declaredRecords": 15,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.054",
+            "ordinal": 218,
+            "length": 612,
+            "declaredRecords": 36,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.054",
+            "ordinal": 219,
+            "length": 1156,
+            "declaredRecords": 36,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 55,
+        "tables": [
+          {
+            "name": "MAPPITEM.055",
+            "ordinal": 220,
+            "length": 70273,
+            "declaredRecords": 49,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.055",
+            "ordinal": 221,
+            "length": 2324,
+            "declaredRecords": 8,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.055",
+            "ordinal": 222,
+            "length": 833,
+            "declaredRecords": 49,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.055",
+            "ordinal": 223,
+            "length": 1572,
+            "declaredRecords": 49,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 56,
+        "tables": [
+          {
+            "name": "MAPPITEM.056",
+            "ordinal": 224,
+            "length": 86350,
+            "declaredRecords": 58,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.056",
+            "ordinal": 225,
+            "length": 3909,
+            "declaredRecords": 13,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.056",
+            "ordinal": 226,
+            "length": 986,
+            "declaredRecords": 58,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.056",
+            "ordinal": 227,
+            "length": 1860,
+            "declaredRecords": 58,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 57,
+        "tables": [
+          {
+            "name": "MAPPITEM.057",
+            "ordinal": 228,
+            "length": 67295,
+            "declaredRecords": 51,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.057",
+            "ordinal": 229,
+            "length": 3329,
+            "declaredRecords": 11,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.057",
+            "ordinal": 230,
+            "length": 867,
+            "declaredRecords": 51,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.057",
+            "ordinal": 231,
+            "length": 1636,
+            "declaredRecords": 51,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 58,
+        "tables": [
+          {
+            "name": "MAPPITEM.058",
+            "ordinal": 232,
+            "length": 189756,
+            "declaredRecords": 140,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.058",
+            "ordinal": 233,
+            "length": 11246,
+            "declaredRecords": 38,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.058",
+            "ordinal": 234,
+            "length": 2380,
+            "declaredRecords": 140,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.058",
+            "ordinal": 235,
+            "length": 4484,
+            "declaredRecords": 140,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 59,
+        "tables": [
+          {
+            "name": "MAPPITEM.059",
+            "ordinal": 236,
+            "length": 236623,
+            "declaredRecords": 173,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.059",
+            "ordinal": 237,
+            "length": 10965,
+            "declaredRecords": 37,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.059",
+            "ordinal": 238,
+            "length": 2941,
+            "declaredRecords": 173,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.059",
+            "ordinal": 239,
+            "length": 5540,
+            "declaredRecords": 173,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 60,
+        "tables": [
+          {
+            "name": "MAPPITEM.060",
+            "ordinal": 240,
+            "length": 858870,
+            "declaredRecords": 596,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.060",
+            "ordinal": 241,
+            "length": 64701,
+            "declaredRecords": 217,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.060",
+            "ordinal": 242,
+            "length": 10132,
+            "declaredRecords": 596,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.060",
+            "ordinal": 243,
+            "length": 19076,
+            "declaredRecords": 596,
+            "state": "Read"
+          }
+        ]
+      },
+      {
+        "region": 61,
+        "tables": [
+          {
+            "name": "MAPPITEM.061",
+            "ordinal": 244,
+            "length": 543,
+            "declaredRecords": 1,
+            "state": "Read"
+          },
+          {
+            "name": "MAPDITEM.061",
+            "ordinal": 245,
+            "length": 321,
+            "declaredRecords": 1,
+            "state": "Read"
+          },
+          {
+            "name": "MAPTABLE.061",
+            "ordinal": 246,
+            "length": 17,
+            "declaredRecords": 1,
+            "state": "Read"
+          },
+          {
+            "name": "MAPNAMES.061",
+            "ordinal": 247,
+            "length": 36,
+            "declaredRecords": 1,
+            "state": "Read"
+          }
+        ]
+      }
+    ],
     "sources": [
       "arena2/MAPS.BSA"
     ]

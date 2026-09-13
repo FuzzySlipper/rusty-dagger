@@ -222,6 +222,16 @@ public sealed class MapsRegionGroupTests
         Assert.Contains(locations.Locations, location => location.LocationType != 0);
         Assert.Contains(locations.Locations, location => !location.Discovered);
 
+        // Every region's provenance is recorded, including the seventeen with no usable data: the four
+        // tables are named in the donor's own read order, so a published fact traces to its table.
+        Assert.Equal(62, locations.Regions.Count);
+        Assert.Equal(Enumerable.Range(0, 62), locations.Regions.Select(region => region.Region));
+        Assert.All(locations.Regions, region => Assert.Equal(4, region.Tables.Count));
+        Assert.All(locations.Regions, region => Assert.Equal(
+            ["MAPDITEM", "MAPNAMES", "MAPPITEM", "MAPTABLE"],
+            region.Tables.Select(table => table.Name[..table.Name.IndexOf('.', StringComparison.Ordinal)]).Order(StringComparer.Ordinal)));
+        Assert.All(locations.Regions, region => Assert.All(region.Tables, table => Assert.False(string.IsNullOrWhiteSpace(table.State))));
+
         // No dungeon in this corpus disagreed, so the gap list is empty - and the shape that would
         // hold one is exercised by the fixture below rather than left to be discovered.
         Assert.Empty(locations.DungeonsWithoutRecords);

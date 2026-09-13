@@ -40,6 +40,23 @@ public sealed record DaggerfallRegionGap(int Region, IReadOnlyList<string> Empty
 /// <param name="Reason">Why its records could not be read.</param>
 public sealed record DaggerfallDungeonGap(int Region, int Index, string Name, string Reason);
 
+/// <summary>
+/// One table a region group carries: its name, its ordinal in the group, and what it declared.
+/// </summary>
+/// <param name="Name">The table's name as the record carries it, which is where the region index lives.</param>
+/// <param name="Ordinal">The table's ordinal in the donor's own read order.</param>
+/// <param name="Length">How many payload bytes it carries.</param>
+/// <param name="DeclaredRecords">How many records it declares, which its length must account for.</param>
+/// <param name="State">Whether it read, disagreed, or carries no bytes.</param>
+public sealed record DaggerfallRegionTable(string Name, int Ordinal, int Length, int DeclaredRecords, string State);
+
+/// <summary>
+/// One region's table provenance: which tables it has and what each of them declared.
+/// </summary>
+/// <param name="Region">The source region index.</param>
+/// <param name="Tables">Its tables, in the donor's read order.</param>
+public sealed record DaggerfallRegionProvenance(int Region, IReadOnlyList<DaggerfallRegionTable> Tables);
+
 /// <summary>One dungeon: the exterior location it pairs with, its identity, and its blocks.</summary>
 /// <param name="Region">The source region index.</param>
 /// <param name="Index">The location's ordinal in the region's names table.</param>
@@ -64,6 +81,7 @@ public sealed record DaggerfallDungeonRecord(
 /// <param name="Dungeons">Every dungeon among them, with its block references.</param>
 /// <param name="RegionsWithoutTables">Region groups the donor discards, with the tables that are empty named.</param>
 /// <param name="DungeonsWithoutRecords">Dungeon locations whose records disagreed, with the reason.</param>
+/// <param name="Regions">Every region's table provenance, so a fact can be traced to the table it came from.</param>
 /// <param name="Sources">The source identity this section was read from.</param>
 public sealed record DaggerfallLocations(
     int SchemaVersion,
@@ -71,6 +89,7 @@ public sealed record DaggerfallLocations(
     IReadOnlyList<DaggerfallDungeonRecord> Dungeons,
     IReadOnlyList<DaggerfallRegionGap> RegionsWithoutTables,
     IReadOnlyList<DaggerfallDungeonGap> DungeonsWithoutRecords,
+    IReadOnlyList<DaggerfallRegionProvenance> Regions,
     IReadOnlyList<string> Sources)
 {
     public const int CurrentSchemaVersion = 1;
@@ -99,6 +118,24 @@ public sealed record DaggerfallLocations(
             if (!locations.Add((location.Region, location.Index)))
             {
                 throw new InvalidOperationException($"Region {location.Region} carries two locations at index {location.Index}, so one of them would be unreachable.");
+            }
+        }
+
+        // A region's provenance is the four tables the donor reads, named, so a later consumer traces a
+        // value to its source instead of inferring it from an ordinal.
+        foreach (DaggerfallRegionProvenance region in Regions)
+        {
+            if (region.Tables.Count != 4)
+            {
+                throw new InvalidOperationException($"Region {region.Region} records {region.Tables.Count} tables; a region group carries four.");
+            }
+
+            foreach (DaggerfallRegionTable table in region.Tables)
+            {
+                if (string.IsNullOrWhiteSpace(table.Name))
+                {
+                    throw new InvalidOperationException($"Region {region.Region} records a table with no name, so nothing says where its records came from.");
+                }
             }
         }
 
@@ -166,8 +203,21 @@ public static class DaggerfallLocationBuilder
         List<DaggerfallDungeonRecord> dungeons = [];
         List<DaggerfallDungeonGap> dungeonGaps = [];
         List<DaggerfallRegionGap> withoutTables = [];
+        List<DaggerfallRegionProvenance> regions = [];
         foreach (MapsRegionGroup group in MapsDecoder.DecodeRegionGroups(archive))
         {
+            // Every region's tables are recorded whatever they hold, including the ones with no bytes:
+            // a location's region and index locate its table, and this says what that table declared.
+            regions.Add(new DaggerfallRegionProvenance(group.Region,
+            [
+                .. group.Tables.Select(table => new DaggerfallRegionTable(
+                    table.Name,
+                    table.Ordinal,
+                    table.Length,
+                    table.DeclaredRecords,
+                    table.State.ToString())),
+            ]));
+
             if (group.Tables.Any(table => table.Length == 0))
             {
                 // Which tables are empty is the diagnosable fact; that a region has none to publish is
@@ -222,6 +272,7 @@ public static class DaggerfallLocationBuilder
             [.. dungeons.OrderBy(dungeon => dungeon.Region).ThenBy(dungeon => dungeon.Index)],
             [.. withoutTables.OrderBy(gap => gap.Region)],
             [.. dungeonGaps.OrderBy(gap => gap.Region).ThenBy(gap => gap.Index)],
+            [.. regions.OrderBy(region => region.Region)],
             [archive.Source]);
         published.Validate();
         return published;
