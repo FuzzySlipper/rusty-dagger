@@ -22,18 +22,21 @@ internal sealed class DaggerfallUiArt
     internal const string InventoryPath = "worldrpg/media/classic-media-inventory.json";
 
     /// <summary>
-    /// The images every session shows, by the pack's own media identity: the mode screens and window
-    /// chrome the DOM draws, and the authored inventory skins it draws them with.
+    /// The images every session shows, by the pack's own media identity: the mode screen the product
+    /// enters and the window chrome the DOM draws. An artifact belongs here when the DOM draws it;
+    /// art the group publishes for a later consumer is indexed without being pushed at every session.
     /// </summary>
     private static readonly string[] AlwaysShown =
     [
         "screen.death",
         "window.character-sheet.chrome",
-        "window.inventory.chrome",
-        "inventory.skin.grid-slot-slate.v1",
-        "inventory.skin.panel-slate.v1",
-        "inventory.skin.titlebar-slate.v1",
     ];
+
+    /// <summary>
+    /// The largest slice one admitted read serves - the Engine refuses a larger request - so an
+    /// artifact bigger than this is read in chunks and joined here.
+    /// </summary>
+    private const uint MaximumReadBytes = 1024 * 1024;
 
     private DaggerfallUiArt(string revision, IReadOnlyList<(string Id, string Image)> images)
     {
@@ -155,18 +158,27 @@ internal sealed class DaggerfallUiArt
         }
 
         ulong length = info.Span[0].ByteLength;
-        if (length is 0 or > uint.MaxValue)
+        if (length is 0 or > int.MaxValue)
         {
             throw new InvalidOperationException($"Admitted content '{path}' is {length} bytes, which is not a readable published artifact.");
         }
 
-        ReadOnlyMemory<byte> bytes = content.ReadBytes(new ContentReadBytesRequest(reference, 0, (uint)length));
-        if ((ulong)bytes.Length != length)
+        byte[] bytes = new byte[checked((int)length)];
+        ulong offset = 0;
+        while (offset < length)
         {
-            throw new InvalidOperationException($"Admitted content '{path}' returned {bytes.Length} of {length} bytes.");
+            uint take = (uint)Math.Min(MaximumReadBytes, length - offset);
+            ReadOnlyMemory<byte> chunk = content.ReadBytes(new ContentReadBytesRequest(reference, offset, take));
+            if (chunk.IsEmpty)
+            {
+                throw new InvalidOperationException($"Admitted content '{path}' returned no bytes at offset {offset} of its {length}.");
+            }
+
+            chunk.CopyTo(bytes.AsMemory(checked((int)offset)));
+            offset += (ulong)chunk.Length;
         }
 
-        return bytes.ToArray();
+        return bytes;
     }
 
     private static ContentSha256 Sha256(string hex)

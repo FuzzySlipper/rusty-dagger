@@ -15,7 +15,7 @@ export type LootAction =
 import { image } from './art.js';
 
 export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void): {
-  update(value: LootProjection | null): void; dispose(): void;
+  update(value: LootProjection | null): void; refresh(): void; dispose(): void;
 } {
   const shell = document.createElement('section');
   shell.className = 'dagger-loot';
@@ -36,40 +36,48 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
       claim({ action: 'loot-take', container: current.container, revision: current.revision, item: button.dataset.lootItem });
   };
   shell.addEventListener('click', onClick);
-  return {
-    update(value): void {
-      if (value === null) { current = null; return; }
-      heading.textContent = value.title;
-      status.textContent = value.message;
-      empty.hidden = value.items.length !== 0;
-      if (current?.revision === value.revision) { current = value; return; }
-      current = value;
-      const keys = new Set(value.items.map(item => item.key));
-      for (const [key, row] of entries) if (!keys.has(key)) { row.element.remove(); entries.delete(key); }
-      for (const item of value.items) {
-        let row = entries.get(item.key);
-        if (!row) {
-          const element = document.createElement('li');
-          const icon = document.createElement('img');
-          icon.alt = ''; icon.draggable = false;
-          const text = document.createElement('div');
-          const label = document.createElement('strong');
-          const detail = document.createElement('p');
-          text.append(label, detail);
-          const button = document.createElement('button');
-          button.type = 'button'; button.dataset.lootItem = item.key;
-          element.append(icon, text, button);
-          row = { element, icon, label, detail, button };
-          entries.set(item.key, row); rows.append(element);
-        }
-        row.label.textContent = `${item.label} × ${item.quantity}`;
-        row.detail.textContent = item.details;
-        row.button.textContent = item.key.startsWith('stack:') ? 'Take 1' : 'Take';
-        row.button.setAttribute('aria-label', `${row.button.textContent} ${item.label}`);
-        const iconSource = image(item.icon);
-        row.icon.hidden = iconSource === null;
-        if (iconSource !== null) row.icon.src = iconSource;
+  const render = (value: LootProjection | null): void => {
+    if (value === null) { current = null; return; }
+    heading.textContent = value.title;
+    status.textContent = value.message;
+    empty.hidden = value.items.length !== 0;
+    if (current?.revision === value.revision) { current = value; return; }
+    current = value;
+    const keys = new Set(value.items.map(item => item.key));
+    for (const [key, row] of entries) if (!keys.has(key)) { row.element.remove(); entries.delete(key); }
+    for (const item of value.items) {
+      let row = entries.get(item.key);
+      if (!row) {
+        const element = document.createElement('li');
+        const icon = document.createElement('img');
+        icon.alt = ''; icon.draggable = false;
+        const text = document.createElement('div');
+        const label = document.createElement('strong');
+        const detail = document.createElement('p');
+        text.append(label, detail);
+        const button = document.createElement('button');
+        button.type = 'button'; button.dataset.lootItem = item.key;
+        element.append(icon, text, button);
+        row = { element, icon, label, detail, button };
+        entries.set(item.key, row); rows.append(element);
       }
+      row.label.textContent = `${item.label} × ${item.quantity}`;
+      row.detail.textContent = item.details;
+      row.button.textContent = item.key.startsWith('stack:') ? 'Take 1' : 'Take';
+      row.button.setAttribute('aria-label', `${row.button.textContent} ${item.label}`);
+      const iconSource = image(item.icon);
+      row.icon.hidden = iconSource === null;
+      if (iconSource !== null) row.icon.src = iconSource;
+    }
+  };
+  return {
+    update: render,
+    // Rows keep their icons, so art that arrives later repaints the contents already shown.
+    refresh(): void {
+      if (current === null) return;
+      const held = current;
+      current = null;
+      render(held);
     },
     dispose(): void { shell.removeEventListener('click', onClick); shell.remove(); },
   };
