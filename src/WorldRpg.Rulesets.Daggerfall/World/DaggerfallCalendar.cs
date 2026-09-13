@@ -105,6 +105,81 @@ public readonly record struct DaggerfallCalendar(int Year, int Month, int Day, i
         }
     }
 
+    /// <summary>
+    /// The day of the year, counted from one at the year's first day, which is what the holiday
+    /// table is keyed by.
+    /// </summary>
+    public int DayOfYear => (Month * DaysPerMonth) + Day + 1;
+
+    /// <summary>
+    /// Which holiday the date is, or zero when it is not one, for the region that would celebrate it.
+    /// </summary>
+    /// <remarks>
+    /// The classic rule (the donor's <c>FormulaHelper.GetHolidayId</c>) is a table of fifty-three
+    /// holidays, each on one day of the year and each celebrated either everywhere or in one region.
+    /// A region is named one-based here, which is the donor's own convention: its table stores the
+    /// region's index plus one, or 0xFF for a holiday every region keeps. Days past the table's last
+    /// entry are never a holiday, which is why the check on the day comes before the search rather
+    /// than after it.
+    /// </remarks>
+    /// <param name="regionIndex">The zero-based source region index whose calendar this is.</param>
+    public int GetHolidayId(int regionIndex)
+    {
+        if (regionIndex < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(regionIndex), regionIndex, "A region index is not negative.");
+        }
+
+        int dayOfYear = DayOfYear;
+        if (dayOfYear > HolidayLastDay)
+        {
+            return 0;
+        }
+
+        for (int holiday = 0; holiday < HolidaysCelebratedIn.Length; holiday++)
+        {
+            bool kept = HolidaysCelebratedIn[holiday] == EveryRegion || HolidaysCelebratedIn[holiday] == regionIndex + 1;
+            if (kept && dayOfYear == HolidayDaysOfYear[holiday])
+            {
+                return holiday + 1;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>The value the holiday table uses for a holiday every region keeps.</summary>
+    private const byte EveryRegion = 0xFF;
+
+    /// <summary>The last day of the year the holiday table reaches; later days are never a holiday.</summary>
+    private const int HolidayLastDay = 355;
+
+    /// <summary>
+    /// Which regions celebrate each holiday, by holiday: a region's index plus one, or every region.
+    /// </summary>
+    private static readonly byte[] HolidaysCelebratedIn =
+    [
+        0xFF, 0x19, 0x01, 0xFF, 0x1D, 0x05, 0x19, 0x06, 0x3C, 0xFF, 0x29, 0x1A,
+        0xFF, 0x02, 0x19, 0x01, 0x0E, 0x12, 0x14, 0xFF, 0xFF, 0x1C, 0x21, 0x1F, 0x2C, 0xFF, 0x12,
+        0x23, 0xFF, 0x38, 0xFF, 0x01, 0x30, 0x29, 0x0B, 0x16, 0xFF, 0xFF, 0x11, 0x17, 0x14, 0x01,
+        0xFF, 0x13, 0xFF, 0x33, 0x3C, 0x2E, 0xFF, 0xFF, 0x01, 0x2D, 0x18,
+    ];
+
+    /// <summary>The day of the year each holiday falls on, by holiday.</summary>
+    private static readonly short[] HolidayDaysOfYear =
+    [
+        0x01, 0x02, 0x0C, 0x0F, 0x10, 0x12, 0x20, 0x23, 0x26, 0x2E, 0x39, 0x3A,
+        0x43, 0x45, 0x55, 0x56, 0x5B, 0x67, 0x6E, 0x76, 0x7F, 0x81, 0x8C, 0x96, 0x97, 0xA6, 0xAD,
+        0xAE, 0xBE, 0xC0, 0xC8, 0xD1, 0xD4, 0xDD, 0xE0, 0xE7, 0xED, 0xF3, 0xF6, 0xFC, 0x103, 0x113,
+        0x11B, 0x125, 0x12C, 0x12F, 0x134, 0x13E, 0x140, 0x159, 0x15C, 0x162, 0x163,
+    ];
+
+    /// <summary>The day of the year each holiday falls on, by its one-based identity.</summary>
+    public static IReadOnlyList<int> HolidayDays => [.. HolidayDaysOfYear.Select(day => (int)day)];
+
+    /// <summary>How many holidays the table carries.</summary>
+    public static int HolidayCount => HolidayDaysOfYear.Length;
+
     /// <summary>How many whole days have passed since the calendar's first day.</summary>
     public long DayNumber => (((long)Year - FirstYear) * DaysPerYear) + ((Month - FirstMonth) * DaysPerMonth) + Day;
 
