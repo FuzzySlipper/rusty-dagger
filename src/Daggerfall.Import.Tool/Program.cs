@@ -63,6 +63,11 @@ internal static class Program
                 return RunCharacterPresentationCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "classic-media")
+            {
+                return RunClassicMediaCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "locations")
             {
                 return RunLocationsCommand(args);
@@ -500,6 +505,64 @@ internal static class Program
         pack["locations"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(locations, PublishedJson.Section));
         File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: locations updated in {packFile}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Publishes the classic media into a content root, so the artifacts are admitted content a
+    /// consumer reads by name rather than bytes that only exist inside this process.
+    /// </summary>
+    /// <remarks>
+    /// The inventory is written beside the artifacts from the publication's own artifact list. It is
+    /// generated rather than maintained by hand: every earlier hand-kept index in this repository has
+    /// drifted from what it indexed, and the point of writing this one is that a rebuild rewrites it.
+    /// </remarks>
+    private static int RunClassicMediaCommand(IReadOnlyList<string> args)
+    {
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        if (args.Count != (update ? 6 : 5) || args[1] != "--arena2" || args[3] != "--out")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool classic-media --arena2 SOURCE_DIR --out CONTENT_DIR [--update]");
+        }
+
+        string arena2 = args[2];
+        string outRoot = args[4];
+        AdmittedArena2Sources sources = new(arena2);
+        LoadClassicMediaSources(sources);
+        Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(sources.ClassicMediaInputs);
+        Console.WriteLine($"classic media: {publication.Artifacts.Count} artifacts, {publication.Sources.Count} sources, {publication.UiImages.Count} UI images");
+        if (!update)
+        {
+            Console.WriteLine("content: not written (rerun with --update to publish these artifacts)");
+            return 0;
+        }
+
+        // The publication's artifact paths already begin with 'media/', so the root is the content
+        // directory itself: prefixing another media/ published everything one level too deep.
+        foreach (ImportPublicationArtifact artifact in publication.Artifacts)
+        {
+            string path = Path.Combine(outRoot, artifact.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, artifact.Bytes.ToArray());
+        }
+
+        // The inventory names each artifact with its byte length and digest, so a consumer can tell
+        // whether the content it admitted is the content this publication produced.
+        JsonObject inventory = new()
+        {
+            ["schemaVersion"] = 1,
+            ["generator"] = "daggerfall-import-tool classic-media",
+            ["artifacts"] = new JsonArray([.. publication.Artifacts
+                .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
+                .Select(artifact => (JsonNode)new JsonObject
+                {
+                    ["path"] = artifact.RelativePath,
+                    ["byteLength"] = artifact.Bytes.Length,
+                    ["sha256"] = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(artifact.Bytes.Span)),
+                })]),
+        };
+        File.WriteAllText(Path.Combine(outRoot, "media", "classic-media-inventory.json"), inventory.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"content: {publication.Artifacts.Count} artifacts and their inventory written under {outRoot}");
         return 0;
     }
 

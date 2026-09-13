@@ -3582,6 +3582,21 @@ public sealed class NormalizedRuntimeSeamTests
 
     private sealed class ContentFake : IContentService
     {
+        // The pinned pair grew a bundle surface. Nothing in this product opens a bundle yet - content is
+        // admitted as one snapshot - so the fake refuses these rather than pretending a bundle exists:
+        // a test double that answered with an empty bundle would hide a caller that started using one.
+        public ReadOnlyMemory<ContentBundleInfo> ListBundles() =>
+            throw new NotSupportedException("This fake admits one content snapshot and carries no bundles.");
+
+        public ContentBundle OpenBundle(ContentBundleOpenRequest request) =>
+            throw new NotSupportedException($"This fake admits one content snapshot, so bundle '{request}' cannot be opened.");
+
+        public ReadOnlyMemory<ContentReferenceInfo> ReadBundleFiles(ContentBundle bundle) =>
+            throw new NotSupportedException("This fake admits one content snapshot and carries no bundle files.");
+
+        public ContentReference OpenBundleReference(ContentBundleReferenceRequest request) =>
+            throw new NotSupportedException($"This fake admits one content snapshot, so bundle reference '{request}' cannot be opened.");
+
         private readonly List<string> releases;
         private readonly Dictionary<string, ContentSha256> values = new(StringComparer.Ordinal);
         private readonly Dictionary<ulong, KeyValuePair<string, ContentSha256>> references = [];
