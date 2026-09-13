@@ -105,8 +105,8 @@ public static class CharacterMediaReferences
     /// <param name="inventory">The character-media inventory to publish from.</param>
     /// <param name="suppliedPalettes">The palette files the caller supplies, by file name.</param>
     /// <exception cref="InvalidOperationException">
-    /// A canvas needs a palette the caller does not supply, naming the file and the palette rather
-    /// than painting it with a default.
+    /// A canvas needs a palette or a companion layer the corpus does not supply, naming the file and
+    /// the missing reference rather than painting it with a default or publishing it alone.
     /// </exception>
     public static CharacterMediaReferenceSet Derive(
         CharacterMediaInventory inventory,
@@ -114,6 +114,12 @@ public static class CharacterMediaReferences
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(suppliedPalettes);
+        HashSet<string> supplied = new(StringComparer.OrdinalIgnoreCase);
+        foreach (CharacterMediaRecord record in inventory.Files)
+        {
+            supplied.Add(System.IO.Path.GetFileName(record.Path));
+        }
+
         List<CharacterCanvasReference> references = [];
         List<CharacterMediaUnavailable> unavailable = [];
         foreach (CharacterMediaRecord file in inventory.Files)
@@ -144,6 +150,18 @@ public static class CharacterMediaReferences
             }
 
             (IReadOnlyList<string> companions, string reason) = Companions(file);
+
+            // A paper-doll layer without the layers it is drawn with is not a publishable layer: the
+            // donor's naming establishes which files belong together, so a missing companion is a gap
+            // that names itself rather than a canvas published on its own.
+            foreach (string companion in companions)
+            {
+                if (!supplied.Contains(companion))
+                {
+                    throw new InvalidOperationException(
+                        $"'{System.IO.Path.GetFileName(file.Path)}' is drawn with '{companion}', which the corpus does not supply, so publishing it alone would publish an incomplete paper doll.");
+                }
+            }
             for (int index = 0; index < file.CanvasCount; index++)
             {
                 references.Add(new CharacterCanvasReference(

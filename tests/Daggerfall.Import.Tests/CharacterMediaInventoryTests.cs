@@ -199,7 +199,7 @@ public sealed class CharacterMediaInventoryTests
         // have to as well: one supplied trio cannot be a paper-doll layer to one rule and an
         // unknown file to another.
         CharacterMediaInventory lowerCase = CharacterMediaInventory.Enumerate(
-            [("body00i0.img", ValidImage()), ("face00i0.cif", ValidImage()), ("scbg00i0.img", ValidImage())],
+            [("body00i0.img", ValidImage()), ("body00i1.img", ValidImage()), ("face00i0.cif", ValidImage()), ("scbg00i0.img", ValidImage())],
             new HashSet<string>(StringComparer.Ordinal),
             "none",
             "fixture");
@@ -219,6 +219,19 @@ public sealed class CharacterMediaInventoryTests
         Assert.Equal("character.body.body08i0.0", shapeSet.Canvases.Single(reference => reference.Path == "BODY08I0.IMG").MediaId);
         Assert.Equal("character.body.body18i0.0", shapeSet.Canvases.Single(reference => reference.Path == "BODY18I0.IMG").MediaId);
         Assert.Equal("character.face.face000i0.0", shapeSet.Canvases.Single(reference => reference.Path == "FACE000I0.CIF").MediaId);
+
+        // A paper-doll layer whose companion the corpus does not supply is refused by name too: the
+        // donor's naming says which layers belong together, and publishing one alone would publish an
+        // incomplete paper doll rather than a gap.
+        CharacterMediaInventory incomplete = CharacterMediaInventory.Enumerate(
+            [("BODY00I0.IMG", ValidImage()), ("BODY00I1.IMG", ValidImage()), ("SCBG00I0.IMG", ValidImage())],
+            new HashSet<string>(StringComparer.Ordinal),
+            "none",
+            "fixture");
+        InvalidOperationException alone = Assert.Throws<InvalidOperationException>(() => CharacterMediaReferences.Derive(incomplete, supplied));
+        Assert.Contains("BODY00I0.IMG", alone.Message, StringComparison.Ordinal);
+        Assert.Contains("FACE00I0.CIF", alone.Message, StringComparison.Ordinal);
+        Assert.Contains("incomplete paper doll", alone.Message, StringComparison.Ordinal);
 
         // A canvas whose palette is not supplied is refused by name, not painted with a default.
         InvalidOperationException refused = Assert.Throws<InvalidOperationException>(
