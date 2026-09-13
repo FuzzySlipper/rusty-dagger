@@ -1,17 +1,21 @@
+using System.Buffers.Binary;
+using System.Text;
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
+using Daggerfall.Import.Publication;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
 
-/// <summary>The published catalog of the numeric sound archive.</summary>
+/// <summary>The published catalog of the numeric sound archive and the artifacts its references name.</summary>
 public sealed class SoundCatalogTests
 {
     [Fact]
     public void Catalogues_every_numeric_clip_in_the_archives_own_order()
     {
-        SoundArchive archive = SoundArchive.Parse(File.ReadAllBytes(Corpus("DAGGER.SND")), "arena2/DAGGER.SND");
-        DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(archive);
+        SoundArchive archive = RepositoryArchive();
+        DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(archive, Admissions());
         catalog.Validate();
 
         // Measured: the archive carries four hundred and fifty-nine numeric records, and the catalog is
@@ -40,11 +44,15 @@ public sealed class SoundCatalogTests
         Assert.Equal(0, unsupported.ByteLength);
         Assert.Contains("no sample bytes", unsupported.Reason, StringComparison.Ordinal);
         Assert.Equal(459, catalog.Clips.Count);
-        // An admitted clip carries the donor's name as its usage candidate and the product's identity in
-        // its reason, which is the pair a consumer needs: what the original called it, and what this
-        // product publishes it as.
+
+        // The media identity is the machine-readable half of an admission, and it is present exactly
+        // when a published artifact carries the clip: a consumer asks the content store for a name, so
+        // an admission that named one only inside a sentence would not be a reference it could follow.
+        Assert.Equal("audio.melee.dagger.swing", catalog.Clips[106].MediaId);
+        Assert.Equal("audio.melee.hit.5", catalog.Clips[112].MediaId);
+        Assert.All(catalog.Clips.Where(clip => clip.Disposition != DaggerfallSoundClipDisposition.Admitted), clip => Assert.Null(clip.MediaId));
         Assert.All(catalog.Clips.Where(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted),
-            clip => Assert.Contains("audio.", clip.Reason, StringComparison.Ordinal));
+            clip => Assert.Contains(clip.MediaId!, clip.Reason, StringComparison.Ordinal));
 
         // The donor's own names are the usage candidates, transcribed from its clip enum: three
         // hundred and seventy-three of the four hundred and fifty-nine clips are named there, and the
@@ -55,7 +63,6 @@ public sealed class SoundCatalogTests
         // which is not a clip at all, so the table carries three hundred and seventy-three.
         Assert.Equal(373, DaggerfallSoundNames.Count);
         Assert.Equal("SwingHighPitch", catalog.Clips[106].UsageCandidate);
-        Assert.Contains("'audio.melee.dagger.swing'", catalog.Clips[106].Reason, StringComparison.Ordinal);
         Assert.Equal("Hit1", catalog.Clips[108].UsageCandidate);
         Assert.Equal("Hit5", catalog.Clips[112].UsageCandidate);
 
@@ -72,10 +79,116 @@ public sealed class SoundCatalogTests
         Assert.NotEmpty(archive.CreateWave(106));
 
         // The catalog is deterministic: the same archive catalogues the same way twice.
-        DaggerfallSoundCatalog again = DaggerfallSoundCatalogBuilder.Build(archive);
+        DaggerfallSoundCatalog again = DaggerfallSoundCatalogBuilder.Build(archive, Admissions());
         Assert.Equal(
-            catalog.Clips.Select(clip => (clip.Ordinal, clip.NumericId, clip.ByteLength, clip.Disposition, clip.UsageCandidate)),
-            again.Clips.Select(clip => (clip.Ordinal, clip.NumericId, clip.ByteLength, clip.Disposition, clip.UsageCandidate)));
+            catalog.Clips.Select(clip => (clip.Ordinal, clip.NumericId, clip.ByteLength, clip.Disposition, clip.UsageCandidate, clip.MediaId)),
+            again.Clips.Select(clip => (clip.Ordinal, clip.NumericId, clip.ByteLength, clip.Disposition, clip.UsageCandidate, clip.MediaId)));
+    }
+
+    /// <summary>
+    /// The reference closure the task asks for: every admitted catalog entry names the artifact the
+    /// publication emitted for it, and the delivered content is what this build produces.
+    /// </summary>
+    [Fact]
+    public void Every_admitted_clip_is_carried_by_the_artifact_the_publication_emitted()
+    {
+        SoundArchive archive = RepositoryArchive();
+        Arena2ClassicMediaPublication publication = PublishFromCorpus();
+        DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(archive, publication.SoundAdmissions);
+
+        // The admitted set is the publication's own audio manifests, so these two records of the same
+        // fact cannot drift: an entry the catalog calls admitted is one the publication emitted.
+        DaggerfallSoundClip[] admitted = [.. catalog.Clips.Where(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted)];
+        Assert.Equal(6, admitted.Length);
+        Assert.Equal([106, 108, 109, 110, 111, 112], admitted.Select(clip => clip.Ordinal));
+        Assert.Equal(
+            publication.Audio.Select(audio => (audio.SourceRecordOrdinal, audio.MediaId)).OrderBy(entry => entry.SourceRecordOrdinal),
+            admitted.Select(clip => (clip.Ordinal, clip.MediaId!)).OrderBy(entry => entry.Item1));
+
+        foreach (DaggerfallSoundClip clip in admitted)
+        {
+            // The reference a consumer follows, followed to the end: clip ordinal -> media id -> one
+            // emitted artifact -> the samples the archive holds for that ordinal.
+            NormalizedMediaDescriptor resource = Assert.Single(publication.MediaManifest.Resources, value => value.Id == clip.MediaId);
+            ImportPublicationArtifact artifact = Assert.Single(publication.Artifacts, value => value.RelativePath == resource.RelativePath);
+            Assert.Equal(resource.ContentDigest, artifact.ContentHash);
+            Assert.Equal(resource.ByteLength, artifact.Bytes.Length);
+
+            // The catalog states the sample bytes the archive holds for the clip, and the artifact is
+            // that many bytes inside a 44-byte WAV container, so the two are checked against each
+            // other's content rather than against a count that happens to agree.
+            Assert.Equal(clip.ByteLength + 44, artifact.Bytes.Length);
+            AssertWave(artifact.Bytes.Span);
+            Assert.True(artifact.Bytes.Span[44..].SequenceEqual(archive.GetClip(clip.Ordinal).PcmUnsigned8.Span));
+
+            // The delivered tree carries that same artifact under its content-relative name, which is
+            // the name a consumer holds rather than a path relative to this publication.
+            Assert.Equal(artifact.Bytes.ToArray(), File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content", "worldrpg", resource.RelativePath)));
+        }
+
+        // The published catalog is current and readable: the committed artifact is exactly what this
+        // build writes, and reading it back recovers the same references.
+        byte[] written = DaggerfallSoundCatalogJson.Write(catalog);
+        byte[] committed = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content", "worldrpg", DaggerfallSoundCatalogJson.RelativePath));
+        Assert.Equal(written, committed);
+        DaggerfallSoundCatalog reread = DaggerfallSoundCatalogJson.Read(committed);
+        Assert.Equal(catalog.Clips, reread.Clips);
+        Assert.Equal(catalog.Sources, reread.Sources);
+    }
+
+    /// <summary>
+    /// A closure that could not be published is refused where it is stated rather than published as a
+    /// reference to nothing: an ordinal the archive does not carry, one clip admitted twice, one media
+    /// identity claimed by two clips, and the archive's sample-less record.
+    /// </summary>
+    [Fact]
+    public void Refuses_an_admitted_closure_that_could_not_be_published()
+    {
+        SoundArchive archive = RepositoryArchive();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => DaggerfallSoundCatalogBuilder.Build(archive, [new(archive.Count, "audio.melee.dagger.swing")]));
+        Assert.Throws<ArgumentException>(() => DaggerfallSoundCatalogBuilder.Build(archive, [new(106, "audio.melee.dagger.swing"), new(106, "audio.melee.hit.1")]));
+        Assert.Throws<ArgumentException>(() => DaggerfallSoundCatalogBuilder.Build(archive, [new(106, "audio.melee.hit.1"), new(108, "audio.melee.hit.1")]));
+
+        // Ordinal five is the record the archive carries no samples for, so an admission of it would
+        // claim an artifact that no producer can emit; the catalog states it unsupported instead.
+        InvalidOperationException unsupported = Assert.Throws<InvalidOperationException>(
+            () => DaggerfallSoundCatalogBuilder.Build(archive, [new(5, "audio.melee.hit.1")]));
+        Assert.Contains("no sample bytes", unsupported.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The six clips the product publishes today, stated here so the identity test does not read them off the producer.</summary>
+    private static IReadOnlyList<DaggerfallSoundAdmission> Admissions() =>
+    [
+        new(106, "audio.melee.dagger.swing"),
+        new(108, "audio.melee.hit.1"),
+        new(109, "audio.melee.hit.2"),
+        new(110, "audio.melee.hit.3"),
+        new(111, "audio.melee.hit.4"),
+        new(112, "audio.melee.hit.5"),
+    ];
+
+    private static SoundArchive RepositoryArchive() => SoundArchive.Parse(File.ReadAllBytes(Corpus("DAGGER.SND")), Arena2ClassicMediaPublication.DaggerSoundSourcePath);
+
+    private static Arena2ClassicMediaPublication PublishFromCorpus() => Arena2ClassicMediaPublication.Create(new(
+        Read("WEAPON01.CIF"), Read("WEAPON02.CIF"), Read("WEAPON04.CIF"), Read("WEAPON05.CIF"), Read("WEAPON06.CIF"),
+        Read("WEAPON07.CIF"), Read("WEAPON08.CIF"), Read("WEAPON09.CIF"), Read("WEAPON10.CIF"),
+        Read("ART_PAL.COL"), Read("TEXTURE.380"), Read("PAL.PAL"), Read("DAGGER.SND"),
+        Read("MAIN00I0.IMG"), Read("MAIN03I0.IMG"), Read("MAIN04I0.IMG"), Read("MAIN05I0.IMG"),
+        Read("INVE00I0.IMG"), Read("INFO00I0.IMG"), Read("DIE_00I0.IMG"),
+        Read("TEXTURE.207"), Read("TEXTURE.216"), Read("TEXTURE.234"), Read("TEXTURE.245"), Read("FONT0003.FNT")));
+
+    private static byte[] Read(string name) => File.ReadAllBytes(Corpus(name));
+
+    private static void AssertWave(ReadOnlySpan<byte> wave)
+    {
+        Assert.Equal("RIFF", Encoding.ASCII.GetString(wave[..4]));
+        Assert.Equal("WAVE", Encoding.ASCII.GetString(wave.Slice(8, 4)));
+        Assert.Equal(1, BinaryPrimitives.ReadUInt16LittleEndian(wave.Slice(20, 2)));
+        Assert.Equal(1, BinaryPrimitives.ReadUInt16LittleEndian(wave.Slice(22, 2)));
+        Assert.Equal(SoundArchive.SampleRate, BinaryPrimitives.ReadUInt32LittleEndian(wave.Slice(24, 4)));
+        Assert.Equal(8, BinaryPrimitives.ReadUInt16LittleEndian(wave.Slice(34, 2)));
+        Assert.Equal("data", Encoding.ASCII.GetString(wave.Slice(36, 4)));
     }
 
     private static string Corpus(string name) => Path.Combine(RepositoryRoot(), "local/arena2", name);

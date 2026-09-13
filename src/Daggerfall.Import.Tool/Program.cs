@@ -543,7 +543,18 @@ internal static class Program
         AdmittedArena2Sources sources = new(arena2);
         LoadClassicMediaSources(sources);
         Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(sources.ClassicMediaInputs);
+
+        // The catalog is published beside the clips it describes and its admitted entries are the
+        // publication's own audio manifests, so "a published artifact carries this clip" is a
+        // reference to emitted bytes rather than a second list the catalog keeps in agreement.
+        DaggerfallSoundCatalog catalog = DaggerfallSoundCatalogBuilder.Build(
+            SoundArchive.Parse(sources.ClassicMediaInputs.DaggerSound, Arena2ClassicMediaPublication.DaggerSoundSourcePath),
+            publication.SoundAdmissions);
+        List<ImportPublicationArtifact> published = [.. publication.Artifacts, new ImportPublicationArtifact(DaggerfallSoundCatalogJson.RelativePath, DaggerfallSoundCatalogJson.Write(catalog))];
         Console.WriteLine($"classic media: {publication.Artifacts.Count} artifacts, {publication.Sources.Count} sources, {publication.UiImages.Count} UI images");
+        int admitted = catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.Admitted);
+        int readable = catalog.Clips.Count(clip => clip.Disposition == DaggerfallSoundClipDisposition.ReadableNoConsumer);
+        Console.WriteLine($"sound catalog: {catalog.Clips.Count} clips, {admitted} admitted, {readable} readable with no consumer, {catalog.Clips.Count - admitted - readable} unsupported");
         if (!update)
         {
             Console.WriteLine("content: not written (rerun with --update to publish these artifacts)");
@@ -552,7 +563,7 @@ internal static class Program
 
         // The publication's artifact paths already begin with 'media/', so the root is the content
         // directory itself: prefixing another media/ published everything one level too deep.
-        foreach (ImportPublicationArtifact artifact in publication.Artifacts)
+        foreach (ImportPublicationArtifact artifact in published)
         {
             string path = Path.Combine(outRoot, artifact.RelativePath.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
@@ -565,7 +576,7 @@ internal static class Program
         {
             ["schemaVersion"] = 1,
             ["generator"] = "daggerfall-import-tool classic-media",
-            ["artifacts"] = new JsonArray([.. publication.Artifacts
+            ["artifacts"] = new JsonArray([.. published
                 .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
                 .Select(artifact => (JsonNode)new JsonObject
                 {
@@ -575,7 +586,7 @@ internal static class Program
                 })]),
         };
         File.WriteAllText(Path.Combine(outRoot, "media", "classic-media-inventory.json"), inventory.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
-        Console.WriteLine($"content: {publication.Artifacts.Count} artifacts and their inventory written under {outRoot}");
+        Console.WriteLine($"content: {published.Count} artifacts and their inventory written under {outRoot}");
         return 0;
     }
 

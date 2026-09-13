@@ -67,7 +67,34 @@ public sealed class PublishedContentDeliveryTests
             .Select(file => Encoding.UTF8.GetString(file.Path.Span))
             .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
-        Assert.Equal(58, listed.Count);
+        // The published group carries the fifty-eight media artifacts and the sound catalog that
+        // describes the whole archive, and the inventory indexes both because both are content.
+        Assert.Equal(59, listed.Count);
+    }
+
+    [Fact]
+    public void The_published_sound_catalog_names_clips_the_admitted_media_carries()
+    {
+        ProductContent content = AdmittedContent();
+        JsonElement catalog = JsonDocument.Parse(content.ReadBytes("worldrpg/media/audio/classic-sound-catalog.json").ToArray()).RootElement;
+
+        // The catalog is the availability record for the whole archive, delivered by name like any
+        // other artifact, so a consumer can see every clip and its disposition rather than assuming
+        // the six the product plays today.
+        Assert.Equal(1, catalog.GetProperty("schemaVersion").GetInt32());
+        JsonElement[] clips = [.. catalog.GetProperty("clips").EnumerateArray()];
+        Assert.Equal(459, clips.Length);
+        JsonElement[] admitted = [.. clips.Where(clip => clip.GetProperty("disposition").GetString() == "admitted")];
+        Assert.Equal(6, admitted.Length);
+        Assert.All(clips.Where(clip => clip.GetProperty("disposition").GetString() != "admitted"), clip => Assert.Equal(JsonValueKind.Null, clip.GetProperty("mediaId").ValueKind));
+
+        // Every admitted reference resolves inside admitted content: the classic media manifest the
+        // pack reads carries exactly those media identities, so the catalog's references are the ones
+        // the product can follow rather than names only the importer knows.
+        JsonElement manifest = JsonDocument.Parse(content.ReadBytes("worldrpg/imports/privateers-hold/media/classic/manifest.json").ToArray()).RootElement;
+        HashSet<string> carried = [.. manifest.GetProperty("media").GetProperty("resources").EnumerateArray().Select(resource => resource.GetProperty("id").GetString()!)];
+        Assert.All(admitted, clip => Assert.Contains(clip.GetProperty("mediaId").GetString()!, carried));
+        Assert.Equal(admitted.Length, manifest.GetProperty("audio").EnumerateArray().Count());
     }
 
     private static ProductContent AdmittedContent()

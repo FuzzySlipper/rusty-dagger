@@ -340,6 +340,9 @@ public sealed record Arena2ClassicMediaPublication(
     ClassicFontManifest Font,
     IReadOnlyList<ClassicAuthoredUiAssetManifest> AuthoredUiAssets)
 {
+    /// <summary>The logical source path the numeric sound archive is read under, in this publication and by any catalog of it.</summary>
+    public const string DaggerSoundSourcePath = "arena2/DAGGER.SND";
+
     private const int WeaponReferenceWidth = 320;
     private const int WeaponReferenceHeight = 200;
     private const int FontCellSize = 16;
@@ -487,6 +490,15 @@ public sealed record Arena2ClassicMediaPublication(
         new("iron-boots", 245, 0), new("buckler", 245, 33), new("round-shield", 245, 34),
         new("kite-shield", 245, 35), new("tower-shield", 245, 36), new("gold-piece", 216, 1), new("arrow", 207, 16),
     ];
+
+    /// <summary>
+    /// The clips this publication emits, stated in the sound catalog's own admission vocabulary. The
+    /// catalog an importer publishes beside these artifacts is built from this list, so its admitted
+    /// entries name artifacts this publication actually produced rather than a second table kept in
+    /// agreement by hand.
+    /// </summary>
+    public IReadOnlyList<DaggerfallSoundAdmission> SoundAdmissions =>
+        [.. Audio.Select(audio => new DaggerfallSoundAdmission(audio.SourceRecordOrdinal, audio.MediaId))];
 
     /// <summary>Regenerates selected classic art with the compatibility presentation profile.</summary>
     public static Arena2ClassicMediaPublication Create(Arena2ClassicMediaInputs inputs, Arena2ClassicMediaPublicationOptions? options = null) =>
@@ -676,7 +688,7 @@ public sealed record Arena2ClassicMediaPublication(
         Arena2ClassicMediaPublicationOptions options,
         out ClassicAudioManifest[] manifests)
     {
-        SoundArchive sounds = SoundArchive.Parse(soundBytes, "arena2/DAGGER.SND");
+        SoundArchive sounds = SoundArchive.Parse(soundBytes, DaggerSoundSourcePath);
         List<GeneratedMediaArtifact> result = [];
         List<ClassicAudioManifest> semantic = [];
         foreach (AudioSource source in AudioSources)
