@@ -452,7 +452,7 @@ internal static class Program
         }
 
         JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
-        pack["characterPresentation"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(presentation, SectionOptions));
+        pack["characterPresentation"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(presentation, PublishedJson.Section));
         File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: characterPresentation updated in {packFile}");
         return 0;
@@ -472,23 +472,6 @@ internal static class Program
                 new DaggerfallCatalogSource(source["recordId"]!.GetValue<string>(), source["path"]!.GetValue<string>()));
         })];
     }
-
-    /// <summary>
-    /// The published section's shape: camelCase, indented, and enum-like values by name.
-    /// </summary>
-    /// <remarks>
-    /// A binding is stored as "requiredPending" rather than 1 because the pack is authored content a
-    /// person reads and a consumer parses by meaning: an ordinal would tie the published data to the
-    /// order of an enum in code. The catalog section sets the same precedent - its elements are
-    /// names, not indices - while genuinely numeric values stay numbers.
-    /// </remarks>
-    private static readonly JsonSerializerOptions SectionOptions = new()
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = true,
-        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.Strict,
-        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
-    };
 
     private static (List<string> Attributes, List<string> Skills) ReadVocabulary(string packFile)
     {
