@@ -31,6 +31,12 @@ public static class ImgDecoder
     /// <summary>The compression value a classic CIF uses for a run-length encoded record.</summary>
     public const ushort RleCompressed = 2;
 
+    /// <summary>The length whose canvas is followed by an embedded palette.</summary>
+    public const int EmbeddedPaletteScreenBytes = 64768;
+
+    /// <summary>How many palette bytes follow that canvas.</summary>
+    public const int EmbeddedPaletteBytes = 768;
+
     /// <summary>
     /// The headerless shapes the classic reader recognises by file length alone, from the
     /// donor's <c>ImgFile.GetHeaderlessFileImageDimensions</c>. A file whose length is one of
@@ -55,7 +61,7 @@ public static class ImgDecoder
         (20480, 320, 64),
         (26496, 184, 144),
         (Arena2FormatConstants.HeaderlessUiImgBytes, 320, 200),
-        (64768, 320, 200),
+        (EmbeddedPaletteScreenBytes, 320, 200),
         (68800, 320, 215),
         (112128, 512, 219),
     ];
@@ -177,6 +183,52 @@ public static class ImgDecoder
         image = null;
         reason = $"a headerless image of {bytes.Length} bytes is not one of the {HeaderlessShapes.Length} documented shapes";
         return false;
+    }
+
+    /// <summary>
+    /// Reads the palette a 64768-byte screen carries after its canvas.
+    /// </summary>
+    /// <remarks>
+    /// Six supplied screens are exactly this length — a 320x200 canvas followed by 768 palette bytes
+    /// — and the classic reader reads that trailing palette for exactly those names, scaling its
+    /// channels by four. The shape table already stops at the canvas, so the trailing bytes are left
+    /// to whoever publishes the screen; this reads them. A screen reached from any other length
+    /// carries no palette, which is why the check is on the length the shape table establishes
+    /// rather than on a file name: the corpus's six are the only files of this length.
+    /// </remarks>
+    public static bool TryReadEmbeddedPalette(
+        ReadOnlySpan<byte> bytes,
+        string source,
+        [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out Arena2Palette? palette,
+        out string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        if (bytes.Length != EmbeddedPaletteScreenBytes)
+        {
+            palette = null;
+            reason = $"a screen of {bytes.Length} bytes carries no {EmbeddedPaletteBytes}-byte embedded palette; only the {EmbeddedPaletteScreenBytes}-byte shape does";
+            return false;
+        }
+
+        if (!TryDecodeHeaderless(bytes, source, out IndexedImg? image, out reason))
+        {
+            palette = null;
+            return false;
+        }
+
+        if (image.Width * image.Height + EmbeddedPaletteBytes != bytes.Length)
+        {
+            palette = null;
+            reason = $"the {image.Width}x{image.Height} canvas of {source} leaves {bytes.Length - (image.Width * image.Height)} bytes, not the {EmbeddedPaletteBytes} an embedded palette needs";
+            return false;
+        }
+
+        // Six-bit, like the map palette: the classic reader scales it by four for the same reason.
+        palette = PaletteDecoder.ScaleChannels(
+            PaletteDecoder.Decode(bytes[^EmbeddedPaletteBytes..], $"{source} embedded palette"),
+            4);
+        reason = string.Empty;
+        return true;
     }
 
     /// <summary>Reads one record of a CIF sequence, framed by the payload length it declares.</summary>
