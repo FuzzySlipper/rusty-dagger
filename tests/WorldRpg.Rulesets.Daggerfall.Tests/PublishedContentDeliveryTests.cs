@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
+using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
 
 namespace WorldRpg.Rulesets.Daggerfall.Tests;
@@ -64,14 +65,66 @@ public sealed class PublishedContentDeliveryTests
             listed.Add(path);
         }
 
-        HashSet<string> published = [.. content.ReadDirectory("worldrpg/media", recursive: true)
-            .Select(file => Encoding.UTF8.GetString(file.Path.Span))
-            .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal))];
+        // Each content group has its own generated index, so the classic index accounts for the classic
+        // group and the character index accounts for the character canvases. An artifact no index names
+        // fails here, which is what makes a hand-written artifact or a dropped entry visible.
+        HashSet<string> published = [.. GeneratedContentFiles(content)
+            .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal) && !path.Contains("/character/", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
         // The published group carries the seventy-four media artifacts and the sound catalog that
         // describes the whole archive, and the inventory indexes both because both are content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
         Assert.Equal(80, listed.Count);
+
+        // The character canvases are admitted content in the same tree: they have their own generated
+        // index beside them, and both indexes state the bytes they describe rather than trusting them.
+        HashSet<string> characterListed = [];
+        foreach (JsonElement artifact in Index("worldrpg/media/character/character-media-inventory.json").Artifacts)
+        {
+            // The index states the content-relative name, which is the name a consumer reads from
+            // admitted content rather than a path it has to assemble from the group.
+            string path = artifact.GetProperty("relativePath").GetString()!;
+            byte[] bytes = content.ReadBytes(path).ToArray();
+            Assert.Equal(artifact.GetProperty("byteLength").GetInt64(), bytes.Length);
+            Assert.Equal(artifact.GetProperty("sha256").GetString(), Convert.ToHexStringLower(SHA256.HashData(bytes)));
+            characterListed.Add(path);
+        }
+
+        // The canvases this repository cannot publish are stated in that index too, so a consumer that
+        // finds no artifact for a face or a story sprite can tell "not published" from "not readable".
+        GeneratedIndex characters = Index("worldrpg/media/character/character-media-inventory.json");
+        (string Family, string Kind, string Reason, string[] Files, string Anchor)[] unreachable =
+        [
+            .. characters.Unreadable.Select(family => (
+                family.GetProperty("family").GetString()!,
+                family.GetProperty("kind").GetString()!,
+                family.GetProperty("reason").GetString()!,
+                family.GetProperty("files").EnumerateArray().Select(file => file.GetString()!).ToArray(),
+                family.GetProperty("donorAnchor").GetString()!)),
+        ];
+        Assert.Equal(["BSS", "FACE"], unreachable.Select(family => family.Family));
+        Assert.Equal(["CMPA00I0.BSS", "CMPA01I0.BSS", "CMPA02I0.BSS"], unreachable[0].Files);
+        Assert.Equal(["FACES.CIF"], unreachable[1].Files);
+        Assert.Equal("Assets/Scripts/API/BssFile.cs", unreachable[0].Anchor);
+        // The face grid has no donor reader to name: the donor reads the grid, this repository enumerates
+        // its cells and cannot slice their pixels, which is a different gap from a missing reader.
+        Assert.Empty(unreachable[1].Anchor);
+        Assert.All(unreachable, family =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(family.Kind));
+            // Both reasons are about the same loss: the file carries canvases whose pixels are not here,
+            // rather than a canvas published at the wrong shape or with guessed colours.
+            Assert.Contains("pixels", family.Reason, StringComparison.Ordinal);
+        });
+
+        HashSet<string> characterPublished = [.. GeneratedContentFiles(content)
+            .Where(path => path.StartsWith("worldrpg/media/character/", StringComparison.Ordinal) && !path.EndsWith("character-media-inventory.json", StringComparison.Ordinal))];
+        // Every artifact the index names is an admitted file, and the group carries no other: an
+        // artifact written without an index entry, or an entry with no artifact, fails here.
+        Assert.Equal(264, characterListed.Count);
+        Assert.Equal(
+            [.. characterPublished.Except(characterListed).Order(StringComparer.Ordinal)],
+            [.. characterListed.Except(characterPublished).Order(StringComparer.Ordinal)]);
 
         // The families this repository cannot read at all are stated with their files and the donor
         // anchor, so a consumer that finds no artifact for one of them can tell "not published" from
@@ -160,12 +213,12 @@ public sealed class PublishedContentDeliveryTests
         });
         Assert.Contains(files, file => file.GetProperty("outcome").GetString() == "unreferenced");
 
-        // Every published reference states either that it resolves or that it is still pending, with the
-        // file and palette it would need. Today the character media are not published as artifacts, so
-        // they are pending - and the record says so instead of pretending to bind.
-        foreach (string section in new[] { "layers", "faces" })
+        // Every published reference states either that a consumer binds it or that it is still pending,
+        // with the file and palette it would need, and names the consumer when one binds it.
+        JsonElement[] layers = [.. presentation.GetProperty("layers").EnumerateArray()];
+        JsonElement[] factionFaces = [.. presentation.GetProperty("faces").EnumerateArray()];
+        foreach (JsonElement[] references in new[] { layers, factionFaces })
         {
-            JsonElement[] references = [.. presentation.GetProperty(section).EnumerateArray()];
             Assert.NotEmpty(references);
             Assert.All(references, reference =>
             {
@@ -175,14 +228,78 @@ public sealed class PublishedContentDeliveryTests
                 Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("mediaId").GetString()));
                 Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("sourceFile").GetString()));
                 Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("palette").GetString()));
+                Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("consumer").GetString()));
             });
-            // No consumer binds a canvas yet, so every reference is required-pending: the count is pinned
-            // so that naming a consumer has to move it deliberately rather than by accident.
-            Assert.Equal(references.Length, references.Count(reference => reference.GetProperty("binding").GetString() == "requiredPending"));
         }
+
+        // The canvases are published, so a reference the character sheet resolves is admitted rather than
+        // pending forever - but only those: the sheet resolves one race at a time, so the other seven
+        // races' paper-doll layers and every faction face stay required-pending even though their
+        // artifacts exist. Both counts are pinned so that binding a file has to move this deliberately.
+        Assert.Equal(25, layers.Count(layer => layer.GetProperty("binding").GetString() == "admitted"));
+        Assert.Equal(175, layers.Count(layer => layer.GetProperty("binding").GetString() == "requiredPending"));
+        Assert.All(layers.Where(layer => layer.GetProperty("binding").GetString() == "admitted"),
+            layer => Assert.Equal("the character sheet", layer.GetProperty("consumer").GetString()));
+        // The faction faces are a grid nothing here slices the pixels of, so they are neither published
+        // nor bound and the count is the whole grid.
+        Assert.Equal(61, factionFaces.Count(face => face.GetProperty("binding").GetString() == "requiredPending"));
+
+        // The three supplied career portraits are what any career's sheet draws, so they are bound by the
+        // same consumer, and the careers the corpus depicts no portrait for say so rather than borrowing
+        // another class's art.
+        JsonElement[] careers = [.. presentation.GetProperty("careers").EnumerateArray()];
+        Assert.Equal(3, careers.Length);
+        Assert.All(careers, portrait =>
+        {
+            Assert.Equal("admitted", portrait.GetProperty("binding").GetString());
+            Assert.Equal("the character sheet", portrait.GetProperty("consumer").GetString());
+        });
 
         Assert.Equal(61, presentation.GetProperty("faces").GetArrayLength());
         Assert.Equal(200, presentation.GetProperty("layers").GetArrayLength());
+    }
+
+    /// <summary>
+    /// The admitted references are exactly the ones the character sheet resolves, checked against the
+    /// sheet's own projection: a binding is a claim that a live consumer draws the canvas, so this is what
+    /// makes it a fact about the product rather than a label the producer wrote for itself.
+    /// </summary>
+    [Fact]
+    public void The_admitted_character_references_are_the_ones_the_character_sheet_resolves()
+    {
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(
+            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallActorDefinition player = definitions.Actors[definitions.Actors.Keys.Single(id => id.Value == "player")];
+        CharacterIdentityPresentation identity = CharacterIdentityPresentation.From(definitions, player)!;
+
+        JsonElement presentation = JsonDocument.Parse(
+            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")))
+            .RootElement.GetProperty("characterPresentation");
+
+        // The layers, in both directions: a layer marked admitted that the sheet does not resolve would be
+        // a consumer claimed but not real, and one the sheet resolves but leaves pending would be a live
+        // consumer the publication does not admit.
+        HashSet<string> resolvedLayers = [.. identity.Media.Select(medium => medium.MediaId)];
+        HashSet<string> admittedLayers =
+        [
+            .. presentation.GetProperty("layers").EnumerateArray()
+                .Where(layer => layer.GetProperty("binding").GetString() == "admitted")
+                .Select(layer => layer.GetProperty("mediaId").GetString()!),
+        ];
+        Assert.Equal(resolvedLayers.Order(StringComparer.Ordinal), admittedLayers.Order(StringComparer.Ordinal));
+        Assert.Equal(25, admittedLayers.Count);
+
+        // A career portrait is bound by the family rule rather than by this pack's one player career: the
+        // sheet draws whichever class an actor declares, so every portrait the corpus supplies is admitted -
+        // and the one this actor declares is among them, which is the direction that matters for it.
+        HashSet<string> admittedPortraits =
+        [
+            .. presentation.GetProperty("careers").EnumerateArray()
+                .Where(career => career.GetProperty("binding").GetString() == "admitted")
+                .Select(career => career.GetProperty("mediaId").GetString()!),
+        ];
+        Assert.Equal(3, admittedPortraits.Count);
+        Assert.Contains(identity.Portrait, admittedPortraits);
     }
 
     [Fact]
@@ -365,6 +482,31 @@ public sealed class PublishedContentDeliveryTests
                 Encoding.UTF8.GetBytes(Path.GetRelativePath(contentRoot, path).Replace(Path.DirectorySeparatorChar, '/')),
                 File.ReadAllBytes(path)))];
         return new ProductContent(files);
+    }
+
+    /// <summary>
+    /// Every admitted content-file name in the published group, read through the same directory listing a
+    /// consumer would see rather than from the filesystem.
+    /// </summary>
+    private static IEnumerable<string> GeneratedContentFiles(ProductContent content) =>
+        content.ReadDirectory("worldrpg/media", recursive: true).Select(file => Encoding.UTF8.GetString(file.Path.Span));
+
+    /// <summary>One generated content-group index, parsed, with its entries already checked to be an array.</summary>
+    private readonly record struct GeneratedIndex(JsonElement Root, JsonElement[] Artifacts)
+    {
+        /// <summary>The families whose canvases the producer could not publish, with the reason it gave.</summary>
+        internal JsonElement[] Unreadable => [.. Root.GetProperty("unreadableFamilies").EnumerateArray()];
+    }
+
+    /// <summary>
+    /// Reads one generated index from admitted content. Two content groups publish one - the classic
+    /// media and the character canvases - so the path is supplied rather than assumed.
+    /// </summary>
+    private static GeneratedIndex Index(string path)
+    {
+        JsonElement root = JsonDocument.Parse(AdmittedContent().ReadBytes(path).ToArray()).RootElement;
+        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32());
+        return new(root, [.. root.GetProperty("artifacts").EnumerateArray()]);
     }
 
     private static string RepositoryRoot()

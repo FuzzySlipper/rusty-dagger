@@ -75,6 +75,16 @@ public static class CharacterMediaReferences
     /// <summary>The palette the classic reader pairs with these families, with no name rule.</summary>
     public const string ArtPalette = "ART_PAL.COL";
 
+    /// <summary>The published consumer that binds a character canvas: the ruleset's character sheet.</summary>
+    /// <remarks>
+    /// <c>MediaBinding.Admitted</c> means a published consumer binds the file, not that bytes exist, so
+    /// the name is the consumer's own: <c>DaggerfallCharacterPresentation</c> resolves an actor's race
+    /// layers and career portrait through <c>DaggerfallCharacterPresentationSet</c> on every sheet read
+    /// and publishes them in the sheet projection. Naming it here is what tells the publication which
+    /// files are bound rather than leaving every file pending while its artifacts sit unread.
+    /// </remarks>
+    public const string CharacterSheetConsumer = "the character sheet";
+
     /// <summary>The palette a <c>NITE*</c> file is read with.</summary>
     public const string NightskyPalette = "NIGHTSKY.COL";
 
@@ -227,6 +237,112 @@ public static class CharacterMediaReferences
         }
 
         return $"character.{family}.{name.ToLowerInvariant()}.{canvasIndex}";
+    }
+
+    /// <summary>
+    /// The same references with the binding a consumer established: the canvases a published consumer
+    /// binds become <see cref="MediaBinding.Admitted"/> and the rest stay required-pending.
+    /// </summary>
+    /// <remarks>
+    /// The emission pass publishes every readable canvas because the reference set is the subject, but
+    /// publishing bytes is not binding them: a reference is bound when a consumer resolves it. Rewriting
+    /// the set with that fact - rather than deriving the flag from what the pass published - is what keeps
+    /// "a consumer binds this" a statement about a consumer.
+    /// </remarks>
+    /// <param name="set">The derived reference set, before any consumer is named.</param>
+    /// <param name="admitted">The source files a published consumer binds, by file name.</param>
+    /// <param name="consumer">The consumer that binds them, named as it is in the published references.</param>
+    public static CharacterMediaReferenceSet WithBoundFiles(
+        CharacterMediaReferenceSet set,
+        IReadOnlySet<string> admitted,
+        string consumer)
+    {
+        ArgumentNullException.ThrowIfNull(set);
+        ArgumentNullException.ThrowIfNull(admitted);
+        ArgumentException.ThrowIfNullOrWhiteSpace(consumer);
+        return set with
+        {
+            Canvases = [.. set.Canvases.Select(canvas =>
+            {
+                bool bound = admitted.Contains(System.IO.Path.GetFileName(canvas.Path));
+                return canvas with
+                {
+                    Binding = bound ? MediaBinding.Admitted : MediaBinding.RequiredPending,
+                    Consumer = bound ? consumer : canvas.Consumer,
+                };
+            })],
+            Unavailable = [.. set.Unavailable.Select(file =>
+            {
+                bool bound = admitted.Contains(System.IO.Path.GetFileName(file.Path));
+                return file with { Binding = bound ? MediaBinding.Admitted : MediaBinding.RequiredPending };
+            })],
+        };
+    }
+
+    /// <summary>
+    /// The supplied files one race's paper doll is drawn from: the layers the ruleset resolves for a
+    /// race, and the class portraits any career's sheet draws.
+    /// </summary>
+    /// <remarks>
+    /// A published reference is <c>MediaBinding.Admitted</c> when a published consumer binds the file,
+    /// so the set has to come from the consumer rather than from the publisher: the character sheet
+    /// resolves exactly one race's background, bodies and heads at a time — the race the player's actor
+    /// declares — plus a career portrait for any career the corpus depicts. Every other supplied file
+    /// stays <c>RequiredPending</c> even though its canvas is published, because no consumer resolves it
+    /// yet; the character-creation task that lets a player choose a race is what binds the rest.
+    /// <para>
+    /// The portraits are bound by the family rule rather than by the pack's careers: the sheet resolves a
+    /// portrait for whichever career an actor declares, and all three supplied portraits are reachable
+    /// that way.
+    /// </para>
+    /// </remarks>
+    /// <param name="inventory">The supplied files, which are the candidate bindings.</param>
+    /// <param name="donorRaceId">
+    /// The donor's own race value, which is one-based: the paper-doll file names are zero-based, so race
+    /// value 1 is drawn from the <c>*00*</c> files, exactly as the presentation builder reads them. A
+    /// value with no paper-doll subclass binds nothing.
+    /// </param>
+    public static IReadOnlySet<string> FilesBoundByCharacterSheet(CharacterMediaInventory inventory, int donorRaceId)
+    {
+        ArgumentNullException.ThrowIfNull(inventory);
+        Dictionary<string, string> supplied = new(StringComparer.OrdinalIgnoreCase);
+        foreach (CharacterMediaRecord file in inventory.Files)
+        {
+            supplied[System.IO.Path.GetFileName(file.Path)] = file.Path;
+        }
+
+        HashSet<string> bound = new(StringComparer.OrdinalIgnoreCase);
+        // The paper-doll layers, by the same naming rule the presentation builder resolves: a background
+        // per race, both genders' bodies, and the ten heads a face CIF carries per gender. The background
+        // is the file a prefix rule would miss - its name is not a layer of a race, it is the scene the
+        // race is drawn in.
+        if (donorRaceId is >= 1 and <= 8)
+        {
+            int media = donorRaceId - 1;
+            string[] layers =
+            [
+                $"SCBG{media:00}I0.IMG",
+                $"BODY{media:00}I0.IMG",
+                $"BODY{media:00}I1.IMG",
+                $"BODY{media + 10:00}I0.IMG",
+                $"BODY{media + 10:00}I1.IMG",
+                $"FACE{media:00}I0.CIF",
+                $"FACE{media + 10:00}I0.CIF",
+            ];
+            foreach (string layer in layers)
+            {
+                if (supplied.TryGetValue(layer, out string? path)) bound.Add(path);
+            }
+        }
+
+        // A career portrait is drawn whichever class an actor declares, so every supplied one is bound by
+        // the family rule rather than by the pack's careers.
+        foreach (CharacterMediaRecord file in inventory.Files.Where(file => file.Family == "CEL"))
+        {
+            bound.Add(file.Path);
+        }
+
+        return bound;
     }
 
     /// <summary>
