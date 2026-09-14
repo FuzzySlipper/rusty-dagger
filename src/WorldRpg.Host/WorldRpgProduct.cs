@@ -178,34 +178,22 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// </summary>
     /// <remarks>
     /// The world does not start here: the session holds input and time while the entry screen is up, so
-    /// this tells it which mode it is starting in and publishes once, which is the projection a client
-    /// that just attached reads. The Engine calls this once through the generated product exports, so the
-    /// entry screen is what a client sees before anything has happened in the world; a product resumed
-    /// from a save starts in ordinary play instead, because the screen exists to begin a run rather than
-    /// to begin one already in progress.
+    /// this tells it which mode it is starting in and exposes that as a projection. The mode change is the
+    /// publication - telling the session and then asking it to publish again would expose two UI
+    /// projections for one Start, which is one more than the Engine's own product exercise holds a product
+    /// to. A resumed product is already in ordinary play, so its mode change is the already-in-mode case
+    /// and publishes nothing, leaving the create-time projection as the one a client attaches to.
     /// <para>
-    /// The mode is set here rather than applied through <see cref="Apply"/>, which republishes, and the
-    /// session is told it without a publication of its own: Start exposes exactly one UI projection, which
-    /// is the contract the Engine's own product exercise holds it to, and a mode-change publication beside
-    /// this one would make it two. The decision is still recorded, so a caller that needs to know why the
-    /// product is where it is reads the history it always did.
+    /// The Engine calls this once through the generated product exports, so the entry screen is what a
+    /// client sees before anything has happened in the world.
     /// </para>
     /// </remarks>
     public void Start()
     {
         if (_shutdown || _started) return;
         _started = true;
-        ProductMode start = _resumed ? ProductMode.Playing : ProductMode.Title;
-        ProductMode from = _mode;
-        _mode = start;
-        // The session is told the mode and then asked to publish it, rather than being told through the
-        // transition that republishes: Start exposes one UI projection, and telling the session twice
-        // would make it two.
-        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(start);
-        _session.PublishInitial();
-        Record(new(from, start,
-            from == start ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied,
-            _resumed ? "the resumed product started in the world it restored" : "the product started at its entry screen"));
+        Apply(_resumed ? ProductMode.Playing : ProductMode.Title,
+            _resumed ? "the resumed product started in the world it restored" : "the product started at its entry screen");
     }
 
     /// <summary>
