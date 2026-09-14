@@ -75,6 +75,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <div class="dagger-death" role="alert" hidden><img class="dagger-death-screen" alt="You have died."></div>
+    <div class="dagger-entry" role="dialog" aria-label="Title" hidden><img class="dagger-entry-screen" alt="Rusty Dagger"><button class="dagger-entry-begin" type="button">Begin</button></div>
     <button class="dagger-menu-toggle" type="button" data-action="menu" aria-haspopup="dialog">Menu · Esc</button>
     <dialog class="dagger-menu" aria-labelledby="dagger-menu-title">
       <h1 id="dagger-menu-title" tabindex="-1">Game menu</h1>
@@ -114,6 +115,8 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   });
   const deathRoot = shell.querySelector<HTMLElement>('.dagger-death')!;
   const deathScreen = shell.querySelector<HTMLImageElement>('.dagger-death-screen')!;
+  const entryRoot = shell.querySelector<HTMLElement>('.dagger-entry')!;
+  const entryScreen = shell.querySelector<HTMLImageElement>('.dagger-entry-screen')!;
   const inventoryRoot = shell.querySelector<HTMLElement>('.dagger-inventory-root')!;
   const inventoryView = mountInventory(inventoryRoot, (action) => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: action,
@@ -270,6 +273,21 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   let artRevision = heldRevision();
   let artCooldown = 0;
   let deadMode = false;
+  let titleMode = false;
+  // The entry screen is the mode's own screen: the mode shows the published artifact, and the one thing
+  // the screen does is ask the product to begin. The product decides, so the answer is the mode changing
+  // rather than this hiding itself.
+  const redrawEntry = (): void => {
+    entryRoot.hidden = !titleMode;
+    if (!titleMode) return;
+    const entry = image('screen.title');
+    if (entry !== null) entryScreen.src = entry;
+  };
+  shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.addEventListener('click', () => {
+    context.intents?.claim('dagger.ui', {
+      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'begin' },
+    });
+  });
   let lastPanelRevision: string | null = null;
   const requestArt = (revision: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'art-request', revision },
@@ -278,6 +296,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     deathRoot.hidden = !deadMode;
     const death = image('screen.death');
     if (deadMode && death !== null) deathScreen.src = death;
+    redrawEntry();
     // The panels memo their own state revision, so art that arrived after the state it draws has to
     // ask them to paint again rather than re-send a projection they would ignore.
     inventoryView.refresh();
@@ -339,6 +358,11 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       const death = image('screen.death');
       if (death !== null) deathScreen.src = death;
     }
+
+    // The entry screen is the mode's screen, the way the death screen is the dead mode's: the mode
+    // value decides which one is up, and the artifact the mode names is what it shows.
+    titleMode = value.mode === 'title';
+    redrawEntry();
 
     title.textContent = 'Exploring';
     outcome.textContent = value.lastOutcome;

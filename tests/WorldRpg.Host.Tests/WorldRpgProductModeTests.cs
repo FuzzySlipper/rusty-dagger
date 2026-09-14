@@ -18,7 +18,7 @@ public sealed class WorldRpgProductModeTests
     public void A_modal_owns_input_until_it_is_closed_and_a_pause_cancels_it()
     {
         using WorldRpgProduct product = Product();
-        product.Start();
+        StartInPlay(product);
 
         Assert.Equal(ProductMode.Playing, product.Mode);
         Assert.True(product.EnterModal().Changed);
@@ -60,7 +60,7 @@ public sealed class WorldRpgProductModeTests
     {
         ModeRecordingRuleset ruleset = new();
         using WorldRpgProduct product = Product(ruleset);
-        product.Start();
+        StartInPlay(product);
         product.EnterModal();
 
         Assert.True(product.MarkDead().Changed);
@@ -97,7 +97,7 @@ public sealed class WorldRpgProductModeTests
     {
         ModeRecordingRuleset ruleset = new() { Request = ProductMode.Modal };
         using WorldRpgProduct product = Product(ruleset);
-        product.Start();
+        StartInPlay(product);
 
         // The ruleset can open an interaction the product cannot see, so it asks; the product
         // adopts the request and tells the session what it decided.
@@ -127,7 +127,7 @@ public sealed class WorldRpgProductModeTests
         // play while ModeHistory claimed the world was held.
         PlainRuleset ruleset = new();
         using WorldRpgProduct product = new(Context(), ruleset, new GameBundleId("test.bundle"));
-        product.Start();
+        StartInPlay(product);
 
         Assert.Equal(ProductModeChangeOutcome.Refused, product.EnterModal().Outcome);
         Assert.Equal(ProductMode.Playing, product.Mode);
@@ -149,7 +149,7 @@ public sealed class WorldRpgProductModeTests
         // and that request has to settle before the world takes a step rather than after it.
         ModeRecordingRuleset ruleset = new() { Request = ProductMode.Dead };
         using WorldRpgProduct product = Product(ruleset);
-        product.Start();
+        StartInPlay(product);
 
         product.Update(Update(1));
 
@@ -171,6 +171,78 @@ public sealed class WorldRpgProductModeTests
         Assert.Equal(ProductModeChangeOutcome.AlreadyInMode, product.ModeHistory[^1].Outcome);
         Assert.False(product.ModeHistory[^1].Changed);
         Assert.Equal(ProductMode.Playing, product.Mode);
+    }
+
+    [Fact]
+    public void The_entry_screen_holds_the_world_until_a_client_asks_to_begin()
+    {
+        ModeRecordingRuleset ruleset = new();
+        using WorldRpgProduct product = Product(ruleset);
+
+        product.Start();
+
+        // The product a launcher starts shows its entry screen, and the session is told the world is held
+        // rather than being left to step behind it: input and time reach nothing while the mode holds.
+        Assert.Equal(ProductMode.Title, product.Mode);
+        Assert.Equal(ProductMode.Title, ruleset.LastApplied);
+        Assert.Equal(ProductModeChangeOutcome.Applied, product.ModeHistory[^1].Outcome);
+
+        // The entry screen's own action is the client's one way to leave it, and the product applies it
+        // before the session runs, so the update that asked to begin does not also take a world step.
+        product.Update(Semantic("""{"action":"begin"}"""));
+        Assert.True(product.Mode == ProductMode.Playing, $"mode={product.Mode} history={product.ModeHistory[^1]}");
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal(ProductMode.Playing, ruleset.LastApplied);
+        Assert.Equal(1, ruleset.Updates);
+
+        // An action the entry screen does not answer leaves the mode where it is.
+        using WorldRpgProduct second = Product();
+        second.Start();
+        second.Update(Semantic("""{"action":"inventory"}"""));
+        Assert.Equal(ProductMode.Title, second.Mode);
+
+        // A payload that names the action twice is not a shape this reads, so the mode stays and the
+        // refusal is the ruleset's to report rather than the product's to guess at.
+        second.Update(Semantic("""{"action":"begin","action":"begin"}"""));
+        Assert.Equal(ProductMode.Title, second.Mode);
+        // Asking to begin from a mode that is not the entry screen is refused and recorded, so a caller
+        // that skipped the entry screen is visible rather than silently put into play.
+        second.Update(Semantic("""{"action":"begin"}"""));
+        Assert.Equal(ProductMode.Playing, second.Mode);
+        Assert.Equal(ProductModeChangeOutcome.AlreadyInMode, second.Begin().Outcome);
+    }
+
+    /// <summary>One admitted input slice carrying a UI semantic action, the way the Engine delivers one.</summary>
+    private static ProductUpdate Semantic(string json)
+    {
+        ProductInputEvent[] slice = [Ui(json)];
+        return new(OuterUpdate(1), slice);
+    }
+
+    /// <summary>One product-payload input event carrying a semantic action to the product.</summary>
+    private static ProductInputEvent Ui(string json) =>
+        new ProductInputEvent(InputEventKind.DirectDigital, InputEdge.None, InputDevice.None, InputChannel.None,
+            InputAxis.None, KeyboardControl.None, PointerButton.None, ControllerButton.None, ControllerAxis.None,
+            InputClearReason.None, InputValueKind.ProductPayload, InputPhase.DirectUi, InputProvenance.DirectUi,
+            default, default, default, 0F, 0F, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty,
+            ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty) with
+        {
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = System.Text.Encoding.UTF8.GetBytes(json),
+        };
+
+    private static ProductUpdateFacts OuterUpdate(ulong step) =>
+        new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, step, step, step, step, 60, 1, 0, 1d / 60d);
+
+    /// <summary>
+    /// Starts a product and leaves its entry screen, which is the two steps a launcher and a client take.
+    /// A test about ordinary play cares about what happens after both, and a test about the entry screen
+    /// calls them separately.
+    /// </summary>
+    private static void StartInPlay(WorldRpgProduct product)
+    {
+        product.Start();
+        product.Begin();
     }
 
     private static ProductUpdate Update(ulong step) =>

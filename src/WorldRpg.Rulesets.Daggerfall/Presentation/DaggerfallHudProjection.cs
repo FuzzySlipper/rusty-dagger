@@ -179,6 +179,7 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
     /// <summary>The wire name of the mode the product decided, lowercased for a thin DOM consumer.</summary>
     private static string Mode(ProductMode mode) => mode switch
     {
+        ProductMode.Title => "title",
         ProductMode.Playing => "playing",
         ProductMode.Paused => "paused",
         ProductMode.Modal => "modal",

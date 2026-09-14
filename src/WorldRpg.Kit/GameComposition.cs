@@ -360,6 +360,13 @@ public interface IGameSession : IDisposable { void PublishInitial(); ProductUpda
 /// </summary>
 public enum ProductMode
 {
+    /// <summary>
+    /// The entry screen owns the product: it shows the screen the product offers before a world
+    /// starts, so neither gameplay input nor world time reaches the session until the product leaves
+    /// this mode. A product that never enters it behaves exactly as it did before the mode existed.
+    /// </summary>
+    Title,
+
     /// <summary>Ordinary play: gameplay input is interpreted and world time advances.</summary>
     Playing,
 

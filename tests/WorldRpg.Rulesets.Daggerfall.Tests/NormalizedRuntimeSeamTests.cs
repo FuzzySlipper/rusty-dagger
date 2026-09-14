@@ -1607,6 +1607,10 @@ public sealed class NormalizedRuntimeSeamTests
         using (WorldRpgProduct product = new(new ProductCreateContext(engine.Context, FullContent(root), input)))
         {
             product.Start();
+            // The product a launcher starts shows its entry screen, and a client that has read it asks to
+            // begin; the admitted update under test is the first one that reaches the world.
+            Assert.Equal(ProductMode.Title, product.Mode);
+            product.Begin();
             ProductUpdateFacts facts = new(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d);
             Assert.Equal(ProductUpdateResult.None, product.Update(new ProductUpdate(facts, ReadOnlySpan<ProductInputEvent>.Empty)));
             Assert.Equal(1, spatial.StepCalls);
@@ -3987,6 +3991,59 @@ public sealed class NormalizedRuntimeSeamTests
 
         Assert.Equal(EnemyBehaviorState.Idle, session.LastEnemyBehavior[2000].State);
         Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+    }
+
+    /// <summary>
+    /// The entry-screen mode the title screen owns: while it holds, no world time and no gameplay input
+    /// reach the session, it asks the product for nothing on its own, and the projection names it so the
+    /// thin UI knows which screen the mode is showing.
+    /// </summary>
+    [Fact]
+    public void The_entry_screen_mode_holds_the_world_and_names_itself_on_the_wire()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+
+        // The product decides the mode, which is what the session applies.
+        session.ApplyProductMode(ProductMode.Title);
+        Assert.Equal(ProductMode.Title, session.Mode);
+
+        // The screen is up, so the world is not: an admitted update with held movement in it takes no
+        // step, and the projection still publishes so the screen can be read.
+        int stepsBefore = spatial.StepCalls;
+        session.Update(new ProductUpdate(OuterUpdate(1), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
+        Assert.Equal(stepsBefore, spatial.StepCalls);
+        Assert.Equal("title", engine.PublishedField("mode"));
+
+        // The session asks the product for nothing while the entry screen holds: it has no loot container
+        // to follow, and the mode is the product's own decision rather than one it reports.
+        Assert.Null(session.PendingModeRequest);
+
+        // A gameplay action read while the entry screen holds is dropped rather than acted on, so a key
+        // pressed during the screen cannot land in the world behind it.
+        ProductInputEvent loot = Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes("""{"action":"loot"}"""),
+        };
+        session.Update(new ProductUpdate(OuterUpdate(2), [loot]));
+        Assert.Null(session.OpenLoot);
+        Assert.Equal(ProductMode.Title, session.Mode);
+        Assert.Equal(stepsBefore, spatial.StepCalls);
+
+        // Leaving the entry screen is the product's transition, and ordinary play resumes under it.
+        session.ApplyProductMode(ProductMode.Playing);
+        Assert.Equal("playing", engine.PublishedField("mode"));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.True(spatial.StepCalls > stepsBefore, "ordinary play admits world time again");
     }
 
     /// <summary>A session whose one placed enemy can see the player at the given distance.</summary>
