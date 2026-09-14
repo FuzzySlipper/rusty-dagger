@@ -208,8 +208,8 @@ public sealed class BlockInventoryTests
         DaggerfallBlockRecord first = blocks.Records[0];
         DaggerfallBlockRecord second = blocks.Records[1];
 
-        Assert.Contains("carries ordinal 0 where the section is ordered by ordinal and the previous record was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 0 }) }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("carries ordinal 3 where the section is ordered by ordinal and the previous record was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 3 }) }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("carries ordinal 0 where the section is ordered by ordinal and the previous record of 'local/arena2/BLOCKS.BSA' was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 0 }) }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("carries ordinal 3 where the section is ordered by ordinal and the previous record of 'local/arena2/BLOCKS.BSA' was 0", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, 1, second with { Ordinal = 3 }) }).Validate()).Message, StringComparison.Ordinal);
         Assert.Equal(0, first.Ordinal);
     }
 
@@ -267,6 +267,30 @@ public sealed class BlockInventoryTests
     }
 
     [Fact]
+    public void Orders_each_sources_ordinals_separately()
+    {
+        // A record's ordinal is its own archive's directory position, so two archives both begin at zero.
+        // Reading the ordinals as one global sequence would refuse a section the producer can build.
+        BlockRecordInventory first = BlockRecordInventoryReader.Read(NamedArchive(("B0000000.RDI", new byte[512]), ("B0000001.RDI", new byte[512])), "first/BLOCKS.BSA");
+        BlockRecordInventory second = BlockRecordInventoryReader.Read(NamedArchive(("B0000002.RDI", new byte[512])), "second/BLOCKS.BSA");
+        DaggerfallBlocks blocks = new(
+            DaggerfallBlocks.CurrentSchemaVersion,
+            [Source(first, "first/BLOCKS.BSA"), Source(second, "second/BLOCKS.BSA")],
+            [.. first.Records.Select(record => Publish(record, "first/BLOCKS.BSA")), .. second.Records.Select(record => Publish(record, "second/BLOCKS.BSA"))]);
+
+        blocks.Validate();
+        Assert.Equal([0, 1, 0], blocks.Records.Select(record => record.Ordinal));
+
+        // The same ordinals out of order inside one source are still refused, and so is a source that
+        // reappears after another one has been published.
+        DaggerfallBlocks skipped = blocks with { Records = [.. blocks.Records.Take(1), blocks.Records[1] with { Ordinal = 5 }, blocks.Records[2]] };
+        Assert.Contains("carries ordinal 5 where the section is ordered by ordinal and the previous record of 'first/BLOCKS.BSA' was 0", Assert.Throws<InvalidOperationException>(() => skipped.Validate()).Message, StringComparison.Ordinal);
+
+        DaggerfallBlocks interleaved = blocks with { Records = [.. blocks.Records, blocks.Records[0]] };
+        Assert.Contains("is interleaved with another source rather than grouped", Assert.Throws<InvalidOperationException>(() => interleaved.Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Refuses_a_source_whose_declared_count_is_not_what_the_section_carries()
     {
         DaggerfallBlocks blocks = Supplied();
@@ -309,6 +333,25 @@ public sealed class BlockInventoryTests
         Assert.Equal([BlockRecordKind.Rdi, BlockRecordKind.Unknown, BlockRecordKind.Rdi], inventory.Records.Select(record => record.Kind));
         Assert.Equal([BlockRecordDisposition.DonorUnsupported, BlockRecordDisposition.UnknownKind, BlockRecordDisposition.DonorUnsupported], inventory.Records.Select(record => record.Disposition));
     }
+
+    private static DaggerfallBlockSource Source(BlockRecordInventory inventory, string path) =>
+        new("CNT-005", path, 4 + inventory.Records.Sum(record => record.ByteLength), inventory.DeclaredRecords, inventory.Records.Count);
+
+    private static DaggerfallBlockRecord Publish(BlockRecord record, string path) =>
+        new(
+            record.Ordinal,
+            record.SourceKey,
+            path,
+            (DaggerfallBlockKind)record.Kind,
+            (DaggerfallBlockDisposition)record.Disposition,
+            record.Offset,
+            record.ByteLength,
+            (DaggerfallBlockState)record.State,
+            record.Reason,
+            null,
+            null,
+            null,
+            null);
 
     private static DaggerfallBlocks Supplied() => DaggerfallBlocksBuilder.Build(
         File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/BLOCKS.BSA")),
