@@ -76,11 +76,13 @@ public sealed class PublishedContentDeliveryTests
         // The families this repository cannot read at all are stated with their files and the donor
         // anchor, so a consumer that finds no artifact for one of them can tell "not published" from
         // "not readable" instead of guessing.
-        (string Family, string[] Files, string Anchor)[] unreadable =
+        (string Family, string Kind, string Reason, string[] Files, string Anchor)[] unreadable =
         [
             .. inventory.GetProperty("unreadableFamilies").EnumerateArray()
                 .Select(family => (
                     family.GetProperty("family").GetString()!,
+                    family.GetProperty("kind").GetString()!,
+                    family.GetProperty("reason").GetString()!,
                     family.GetProperty("files").EnumerateArray().Select(file => file.GetString()!).ToArray(),
                     family.GetProperty("donorAnchor").GetString()!)),
         ];
@@ -88,6 +90,14 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(["MAGE.CEL", "ROGUE.CEL", "WARRIOR.CEL"], unreadable.Single(family => family.Family == ".CEL").Files);
         Assert.Equal(["CMPA00I0.BSS", "CMPA01I0.BSS", "CMPA02I0.BSS"], unreadable.Single(family => family.Family == ".BSS").Files);
         Assert.All(unreadable, family => Assert.StartsWith("Assets/Scripts/API/", family.Anchor, StringComparison.Ordinal));
+        // The reason says which half is missing: these containers are read here, so the gap is a missing
+        // publisher rather than a missing decoder, and the kind names what the file actually carries.
+        Assert.Equal(["class-question animation", "compass sprite bank"], unreadable.Select(family => family.Kind).Order(StringComparer.Ordinal));
+        Assert.All(unreadable, family =>
+        {
+            Assert.Contains("no publisher", family.Reason, StringComparison.Ordinal);
+            Assert.DoesNotContain("no decoder", family.Reason, StringComparison.Ordinal);
+        });
 
         // The six screens drawn with the palette inside their own file state that conversion fact with
         // its donor anchor, so a consumer can tell why their colours are what they are - and nothing

@@ -254,7 +254,7 @@ public enum ClassicUiImage
     /// <summary>The character-generation screen, which carries its own palette.</summary>
     CharacterGenerationScreen,
 
-    /// <summary>The class and background pick screen (donor <c>CreateCharClassQuestions</c>), which carries its own palette.</summary>
+    /// <summary>The pick screen, which carries its own palette. No donor window this repository has read names its file, so its consumer is unconfirmed.</summary>
     PickScreen02,
 
     /// <summary>The start window's menu background (donor <c>DaggerfallStartWindow</c>), which carries its own palette.</summary>

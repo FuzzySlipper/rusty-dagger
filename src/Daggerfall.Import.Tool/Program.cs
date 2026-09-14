@@ -743,14 +743,15 @@ internal static class Program
             return entry;
         }
 
-        // A family this repository cannot read is stated rather than left as an absence: a consumer that
-        // finds no artifact for one of these files must be able to tell "not published" from "not
-        // readable", and the donor anchor says where the original behaviour lives.
+        // A family that carries no published canvas is stated rather than left as an absence, and the
+        // reason says which half is missing: these two containers are read here, so the gap is a missing
+        // publisher rather than a missing decoder, and the donor anchor says where the original
+        // behaviour lives.
         JsonArray unreadable = [];
-        foreach ((string family, string reason, string anchor) in new[]
+        foreach ((string family, string kind, string reason, string anchor) in new[]
         {
-            (".CEL", "no decoder in this repository: the classic animation is colour-cycled and the donor reads it through its own FLC reader", "Assets/Scripts/API/FlcFile.cs"),
-            (".BSS", "no decoder in this repository: the donor reads these sound-bank streams through its own BSS reader", "Assets/Scripts/API/BssFile.cs"),
+            (".CEL", "class-question animation", "no publisher in this repository: the FLC container and its frames are read, but no artifact is published from them and nothing plays them back, so the file carries no canvas here", "Assets/Scripts/API/FlcFile.cs"),
+            (".BSS", "compass sprite bank", "no publisher in this repository: the BSS container's image frames are read, but no artifact is published from them, so the compass the donor draws from these files has no published canvas here", "Assets/Scripts/API/BssFile.cs"),
             // No family entry for the CIF files: most of the corpus's CIFs are weapon, armour and painting
             // grammars this repository reads and publishes, and the face grammar it refuses is refused by
             // name when a face is read rather than being a family that carries no artifact at all.
@@ -765,6 +766,7 @@ internal static class Program
             unreadable.Add(new JsonObject
             {
                 ["family"] = family,
+                ["kind"] = kind,
                 ["files"] = new JsonArray([.. files.Select(file => JsonValue.Create(file))]),
                 ["reason"] = reason,
                 ["donorAnchor"] = anchor,

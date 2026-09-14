@@ -134,8 +134,8 @@ public sealed class Arena2ClassicMediaPublicationTests
                 ClassicUiSlot.CharacterGeneration, ClassicUiSlot.Pick, ClassicUiSlot.StartMenu, ClassicUiSlot.Prison, ClassicUiSlot.Title,
             ],
             first.UiImages.Select(image => image.Slot).Distinct().OrderBy(slot => slot));
-        // The five supplied screens carry their own palettes, so each fills its own slot; the two pick
-        // screens share one, because a consumer choosing a class binds both.
+        // The five supplied screens carry their own palettes, so each fills a slot of its own; the pick
+        // screen keeps the pick slot, and the start-menu and prison screens have theirs.
         Assert.Equal(
             ["screen.character-generation", "screen.pick.02", "screen.prison", "screen.start-menu", "screen.title"],
             first.UiImages.Where(image => image.Slot is ClassicUiSlot.CharacterGeneration or ClassicUiSlot.Pick or ClassicUiSlot.StartMenu or ClassicUiSlot.Prison or ClassicUiSlot.Title)
