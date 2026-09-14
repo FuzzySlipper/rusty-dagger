@@ -13,11 +13,20 @@ internal sealed class DaggerfallOutcomePresentation(
     IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
     Func<DaggerfallMeleeTargetingEvidence?>? meleeEvidence = null)
 {
+    // Whether the published line reports something that happened rather than something that did not.
+    private bool _lineIsResult;
+
     internal void React(IProductFact fact)
     {
         switch (fact)
         {
             case AttackRejectedFact rejected:
+                // A rejection is about an action that did not happen, and a held attack button produces
+                // one every update. It therefore yields to a result that is still fresh: the line the
+                // player needs to read is what happened, not that the same denied swing was denied
+                // again sixteen milliseconds later.
+                if (_lineIsResult && presentation.LastOutcome.Length != 0) break;
+                _lineIsResult = false;
                 presentation.SetOutcome(rejected.Reason switch
                 {
                     AttackRejection.MissingPlayerPosition => "No authored player position",
@@ -33,12 +42,15 @@ internal sealed class DaggerfallOutcomePresentation(
                 });
                 break;
             case AttackMissedFact missed when Actor(missed.TargetId, out DaggerfallActorDefinition definition):
+                _lineIsResult = true;
                 presentation.SetOutcome(missed.EnemyAttack ? $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})" : $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})");
                 break;
             case AttackHitFact hit when Actor(hit.TargetId, out DaggerfallActorDefinition definition):
+                _lineIsResult = true;
                 presentation.SetOutcome(hit.EnemyAttack ? $"Hit {definition.Id.Value} for {hit.Damage} damage" : $"Hit {definition.Id.Value} for {hit.Damage} damage");
                 break;
             case ActorDiedFact died when Actor(died.ActorId, out DaggerfallActorDefinition definition):
+                _lineIsResult = true;
                 presentation.SetOutcome($"Defeated {definition.Id} for {died.AppliedDamage} damage; gained {definition.Rewards.ExperienceReward} XP");
                 break;
             case LootAwardedFact loot:
