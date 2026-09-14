@@ -2898,8 +2898,9 @@
       "interpretation": "fixed-melee",
       "skill": "hand-to-hand",
       "cooldownSeconds": 1.5,
-      "attackRangeIndex": 0
-    , "reach": 2.0},
+      "attackRangeIndex": 0,
+      "reach": 2.0
+    },
     {
       "id": "skeleton-strike",
       "tags": [
@@ -2909,8 +2910,9 @@
       "interpretation": "fixed-melee",
       "skill": "long-blade",
       "cooldownSeconds": 2,
-      "attackRangeIndex": 0
-    , "reach": 2.0},
+      "attackRangeIndex": 0,
+      "reach": 2.0
+    },
     {
       "id": "archer-shot",
       "tags": [
@@ -2934,8 +2936,9 @@
       "skill": "short-blade",
       "cooldownSeconds": 1.2,
       "minimumDamage": 2,
-      "maximumDamage": 8
-    , "reach": 2.0},
+      "maximumDamage": 8,
+      "reach": 2.0
+    },
     {
       "id": "power-attack",
       "tags": [
