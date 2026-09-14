@@ -250,6 +250,14 @@ public sealed class WorldRpgProduct : IEngineProduct
             return;
         }
 
+        if (_mode == ProductMode.Title)
+        {
+            // Replacing a session that has not begun would be the same run started twice, and it would put
+            // the entry screen behind the world without the client having asked to leave it.
+            Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the entry screen leaves only for ordinary play; begin first"));
+            return;
+        }
+
         IGameSession replacement = _ruleset.CreateSession(new GameSessionContext(_context.Engine, _composition));
         IGameSession previous = _session;
         try
