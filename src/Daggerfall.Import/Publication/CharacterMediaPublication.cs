@@ -8,22 +8,43 @@ namespace Daggerfall.Import.Normalization;
 
 /// <summary>One published character canvas: its media identity and the PNG written for it.</summary>
 /// <param name="Reference">The canvas reference this artifact is the emission of.</param>
-/// <param name="RelativePath">The content-relative path the artifact is written to.</param>
+/// <param name="RelativePath">The content-group-relative path the artifact is written to, without the group.</param>
 /// <param name="Bytes">The encoded PNG.</param>
 /// <param name="Width">The canvas width in pixels.</param>
 /// <param name="Height">The canvas height in pixels.</param>
-public sealed record CharacterMediaArtifact(CharacterCanvasReference Reference, string RelativePath, byte[] Bytes, int Width, int Height)
+/// <param name="Palette">The palette the pixels were actually painted in, which is not always the one the reference names.</param>
+/// <param name="OwnPalette">Whether that palette came from the source container rather than from a supplied file.</param>
+public sealed record CharacterMediaArtifact(
+    CharacterCanvasReference Reference,
+    string RelativePath,
+    byte[] Bytes,
+    int Width,
+    int Height,
+    Arena2Palette Palette,
+    bool OwnPalette)
 {
     /// <summary>The stable identity of this canvas as a published artifact.</summary>
     public string MediaId => Reference.MediaId;
+
+    /// <summary>
+    /// Where the painting palette came from, which is a fact about the colours a consumer inherits: a
+    /// container's own palette is inside the source bytes and a supplied palette is a file beside it.
+    /// </summary>
+    public string PaletteSource => OwnPalette
+        ? CharacterMediaPublisher.EmbeddedPaletteSource
+        : CharacterMediaPublisher.SuppliedPaletteSource;
 }
 
 /// <summary>
 /// One published character canvas as the generated index states it, so a consumer resolves a media
 /// identity to bytes and can tell what the artifact was decoded from.
 /// </summary>
+/// <remarks>
+/// The entry carries the same <c>path</c>, <c>byteLength</c> and <c>sha256</c> keys the classic media index
+/// uses, so one reader resolves an artifact of either group rather than special-casing the key.
+/// </remarks>
 /// <param name="MediaId">The stable identity of the canvas.</param>
-/// <param name="RelativePath">The content-group-relative path the artifact is written to.</param>
+/// <param name="Path">The content-group-relative path the artifact is written to, without the group.</param>
 /// <param name="ByteLength">The artifact's length in bytes.</param>
 /// <param name="Sha256">The artifact's digest, so a consumer can refuse bytes that are not these.</param>
 /// <param name="Width">The canvas width in pixels.</param>
@@ -37,7 +58,7 @@ public sealed record CharacterMediaArtifact(CharacterCanvasReference Reference, 
 /// <param name="Consumer">The consumer that binds it, or the inventory's label for one that does not.</param>
 public sealed record CharacterMediaIndexEntry(
     string MediaId,
-    string RelativePath,
+    string Path,
     long ByteLength,
     string Sha256,
     int Width,
@@ -150,7 +171,14 @@ public static class CharacterMediaPublication
             }
 
             byte[] png = Encode(canvas.Width, canvas.Height, canvas.Pixels, named);
-            artifacts.Add(new CharacterMediaArtifact(reference, $"media/character/{Slug(reference.MediaId)}.png", png, canvas.Width, canvas.Height));
+            artifacts.Add(new CharacterMediaArtifact(
+                reference,
+                $"media/character/{Slug(reference.MediaId)}.png",
+                png,
+                canvas.Width,
+                canvas.Height,
+                named,
+                canvas.OwnPalette is not null));
         }
 
         return new CharacterMediaPublicationResult(artifacts, refusals);

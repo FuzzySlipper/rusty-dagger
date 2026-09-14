@@ -280,69 +280,56 @@ public static class CharacterMediaReferences
     }
 
     /// <summary>
-    /// The supplied files one race's paper doll is drawn from: the layers the ruleset resolves for a
-    /// race, and the class portraits any career's sheet draws.
+    /// The supplied files a character sheet resolves: every race's background and paper-doll layers, and
+    /// every class portrait the corpus supplies.
     /// </summary>
     /// <remarks>
-    /// A published reference is <c>MediaBinding.Admitted</c> when a published consumer binds the file,
-    /// so the set has to come from the consumer rather than from the publisher: the character sheet
-    /// resolves exactly one race's background, bodies and heads at a time — the race the player's actor
-    /// declares — plus a career portrait for any career the corpus depicts. Every other supplied file
-    /// stays <c>RequiredPending</c> even though its canvas is published, because no consumer resolves it
-    /// yet; the character-creation task that lets a player choose a race is what binds the rest.
+    /// A published reference is <c>MediaBinding.Admitted</c> when a published consumer binds the file, so the
+    /// set comes from the consumer's domain rather than from the publisher's: the sheet resolves a race
+    /// through <c>DaggerfallCharacterPresentationSet.RequireRace</c> for any of the eight races the catalogs
+    /// publish, taking that race's background, both genders' bodies and its head CIFs, and a career's
+    /// portrait for any career the corpus depicts. The pack publishes all eight races' layers for exactly
+    /// that reason, so binding only the race one actor happens to declare would leave seven races' live
+    /// references labelled unclaimed.
     /// <para>
-    /// The portraits are bound by the family rule rather than by the pack's careers: the sheet resolves a
-    /// portrait for whichever career an actor declares, and all three supplied portraits are reachable
-    /// that way.
+    /// What stays unbound is what no consumer resolves: the faction face grid, whose cells nothing here
+    /// slices the pixels of, and the story and compass families, which have no character-sheet role.
     /// </para>
     /// </remarks>
     /// <param name="inventory">The supplied files, which are the candidate bindings.</param>
-    /// <param name="donorRaceId">
-    /// The donor's own race value, which is one-based: the paper-doll file names are zero-based, so race
-    /// value 1 is drawn from the <c>*00*</c> files, exactly as the presentation builder reads them. A
-    /// value with no paper-doll subclass binds nothing.
-    /// </param>
-    public static IReadOnlySet<string> FilesBoundByCharacterSheet(CharacterMediaInventory inventory, int donorRaceId)
+    public static IReadOnlySet<string> FilesBoundByCharacterSheet(CharacterMediaInventory inventory)
     {
         ArgumentNullException.ThrowIfNull(inventory);
-        Dictionary<string, string> supplied = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> bound = new(StringComparer.OrdinalIgnoreCase);
         foreach (CharacterMediaRecord file in inventory.Files)
         {
-            supplied[System.IO.Path.GetFileName(file.Path)] = file.Path;
-        }
-
-        HashSet<string> bound = new(StringComparer.OrdinalIgnoreCase);
-        // The paper-doll layers, by the same naming rule the presentation builder resolves: a background
-        // per race, both genders' bodies, and the ten heads a face CIF carries per gender. The background
-        // is the file a prefix rule would miss - its name is not a layer of a race, it is the scene the
-        // race is drawn in.
-        if (donorRaceId is >= 1 and <= 8)
-        {
-            int media = donorRaceId - 1;
-            string[] layers =
-            [
-                $"SCBG{media:00}I0.IMG",
-                $"BODY{media:00}I0.IMG",
-                $"BODY{media:00}I1.IMG",
-                $"BODY{media + 10:00}I0.IMG",
-                $"BODY{media + 10:00}I1.IMG",
-                $"FACE{media:00}I0.CIF",
-                $"FACE{media + 10:00}I0.CIF",
-            ];
-            foreach (string layer in layers)
+            // A file is bound when the sheet has a layer that resolves it: a paper-doll name encodes a race
+            // and a layer, a background names the scene a race is drawn in, and a class portrait is the
+            // family the sheet's portrait lookup draws from.
+            string name = System.IO.Path.GetFileNameWithoutExtension(file.Path).ToUpperInvariant();
+            if (file.Family == "CEL" || TryRaceAndGender(name, out _, out _) || IsRaceBackground(name))
             {
-                if (supplied.TryGetValue(layer, out string? path)) bound.Add(path);
+                bound.Add(file.Path);
             }
         }
 
-        // A career portrait is drawn whichever class an actor declares, so every supplied one is bound by
-        // the family rule rather than by the pack's careers.
-        foreach (CharacterMediaRecord file in inventory.Files.Where(file => file.Family == "CEL"))
-        {
-            bound.Add(file.Path);
-        }
-
         return bound;
+    }
+
+    /// <summary>
+    /// Whether a file name is a race background. The name is the donor's <c>SCBG{race}I0</c>, and the
+    /// presentation builder resolves one per catalog race, so the numbering a background carries is the same
+    /// zero-based race the paper-doll files use.
+    /// </summary>
+    private static bool IsRaceBackground(string nameWithoutExtension)
+    {
+        const string Prefix = "SCBG";
+        return nameWithoutExtension.Length == 8
+            && nameWithoutExtension.StartsWith(Prefix, StringComparison.Ordinal)
+            && nameWithoutExtension[6] == 'I'
+            && nameWithoutExtension[7] == '0'
+            && int.TryParse(nameWithoutExtension.AsSpan(4, 2), out int race)
+            && race is >= 0 and <= 7;
     }
 
     /// <summary>

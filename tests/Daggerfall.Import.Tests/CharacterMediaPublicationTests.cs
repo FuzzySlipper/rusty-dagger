@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalization;
+using Daggerfall.Import.Publication;
 using Xunit;
 
 namespace Daggerfall.Import.Tests;
@@ -105,6 +106,82 @@ public sealed class CharacterMediaPublicationTests
     }
 
     /// <summary>
+    /// The colours a published canvas carries come from the palette its own reference names, checked against
+    /// the pixels rather than against the encoded bytes: a digest moves with whatever was written, so a pass
+    /// that painted every canvas in the wrong palette would still hash to something consistent.
+    /// </summary>
+    [Fact]
+    public void PublishesEachCanvasInThePaletteItsSourceFilePairsWith()
+    {
+        (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
+        List<(string Path, ReadOnlyMemory<byte> Bytes)> supplied = [.. sources.Select(entry => (entry.Key, entry.Value))];
+        CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(supplied, new HashSet<string>(StringComparer.Ordinal), "arena2");
+        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal));
+        CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(set, sources, palettes, inventory);
+        Dictionary<string, CharacterMediaArtifact> artifacts = pass.Artifacts.ToDictionary(artifact => artifact.MediaId, StringComparer.Ordinal);
+
+        // A NITE canvas is paired with NIGHTSKY.COL and a BODY canvas with ART_PAL.COL, and the two palettes
+        // differ in every opaque pixel of a NITE canvas - which is what makes a swapped pair visible here.
+        IndexedImg nite = NiteskyCanvas();
+        AssertOpaquePixels(artifacts["character.nite.nite00i0.0"], nite.Pixels, palettes["NIGHTSKY.COL"]);
+        AssertOpaquePixels(artifacts["character.body-unclothed.male.00.0"], BodyCanvas(), palettes["ART_PAL.COL"]);
+
+        // The two palettes really do disagree on the NITE canvas, so the check above cannot pass by accident
+        // on a corpus where every palette happened to match.
+        Assert.True(
+            palettes["NIGHTSKY.COL"].ToRgba(nite.Pixels.Span, PaletteAlphaMode.IndexZeroTransparent)
+                .Where((color, index) => color.Alpha != 0 && palettes["ART_PAL.COL"].ToRgba(nite.Pixels.Span, PaletteAlphaMode.IndexZeroTransparent)[index] != color)
+                .Any(),
+            "NIGHTSKY.COL and ART_PAL.COL paint a NITE canvas identically, so this check would not catch a swapped palette.");
+
+        // A career portrait is painted in the palette its own container carries, and that palette is not the
+        // shared art palette: MAGE.CEL's frame 0 differs from ART_PAL.COL on every one of its pixels.
+        CharacterMediaArtifact portrait = artifacts["character.portrait.mage.0"];
+        IReadOnlyList<FlcDecoder.FlcFrameImage> frames = FlcDecoder.DecodeFrames(sources["MAGE.CEL"].Span, "MAGE.CEL", out Arena2Palette? own);
+        Assert.NotNull(own);
+        Assert.Equal((110, 119, frames[0].Width, frames[0].Height), (portrait.Width, portrait.Height, frames[0].Width, frames[0].Height));
+        AssertOpaquePixels(portrait, frames[0].Pixels, own);
+        Assert.NotEqual(
+            [.. own.ToRgba(frames[0].Pixels, PaletteAlphaMode.IndexZeroTransparent)],
+            [.. palettes["ART_PAL.COL"].ToRgba(frames[0].Pixels, PaletteAlphaMode.IndexZeroTransparent)]);
+    }
+
+    /// <summary>Whether every opaque pixel of a published canvas is the colour its palette gives that index.</summary>
+    private static void AssertOpaquePixels(CharacterMediaArtifact artifact, ReadOnlyMemory<byte> indexed, Arena2Palette palette)
+    {
+        Assert.Equal(indexed.Length, artifact.Width * artifact.Height);
+        DeterministicPngImage published = DeterministicPngReader.ReadRgba8(artifact.Bytes, artifact.MediaId);
+        Rgba32[] expected = palette.ToRgba(indexed.Span, PaletteAlphaMode.IndexZeroTransparent);
+        int compared = 0;
+        for (int index = 0; index < expected.Length; index++)
+        {
+            byte r = published.Rgba[(index * 4) + 0];
+            byte g = published.Rgba[(index * 4) + 1];
+            byte b = published.Rgba[(index * 4) + 2];
+            byte a = published.Rgba[(index * 4) + 3];
+            Assert.Equal(
+                (expected[index].Red, expected[index].Green, expected[index].Blue, expected[index].Alpha),
+                (r, g, b, a));
+            if (a != 0) compared++;
+        }
+
+        Assert.True(compared > 0, $"'{artifact.MediaId}' published no opaque pixel, so its palette is not observable.");
+    }
+
+    /// <summary>The indexed pixels of NITE00I0.IMG, which is a headerless 512x219 canvas.</summary>
+    private static IndexedImg NiteskyCanvas()
+    {
+        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
+        return ImgDecoder.DecodeHeaderless(File.ReadAllBytes(Path.Combine(arena2, "NITE00I0.IMG")), "NITE00I0.IMG");
+    }
+
+    private static ReadOnlyMemory<byte> BodyCanvas()
+    {
+        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
+        return ImgDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, "BODY00I0.IMG")), "BODY00I0.IMG").Pixels;
+    }
+
+    /// <summary>
     /// The whole pass over the real corpus: every readable canvas becomes an artifact, the formats this
     /// repository cannot read are named with their files, and the committed index is byte-for-byte what
     /// the pass regenerates - so an index that drifted from the corpus cannot stay committed.
@@ -161,19 +238,17 @@ public sealed class CharacterMediaPublicationTests
         });
 
         // The committed index is the pass's own output, regenerated for the same consumer the committed
-        // pack names: the same 264 canvases with the same digests, the same bindings, and the same two
-        // families absent, so an index that drifted from the corpus or from its producer cannot stay.
-        int playerRace = PlayerDonorRaceId();
+        // pack names and under the same content group, so an index that drifted from the corpus, from its
+        // producer, or from the group naming cannot stay committed.
         CharacterMediaReferenceSet boundSet = CharacterMediaReferences.WithBoundFiles(
             set,
-            CharacterMediaReferences.FilesBoundByCharacterSheet(inventory, playerRace),
+            CharacterMediaReferences.FilesBoundByCharacterSheet(inventory),
             CharacterMediaReferences.CharacterSheetConsumer);
         string committed = Path.Combine(RepositoryRoot(), "content/worldrpg/media/character/character-media-inventory.json");
-        byte[] regenerated = CharacterMediaPublisher.WriteIndex(pass, boundSet);
+        byte[] regenerated = CharacterMediaPublisher.WriteIndex(pass, boundSet, "worldrpg");
 
-        // The publication states group-relative paths because it does not name the content group; the
-        // committed index is content-relative because that is the name a consumer reads. The group prefix
-        // is the only difference, which is what keeps the two conventions from drifting apart silently.
+        // Every field of every entry, not a sampled handful: a hand-edited byte length, dimension, family,
+        // source file or palette fact has to fail here rather than pass on the fields that did not move.
         using JsonDocument published = JsonDocument.Parse(regenerated);
         using JsonDocument delivered = JsonDocument.Parse(File.ReadAllBytes(committed));
         JsonElement[] written = [.. published.RootElement.GetProperty("artifacts").EnumerateArray()];
@@ -181,34 +256,15 @@ public sealed class CharacterMediaPublicationTests
         Assert.Equal(written.Length, shipped.Length);
         for (int position = 0; position < written.Length; position++)
         {
-            Assert.Equal(written[position].GetProperty("mediaId").GetString(), shipped[position].GetProperty("mediaId").GetString());
-            Assert.Equal($"worldrpg/{written[position].GetProperty("relativePath").GetString()}", shipped[position].GetProperty("relativePath").GetString());
-            Assert.Equal(written[position].GetProperty("sha256").GetString(), shipped[position].GetProperty("sha256").GetString());
-            Assert.Equal(written[position].GetProperty("binding").GetString(), shipped[position].GetProperty("binding").GetString());
-            Assert.Equal(written[position].GetProperty("consumer").GetString(), shipped[position].GetProperty("consumer").GetString());
+            Assert.Equal(
+                [.. written[position].EnumerateObject().Select(property => $"{property.Name}={property.Value.GetRawText()}")],
+                [.. shipped[position].EnumerateObject().Select(property => $"{property.Name}={property.Value.GetRawText()}")]);
         }
 
         Assert.Equal(
             published.RootElement.GetProperty("unreadableFamilies").GetRawText(),
             delivered.RootElement.GetProperty("unreadableFamilies").GetRawText());
     }
-
-    /// <summary>
-    /// The donor race value of the pack's player actor, read from the published pack: the binding is the
-    /// sheet's own race, so the check that it is right reads the same authored fact the tool does.
-    /// </summary>
-    private static int PlayerDonorRaceId()
-    {
-        using JsonDocument pack = JsonDocument.Parse(File.ReadAllBytes(PackPath()));
-        JsonElement player = pack.RootElement.GetProperty("actors").EnumerateArray()
-            .Single(actor => actor.GetProperty("id").GetString() == "player");
-        string race = player.GetProperty("race").GetString()!;
-        return pack.RootElement.GetProperty("catalogs").GetProperty("races").EnumerateArray()
-            .Single(value => value.GetProperty("id").GetString() == race)
-            .GetProperty("donorRaceId").GetInt32();
-    }
-
-    private static string PackPath() => Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json");
 
     /// <summary>
     /// A binding is what a published consumer establishes, not what the pass published: the sheet's own
@@ -223,23 +279,23 @@ public sealed class CharacterMediaPublicationTests
         CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(supplied, new HashSet<string>(StringComparer.Ordinal), "arena2");
         CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal));
 
-        // Breton is donor race 1, so the bound files are that race's own bodies, background and heads -
-        // the female files carry ten above the male's number - plus the three class portraits.
-        IReadOnlySet<string> bound = CharacterMediaReferences.FilesBoundByCharacterSheet(inventory, 1);
-        Assert.Equal(
-            [
-                "BODY00I0.IMG", "BODY00I1.IMG", "BODY10I0.IMG", "BODY10I1.IMG",
-                "FACE00I0.CIF", "FACE10I0.CIF", "MAGE.CEL", "ROGUE.CEL", "SCBG00I0.IMG", "WARRIOR.CEL",
-            ],
-            bound.Order(StringComparer.Ordinal));
-        // A race with no paper-doll media binds nothing beyond the portraits rather than being mapped onto
-        // another race's art.
-        Assert.Equal(["MAGE.CEL", "ROGUE.CEL", "WARRIOR.CEL"], CharacterMediaReferences.FilesBoundByCharacterSheet(inventory, 18).Order(StringComparer.Ordinal));
+        // The consumer's domain is every race the catalogs publish, so the bound files are all eight
+        // races' bodies, backgrounds and head CIFs - 8 BODY backgrounds, 32 bodies, 16 head CIFs - plus
+        // the three class portraits. The ninth SCBG file numbers a race the catalogs do not publish and
+        // stays unbound rather than being mapped onto one.
+        IReadOnlySet<string> bound = CharacterMediaReferences.FilesBoundByCharacterSheet(inventory);
+        Assert.Equal(59, bound.Count);
+        Assert.Equal(8, bound.Count(file => file.StartsWith("SCBG", StringComparison.Ordinal)));
+        Assert.Equal(32, bound.Count(file => file.StartsWith("BODY", StringComparison.Ordinal)));
+        Assert.Equal(16, bound.Count(file => file.StartsWith("FACE", StringComparison.Ordinal)));
+        Assert.All(bound.Where(file => file.StartsWith("SCBG", StringComparison.Ordinal)),
+            file => Assert.True(string.CompareOrdinal(file, "SCBG08I0.IMG") < 0, $"{file} names a race the catalogs do not publish."));
+        Assert.Equal(["MAGE.CEL", "ROGUE.CEL", "WARRIOR.CEL"], bound.Where(file => file.EndsWith(".CEL", StringComparison.Ordinal)).Order(StringComparer.Ordinal));
+        // The story and compass families have no character-sheet role, so no consumer binds them.
+        Assert.DoesNotContain("CMPA00I0.BSS", bound);
 
         CharacterMediaReferenceSet referenced = CharacterMediaReferences.WithBoundFiles(set, bound, CharacterMediaReferences.CharacterSheetConsumer);
-        Assert.Equal(
-            set.Canvases.Count(canvas => bound.Contains(System.IO.Path.GetFileName(canvas.Path))),
-            referenced.Canvases.Count(canvas => canvas.Binding == MediaBinding.Admitted));
+        Assert.Equal(240, referenced.Canvases.Count(canvas => canvas.Binding == MediaBinding.Admitted));
         Assert.All(referenced.Canvases.Where(canvas => canvas.Binding == MediaBinding.Admitted),
             canvas => Assert.Equal(CharacterMediaReferences.CharacterSheetConsumer, canvas.Consumer));
         // The rewrite does not touch a reference no consumer bound: it keeps the inventory's own label for
@@ -265,12 +321,112 @@ public sealed class CharacterMediaPublicationTests
             entries.Count(entry => entry.GetProperty("binding").GetString() == "admitted"));
         Assert.All(entries.Where(entry => entry.GetProperty("binding").GetString() == "admitted"),
             entry => Assert.Equal(CharacterMediaReferences.CharacterSheetConsumer, entry.GetProperty("consumer").GetString()));
-        // A canvas whose pixels the file carries states that, because a consumer that re-encodes it must
-        // not lose the fact that its colours came from the container.
+        // A canvas whose pixels the file carries states that, because a consumer that re-encodes it must not
+        // lose the fact that its colours came from the container - and it names the palette it was really
+        // painted in, by a digest of the container's own colours, rather than the palette a reference happens
+        // to carry. A consumer that repainted a portrait with the shared art palette would get other colours.
         Assert.All(entries.Where(entry => entry.GetProperty("sourceFile").GetString()!.EndsWith(".CEL", StringComparison.Ordinal)),
-            entry => Assert.Equal("embedded-in-source-file", entry.GetProperty("paletteSource").GetString()));
+            entry =>
+            {
+                Assert.Equal("embedded-in-source-file", entry.GetProperty("paletteSource").GetString());
+                Assert.StartsWith("embedded-palette-sha256:", entry.GetProperty("palette").GetString(), StringComparison.Ordinal);
+                Assert.DoesNotContain("ART_PAL", entry.GetProperty("palette").GetString(), StringComparison.Ordinal);
+            });
         Assert.All(entries.Where(entry => !entry.GetProperty("sourceFile").GetString()!.EndsWith(".CEL", StringComparison.Ordinal)),
-            entry => Assert.Equal("supplied-palette-file", entry.GetProperty("paletteSource").GetString()));
+            entry =>
+            {
+                Assert.Equal("supplied-palette-file", entry.GetProperty("paletteSource").GetString());
+                Assert.Equal(CharacterMediaReferences.PaletteFor(entry.GetProperty("sourceFile").GetString()!), entry.GetProperty("palette").GetString());
+            });
+    }
+
+    /// <summary>
+    /// Two references carrying one identity would publish one artifact under one name twice, which a consumer
+    /// could not resolve; the enumeration derives unique identities, so this guards the primitive against a
+    /// hand-built set rather than a case the derivation produces.
+    /// </summary>
+    [Fact]
+    public void RefusesTwoReferencesThatClaimOneMediaIdentity()
+    {
+        (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
+        List<(string Path, ReadOnlyMemory<byte> Bytes)> supplied = [.. sources.Select(entry => (entry.Key, entry.Value))];
+        CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(supplied, new HashSet<string>(StringComparer.Ordinal), "arena2");
+        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal));
+        string identity = set.Canvases[0].MediaId;
+        CharacterMediaReferenceSet duplicated = set with { Canvases = [.. set.Canvases, set.Canvases.Single(canvas => canvas.MediaId == identity) with { Path = "FACE00I0.CIF" }] };
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => CharacterMediaPublisher.PublishAll(duplicated, sources, palettes, inventory));
+        Assert.Contains(identity, error.Message, StringComparison.Ordinal);
+        Assert.Contains("more than one canvas reference", error.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A family entry says what is true of the family it names. The FACE family publishes 160 canvases here,
+    /// so an entry that claimed nothing reads the FACE format would be false in the same run that reads it -
+    /// while a BSS container really does read and really does have no pixel decoder.
+    /// </summary>
+    [Fact]
+    public void StatesEachUnpublishableFamilyWithACauseThatMatchesTheRun()
+    {
+        (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
+        List<(string Path, ReadOnlyMemory<byte> Bytes)> supplied = [.. sources.Select(entry => (entry.Key, entry.Value))];
+        CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(supplied, new HashSet<string>(StringComparer.Ordinal), "arena2");
+        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal));
+        CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(set, sources, palettes, inventory);
+
+        Assert.Equal(["BSS", "FACE"], pass.UnreadableFamilies.Select(family => family.Family));
+        CharacterMediaUnreadableFamily bss = pass.UnreadableFamilies[0];
+        Assert.Equal("BSS sprite container", bss.Kind);
+        Assert.Contains("missing pixel decoder", bss.Reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("nothing in this repository reads", bss.Reason, StringComparison.Ordinal);
+        Assert.Equal("Assets/Scripts/API/BssFile.cs", bss.DonorAnchor);
+        CharacterMediaUnreadableFamily grid = pass.UnreadableFamilies[1];
+        Assert.Equal("fixed-cell RCI grid", grid.Kind);
+        Assert.Contains("nothing in this repository slices a cell's pixels", grid.Reason, StringComparison.Ordinal);
+        // The grid has no donor reader to name: the donor reads the grid and this repository enumerates its
+        // cells, so naming a reader here would be naming the wrong gap.
+        Assert.Equal(string.Empty, grid.DonorAnchor);
+
+        // Every file either family names is one the pass actually refused, and the aggregate covers them
+        // exactly: an entry that claimed a file the run published would be the false claim in one direction.
+        string[] refusedFiles = [.. pass.Refusals
+            .SelectMany(refusal => pass.UnreadableFamilies.SelectMany(family => family.Files).Where(file => refusal.Contains(file, StringComparison.Ordinal)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)];
+        Assert.Equal(
+            pass.UnreadableFamilies.SelectMany(family => family.Files).Order(StringComparer.OrdinalIgnoreCase),
+            refusedFiles);
+        Assert.All(pass.UnreadableFamilies.SelectMany(family => family.Files), file => Assert.DoesNotContain(
+            pass.Artifacts,
+            artifact => System.IO.Path.GetFileName(artifact.Reference.Path).Equals(file, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>
+    /// The documented character-media inventory and the supplied corpus have to agree, which is what the
+    /// tool's <c>--inventory</c> argument is for: a documented file the corpus lacks would make the
+    /// publication account for a family the source does not carry, and a supplied file with no row is
+    /// content this publication would emit without a record.
+    /// </summary>
+    [Fact]
+    public void TheDocumentedInventoryAndTheSuppliedCorpusAgree()
+    {
+        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(
+            File.ReadAllBytes(Path.Combine(RepositoryRoot(), "docs/coverage/content-source-manifest.csv")));
+        string[] documented = [.. rows
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-021"))
+            .Select(row => System.IO.Path.GetFileName(row.PathOrPattern))
+            .Order(StringComparer.OrdinalIgnoreCase)];
+        Assert.Equal(87, documented.Length);
+
+        string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
+        string[] supplied = [.. Directory.EnumerateFiles(arena2)
+            .Select(path => System.IO.Path.GetFileName(path))
+            .Where(name => name is { Length: > 0 } && CharacterMediaInventory.IsDocumentedFamily(name))
+            .Select(name => name!)
+            .Order(StringComparer.OrdinalIgnoreCase)];
+
+        Assert.Equal(documented, supplied);
     }
 
     /// <summary>

@@ -98,6 +98,17 @@ public sealed record DaggerfallCharacterPresentation(
 {
     public const int CurrentSchemaVersion = 1;
 
+    /// <summary>
+    /// Checks the section against the canvases the publication actually emitted.
+    /// </summary>
+    /// <remarks>
+    /// The rule is the binding's own meaning rather than "everything must resolve": a reference a published
+    /// consumer binds has to resolve to an artifact, or the pack would claim a live consumer draws art that
+    /// was never emitted, while a reference that stays required-pending is a stated gap and is allowed to
+    /// have no artifact. Every reference is checked, not only the layers: a face or a career whose media
+    /// never got published is the same dangling reference, and one a reader would only discover in a session.
+    /// </remarks>
+    /// <param name="publishedMediaIds">The media identities the publication emitted.</param>
     public void Validate(IReadOnlySet<string> publishedMediaIds)
     {
         ArgumentNullException.ThrowIfNull(publishedMediaIds);
@@ -113,16 +124,39 @@ public sealed record DaggerfallCharacterPresentation(
             ArgumentException.ThrowIfNullOrWhiteSpace(layer.Layer);
             ArgumentException.ThrowIfNullOrWhiteSpace(layer.SourceFile);
             ArgumentException.ThrowIfNullOrWhiteSpace(layer.Palette);
+            RequireBoundReference(publishedMediaIds, layer.Binding, layer.MediaId, $"Race '{layer.Race}' layer '{layer.Layer}'");
+        }
 
-            // A layer whose identity resolves to no canvas would be a reference to nothing, which is
-            // the failure this publication exists to make impossible rather than to discover later.
-            if (!publishedMediaIds.Contains(layer.MediaId))
-            {
-                throw new InvalidOperationException(
-                    $"Race '{layer.Race}' layer '{layer.Layer}' names media '{layer.MediaId}', which no published canvas carries; the reference would resolve to nothing.");
-            }
+        foreach (DaggerfallFactionFace face in Faces)
+        {
+            NormalizedImportDocument.RequireLogicalId(face.MediaId, nameof(face.MediaId));
+            ArgumentException.ThrowIfNullOrWhiteSpace(face.SourceFile);
+            ArgumentException.ThrowIfNullOrWhiteSpace(face.Palette);
+            RequireBoundReference(publishedMediaIds, face.Binding, face.MediaId, $"Faction face {face.Index}");
+        }
+
+        foreach (DaggerfallCareerPortrait portrait in Careers)
+        {
+            NormalizedImportDocument.RequireLogicalId(portrait.MediaId, nameof(portrait.MediaId));
+            ArgumentException.ThrowIfNullOrWhiteSpace(portrait.SourceFile);
+            ArgumentException.ThrowIfNullOrWhiteSpace(portrait.Palette);
+            RequireBoundReference(publishedMediaIds, portrait.Binding, portrait.MediaId, $"Career '{portrait.CareerId}' portrait");
         }
     }
+
+    /// <summary>
+    /// Refuses a reference a consumer binds whose canvas was never published, and says nothing about one
+    /// that stays pending: a pending reference is a stated gap, not a dangling one.
+    /// </summary>
+    private static void RequireBoundReference(IReadOnlySet<string> publishedMediaIds, MediaBinding binding, string mediaId, string subject)
+    {
+        if (binding == MediaBinding.Admitted && !publishedMediaIds.Contains(mediaId))
+        {
+            throw new InvalidOperationException(
+                $"{subject} names media '{mediaId}', which is bound by a published consumer but that no published canvas carries; the reference would resolve to nothing.");
+        }
+    }
+
 }
 
 /// <summary>Compares a source file name the way the inventory admits one: without regard to case.</summary>
@@ -170,15 +204,27 @@ public static class DaggerfallCharacterPresentationBuilder
     private static string ConsumerOf(CharacterCanvasReference canvas) =>
         canvas.Consumer is { Length: > 0 } consumer ? consumer : CharacterMediaInventory.UnstatedConsumer;
 
+    /// <param name="inventory">The supplied files, as the inventory enumerated them.</param>
+    /// <param name="suppliedPalettes">The palette files the caller supplies, by file name.</param>
+    /// <param name="races">The catalog races a layer is keyed by.</param>
+    /// <param name="careers">The catalog careers a portrait is matched to, by identity and name.</param>
+    /// <param name="unpublishable">
+    /// The supplied files whose canvases the publication could not emit, by file name, with the reason. A
+    /// file here is recorded as unreadable even though its container was read: a format this repository
+    /// parses but cannot take pixels from supplies no canvas, and calling it merely unused would say the
+    /// opposite of what the generated media index states.
+    /// </param>
     public static DaggerfallCharacterPresentation Build(
         CharacterMediaInventory inventory,
         IReadOnlySet<string> suppliedPalettes,
         IReadOnlyList<DaggerfallRaceKey> races,
-        IReadOnlyDictionary<string, string> careers)
+        IReadOnlyDictionary<string, string> careers,
+        IReadOnlyDictionary<string, string>? unpublishable = null)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(races);
         ArgumentNullException.ThrowIfNull(careers);
+        IReadOnlyDictionary<string, string> unread = unpublishable ?? new Dictionary<string, string>(StringComparer.Ordinal);
         CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, suppliedPalettes);
         // Looked up by source file and canvas index rather than by a second derivation of the media
         // id: the derivation owns naming, and a builder that re-derived it would be a second place
@@ -289,6 +335,14 @@ public static class DaggerfallCharacterPresentationBuilder
             if (unavailable.TryGetValue(name, out CharacterMediaUnavailable? unreadable))
             {
                 files.Add(new DaggerfallCharacterFile(name, file.Family, 0, CharacterFileOutcome.Unreadable, unreadable.Reason));
+                continue;
+            }
+
+            // A file whose container was read but whose canvases could not be emitted carries no canvas
+            // here, which is what the outcome says; its count stays so the gap names what it lost.
+            if (unread.TryGetValue(name, out string? refusal))
+            {
+                files.Add(new DaggerfallCharacterFile(name, file.Family, file.CanvasCount, CharacterFileOutcome.Unreadable, refusal));
                 continue;
             }
 

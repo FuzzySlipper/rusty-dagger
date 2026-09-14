@@ -8232,8 +8232,8 @@
         "mediaId": "character.scbg.scbg01i0.0",
         "sourceFile": "SCBG01I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8242,8 +8242,8 @@
         "mediaId": "character.body-clothed.female.01.0",
         "sourceFile": "BODY11I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8252,8 +8252,8 @@
         "mediaId": "character.body-unclothed.female.01.0",
         "sourceFile": "BODY11I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8262,8 +8262,8 @@
         "mediaId": "character.body-clothed.male.01.0",
         "sourceFile": "BODY01I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8272,8 +8272,8 @@
         "mediaId": "character.body-unclothed.male.01.0",
         "sourceFile": "BODY01I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8282,8 +8282,8 @@
         "mediaId": "character.head.female.01.0",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8292,8 +8292,8 @@
         "mediaId": "character.head.female.01.1",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8302,8 +8302,8 @@
         "mediaId": "character.head.female.01.2",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8312,8 +8312,8 @@
         "mediaId": "character.head.female.01.3",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8322,8 +8322,8 @@
         "mediaId": "character.head.female.01.4",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8332,8 +8332,8 @@
         "mediaId": "character.head.female.01.5",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8342,8 +8342,8 @@
         "mediaId": "character.head.female.01.6",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8352,8 +8352,8 @@
         "mediaId": "character.head.female.01.7",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8362,8 +8362,8 @@
         "mediaId": "character.head.female.01.8",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8372,8 +8372,8 @@
         "mediaId": "character.head.female.01.9",
         "sourceFile": "FACE11I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8382,8 +8382,8 @@
         "mediaId": "character.head.male.01.0",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8392,8 +8392,8 @@
         "mediaId": "character.head.male.01.1",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8402,8 +8402,8 @@
         "mediaId": "character.head.male.01.2",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8412,8 +8412,8 @@
         "mediaId": "character.head.male.01.3",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8422,8 +8422,8 @@
         "mediaId": "character.head.male.01.4",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8432,8 +8432,8 @@
         "mediaId": "character.head.male.01.5",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8442,8 +8442,8 @@
         "mediaId": "character.head.male.01.6",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8452,8 +8452,8 @@
         "mediaId": "character.head.male.01.7",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8462,8 +8462,8 @@
         "mediaId": "character.head.male.01.8",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "redguard",
@@ -8472,8 +8472,8 @@
         "mediaId": "character.head.male.01.9",
         "sourceFile": "FACE01I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8482,8 +8482,8 @@
         "mediaId": "character.scbg.scbg02i0.0",
         "sourceFile": "SCBG02I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8492,8 +8492,8 @@
         "mediaId": "character.body-clothed.female.02.0",
         "sourceFile": "BODY12I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8502,8 +8502,8 @@
         "mediaId": "character.body-unclothed.female.02.0",
         "sourceFile": "BODY12I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8512,8 +8512,8 @@
         "mediaId": "character.body-clothed.male.02.0",
         "sourceFile": "BODY02I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8522,8 +8522,8 @@
         "mediaId": "character.body-unclothed.male.02.0",
         "sourceFile": "BODY02I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8532,8 +8532,8 @@
         "mediaId": "character.head.female.02.0",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8542,8 +8542,8 @@
         "mediaId": "character.head.female.02.1",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8552,8 +8552,8 @@
         "mediaId": "character.head.female.02.2",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8562,8 +8562,8 @@
         "mediaId": "character.head.female.02.3",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8572,8 +8572,8 @@
         "mediaId": "character.head.female.02.4",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8582,8 +8582,8 @@
         "mediaId": "character.head.female.02.5",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8592,8 +8592,8 @@
         "mediaId": "character.head.female.02.6",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8602,8 +8602,8 @@
         "mediaId": "character.head.female.02.7",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8612,8 +8612,8 @@
         "mediaId": "character.head.female.02.8",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8622,8 +8622,8 @@
         "mediaId": "character.head.female.02.9",
         "sourceFile": "FACE12I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8632,8 +8632,8 @@
         "mediaId": "character.head.male.02.0",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8642,8 +8642,8 @@
         "mediaId": "character.head.male.02.1",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8652,8 +8652,8 @@
         "mediaId": "character.head.male.02.2",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8662,8 +8662,8 @@
         "mediaId": "character.head.male.02.3",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8672,8 +8672,8 @@
         "mediaId": "character.head.male.02.4",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8682,8 +8682,8 @@
         "mediaId": "character.head.male.02.5",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8692,8 +8692,8 @@
         "mediaId": "character.head.male.02.6",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8702,8 +8702,8 @@
         "mediaId": "character.head.male.02.7",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8712,8 +8712,8 @@
         "mediaId": "character.head.male.02.8",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "nord",
@@ -8722,8 +8722,8 @@
         "mediaId": "character.head.male.02.9",
         "sourceFile": "FACE02I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8732,8 +8732,8 @@
         "mediaId": "character.scbg.scbg03i0.0",
         "sourceFile": "SCBG03I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8742,8 +8742,8 @@
         "mediaId": "character.body-clothed.female.03.0",
         "sourceFile": "BODY13I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8752,8 +8752,8 @@
         "mediaId": "character.body-unclothed.female.03.0",
         "sourceFile": "BODY13I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8762,8 +8762,8 @@
         "mediaId": "character.body-clothed.male.03.0",
         "sourceFile": "BODY03I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8772,8 +8772,8 @@
         "mediaId": "character.body-unclothed.male.03.0",
         "sourceFile": "BODY03I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8782,8 +8782,8 @@
         "mediaId": "character.head.female.03.0",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8792,8 +8792,8 @@
         "mediaId": "character.head.female.03.1",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8802,8 +8802,8 @@
         "mediaId": "character.head.female.03.2",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8812,8 +8812,8 @@
         "mediaId": "character.head.female.03.3",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8822,8 +8822,8 @@
         "mediaId": "character.head.female.03.4",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8832,8 +8832,8 @@
         "mediaId": "character.head.female.03.5",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8842,8 +8842,8 @@
         "mediaId": "character.head.female.03.6",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8852,8 +8852,8 @@
         "mediaId": "character.head.female.03.7",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8862,8 +8862,8 @@
         "mediaId": "character.head.female.03.8",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8872,8 +8872,8 @@
         "mediaId": "character.head.female.03.9",
         "sourceFile": "FACE13I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8882,8 +8882,8 @@
         "mediaId": "character.head.male.03.0",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8892,8 +8892,8 @@
         "mediaId": "character.head.male.03.1",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8902,8 +8902,8 @@
         "mediaId": "character.head.male.03.2",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8912,8 +8912,8 @@
         "mediaId": "character.head.male.03.3",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8922,8 +8922,8 @@
         "mediaId": "character.head.male.03.4",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8932,8 +8932,8 @@
         "mediaId": "character.head.male.03.5",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8942,8 +8942,8 @@
         "mediaId": "character.head.male.03.6",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8952,8 +8952,8 @@
         "mediaId": "character.head.male.03.7",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8962,8 +8962,8 @@
         "mediaId": "character.head.male.03.8",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "dark-elf",
@@ -8972,8 +8972,8 @@
         "mediaId": "character.head.male.03.9",
         "sourceFile": "FACE03I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -8982,8 +8982,8 @@
         "mediaId": "character.scbg.scbg04i0.0",
         "sourceFile": "SCBG04I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -8992,8 +8992,8 @@
         "mediaId": "character.body-clothed.female.04.0",
         "sourceFile": "BODY14I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9002,8 +9002,8 @@
         "mediaId": "character.body-unclothed.female.04.0",
         "sourceFile": "BODY14I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9012,8 +9012,8 @@
         "mediaId": "character.body-clothed.male.04.0",
         "sourceFile": "BODY04I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9022,8 +9022,8 @@
         "mediaId": "character.body-unclothed.male.04.0",
         "sourceFile": "BODY04I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9032,8 +9032,8 @@
         "mediaId": "character.head.female.04.0",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9042,8 +9042,8 @@
         "mediaId": "character.head.female.04.1",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9052,8 +9052,8 @@
         "mediaId": "character.head.female.04.2",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9062,8 +9062,8 @@
         "mediaId": "character.head.female.04.3",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9072,8 +9072,8 @@
         "mediaId": "character.head.female.04.4",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9082,8 +9082,8 @@
         "mediaId": "character.head.female.04.5",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9092,8 +9092,8 @@
         "mediaId": "character.head.female.04.6",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9102,8 +9102,8 @@
         "mediaId": "character.head.female.04.7",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9112,8 +9112,8 @@
         "mediaId": "character.head.female.04.8",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9122,8 +9122,8 @@
         "mediaId": "character.head.female.04.9",
         "sourceFile": "FACE14I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9132,8 +9132,8 @@
         "mediaId": "character.head.male.04.0",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9142,8 +9142,8 @@
         "mediaId": "character.head.male.04.1",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9152,8 +9152,8 @@
         "mediaId": "character.head.male.04.2",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9162,8 +9162,8 @@
         "mediaId": "character.head.male.04.3",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9172,8 +9172,8 @@
         "mediaId": "character.head.male.04.4",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9182,8 +9182,8 @@
         "mediaId": "character.head.male.04.5",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9192,8 +9192,8 @@
         "mediaId": "character.head.male.04.6",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9202,8 +9202,8 @@
         "mediaId": "character.head.male.04.7",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9212,8 +9212,8 @@
         "mediaId": "character.head.male.04.8",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "high-elf",
@@ -9222,8 +9222,8 @@
         "mediaId": "character.head.male.04.9",
         "sourceFile": "FACE04I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9232,8 +9232,8 @@
         "mediaId": "character.scbg.scbg05i0.0",
         "sourceFile": "SCBG05I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9242,8 +9242,8 @@
         "mediaId": "character.body-clothed.female.05.0",
         "sourceFile": "BODY15I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9252,8 +9252,8 @@
         "mediaId": "character.body-unclothed.female.05.0",
         "sourceFile": "BODY15I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9262,8 +9262,8 @@
         "mediaId": "character.body-clothed.male.05.0",
         "sourceFile": "BODY05I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9272,8 +9272,8 @@
         "mediaId": "character.body-unclothed.male.05.0",
         "sourceFile": "BODY05I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9282,8 +9282,8 @@
         "mediaId": "character.head.female.05.0",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9292,8 +9292,8 @@
         "mediaId": "character.head.female.05.1",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9302,8 +9302,8 @@
         "mediaId": "character.head.female.05.2",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9312,8 +9312,8 @@
         "mediaId": "character.head.female.05.3",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9322,8 +9322,8 @@
         "mediaId": "character.head.female.05.4",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9332,8 +9332,8 @@
         "mediaId": "character.head.female.05.5",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9342,8 +9342,8 @@
         "mediaId": "character.head.female.05.6",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9352,8 +9352,8 @@
         "mediaId": "character.head.female.05.7",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9362,8 +9362,8 @@
         "mediaId": "character.head.female.05.8",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9372,8 +9372,8 @@
         "mediaId": "character.head.female.05.9",
         "sourceFile": "FACE15I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9382,8 +9382,8 @@
         "mediaId": "character.head.male.05.0",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9392,8 +9392,8 @@
         "mediaId": "character.head.male.05.1",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9402,8 +9402,8 @@
         "mediaId": "character.head.male.05.2",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9412,8 +9412,8 @@
         "mediaId": "character.head.male.05.3",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9422,8 +9422,8 @@
         "mediaId": "character.head.male.05.4",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9432,8 +9432,8 @@
         "mediaId": "character.head.male.05.5",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9442,8 +9442,8 @@
         "mediaId": "character.head.male.05.6",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9452,8 +9452,8 @@
         "mediaId": "character.head.male.05.7",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9462,8 +9462,8 @@
         "mediaId": "character.head.male.05.8",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "wood-elf",
@@ -9472,8 +9472,8 @@
         "mediaId": "character.head.male.05.9",
         "sourceFile": "FACE05I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9482,8 +9482,8 @@
         "mediaId": "character.scbg.scbg06i0.0",
         "sourceFile": "SCBG06I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9492,8 +9492,8 @@
         "mediaId": "character.body-clothed.female.06.0",
         "sourceFile": "BODY16I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9502,8 +9502,8 @@
         "mediaId": "character.body-unclothed.female.06.0",
         "sourceFile": "BODY16I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9512,8 +9512,8 @@
         "mediaId": "character.body-clothed.male.06.0",
         "sourceFile": "BODY06I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9522,8 +9522,8 @@
         "mediaId": "character.body-unclothed.male.06.0",
         "sourceFile": "BODY06I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9532,8 +9532,8 @@
         "mediaId": "character.head.female.06.0",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9542,8 +9542,8 @@
         "mediaId": "character.head.female.06.1",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9552,8 +9552,8 @@
         "mediaId": "character.head.female.06.2",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9562,8 +9562,8 @@
         "mediaId": "character.head.female.06.3",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9572,8 +9572,8 @@
         "mediaId": "character.head.female.06.4",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9582,8 +9582,8 @@
         "mediaId": "character.head.female.06.5",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9592,8 +9592,8 @@
         "mediaId": "character.head.female.06.6",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9602,8 +9602,8 @@
         "mediaId": "character.head.female.06.7",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9612,8 +9612,8 @@
         "mediaId": "character.head.female.06.8",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9622,8 +9622,8 @@
         "mediaId": "character.head.female.06.9",
         "sourceFile": "FACE16I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9632,8 +9632,8 @@
         "mediaId": "character.head.male.06.0",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9642,8 +9642,8 @@
         "mediaId": "character.head.male.06.1",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9652,8 +9652,8 @@
         "mediaId": "character.head.male.06.2",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9662,8 +9662,8 @@
         "mediaId": "character.head.male.06.3",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9672,8 +9672,8 @@
         "mediaId": "character.head.male.06.4",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9682,8 +9682,8 @@
         "mediaId": "character.head.male.06.5",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9692,8 +9692,8 @@
         "mediaId": "character.head.male.06.6",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9702,8 +9702,8 @@
         "mediaId": "character.head.male.06.7",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9712,8 +9712,8 @@
         "mediaId": "character.head.male.06.8",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "khajiit",
@@ -9722,8 +9722,8 @@
         "mediaId": "character.head.male.06.9",
         "sourceFile": "FACE06I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9732,8 +9732,8 @@
         "mediaId": "character.scbg.scbg07i0.0",
         "sourceFile": "SCBG07I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9742,8 +9742,8 @@
         "mediaId": "character.body-clothed.female.07.0",
         "sourceFile": "BODY17I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9752,8 +9752,8 @@
         "mediaId": "character.body-unclothed.female.07.0",
         "sourceFile": "BODY17I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9762,8 +9762,8 @@
         "mediaId": "character.body-clothed.male.07.0",
         "sourceFile": "BODY07I1.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9772,8 +9772,8 @@
         "mediaId": "character.body-unclothed.male.07.0",
         "sourceFile": "BODY07I0.IMG",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9782,8 +9782,8 @@
         "mediaId": "character.head.female.07.0",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9792,8 +9792,8 @@
         "mediaId": "character.head.female.07.1",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9802,8 +9802,8 @@
         "mediaId": "character.head.female.07.2",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9812,8 +9812,8 @@
         "mediaId": "character.head.female.07.3",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9822,8 +9822,8 @@
         "mediaId": "character.head.female.07.4",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9832,8 +9832,8 @@
         "mediaId": "character.head.female.07.5",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9842,8 +9842,8 @@
         "mediaId": "character.head.female.07.6",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9852,8 +9852,8 @@
         "mediaId": "character.head.female.07.7",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9862,8 +9862,8 @@
         "mediaId": "character.head.female.07.8",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9872,8 +9872,8 @@
         "mediaId": "character.head.female.07.9",
         "sourceFile": "FACE17I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9882,8 +9882,8 @@
         "mediaId": "character.head.male.07.0",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9892,8 +9892,8 @@
         "mediaId": "character.head.male.07.1",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9902,8 +9902,8 @@
         "mediaId": "character.head.male.07.2",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9912,8 +9912,8 @@
         "mediaId": "character.head.male.07.3",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9922,8 +9922,8 @@
         "mediaId": "character.head.male.07.4",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9932,8 +9932,8 @@
         "mediaId": "character.head.male.07.5",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9942,8 +9942,8 @@
         "mediaId": "character.head.male.07.6",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9952,8 +9952,8 @@
         "mediaId": "character.head.male.07.7",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9962,8 +9962,8 @@
         "mediaId": "character.head.male.07.8",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       },
       {
         "race": "argonian",
@@ -9972,8 +9972,8 @@
         "mediaId": "character.head.male.07.9",
         "sourceFile": "FACE07I0.CIF",
         "palette": "ART_PAL.COL",
-        "binding": "requiredPending",
-        "consumer": "an unstated consumer"
+        "binding": "admitted",
+        "consumer": "the character sheet"
       }
     ],
     "faces": [
@@ -10853,22 +10853,22 @@
         "path": "CMPA00I0.BSS",
         "family": "BSS",
         "canvasCount": 32,
-        "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027BSS\u0027 family has no paper-doll role in this section yet."
+        "outcome": "unreadable",
+        "reason": "\u0027character.bss.cmpa00i0.0\u0027 cannot be published: CMPA00I0.BSS at byte 0: the BssFrames shape of \u0027CMPA00I0.BSS\u0027 has no pixel decoder here"
       },
       {
         "path": "CMPA01I0.BSS",
         "family": "BSS",
         "canvasCount": 32,
-        "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027BSS\u0027 family has no paper-doll role in this section yet."
+        "outcome": "unreadable",
+        "reason": "\u0027character.bss.cmpa01i0.0\u0027 cannot be published: CMPA01I0.BSS at byte 0: the BssFrames shape of \u0027CMPA01I0.BSS\u0027 has no pixel decoder here"
       },
       {
         "path": "CMPA02I0.BSS",
         "family": "BSS",
         "canvasCount": 32,
-        "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027BSS\u0027 family has no paper-doll role in this section yet."
+        "outcome": "unreadable",
+        "reason": "\u0027character.bss.cmpa02i0.0\u0027 cannot be published: CMPA02I0.BSS at byte 0: the BssFrames shape of \u0027CMPA02I0.BSS\u0027 has no pixel decoder here"
       },
       {
         "path": "CUST00I0.IMG",
@@ -11056,8 +11056,8 @@
         "path": "FACES.CIF",
         "family": "FACE",
         "canvasCount": 61,
-        "outcome": "referenced",
-        "reason": "A layer in this section is drawn from this file\u0027s canvases."
+        "outcome": "unreadable",
+        "reason": "\u0027character.faction-face.00\u0027 cannot be published: FACES.CIF at byte 0: an RCI grid\u0027s 61 cells are enumerated by shape; this repository has no decoder that slices their pixels"
       },
       {
         "path": "MAGE.CEL",

@@ -4,13 +4,13 @@
   "unreadableFamilies": [
     {
       "family": "BSS",
-      "kind": "BSS container",
+      "kind": "BSS sprite container",
       "files": [
         "CMPA00I0.BSS",
         "CMPA01I0.BSS",
         "CMPA02I0.BSS"
       ],
-      "reason": "nothing in this repository reads the BSS format: the donor reads it with Assets/Scripts/API/BssFile.cs, and without it the file\u0027s canvases have no pixels here rather than an approximation",
+      "reason": "these supplied file(s) read as a BSS sprite container and none of their canvases could be decoded into pixels here, so the gap is a missing pixel decoder rather than a missing reader; the donor\u0027s own reader is where that behaviour lives",
       "donorAnchor": "Assets/Scripts/API/BssFile.cs"
     },
     {
@@ -26,7 +26,7 @@
   "artifacts": [
     {
       "mediaId": "character.body-clothed.female.00.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-00-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-00-0.png",
       "byteLength": 3241,
       "sha256": "d0628a73ca441bc2a66bd38ad64927b3058fd71f84f3ea14d84c4c8d38fc141c",
       "width": 66,
@@ -41,7 +41,7 @@
     },
     {
       "mediaId": "character.body-clothed.female.01.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-01-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-01-0.png",
       "byteLength": 3117,
       "sha256": "c5de9b413de286d6d8a1a87faaecc804c1c99085d0463488e128a77c8a33c0a1",
       "width": 66,
@@ -51,12 +51,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.female.02.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-02-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-02-0.png",
       "byteLength": 3407,
       "sha256": "dfc3b9f58b0b662d8215354ffb80a6a699d42d6e5b2bf326e4f69812ae328f66",
       "width": 66,
@@ -66,12 +66,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.female.03.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-03-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-03-0.png",
       "byteLength": 2902,
       "sha256": "363fff63b81e3114084f31834b6ea9ce65e81dfecfa80494051137ec89144203",
       "width": 66,
@@ -81,12 +81,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.female.04.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-04-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-04-0.png",
       "byteLength": 3292,
       "sha256": "0999f20a6751dec5f8acd268e3305659473203754c27c165d03845b966a1f685",
       "width": 66,
@@ -96,12 +96,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.female.05.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-05-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-05-0.png",
       "byteLength": 3432,
       "sha256": "19f1c51e2e4b2b4637d619ef1ace37fbbddf6ebaa35fe95b224e7d1930124566",
       "width": 66,
@@ -111,12 +111,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.female.06.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-06-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-06-0.png",
       "byteLength": 3890,
       "sha256": "c485b7bb723fbce25f9960e880a11f58c0c58bb1f2ec8343b18aaf841e0f23c1",
       "width": 66,
@@ -126,12 +126,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.female.07.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-female-07-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-female-07-0.png",
       "byteLength": 4374,
       "sha256": "de3cb8687b25031f7fae7f97f856bff1496e92213f210ab16d20ae2e4ff3d99b",
       "width": 66,
@@ -141,12 +141,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.male.00.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-00-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-00-0.png",
       "byteLength": 3801,
       "sha256": "ba8ce79ca8c294215b213871a98408183f3dd083e958e8013bdec1c5a7918ce1",
       "width": 69,
@@ -161,7 +161,7 @@
     },
     {
       "mediaId": "character.body-clothed.male.01.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-01-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-01-0.png",
       "byteLength": 3800,
       "sha256": "5df5677d93b5f28bf70bac8dc78822947e68d2c0ae41a8b0a2b57962c8eeb967",
       "width": 69,
@@ -171,12 +171,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.male.02.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-02-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-02-0.png",
       "byteLength": 3907,
       "sha256": "207dfa235ab92bc713e4a820e702576d3853063a8802cb228feed1c3a49ef3b1",
       "width": 69,
@@ -186,12 +186,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.male.03.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-03-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-03-0.png",
       "byteLength": 3602,
       "sha256": "ac7973a798743e0acaf3e4357c24e1d5f678c43f48c4e026affa49bd634ea01a",
       "width": 69,
@@ -201,12 +201,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.male.04.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-04-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-04-0.png",
       "byteLength": 3706,
       "sha256": "f72223283362adfe3a2d69481d24f50eecef6ece86af1d3bbc8669ca071752af",
       "width": 69,
@@ -216,12 +216,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.male.05.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-05-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-05-0.png",
       "byteLength": 3947,
       "sha256": "7ca2fe12411b3d75060e3e0fd223d27544ea3af313b227f338b2181291360143",
       "width": 69,
@@ -231,12 +231,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.male.06.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-06-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-06-0.png",
       "byteLength": 4128,
       "sha256": "cc6d86c2eeb64e5ffc981ff4ffb25411e2bc94cf59dabd7ea2bf4ed5aeb094e9",
       "width": 69,
@@ -246,12 +246,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-clothed.male.07.0",
-      "relativePath": "worldrpg/media/character/character-body-clothed-male-07-0.png",
+      "path": "worldrpg/media/character/character-body-clothed-male-07-0.png",
       "byteLength": 4718,
       "sha256": "4854022c67366dab43ec9fde70e0cd706ac76b61368a70b641df7df5aec05859",
       "width": 69,
@@ -261,12 +261,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.female.00.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-00-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-00-0.png",
       "byteLength": 2990,
       "sha256": "7aef72fd14ac6d1d161d2c4611ceee0c8263a041407e40fc6759b0355e565fae",
       "width": 66,
@@ -281,7 +281,7 @@
     },
     {
       "mediaId": "character.body-unclothed.female.01.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-01-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-01-0.png",
       "byteLength": 2804,
       "sha256": "ed8304a88b332bbed77720d06090cba644c115e51bc992a3a98d7037c15559de",
       "width": 66,
@@ -291,12 +291,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.female.02.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-02-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-02-0.png",
       "byteLength": 3142,
       "sha256": "95356d80124ab34741b39592988fbb820e79f1980f412b1a962c4bd9b1c0ea96",
       "width": 66,
@@ -306,12 +306,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.female.03.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-03-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-03-0.png",
       "byteLength": 2539,
       "sha256": "cc58e2a508292c8282fadbdac77e9de20fce4ce238ad5d126f2754a79dd2e527",
       "width": 66,
@@ -321,12 +321,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.female.04.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-04-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-04-0.png",
       "byteLength": 2942,
       "sha256": "481fc97c562a1266f4ad056104cd68268ae5e81af752e16cac8a0fda212f731e",
       "width": 66,
@@ -336,12 +336,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.female.05.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-05-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-05-0.png",
       "byteLength": 3148,
       "sha256": "50a9329505dae96cbab68ac7f53b1ee38b458868d99f60df85b74ead05aded5d",
       "width": 66,
@@ -351,12 +351,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.female.06.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-06-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-06-0.png",
       "byteLength": 3575,
       "sha256": "c49f7571f9f7a5f61c235460f7bfba3f8004edc3c82c12ad96047fd3681c4206",
       "width": 66,
@@ -366,12 +366,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.female.07.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-female-07-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-female-07-0.png",
       "byteLength": 4104,
       "sha256": "41191691e7c7dcd05e70bf9a50b4869bef2dca476f80cd6dd1f2150576348d9d",
       "width": 66,
@@ -381,12 +381,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.male.00.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-00-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-00-0.png",
       "byteLength": 3572,
       "sha256": "15c095dbda2519d6d4a8a5ae81701a1799b2a96afe41afc7a4106c4cc35ceb3d",
       "width": 69,
@@ -401,7 +401,7 @@
     },
     {
       "mediaId": "character.body-unclothed.male.01.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-01-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-01-0.png",
       "byteLength": 3551,
       "sha256": "fd13388173fa6aa4eacf36eb8b888d7344eb7c532df87d868b59fcebb339b905",
       "width": 69,
@@ -411,12 +411,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.male.02.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-02-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-02-0.png",
       "byteLength": 3680,
       "sha256": "d08709f98cab4a265d42aa8dfcb500e4e574cc8bb3acb36f6bbe6f8a85f6d2a2",
       "width": 69,
@@ -426,12 +426,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.male.03.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-03-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-03-0.png",
       "byteLength": 3207,
       "sha256": "812c0985944ff0ade35fa7cd88a4eadd8f99ee9bb0a398c304efadef359daa72",
       "width": 69,
@@ -441,12 +441,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.male.04.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-04-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-04-0.png",
       "byteLength": 3309,
       "sha256": "2432574d99f8fcb775f58aa771073cf6bf51ae2db588c43a46d19bb47bd32e54",
       "width": 69,
@@ -456,12 +456,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.male.05.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-05-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-05-0.png",
       "byteLength": 3587,
       "sha256": "0625bb51116bedee792e10c60ff23b296cfcaa66eb56c5f7c123fcc46fe114a2",
       "width": 69,
@@ -471,12 +471,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.male.06.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-06-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-06-0.png",
       "byteLength": 3697,
       "sha256": "9316000d7553cbbdb44af8d3a4aacfcf74f373e85708f66f5532b011992f40b3",
       "width": 69,
@@ -486,12 +486,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.body-unclothed.male.07.0",
-      "relativePath": "worldrpg/media/character/character-body-unclothed-male-07-0.png",
+      "path": "worldrpg/media/character/character-body-unclothed-male-07-0.png",
       "byteLength": 4509,
       "sha256": "b8cb351f837eae48e59b3b8d8f8ae198c0b5fe268226d14d486ce8e57c8a5b1c",
       "width": 69,
@@ -501,12 +501,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.char.char00i0.0",
-      "relativePath": "worldrpg/media/character/character-char-char00i0-0.png",
+      "path": "worldrpg/media/character/character-char-char00i0-0.png",
       "byteLength": 27473,
       "sha256": "489b22e80fabddc9d4d04e19a2c60234ce756aa42e8844f7b1d4406f1c20f984",
       "width": 320,
@@ -521,7 +521,7 @@
     },
     {
       "mediaId": "character.char.char01i0.0",
-      "relativePath": "worldrpg/media/character/character-char-char01i0-0.png",
+      "path": "worldrpg/media/character/character-char-char01i0-0.png",
       "byteLength": 27456,
       "sha256": "205770a637838978dd6252d45ad6c97a4297ea357f96210a5d836595cc29d17a",
       "width": 320,
@@ -536,7 +536,7 @@
     },
     {
       "mediaId": "character.char.char02i0.0",
-      "relativePath": "worldrpg/media/character/character-char-char02i0-0.png",
+      "path": "worldrpg/media/character/character-char-char02i0-0.png",
       "byteLength": 31882,
       "sha256": "6bb27a359dc7202f341ae621a93d29ba36cfde109859778208c8b2e5bd803657",
       "width": 320,
@@ -551,7 +551,7 @@
     },
     {
       "mediaId": "character.char.char02i1.0",
-      "relativePath": "worldrpg/media/character/character-char-char02i1-0.png",
+      "path": "worldrpg/media/character/character-char-char02i1-0.png",
       "byteLength": 253,
       "sha256": "5d7a1a35bdeb6858cb8f086449b0a12dd83645b702f7a82ee049ed7e92cc4fcd",
       "width": 15,
@@ -566,7 +566,7 @@
     },
     {
       "mediaId": "character.char.char03i0.0",
-      "relativePath": "worldrpg/media/character/character-char-char03i0-0.png",
+      "path": "worldrpg/media/character/character-char-char03i0-0.png",
       "byteLength": 28698,
       "sha256": "40e24ca03a56ac8daf97f879900360f5188d5afc02e317da0aaf8eec23b66959",
       "width": 320,
@@ -581,7 +581,7 @@
     },
     {
       "mediaId": "character.char.char03i1.0",
-      "relativePath": "worldrpg/media/character/character-char-char03i1-0.png",
+      "path": "worldrpg/media/character/character-char-char03i1-0.png",
       "byteLength": 496,
       "sha256": "5d8dad7fdef7bf3e59be94c7664e9b7282131dc4be4b34a0f85184f34775781a",
       "width": 37,
@@ -596,7 +596,7 @@
     },
     {
       "mediaId": "character.char.char04i0.0",
-      "relativePath": "worldrpg/media/character/character-char-char04i0-0.png",
+      "path": "worldrpg/media/character/character-char-char04i0-0.png",
       "byteLength": 30260,
       "sha256": "91de37abaae02cffd4c8781597f0760255a5b60de41d6eacc76674f0450aabe3",
       "width": 320,
@@ -611,7 +611,7 @@
     },
     {
       "mediaId": "character.char.char05i0.0",
-      "relativePath": "worldrpg/media/character/character-char-char05i0-0.png",
+      "path": "worldrpg/media/character/character-char-char05i0-0.png",
       "byteLength": 28802,
       "sha256": "13518b041ff440ecbdcf1181fd115076a90e0ba7c017be7f25f536e335f084d9",
       "width": 320,
@@ -626,7 +626,7 @@
     },
     {
       "mediaId": "character.char.char05i1.0",
-      "relativePath": "worldrpg/media/character/character-char-char05i1-0.png",
+      "path": "worldrpg/media/character/character-char-char05i1-0.png",
       "byteLength": 1503,
       "sha256": "9253f5442b547c02d2b13fdca7ce7fc59e64252070f66a6f6181baeee007cb1e",
       "width": 66,
@@ -641,7 +641,7 @@
     },
     {
       "mediaId": "character.cust.cust00i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust00i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust00i0-0.png",
       "byteLength": 29378,
       "sha256": "af289b9ffa2a9784323f8f64cf169bc08578ed430cbc34dc7bed9bd1e8e174bc",
       "width": 320,
@@ -656,7 +656,7 @@
     },
     {
       "mediaId": "character.cust.cust01i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust01i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust01i0-0.png",
       "byteLength": 13265,
       "sha256": "7c4240eb90b11aec7cdab1d3a7f8abbc889f775eb6e7b8cb0b1437d096677b45",
       "width": 168,
@@ -671,7 +671,7 @@
     },
     {
       "mediaId": "character.cust.cust02i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust02i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust02i0-0.png",
       "byteLength": 2841,
       "sha256": "5df8c5161af7fa834a26f456965e690b947db44b2dccad05f156950200a3e4cb",
       "width": 168,
@@ -686,7 +686,7 @@
     },
     {
       "mediaId": "character.cust.cust03i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust03i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust03i0-0.png",
       "byteLength": 14856,
       "sha256": "65c6018e8e1a8244acfca0c51ff51818f80591ea5cec74694165c3ce6c8965a5",
       "width": 168,
@@ -701,7 +701,7 @@
     },
     {
       "mediaId": "character.cust.cust04i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust04i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust04i0-0.png",
       "byteLength": 907,
       "sha256": "fa19ed3ce7e0128a1547b038c1fd417d4a27afcfad556950cfb81b282cff44be",
       "width": 168,
@@ -716,7 +716,7 @@
     },
     {
       "mediaId": "character.cust.cust05i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust05i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust05i0-0.png",
       "byteLength": 477,
       "sha256": "56b70e888e5b3a6e0ce471e9587294debfc875d176544751536cb6a914c00edb",
       "width": 167,
@@ -731,7 +731,7 @@
     },
     {
       "mediaId": "character.cust.cust06i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust06i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust06i0-0.png",
       "byteLength": 462,
       "sha256": "e06b08fb0a86ee670062d7ea6d470c6e90cb2cd33470e45dc54fd7e5d55d5284",
       "width": 168,
@@ -746,7 +746,7 @@
     },
     {
       "mediaId": "character.cust.cust07i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust07i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust07i0-0.png",
       "byteLength": 444,
       "sha256": "2937b571481903dc4b829fe2cc04187a1fa7de2fe98f05895af5a0257cdd220b",
       "width": 168,
@@ -761,7 +761,7 @@
     },
     {
       "mediaId": "character.cust.cust08i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust08i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust08i0-0.png",
       "byteLength": 198,
       "sha256": "c08ea26325025e2ed1b4ebd3aaf04efd7e4be08eeea699f8a2b2f1f7577dd97f",
       "width": 24,
@@ -776,7 +776,7 @@
     },
     {
       "mediaId": "character.cust.cust09i0.0",
-      "relativePath": "worldrpg/media/character/character-cust-cust09i0-0.png",
+      "path": "worldrpg/media/character/character-cust-cust09i0-0.png",
       "byteLength": 253,
       "sha256": "5d7a1a35bdeb6858cb8f086449b0a12dd83645b702f7a82ee049ed7e92cc4fcd",
       "width": 15,
@@ -791,7 +791,7 @@
     },
     {
       "mediaId": "character.head.female.00.0",
-      "relativePath": "worldrpg/media/character/character-head-female-00-0.png",
+      "path": "worldrpg/media/character/character-head-female-00-0.png",
       "byteLength": 905,
       "sha256": "64142f3adc37c2ae36361a5dbd2af234fb3da54d40449676c66824a8517c7893",
       "width": 31,
@@ -806,7 +806,7 @@
     },
     {
       "mediaId": "character.head.female.00.1",
-      "relativePath": "worldrpg/media/character/character-head-female-00-1.png",
+      "path": "worldrpg/media/character/character-head-female-00-1.png",
       "byteLength": 866,
       "sha256": "22e67fe4ffbfb242dbd03c0efb059103b0bc6a9386a7d4f3ccf51bc1435558be",
       "width": 30,
@@ -821,7 +821,7 @@
     },
     {
       "mediaId": "character.head.female.00.2",
-      "relativePath": "worldrpg/media/character/character-head-female-00-2.png",
+      "path": "worldrpg/media/character/character-head-female-00-2.png",
       "byteLength": 773,
       "sha256": "5c1f769e43c500fd70c92b62cb8f13902b60d89a7dd845dc7c24ae60d06c8689",
       "width": 26,
@@ -836,7 +836,7 @@
     },
     {
       "mediaId": "character.head.female.00.3",
-      "relativePath": "worldrpg/media/character/character-head-female-00-3.png",
+      "path": "worldrpg/media/character/character-head-female-00-3.png",
       "byteLength": 952,
       "sha256": "26432414242fab11848e76fd48aca2c6c461c8c7c45fd44e33e519f2c6f7d1f2",
       "width": 29,
@@ -851,7 +851,7 @@
     },
     {
       "mediaId": "character.head.female.00.4",
-      "relativePath": "worldrpg/media/character/character-head-female-00-4.png",
+      "path": "worldrpg/media/character/character-head-female-00-4.png",
       "byteLength": 854,
       "sha256": "e70fb84e6227cb9a0125002f65c4fb1701aa4c13c667a866154c430110190f13",
       "width": 33,
@@ -866,7 +866,7 @@
     },
     {
       "mediaId": "character.head.female.00.5",
-      "relativePath": "worldrpg/media/character/character-head-female-00-5.png",
+      "path": "worldrpg/media/character/character-head-female-00-5.png",
       "byteLength": 881,
       "sha256": "43351ae57cf3ae940da7a873721f7645f9827819fb5aa794b15acd4cd7d0a60a",
       "width": 29,
@@ -881,7 +881,7 @@
     },
     {
       "mediaId": "character.head.female.00.6",
-      "relativePath": "worldrpg/media/character/character-head-female-00-6.png",
+      "path": "worldrpg/media/character/character-head-female-00-6.png",
       "byteLength": 783,
       "sha256": "f5241c60b0f697ebce12da4f3d6b661d7d95536e48cef8de9a1705f4baf02d42",
       "width": 31,
@@ -896,7 +896,7 @@
     },
     {
       "mediaId": "character.head.female.00.7",
-      "relativePath": "worldrpg/media/character/character-head-female-00-7.png",
+      "path": "worldrpg/media/character/character-head-female-00-7.png",
       "byteLength": 992,
       "sha256": "f12063d105dfbedde1744fe3d4bd36190b7f058d6e7e2a7976d32bfe3a8df75f",
       "width": 35,
@@ -911,7 +911,7 @@
     },
     {
       "mediaId": "character.head.female.00.8",
-      "relativePath": "worldrpg/media/character/character-head-female-00-8.png",
+      "path": "worldrpg/media/character/character-head-female-00-8.png",
       "byteLength": 832,
       "sha256": "64df18b7c6f85ae634b09407ec8f826d54c851ae35e6fa58856feb5745cef97a",
       "width": 28,
@@ -926,7 +926,7 @@
     },
     {
       "mediaId": "character.head.female.00.9",
-      "relativePath": "worldrpg/media/character/character-head-female-00-9.png",
+      "path": "worldrpg/media/character/character-head-female-00-9.png",
       "byteLength": 873,
       "sha256": "23348c1215f5b1faf58903421350497be15fe015a5b152a423439e0fdcb20acf",
       "width": 27,
@@ -941,7 +941,7 @@
     },
     {
       "mediaId": "character.head.female.01.0",
-      "relativePath": "worldrpg/media/character/character-head-female-01-0.png",
+      "path": "worldrpg/media/character/character-head-female-01-0.png",
       "byteLength": 553,
       "sha256": "b4a9eff9be7a74fe96fc1480cc43032c66673a7bc2bbecd625089f836ae12ecd",
       "width": 22,
@@ -951,12 +951,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.1",
-      "relativePath": "worldrpg/media/character/character-head-female-01-1.png",
+      "path": "worldrpg/media/character/character-head-female-01-1.png",
       "byteLength": 737,
       "sha256": "8d78bdf0538d4c994ae88e3b5b0bfc6948f6db3add49831f82f5e2358c0b6250",
       "width": 27,
@@ -966,12 +966,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.2",
-      "relativePath": "worldrpg/media/character/character-head-female-01-2.png",
+      "path": "worldrpg/media/character/character-head-female-01-2.png",
       "byteLength": 721,
       "sha256": "8a457859f15c0ead56a8cf3e4ac6bfe114dc8a08f3b085c8500e9dcfa44a783f",
       "width": 29,
@@ -981,12 +981,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.3",
-      "relativePath": "worldrpg/media/character/character-head-female-01-3.png",
+      "path": "worldrpg/media/character/character-head-female-01-3.png",
       "byteLength": 741,
       "sha256": "433369da610b240397ea89f06a5555e0cb94aecc29f46d139412730603e77bc9",
       "width": 30,
@@ -996,12 +996,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.4",
-      "relativePath": "worldrpg/media/character/character-head-female-01-4.png",
+      "path": "worldrpg/media/character/character-head-female-01-4.png",
       "byteLength": 796,
       "sha256": "e3fca9c425bfdbef69ea5941fc5ab9076c396ef72fae49297741684e06c1a8c7",
       "width": 25,
@@ -1011,12 +1011,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.5",
-      "relativePath": "worldrpg/media/character/character-head-female-01-5.png",
+      "path": "worldrpg/media/character/character-head-female-01-5.png",
       "byteLength": 925,
       "sha256": "e9d7d3455be5414cedc523398cb58eb053aeece8e58533df26ede7ba52db6aba",
       "width": 34,
@@ -1026,12 +1026,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.6",
-      "relativePath": "worldrpg/media/character/character-head-female-01-6.png",
+      "path": "worldrpg/media/character/character-head-female-01-6.png",
       "byteLength": 703,
       "sha256": "08a2db934a9f7841069d1255700483920ebbb221764abf836de89fed174cef70",
       "width": 27,
@@ -1041,12 +1041,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.7",
-      "relativePath": "worldrpg/media/character/character-head-female-01-7.png",
+      "path": "worldrpg/media/character/character-head-female-01-7.png",
       "byteLength": 825,
       "sha256": "c4ec7fa5628eb72ff7da14783133d6be84813994dbb667394f256e1e503cfc41",
       "width": 32,
@@ -1056,12 +1056,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.8",
-      "relativePath": "worldrpg/media/character/character-head-female-01-8.png",
+      "path": "worldrpg/media/character/character-head-female-01-8.png",
       "byteLength": 804,
       "sha256": "722e34907ba1ce919533f9170619485b622f844e85b569fa78ea058d2f5867f9",
       "width": 25,
@@ -1071,12 +1071,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.01.9",
-      "relativePath": "worldrpg/media/character/character-head-female-01-9.png",
+      "path": "worldrpg/media/character/character-head-female-01-9.png",
       "byteLength": 633,
       "sha256": "2fc26caef9268d4450817a79f92d5aacc7d35ab858e0bc326d9d2f1340bb19ac",
       "width": 27,
@@ -1086,12 +1086,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.0",
-      "relativePath": "worldrpg/media/character/character-head-female-02-0.png",
+      "path": "worldrpg/media/character/character-head-female-02-0.png",
       "byteLength": 938,
       "sha256": "815d0d2efb6b471003ca3d1877dfdae3b2124970752399fd3952c71e48da6c33",
       "width": 29,
@@ -1101,12 +1101,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.1",
-      "relativePath": "worldrpg/media/character/character-head-female-02-1.png",
+      "path": "worldrpg/media/character/character-head-female-02-1.png",
       "byteLength": 938,
       "sha256": "815d0d2efb6b471003ca3d1877dfdae3b2124970752399fd3952c71e48da6c33",
       "width": 29,
@@ -1116,12 +1116,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.2",
-      "relativePath": "worldrpg/media/character/character-head-female-02-2.png",
+      "path": "worldrpg/media/character/character-head-female-02-2.png",
       "byteLength": 1052,
       "sha256": "6dbd8a4e8d4364bd1f53bbd7f811dd6162ef324f663b6c201073be48cba6af0f",
       "width": 30,
@@ -1131,12 +1131,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.3",
-      "relativePath": "worldrpg/media/character/character-head-female-02-3.png",
+      "path": "worldrpg/media/character/character-head-female-02-3.png",
       "byteLength": 892,
       "sha256": "a69690291e919d532c5d6e110b515494564fc6d9544016c6e0a122742edfa034",
       "width": 25,
@@ -1146,12 +1146,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.4",
-      "relativePath": "worldrpg/media/character/character-head-female-02-4.png",
+      "path": "worldrpg/media/character/character-head-female-02-4.png",
       "byteLength": 798,
       "sha256": "5a201000f030132911ca81051fe276d5614ca708226b9ad9cee4a87452bd2d1d",
       "width": 25,
@@ -1161,12 +1161,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.5",
-      "relativePath": "worldrpg/media/character/character-head-female-02-5.png",
+      "path": "worldrpg/media/character/character-head-female-02-5.png",
       "byteLength": 783,
       "sha256": "529eabdb5774d74343e561d8f01b27b7a4bbcbf61df292a0b4973995befbd216",
       "width": 28,
@@ -1176,12 +1176,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.6",
-      "relativePath": "worldrpg/media/character/character-head-female-02-6.png",
+      "path": "worldrpg/media/character/character-head-female-02-6.png",
       "byteLength": 904,
       "sha256": "4d8dc2d0289e182338d3510a05bbb6d71ffcaf2081f748e458501e855ce3f02d",
       "width": 32,
@@ -1191,12 +1191,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.7",
-      "relativePath": "worldrpg/media/character/character-head-female-02-7.png",
+      "path": "worldrpg/media/character/character-head-female-02-7.png",
       "byteLength": 944,
       "sha256": "784483b1a8bc5ae41d777b42479a6a48d1e2700aa1be3e477aaad3c00e7d76b0",
       "width": 29,
@@ -1206,12 +1206,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.8",
-      "relativePath": "worldrpg/media/character/character-head-female-02-8.png",
+      "path": "worldrpg/media/character/character-head-female-02-8.png",
       "byteLength": 940,
       "sha256": "4ca4c22c8dbcf56891bb2e8902487ebfe91e338c4a7508269c57eb823ee0343f",
       "width": 29,
@@ -1221,12 +1221,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.02.9",
-      "relativePath": "worldrpg/media/character/character-head-female-02-9.png",
+      "path": "worldrpg/media/character/character-head-female-02-9.png",
       "byteLength": 1040,
       "sha256": "9ffe653c1b37e854e1ec796bc59312e2ef79b96e568a6206989eb7c4a93d801e",
       "width": 26,
@@ -1236,12 +1236,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.0",
-      "relativePath": "worldrpg/media/character/character-head-female-03-0.png",
+      "path": "worldrpg/media/character/character-head-female-03-0.png",
       "byteLength": 1019,
       "sha256": "e211e17d35eb67e79355f890624b36cef227fc0ca9097abcdf20431dd5f2b817",
       "width": 33,
@@ -1251,12 +1251,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.1",
-      "relativePath": "worldrpg/media/character/character-head-female-03-1.png",
+      "path": "worldrpg/media/character/character-head-female-03-1.png",
       "byteLength": 767,
       "sha256": "828609fd1460504976a2b52ad0bf76d4af56feb3e90f22a542a8267d407998ea",
       "width": 27,
@@ -1266,12 +1266,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.2",
-      "relativePath": "worldrpg/media/character/character-head-female-03-2.png",
+      "path": "worldrpg/media/character/character-head-female-03-2.png",
       "byteLength": 782,
       "sha256": "7aff28f16962cfe1ede16b1b7a2a6dc6a628ed1fe5e32849811903b2b64974ed",
       "width": 25,
@@ -1281,12 +1281,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.3",
-      "relativePath": "worldrpg/media/character/character-head-female-03-3.png",
+      "path": "worldrpg/media/character/character-head-female-03-3.png",
       "byteLength": 908,
       "sha256": "da8ba1120863835c1738357cd9f44cfc4d69fa01fc876fa7a55f285d8580af96",
       "width": 30,
@@ -1296,12 +1296,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.4",
-      "relativePath": "worldrpg/media/character/character-head-female-03-4.png",
+      "path": "worldrpg/media/character/character-head-female-03-4.png",
       "byteLength": 1004,
       "sha256": "dc299a248b3fafc1a23c89ffd174966dd3e4d52ec87492ab97d9c0e1f3093ba4",
       "width": 34,
@@ -1311,12 +1311,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.5",
-      "relativePath": "worldrpg/media/character/character-head-female-03-5.png",
+      "path": "worldrpg/media/character/character-head-female-03-5.png",
       "byteLength": 912,
       "sha256": "5d2a954a81857e9d89e4a37249271cb5c77947414c6ce9c26606264c1407bea7",
       "width": 30,
@@ -1326,12 +1326,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.6",
-      "relativePath": "worldrpg/media/character/character-head-female-03-6.png",
+      "path": "worldrpg/media/character/character-head-female-03-6.png",
       "byteLength": 851,
       "sha256": "859480dd37c2f2aa1d3cf09d319a2bfd69a197571ddb246981291c8057d9c543",
       "width": 26,
@@ -1341,12 +1341,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.7",
-      "relativePath": "worldrpg/media/character/character-head-female-03-7.png",
+      "path": "worldrpg/media/character/character-head-female-03-7.png",
       "byteLength": 1002,
       "sha256": "ff67f82ae0505e1cd9a7dc57f94e2f3160f4a9c65c9f9c96b5d04c9ac6f94ec1",
       "width": 30,
@@ -1356,12 +1356,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.8",
-      "relativePath": "worldrpg/media/character/character-head-female-03-8.png",
+      "path": "worldrpg/media/character/character-head-female-03-8.png",
       "byteLength": 1051,
       "sha256": "21fc3c9ebedfc2898183dfe23cda862f7b4b51c5ae2b021b164e82ba8be60070",
       "width": 28,
@@ -1371,12 +1371,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.03.9",
-      "relativePath": "worldrpg/media/character/character-head-female-03-9.png",
+      "path": "worldrpg/media/character/character-head-female-03-9.png",
       "byteLength": 780,
       "sha256": "7fc0f13ad47f941f8126f90e863f9bb20657ffcd09a0d530bd83b9658f89d530",
       "width": 25,
@@ -1386,12 +1386,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.0",
-      "relativePath": "worldrpg/media/character/character-head-female-04-0.png",
+      "path": "worldrpg/media/character/character-head-female-04-0.png",
       "byteLength": 939,
       "sha256": "323e949915a8bd6bd72ff7f431c32dc01a48d936ed059b811e5700e066a6b29d",
       "width": 32,
@@ -1401,12 +1401,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.1",
-      "relativePath": "worldrpg/media/character/character-head-female-04-1.png",
+      "path": "worldrpg/media/character/character-head-female-04-1.png",
       "byteLength": 1021,
       "sha256": "7effd45693ae8cfff246ef92c6af92801e6a39968a5b745133c7b0e920b5daf4",
       "width": 33,
@@ -1416,12 +1416,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.2",
-      "relativePath": "worldrpg/media/character/character-head-female-04-2.png",
+      "path": "worldrpg/media/character/character-head-female-04-2.png",
       "byteLength": 1104,
       "sha256": "b425eb720238198becc23089ffea9c73454b0460d27337bdbc8bb0ca3494e1c7",
       "width": 29,
@@ -1431,12 +1431,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.3",
-      "relativePath": "worldrpg/media/character/character-head-female-04-3.png",
+      "path": "worldrpg/media/character/character-head-female-04-3.png",
       "byteLength": 1023,
       "sha256": "22ba53614b5739897c59da81503428e55b3458a737fa29c07425b3a5dc7f3295",
       "width": 26,
@@ -1446,12 +1446,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.4",
-      "relativePath": "worldrpg/media/character/character-head-female-04-4.png",
+      "path": "worldrpg/media/character/character-head-female-04-4.png",
       "byteLength": 919,
       "sha256": "7587d8357eb34578efe86407b620b90f1f331e4da11c44f0945317fd044c9a6c",
       "width": 27,
@@ -1461,12 +1461,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.5",
-      "relativePath": "worldrpg/media/character/character-head-female-04-5.png",
+      "path": "worldrpg/media/character/character-head-female-04-5.png",
       "byteLength": 1031,
       "sha256": "238bac73d368a485d7a8c72606fc9ac9a2a6000a91b8cbd81cf1d0d495b61817",
       "width": 31,
@@ -1476,12 +1476,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.6",
-      "relativePath": "worldrpg/media/character/character-head-female-04-6.png",
+      "path": "worldrpg/media/character/character-head-female-04-6.png",
       "byteLength": 1044,
       "sha256": "c8bf50f4af291b29a8bb29fffaf78188cd8848c9cc899344d16ffba48c1dfaba",
       "width": 30,
@@ -1491,12 +1491,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.7",
-      "relativePath": "worldrpg/media/character/character-head-female-04-7.png",
+      "path": "worldrpg/media/character/character-head-female-04-7.png",
       "byteLength": 943,
       "sha256": "c2e31732a274f2be45b18911577fd4b1ec53555b64dde87603ceb926953dba03",
       "width": 25,
@@ -1506,12 +1506,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.8",
-      "relativePath": "worldrpg/media/character/character-head-female-04-8.png",
+      "path": "worldrpg/media/character/character-head-female-04-8.png",
       "byteLength": 1076,
       "sha256": "63d6a42f79ca27ff6a0546b1f81f687becdf784a697be6aedded7935938b9602",
       "width": 30,
@@ -1521,12 +1521,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.04.9",
-      "relativePath": "worldrpg/media/character/character-head-female-04-9.png",
+      "path": "worldrpg/media/character/character-head-female-04-9.png",
       "byteLength": 937,
       "sha256": "78f3853e6f3a78ab195f28120d60315b153063ed4898dcb588dba5d6225ad5aa",
       "width": 26,
@@ -1536,12 +1536,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.0",
-      "relativePath": "worldrpg/media/character/character-head-female-05-0.png",
+      "path": "worldrpg/media/character/character-head-female-05-0.png",
       "byteLength": 1058,
       "sha256": "d0cde3b29348853a35da9946b4d575743a2d315750ccdcaea613d78a75acc86d",
       "width": 32,
@@ -1551,12 +1551,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.1",
-      "relativePath": "worldrpg/media/character/character-head-female-05-1.png",
+      "path": "worldrpg/media/character/character-head-female-05-1.png",
       "byteLength": 1000,
       "sha256": "d6cf198fdcff26f5d2553bae6081d843ede2b1dd127f3f121e8f984cbb4489a4",
       "width": 33,
@@ -1566,12 +1566,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.2",
-      "relativePath": "worldrpg/media/character/character-head-female-05-2.png",
+      "path": "worldrpg/media/character/character-head-female-05-2.png",
       "byteLength": 1047,
       "sha256": "116866746976b0f49000485448a111913c8ec7e1e350872a5b85d1825a66be61",
       "width": 30,
@@ -1581,12 +1581,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.3",
-      "relativePath": "worldrpg/media/character/character-head-female-05-3.png",
+      "path": "worldrpg/media/character/character-head-female-05-3.png",
       "byteLength": 1002,
       "sha256": "e964a3cb3e0c3310a06f480be82ef6aba57bf71946369567239c7e065bab78e1",
       "width": 26,
@@ -1596,12 +1596,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.4",
-      "relativePath": "worldrpg/media/character/character-head-female-05-4.png",
+      "path": "worldrpg/media/character/character-head-female-05-4.png",
       "byteLength": 1131,
       "sha256": "f98ffded0b0f04dfc0d6ce042dfd515dbdb499c9bce4e150cb4cb78617fed732",
       "width": 32,
@@ -1611,12 +1611,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.5",
-      "relativePath": "worldrpg/media/character/character-head-female-05-5.png",
+      "path": "worldrpg/media/character/character-head-female-05-5.png",
       "byteLength": 842,
       "sha256": "7750f34a8c1c01b5a00f8e2a4be2ab2a9354ee7362aa53aaa1d404d5327fb066",
       "width": 29,
@@ -1626,12 +1626,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.6",
-      "relativePath": "worldrpg/media/character/character-head-female-05-6.png",
+      "path": "worldrpg/media/character/character-head-female-05-6.png",
       "byteLength": 954,
       "sha256": "afd1905cc8a02714fafc8ec31aebb9d94fe2d1e2a034e7f6182f33d7468e9936",
       "width": 27,
@@ -1641,12 +1641,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.7",
-      "relativePath": "worldrpg/media/character/character-head-female-05-7.png",
+      "path": "worldrpg/media/character/character-head-female-05-7.png",
       "byteLength": 869,
       "sha256": "a3f07c75ea8aac24f069a3f8d33b130aa4de34c7d572df31ce21d59f9e4a879d",
       "width": 30,
@@ -1656,12 +1656,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.8",
-      "relativePath": "worldrpg/media/character/character-head-female-05-8.png",
+      "path": "worldrpg/media/character/character-head-female-05-8.png",
       "byteLength": 965,
       "sha256": "fed9803565bcb863b9e5d333bda185d16c0e44faa05bdbbd9d77430131b13232",
       "width": 32,
@@ -1671,12 +1671,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.05.9",
-      "relativePath": "worldrpg/media/character/character-head-female-05-9.png",
+      "path": "worldrpg/media/character/character-head-female-05-9.png",
       "byteLength": 833,
       "sha256": "8c7a8603b8ee10e8358459a6673bac213ad195d0a9c41fa2c0e522d7cfca795e",
       "width": 25,
@@ -1686,12 +1686,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.0",
-      "relativePath": "worldrpg/media/character/character-head-female-06-0.png",
+      "path": "worldrpg/media/character/character-head-female-06-0.png",
       "byteLength": 983,
       "sha256": "2fe769cc1d1709df9d228176c53b0b385cc64173a0313ecedf84061bc9692e6e",
       "width": 26,
@@ -1701,12 +1701,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.1",
-      "relativePath": "worldrpg/media/character/character-head-female-06-1.png",
+      "path": "worldrpg/media/character/character-head-female-06-1.png",
       "byteLength": 947,
       "sha256": "b57ae51be5cf86f3a7ec60b773a31eed697027c05067d93d1c681d90dbdd2f8f",
       "width": 34,
@@ -1716,12 +1716,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.2",
-      "relativePath": "worldrpg/media/character/character-head-female-06-2.png",
+      "path": "worldrpg/media/character/character-head-female-06-2.png",
       "byteLength": 855,
       "sha256": "e1a03d0551435e8b50da10e810784ff0daf5b035c9e2ac255f7e905380166e44",
       "width": 29,
@@ -1731,12 +1731,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.3",
-      "relativePath": "worldrpg/media/character/character-head-female-06-3.png",
+      "path": "worldrpg/media/character/character-head-female-06-3.png",
       "byteLength": 892,
       "sha256": "35c725e4c80fa1f5a2bab60dfc169d482350e676179f682a6d338584ee879b6b",
       "width": 29,
@@ -1746,12 +1746,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.4",
-      "relativePath": "worldrpg/media/character/character-head-female-06-4.png",
+      "path": "worldrpg/media/character/character-head-female-06-4.png",
       "byteLength": 976,
       "sha256": "f022b187b5e19b96ec5e3afddea405185437fadde1055d1babef9db744d39d01",
       "width": 33,
@@ -1761,12 +1761,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.5",
-      "relativePath": "worldrpg/media/character/character-head-female-06-5.png",
+      "path": "worldrpg/media/character/character-head-female-06-5.png",
       "byteLength": 625,
       "sha256": "e1a281a336551c8e537c754b7be953106d1190d2ed4c9286a20540a2d34e4805",
       "width": 24,
@@ -1776,12 +1776,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.6",
-      "relativePath": "worldrpg/media/character/character-head-female-06-6.png",
+      "path": "worldrpg/media/character/character-head-female-06-6.png",
       "byteLength": 788,
       "sha256": "702574410ff141775bab8a5bbf3f01ed743f1b0450da40562c23b3e842c48e03",
       "width": 29,
@@ -1791,12 +1791,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.7",
-      "relativePath": "worldrpg/media/character/character-head-female-06-7.png",
+      "path": "worldrpg/media/character/character-head-female-06-7.png",
       "byteLength": 777,
       "sha256": "e20dd51ae63673853315d090756f860b73d8221e0748c19c8c48bdc8c7592b9e",
       "width": 25,
@@ -1806,12 +1806,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.8",
-      "relativePath": "worldrpg/media/character/character-head-female-06-8.png",
+      "path": "worldrpg/media/character/character-head-female-06-8.png",
       "byteLength": 919,
       "sha256": "8cff7961e873dd67cd399cdb179483ec19b0eeffde2e020d6698a00f82639e5e",
       "width": 29,
@@ -1821,12 +1821,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.06.9",
-      "relativePath": "worldrpg/media/character/character-head-female-06-9.png",
+      "path": "worldrpg/media/character/character-head-female-06-9.png",
       "byteLength": 810,
       "sha256": "d3f9eafe6035c681df44a02b18fd560cc03cfad3e4265aab6847e2e71fbe3efe",
       "width": 30,
@@ -1836,12 +1836,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.0",
-      "relativePath": "worldrpg/media/character/character-head-female-07-0.png",
+      "path": "worldrpg/media/character/character-head-female-07-0.png",
       "byteLength": 680,
       "sha256": "0010b0a5e1c61986bbdad07d905a4747c28d035ce75a82092a3af65dd9e179b2",
       "width": 31,
@@ -1851,12 +1851,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.1",
-      "relativePath": "worldrpg/media/character/character-head-female-07-1.png",
+      "path": "worldrpg/media/character/character-head-female-07-1.png",
       "byteLength": 754,
       "sha256": "1e30e5d3ce638d7ca0a552233c6ec37ebfa990375b2c1f9f2ad5c7f521df0db9",
       "width": 37,
@@ -1866,12 +1866,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.2",
-      "relativePath": "worldrpg/media/character/character-head-female-07-2.png",
+      "path": "worldrpg/media/character/character-head-female-07-2.png",
       "byteLength": 1012,
       "sha256": "17fa1eda8ccf5cd36f7d528c95152e088c3d3cc405dab7160948f7dba8ef8377",
       "width": 37,
@@ -1881,12 +1881,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.3",
-      "relativePath": "worldrpg/media/character/character-head-female-07-3.png",
+      "path": "worldrpg/media/character/character-head-female-07-3.png",
       "byteLength": 649,
       "sha256": "c5c29c2094d2c12d5f814d6f5266f47efb599a4d45948528060c54f6bbce44b2",
       "width": 31,
@@ -1896,12 +1896,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.4",
-      "relativePath": "worldrpg/media/character/character-head-female-07-4.png",
+      "path": "worldrpg/media/character/character-head-female-07-4.png",
       "byteLength": 711,
       "sha256": "65259d80f0cc1c7c1c2a440cd9828e4e460385e9479aa4e9409ac039d6d914fd",
       "width": 26,
@@ -1911,12 +1911,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.5",
-      "relativePath": "worldrpg/media/character/character-head-female-07-5.png",
+      "path": "worldrpg/media/character/character-head-female-07-5.png",
       "byteLength": 813,
       "sha256": "bed3e34cdbfbdc55c090b2152e5cf52265b8bc0b5a9c0d7c43d3de6abd6ca40a",
       "width": 37,
@@ -1926,12 +1926,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.6",
-      "relativePath": "worldrpg/media/character/character-head-female-07-6.png",
+      "path": "worldrpg/media/character/character-head-female-07-6.png",
       "byteLength": 829,
       "sha256": "38bf2af018ff3baf2db93e3d065dbed42d7199cc8b0382e896fa612000e1a80c",
       "width": 36,
@@ -1941,12 +1941,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.7",
-      "relativePath": "worldrpg/media/character/character-head-female-07-7.png",
+      "path": "worldrpg/media/character/character-head-female-07-7.png",
       "byteLength": 698,
       "sha256": "8500a7a22e28c2add95ff16ea2cf366fb49a5b7707adadf6ba3a16efa608601b",
       "width": 31,
@@ -1956,12 +1956,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.8",
-      "relativePath": "worldrpg/media/character/character-head-female-07-8.png",
+      "path": "worldrpg/media/character/character-head-female-07-8.png",
       "byteLength": 517,
       "sha256": "5375bc159260f381bb91627ab10eedbd08cc4d8ad669e1dbebb7622ef78add79",
       "width": 22,
@@ -1971,12 +1971,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.female.07.9",
-      "relativePath": "worldrpg/media/character/character-head-female-07-9.png",
+      "path": "worldrpg/media/character/character-head-female-07-9.png",
       "byteLength": 713,
       "sha256": "a82616f1b1babb3f643bb4fcdc13c4c7522c1686b3990ec66f25127de5fea618",
       "width": 37,
@@ -1986,12 +1986,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.00.0",
-      "relativePath": "worldrpg/media/character/character-head-male-00-0.png",
+      "path": "worldrpg/media/character/character-head-male-00-0.png",
       "byteLength": 623,
       "sha256": "8678a3cf07c31539c7f522cc8228a8deb8ed60c79d36ad24d0816322d08e4c63",
       "width": 20,
@@ -2006,7 +2006,7 @@
     },
     {
       "mediaId": "character.head.male.00.1",
-      "relativePath": "worldrpg/media/character/character-head-male-00-1.png",
+      "path": "worldrpg/media/character/character-head-male-00-1.png",
       "byteLength": 903,
       "sha256": "b2a6a7e0bb1f7e28a157d766fb012b739cb63a5a7b37a468da84b104314a76e9",
       "width": 30,
@@ -2021,7 +2021,7 @@
     },
     {
       "mediaId": "character.head.male.00.2",
-      "relativePath": "worldrpg/media/character/character-head-male-00-2.png",
+      "path": "worldrpg/media/character/character-head-male-00-2.png",
       "byteLength": 709,
       "sha256": "07311073bed5f3a30e045c826a234f6a440a056a7c822437d2e6283136e47096",
       "width": 20,
@@ -2036,7 +2036,7 @@
     },
     {
       "mediaId": "character.head.male.00.3",
-      "relativePath": "worldrpg/media/character/character-head-male-00-3.png",
+      "path": "worldrpg/media/character/character-head-male-00-3.png",
       "byteLength": 826,
       "sha256": "fce07e5d9a62fe5cbf57e2f1f47140a10f127dc63371bca4b9bc73aecb060160",
       "width": 29,
@@ -2051,7 +2051,7 @@
     },
     {
       "mediaId": "character.head.male.00.4",
-      "relativePath": "worldrpg/media/character/character-head-male-00-4.png",
+      "path": "worldrpg/media/character/character-head-male-00-4.png",
       "byteLength": 819,
       "sha256": "2f3875c037af6dfe811b9f1eac8ede7aabf1f331dd34e60441ab13ada80fe73a",
       "width": 29,
@@ -2066,7 +2066,7 @@
     },
     {
       "mediaId": "character.head.male.00.5",
-      "relativePath": "worldrpg/media/character/character-head-male-00-5.png",
+      "path": "worldrpg/media/character/character-head-male-00-5.png",
       "byteLength": 823,
       "sha256": "41e90365bea0afd423960364aac46cd1edf81e4ae72148b74dcf949ff1775f2f",
       "width": 25,
@@ -2081,7 +2081,7 @@
     },
     {
       "mediaId": "character.head.male.00.6",
-      "relativePath": "worldrpg/media/character/character-head-male-00-6.png",
+      "path": "worldrpg/media/character/character-head-male-00-6.png",
       "byteLength": 743,
       "sha256": "d90d85b3b811bea248ddf3e67c730243e1835e12b2d2b17ce216c601d2419485",
       "width": 22,
@@ -2096,7 +2096,7 @@
     },
     {
       "mediaId": "character.head.male.00.7",
-      "relativePath": "worldrpg/media/character/character-head-male-00-7.png",
+      "path": "worldrpg/media/character/character-head-male-00-7.png",
       "byteLength": 734,
       "sha256": "f5b9fb3fcb2c0a8e8e99d912bb1e299bd2b524858e3235be71b534f2b5a1f2ba",
       "width": 23,
@@ -2111,7 +2111,7 @@
     },
     {
       "mediaId": "character.head.male.00.8",
-      "relativePath": "worldrpg/media/character/character-head-male-00-8.png",
+      "path": "worldrpg/media/character/character-head-male-00-8.png",
       "byteLength": 757,
       "sha256": "1871c6cbb47a4fb4f6f89392c688ac762e6ce3ebe8f3b9cbe11551f51b2bd1de",
       "width": 24,
@@ -2126,7 +2126,7 @@
     },
     {
       "mediaId": "character.head.male.00.9",
-      "relativePath": "worldrpg/media/character/character-head-male-00-9.png",
+      "path": "worldrpg/media/character/character-head-male-00-9.png",
       "byteLength": 904,
       "sha256": "30cf9b1fac3479e713acf16ea9a5a60532f71ce38b6a618aeb83b22c4c33b315",
       "width": 29,
@@ -2141,7 +2141,7 @@
     },
     {
       "mediaId": "character.head.male.01.0",
-      "relativePath": "worldrpg/media/character/character-head-male-01-0.png",
+      "path": "worldrpg/media/character/character-head-male-01-0.png",
       "byteLength": 591,
       "sha256": "29283cb9e6a46c65e3855a92047c5e29245df430e993986d72aa7f5e8ddfadb2",
       "width": 19,
@@ -2151,12 +2151,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.1",
-      "relativePath": "worldrpg/media/character/character-head-male-01-1.png",
+      "path": "worldrpg/media/character/character-head-male-01-1.png",
       "byteLength": 627,
       "sha256": "49d60fb927fd43c0202f94a3709c083955e619347c34019e45dfebaf5110913e",
       "width": 20,
@@ -2166,12 +2166,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.2",
-      "relativePath": "worldrpg/media/character/character-head-male-01-2.png",
+      "path": "worldrpg/media/character/character-head-male-01-2.png",
       "byteLength": 837,
       "sha256": "0a84f09cce90d42f8bb557d5e6ef90b9b0f6b7d425202598ba80a8eff35ce609",
       "width": 28,
@@ -2181,12 +2181,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.3",
-      "relativePath": "worldrpg/media/character/character-head-male-01-3.png",
+      "path": "worldrpg/media/character/character-head-male-01-3.png",
       "byteLength": 803,
       "sha256": "86ea0b5cf6d5d67d536f134ace6b9a1ab766363979c6f2137dfbf56b99556bca",
       "width": 29,
@@ -2196,12 +2196,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.4",
-      "relativePath": "worldrpg/media/character/character-head-male-01-4.png",
+      "path": "worldrpg/media/character/character-head-male-01-4.png",
       "byteLength": 919,
       "sha256": "2cc0bfcb47e9559f254b7246d5e39821404b231dd7eb2c8926a9e23014761214",
       "width": 30,
@@ -2211,12 +2211,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.5",
-      "relativePath": "worldrpg/media/character/character-head-male-01-5.png",
+      "path": "worldrpg/media/character/character-head-male-01-5.png",
       "byteLength": 870,
       "sha256": "2f0d533b585f096d2d177016756443854e5437a467019fa43159da81f0d97bc4",
       "width": 31,
@@ -2226,12 +2226,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.6",
-      "relativePath": "worldrpg/media/character/character-head-male-01-6.png",
+      "path": "worldrpg/media/character/character-head-male-01-6.png",
       "byteLength": 699,
       "sha256": "5b684cdd15644a855f865549365ab404c6245747768e337246a22b36c8eebaa5",
       "width": 24,
@@ -2241,12 +2241,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.7",
-      "relativePath": "worldrpg/media/character/character-head-male-01-7.png",
+      "path": "worldrpg/media/character/character-head-male-01-7.png",
       "byteLength": 748,
       "sha256": "e045f3c5d7b7490798be433cc699de0e7acf0dd10ce46754eb81f49485d641ec",
       "width": 33,
@@ -2256,12 +2256,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.8",
-      "relativePath": "worldrpg/media/character/character-head-male-01-8.png",
+      "path": "worldrpg/media/character/character-head-male-01-8.png",
       "byteLength": 891,
       "sha256": "b54d4c9e979cd400d171591a366b2314d17d6984ea9ee3e8ba8197fa49d70ee8",
       "width": 30,
@@ -2271,12 +2271,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.01.9",
-      "relativePath": "worldrpg/media/character/character-head-male-01-9.png",
+      "path": "worldrpg/media/character/character-head-male-01-9.png",
       "byteLength": 879,
       "sha256": "86a31d46600f6747e7511c401373c94bb05206f594bcf7131063af4fbe68c39a",
       "width": 31,
@@ -2286,12 +2286,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.0",
-      "relativePath": "worldrpg/media/character/character-head-male-02-0.png",
+      "path": "worldrpg/media/character/character-head-male-02-0.png",
       "byteLength": 844,
       "sha256": "068d0801899001b47ec949c801409036fab60b37e3dc7da76148296230d75cb3",
       "width": 24,
@@ -2301,12 +2301,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.1",
-      "relativePath": "worldrpg/media/character/character-head-male-02-1.png",
+      "path": "worldrpg/media/character/character-head-male-02-1.png",
       "byteLength": 1027,
       "sha256": "e86f1866055ebc2bef38a54725c2c509f59bab4ef65069889f73d74b6233649d",
       "width": 31,
@@ -2316,12 +2316,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.2",
-      "relativePath": "worldrpg/media/character/character-head-male-02-2.png",
+      "path": "worldrpg/media/character/character-head-male-02-2.png",
       "byteLength": 630,
       "sha256": "9e6ad0b82ad120a485edb63698fde9a40f7b0aaf807a214dc09f354ad8b045dd",
       "width": 22,
@@ -2331,12 +2331,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.3",
-      "relativePath": "worldrpg/media/character/character-head-male-02-3.png",
+      "path": "worldrpg/media/character/character-head-male-02-3.png",
       "byteLength": 962,
       "sha256": "b2a7af5ca9dbeb3613fb97cca6dcd94215d77b3a327f56b7729bec130cfc6a7f",
       "width": 25,
@@ -2346,12 +2346,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.4",
-      "relativePath": "worldrpg/media/character/character-head-male-02-4.png",
+      "path": "worldrpg/media/character/character-head-male-02-4.png",
       "byteLength": 1035,
       "sha256": "1843ca6c11165d44842fda966c836bcc790e2a8d4cd19c950b7a48a5d447f0c6",
       "width": 31,
@@ -2361,12 +2361,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.5",
-      "relativePath": "worldrpg/media/character/character-head-male-02-5.png",
+      "path": "worldrpg/media/character/character-head-male-02-5.png",
       "byteLength": 839,
       "sha256": "d83f991bc9d77a99ba6d3f657428619d6177aa5d391c8a0e0e88d293969c3f84",
       "width": 27,
@@ -2376,12 +2376,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.6",
-      "relativePath": "worldrpg/media/character/character-head-male-02-6.png",
+      "path": "worldrpg/media/character/character-head-male-02-6.png",
       "byteLength": 975,
       "sha256": "19c1d44ec5d647effef28b213838400214d79c1d774890e848da8751372c637e",
       "width": 31,
@@ -2391,12 +2391,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.7",
-      "relativePath": "worldrpg/media/character/character-head-male-02-7.png",
+      "path": "worldrpg/media/character/character-head-male-02-7.png",
       "byteLength": 861,
       "sha256": "1291aed0b61e9da5957eb24da876ad43739463b6eb2566945a606335699e26e3",
       "width": 29,
@@ -2406,12 +2406,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.8",
-      "relativePath": "worldrpg/media/character/character-head-male-02-8.png",
+      "path": "worldrpg/media/character/character-head-male-02-8.png",
       "byteLength": 978,
       "sha256": "058c31e41444228081cb55e65bf8f349710e53161cbe9ee920f29fc5661f0d4a",
       "width": 25,
@@ -2421,12 +2421,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.02.9",
-      "relativePath": "worldrpg/media/character/character-head-male-02-9.png",
+      "path": "worldrpg/media/character/character-head-male-02-9.png",
       "byteLength": 981,
       "sha256": "70c4cc05c88e066c447d4976b1c9f6355c4eb3087d3c92f4ad6428da6e84d28e",
       "width": 31,
@@ -2436,12 +2436,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.0",
-      "relativePath": "worldrpg/media/character/character-head-male-03-0.png",
+      "path": "worldrpg/media/character/character-head-male-03-0.png",
       "byteLength": 934,
       "sha256": "640f0980c63cef8b39a29b3c58b0ba5d1eee384eed504d8183777865830574b5",
       "width": 31,
@@ -2451,12 +2451,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.1",
-      "relativePath": "worldrpg/media/character/character-head-male-03-1.png",
+      "path": "worldrpg/media/character/character-head-male-03-1.png",
       "byteLength": 926,
       "sha256": "fbe74bd83934befce9378f7d87bcc4d5ad8e769fd17197219a24c42354fde327",
       "width": 25,
@@ -2466,12 +2466,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.2",
-      "relativePath": "worldrpg/media/character/character-head-male-03-2.png",
+      "path": "worldrpg/media/character/character-head-male-03-2.png",
       "byteLength": 769,
       "sha256": "ee5524798826cc18bfd8754e2cfe511e7c60db4917fc56dc3c45798dfe135b5c",
       "width": 26,
@@ -2481,12 +2481,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.3",
-      "relativePath": "worldrpg/media/character/character-head-male-03-3.png",
+      "path": "worldrpg/media/character/character-head-male-03-3.png",
       "byteLength": 822,
       "sha256": "387d162f772928acdbef158377029c96660c93a329c1e87e5bb9bd8850cb092b",
       "width": 27,
@@ -2496,12 +2496,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.4",
-      "relativePath": "worldrpg/media/character/character-head-male-03-4.png",
+      "path": "worldrpg/media/character/character-head-male-03-4.png",
       "byteLength": 897,
       "sha256": "e07c0e273c57f35f54665148bdb4d0999c0ef0d12b87bb52d9e85733ad9fb917",
       "width": 32,
@@ -2511,12 +2511,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.5",
-      "relativePath": "worldrpg/media/character/character-head-male-03-5.png",
+      "path": "worldrpg/media/character/character-head-male-03-5.png",
       "byteLength": 913,
       "sha256": "2b1d3356a12656a4072a28e2dd7685ff9486b8f8a7a8402144835ad5b82d9d7a",
       "width": 29,
@@ -2526,12 +2526,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.6",
-      "relativePath": "worldrpg/media/character/character-head-male-03-6.png",
+      "path": "worldrpg/media/character/character-head-male-03-6.png",
       "byteLength": 1012,
       "sha256": "8904fda42e9707ca2c210221c0b978b7616b13541fa701ea6ce2a4ceebac1f0b",
       "width": 31,
@@ -2541,12 +2541,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.7",
-      "relativePath": "worldrpg/media/character/character-head-male-03-7.png",
+      "path": "worldrpg/media/character/character-head-male-03-7.png",
       "byteLength": 788,
       "sha256": "a3d6529b073870bdddc369378546b42fac3f9332b00036f6f5d28b79cceae5d4",
       "width": 26,
@@ -2556,12 +2556,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.8",
-      "relativePath": "worldrpg/media/character/character-head-male-03-8.png",
+      "path": "worldrpg/media/character/character-head-male-03-8.png",
       "byteLength": 792,
       "sha256": "10da7470c4f144a1e85fa8a1ef57c9e7fcf646d9ef05d615ae634b957bb4e91a",
       "width": 26,
@@ -2571,12 +2571,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.03.9",
-      "relativePath": "worldrpg/media/character/character-head-male-03-9.png",
+      "path": "worldrpg/media/character/character-head-male-03-9.png",
       "byteLength": 802,
       "sha256": "81c4cc747e6ed77ca83b6325e8fb6a674785fb82d1a56668bdd2864a11c663e2",
       "width": 28,
@@ -2586,12 +2586,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.0",
-      "relativePath": "worldrpg/media/character/character-head-male-04-0.png",
+      "path": "worldrpg/media/character/character-head-male-04-0.png",
       "byteLength": 901,
       "sha256": "7c9007642a1bd7c73611f3faf6ebc7d566df8280fa403cb95ba03af42ab53b63",
       "width": 25,
@@ -2601,12 +2601,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.1",
-      "relativePath": "worldrpg/media/character/character-head-male-04-1.png",
+      "path": "worldrpg/media/character/character-head-male-04-1.png",
       "byteLength": 985,
       "sha256": "4325e603a6dac5af3129935c0dfa0963e07df9ca5ff11689fbe4549ab0af882b",
       "width": 28,
@@ -2616,12 +2616,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.2",
-      "relativePath": "worldrpg/media/character/character-head-male-04-2.png",
+      "path": "worldrpg/media/character/character-head-male-04-2.png",
       "byteLength": 798,
       "sha256": "1ab428e41eed524c548fee31abbd11a3eddfbe93a895f050e63477de45d3af2e",
       "width": 21,
@@ -2631,12 +2631,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.3",
-      "relativePath": "worldrpg/media/character/character-head-male-04-3.png",
+      "path": "worldrpg/media/character/character-head-male-04-3.png",
       "byteLength": 1008,
       "sha256": "05a2cc7a2f99fa84baf3260448725d809cfa06e7acb6556aab223769293e3c9a",
       "width": 25,
@@ -2646,12 +2646,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.4",
-      "relativePath": "worldrpg/media/character/character-head-male-04-4.png",
+      "path": "worldrpg/media/character/character-head-male-04-4.png",
       "byteLength": 1104,
       "sha256": "51719520bb061165f11faeae97e7812f1b22c37de4f14a1f1bdb1996bff0319f",
       "width": 36,
@@ -2661,12 +2661,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.5",
-      "relativePath": "worldrpg/media/character/character-head-male-04-5.png",
+      "path": "worldrpg/media/character/character-head-male-04-5.png",
       "byteLength": 908,
       "sha256": "356bc79755566a363ed2ece3d9a77940ec23884a9461297c5a46762bf1a8c257",
       "width": 27,
@@ -2676,12 +2676,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.6",
-      "relativePath": "worldrpg/media/character/character-head-male-04-6.png",
+      "path": "worldrpg/media/character/character-head-male-04-6.png",
       "byteLength": 943,
       "sha256": "3cbd2044e7533091c92aa8137a92b3ea688deba601434ed5f87b70b2d4bb1d9d",
       "width": 25,
@@ -2691,12 +2691,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.7",
-      "relativePath": "worldrpg/media/character/character-head-male-04-7.png",
+      "path": "worldrpg/media/character/character-head-male-04-7.png",
       "byteLength": 912,
       "sha256": "93bef4a2ae386d4d4aa704e6104f80a6da8d2ca8d944d20240a52d10867b6cd8",
       "width": 24,
@@ -2706,12 +2706,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.8",
-      "relativePath": "worldrpg/media/character/character-head-male-04-8.png",
+      "path": "worldrpg/media/character/character-head-male-04-8.png",
       "byteLength": 821,
       "sha256": "f2e9d169c0439abf3f99e3a1118f8ee8169ccec848a877e834180b4da8b97841",
       "width": 23,
@@ -2721,12 +2721,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.04.9",
-      "relativePath": "worldrpg/media/character/character-head-male-04-9.png",
+      "path": "worldrpg/media/character/character-head-male-04-9.png",
       "byteLength": 865,
       "sha256": "da96b0ad5f18bf3063d586bfa1ca8c73beb80783c828c93ee372c34ceacbb91f",
       "width": 30,
@@ -2736,12 +2736,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.0",
-      "relativePath": "worldrpg/media/character/character-head-male-05-0.png",
+      "path": "worldrpg/media/character/character-head-male-05-0.png",
       "byteLength": 916,
       "sha256": "1cd635adb890168eb789be4c77588f90a16f938d4e7a67ae6ee0a0e449559253",
       "width": 34,
@@ -2751,12 +2751,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.1",
-      "relativePath": "worldrpg/media/character/character-head-male-05-1.png",
+      "path": "worldrpg/media/character/character-head-male-05-1.png",
       "byteLength": 1014,
       "sha256": "c8f016429924464d13a92d3ea8a0fd82336e639b2c7facd1ef726b9fce4767bd",
       "width": 30,
@@ -2766,12 +2766,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.2",
-      "relativePath": "worldrpg/media/character/character-head-male-05-2.png",
+      "path": "worldrpg/media/character/character-head-male-05-2.png",
       "byteLength": 920,
       "sha256": "b3111afad756d0cc7e3f203cc49f4708ef2c70466d0202ac1b1a89f5e15b7f73",
       "width": 26,
@@ -2781,12 +2781,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.3",
-      "relativePath": "worldrpg/media/character/character-head-male-05-3.png",
+      "path": "worldrpg/media/character/character-head-male-05-3.png",
       "byteLength": 927,
       "sha256": "09ddec66e3b423da3caf6c8d899f8a074d04c4e05dc0651090d66ddd4a48056e",
       "width": 34,
@@ -2796,12 +2796,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.4",
-      "relativePath": "worldrpg/media/character/character-head-male-05-4.png",
+      "path": "worldrpg/media/character/character-head-male-05-4.png",
       "byteLength": 1121,
       "sha256": "4b5b7c4aa2aaa45d4e47ae85d1544fbd62ae4d1b63c55bbd4248162f49777cd6",
       "width": 33,
@@ -2811,12 +2811,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.5",
-      "relativePath": "worldrpg/media/character/character-head-male-05-5.png",
+      "path": "worldrpg/media/character/character-head-male-05-5.png",
       "byteLength": 980,
       "sha256": "b65e65c49cdba73431dccc6d28a8cc28ce3fc5582075f4c8d6c86095341393b1",
       "width": 25,
@@ -2826,12 +2826,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.6",
-      "relativePath": "worldrpg/media/character/character-head-male-05-6.png",
+      "path": "worldrpg/media/character/character-head-male-05-6.png",
       "byteLength": 748,
       "sha256": "11d361c308e6af174fe90866c9a604bd66883ed5c8e8174c4c83244511fbcb9e",
       "width": 29,
@@ -2841,12 +2841,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.7",
-      "relativePath": "worldrpg/media/character/character-head-male-05-7.png",
+      "path": "worldrpg/media/character/character-head-male-05-7.png",
       "byteLength": 873,
       "sha256": "ea824a471d0b0650b9e7ff9e189730a98af451c3e93ccf2f3e442621a38718f1",
       "width": 25,
@@ -2856,12 +2856,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.8",
-      "relativePath": "worldrpg/media/character/character-head-male-05-8.png",
+      "path": "worldrpg/media/character/character-head-male-05-8.png",
       "byteLength": 758,
       "sha256": "047de9ed4e174d44ef92c587c874cfbba719e9c26eb1272adf64753e22edac82",
       "width": 24,
@@ -2871,12 +2871,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.05.9",
-      "relativePath": "worldrpg/media/character/character-head-male-05-9.png",
+      "path": "worldrpg/media/character/character-head-male-05-9.png",
       "byteLength": 856,
       "sha256": "d564034a97982acd9e3403abf1e206e111ac9f82b340f28448bf88a6234e3ef9",
       "width": 26,
@@ -2886,12 +2886,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.0",
-      "relativePath": "worldrpg/media/character/character-head-male-06-0.png",
+      "path": "worldrpg/media/character/character-head-male-06-0.png",
       "byteLength": 766,
       "sha256": "406020b9f372bc3a7f590e9db9049dcd21ec48c7e6a58e46a9131825e86d0ea2",
       "width": 19,
@@ -2901,12 +2901,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.1",
-      "relativePath": "worldrpg/media/character/character-head-male-06-1.png",
+      "path": "worldrpg/media/character/character-head-male-06-1.png",
       "byteLength": 1015,
       "sha256": "4b06df80643d15284ff3ee639c3ead8ce22fb4a2d56b9b2502e2b281d7b7bea9",
       "width": 25,
@@ -2916,12 +2916,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.2",
-      "relativePath": "worldrpg/media/character/character-head-male-06-2.png",
+      "path": "worldrpg/media/character/character-head-male-06-2.png",
       "byteLength": 948,
       "sha256": "0c1d72c9ab5a3fc594d732f370545ab9af37bd02801fdf15ae5cdd2d230010be",
       "width": 28,
@@ -2931,12 +2931,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.3",
-      "relativePath": "worldrpg/media/character/character-head-male-06-3.png",
+      "path": "worldrpg/media/character/character-head-male-06-3.png",
       "byteLength": 762,
       "sha256": "f5ea5ab6797f00eb1b083d23b48aba10242186d301e09a68f8f6e334e3e9cb2b",
       "width": 19,
@@ -2946,12 +2946,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.4",
-      "relativePath": "worldrpg/media/character/character-head-male-06-4.png",
+      "path": "worldrpg/media/character/character-head-male-06-4.png",
       "byteLength": 937,
       "sha256": "dfc7d6297b6e3d2ffb78ae6b2f60b5e92905e6b156bf938715a1e9fe0f1c36b5",
       "width": 29,
@@ -2961,12 +2961,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.5",
-      "relativePath": "worldrpg/media/character/character-head-male-06-5.png",
+      "path": "worldrpg/media/character/character-head-male-06-5.png",
       "byteLength": 1071,
       "sha256": "b058d3163b84bc6a0316c74380c47753940b9bffeddea243f0a76ebbb8bcfdb6",
       "width": 25,
@@ -2976,12 +2976,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.6",
-      "relativePath": "worldrpg/media/character/character-head-male-06-6.png",
+      "path": "worldrpg/media/character/character-head-male-06-6.png",
       "byteLength": 900,
       "sha256": "1c6b50cfc4c39a8e43d10b2af8b993edece06be280bff6da701b6ae2baffffb2",
       "width": 30,
@@ -2991,12 +2991,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.7",
-      "relativePath": "worldrpg/media/character/character-head-male-06-7.png",
+      "path": "worldrpg/media/character/character-head-male-06-7.png",
       "byteLength": 803,
       "sha256": "edc56910c7aacf71c5dc0195103adabc487afc7106db695e057552f95d5170ed",
       "width": 21,
@@ -3006,12 +3006,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.8",
-      "relativePath": "worldrpg/media/character/character-head-male-06-8.png",
+      "path": "worldrpg/media/character/character-head-male-06-8.png",
       "byteLength": 810,
       "sha256": "4ef8494d277e62013db3207950cccb299a7841c9f6238fd13113c7c53de2de9c",
       "width": 23,
@@ -3021,12 +3021,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.06.9",
-      "relativePath": "worldrpg/media/character/character-head-male-06-9.png",
+      "path": "worldrpg/media/character/character-head-male-06-9.png",
       "byteLength": 860,
       "sha256": "bf2d8895dae2e47a877090f1f6392d4415548c25265126881af472536234795c",
       "width": 23,
@@ -3036,12 +3036,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.0",
-      "relativePath": "worldrpg/media/character/character-head-male-07-0.png",
+      "path": "worldrpg/media/character/character-head-male-07-0.png",
       "byteLength": 527,
       "sha256": "298363159d5b886be6e958403c70b11cf099f6621670753d9448fa8a8a39bc71",
       "width": 22,
@@ -3051,12 +3051,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.1",
-      "relativePath": "worldrpg/media/character/character-head-male-07-1.png",
+      "path": "worldrpg/media/character/character-head-male-07-1.png",
       "byteLength": 656,
       "sha256": "3f8f49b140863f4c9ca2126e5bae7dcea876e3b2c6a0c30d22b9349807cc4e3d",
       "width": 36,
@@ -3066,12 +3066,12 @@
       "canvasIndex": 1,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.2",
-      "relativePath": "worldrpg/media/character/character-head-male-07-2.png",
+      "path": "worldrpg/media/character/character-head-male-07-2.png",
       "byteLength": 588,
       "sha256": "a213eda68ab4a21a70abf2ed715b352a46307d5ff3b30114a55da974ef1cc260",
       "width": 22,
@@ -3081,12 +3081,12 @@
       "canvasIndex": 2,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.3",
-      "relativePath": "worldrpg/media/character/character-head-male-07-3.png",
+      "path": "worldrpg/media/character/character-head-male-07-3.png",
       "byteLength": 558,
       "sha256": "de7fc6558e1b09520b90504c237dbfc13c774b366256394b1042b62a584da4b5",
       "width": 23,
@@ -3096,12 +3096,12 @@
       "canvasIndex": 3,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.4",
-      "relativePath": "worldrpg/media/character/character-head-male-07-4.png",
+      "path": "worldrpg/media/character/character-head-male-07-4.png",
       "byteLength": 688,
       "sha256": "1021570283c1c4a1498454d6400649748c2d24222d4c46a15b1a3c6fa97a5d79",
       "width": 31,
@@ -3111,12 +3111,12 @@
       "canvasIndex": 4,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.5",
-      "relativePath": "worldrpg/media/character/character-head-male-07-5.png",
+      "path": "worldrpg/media/character/character-head-male-07-5.png",
       "byteLength": 561,
       "sha256": "1d3a52cc7e8b2e4b76b79f1491bd79cbdba31395a3709080710da2b1f7713bfe",
       "width": 22,
@@ -3126,12 +3126,12 @@
       "canvasIndex": 5,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.6",
-      "relativePath": "worldrpg/media/character/character-head-male-07-6.png",
+      "path": "worldrpg/media/character/character-head-male-07-6.png",
       "byteLength": 755,
       "sha256": "111fcd7b815c4b02bb8c0052306e3b2e99502ce498da852bcbc02f3e351cd8ca",
       "width": 31,
@@ -3141,12 +3141,12 @@
       "canvasIndex": 6,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.7",
-      "relativePath": "worldrpg/media/character/character-head-male-07-7.png",
+      "path": "worldrpg/media/character/character-head-male-07-7.png",
       "byteLength": 517,
       "sha256": "5375bc159260f381bb91627ab10eedbd08cc4d8ad669e1dbebb7622ef78add79",
       "width": 22,
@@ -3156,12 +3156,12 @@
       "canvasIndex": 7,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.8",
-      "relativePath": "worldrpg/media/character/character-head-male-07-8.png",
+      "path": "worldrpg/media/character/character-head-male-07-8.png",
       "byteLength": 862,
       "sha256": "d1d7028ab07d933fbed42fd75b714c55e7e1ebcf936e2ee698c1b0d875d9aae1",
       "width": 36,
@@ -3171,12 +3171,12 @@
       "canvasIndex": 8,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.head.male.07.9",
-      "relativePath": "worldrpg/media/character/character-head-male-07-9.png",
+      "path": "worldrpg/media/character/character-head-male-07-9.png",
       "byteLength": 556,
       "sha256": "46d3dea1536c058c6c571c9c43a0f7820e81c399fece3a8061d1e3a32740e84e",
       "width": 22,
@@ -3186,12 +3186,12 @@
       "canvasIndex": 9,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.nite.nite00i0.0",
-      "relativePath": "worldrpg/media/character/character-nite-nite00i0-0.png",
+      "path": "worldrpg/media/character/character-nite-nite00i0-0.png",
       "byteLength": 6789,
       "sha256": "00b517628956d461505c33acc2b4acd6843150032a5a420f6c2ad333eb402333",
       "width": 512,
@@ -3206,7 +3206,7 @@
     },
     {
       "mediaId": "character.nite.nite01i0.0",
-      "relativePath": "worldrpg/media/character/character-nite-nite01i0-0.png",
+      "path": "worldrpg/media/character/character-nite-nite01i0-0.png",
       "byteLength": 5203,
       "sha256": "de4a80f805803e627e973064bb971c3939bcec416ef1924ddddfba9e66ff30ec",
       "width": 512,
@@ -3221,7 +3221,7 @@
     },
     {
       "mediaId": "character.nite.nite02i0.0",
-      "relativePath": "worldrpg/media/character/character-nite-nite02i0-0.png",
+      "path": "worldrpg/media/character/character-nite-nite02i0-0.png",
       "byteLength": 4727,
       "sha256": "18c24fa3dbe3ce99756d6fd76851f59b0b83200942ce930b170a46ccf4137440",
       "width": 512,
@@ -3236,7 +3236,7 @@
     },
     {
       "mediaId": "character.nite.nite03i0.0",
-      "relativePath": "worldrpg/media/character/character-nite-nite03i0-0.png",
+      "path": "worldrpg/media/character/character-nite-nite03i0-0.png",
       "byteLength": 6512,
       "sha256": "42f03ffce6a5902eaf7718b9a4e5545408e948d6597b055dc47276fe4f349ae0",
       "width": 512,
@@ -3251,7 +3251,7 @@
     },
     {
       "mediaId": "character.portrait.mage.0",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-0.png",
+      "path": "worldrpg/media/character/character-portrait-mage-0.png",
       "byteLength": 3885,
       "sha256": "e4a8554a40818307dbf5d178a78701c0a9f579b2bb00173bafb7060d003d4076",
       "width": 110,
@@ -3259,14 +3259,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 0,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.1",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-1.png",
+      "path": "worldrpg/media/character/character-portrait-mage-1.png",
       "byteLength": 3931,
       "sha256": "62200b83b129e8fb851494f69507ef2c387d2dc428cd741cbd05d4ff6fef79fd",
       "width": 110,
@@ -3274,14 +3274,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 1,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.10",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-10.png",
+      "path": "worldrpg/media/character/character-portrait-mage-10.png",
       "byteLength": 3825,
       "sha256": "e6a8859c1b08635bd53bda6813060cd5a4c4c917a57200678c408e31ac9c7a06",
       "width": 110,
@@ -3289,14 +3289,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 10,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.11",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-11.png",
+      "path": "worldrpg/media/character/character-portrait-mage-11.png",
       "byteLength": 3774,
       "sha256": "c843315d1c37fb412b087000d94b0543df85a0276ac1a2198a2fe73991c1d4ad",
       "width": 110,
@@ -3304,14 +3304,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 11,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.12",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-12.png",
+      "path": "worldrpg/media/character/character-portrait-mage-12.png",
       "byteLength": 3734,
       "sha256": "89b1e75be8d84720e0db84f48a3f8fc75b1626f0efc891fa844d88b9e31f84b5",
       "width": 110,
@@ -3319,14 +3319,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 12,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.13",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-13.png",
+      "path": "worldrpg/media/character/character-portrait-mage-13.png",
       "byteLength": 3730,
       "sha256": "62c6cb71df3f3c006abbafbbaad1cc6ddf871acfa3abac45049a7d0da06eae51",
       "width": 110,
@@ -3334,14 +3334,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 13,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.14",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-14.png",
+      "path": "worldrpg/media/character/character-portrait-mage-14.png",
       "byteLength": 3721,
       "sha256": "593194e01f6b056fb6379201ff338822c4e8c6c54673f087a111dbf19bb09d58",
       "width": 110,
@@ -3349,14 +3349,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 14,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.2",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-2.png",
+      "path": "worldrpg/media/character/character-portrait-mage-2.png",
       "byteLength": 4044,
       "sha256": "13567b5fb1d66671a63c03a7628208912ff487483602a674a8427edc93a8d7b8",
       "width": 110,
@@ -3364,14 +3364,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 2,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.3",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-3.png",
+      "path": "worldrpg/media/character/character-portrait-mage-3.png",
       "byteLength": 4316,
       "sha256": "cee4bfcae83cbaebc90be59421527d32bcedee3c6c4cbf36d2e3e5b47ca51188",
       "width": 110,
@@ -3379,14 +3379,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 3,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.4",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-4.png",
+      "path": "worldrpg/media/character/character-portrait-mage-4.png",
       "byteLength": 4395,
       "sha256": "d98ab5a894f9e87e8cc1e956d9ad2b0a53586e1113ef6e065a5c799e76ae55ac",
       "width": 110,
@@ -3394,14 +3394,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 4,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.5",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-5.png",
+      "path": "worldrpg/media/character/character-portrait-mage-5.png",
       "byteLength": 4336,
       "sha256": "4342545ba1b7325b13b02ba879aea2c756d8b346bb80926fc8e37e384fa625bd",
       "width": 110,
@@ -3409,14 +3409,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 5,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.6",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-6.png",
+      "path": "worldrpg/media/character/character-portrait-mage-6.png",
       "byteLength": 4237,
       "sha256": "7f83e3b03fbebaec8b31c07b5ba99925c594af641f0ac7ddaac549da43b98a8b",
       "width": 110,
@@ -3424,14 +3424,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 6,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.7",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-7.png",
+      "path": "worldrpg/media/character/character-portrait-mage-7.png",
       "byteLength": 4089,
       "sha256": "c489413de7fed6eacd9a3af8f1f45a2cc7996618b9bc8a8f4b5fb83549bc50dc",
       "width": 110,
@@ -3439,14 +3439,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 7,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.8",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-8.png",
+      "path": "worldrpg/media/character/character-portrait-mage-8.png",
       "byteLength": 3973,
       "sha256": "5566b5247d1d71f8de0df3a6965ad2d0cbfec678f8c5381d345712722de50ca2",
       "width": 110,
@@ -3454,14 +3454,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 8,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.mage.9",
-      "relativePath": "worldrpg/media/character/character-portrait-mage-9.png",
+      "path": "worldrpg/media/character/character-portrait-mage-9.png",
       "byteLength": 3852,
       "sha256": "3ac5e1090c3ae34cc5f805364a1bcebb9a58221204639cdb1e2875d5734b6e97",
       "width": 110,
@@ -3469,14 +3469,14 @@
       "family": "CEL",
       "sourceFile": "MAGE.CEL",
       "canvasIndex": 9,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.0",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-0.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-0.png",
       "byteLength": 5732,
       "sha256": "b041eb713f379e2e72af1eec11f44d8645688e4ca551bee72e3572a21628556b",
       "width": 175,
@@ -3484,14 +3484,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 0,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.1",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-1.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-1.png",
       "byteLength": 6283,
       "sha256": "e645e65df84c5479ea104f470a921d42f0173da6e9586cffcbd95eccdfe9ff5b",
       "width": 175,
@@ -3499,14 +3499,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 1,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.2",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-2.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-2.png",
       "byteLength": 6045,
       "sha256": "5492263da49928554e6ca1e8811250464d423e3b69df758cfc14b750420ad0f4",
       "width": 175,
@@ -3514,14 +3514,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 2,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.3",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-3.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-3.png",
       "byteLength": 6317,
       "sha256": "628f982038e1684e03f7bb5950033a0476d6b49c6ed8bcdf1d418a7b3cc11b7f",
       "width": 175,
@@ -3529,14 +3529,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 3,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.4",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-4.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-4.png",
       "byteLength": 5825,
       "sha256": "1970005c157ea11cb72ac88181a4783952f8139851015c489c8664423b8dc4cf",
       "width": 175,
@@ -3544,14 +3544,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 4,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.5",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-5.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-5.png",
       "byteLength": 5476,
       "sha256": "215143fa11a66d8314c1ffa63e86a35e49eb139c038a0e4a1e1244b0e5834b0d",
       "width": 175,
@@ -3559,14 +3559,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 5,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.6",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-6.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-6.png",
       "byteLength": 5375,
       "sha256": "382017560dce297e18ccd8e0e1b5f3a8fa6234c2a3f347d32c9c49d94feb52f2",
       "width": 175,
@@ -3574,14 +3574,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 6,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.7",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-7.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-7.png",
       "byteLength": 5201,
       "sha256": "f453969ff735feb412118ff2aa6b8f28abea679ff835682b57fa0c96aa7c9101",
       "width": 175,
@@ -3589,14 +3589,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 7,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.8",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-8.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-8.png",
       "byteLength": 5139,
       "sha256": "09291449d943a638618b6a12829b83cd7bb8040ab85e7694262c1cc9580ba07f",
       "width": 175,
@@ -3604,14 +3604,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 8,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.rogue.9",
-      "relativePath": "worldrpg/media/character/character-portrait-rogue-9.png",
+      "path": "worldrpg/media/character/character-portrait-rogue-9.png",
       "byteLength": 5041,
       "sha256": "95819c61a1d7f9805d0b126649b33a6276b625359c8cdaf786ca36cfafbcec07",
       "width": 175,
@@ -3619,14 +3619,14 @@
       "family": "CEL",
       "sourceFile": "ROGUE.CEL",
       "canvasIndex": 9,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.0",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-0.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-0.png",
       "byteLength": 6923,
       "sha256": "1ef30cffb09ddc0e7909169507aea5633dec79933e98eb5d060cae1b9a0ec2fd",
       "width": 183,
@@ -3634,14 +3634,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 0,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.1",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-1.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-1.png",
       "byteLength": 7079,
       "sha256": "a0e49ffddf8cb92293f95d4743c055dcbb80aad54b2050a5856ebf33b5517e7e",
       "width": 183,
@@ -3649,14 +3649,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 1,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.10",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-10.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-10.png",
       "byteLength": 6955,
       "sha256": "dbd331c29894d1cedfaeedaa687c7e90d8f0a8e4583e46966da7523b04b0c572",
       "width": 183,
@@ -3664,14 +3664,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 10,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.11",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-11.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-11.png",
       "byteLength": 6903,
       "sha256": "136f39d3b8b60e0db89807fad607d026c8334ffe52b1bc1707b3f1ee87a74653",
       "width": 183,
@@ -3679,14 +3679,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 11,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.12",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-12.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-12.png",
       "byteLength": 6868,
       "sha256": "d423858a5c04f30fec0e3f49ce27c9ff8e8ad8fa595d67d2aa863bae58565945",
       "width": 183,
@@ -3694,14 +3694,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 12,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.13",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-13.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-13.png",
       "byteLength": 6827,
       "sha256": "77e455ffe3d780f0efcb9263937b9bcf79228973cf918c94bbd2dfdf1b31b099",
       "width": 183,
@@ -3709,14 +3709,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 13,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.14",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-14.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-14.png",
       "byteLength": 6795,
       "sha256": "3ac666356d90637aecced75bb0dc573c0f3652cc23511a8b62b75fce9be36d81",
       "width": 183,
@@ -3724,14 +3724,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 14,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.2",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-2.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-2.png",
       "byteLength": 7148,
       "sha256": "59c13a5f3767ddd1b7073b89e25c4d54225505624005d55bcda327fb3e843878",
       "width": 183,
@@ -3739,14 +3739,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 2,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.3",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-3.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-3.png",
       "byteLength": 7013,
       "sha256": "fab821e3d35466c7851532ec9c103f201155bf947c2e935b2c82d61260f747ce",
       "width": 183,
@@ -3754,14 +3754,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 3,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.4",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-4.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-4.png",
       "byteLength": 7159,
       "sha256": "063fb84c973588ca26ac954d68c256f384c6379fbfb052c426b7b4895369722f",
       "width": 183,
@@ -3769,14 +3769,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 4,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.5",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-5.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-5.png",
       "byteLength": 7307,
       "sha256": "f204420726e085842daa7b8347d29f9c6409851972d3b671096556d7a6e98269",
       "width": 183,
@@ -3784,14 +3784,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 5,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.6",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-6.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-6.png",
       "byteLength": 7370,
       "sha256": "2094d2a296e3b9568f8a40a1640b66a6c517ca3d18279991400d10d4e6d85e73",
       "width": 183,
@@ -3799,14 +3799,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 6,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.7",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-7.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-7.png",
       "byteLength": 7274,
       "sha256": "8a5dab7955c8763817983dcb27aba929469828668b6afa4c47d3cb724b048cf0",
       "width": 183,
@@ -3814,14 +3814,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 7,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.8",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-8.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-8.png",
       "byteLength": 7153,
       "sha256": "985cebd1ba1c301d539e65e347be9836b38a4cd6ac3e5574e5d3636c4b46f9fc",
       "width": 183,
@@ -3829,14 +3829,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 8,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.portrait.warrior.9",
-      "relativePath": "worldrpg/media/character/character-portrait-warrior-9.png",
+      "path": "worldrpg/media/character/character-portrait-warrior-9.png",
       "byteLength": 7019,
       "sha256": "a4aca2202a4c77fddee23bd7ef8ffbddce1edc60d2fef70beacee0d68113b5d1",
       "width": 183,
@@ -3844,14 +3844,14 @@
       "family": "CEL",
       "sourceFile": "WARRIOR.CEL",
       "canvasIndex": 9,
-      "palette": "ART_PAL.COL",
+      "palette": "embedded-palette-sha256:6f05da1ff280c75d",
       "paletteSource": "embedded-in-source-file",
       "binding": "admitted",
       "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg00i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg00i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg00i0-0.png",
       "byteLength": 15042,
       "sha256": "095baba9e8d3eaee5d87fcd59c0de57462d5aecf43d59196527585b04cb289d5",
       "width": 125,
@@ -3866,7 +3866,7 @@
     },
     {
       "mediaId": "character.scbg.scbg01i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg01i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg01i0-0.png",
       "byteLength": 15111,
       "sha256": "c43e1d3b6b96c6d29d76150e08d541362bd272853ecdb8648511632eb9c9b01c",
       "width": 125,
@@ -3876,12 +3876,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg02i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg02i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg02i0-0.png",
       "byteLength": 17887,
       "sha256": "8c972ca3699f4980cb878bd6dc3d81fe511990477a63d6c2fe829ecb936a0e07",
       "width": 125,
@@ -3891,12 +3891,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg03i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg03i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg03i0-0.png",
       "byteLength": 11447,
       "sha256": "725863a6a524d1929c7002332408c06bfbaed7739fe872dfee637113521705a7",
       "width": 125,
@@ -3906,12 +3906,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg04i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg04i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg04i0-0.png",
       "byteLength": 12114,
       "sha256": "771b6dfe32b1f36f123620e15bc84c90370f8b29303e428a198544f447e661e2",
       "width": 125,
@@ -3921,12 +3921,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg05i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg05i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg05i0-0.png",
       "byteLength": 19983,
       "sha256": "0a72e583e3ad089cc0b9c0c2acc4b40b2c43c8ce8f5da91b8065aec623421cbf",
       "width": 125,
@@ -3936,12 +3936,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg06i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg06i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg06i0-0.png",
       "byteLength": 17201,
       "sha256": "e13c22fc9727184d919a0005ddb2a91323d71926cc00681a2a6a02fc556b5267",
       "width": 125,
@@ -3951,12 +3951,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg07i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg07i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg07i0-0.png",
       "byteLength": 16084,
       "sha256": "47195a3fcfb75affd673864c762e84b0c138b1fbeff3c33394cd9606fb3df3e5",
       "width": 125,
@@ -3966,12 +3966,12 @@
       "canvasIndex": 0,
       "palette": "ART_PAL.COL",
       "paletteSource": "supplied-palette-file",
-      "binding": "requiredPending",
-      "consumer": ""
+      "binding": "admitted",
+      "consumer": "the character sheet"
     },
     {
       "mediaId": "character.scbg.scbg08i0.0",
-      "relativePath": "worldrpg/media/character/character-scbg-scbg08i0-0.png",
+      "path": "worldrpg/media/character/character-scbg-scbg08i0-0.png",
       "byteLength": 16223,
       "sha256": "fec35d4286147f865a85e09f677f670b7de29b44c8751c9364b020c0078cf1ea",
       "width": 125,
