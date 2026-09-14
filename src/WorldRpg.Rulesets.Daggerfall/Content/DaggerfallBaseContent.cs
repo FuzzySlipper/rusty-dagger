@@ -1227,9 +1227,10 @@ internal static class DaggerfallBaseContent
             // non-positive one, so an action authoring 0 here loads and then throws on every swing.
             if (reach is not > 0d) diagnostics.Add($"Action '{action.Id}' must declare the positive reach it carries to.");
             if (action.Interpretation == "fixed-melee" && reach > MaximumMeleeReach) diagnostics.Add($"Melee action '{action.Id}' reaches {reach} beyond any melee distance '{MaximumMeleeReach}'.");
-            // A reached target the Engine will not resolve past its own detection range is an attack the
-            // ruleset admits and the query then rejects, which reads as a miss rather than as the authoring
-            // mistake it is.
+            // A guardrail against authoring nonsense rather than a live disagreement: nothing re-queries
+            // at impact time, so the behaviour gate is the admission, and a reach past what an attacker
+            // perceives would mean a shot that only ever fires if something else already put the player
+            // there.
             if (action.Interpretation == "fixed-ranged" && reach > MaximumRangedReach) diagnostics.Add($"Ranged action '{action.Id}' reaches {reach} beyond the range an attacker perceives '{MaximumRangedReach}'.");
         }
     }
@@ -1714,9 +1715,11 @@ internal static class DaggerfallBaseContent
             ["monster-strike"] = ("fixed-melee", "hand-to-hand", ["attack", "melee"]),
             ["skeleton-strike"] = ("fixed-melee", "long-blade", ["attack", "melee"]),
             ["thief-strike"] = ("fixed-melee", "short-blade", ["attack", "melee"]),
-            // The archer's shot is the one adopted ranged action: the donor's mobile record declares the
-            // ranged attack group and no melee damage range, and the corpus's own bows carry the archery
-            // damage this borrows.
+            // The archer's shot is the one adopted ranged action. The donor's mobile record declares the
+            // ranged attack group and carries no melee damage range, so the action supplies both the reach
+            // and the damage. The damage is the iron long bow's range exactly and the skill is the one the
+            // corpus's bows use; neither is a value the mobile record states, which is why they are
+            // authored here rather than read from it.
             ["archer-shot"] = ("fixed-ranged", "archery", ["attack", "ranged"]),
         };
         if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill, string[] Tags) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(expected.Tags))) diagnostics.Add("Actions must be the exact six adopted ids, interpretations, skills, and tags.");
@@ -1744,8 +1747,11 @@ internal static class DaggerfallBaseContent
             "chain2-material-alias-is-not-authored",
             "bows-retain-donor-both-hands-policy",
             "loot-matrix-uses-fall-exe-errata",
-            // A shot is resolved when its authored damage frame is reached rather than travelling, and
-            // nothing is drawn from a quiver: the donor looses an arrow the pack's own arrow item models.
+            // A shot is resolved when its authored damage frame is reached rather than travelling, nothing
+            // is drawn from a quiver although the pack models an arrow item the donor consumes, and the
+            // RangedAttack1/RangedAttack2 groups the donor record declares are not selected, so a shot
+            // presents as a swing. The id names the delivery; the scope is stated where the catalog is
+            // checked, because a donor erratum is an identity rather than a description.
             "ranged-attacks-are-hitscan-and-consume-no-ammunition",
         ];
         if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and the ranged delivery exactly.");
