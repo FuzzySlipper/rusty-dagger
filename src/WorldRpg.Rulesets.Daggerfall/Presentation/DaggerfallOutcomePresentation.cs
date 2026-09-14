@@ -1,12 +1,17 @@
+using Rusty.Engine;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Facts;
+using WorldRpg.Rulesets.Daggerfall.Modules.Combat;
 using WorldRpg.Kit.Actors;
 using WorldRpg.Kit.Presentation;
 
 namespace WorldRpg.Rulesets.Daggerfall.Presentation;
 
 /// <summary>Daggerfall-specific attack and reward wording; generic presentation state only stores the resolved message.</summary>
-internal sealed class DaggerfallOutcomePresentation(PresentationState presentation, IReadOnlyDictionary<long, DaggerfallActorDefinition> actors)
+internal sealed class DaggerfallOutcomePresentation(
+    PresentationState presentation,
+    IReadOnlyDictionary<long, DaggerfallActorDefinition> actors,
+    Func<DaggerfallMeleeTargetingEvidence?>? meleeEvidence = null)
 {
     internal void React(IProductFact fact)
     {
@@ -16,7 +21,7 @@ internal sealed class DaggerfallOutcomePresentation(PresentationState presentati
                 presentation.SetOutcome(rejected.Reason switch
                 {
                     AttackRejection.MissingPlayerPosition => "No authored player position",
-                    AttackRejection.NoTargetInReach => "No target in melee reach",
+                    AttackRejection.NoTargetInReach => NothingInMeleeReach(),
                     AttackRejection.Cooldown => "Cooldown",
                     AttackRejection.InsufficientStamina => "Too exhausted to attack",
                     AttackRejection.InsufficientWeaponMaterial => "Weapon material cannot harm this target",
@@ -40,6 +45,18 @@ internal sealed class DaggerfallOutcomePresentation(PresentationState presentati
                 presentation.SetOutcome("Corpse is empty");
                 break;
         }
+    }
+
+    /// <summary>
+    /// A melee request that found nothing has to say what the query actually saw. The Engine already
+    /// returns those counts on the receipt, and a miss that drops them is indistinguishable from a
+    /// world where nothing is visible, which is the confusion this line exists to end.
+    /// </summary>
+    private string NothingInMeleeReach()
+    {
+        if (meleeEvidence?.Invoke() is not { } evidence) return "No target in melee reach";
+        PerceptionReadoutLeaseReceipt receipt = evidence.Receipt;
+        return $"No target in melee reach ({receipt.SelectionComparisons} compared: {receipt.DistanceRejects} out of range, {receipt.FacingRejects} out of cone, {receipt.VisibilityCasts} cast, {receipt.OcclusionRejects} occluded)";
     }
 
     private bool Actor(long entityId, out DaggerfallActorDefinition definition) => actors.TryGetValue(entityId, out definition!);

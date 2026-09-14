@@ -35,7 +35,9 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal("right-hand", definitions.RequireActor(new DaggerfallActorId("player")).Loadout[0].EquipSlot!.Value.Value);
         Assert.Equal(8, definitions.RequireActor(new DaggerfallActorId("player")).HitPointsPerLevel);
         Assert.Equal(5, definitions.Actions["melee-attack"].StaminaCost);
-        Assert.Equal(["melee-attack", "power-attack", "rat-bite", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
+        Assert.Equal(["melee-attack", "monster-strike", "power-attack", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
+        Assert.Equal(0, definitions.Actions["monster-strike"].AttackRangeIndex);
+        Assert.Null(definitions.Actions["monster-strike"].MinimumDamage);
         Assert.Equal(0.75, definitions.Actions["melee-attack"].CooldownSeconds);
         Assert.Equal(1.2, definitions.Actions["power-attack"].CooldownSeconds);
         Assert.Equal(4, definitions.Actions["power-attack"].DamageBonus);

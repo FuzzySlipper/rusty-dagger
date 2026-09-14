@@ -1435,20 +1435,25 @@ internal static class DaggerfallBaseContent
         {
             ["melee-attack"] = ("player-equipped-melee", "equipped"),
             ["power-attack"] = ("player-equipped-melee", "equipped"),
-            ["rat-bite"] = ("fixed-melee", "hand-to-hand"),
+            ["monster-strike"] = ("fixed-melee", "hand-to-hand"),
             ["skeleton-strike"] = ("fixed-melee", "long-blade"),
             ["thief-strike"] = ("fixed-melee", "short-blade"),
         };
         if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(["attack", "melee"]))) diagnostics.Add("Actions must be the exact five adopted ids, interpretations, skills, and tags.");
         if (!actions.TryGetValue("melee-attack", out DaggerfallActionDefinition? melee) || melee.StaminaCost != 5 || melee.MinimumDamage is not null || melee.MaximumDamage is not null || melee.AttackRangeIndex is not null
             || !actions.TryGetValue("power-attack", out DaggerfallActionDefinition? power) || power.StaminaCost != 25 || power.DamageBonus != 4 || power.MinimumDamage is not null || power.MaximumDamage is not null || power.AttackRangeIndex is not null
-            || !actions.TryGetValue("rat-bite", out DaggerfallActionDefinition? ratAction) || ratAction.AttackRangeIndex != 0 || ratAction.MinimumDamage is not null || ratAction.MaximumDamage is not null
+            || !actions.TryGetValue("monster-strike", out DaggerfallActionDefinition? monsterAction) || monsterAction.AttackRangeIndex != 0 || monsterAction.MinimumDamage is not null || monsterAction.MaximumDamage is not null
             || !actions.TryGetValue("skeleton-strike", out DaggerfallActionDefinition? skeletonAction) || skeletonAction.AttackRangeIndex != 0 || skeletonAction.MinimumDamage is not null || skeletonAction.MaximumDamage is not null
             || !actions.TryGetValue("thief-strike", out DaggerfallActionDefinition? thiefAction) || thiefAction.AttackRangeIndex is not null || thiefAction.MinimumDamage != 2 || thiefAction.MaximumDamage != 8) diagnostics.Add("Action damage and stamina ownership does not match the adopted actor/action catalog.");
+        // Every placed actor that swings has a policy: the donor resolves a weaponless monster's
+        // melee with its hand-to-hand skill and the damage range its own record carries, one
+        // enemy-class thief uses a short blade, and one monster uses a long blade.
+        string[] monsterStrikers = ["giant-bat", "imp", "orc", "rat"];
         if (!actors.TryGetValue(new("player"), out DaggerfallActorDefinition? playerActionOwner) || playerActionOwner.ActionId != "melee-attack"
-            || !actors.TryGetValue(new("rat"), out DaggerfallActorDefinition? ratActionOwner) || ratActionOwner.ActionId != "rat-bite"
+            || !actors.TryGetValue(new("rat"), out DaggerfallActorDefinition? ratActionOwner) || ratActionOwner.ActionId != "monster-strike"
             || !actors.TryGetValue(new("skeletal-warrior"), out DaggerfallActorDefinition? skeletonActionOwner) || skeletonActionOwner.ActionId != "skeleton-strike"
-            || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thiefActionOwner) || thiefActionOwner.ActionId != "thief-strike") diagnostics.Add("The four adopted actor/action associations must remain explicit.");
+            || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thiefActionOwner) || thiefActionOwner.ActionId != "thief-strike"
+            || monsterStrikers.Any(id => !actors.TryGetValue(new(id), out DaggerfallActorDefinition? striker) || striker.ActionId != "monster-strike")) diagnostics.Add("The adopted actor/action associations must remain explicit: the player, the four monster-strike creatures, the skeleton and the thief.");
         if (actions.Values.Any(action => action.Id != "power-attack" && action.DamageBonus != 0)) diagnostics.Add("Only the authored power-attack may carry an action damage bonus.");
         string[] categories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
         if (pools.Count != categories.Length || !pools.Select(pool => pool.Id).Order().SequenceEqual(categories.Order()) || pools.Any(pool => pool.Status != "deferred" || string.IsNullOrWhiteSpace(pool.Reason))) diagnostics.Add("Deferred loot category pools must be the exact adopted category set with a reason.");

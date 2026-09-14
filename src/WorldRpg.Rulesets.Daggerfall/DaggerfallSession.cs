@@ -286,7 +286,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                 _uniqueItems,
                 State.Progression,
                 tuning.LootInteraction);
-            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored);
+            _outcomes = new DaggerfallOutcomePresentation(Presentation, authored, () => _combat.LastMeleeTargeting);
             _inventoryUi = new DaggerfallInventoryPresentation(inventory, equipmentCoordinator, definitions, inputs.ClassicPresentation.InventoryIcons);
             _lootUi = new DaggerfallLootPresentation(_corpseLoot, _inventoryUi);
             _characterUi = new DaggerfallCharacterPresentation(definitions, playerDefinition, equipmentCoordinator);

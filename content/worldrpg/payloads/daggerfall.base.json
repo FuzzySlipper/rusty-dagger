@@ -261,7 +261,7 @@
           "maximumDamage": 4
         }
       ],
-      "action": "rat-bite"
+      "action": "monster-strike"
     },
     {
       "id": "imp",
@@ -289,6 +289,8 @@
         "streetwise": 40,
         "running": 40,
         "centaurian": 40
+      ,
+        "hand-to-hand": 40
       },
       "armor": 15,
       "health": {
@@ -313,7 +315,8 @@
           "minimumDamage": 2,
           "maximumDamage": 15
         }
-      ]
+      ],
+      "action": "monster-strike"
     },
     {
       "id": "spriggan",
@@ -394,6 +397,8 @@
         "etiquette": 45,
         "running": 45,
         "centaurian": 45
+      ,
+        "hand-to-hand": 45
       },
       "armor": 30,
       "health": {
@@ -416,7 +421,8 @@
           "minimumDamage": 2,
           "maximumDamage": 12
         }
-      ]
+      ],
+      "action": "monster-strike"
     },
     {
       "id": "grizzly-bear",
@@ -609,7 +615,8 @@
           "minimumDamage": 1,
           "maximumDamage": 6
         }
-      ]
+      ],
+      "action": "monster-strike"
     },
     {
       "id": "centaur",
@@ -2884,7 +2891,7 @@
       "staminaCost": 5
     },
     {
-      "id": "rat-bite",
+      "id": "monster-strike",
       "tags": [
         "attack",
         "melee"
