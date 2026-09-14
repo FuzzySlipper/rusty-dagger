@@ -112,10 +112,17 @@ internal sealed record DaggerfallVocabulary(IReadOnlyList<DaggerfallStatId> Attr
 /// <summary>Immutable typed definitions loaded from the ordered daggerfall.base payload.</summary>
 internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValuesByMaterial, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources, IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools, IReadOnlyList<DaggerfallDonorErratum> donorErrata, DaggerfallItemTemplateLedger itemTemplates,
     DaggerfallCharacterPresentationSet characterPresentation,
-    DaggerfallLocationSet locations)
+    DaggerfallLocationSet locations,
+    DaggerfallMagicCatalogSet magic)
 {
     /// <summary>The normalized reference catalogs a consumer resolves keys through.</summary>
     internal DaggerfallCatalogSet Catalogs { get; } = catalogs;
+
+    /// <summary>
+    /// The published spells and magic-item templates, loaded from the pack alone: a spell resolves by key
+    /// to its source identity and effects, and an item enchantment resolves to the spell it names.
+    /// </summary>
+    internal DaggerfallMagicCatalogSet Magic { get; } = magic;
 
     internal DaggerfallVocabulary Vocabulary { get; } = vocabulary;
     internal IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> Actors { get; } = new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors.ToDictionary());
