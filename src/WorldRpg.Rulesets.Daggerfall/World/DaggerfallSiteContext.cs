@@ -12,7 +12,8 @@ namespace WorldRpg.Rulesets.Daggerfall.World;
 /// needs no rendering, no directory of its own and no second read of the payload.
 /// <para>
 /// A site's <em>identity</em> is its region and index, never its name. The corpus publishes 15,251
-/// locations under 12,672 distinct names, and 129 names repeat within one region alone.
+/// locations under 12,672 distinct names, and within a single region 129 (region, name) pairs across 44
+/// distinct names share their name with another location.
 /// </para>
 /// <para>
 /// What is durable here is the delta rather than the record: a save carries which sites play revealed,
@@ -52,12 +53,24 @@ internal sealed class DaggerfallSiteContext
 
         if (returnAnchor is { } anchor)
         {
+            // The save section refuses this pair for the same reason, and holding one invariant in two
+            // places is what keeps a Leave from moving a player who is nowhere onto a site they were
+            // never shown to be at.
+            if (Active is null)
+            {
+                throw new ArgumentException("A site context cannot hold a return anchor for a player it places at no site.", nameof(returnAnchor));
+            }
+
             ReturnAnchor = Require(anchor).Id;
         }
 
         foreach (DaggerfallSiteId id in discovered)
         {
-            _discovered.Add(Require(id).Id);
+            // Routed through the same rule as play, so a save that carries a site the bundle already
+            // marks discovered cannot make this context re-persist an authored fact. Such a save is
+            // redundant rather than wrong - IsDiscovered still answers true from the record - but the
+            // delta this context captures stays what play added and nothing else.
+            Reveal(Require(id));
         }
     }
 
@@ -70,7 +83,11 @@ internal sealed class DaggerfallSiteContext
     /// <summary>
     /// The region the session is in, which is what every donor formula that takes a region index reads.
     /// </summary>
-    internal int? Region => Active?.Region ?? ReturnAnchor?.Region;
+    /// <remarks>
+    /// It is the active site's region and nothing else: a return anchor only exists while the player is
+    /// somewhere, so it can never be the only region this could answer with.
+    /// </remarks>
+    internal int? Region => Active?.Region;
 
     /// <summary>How many site records the bundle publishes.</summary>
     internal int RecordCount => _records.Count;
@@ -106,7 +123,9 @@ internal sealed class DaggerfallSiteContext
     internal IReadOnlyList<DaggerfallSiteRecord> FindByName(string name)
     {
         ArgumentNullException.ThrowIfNull(name);
-        return [.. _records.Values.Where(record => string.Equals(record.Name, name, StringComparison.Ordinal)).OrderBy(record => record.Id.Region).ThenBy(record => record.Id.Index)];
+        // Walked in the ordered list rather than the dictionary so the answer does not depend on how a
+        // dictionary happens to enumerate, which is not a property this type promised.
+        return [.. _ordered.Where(record => string.Equals(record.Name, name, StringComparison.Ordinal))];
     }
 
     /// <summary>

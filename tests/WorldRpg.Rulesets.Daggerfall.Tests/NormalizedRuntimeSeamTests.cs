@@ -1948,6 +1948,39 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(captured.Active, recaptured.Active);
         Assert.Equal(captured.ReturnAnchor, recaptured.ReturnAnchor);
         Assert.Equal(captured.Discovered, recaptured.Discovered);
+
+        // The other direction: a save that carries no site section at all predates site persistence, so
+        // it starts where its own bundle starts rather than at no site - which is what a restore that
+        // ignored the distinction would do.
+        DaggerfallSavePayload siteless = CapturedSave(root) with { Site = null };
+        using DaggerfallSession old = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(siteless), RandomMinimum.Create());
+        Assert.Equal(new DaggerfallSiteId(17, 179), old.Site.Active);
+        Assert.Equal(17, old.Site.Region);
+        Assert.Contains(old.RestoreNotices, notice => notice.Code == "site-section-absent");
+    }
+
+    [Fact]
+    public void A_scenario_that_starts_the_player_at_a_site_the_locations_do_not_carry_is_refused()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        ProductContent content = ImportContent(root);
+        JsonNode scenario = JsonNode.Parse(File.ReadAllText(Path.Combine(root, "content/worldrpg/payloads/daggerfall.privateers-hold.json")))!;
+
+        // A starting site the published locations do not carry would leave the session standing at a
+        // location nothing can name, so the scenario is refused against the section that does carry them.
+        scenario["startingState"]!["site"]!["index"] = 999999;
+        DaggerfallContentException unknown = Assert.Throws<DaggerfallContentException>(
+            () => PrivateersHoldContent.Read(content, System.Text.Encoding.UTF8.GetBytes(scenario.ToJsonString()), definitions));
+        Assert.Contains("startingState.site names location 17/999999", unknown.Message, StringComparison.Ordinal);
+        Assert.Contains("which the published locations do not carry", unknown.Message, StringComparison.Ordinal);
+
+        // And a site that is not an identity at all is refused for what it is, not for where it points.
+        scenario["startingState"]!["site"]!["index"] = 179;
+        scenario["startingState"]!["site"]!["region"] = -1;
+        DaggerfallContentException negative = Assert.Throws<DaggerfallContentException>(
+            () => PrivateersHoldContent.Read(content, System.Text.Encoding.UTF8.GetBytes(scenario.ToJsonString()), definitions));
+        Assert.Contains("must name a non-negative region and index", negative.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1970,16 +2003,23 @@ public sealed class NormalizedRuntimeSeamTests
 
         Assert.Equal(2, plan.Notices.Count(notice => notice.Code == "unexplained-site"));
         Assert.Contains(plan.Notices, notice => notice.Message.Contains("17/999999", StringComparison.Ordinal));
+
+        // The kept sites still resolve, so the drop is confined to the identity nothing publishes. The
+        // anchor goes with the site it was a return from: keeping it would leave the first Leave moving a
+        // player who is nowhere onto a site they were never shown to be at, and the notice says so.
         Assert.Null(plan.Payload.Site!.Active);
-        Assert.Equal(new DaggerfallSiteIdSave(17, 4), plan.Payload.Site.ReturnAnchor);
+        Assert.Null(plan.Payload.Site.ReturnAnchor);
+        Assert.Contains(plan.Notices, notice => notice.Code == "site-restored-nowhere");
         Assert.Equal([new DaggerfallSiteIdSave(17, 179)], plan.Payload.Site.Discovered);
 
-        // The kept sites still resolve, so the drop is confined to the identity nothing publishes, and
-        // the region still comes from the anchor when the active site is the one that was dropped.
-        World.DaggerfallSiteContext site = new(definitions.Locations, null, new DaggerfallSiteId(17, 4), [new DaggerfallSiteId(17, 179)]);
+        World.DaggerfallSiteContext site = new(definitions.Locations, new DaggerfallSiteId(17, 4), null, [new DaggerfallSiteId(17, 179)]);
         Assert.Equal("Charing", site.Require(new DaggerfallSiteId(17, 4)).Name);
         Assert.Equal(17, site.Region);
         Assert.True(site.IsDiscovered(new DaggerfallSiteId(17, 179)));
+
+        // A return anchor with no site to return from is incoherent, and the context refuses the pair the
+        // save section refuses, so the two owners cannot disagree about what state is representable.
+        Assert.Throws<ArgumentException>(() => new World.DaggerfallSiteContext(definitions.Locations, null, new DaggerfallSiteId(17, 4), []));
     }
 
     [Fact]
@@ -2380,9 +2420,12 @@ public sealed class NormalizedRuntimeSeamTests
 
         DaggerfallSaveRead read = DaggerfallSavePayload.Read(encoded);
 
-        SaveRestoreNotice notice = Assert.Single(read.Notices);
-        Assert.Equal("save-schema-migrated", notice.Code);
+        // Two notices, because a schema-1 save predates two separate things: the identity shape the
+        // migration rewrites, and the site section it never carried. Both fallbacks are reported rather
+        // than one of them being silent.
+        SaveRestoreNotice notice = Assert.Single(read.Notices, value => value.Code == "save-schema-migrated");
         Assert.Contains(items.NextIdentity.ToString(CultureInfo.InvariantCulture), notice.Message, StringComparison.Ordinal);
+        Assert.Contains(read.Notices, value => value.Code == "site-section-absent");
         KindAllocatorState migrated = read.Payload.Identities.RequireKinds(DaggerfallSavePayload.PersistedKinds).Kinds.Single(state => state.Kind == DurableIdentityKind.Item);
         Assert.Equal(items.NextIdentity, migrated.NextIdentity);
         Assert.Equal(items.Reserved.Order(), migrated.Reserved.Order());

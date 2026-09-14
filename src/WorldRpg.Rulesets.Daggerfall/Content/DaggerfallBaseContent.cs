@@ -315,8 +315,16 @@ internal static class DaggerfallBaseContent
             _ = Integer(location, "longitude", diagnostics);
             _ = Integer(location, "latitude", diagnostics);
             int dungeonType = Integer(location, "dungeonType", diagnostics);
-            int locationType = Integer(location, "locationType", diagnostics);
             bool discovered = Boolean(location, "discovered", diagnostics);
+
+            // Read against the record rather than through the shared helper: across fifteen thousand
+            // locations, a diagnostic that says only "'locationType' must be an integer" leaves the
+            // reader nowhere to look, so this one names the location and what it actually carried.
+            int locationType = 0;
+            if (!location.TryGetProperty("locationType", out JsonElement kindValue) || kindValue.ValueKind != JsonValueKind.Number || !kindValue.TryGetInt32(out locationType))
+            {
+                diagnostics.Add($"Published location {index} of region {region} carries no integer locationType; it carries {DaggerfallSiteKinds.Describe(kindValue)}.");
+            }
             if (!keys.Add((region, index)))
             {
                 diagnostics.Add($"Published locations carry region {region} index {index} twice, so one of them is unreachable.");
