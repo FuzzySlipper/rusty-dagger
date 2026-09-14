@@ -14,7 +14,7 @@ public sealed class CharacterMediaPublicationTests
     [Fact]
     public void PublishesEachCanvasOfAFamilyInItsOwnPalette()
     {
-        (Dictionary<string, ReadOnlyMemory<byte>> sources, Arena2Palette palette) = Corpus();
+        (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
         CharacterCanvasReference[] references =
         [
             new("character.head.breton.male", "FACE00I0.CIF", "FACE", "head", "an unstated consumer", MediaBinding.RequiredPending, 3, "ART_PAL.COL", [], "the canvas the reference names"),
@@ -24,7 +24,7 @@ public sealed class CharacterMediaPublicationTests
             new("character.faction-face.00", "FACES.CIF", "FACE", "faction-face", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "the canvas the reference names"),
         ];
 
-        CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("FACE", references, sources, palette);
+        CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("FACE", references, sources, palettes);
 
         Assert.Equal(2, published.Artifacts.Count);
         // Artifacts come out in canvas order, which is the order the reader enumerates records in.
@@ -47,27 +47,27 @@ public sealed class CharacterMediaPublicationTests
         [
             new("character.career.mage.portrait", "MAGE.CEL", "CEL", "career-portrait", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "the canvas the reference names"),
         ];
-        CharacterMediaPublicationResult publishedPortrait = CharacterMediaPublication.Publish("CEL", portraits, sources, palette);
+        CharacterMediaPublicationResult publishedPortrait = CharacterMediaPublication.Publish("CEL", portraits, sources, palettes);
         Assert.True(publishedPortrait.Refusals.Count == 0, $"refused: {string.Join(" | ", publishedPortrait.Refusals)}");
         CharacterMediaArtifact portrait = Assert.Single(publishedPortrait.Artifacts);
         Assert.Equal("media/character/character-career-mage-portrait.png", portrait.RelativePath);
         Assert.True(portrait.Width > 0 && portrait.Height > 0 && portrait.Bytes.Length > 100);
 
         // A family the references do not carry publishes nothing rather than guessing at a file list.
-        Assert.Empty(CharacterMediaPublication.Publish("BODY", references, sources, palette).Artifacts);
+        Assert.Empty(CharacterMediaPublication.Publish("BODY", references, sources, palettes).Artifacts);
     }
 
     [Fact]
     public void RefusesAMissingFileAndACanvasThatDoesNotExist()
     {
-        (Dictionary<string, ReadOnlyMemory<byte>> sources, Arena2Palette palette) = Corpus();
+        (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
         CharacterCanvasReference[] references =
         [
             new("character.faction-face.00", "NOTHERE.CIF", "FACE", "faction-face", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "the canvas the reference names"),
             new("character.faction-face.01", "FACES.CIF", "FACE", "faction-face", "an unstated consumer", MediaBinding.RequiredPending, 999, "ART_PAL.COL", [], "the canvas the reference names"),
         ];
 
-        CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("FACE", references, sources, palette);
+        CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("FACE", references, sources, palettes);
 
         Assert.Empty(published.Artifacts);
         Assert.Equal(2, published.Refusals.Count);
@@ -75,7 +75,32 @@ public sealed class CharacterMediaPublicationTests
         Assert.Contains(published.Refusals, refusal => refusal.Contains("character.faction-face.01", StringComparison.Ordinal) && refusal.Contains("999", StringComparison.Ordinal));
     }
 
-    private static (Dictionary<string, ReadOnlyMemory<byte>> Sources, Arena2Palette Palette) Corpus()
+    [Fact]
+    public void PublishesAHeaderlessCanvasAndRefusesAPaletteTheCorpusDoesNotCarry()
+    {
+        (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
+        CharacterCanvasReference[] references =
+        [
+            // A headerless canvas: the reader establishes the shape from the file length, and the
+            // headered reader cannot open it at all.
+            new("character.nite.00", "NITE00I0.IMG", "NITE", "nite", "an unstated consumer", MediaBinding.RequiredPending, 0, "NIGHTSKY.COL", [], "the canvas the reference names"),
+            // A palette the corpus does not carry is a refusal, because painting it with a default
+            // publishes every colour wrong while looking successful.
+            new("character.nite.01", "NITE01I0.IMG", "NITE", "nite", "an unstated consumer", MediaBinding.RequiredPending, 0, "NOTHERE.COL", [], "the canvas the reference names"),
+        ];
+
+        CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("NITE", references, sources, palettes);
+
+        Assert.True(published.Refusals.Count == 1, $"refused: {string.Join(" | ", published.Refusals)}");
+        Assert.Contains("character.nite.01", published.Refusals[0], StringComparison.Ordinal);
+        Assert.Contains("NOTHERE.COL", published.Refusals[0], StringComparison.Ordinal);
+        CharacterMediaArtifact nite = Assert.Single(published.Artifacts);
+        Assert.Equal("character.nite.00", nite.MediaId);
+        // 512x219 is the shape the NITE file's length establishes.
+        Assert.Equal((512, 219), (nite.Width, nite.Height));
+    }
+
+    private static (Dictionary<string, ReadOnlyMemory<byte>> Sources, Dictionary<string, Arena2Palette> Palettes) Corpus()
     {
         string arena2 = Path.Combine(RepositoryRoot(), "local", "arena2");
         Dictionary<string, ReadOnlyMemory<byte>> sources = new(StringComparer.Ordinal)
@@ -85,8 +110,16 @@ public sealed class CharacterMediaPublicationTests
             // A career portrait: a classic animation whose frames are the canvases and whose container
             // carries the palette they are painted in.
             ["MAGE.CEL"] = File.ReadAllBytes(Path.Combine(arena2, "MAGE.CEL")),
+            ["NITE00I0.IMG"] = File.ReadAllBytes(Path.Combine(arena2, "NITE00I0.IMG")),
+            ["NITE01I0.IMG"] = File.ReadAllBytes(Path.Combine(arena2, "NITE01I0.IMG")),
         };
-        return (sources, PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, "ART_PAL.COL")), "arena2/ART_PAL.COL"));
+        Dictionary<string, Arena2Palette> palettes = new(StringComparer.Ordinal)
+        {
+            ["ART_PAL.COL"] = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, "ART_PAL.COL")), "arena2/ART_PAL.COL"),
+            // The NITE family is paired with its own palette, and the two differ in every opaque pixel.
+            ["NIGHTSKY.COL"] = PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, "NIGHTSKY.COL")), "arena2/NIGHTSKY.COL"),
+        };
+        return (sources, palettes);
     }
 
     private static string RepositoryRoot()
