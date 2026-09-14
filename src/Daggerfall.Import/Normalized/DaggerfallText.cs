@@ -485,8 +485,7 @@ public static class DaggerfallTextBuilder
     {
         ArgumentNullException.ThrowIfNull(bytes);
         ArgumentNullException.ThrowIfNull(inventory);
-        SourceInventoryRow family = inventory.FirstOrDefault(row => row.RowType == "family" && StringComparer.Ordinal.Equals(row.Id, TextFamily))
-            ?? throw new InvalidOperationException($"The documented inventory does not carry family '{TextFamily}'.");
+        SourceInventoryRow family = SourceInventoryRow.RequireFamily(inventory, TextFamily);
         if (!StringComparer.Ordinal.Equals(family.PathOrPattern, label))
         {
             throw new InvalidOperationException($"The text resource was read as '{label}', but the documented inventory places {TextFamily} at '{family.PathOrPattern}'.");

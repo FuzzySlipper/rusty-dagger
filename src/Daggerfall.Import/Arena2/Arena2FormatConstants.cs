@@ -47,4 +47,13 @@ public static class Arena2FormatConstants
 
     /// <summary>Palette header plus RGB payload byte count.</summary>
     public const int PaletteHeaderedBytes = 776;
+
+    /// <summary>Bytes the classic record directory's own size field occupies.</summary>
+    public const int ClassicDirectorySizeBytes = 2;
+
+    /// <summary>Bytes one classic record directory entry occupies: a two-byte id and a four-byte offset.</summary>
+    public const int ClassicDirectoryEntryBytes = 6;
+
+    /// <summary>The sentinel id that ends a classic record directory, pointing at the end of the file.</summary>
+    public const ushort ClassicDirectorySentinelId = 0xffff;
 }

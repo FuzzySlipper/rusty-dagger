@@ -174,8 +174,7 @@ public static class DaggerfallCatalogBuilder
     }
 
     private static SourceInventoryRow RequireFamily(IReadOnlyList<SourceInventoryRow> inventory, string familyId) =>
-        inventory.FirstOrDefault(row => row.RowType == "family" && StringComparer.Ordinal.Equals(row.Id, familyId))
-        ?? throw new InvalidOperationException($"The documented inventory does not carry family '{familyId}'.");
+        SourceInventoryRow.RequireFamily(inventory, familyId);
 
     private static (string Id, string Path) FamilyCitation(IReadOnlyList<SourceInventoryRow> inventory, string familyId)
     {

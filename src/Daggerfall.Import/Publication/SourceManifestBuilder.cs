@@ -14,7 +14,26 @@ public sealed record SourceInventoryRow(
     string PathOrPattern,
     string RecordOrStem,
     string Disposition,
-    string Notes);
+    string Notes)
+{
+    /// <summary>
+    /// Finds the family row a published section has to cite, or reports that the documented inventory
+    /// does not carry it.
+    /// </summary>
+    /// <remarks>
+    /// One rule decides whether a family is documented, so every section cites provenance the same way:
+    /// a section names a family the inventory carries, or the inventory does not cover what it read. The
+    /// lookup lives beside the row type it queries rather than in each builder, because a builder that
+    /// matched rows differently would publish a citation no other section would accept.
+    /// </remarks>
+    public static SourceInventoryRow RequireFamily(IReadOnlyList<SourceInventoryRow> inventory, string familyId)
+    {
+        ArgumentNullException.ThrowIfNull(inventory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(familyId);
+        return inventory.FirstOrDefault(row => row.RowType == "family" && StringComparer.Ordinal.Equals(row.Id, familyId))
+            ?? throw new InvalidOperationException($"The documented inventory does not carry family '{familyId}'.");
+    }
+}
 
 /// <summary>Decoded archive identities, or why the archive could not be read.</summary>
 public sealed record SourceArchiveDecode(IReadOnlyList<SourceManifestRecord> Records, string? Failure);
