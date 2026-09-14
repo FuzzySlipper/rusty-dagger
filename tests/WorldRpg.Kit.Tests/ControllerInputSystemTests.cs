@@ -219,6 +219,13 @@ public sealed class ControllerInputSystemTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with { MovementForwardSensitivity = float.PositiveInfinity }));
         Assert.Throws<ArgumentNullException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with { Actions = null! }));
         Assert.Throws<ArgumentOutOfRangeException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with { Actions = [new ControllerActionBinding(ControllerButton.None, new InputActionId("test.attack"))] }));
+        // One axis means one thing, in either role: a pad that pointed strafe and forward at the same
+        // physical axis would move in two directions from one deflection.
+        Assert.Throws<ArgumentException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with { MovementY = ControllerAxis.Axis0 }));
+        Assert.Throws<ArgumentException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with { LookY = ControllerAxis.Axis2 }));
+        // A binding whose action has no name is a button that presses nothing.
+        Assert.Throws<ArgumentException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with { Actions = [new ControllerActionBinding(ControllerButton.Button0, new InputActionId(""))] }));
+        Assert.Throws<ArgumentException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with { Actions = [new ControllerActionBinding(ControllerButton.Button0, new InputActionId("  "))] }));
         // One press cannot mean two things, and the refusal names the button it collides on.
         ArgumentException collision = Assert.Throws<ArgumentException>(() => new PlayerInputSystem(TestTuning(), Controls(), controller: Pad() with
         {

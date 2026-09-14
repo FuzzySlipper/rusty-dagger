@@ -481,6 +481,73 @@ public sealed class NormalizedRuntimeSeamTests
         // Two bindings on one button is a press that cannot mean one thing, which the payload reader
         // refuses the same way the Kit refuses it in code instead of letting the first one win.
         Assert.Throws<ArgumentException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["controllerInput"]!["actions"]!.AsArray()[1]!["button"] = 0)));
+        // The same axis in two roles, and a bound action with no name, are the other two ways a pad
+        // payload describes a device that cannot work.
+        Assert.Throws<ArgumentException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["controllerInput"]!["movementYAxis"] = 0)));
+        Assert.Throws<JsonException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["controllerInput"]!["actions"]!.AsArray()[0]!["action"] = "")));
+    }
+
+    [Fact]
+    public void The_pad_owns_its_controls_and_the_product_manifest_declares_none_of_them_twice()
+    {
+        string root = RepositoryRoot();
+        // Pad bindings are tuning because the Engine's controller vocabulary is positional and a
+        // different pad has to be a configuration change rather than a rebuild. That makes the
+        // product manifest the wrong place for a controller trigger: declaring one there would
+        // describe the same press twice, once as a mapped intent and once as the raw fact the pad
+        // tuning reads, and nothing else would notice.
+        string manifest = File.ReadAllText(Path.Combine(root, "src/WorldRpg.Host/WorldRpg.Host.csproj"));
+        Assert.DoesNotContain("Trigger=\"controller-", manifest, StringComparison.Ordinal);
+        // The pad tuning has to be present and non-empty for that ownership to mean anything.
+        Assert.NotEmpty(DaggerfallTuning.Defaults.ControllerInput.Actions);
+    }
+
+    [Fact]
+    public void A_panel_request_is_an_event_that_stops_standing_once_the_dom_has_had_its_chance()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button8, InputEdge.Pressed)]));
+        Assert.Equal("inventory", engine.PublishedNested("panelRequest", "panel"));
+
+        // A request that outlived the page that performed it would re-open a panel nobody asked for on
+        // the next load, so it ages out on admitted world time like the message line does.
+        for (ulong step = 2; step <= 62; step++) session.Update(new ProductUpdate(OuterUpdate(step), []));
+        Assert.Null(engine.PublishedNested("panelRequest", "panel"));
+        Assert.Null(session.LatestPanelRequest);
+    }
+
+    [Fact]
+    public void Two_panel_buttons_in_one_slice_leave_the_later_request_standing()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        // One admitted slice can carry both presses, and one panel can open: the later press in the
+        // fixed order is the one the DOM is asked for, and the earlier one is not silently preferred.
+        session.Update(new ProductUpdate(OuterUpdate(1),
+        [
+            PadButton(ControllerButton.Button8, InputEdge.Pressed),
+            PadButton(ControllerButton.Button9, InputEdge.Pressed),
+        ]));
+
+        Assert.Equal("menu", engine.PublishedNested("panelRequest", "panel"));
+        Assert.Equal("2", engine.PublishedNested("panelRequest", "revision"));
     }
 
     [Fact]
