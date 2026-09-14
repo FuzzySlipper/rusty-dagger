@@ -169,14 +169,16 @@ public sealed class PublishedContentDeliveryTests
             Assert.NotEmpty(references);
             Assert.All(references, reference =>
             {
-                Assert.Contains(reference.GetProperty("binding").GetString(), new[] { "resolved", "requiredPending" });
+                // The two states the binding actually has. Checking for a value no code can write would
+                // be a tautology, which is what this assertion used to be.
+                Assert.Contains(reference.GetProperty("binding").GetString(), new[] { "admitted", "requiredPending" });
                 Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("mediaId").GetString()));
                 Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("sourceFile").GetString()));
                 Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("palette").GetString()));
             });
-            // Nothing claims to be resolved yet: the count is pinned so that publishing the media has to
-            // move it deliberately rather than by accident.
-            Assert.Equal(0, references.Count(reference => reference.GetProperty("binding").GetString() == "resolved"));
+            // No consumer binds a canvas yet, so every reference is required-pending: the count is pinned
+            // so that naming a consumer has to move it deliberately rather than by accident.
+            Assert.Equal(references.Length, references.Count(reference => reference.GetProperty("binding").GetString() == "requiredPending"));
         }
 
         Assert.Equal(61, presentation.GetProperty("faces").GetArrayLength());
