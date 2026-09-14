@@ -1,10 +1,12 @@
 using WorldRpg.Kit.Controls;
+using Rusty.Engine;
 using System.Text.Json;
 
 namespace WorldRpg.Rulesets.Daggerfall;
 
 internal sealed record DaggerfallTuning(
     PlayerControlTuning PlayerControl,
+    ControllerInputTuning ControllerInput,
     SpatialTuning Spatial,
     FirstPersonCameraTuning Camera,
     DaggerfallMeleeTargetingTuning MeleeTargeting,
@@ -17,6 +19,7 @@ internal sealed record DaggerfallTuning(
     internal static DaggerfallTuning Defaults { get; } = new(
         // Screen-space mouse Y increases downward; Engine camera pitch increases upward.
         new PlayerControlTuning(.0035f, -1.5533f, 1.5533f, .35f, InvertHorizontal: false, InvertVertical: true, WrapYaw: true),
+        ControllerInputTuning.Standard with { Actions = DaggerfallInput.PadActions },
         new SpatialTuning(.5, 32, 32, 2, new CharacterControllerTuning(
             StandingHeight: 1.8f,
             Radius: .25f,
@@ -36,6 +39,7 @@ internal sealed record DaggerfallTuning(
     internal DaggerfallTuning Validate() => this with
     {
         PlayerControl = PlayerControl.Validate(),
+        ControllerInput = ControllerInput.Validate(),
         Spatial = Spatial.Validate(),
         Camera = Camera.Validate(),
         MeleeTargeting = MeleeTargeting.Validate(),
@@ -68,6 +72,10 @@ internal sealed record DaggerfallTuning(
                 controls.GetProperty("invertHorizontal").GetBoolean(),
                 controls.GetProperty("invertVertical").GetBoolean(),
                 controls.GetProperty("wrapYaw").GetBoolean()),
+            // A payload that predates the controller block keeps working: the layout the shell
+            // delivers is a default rather than something every payload has to restate, and only a
+            // payload that actually rebinds the pad has to carry the block.
+            root.TryGetProperty("controllerInput", out JsonElement controllerInput) ? ReadControllerInput(controllerInput) : Defaults.ControllerInput,
             new SpatialTuning(
                 spatial.GetProperty("collisionVoxelSize").GetDouble(),
                 checked((uint)spatial.GetProperty("collisionChunkSize").GetInt32()),
@@ -113,6 +121,66 @@ internal sealed record DaggerfallTuning(
         StrafeSpeed: controller.GetProperty("strafeSpeed").GetSingle(),
         RecoveryMaximumDistance: controller.GetProperty("recoveryMaximumDistance").GetSingle(),
         MaximumStepHeight: controller.GetProperty("maximumStepHeight").GetSingle());
+
+    /// <summary>
+    /// Reads the pad's positional mapping. The Engine numbers controller axes and buttons rather than
+    /// naming them, so the payload numbers them too and the ruleset refuses an index the Engine does
+    /// not publish instead of silently binding the nearest one.
+    /// </summary>
+    private static ControllerInputTuning ReadControllerInput(JsonElement controller)
+    {
+        List<ControllerActionBinding> actions = [];
+        foreach (JsonElement binding in controller.GetProperty("actions").EnumerateArray())
+            actions.Add(new ControllerActionBinding(
+                ReadControllerButton(binding.GetProperty("button").GetInt32()),
+                new InputActionId(binding.GetProperty("action").GetString() ?? throw new JsonException("A controller action binding must name an action."))));
+        return new ControllerInputTuning(
+            ReadControllerAxis(controller.GetProperty("movementXAxis").GetInt32()),
+            ReadControllerAxis(controller.GetProperty("movementYAxis").GetInt32()),
+            ReadControllerAxis(controller.GetProperty("lookXAxis").GetInt32()),
+            ReadControllerAxis(controller.GetProperty("lookYAxis").GetInt32()),
+            controller.GetProperty("movementDeadzone").GetSingle(),
+            controller.GetProperty("lookDeadzone").GetSingle(),
+            controller.GetProperty("movementStrafeSensitivity").GetSingle(),
+            controller.GetProperty("movementForwardSensitivity").GetSingle(),
+            controller.GetProperty("lookYawRadiansPerSecond").GetSingle(),
+            controller.GetProperty("lookPitchRadiansPerSecond").GetSingle(),
+            controller.GetProperty("invertMovementX").GetBoolean(),
+            controller.GetProperty("invertMovementY").GetBoolean(),
+            controller.GetProperty("invertLookX").GetBoolean(),
+            controller.GetProperty("invertLookY").GetBoolean(),
+            actions).Validate();
+    }
+
+    private static ControllerAxis ReadControllerAxis(int index) => index switch
+    {
+        0 => ControllerAxis.Axis0,
+        1 => ControllerAxis.Axis1,
+        2 => ControllerAxis.Axis2,
+        3 => ControllerAxis.Axis3,
+        _ => throw new JsonException($"Controller axis {index} is not one the Engine publishes; axes are numbered 0 through 3."),
+    };
+
+    private static ControllerButton ReadControllerButton(int index) => index switch
+    {
+        0 => ControllerButton.Button0,
+        1 => ControllerButton.Button1,
+        2 => ControllerButton.Button2,
+        3 => ControllerButton.Button3,
+        4 => ControllerButton.Button4,
+        5 => ControllerButton.Button5,
+        6 => ControllerButton.Button6,
+        7 => ControllerButton.Button7,
+        8 => ControllerButton.Button8,
+        9 => ControllerButton.Button9,
+        10 => ControllerButton.Button10,
+        11 => ControllerButton.Button11,
+        12 => ControllerButton.Button12,
+        13 => ControllerButton.Button13,
+        14 => ControllerButton.Button14,
+        15 => ControllerButton.Button15,
+        _ => throw new JsonException($"Controller button {index} is not one the Engine publishes; buttons are numbered 0 through 15."),
+    };
 }
 
 /// <summary>

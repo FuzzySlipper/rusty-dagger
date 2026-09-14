@@ -334,6 +334,156 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void The_pads_mapping_is_tuning_and_every_payload_agrees_with_the_ruleset_defaults()
+    {
+        string root = RepositoryRoot();
+        ControllerInputTuning loaded = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json"))).ControllerInput;
+        ControllerInputTuning scenario = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.privateers-hold.json"))).ControllerInput;
+
+        AssertSamePad(DaggerfallTuning.Defaults.ControllerInput, loaded);
+        AssertSamePad(loaded, scenario);
+
+        // The values the payloads name, so a payload edit that silently changed the layout fails here
+        // rather than in a playtest: the shell delivers left stick 0/1, right stick 2/3, positive down.
+        Assert.Equal(ControllerAxis.Axis0, loaded.MovementX);
+        Assert.Equal(ControllerAxis.Axis1, loaded.MovementY);
+        Assert.Equal(ControllerAxis.Axis2, loaded.LookX);
+        Assert.Equal(ControllerAxis.Axis3, loaded.LookY);
+        Assert.Equal(.2f, loaded.MovementDeadzone);
+        Assert.Equal(.2f, loaded.LookDeadzone);
+        Assert.True(loaded.InvertMovementY);
+        Assert.True(loaded.InvertLookY);
+        Assert.False(loaded.InvertMovementX);
+        Assert.False(loaded.InvertLookX);
+        Assert.Equal(2.5f, loaded.LookYawRadiansPerSecond);
+        Assert.Equal(
+            [ControllerButton.Button0, ControllerButton.Button1, ControllerButton.Button2, ControllerButton.Button3, ControllerButton.Button8, ControllerButton.Button9],
+            loaded.Actions.Select(binding => binding.Button));
+        Assert.Equal(
+            ["daggerfall.attack", "daggerfall.interact", "daggerfall.toggle-weapon", "daggerfall.character", "daggerfall.inventory", "daggerfall.menu"],
+            loaded.Actions.Select(binding => binding.Action.Value));
+    }
+
+    [Fact]
+    public void Every_action_a_payload_binds_is_an_action_the_ruleset_actually_requests()
+    {
+        string root = RepositoryRoot();
+        // Content naming an action no code asks for is a button that silently does nothing, which is
+        // exactly what a renamed action id would produce: nothing else reads the payload's string back.
+        HashSet<string> declared = [
+            DaggerfallInput.Attack.Value,
+            DaggerfallInput.ToggleWeapon.Value,
+            DaggerfallInput.Interact.Value,
+            DaggerfallInput.Inventory.Value,
+            DaggerfallInput.Character.Value,
+            DaggerfallInput.Menu.Value,
+        ];
+        foreach (string payload in new[] { "daggerfall.defaults.json", "daggerfall.privateers-hold.json" })
+        {
+            DaggerfallTuning tuning = DaggerfallTuning.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/tuning-payloads", payload)));
+            Assert.NotEmpty(tuning.ControllerInput.Actions);
+            foreach (ControllerActionBinding binding in tuning.ControllerInput.Actions)
+                Assert.Contains(binding.Action.Value, declared);
+        }
+    }
+
+    [Fact]
+    public void A_pad_alone_moves_and_turns_the_player_on_the_ordinary_input_path()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+        DaggerfallTuning tuning = DaggerfallTuning.Defaults;
+
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, tuning))
+        {
+            // No keyboard and no synthetic pointer step: one stick pushed forward with the other
+            // pushed right is the whole input slice.
+            session.Update(new ProductUpdateFacts(ProductUpdateMode.Realtime, ProductLifecycleState.Running, 1, 1, 1, 1, 60, 1, 0, 1d / 60d),
+            [
+                PadAxis(ControllerAxis.Axis1, -1f),
+                PadAxis(ControllerAxis.Axis2, 1f),
+            ]);
+
+            // Full deflection is one unit of planar intent, and the authored start yaw is pi, which
+            // wrapping puts just inside the negative end after the stick's positive yaw travel.
+            Assert.Equal(new Vector2(0f, 1f), spatial.StepRequests[0].Command.PlanarIntent);
+            Assert.Equal(-MathF.PI + (tuning.ControllerInput.LookYawRadiansPerSecond / 60f), session.State.PlayerControl.YawRadians, precision: 4);
+        }
+    }
+
+    [Fact]
+    public void A_pad_button_asks_the_dom_for_the_menu_action_that_opens_that_panel()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        List<string> requested = [];
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            // Collects a request only where the published revision moved, so the panel a button asks
+            // for is read from the projection's own edge rather than from the call that made it.
+            void Press(ControllerButton button, ulong step)
+            {
+                session.Update(new ProductUpdate(OuterUpdate(step), [PadButton(button, InputEdge.Pressed)]));
+                string? panel = engine.PublishedNested("panelRequest", "panel");
+                string? revision = engine.PublishedNested("panelRequest", "revision");
+                if (panel is null || revision is null || requested.Count == int.Parse(revision, CultureInfo.InvariantCulture)) return;
+                requested.Add(panel);
+            }
+
+            Assert.Null(engine.PublishedNested("panelRequest", "panel"));
+            Press(ControllerButton.Button8, 1);
+            Assert.Equal("inventory", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal("1", engine.PublishedNested("panelRequest", "revision"));
+            Press(ControllerButton.Button3, 2);
+            Assert.Equal("character", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal("2", engine.PublishedNested("panelRequest", "revision"));
+            Press(ControllerButton.Button9, 3);
+            Assert.Equal("menu", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal("3", engine.PublishedNested("panelRequest", "revision"));
+
+            // An action that opens no panel leaves the last request standing rather than clearing it:
+            // clearing would retire a request the DOM may not have performed yet.
+            Assert.Contains(DaggerfallTuning.Defaults.ControllerInput.Actions, binding => binding.Button == ControllerButton.Button0);
+            Press(ControllerButton.Button0, 4);
+            Assert.Equal("menu", engine.PublishedNested("panelRequest", "panel"));
+            Assert.Equal("3", engine.PublishedNested("panelRequest", "revision"));
+        }
+
+        // The panel names are the DOM's own menu actions, so a request opens the panel that the menu's
+        // button of the same name opens. There is no DOM harness in this repository, so the agreement
+        // is pinned where the DOM spells it: as the data-action of a button in the DOM's own source.
+        Assert.Equal(["inventory", "character", "menu"], requested);
+        string dom = File.ReadAllText(Path.Combine(root, "src/ui/main.ts"));
+        Assert.All(requested, panel => Assert.Contains($"data-action=\"{panel}\"", dom, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_payload_axis_or_button_the_engine_does_not_publish_is_refused_rather_than_bound()
+    {
+        string root = RepositoryRoot();
+        // The Engine publishes four axes and sixteen buttons. An index beyond them is a payload that
+        // means a device this build cannot hear, so it is refused rather than clamped to the nearest.
+        Assert.Throws<JsonException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["controllerInput"]!["movementXAxis"] = 4)));
+        Assert.Throws<JsonException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["controllerInput"]!["actions"]!.AsArray()[0]!["button"] = 16)));
+        // Two bindings on one button is a press that cannot mean one thing, which the payload reader
+        // refuses the same way the Kit refuses it in code instead of letting the first one win.
+        Assert.Throws<ArgumentException>(() => DaggerfallTuning.Read(MutatedTuning(root, tuning => tuning["controllerInput"]!["actions"]!.AsArray()[1]!["button"] = 0)));
+    }
+
+    [Fact]
     public void Realtime_substeps_reuse_postlook_held_movement_with_one_sequence_each()
     {
         string root = RepositoryRoot();
@@ -3803,6 +3953,61 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     private static ProductInputEvent Input(InputEventKind kind, InputEdge edge = InputEdge.None, KeyboardControl keyboard = KeyboardControl.None, float x = 0F, float y = 0F, InputPhase phase = InputPhase.None, string intent = "") => new(kind, edge, InputDevice.None, InputChannel.None, InputAxis.None, keyboard, PointerButton.None, ControllerButton.None, ControllerAxis.None, InputClearReason.None, InputValueKind.None, phase, InputProvenance.None, default, default, default, x, y, ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty, Encoding.UTF8.GetBytes(intent), ReadOnlyMemory<byte>.Empty, ReadOnlyMemory<byte>.Empty);
+
+    /// <summary>One physical controller axis event, as the shell publishes it.</summary>
+    private static ProductInputEvent PadAxis(ControllerAxis axis, float value) =>
+        Input(InputEventKind.ControllerAxis, x: value) with
+        {
+            Device = InputDevice.Controller,
+            Channel = InputChannel.Axis,
+            ValueKind = InputValueKind.Axis,
+            ControllerAxis = axis,
+            Phase = InputPhase.Axis,
+            Provenance = InputProvenance.Physical,
+        };
+
+    /// <summary>One physical controller button edge, as the shell publishes it.</summary>
+    private static ProductInputEvent PadButton(ControllerButton button, InputEdge edge) =>
+        Input(InputEventKind.ControllerButton, edge, x: edge == InputEdge.Pressed ? 1F : 0F) with
+        {
+            Device = InputDevice.Controller,
+            Channel = InputChannel.Button,
+            ValueKind = InputValueKind.Digital,
+            ControllerButton = button,
+            Phase = edge == InputEdge.Pressed ? InputPhase.Pressed : InputPhase.Released,
+            Provenance = InputProvenance.Physical,
+        };
+
+    /// <summary>The default tuning payload with one test mutation applied.</summary>
+    private static byte[] MutatedTuning(string repositoryRoot, Action<JsonObject> mutate)
+    {
+        JsonObject tuning = JsonNode.Parse(File.ReadAllText(Path.Combine(repositoryRoot, "content/worldrpg/tuning-payloads/daggerfall.defaults.json")))!.AsObject();
+        mutate(tuning);
+        return Encoding.UTF8.GetBytes(tuning.ToJsonString());
+    }
+
+    /// <summary>
+    /// Field-by-field pad agreement. The record holds a list, so record equality compares that list by
+    /// reference and would call two identical payloads different.
+    /// </summary>
+    private static void AssertSamePad(ControllerInputTuning expected, ControllerInputTuning actual)
+    {
+        Assert.Equal(expected.MovementX, actual.MovementX);
+        Assert.Equal(expected.MovementY, actual.MovementY);
+        Assert.Equal(expected.LookX, actual.LookX);
+        Assert.Equal(expected.LookY, actual.LookY);
+        Assert.Equal(expected.MovementDeadzone, actual.MovementDeadzone);
+        Assert.Equal(expected.LookDeadzone, actual.LookDeadzone);
+        Assert.Equal(expected.MovementStrafeSensitivity, actual.MovementStrafeSensitivity);
+        Assert.Equal(expected.MovementForwardSensitivity, actual.MovementForwardSensitivity);
+        Assert.Equal(expected.LookYawRadiansPerSecond, actual.LookYawRadiansPerSecond);
+        Assert.Equal(expected.LookPitchRadiansPerSecond, actual.LookPitchRadiansPerSecond);
+        Assert.Equal(expected.InvertMovementX, actual.InvertMovementX);
+        Assert.Equal(expected.InvertMovementY, actual.InvertMovementY);
+        Assert.Equal(expected.InvertLookX, actual.InvertLookX);
+        Assert.Equal(expected.InvertLookY, actual.InvertLookY);
+        Assert.Equal(expected.Actions.Select(binding => (binding.Button, binding.Action)), actual.Actions.Select(binding => (binding.Button, binding.Action)));
+    }
 
     private sealed class ContentFake : IContentService
     {

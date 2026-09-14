@@ -1,5 +1,6 @@
 using Rusty.Engine;
 using Rusty.Engine.Mechanics;
+using System.Globalization;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Kit;
 using WorldRpg.Kit.Actors;
@@ -32,7 +33,8 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         PresentationSlots slots,
         InventoryPresentation? inventory = null,
         LootPresentation? loot = null,
-        CharacterSheetPresentation? character = null)
+        CharacterSheetPresentation? character = null,
+        DaggerfallPanelRequest? panelRequest = null)
     {
         UiValueBuilder builder = new();
         uint[] rows = resources.Select(resource => ResourceRow(builder, player, resource)).ToArray();
@@ -68,6 +70,14 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
                     ("container", builder.String(loot.Container)),
                     ("revision", builder.String(loot.Revision)),
                     ("close", builder.String("loot-close")))),
+            // A pad has no pointer and the DOM, not the product, owns whether a panel is open, so a
+            // button that opens one asks for the DOM's own menu action. Publishing it with a revision
+            // lets the DOM act on each request exactly once while the request itself stays visible.
+            ("panelRequest", panelRequest is null
+                ? builder.Null()
+                : builder.Object(
+                    ("panel", builder.String(panelRequest.Panel)),
+                    ("revision", builder.String(panelRequest.Revision.ToString(CultureInfo.InvariantCulture))))),
         ];
         if (inventory is not null) fields = [.. fields, ("inventory", Inventory(builder, inventory))];
         // Contents are an affordance the same way focus is: a dead or paused product refuses the take

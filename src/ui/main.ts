@@ -29,6 +29,13 @@ interface DaggerHud {
   readonly loot?: LootProjection | null;
   readonly uiArtRevision?: string;
   readonly uiArt?: UiArt | null;
+  readonly panelRequest?: PanelRequest | null;
+}
+
+/** A panel the player asked for on a device the DOM has no channel of its own for. */
+interface PanelRequest {
+  readonly panel: string;
+  readonly revision: string;
 }
 
 interface CompositionIdentity {
@@ -68,7 +75,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     </section>
     <p class="dagger-outcome" role="status">Awaiting projection…</p>
     <div class="dagger-death" role="alert" hidden><img class="dagger-death-screen" alt="You have died."></div>
-    <button class="dagger-menu-toggle" type="button" aria-haspopup="dialog">Menu · Esc</button>
+    <button class="dagger-menu-toggle" type="button" data-action="menu" aria-haspopup="dialog">Menu · Esc</button>
     <dialog class="dagger-menu" aria-labelledby="dagger-menu-title">
       <h1 id="dagger-menu-title" tabindex="-1">Game menu</h1>
       <div class="dagger-menu-home">
@@ -206,14 +213,17 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       menu.scrollTop = 0;
     } else panel.querySelector<HTMLButtonElement>(':scope > [data-action="back"]')!.focus();
   };
-  const onMenuClick = (event: MouseEvent): void => {
-    const action = (event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action;
-    if (action === 'resume') closeMenu();
+  // One place decides what a menu action means, whether the DOM heard it from a click, a key, or the
+  // product answering a button on a pad the DOM cannot see.
+  const runMenuAction = (action: string | undefined): void => {
+    if (action === 'resume' || action === 'loot-exit') closeMenu();
     else if (action === 'back') showHome();
-    else if (action === 'loot-exit') closeMenu();
+    else if (action === 'menu') dismiss();
     else if (action === 'loot') claim('loot');
     else if (action === 'diagnostics' || action === 'tools' || action === 'inventory' || action === 'character' || action === 'debug') showPanel(action);
   };
+  const onMenuClick = (event: MouseEvent): void =>
+    runMenuAction((event.target as HTMLElement).closest<HTMLButtonElement>('button')?.dataset.action);
   // Capture before Engine input sees navigation keys. Escape's native dialog
   // cancellation is suppressed so one physical press performs exactly one step.
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -250,7 +260,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const onCancel = (event: Event): void => event.preventDefault();
   menu.addEventListener('cancel', onCancel);
   menu.addEventListener('click', onMenuClick);
-  menuToggle.addEventListener('click', openMenu);
+  menuToggle.addEventListener('click', () => runMenuAction('menu'));
   document.addEventListener('keydown', onKeyDown, true);
   // The published art arrives inside a snapshot: bytes the session read from admitted content, keyed
   // by the pack's media identity. The DOM holds the last block it saw and asks the product for the
@@ -258,6 +268,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   let artRevision = heldRevision();
   let artCooldown = 0;
   let deadMode = false;
+  let lastPanelRevision: string | null = null;
   const requestArt = (revision: string): void => context.intents?.claim('dagger.ui', {
     kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'art-request', revision },
   });
@@ -295,6 +306,13 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
 
     if (value.inventory) inventoryView.update(value.inventory);
     if (value.character && isCharacterProjection(value.character)) characterView.update(value.character);
+    // A pad button reaches the product, not this DOM, so the panel it asked for arrives here as the
+    // menu action that opens it. Each revision is performed once; the request itself stays published.
+    const panelRequest = value.panelRequest ?? null;
+    if (panelRequest !== null && panelRequest.revision !== lastPanelRevision) {
+      lastPanelRevision = panelRequest.revision;
+      runMenuAction(panelRequest.panel);
+    }
     currentLoot = value.loot ?? null;
     lootView.update(currentLoot);
     if (currentLoot && currentLoot.container !== lastLootContainer) {

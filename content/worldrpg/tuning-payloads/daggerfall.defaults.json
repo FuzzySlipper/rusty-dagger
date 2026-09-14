@@ -8,6 +8,48 @@
     "invertVertical": true,
     "wrapYaw": true
   },
+  "controllerInput": {
+    "movementXAxis": 0,
+    "movementYAxis": 1,
+    "lookXAxis": 2,
+    "lookYAxis": 3,
+    "movementDeadzone": 0.2,
+    "lookDeadzone": 0.2,
+    "movementStrafeSensitivity": 1.0,
+    "movementForwardSensitivity": 1.0,
+    "lookYawRadiansPerSecond": 2.5,
+    "lookPitchRadiansPerSecond": 1.75,
+    "invertMovementX": false,
+    "invertMovementY": true,
+    "invertLookX": false,
+    "invertLookY": true,
+    "actions": [
+      {
+        "button": 0,
+        "action": "daggerfall.attack"
+      },
+      {
+        "button": 1,
+        "action": "daggerfall.interact"
+      },
+      {
+        "button": 2,
+        "action": "daggerfall.toggle-weapon"
+      },
+      {
+        "button": 3,
+        "action": "daggerfall.character"
+      },
+      {
+        "button": 8,
+        "action": "daggerfall.inventory"
+      },
+      {
+        "button": 9,
+        "action": "daggerfall.menu"
+      }
+    ]
+  },
   "spatial": {
     "collisionVoxelSize": 0.5,
     "collisionChunkSize": 32,
