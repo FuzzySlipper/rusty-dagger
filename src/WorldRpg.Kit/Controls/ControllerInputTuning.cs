@@ -66,10 +66,12 @@ public sealed record ControllerInputTuning(
         // would drive both from one movement, and the misconfiguration is refused here rather than
         // showing up as gameplay nobody can explain.
         ControllerAxis[] roleAxes = [MovementX, MovementY, LookX, LookY];
+        string[] roleNames = [nameof(MovementX), nameof(MovementY), nameof(LookX), nameof(LookY)];
         for (int role = 0; role < roleAxes.Length; role++)
         {
-            if (Array.IndexOf(roleAxes, roleAxes[role]) != role)
-                throw new ArgumentException($"Controller axis '{roleAxes[role]}' is bound to more than one of movement and look, and one axis cannot mean two things.", nameof(MovementX));
+            int earlier = Array.IndexOf(roleAxes, roleAxes[role]);
+            if (earlier != role)
+                throw new ArgumentException($"Controller axis '{roleAxes[role]}' is bound to both {roleNames[earlier]} and {roleNames[role]}, and one axis cannot mean two things.", roleNames[role]);
         }
 
         Deadzone(MovementDeadzone, nameof(MovementDeadzone));
