@@ -117,30 +117,34 @@ public sealed record DaggerfallBlockObjects(
     IReadOnlyList<string> ModelIds,
     IReadOnlyList<DaggerfallBlockTexture> Textures);
 
+/// <summary>What one half of a building sub-record declares it places.</summary>
+/// <param name="Objects">How many 3D object records it declares.</param>
+/// <param name="Flats">How many flat object records it declares.</param>
+/// <param name="Sections">How many section-3 records it declares.</param>
+/// <param name="People">How many people records it declares.</param>
+/// <param name="Doors">How many door records it declares.</param>
+public sealed record DaggerfallBlockObjectCounts(int Objects, int Flats, int Sections, int People, int Doors);
+
 /// <summary>One building slot of a city block header.</summary>
 /// <param name="Index">The slot's ordinal, which is the sub-record's ordinal in the block.</param>
 /// <param name="ByteLength">The bytes the donor steps over for this sub-record, padding included.</param>
+/// <param name="PaddingBytes">The bytes the sub-record reserves past what its halves occupy.</param>
 /// <param name="BuildingType">The building type byte the slot carries.</param>
 /// <param name="FactionId">The faction the slot names, or zero when it names none.</param>
 /// <param name="Quality">The quality byte the slot carries.</param>
 /// <param name="NameSeed">The seed the building's generated name derives from.</param>
-/// <param name="Objects">How many 3D object records the sub-record declares.</param>
-/// <param name="Flats">How many flat object records the sub-record declares.</param>
-/// <param name="Sections">How many section-3 records the sub-record declares.</param>
-/// <param name="People">How many people records the sub-record declares.</param>
-/// <param name="Doors">How many door records the sub-record declares.</param>
+/// <param name="Exterior">What the sub-record's outside half declares.</param>
+/// <param name="Interior">What the sub-record's inside half declares.</param>
 public sealed record DaggerfallBlockBuilding(
     int Index,
     int ByteLength,
+    int PaddingBytes,
     int BuildingType,
     int FactionId,
     int Quality,
     int NameSeed,
-    int Objects,
-    int Flats,
-    int Sections,
-    int People,
-    int Doors);
+    DaggerfallBlockObjectCounts Exterior,
+    DaggerfallBlockObjectCounts Interior);
 
 /// <summary>What a city block's own header declares, without a single placement decoded.</summary>
 /// <param name="Name">The name the block states for itself.</param>
@@ -212,16 +216,10 @@ public sealed record DaggerfallBlocks(
     public const int CurrentSchemaVersion = 1;
 
     /// <summary>The bytes of a city block header, up to and including the block's own name.</summary>
-    public const int RmbHeaderBytes = 6776;
+    public const int RmbHeaderBytes = RmbBlockSummaryReader.HeaderBytes;
 
-    /// <summary>Bytes one 3D object record occupies.</summary>
-    public const int RmbModelRecordBytes = 66;
-
-    /// <summary>Bytes one flat object record occupies.</summary>
-    public const int RmbFlatRecordBytes = 17;
-
-    /// <summary>The bytes of a city block sub-record's own header.</summary>
-    public const int RmbBuildingHeaderBytes = 5;
+    /// <summary>Bytes one city block sub-record's own header occupies.</summary>
+    public const int RmbBuildingHeaderBytes = RmbBlockSummaryReader.SubRecordHeaderBytes;
 
     /// <summary>Checks that every claim this publication makes about the corpus holds together.</summary>
     public void Validate()
@@ -301,7 +299,7 @@ internal static class DaggerfallBlockValidation
     {
         NormalizedImportDocument.RequireLogicalId(record.SourceKey, nameof(record.SourceKey));
         NormalizedImportDocument.RequireLogicalPath(record.Source, nameof(record.Source));
-        if (record.Ordinal < 0 || record.Offset < 0 || record.ByteLength < 1)
+        if (record.Ordinal < 0 || record.Offset < 0 || record.ByteLength < 0)
         {
             throw new InvalidOperationException($"Published block '{record.SourceKey}' carries ordinal {record.Ordinal}, offset {record.Offset} and length {record.ByteLength}, which cannot all describe a record.");
         }
@@ -352,10 +350,14 @@ internal static class DaggerfallBlockValidation
             {
                 case DaggerfallBlockKind.Rmb when record.Rmb is null:
                     throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable city block with no header summary.");
+                case DaggerfallBlockKind.Rmb when record.Objects is not null:
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable city block carrying a dungeon object summary.");
                 case DaggerfallBlockKind.Rdb when record.Objects is null:
                     throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable dungeon block with no object summary.");
-                case DaggerfallBlockKind.Rmb or DaggerfallBlockKind.Rdb when record.Rmb is not null && record.Objects is not null:
-                    throw new InvalidOperationException($"Published block '{record.SourceKey}' carries both a city and a dungeon summary.");
+                case DaggerfallBlockKind.Rdb when record.Rmb is not null:
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' is a readable dungeon block carrying a city header summary.");
+                case DaggerfallBlockKind.Rdi or DaggerfallBlockKind.Unknown when record.Rmb is not null || record.Objects is not null:
+                    throw new InvalidOperationException($"Published block '{record.SourceKey}' is a {record.Kind} record the donor reads as unknown bytes, and it still summarizes what the record places.");
                 default:
                     break;
             }
@@ -418,6 +420,18 @@ internal static class DaggerfallBlockValidation
         {
             throw new InvalidOperationException($"Published block '{sourceKey}' states the number {number} where its own text '{name.NumberText}' says otherwise.");
         }
+
+        // The donor's own composer writes at least two characters for a number — a padded number or a
+        // temple letter followed by one — so a name carrying a single digit is not a shape it produces.
+        bool digits = name.NumberText.Length >= 2 && name.NumberText.All(char.IsAsciiDigit);
+        bool temple = name.NumberText.Length >= 2 && char.IsAsciiLetterUpper(name.NumberText[0]) && name.NumberText[1..].All(char.IsAsciiDigit);
+        bool donorShape = name.Letter2.Length == 1
+            && BlockRecordInventoryReader.RmbLetters2.Contains(name.Letter2[0])
+            && (digits || temple);
+        if (name.DonorShape != donorShape)
+        {
+            throw new InvalidOperationException($"Published block '{sourceKey}' states that its name has the donor's shape where '{name.Prefix}{name.Letter1}{name.Letter2}{name.NumberText}' is {(donorShape ? "one the donor composes" : "not a shape the donor composes")}.");
+        }
     }
 
     private static void Validate(this DaggerfallBlockRdbName name, string sourceKey)
@@ -448,26 +462,42 @@ internal static class DaggerfallBlockValidation
 
     private static void Validate(this DaggerfallBlockRmbHeader header, DaggerfallBlockRecord record)
     {
-        if (header.DeclaredBlocks != header.Buildings.Count)
+        if (header.DeclaredBlocks != header.Buildings.Count || header.DeclaredBlocks > RmbBlockSummaryReader.SubRecordSlots)
         {
-            throw new InvalidOperationException($"Published block '{record.SourceKey}' declares {header.DeclaredBlocks} sub-records and carries {header.Buildings.Count}.");
+            throw new InvalidOperationException($"Published block '{record.SourceKey}' declares {header.DeclaredBlocks} sub-records and carries {header.Buildings.Count}, where the header holds {RmbBlockSummaryReader.SubRecordSlots} slots.");
         }
 
-        if (header.OtherNames is < 0 or > 32 || header.Misc3dObjects < 0 || header.MiscFlatObjects < 0 || header.TrailingBytes < 0)
+        // The three counts lead the header as bytes, so each is bounded by what one byte can state.
+        if (header.OtherNames is < 0 or > RmbBlockSummaryReader.OtherNameSlots
+            || header.Misc3dObjects is < 0 or > 255
+            || header.MiscFlatObjects is < 0 or > 255
+            || header.TrailingBytes < 0)
         {
             throw new InvalidOperationException($"Published block '{record.SourceKey}' states negative or impossible header counts.");
         }
 
         // The header's own arithmetic is republished so it can be checked without the source: the declared
         // sub-records, the objects that follow them, and whatever the record carries past both have to add
-        // up to the record's own length.
-        int accounted = DaggerfallBlocks.RmbHeaderBytes + header.TrailingBytes
-            + (header.Misc3dObjects * DaggerfallBlocks.RmbModelRecordBytes)
-            + (header.MiscFlatObjects * DaggerfallBlocks.RmbFlatRecordBytes)
-            + header.Buildings.Sum(building => building.ByteLength);
+        // up to the record's own length. The sum is taken in wide arithmetic, because a count that wrapped
+        // it would state a block placing tens of millions of objects.
+        long accounted = RmbBlockSummaryReader.HeaderBytes + header.TrailingBytes
+            + (header.Misc3dObjects * (long)RmbObjectCounts.ModelRecordBytes)
+            + (header.MiscFlatObjects * (long)RmbObjectCounts.FlatRecordBytes)
+            + header.Buildings.Sum(building => (long)building.ByteLength);
         if (accounted != record.ByteLength)
         {
             throw new InvalidOperationException($"Published block '{record.SourceKey}' accounts for {accounted} bytes where the record spans {record.ByteLength}.");
+        }
+
+        // A block states its own name, extension included, and in the supplied corpus it is exactly the
+        // archive key the record is stored under. The name slot holds thirteen bytes where the archive's
+        // name field holds fourteen, so a longer key can only appear there truncated.
+        string stated = record.SourceKey.Length <= RmbBlockSummaryReader.NameSlotBytes
+            ? record.SourceKey
+            : record.SourceKey[..RmbBlockSummaryReader.NameSlotBytes];
+        if (!StringComparer.Ordinal.Equals(header.Name, stated))
+        {
+            throw new InvalidOperationException($"Published block '{record.SourceKey}' states the name '{header.Name}' for itself where its own key says '{stated}'.");
         }
 
         for (int index = 0; index < header.Buildings.Count; index++)
@@ -478,11 +508,40 @@ internal static class DaggerfallBlockValidation
                 throw new InvalidOperationException($"Published block '{record.SourceKey}' carries building {building.Index} at position {index}, so its sub-records are not in header order.");
             }
 
-            if (building.ByteLength < DaggerfallBlocks.RmbBuildingHeaderBytes)
+            if (building.ByteLength < DaggerfallBlocks.RmbBuildingHeaderBytes * 2 || building.PaddingBytes < 0)
             {
-                throw new InvalidOperationException($"Published block '{record.SourceKey}' gives building {index} {building.ByteLength} bytes, fewer than the {DaggerfallBlocks.RmbBuildingHeaderBytes}-byte header it has to carry.");
+                throw new InvalidOperationException($"Published block '{record.SourceKey}' gives building {index} {building.ByteLength} bytes and {building.PaddingBytes} bytes of padding, fewer than the two {DaggerfallBlocks.RmbBuildingHeaderBytes}-byte halves it has to carry.");
+            }
+
+            if (building.BuildingType is < 0 or > 255 || building.Quality is < 0 or > 255 || building.FactionId is < 0 or > 65535 || building.NameSeed is < 0 or > 65535)
+            {
+                throw new InvalidOperationException($"Published block '{record.SourceKey}' states building {index}'s slot values outside the widths the source stores them in.");
+            }
+
+            // Each half's counts are wire bytes, and together with the two headers and the padding they have
+            // to account for exactly the bytes the sub-record reserves. Deriving the size from the counts is
+            // what stops a published summary from describing a building that cannot be that size.
+            int used = (DaggerfallBlocks.RmbBuildingHeaderBytes * 2) + Body(building.Exterior) + Body(building.Interior) + building.PaddingBytes;
+            if (used != building.ByteLength)
+            {
+                throw new InvalidOperationException($"Published block '{record.SourceKey}' states building {index} places {Body(building.Exterior) + Body(building.Interior)} bytes of records in {building.ByteLength} bytes with {building.PaddingBytes} of padding.");
             }
         }
+    }
+
+    /// <summary>The bytes the records one half's counts declare occupy.</summary>
+    private static int Body(DaggerfallBlockObjectCounts counts)
+    {
+        if (counts.Objects is < 0 or > 255 || counts.Flats is < 0 or > 255 || counts.Sections is < 0 or > 255 || counts.People is < 0 or > 255 || counts.Doors is < 0 or > 255)
+        {
+            throw new InvalidOperationException($"A published building half declares counts outside the widths the source stores them in: {counts}.");
+        }
+
+        return (counts.Objects * RmbObjectCounts.ModelRecordBytes)
+            + (counts.Flats * RmbObjectCounts.FlatRecordBytes)
+            + (counts.Sections * RmbObjectCounts.SectionRecordBytes)
+            + (counts.People * RmbObjectCounts.PeopleRecordBytes)
+            + (counts.Doors * RmbObjectCounts.DoorRecordBytes);
     }
 
     private static void Validate(this DaggerfallBlockObjects objects, string sourceKey)
@@ -590,9 +649,12 @@ public static class DaggerfallBlocksBuilder
             summary.Misc3dObjects,
             summary.MiscFlatObjects,
             [.. summary.Buildings.Select(building => new DaggerfallBlockBuilding(
-                building.Index, building.ByteLength, building.BuildingType, building.FactionId, building.Quality, building.NameSeed,
-                building.Objects, building.Flats, building.Sections, building.People, building.Doors))],
+                building.Index, building.ByteLength, building.PaddingBytes, building.BuildingType, building.FactionId, building.Quality, building.NameSeed,
+                Publish(building.Exterior), Publish(building.Interior)))],
             summary.TrailingBytes);
+
+    private static DaggerfallBlockObjectCounts Publish(RmbObjectCounts counts) =>
+        new(counts.Objects, counts.Flats, counts.Sections, counts.People, counts.Doors);
 
     private static DaggerfallBlockObjects? Publish(BlockObjectSummary? objects) =>
         objects is null ? null : new DaggerfallBlockObjects(

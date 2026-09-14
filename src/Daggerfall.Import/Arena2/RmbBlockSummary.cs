@@ -1,29 +1,56 @@
 namespace Daggerfall.Import.Arena2;
 
-/// <summary>One building slot of an RMB block header, as the header states it.</summary>
+/// <summary>What one of a city block sub-record's two halves declares it places.</summary>
+/// <param name="Objects">How many 3D object records it declares.</param>
+/// <param name="Flats">How many flat object records it declares.</param>
+/// <param name="Sections">How many section-3 records it declares.</param>
+/// <param name="People">How many people records it declares.</param>
+/// <param name="Doors">How many door records it declares.</param>
+public sealed record RmbObjectCounts(int Objects, int Flats, int Sections, int People, int Doors)
+{
+    /// <summary>Bytes one 3D object record occupies.</summary>
+    public const int ModelRecordBytes = 66;
+
+    /// <summary>Bytes one flat object record occupies.</summary>
+    public const int FlatRecordBytes = 17;
+
+    /// <summary>Bytes one section-3 record occupies.</summary>
+    public const int SectionRecordBytes = 16;
+
+    /// <summary>Bytes one people record occupies.</summary>
+    public const int PeopleRecordBytes = 17;
+
+    /// <summary>Bytes one door record occupies.</summary>
+    public const int DoorRecordBytes = 19;
+
+    /// <summary>The bytes the records these counts declare occupy.</summary>
+    public int BodyBytes => (Objects * ModelRecordBytes)
+        + (Flats * FlatRecordBytes)
+        + (Sections * SectionRecordBytes)
+        + (People * PeopleRecordBytes)
+        + (Doors * DoorRecordBytes);
+}
+
+/// <summary>One building sub-record of an RMB block header: its slot data and both of its halves.</summary>
 /// <param name="Index">The slot's ordinal, which is the sub-record's ordinal in the block.</param>
 /// <param name="ByteLength">The bytes the donor steps over for this sub-record, padding included.</param>
+/// <param name="PaddingBytes">The bytes the sub-record reserves past what its halves occupy.</param>
 /// <param name="BuildingType">The building type byte the slot carries.</param>
 /// <param name="FactionId">The faction the slot names, or zero when it names none.</param>
 /// <param name="Quality">The quality byte the slot carries.</param>
 /// <param name="NameSeed">The seed the building's generated name is derived from.</param>
-/// <param name="Objects">How many 3D object records the sub-record's own header declares.</param>
-/// <param name="Flats">How many flat object records the sub-record's own header declares.</param>
-/// <param name="Sections">How many section-3 records the sub-record's own header declares.</param>
-/// <param name="People">How many people records the sub-record's own header declares.</param>
-/// <param name="Doors">How many door records the sub-record's own header declares.</param>
+/// <param name="Exterior">What the sub-record's outside half declares.</param>
+/// <param name="Interior">What the sub-record's inside half declares.</param>
 public sealed record RmbBuildingSlot(
     int Index,
     int ByteLength,
+    int PaddingBytes,
     byte BuildingType,
     ushort FactionId,
     byte Quality,
     ushort NameSeed,
-    byte Objects,
-    byte Flats,
-    byte Sections,
-    byte People,
-    byte Doors);
+    RmbObjectCounts Exterior,
+    RmbObjectCounts Interior);
 
 /// <summary>
 /// The bounded header summary of one RMB city or exterior block: what the block itself declares it
@@ -51,7 +78,7 @@ public sealed record RmbBlockSummary(
 
 /// <summary>
 /// Reads the fixed part of an RMB block header: its counts, the building sub-records it declares and
-/// the counts those sub-records state for themselves.
+/// what each of those sub-records states for itself.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -63,10 +90,17 @@ public sealed record RmbBlockSummary(
 /// than summarized from offsets that happen to land in the middle of something else.
 /// </para>
 /// <para>
+/// Each declared sub-record is a pair: an outside half and an inside half, each led by a
+/// seventeen-byte header (five counts and six two-byte words this reader does not interpret) and
+/// followed by the records those counts declare, at the sizes the donor reads them. Both halves are
+/// read, because a summary that stopped at the first would state one object for a building that declares
+/// seven. The declared size may reserve a byte past the two halves — the donor steps over it — so the
+/// remainder is published rather than assumed away.
+/// </para>
+/// <para>
 /// What this deliberately does not read: ground tiles, ground scenery, the automap, the header's other
-/// name slots, the sub-records' own objects, and the block's own object records. Those are placements
-/// and geometry, which belong to the tasks that publish dungeon and exterior assemblies; this is the
-/// inventory those tasks start from.
+/// name slots, and the placements inside either half. Those belong to the tasks that publish dungeon and
+/// exterior assemblies; this is the inventory those tasks start from.
 /// </para>
 /// </remarks>
 public static class RmbBlockSummaryReader
@@ -77,17 +111,17 @@ public static class RmbBlockSummaryReader
     /// <summary>The bytes the header occupies before the declared sub-records begin.</summary>
     public const int HeaderBytes = 6776;
 
-    /// <summary>Bytes one 3D object record occupies, from the fields the donor reads.</summary>
-    public const int ModelRecordBytes = 66;
-
-    /// <summary>Bytes one flat object record occupies, from the fields the donor reads.</summary>
-    public const int FlatRecordBytes = 17;
+    /// <summary>Bytes one sub-record's own header occupies: five counts and six uninterpreted words.</summary>
+    public const int SubRecordHeaderBytes = 17;
 
     /// <summary>Name slots the header carries besides its own name.</summary>
     public const int OtherNameSlots = 32;
 
     /// <summary>Bytes one other-name slot occupies.</summary>
     public const int NameSlotBytes = 13;
+
+    /// <summary>Sub-record slots the header carries, which is also the largest count it can declare.</summary>
+    public const int SubRecordSlots = 32;
 
     private const int CountsBytes = 3;
     private const int BlockPositionsBytes = 32 * 20;
@@ -96,7 +130,6 @@ public static class RmbBlockSummaryReader
     private const int BlockDataSizesOffset = CountsBytes + BlockPositionsBytes + BuildingDataBytes + Section2Bytes;
     private const int BuildingDataOffset = CountsBytes + BlockPositionsBytes;
     private const int BuildingDataSlotBytes = 26;
-    private const int SubRecordHeaderBytes = 5;
 
     /// <summary>Reads one RMB block's header summary, or reports why its header cannot be read.</summary>
     public static bool TryRead(byte[] bytes, string source, int offset, int length, out RmbBlockSummary? summary, out string reason)
@@ -113,46 +146,61 @@ public static class RmbBlockSummaryReader
         int declaredBlocks = bytes[offset];
         int misc3dObjects = bytes[offset + 1];
         int miscFlatObjects = bytes[offset + 2];
-        if (declaredBlocks > 32)
+        if (declaredBlocks > SubRecordSlots)
         {
-            reason = $"declares {declaredBlocks} building sub-records, more than the header's 32 slots";
+            reason = $"declares {declaredBlocks} building sub-records, more than the header's {SubRecordSlots} slots";
             return false;
         }
 
-        int[] sizes = new int[declaredBlocks];
         List<RmbBuildingSlot> buildings = new(declaredBlocks);
         int position = HeaderBytes;
         for (int index = 0; index < declaredBlocks; index++)
         {
             int sizeOffset = offset + BlockDataSizesOffset + (index * sizeof(int));
             int size = bytes[sizeOffset] | (bytes[sizeOffset + 1] << 8) | (bytes[sizeOffset + 2] << 16) | (bytes[sizeOffset + 3] << 24);
-            if (size < SubRecordHeaderBytes || size > length - position)
+            if (size < SubRecordHeaderBytes * 2 || size > length - position)
             {
-                reason = $"declares {size} bytes for building {index}, which does not fit in the {length - position} bytes left after the header";
+                reason = $"declares {size} bytes for building {index}, which cannot hold its two {SubRecordHeaderBytes}-byte halves in the {length - position} bytes left after the header";
                 return false;
             }
 
-            sizes[index] = size;
+            // Each declared size spans an outside half and an inside half, and the donor steps over the
+            // whole of it. A half whose own counts run past the declared end would put the next read in
+            // the middle of a record, so it is refused rather than summarized from a guessed offset.
+            RmbObjectCounts exterior = Counts(bytes, offset + position);
+            int interiorOffset = offset + position + SubRecordHeaderBytes + exterior.BodyBytes;
+            if (interiorOffset + SubRecordHeaderBytes > offset + position + size)
+            {
+                reason = $"declares {exterior.BodyBytes} bytes of records in building {index}'s outside half, which leaves no room for its inside half in {size} bytes";
+                return false;
+            }
+
+            RmbObjectCounts interior = Counts(bytes, interiorOffset);
+            int used = (SubRecordHeaderBytes * 2) + exterior.BodyBytes + interior.BodyBytes;
+            if (used > size)
+            {
+                reason = $"declares {used} bytes of records and headers in building {index}, past the {size} bytes it reserves";
+                return false;
+            }
+
             int slotOffset = offset + BuildingDataOffset + (index * BuildingDataSlotBytes);
             buildings.Add(new RmbBuildingSlot(
                 index,
                 size,
+                size - used,
                 bytes[slotOffset + 24],
-                (ushort)(bytes[slotOffset + 14] | (bytes[slotOffset + 15] << 8)),
+                (ushort)(bytes[slotOffset + 18] | (bytes[slotOffset + 19] << 8)),
                 bytes[slotOffset + 25],
                 (ushort)(bytes[slotOffset] | (bytes[slotOffset + 1] << 8)),
-                bytes[offset + position],
-                bytes[offset + position + 1],
-                bytes[offset + position + 2],
-                bytes[offset + position + 3],
-                bytes[offset + position + 4]));
+                exterior,
+                interior));
             position += size;
         }
 
         // The bytes after the header are what the declared sub-records occupy plus the block's own object
         // records. The donor steps over the sub-records and reads the objects that follow, so a record
         // where the two disagree cannot be summarized from these offsets at all.
-        int accounted = position + (misc3dObjects * ModelRecordBytes) + (miscFlatObjects * FlatRecordBytes);
+        long accounted = position + (misc3dObjects * (long)RmbObjectCounts.ModelRecordBytes) + (miscFlatObjects * (long)RmbObjectCounts.FlatRecordBytes);
         if (accounted > length)
         {
             reason = $"accounts for {accounted} bytes from its header, past the record's {length}";
@@ -176,9 +224,13 @@ public static class RmbBlockSummaryReader
             misc3dObjects,
             miscFlatObjects,
             buildings,
-            length - accounted);
+            (int)(length - accounted));
         return true;
     }
+
+    /// <summary>Reads one half's five declared counts, which lead its seventeen-byte header.</summary>
+    private static RmbObjectCounts Counts(byte[] bytes, int offset) =>
+        new(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3], bytes[offset + 4]);
 
     /// <summary>Reads one fixed thirteen-byte name slot, which the source terminates with a zero byte.</summary>
     private static string Text(byte[] bytes, int offset, int length)
