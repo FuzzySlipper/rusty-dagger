@@ -48,8 +48,8 @@ public sealed class EmbeddedPaletteScreenTests
     [InlineData("DIE_00I0.IMG", "screen-death")]
     [InlineData("CHGN00I0.IMG", "screen-character-generation")]
     [InlineData("PICK02I0.IMG", "screen-pick-02")]
-    [InlineData("PICK03I0.IMG", "screen-pick-03")]
-    [InlineData("PRIS00I0.IMG", "screen-intro")]
+    [InlineData("PICK03I0.IMG", "screen-start-menu")]
+    [InlineData("PRIS00I0.IMG", "screen-prison")]
     [InlineData("TITL00I0.IMG", "screen-title")]
     public void PublishesTheScreenInItsOwnPaletteColours(string fileName, string artifact)
     {

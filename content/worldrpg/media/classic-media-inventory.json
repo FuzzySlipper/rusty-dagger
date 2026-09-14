@@ -406,18 +406,6 @@
       }
     },
     {
-      "path": "worldrpg/media/ui/screen-intro.png",
-      "byteLength": 43450,
-      "sha256": "2bc15220a4359d4517a028d07e46d2a818a48f317c52125b4dc98e8b86dd8ad4",
-      "mediaId": "screen.intro",
-      "slot": "intro",
-      "palette": {
-        "source": "embedded-in-source-file",
-        "channelScale": 4,
-        "donorAnchor": "ImgFile.ReadPalette"
-      }
-    },
-    {
       "path": "worldrpg/media/ui/screen-pick-02.png",
       "byteLength": 41063,
       "sha256": "d05e1accee5d4bb03950969f6654b26e4a941d4c76bd4e300adce6d7f15126df",
@@ -430,11 +418,23 @@
       }
     },
     {
-      "path": "worldrpg/media/ui/screen-pick-03.png",
+      "path": "worldrpg/media/ui/screen-prison.png",
+      "byteLength": 43450,
+      "sha256": "2bc15220a4359d4517a028d07e46d2a818a48f317c52125b4dc98e8b86dd8ad4",
+      "mediaId": "screen.prison",
+      "slot": "prison",
+      "palette": {
+        "source": "embedded-in-source-file",
+        "channelScale": 4,
+        "donorAnchor": "ImgFile.ReadPalette"
+      }
+    },
+    {
+      "path": "worldrpg/media/ui/screen-start-menu.png",
       "byteLength": 41081,
       "sha256": "1853159a1bfe841d8f1f9d7099a40b9851ecc49f2f6fede12b78e1fdc4c72b83",
-      "mediaId": "screen.pick.03",
-      "slot": "pick",
+      "mediaId": "screen.start-menu",
+      "slot": "startMenu",
       "palette": {
         "source": "embedded-in-source-file",
         "channelScale": 4,

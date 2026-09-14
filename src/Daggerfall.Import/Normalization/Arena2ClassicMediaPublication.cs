@@ -254,14 +254,14 @@ public enum ClassicUiImage
     /// <summary>The character-generation screen, which carries its own palette.</summary>
     CharacterGenerationScreen,
 
-    /// <summary>The first class and background pick screen, which carries its own palette.</summary>
+    /// <summary>The class and background pick screen (donor <c>CreateCharClassQuestions</c>), which carries its own palette.</summary>
     PickScreen02,
 
-    /// <summary>The second class and background pick screen, which carries its own palette.</summary>
-    PickScreen03,
+    /// <summary>The start window's menu background (donor <c>DaggerfallStartWindow</c>), which carries its own palette.</summary>
+    StartMenuScreen,
 
-    /// <summary>The opening screen, which carries its own palette.</summary>
-    IntroScreen,
+    /// <summary>The prison screen shown while the player serves time (donor <c>DaggerfallCourtWindow</c>), which carries its own palette.</summary>
+    PrisonScreen,
 
     /// <summary>The title screen, which carries its own palette.</summary>
     TitleScreen,
@@ -290,11 +290,14 @@ public enum ClassicUiSlot
     /// <summary>The character-generation screen.</summary>
     CharacterGeneration,
 
-    /// <summary>The class and background pick screens, which the player chooses from.</summary>
+    /// <summary>The class and background pick screen the player chooses from.</summary>
     Pick,
 
-    /// <summary>The opening screen.</summary>
-    Intro,
+    /// <summary>The start window's menu background.</summary>
+    StartMenu,
+
+    /// <summary>The prison screen shown while the player serves time.</summary>
+    Prison,
 
     /// <summary>The title screen.</summary>
     Title,
@@ -416,8 +419,8 @@ public sealed record ClassicUiImageManifest(
         ClassicUiImage.ScreenDeath => ClassicUiSlot.Death,
         ClassicUiImage.CharacterGenerationScreen => ClassicUiSlot.CharacterGeneration,
         ClassicUiImage.PickScreen02 => ClassicUiSlot.Pick,
-        ClassicUiImage.PickScreen03 => ClassicUiSlot.Pick,
-        ClassicUiImage.IntroScreen => ClassicUiSlot.Intro,
+        ClassicUiImage.StartMenuScreen => ClassicUiSlot.StartMenu,
+        ClassicUiImage.PrisonScreen => ClassicUiSlot.Prison,
         ClassicUiImage.TitleScreen => ClassicUiSlot.Title,
         _ => throw new ArgumentOutOfRangeException(nameof(image), image, "An admitted UI image with no slot is an artifact no consumer can bind."),
     };
@@ -631,8 +634,8 @@ public sealed record Arena2ClassicMediaPublication(
         // published in its own colours rather than paired with an external palette.
         new(ClassicUiImage.CharacterGenerationScreen, "screen.character-generation", "CHGN00I0.IMG", true),
         new(ClassicUiImage.PickScreen02, "screen.pick.02", "PICK02I0.IMG", true),
-        new(ClassicUiImage.PickScreen03, "screen.pick.03", "PICK03I0.IMG", true),
-        new(ClassicUiImage.IntroScreen, "screen.intro", "PRIS00I0.IMG", true),
+        new(ClassicUiImage.StartMenuScreen, "screen.start-menu", "PICK03I0.IMG", true),
+        new(ClassicUiImage.PrisonScreen, "screen.prison", "PRIS00I0.IMG", true),
         new(ClassicUiImage.TitleScreen, "screen.title", "TITL00I0.IMG", true),
 
         // Service screens and panels, each named by the donor window that reads it: the book reader's
@@ -1767,13 +1770,27 @@ public sealed record Arena2ClassicMediaPublication(
             _ => throw new ArgumentOutOfRangeException(nameof(fileName)),
         };
 
+        /// <summary>
+        /// Decodes one supplied screen in the palette its own file carries.
+        /// </summary>
+        /// <remarks>
+        /// The palette is required rather than optional: these six screens are the only files in the
+        /// corpus of this shape, the classic reader paints them from those trailing bytes, and falling
+        /// back to the shared art palette would publish every colour wrong while looking successful. A
+        /// file that is not the documented shape - truncated, or padded - is refused with the missing
+        /// reference named instead.
+        /// </remarks>
         private static (IndexedImg Image, Arena2Palette? Palette) Screen(byte[] bytes, string source)
         {
             int canvasBytes = ImgDecoder.EmbeddedPaletteScreenBytes - ImgDecoder.EmbeddedPaletteBytes;
-            IndexedImg image = ImgDecoder.DecodeHeaderless([.. bytes.AsSpan(0, Math.Min(canvasBytes, bytes.Length))], source);
-            return ImgDecoder.TryReadEmbeddedPalette(bytes, source, out Arena2Palette? palette, out _)
-                ? (image, palette)
-                : (image, null);
+            if (!ImgDecoder.TryReadEmbeddedPalette(bytes, source, out Arena2Palette? palette, out string reason))
+            {
+                throw new InvalidOperationException(
+                    $"{source} is published as a screen in its own embedded palette, but that palette could not be read: {reason}");
+            }
+
+            IndexedImg image = ImgDecoder.DecodeHeaderless([.. bytes.AsSpan(0, canvasBytes)], source);
+            return (image, palette);
         }
     }
 }
