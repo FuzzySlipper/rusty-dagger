@@ -288,8 +288,7 @@
         "etiquette": 40,
         "streetwise": 40,
         "running": 40,
-        "centaurian": 40
-      ,
+        "centaurian": 40,
         "hand-to-hand": 40
       },
       "armor": 15,
@@ -396,8 +395,7 @@
         "lockpicking": 45,
         "etiquette": 45,
         "running": 45,
-        "centaurian": 45
-      ,
+        "centaurian": 45,
         "hand-to-hand": 45
       },
       "armor": 30,
@@ -254162,5 +254160,4644 @@
     "sources": [
       "arena2/MAPS.BSA"
     ]
+  },
+  "magic": {
+    "schemaVersion": 1,
+    "sources": [
+      {
+        "recordId": "CNT-012",
+        "path": "local/arena2/SPELLS.STD"
+      },
+      {
+        "recordId": "CNT-012",
+        "path": "local/arena2/MAGIC.DEF"
+      }
+    ],
+    "spells": [
+      {
+        "key": "spell.001",
+        "identity": 1,
+        "identityShared": false,
+        "name": "Fenrik\u0027s Door Jam",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 0,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.001.effect.1",
+            "type": 16,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 25
+            },
+            "chance": {
+              "base": 6,
+              "mod": 1,
+              "perLevel": 10
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.002",
+        "identity": 2,
+        "identityShared": false,
+        "name": "Buoyancy",
+        "element": 1,
+        "rangeType": 0,
+        "cost": 0,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.002.effect.1",
+            "type": 31,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.003",
+        "identity": 3,
+        "identityShared": false,
+        "name": "Frostbite",
+        "element": 1,
+        "rangeType": 1,
+        "cost": 0,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.003.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 9,
+              "levelBase": 1,
+              "levelHigh": 3,
+              "perLevel": 2
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.004",
+        "identity": 4,
+        "identityShared": false,
+        "name": "Levitate",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 50,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.004.effect.1",
+            "type": 14,
+            "subType": -1,
+            "duration": {
+              "base": 2,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.005",
+        "identity": 5,
+        "identityShared": false,
+        "name": "Light",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 150,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.005.effect.1",
+            "type": 15,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 4,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.006",
+        "identity": 6,
+        "identityShared": false,
+        "name": "Invisibility",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 145,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.006.effect.1",
+            "type": 13,
+            "subType": 0,
+            "duration": {
+              "base": 3,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.007",
+        "identity": 7,
+        "identityShared": false,
+        "name": "Wizard\u0027s Fire",
+        "element": 0,
+        "rangeType": 2,
+        "cost": 125,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.007.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 15,
+              "levelBase": 1,
+              "levelHigh": 4,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.008",
+        "identity": 8,
+        "identityShared": false,
+        "name": "Shock",
+        "element": 3,
+        "rangeType": 1,
+        "cost": 225,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.008.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 20,
+              "levelBase": 1,
+              "levelHigh": 4,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.009",
+        "identity": 9,
+        "identityShared": false,
+        "name": "Strength Leech",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 245,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.009.effect.1",
+            "type": 7,
+            "subType": 0,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 9,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.010",
+        "identity": 10,
+        "identityShared": false,
+        "name": "Free Action",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 260,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.010.effect.1",
+            "type": 3,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 20,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.011",
+        "identity": 11,
+        "identityShared": false,
+        "name": "Resist Cold",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 350,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.011.effect.1",
+            "type": 8,
+            "subType": 1,
+            "duration": {
+              "base": 2,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 30,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.012",
+        "identity": 12,
+        "identityShared": false,
+        "name": "Resist Fire",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 350,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.012.effect.1",
+            "type": 8,
+            "subType": 0,
+            "duration": {
+              "base": 2,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 30,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.013",
+        "identity": 13,
+        "identityShared": false,
+        "name": "Resist Shock",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 350,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.013.effect.1",
+            "type": 8,
+            "subType": 3,
+            "duration": {
+              "base": 2,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 30,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.014",
+        "identity": 14,
+        "identityShared": false,
+        "name": "Fireball",
+        "element": 0,
+        "rangeType": 4,
+        "cost": 130,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.014.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 7,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.015",
+        "identity": 15,
+        "identityShared": false,
+        "name": "Cure Poison",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 400,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.015.effect.1",
+            "type": 3,
+            "subType": 1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 60,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.016",
+        "identity": 16,
+        "identityShared": false,
+        "name": "Ice Bolt",
+        "element": 1,
+        "rangeType": 2,
+        "cost": 245,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.016.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 35,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.017",
+        "identity": 17,
+        "identityShared": false,
+        "name": "Shield",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 400,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.017.effect.1",
+            "type": 35,
+            "subType": -1,
+            "duration": {
+              "base": 5,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 12,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.018",
+        "identity": 18,
+        "identityShared": false,
+        "name": "Open",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 300,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.018.effect.1",
+            "type": 17,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 20,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.019",
+        "identity": 19,
+        "identityShared": false,
+        "name": "Wizard Lock",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 480,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.019.effect.1",
+            "type": 16,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 20,
+              "mod": 4,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.020",
+        "identity": 20,
+        "identityShared": false,
+        "name": "Ice Storm",
+        "element": 1,
+        "rangeType": 4,
+        "cost": 195,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.020.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 30,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.021",
+        "identity": 22,
+        "identityShared": false,
+        "name": "Spell Shield",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 660,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.021.effect.1",
+            "type": 22,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 50,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.022",
+        "identity": 23,
+        "identityShared": false,
+        "name": "Silence",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 510,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.022.effect.1",
+            "type": 19,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 35,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.023",
+        "identity": 24,
+        "identityShared": false,
+        "name": "Troll\u0027s Blood",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 660,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.023.effect.1",
+            "type": 18,
+            "subType": -1,
+            "duration": {
+              "base": 5,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.024",
+        "identity": 25,
+        "identityShared": false,
+        "name": "Fire Storm",
+        "element": 0,
+        "rangeType": 3,
+        "cost": 245,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.024.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 20,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.025",
+        "identity": 26,
+        "identityShared": false,
+        "name": "Resist Poison",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 600,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.025.effect.1",
+            "type": 8,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 50,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.026",
+        "identity": 27,
+        "identityShared": false,
+        "name": "Spell Drain",
+        "element": 4,
+        "rangeType": 2,
+        "cost": 295,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.026.effect.1",
+            "type": 4,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 50,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.027",
+        "identity": 28,
+        "identityShared": false,
+        "name": "Far Silence",
+        "element": 4,
+        "rangeType": 2,
+        "cost": 510,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.027.effect.1",
+            "type": 19,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 35,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.028",
+        "identity": 29,
+        "identityShared": false,
+        "name": "Toxic Cloud",
+        "element": 2,
+        "rangeType": 3,
+        "cost": 175,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.028.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 25,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.029",
+        "identity": 30,
+        "identityShared": false,
+        "name": "Shalidor\u0027s Mirror",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 825,
+        "icon": 47,
+        "effects": [
+          {
+            "key": "spell.029.effect.1",
+            "type": 21,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 35,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.030",
+        "identity": 31,
+        "identityShared": false,
+        "name": "Lightning",
+        "element": 3,
+        "rangeType": 2,
+        "cost": 195,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.030.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 25,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.031",
+        "identity": 32,
+        "identityShared": false,
+        "name": "Gods\u0027 Fire",
+        "element": 0,
+        "rangeType": 2,
+        "cost": 2500,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.031.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 50,
+              "levelBase": 10,
+              "levelHigh": 10,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.032",
+        "identity": 33,
+        "identityShared": false,
+        "name": "Wildfire",
+        "element": 0,
+        "rangeType": 2,
+        "cost": 435,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.032.effect.1",
+            "type": 1,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 3,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 3,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 15,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.033",
+        "identity": 34,
+        "identityShared": false,
+        "name": "Wizard Rend",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 155,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.033.effect.1",
+            "type": 4,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 14,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.033.effect.2",
+            "type": 0,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 0,
+              "baseHigh": 1,
+              "levelBase": 0,
+              "levelHigh": 0,
+              "perLevel": 0
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.034",
+        "identity": 35,
+        "identityShared": false,
+        "name": "Medusa\u0027s Gaze",
+        "element": 4,
+        "rangeType": 2,
+        "cost": 915,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.034.effect.1",
+            "type": 0,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 8,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.035",
+        "identity": 36,
+        "identityShared": false,
+        "name": "Force Bolt",
+        "element": 4,
+        "rangeType": 2,
+        "cost": 275,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.035.effect.1",
+            "type": 4,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 30,
+              "levelBase": 1,
+              "levelHigh": 10,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.035.effect.2",
+            "type": 0,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 0,
+              "baseHigh": 1,
+              "levelBase": 0,
+              "levelHigh": 0,
+              "perLevel": 0
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.036",
+        "identity": 37,
+        "identityShared": false,
+        "name": "Slowfalling",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 60,
+        "icon": 13,
+        "effects": [
+          {
+            "key": "spell.036.effect.1",
+            "type": 25,
+            "subType": -1,
+            "duration": {
+              "base": 3,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.037",
+        "identity": 38,
+        "identityShared": false,
+        "name": "Jumping",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 0,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.037.effect.1",
+            "type": 27,
+            "subType": -1,
+            "duration": {
+              "base": 3,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.038",
+        "identity": 39,
+        "identityShared": false,
+        "name": "Spell Resistance",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 0,
+        "icon": 11,
+        "effects": [
+          {
+            "key": "spell.038.effect.1",
+            "type": 22,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 25,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.039",
+        "identity": 40,
+        "identityShared": false,
+        "name": "Stamina",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 50,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.039.effect.1",
+            "type": 10,
+            "subType": 9,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 8,
+              "levelBase": 2,
+              "levelHigh": 2,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.040",
+        "identity": 41,
+        "identityShared": false,
+        "name": "Water Walking",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 15,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.040.effect.1",
+            "type": 31,
+            "subType": -1,
+            "duration": {
+              "base": 5,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.041",
+        "identity": 42,
+        "identityShared": false,
+        "name": "Water Breathing",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 15,
+        "icon": 6,
+        "effects": [
+          {
+            "key": "spell.041.effect.1",
+            "type": 30,
+            "subType": -1,
+            "duration": {
+              "base": 5,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.042",
+        "identity": 44,
+        "identityShared": false,
+        "name": "Chameleon",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 50,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.042.effect.1",
+            "type": 23,
+            "subType": 0,
+            "duration": {
+              "base": 3,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.043",
+        "identity": 45,
+        "identityShared": false,
+        "name": "Shadow Form",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 50,
+        "icon": 15,
+        "effects": [
+          {
+            "key": "spell.043.effect.1",
+            "type": 24,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.044",
+        "identity": 46,
+        "identityShared": false,
+        "name": "Spell Reflection",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 735,
+        "icon": 9,
+        "effects": [
+          {
+            "key": "spell.044.effect.1",
+            "type": 21,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.045",
+        "identity": 47,
+        "identityShared": false,
+        "name": "Spell Absorption",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 525,
+        "icon": 25,
+        "effects": [
+          {
+            "key": "spell.045.effect.1",
+            "type": 20,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.046",
+        "identity": 49,
+        "identityShared": false,
+        "name": "Tongues",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 535,
+        "icon": 44,
+        "effects": [
+          {
+            "key": "spell.046.effect.1",
+            "type": 44,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 20,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.047",
+        "identity": 50,
+        "identityShared": false,
+        "name": "Paralysis",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 400,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.047.effect.1",
+            "type": 0,
+            "subType": -1,
+            "duration": {
+              "base": 3,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 25,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.048",
+        "identity": 51,
+        "identityShared": false,
+        "name": "Sleep",
+        "element": 4,
+        "rangeType": 2,
+        "cost": 265,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.048.effect.1",
+            "type": 1,
+            "subType": 1,
+            "duration": {
+              "base": 5,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 15,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.049",
+        "identity": 52,
+        "identityShared": false,
+        "name": "Vampiric Touch",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 290,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.049.effect.1",
+            "type": 11,
+            "subType": 8,
+            "duration": {
+              "base": 5,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 15,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.050",
+        "identity": 53,
+        "identityShared": false,
+        "name": "Hand of Sleep",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 265,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.050.effect.1",
+            "type": 1,
+            "subType": 1,
+            "duration": {
+              "base": 5,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 15,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.051",
+        "identity": 54,
+        "identityShared": false,
+        "name": "Magicka Leech",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 315,
+        "icon": 47,
+        "effects": [
+          {
+            "key": "spell.051.effect.1",
+            "type": 1,
+            "subType": 2,
+            "duration": {
+              "base": 5,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 15,
+              "levelBase": 1,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.052",
+        "identity": 55,
+        "identityShared": false,
+        "name": "Sphere of Negation",
+        "element": 4,
+        "rangeType": 2,
+        "cost": 950,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.052.effect.1",
+            "type": 5,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 20,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.053",
+        "identity": 56,
+        "identityShared": false,
+        "name": "Hand of Decay",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 550,
+        "icon": 39,
+        "effects": [
+          {
+            "key": "spell.053.effect.1",
+            "type": 5,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 3,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.054",
+        "identity": 57,
+        "identityShared": false,
+        "name": "Banish Daedra",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 1075,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.054.effect.1",
+            "type": 6,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.055",
+        "identity": 58,
+        "identityShared": true,
+        "name": "Holy Word",
+        "element": 4,
+        "rangeType": 3,
+        "cost": 550,
+        "icon": 12,
+        "effects": [
+          {
+            "key": "spell.055.effect.1",
+            "type": 6,
+            "subType": 1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.056",
+        "identity": 58,
+        "identityShared": true,
+        "name": "Holy Touch",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 550,
+        "icon": 12,
+        "effects": [
+          {
+            "key": "spell.056.effect.1",
+            "type": 6,
+            "subType": 1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.057",
+        "identity": 59,
+        "identityShared": false,
+        "name": "Null Magicka",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 790,
+        "icon": 31,
+        "effects": [
+          {
+            "key": "spell.057.effect.1",
+            "type": 6,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.058",
+        "identity": 60,
+        "identityShared": false,
+        "name": "Balyna\u0027s Antidote",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 325,
+        "icon": 49,
+        "effects": [
+          {
+            "key": "spell.058.effect.1",
+            "type": 3,
+            "subType": 1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 15,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.059",
+        "identity": 61,
+        "identityShared": false,
+        "name": "Cure Disease",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 300,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.059.effect.1",
+            "type": 3,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 15,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.060",
+        "identity": 62,
+        "identityShared": false,
+        "name": "Soul Trap",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 745,
+        "icon": 36,
+        "effects": [
+          {
+            "key": "spell.060.effect.1",
+            "type": 12,
+            "subType": -1,
+            "duration": {
+              "base": 10,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.061",
+        "identity": 64,
+        "identityShared": false,
+        "name": "Heal",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 145,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.061.effect.1",
+            "type": 10,
+            "subType": 8,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 5,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.062",
+        "identity": 66,
+        "identityShared": false,
+        "name": "Spider Touch",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 890,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.062.effect.1",
+            "type": 0,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 5,
+              "mod": 15,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.063",
+        "identity": 67,
+        "identityShared": false,
+        "name": "Energy Leech",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 570,
+        "icon": 33,
+        "effects": [
+          {
+            "key": "spell.063.effect.1",
+            "type": 11,
+            "subType": 9,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 5,
+              "levelHigh": 5,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.064",
+        "identity": 71,
+        "identityShared": false,
+        "name": "!Nux Vomica",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 75,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.064.effect.1",
+            "type": 1,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.065",
+        "identity": 72,
+        "identityShared": false,
+        "name": "!Arsenic",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 0,
+        "icon": 5,
+        "effects": [
+          {
+            "key": "spell.065.effect.1",
+            "type": 1,
+            "subType": 0,
+            "duration": {
+              "base": 4,
+              "mod": 60,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.066",
+        "identity": 73,
+        "identityShared": false,
+        "name": "!Moonseed",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 70,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.066.effect.1",
+            "type": 1,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 2,
+              "levelHigh": 2,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.066.effect.2",
+            "type": 0,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 20,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 0,
+              "baseHigh": 1,
+              "levelBase": 0,
+              "levelHigh": 0,
+              "perLevel": 0
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.067",
+        "identity": 74,
+        "identityShared": false,
+        "name": "!Drothweed",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 315,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.067.effect.1",
+            "type": 7,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 4,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 2,
+              "levelHigh": 2,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.067.effect.2",
+            "type": 7,
+            "subType": 3,
+            "duration": {
+              "base": 1,
+              "mod": 4,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 2,
+              "levelHigh": 2,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.067.effect.3",
+            "type": 7,
+            "subType": 6,
+            "duration": {
+              "base": 1,
+              "mod": 4,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 2,
+              "levelHigh": 2,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.068",
+        "identity": 75,
+        "identityShared": false,
+        "name": "!Somnalius",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 265,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.068.effect.1",
+            "type": 1,
+            "subType": 1,
+            "duration": {
+              "base": 1,
+              "mod": 2,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 15,
+              "levelHigh": 15,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.069",
+        "identity": 76,
+        "identityShared": false,
+        "name": "!Pyrrhic Acid",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 85,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.069.effect.1",
+            "type": 1,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 2,
+              "perLevel": 2
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 6,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.070",
+        "identity": 77,
+        "identityShared": false,
+        "name": "!Magebane",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 170,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.070.effect.1",
+            "type": 1,
+            "subType": 2,
+            "duration": {
+              "base": 5,
+              "mod": 4,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.070.effect.2",
+            "type": 7,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 4,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.071",
+        "identity": 78,
+        "identityShared": false,
+        "name": "!Thyrwort",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 310,
+        "icon": 16,
+        "effects": [
+          {
+            "key": "spell.071.effect.1",
+            "type": 7,
+            "subType": 5,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 4,
+              "levelHigh": 4,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.071.effect.2",
+            "type": 7,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 4,
+              "levelHigh": 4,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.072",
+        "identity": 79,
+        "identityShared": false,
+        "name": "!Indulcet",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 145,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.072.effect.1",
+            "type": 1,
+            "subType": 1,
+            "duration": {
+              "base": 1,
+              "mod": 4,
+              "perLevel": 2
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 4,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.072.effect.2",
+            "type": 9,
+            "subType": 7,
+            "duration": {
+              "base": 1,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 0,
+              "baseHigh": 1,
+              "levelBase": 0,
+              "levelHigh": 0,
+              "perLevel": 0
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.073",
+        "identity": 80,
+        "identityShared": false,
+        "name": "!Sursum",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 360,
+        "icon": 12,
+        "effects": [
+          {
+            "key": "spell.073.effect.1",
+            "type": 7,
+            "subType": 1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 3
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 6,
+              "levelHigh": 6,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.073.effect.2",
+            "type": 9,
+            "subType": 0,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 6,
+              "levelHigh": 6,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.074",
+        "identity": 81,
+        "identityShared": false,
+        "name": "!Quaesto Vil",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 50,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.074.effect.1",
+            "type": 10,
+            "subType": 9,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          },
+          {
+            "key": "spell.074.effect.2",
+            "type": 7,
+            "subType": 2,
+            "duration": {
+              "base": 1,
+              "mod": 4,
+              "perLevel": 5
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.075",
+        "identity": 82,
+        "identityShared": false,
+        "name": "Orc Strength",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 385,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.075.effect.1",
+            "type": 9,
+            "subType": 0,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 2,
+              "levelHigh": 2,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.076",
+        "identity": 83,
+        "identityShared": false,
+        "name": "Wisdom",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 445,
+        "icon": 5,
+        "effects": [
+          {
+            "key": "spell.076.effect.1",
+            "type": 9,
+            "subType": 1,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.077",
+        "identity": 84,
+        "identityShared": false,
+        "name": "Iron Will",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 445,
+        "icon": 45,
+        "effects": [
+          {
+            "key": "spell.077.effect.1",
+            "type": 9,
+            "subType": 2,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.078",
+        "identity": 85,
+        "identityShared": false,
+        "name": "Nimbleness",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 445,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.078.effect.1",
+            "type": 9,
+            "subType": 3,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.079",
+        "identity": 86,
+        "identityShared": false,
+        "name": "Feet of Notorgo",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 445,
+        "icon": 25,
+        "effects": [
+          {
+            "key": "spell.079.effect.1",
+            "type": 9,
+            "subType": 6,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.080",
+        "identity": 87,
+        "identityShared": false,
+        "name": "Fortitude",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 445,
+        "icon": 47,
+        "effects": [
+          {
+            "key": "spell.080.effect.1",
+            "type": 9,
+            "subType": 4,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.081",
+        "identity": 88,
+        "identityShared": false,
+        "name": "Charisma",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 445,
+        "icon": 44,
+        "effects": [
+          {
+            "key": "spell.081.effect.1",
+            "type": 9,
+            "subType": 5,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 3,
+              "levelHigh": 4,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.082",
+        "identity": 89,
+        "identityShared": false,
+        "name": "Jack of Trades",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 445,
+        "icon": 4,
+        "effects": [
+          {
+            "key": "spell.082.effect.1",
+            "type": 9,
+            "subType": 7,
+            "duration": {
+              "base": 5,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 10,
+              "levelBase": 3,
+              "levelHigh": 3,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.083",
+        "identity": 90,
+        "identityShared": false,
+        "name": "Charm Mortal",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 2950,
+        "icon": 6,
+        "effects": [
+          {
+            "key": "spell.083.effect.1",
+            "type": 34,
+            "subType": -1,
+            "duration": {
+              "base": 5,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 10,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.084",
+        "identity": 91,
+        "identityShared": false,
+        "name": "Calm Humanoid",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 2950,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.084.effect.1",
+            "type": 33,
+            "subType": 2,
+            "duration": {
+              "base": 5,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 10,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.085",
+        "identity": 92,
+        "identityShared": false,
+        "name": "!Lycanthropy",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 160,
+        "icon": 10,
+        "effects": [
+          {
+            "key": "spell.085.effect.1",
+            "type": 29,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.086",
+        "identity": 94,
+        "identityShared": false,
+        "name": "Recall",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 0,
+        "icon": 1,
+        "effects": [
+          {
+            "key": "spell.086.effect.1",
+            "type": 43,
+            "subType": -1,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.087",
+        "identity": 97,
+        "identityShared": false,
+        "name": "Balyna\u0027s Balm",
+        "element": 4,
+        "rangeType": 0,
+        "cost": 0,
+        "icon": 3,
+        "effects": [
+          {
+            "key": "spell.087.effect.1",
+            "type": 10,
+            "subType": 8,
+            "duration": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 1,
+              "mod": 1,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 2,
+              "levelHigh": 10,
+              "perLevel": 2
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.088",
+        "identity": 98,
+        "identityShared": false,
+        "name": "Quiet Undead",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 2950,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.088.effect.1",
+            "type": 33,
+            "subType": 1,
+            "duration": {
+              "base": 5,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 10,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      },
+      {
+        "key": "spell.089",
+        "identity": 99,
+        "identityShared": false,
+        "name": "Tame",
+        "element": 4,
+        "rangeType": 1,
+        "cost": 2950,
+        "icon": 2,
+        "effects": [
+          {
+            "key": "spell.089.effect.1",
+            "type": 33,
+            "subType": 0,
+            "duration": {
+              "base": 5,
+              "mod": 5,
+              "perLevel": 1
+            },
+            "chance": {
+              "base": 10,
+              "mod": 10,
+              "perLevel": 1
+            },
+            "magnitude": {
+              "baseLow": 1,
+              "baseHigh": 1,
+              "levelBase": 1,
+              "levelHigh": 1,
+              "perLevel": 1
+            }
+          }
+        ]
+      }
+    ],
+    "magicItems": [
+      {
+        "key": "magic-item.0000",
+        "offset": 4,
+        "name": "The Masque of Clavicus",
+        "type": 1,
+        "group": 25,
+        "groupIndex": 2,
+        "uses": 1500,
+        "value": 50000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0000.enchantment.1",
+            "type": 26,
+            "param": 0,
+            "spell": null,
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0001",
+        "offset": 66,
+        "name": "The Mehrunes Razor",
+        "type": 1,
+        "group": 3,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 50000,
+        "material": 8,
+        "enchantments": [
+          {
+            "key": "magic-item.0001.enchantment.1",
+            "type": 26,
+            "param": 1,
+            "spell": "spell.001",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0002",
+        "offset": 128,
+        "name": "The Mace of Molag Bal",
+        "type": 1,
+        "group": 3,
+        "groupIndex": 11,
+        "uses": 1500,
+        "value": 50000,
+        "material": 9,
+        "enchantments": [
+          {
+            "key": "magic-item.0002.enchantment.1",
+            "type": 26,
+            "param": 2,
+            "spell": "spell.002",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0003",
+        "offset": 190,
+        "name": "The Hircine Ring",
+        "type": 1,
+        "group": 25,
+        "groupIndex": 2,
+        "uses": 1500,
+        "value": 50000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0003.enchantment.1",
+            "type": 26,
+            "param": 3,
+            "spell": "spell.003",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0004",
+        "offset": 252,
+        "name": "The Sanguine Rose",
+        "type": 1,
+        "group": 15,
+        "groupIndex": 11,
+        "uses": 1500,
+        "value": 50000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0004.enchantment.1",
+            "type": 26,
+            "param": 4,
+            "spell": "spell.004",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0005",
+        "offset": 314,
+        "name": "Oghma Infinium",
+        "type": 1,
+        "group": 7,
+        "groupIndex": 0,
+        "uses": 1,
+        "value": 50000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0005.enchantment.1",
+            "type": 26,
+            "param": 5,
+            "spell": "spell.005",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0006",
+        "offset": 376,
+        "name": "The Wabbajack",
+        "type": 1,
+        "group": 3,
+        "groupIndex": 2,
+        "uses": 1500,
+        "value": 50000,
+        "material": 9,
+        "enchantments": [
+          {
+            "key": "magic-item.0006.enchantment.1",
+            "type": 26,
+            "param": 6,
+            "spell": "spell.006",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0007",
+        "offset": 438,
+        "name": "The Ring of Namira",
+        "type": 1,
+        "group": 25,
+        "groupIndex": 2,
+        "uses": 1500,
+        "value": 50000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0007.enchantment.1",
+            "type": 26,
+            "param": 7,
+            "spell": "spell.007",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0008",
+        "offset": 500,
+        "name": "The Skull of Corruption",
+        "type": 1,
+        "group": 25,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 50000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0008.enchantment.1",
+            "type": 26,
+            "param": 8,
+            "spell": "spell.008",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0009",
+        "offset": 562,
+        "name": "Azura\u0027s Star",
+        "type": 1,
+        "group": 25,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 50000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0009.enchantment.1",
+            "type": 26,
+            "param": 9,
+            "spell": "spell.009",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0010",
+        "offset": 624,
+        "name": "Silent %it",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 700,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0010.enchantment.1",
+            "type": 0,
+            "param": 23,
+            "spell": "spell.022",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0011",
+        "offset": 686,
+        "name": "%it of the Wise",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 400,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0011.enchantment.1",
+            "type": 1,
+            "param": 83,
+            "spell": "spell.076",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0012",
+        "offset": 748,
+        "name": "%it of Wildfire",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 800,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0012.enchantment.1",
+            "type": 0,
+            "param": 33,
+            "spell": "spell.032",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0013",
+        "offset": 810,
+        "name": "%it of Force Bolts",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 850,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0013.enchantment.1",
+            "type": 0,
+            "param": 36,
+            "spell": "spell.035",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0014",
+        "offset": 872,
+        "name": "Shining %it",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 350,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0014.enchantment.1",
+            "type": 0,
+            "param": 5,
+            "spell": "spell.005",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0015",
+        "offset": 934,
+        "name": "%it of the Sealed Door",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 300,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0015.enchantment.1",
+            "type": 0,
+            "param": 19,
+            "spell": "spell.019",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0016",
+        "offset": 996,
+        "name": "%it of Undeniable Access",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 500,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0016.enchantment.1",
+            "type": 0,
+            "param": 18,
+            "spell": "spell.018",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0017",
+        "offset": 1058,
+        "name": "%it of Venom Antidote",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 450,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0017.enchantment.1",
+            "type": 0,
+            "param": 15,
+            "spell": "spell.015",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0018",
+        "offset": 1120,
+        "name": "%it of Life Stealing",
+        "type": 0,
+        "group": 2,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 1500,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0018.enchantment.1",
+            "type": 6,
+            "param": 1,
+            "spell": "spell.001",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0019",
+        "offset": 1182,
+        "name": "%it of Wizard\u0027s Fire",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 900,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0019.enchantment.1",
+            "type": 0,
+            "param": 7,
+            "spell": "spell.007",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0020",
+        "offset": 1244,
+        "name": "Leaping %it",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 300,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0020.enchantment.1",
+            "type": 0,
+            "param": 4,
+            "spell": "spell.004",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0021",
+        "offset": 1306,
+        "name": "%it of Water-walking",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 300,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0021.enchantment.1",
+            "type": 1,
+            "param": 41,
+            "spell": "spell.040",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0022",
+        "offset": 1368,
+        "name": "%it of Magicka",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 600,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0022.enchantment.1",
+            "type": 9,
+            "param": -1,
+            "spell": null,
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0023",
+        "offset": 1430,
+        "name": "Never Tiring %it",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 250,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0023.enchantment.1",
+            "type": 0,
+            "param": 40,
+            "spell": "spell.039",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0024",
+        "offset": 1492,
+        "name": "%it of Featherweight",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 550,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0024.enchantment.1",
+            "type": 0,
+            "param": 37,
+            "spell": "spell.036",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0025",
+        "offset": 1554,
+        "name": "%it, the Protector",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 650,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0025.enchantment.1",
+            "type": 0,
+            "param": 17,
+            "spell": "spell.017",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0026",
+        "offset": 1616,
+        "name": "%it of Shocking",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 650,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0026.enchantment.1",
+            "type": 0,
+            "param": 8,
+            "spell": "spell.008",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0027",
+        "offset": 1678,
+        "name": "Cursing %it",
+        "type": 0,
+        "group": 2,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 500,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0027.enchantment.1",
+            "type": 2,
+            "param": 50,
+            "spell": "spell.047",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0028",
+        "offset": 1740,
+        "name": "%it of Far Silence",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 850,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0028.enchantment.1",
+            "type": 0,
+            "param": 28,
+            "spell": "spell.027",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0029",
+        "offset": 1802,
+        "name": "%it of Venom Spitting",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 500,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0029.enchantment.1",
+            "type": 10,
+            "param": 7,
+            "spell": "spell.007",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0030",
+        "offset": 1864,
+        "name": "Blazing %it of Fireballs",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 1000,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0030.enchantment.1",
+            "type": 0,
+            "param": 14,
+            "spell": "spell.014",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0031",
+        "offset": 1926,
+        "name": "Frosty %it of Ice Storms",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 900,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0031.enchantment.1",
+            "type": 0,
+            "param": 20,
+            "spell": "spell.020",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0032",
+        "offset": 1988,
+        "name": "%it of Lightning",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 900,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0032.enchantment.1",
+            "type": 0,
+            "param": 31,
+            "spell": "spell.030",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0033",
+        "offset": 2050,
+        "name": "Deadman\u0027s %it",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 800,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0033.enchantment.1",
+            "type": 0,
+            "param": 25,
+            "spell": "spell.024",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0034",
+        "offset": 2112,
+        "name": "Healing %it",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 550,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0034.enchantment.1",
+            "type": 0,
+            "param": 64,
+            "spell": "spell.061",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0035",
+        "offset": 2174,
+        "name": "%it of the Orc Lord",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 750,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0035.enchantment.1",
+            "type": 1,
+            "param": 82,
+            "spell": "spell.075",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0036",
+        "offset": 2236,
+        "name": "Unrestrainable %it",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 500,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0036.enchantment.1",
+            "type": 0,
+            "param": 10,
+            "spell": "spell.010",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0037",
+        "offset": 2298,
+        "name": "%it of Iron Will",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 400,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0037.enchantment.1",
+            "type": 1,
+            "param": 84,
+            "spell": "spell.077",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0038",
+        "offset": 2360,
+        "name": "%it of Nimbleness",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 400,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0038.enchantment.1",
+            "type": 1,
+            "param": 85,
+            "spell": "spell.078",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0039",
+        "offset": 2422,
+        "name": "Torgo\u0027s %it",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 700,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0039.enchantment.1",
+            "type": 1,
+            "param": 86,
+            "spell": "spell.079",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0040",
+        "offset": 2484,
+        "name": "%it of Fortitude",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 400,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0040.enchantment.1",
+            "type": 1,
+            "param": 87,
+            "spell": "spell.080",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0041",
+        "offset": 2546,
+        "name": "%it of Friendship",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 350,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0041.enchantment.1",
+            "type": 1,
+            "param": 88,
+            "spell": "spell.081",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0042",
+        "offset": 2608,
+        "name": "%it of Good Luck",
+        "type": 0,
+        "group": 1,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 400,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0042.enchantment.1",
+            "type": 1,
+            "param": 89,
+            "spell": "spell.082",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0043",
+        "offset": 2670,
+        "name": "%it of Oblivion",
+        "type": 0,
+        "group": 2,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 700,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0043.enchantment.1",
+            "type": 2,
+            "param": 55,
+            "spell": "spell.052",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0044",
+        "offset": 2732,
+        "name": "%it of Toxic Clouds",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 650,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0044.enchantment.1",
+            "type": 0,
+            "param": 29,
+            "spell": "spell.028",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0045",
+        "offset": 2794,
+        "name": "%it of Paralysis",
+        "type": 0,
+        "group": 0,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 600,
+        "material": 0,
+        "enchantments": [
+          {
+            "key": "magic-item.0045.enchantment.1",
+            "type": 0,
+            "param": 35,
+            "spell": "spell.034",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0046",
+        "offset": 2856,
+        "name": "Volendrung",
+        "type": 2,
+        "group": 3,
+        "groupIndex": 13,
+        "uses": 1500,
+        "value": 50000,
+        "material": 4,
+        "enchantments": [
+          {
+            "key": "magic-item.0046.enchantment.1",
+            "type": 2,
+            "param": 50,
+            "spell": "spell.047",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0046.enchantment.2",
+            "type": 2,
+            "param": 52,
+            "spell": "spell.049",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0047",
+        "offset": 2918,
+        "name": "Warlock\u0027s Ring",
+        "type": 2,
+        "group": 25,
+        "groupIndex": 2,
+        "uses": 1500,
+        "value": 50000,
+        "material": 5,
+        "enchantments": [
+          {
+            "key": "magic-item.0047.enchantment.1",
+            "type": 1,
+            "param": 86,
+            "spell": "spell.079",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0047.enchantment.2",
+            "type": 0,
+            "param": 64,
+            "spell": "spell.061",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0047.enchantment.3",
+            "type": 0,
+            "param": 30,
+            "spell": "spell.029",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0048",
+        "offset": 2980,
+        "name": "Auriel\u0027s Bow",
+        "type": 2,
+        "group": 3,
+        "groupIndex": 17,
+        "uses": 1500,
+        "value": 50000,
+        "material": 3,
+        "enchantments": [
+          {
+            "key": "magic-item.0048.enchantment.1",
+            "type": 2,
+            "param": 31,
+            "spell": "spell.030",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0048.enchantment.2",
+            "type": 2,
+            "param": 53,
+            "spell": "spell.050",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0048.enchantment.3",
+            "type": 2,
+            "param": 54,
+            "spell": "spell.051",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0049",
+        "offset": 3042,
+        "name": "Necromancer\u0027s Amulet",
+        "type": 2,
+        "group": 25,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 50000,
+        "material": 6,
+        "enchantments": [
+          {
+            "key": "magic-item.0049.enchantment.1",
+            "type": 1,
+            "param": 83,
+            "spell": "spell.076",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0049.enchantment.2",
+            "type": 0,
+            "param": 24,
+            "spell": "spell.023",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0049.enchantment.3",
+            "type": 9,
+            "param": -1,
+            "spell": null,
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0050",
+        "offset": 3104,
+        "name": "Chrysamere",
+        "type": 2,
+        "group": 3,
+        "groupIndex": 9,
+        "uses": 1500,
+        "value": 50000,
+        "material": 6,
+        "enchantments": [
+          {
+            "key": "magic-item.0050.enchantment.1",
+            "type": 0,
+            "param": 64,
+            "spell": "spell.061",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0050.enchantment.2",
+            "type": 0,
+            "param": 30,
+            "spell": "spell.029",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0050.enchantment.3",
+            "type": 0,
+            "param": 12,
+            "spell": "spell.012",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0050.enchantment.4",
+            "type": 10,
+            "param": 29,
+            "spell": "spell.028",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0051",
+        "offset": 3166,
+        "name": "Lord\u0027s Mail",
+        "type": 2,
+        "group": 2,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 50000,
+        "material": 5,
+        "enchantments": [
+          {
+            "key": "magic-item.0051.enchantment.1",
+            "type": 5,
+            "param": 0,
+            "spell": null,
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0051.enchantment.2",
+            "type": 0,
+            "param": 15,
+            "spell": "spell.015",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0051.enchantment.3",
+            "type": 0,
+            "param": 22,
+            "spell": "spell.021",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0052",
+        "offset": 3228,
+        "name": "Staff of Magnus",
+        "type": 2,
+        "group": 3,
+        "groupIndex": 2,
+        "uses": 1500,
+        "value": 50000,
+        "material": 9,
+        "enchantments": [
+          {
+            "key": "magic-item.0052.enchantment.1",
+            "type": 1,
+            "param": 47,
+            "spell": "spell.045",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0052.enchantment.2",
+            "type": 5,
+            "param": 0,
+            "spell": null,
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0053",
+        "offset": 3290,
+        "name": "Ring of Khajiit",
+        "type": 2,
+        "group": 25,
+        "groupIndex": 2,
+        "uses": 1500,
+        "value": 50000,
+        "material": 7,
+        "enchantments": [
+          {
+            "key": "magic-item.0053.enchantment.1",
+            "type": 0,
+            "param": 6,
+            "spell": "spell.006",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0053.enchantment.2",
+            "type": 1,
+            "param": 86,
+            "spell": "spell.079",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0054",
+        "offset": 3352,
+        "name": "Ebony Mail",
+        "type": 2,
+        "group": 2,
+        "groupIndex": 0,
+        "uses": 1500,
+        "value": 50000,
+        "material": 7,
+        "enchantments": [
+          {
+            "key": "magic-item.0054.enchantment.1",
+            "type": 12,
+            "param": -1,
+            "spell": null,
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0054.enchantment.2",
+            "type": 0,
+            "param": 22,
+            "spell": "spell.021",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0054.enchantment.3",
+            "type": 0,
+            "param": 12,
+            "spell": "spell.012",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0054.enchantment.4",
+            "type": 0,
+            "param": 17,
+            "spell": "spell.017",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0055",
+        "offset": 3414,
+        "name": "Auriel\u0027s Shield",
+        "type": 2,
+        "group": 2,
+        "groupIndex": 10,
+        "uses": 1500,
+        "value": 50000,
+        "material": 7,
+        "enchantments": [
+          {
+            "key": "magic-item.0055.enchantment.1",
+            "type": 0,
+            "param": 12,
+            "spell": "spell.012",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0055.enchantment.2",
+            "type": 1,
+            "param": 46,
+            "spell": "spell.044",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0055.enchantment.3",
+            "type": 0,
+            "param": 17,
+            "spell": "spell.017",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0055.enchantment.4",
+            "type": 12,
+            "param": -1,
+            "spell": null,
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0056",
+        "offset": 3476,
+        "name": "Spell Breaker",
+        "type": 2,
+        "group": 2,
+        "groupIndex": 10,
+        "uses": 1500,
+        "value": 50000,
+        "material": 4,
+        "enchantments": [
+          {
+            "key": "magic-item.0056.enchantment.1",
+            "type": 1,
+            "param": 46,
+            "spell": "spell.044",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0056.enchantment.2",
+            "type": 0,
+            "param": 10,
+            "spell": "spell.010",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0057",
+        "offset": 3538,
+        "name": "Skeleton\u0027s Key",
+        "type": 2,
+        "group": 25,
+        "groupIndex": 5,
+        "uses": 1500,
+        "value": 50000,
+        "material": 7,
+        "enchantments": [
+          {
+            "key": "magic-item.0057.enchantment.1",
+            "type": 0,
+            "param": 18,
+            "spell": "spell.018",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0057.enchantment.2",
+            "type": 10,
+            "param": 20,
+            "spell": "spell.020",
+            "spellIdentityShared": false
+          }
+        ]
+      },
+      {
+        "key": "magic-item.0058",
+        "offset": 3600,
+        "name": "Ebony Blade",
+        "type": 2,
+        "group": 3,
+        "groupIndex": 8,
+        "uses": 1500,
+        "value": 50000,
+        "material": 7,
+        "enchantments": [
+          {
+            "key": "magic-item.0058.enchantment.1",
+            "type": 2,
+            "param": 52,
+            "spell": "spell.049",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0058.enchantment.2",
+            "type": 2,
+            "param": 67,
+            "spell": "spell.063",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0058.enchantment.3",
+            "type": 0,
+            "param": 28,
+            "spell": "spell.027",
+            "spellIdentityShared": false
+          },
+          {
+            "key": "magic-item.0058.enchantment.4",
+            "type": 10,
+            "param": 29,
+            "spell": "spell.028",
+            "spellIdentityShared": false
+          }
+        ]
+      }
+    ],
+    "unresolvedLinks": [
+      {
+        "enchantment": "magic-item.0000.enchantment.1",
+        "item": "magic-item.0000",
+        "spellIdentity": 0,
+        "reason": "no published spell carries this identity"
+      },
+      {
+        "enchantment": "magic-item.0051.enchantment.1",
+        "item": "magic-item.0051",
+        "spellIdentity": 0,
+        "reason": "no published spell carries this identity"
+      },
+      {
+        "enchantment": "magic-item.0052.enchantment.2",
+        "item": "magic-item.0052",
+        "spellIdentity": 0,
+        "reason": "no published spell carries this identity"
+      }
+    ],
+    "dispositions": []
   }
 }
