@@ -252,6 +252,37 @@ public sealed class GeometryPublicationTests
     }
 
     [Fact]
+    public void Refuses_a_summary_the_records_do_not_support_even_when_the_index_agrees()
+    {
+        // The index comparison fires first for an index that disagrees with the section, so the rules that
+        // read the summary itself are pinned by rebuilding a consistent index around a wrong summary.
+        GeometryPublication publication = Publish(["55000"], Textures());
+        GeometryPublicationSummary wrong = publication.Summary with { Unused = publication.Summary.Unused + 1 };
+        GeneratedSpatialArtifact index = publication.Artifacts.Single(artifact => artifact.RelativePath == GeometryPublication.IndexRelativePath);
+        GeometryIndex document = System.Text.Json.JsonSerializer.Deserialize<GeometryIndex>(index.Bytes.Span, Daggerfall.Import.Publication.PublishedJson.SectionRead)!;
+        GeneratedSpatialArtifact agreeing = new(
+            index.Id,
+            index.RelativePath,
+            System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(document with { Summary = wrong }, Daggerfall.Import.Publication.PublishedJson.Section),
+            index.DependsOnArtifactIds);
+        GeometryPublication tampered = publication with
+        {
+            Summary = wrong,
+            Artifacts = [.. publication.Artifacts.Where(artifact => artifact.RelativePath != GeometryPublication.IndexRelativePath), agreeing],
+        };
+
+        Assert.Contains("does not account for every record", Assert.Throws<InvalidOperationException>(() => tampered.Validate()).Message, StringComparison.Ordinal);
+
+        // The index's own schema and inventory claims are checked too, not only its records.
+        GeneratedSpatialArtifact foreign = new(
+            index.Id,
+            index.RelativePath,
+            System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(document with { InventorySource = "elsewhere/ARCH3D.BSA" }, Daggerfall.Import.Publication.PublishedJson.Section),
+            index.DependsOnArtifactIds);
+        Assert.Contains("index does not describe the records", Assert.Throws<InvalidOperationException>(() => (publication with { Artifacts = [.. publication.Artifacts.Where(artifact => artifact.RelativePath != GeometryPublication.IndexRelativePath), foreign] }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Refuses_a_reference_that_is_not_a_mesh_number()
     {
         byte[] archive = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA"));
