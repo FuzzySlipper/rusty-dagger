@@ -59,6 +59,8 @@ public sealed class DaggerfallBlockInventoryTests
         // offsets positions rather than guesses, and the supplied corpus satisfies it exactly.
         JsonElement[] city = [.. Records("rmb")];
         Assert.Equal(920, city.Length);
+        int buildings = 0;
+        int paddings = 0;
 
         foreach (JsonElement record in city)
         {
@@ -73,8 +75,58 @@ public sealed class DaggerfallBlockInventoryTests
             // the archive key the record is stored under.
             Assert.Equal(record.GetProperty("sourceKey").GetString(), header.GetProperty("name").GetString());
             Assert.Equal(header.GetProperty("declaredBlocks").GetInt32(), header.GetProperty("buildings").GetArrayLength());
+
+            // Each sub-record is a pair of halves, and the bytes those halves declare plus their two
+            // headers and the padding they reserve have to account for exactly the size the sub-record
+            // reserves. This is the check that a published building cannot describe a shape it cannot have.
+            foreach (JsonElement building in header.GetProperty("buildings").EnumerateArray())
+            {
+                int halves = 34 + Half(building.GetProperty("exterior")) + Half(building.GetProperty("interior"));
+                Assert.Equal(building.GetProperty("byteLength").GetInt32(), halves + building.GetProperty("paddingBytes").GetInt32());
+                Assert.InRange(building.GetProperty("paddingBytes").GetInt32(), 0, 1);
+                buildings++;
+                paddings += building.GetProperty("paddingBytes").GetInt32();
+            }
         }
+
+        Assert.Equal(9005, buildings);
+        Assert.Equal(5549, paddings);
     }
+
+    [Fact]
+    public void Publishes_the_slot_values_and_both_halves_the_source_states()
+    {
+        // A building's faction sits eighteen bytes into its twenty-six-byte slot, after four uninterpreted
+        // words; reading it a word early states zero for every building in the corpus. And a sub-record's
+        // counts are a pair: the outside half alone understates every building with an inside.
+        using JsonDocument pack = Pack();
+        JsonElement[] city = [.. Records("rmb")];
+        JsonElement wall = city.Single(record => record.GetProperty("sourceKey").GetString() == "WALLAA03.RMB");
+        JsonElement slot = wall.GetProperty("rmb").GetProperty("buildings")[0];
+
+        Assert.Equal("rmb", wall.GetProperty("kind").GetString());
+        Assert.Equal(615, slot.GetProperty("byteLength").GetInt32());
+        Assert.Equal(0, slot.GetProperty("paddingBytes").GetInt32());
+        Assert.Equal(1, slot.GetProperty("exterior").GetProperty("objects").GetInt32());
+        Assert.Equal(6, slot.GetProperty("interior").GetProperty("objects").GetInt32());
+        Assert.Equal(7, slot.GetProperty("interior").GetProperty("flats").GetInt32());
+
+        JsonElement mark = city.Single(record => record.GetProperty("sourceKey").GetString() == "MARKAA00.RMB");
+        Assert.Equal(510, mark.GetProperty("rmb").GetProperty("buildings")[1].GetProperty("factionId").GetInt32());
+
+        JsonElement[] slots = [.. city.SelectMany(record => record.GetProperty("rmb").GetProperty("buildings").EnumerateArray())];
+        Assert.Equal(460, slots.Count(building => building.GetProperty("factionId").GetInt32() != 0));
+        Assert.Equal(6832, slots.Count(building => Half(building.GetProperty("interior")) != 0));
+        Assert.Equal(65535, slots.Max(building => building.GetProperty("factionId").GetInt32()));
+    }
+
+    /// <summary>The bytes the records one published half's counts declare occupy.</summary>
+    private static int Half(JsonElement counts) =>
+        (counts.GetProperty("objects").GetInt32() * 66)
+        + (counts.GetProperty("flats").GetInt32() * 17)
+        + (counts.GetProperty("sections").GetInt32() * 16)
+        + (counts.GetProperty("people").GetInt32() * 17)
+        + (counts.GetProperty("doors").GetInt32() * 19);
 
     [Fact]
     public void Keeps_both_donor_indices_where_one_prefix_names_two_kinds()

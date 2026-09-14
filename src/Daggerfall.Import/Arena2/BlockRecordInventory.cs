@@ -216,8 +216,9 @@ public static class BlockRecordInventoryReader
 
     private static BlockRecord ReadRecord(byte[] bytes, BsaArchive archive, BsaRecord record)
     {
-        // A named archive is what carries block names at all; the numeric variant names nothing, so a
-        // record from it has no kind to classify and is published as such rather than guessed at.
+        // A named archive is what carries block names at all: a numeric archive's records have no names,
+        // so nothing says what kind of block they are, and the inventory refuses rather than filing every
+        // record under a kind the source never stated.
         string key = record.Name ?? throw new Arena2FormatException(archive.Source, record.Offset, $"block archive record {record.Ordinal} carries no name, so nothing says what kind of block it is");
         BlockRecordKind kind = Kind(key);
         long offset = record.Offset;
@@ -290,7 +291,10 @@ public static class BlockRecordInventoryReader
 
         string numberText = remainder[2..];
         char letter2 = remainder[1];
-        bool digits = numberText.Length != 0 && numberText.All(char.IsAsciiDigit);
+
+        // The donor's composer writes at least two characters for a number — a padded number, or a temple's
+        // letter and its number — so a single digit is not one of the shapes it produces.
+        bool digits = numberText.Length >= 2 && numberText.All(char.IsAsciiDigit);
         bool temple = numberText.Length >= 2 && char.IsAsciiLetterUpper(numberText[0]) && numberText[1..].All(char.IsAsciiDigit);
         return new BlockRmbName(
             prefix,
@@ -298,8 +302,8 @@ public static class BlockRecordInventoryReader
             remainder[0],
             letter2,
             numberText,
-            digits ? int.Parse(numberText, System.Globalization.CultureInfo.InvariantCulture) : null,
-            RmbLetters2.Contains(letter2) && (digits || (temple && numberText.Length > 1)));
+            numberText.Length != 0 && numberText.All(char.IsAsciiDigit) ? int.Parse(numberText, System.Globalization.CultureInfo.InvariantCulture) : null,
+            RmbLetters2.Contains(letter2) && (digits || temple));
     }
 
     /// <summary>Takes a dungeon block's name apart into the letter that selects its type and its number.</summary>
