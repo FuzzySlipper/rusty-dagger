@@ -521,6 +521,11 @@ internal static class DaggerfallBlockValidation
             // Each half's counts are wire bytes, and together with the two headers and the padding they have
             // to account for exactly the bytes the sub-record reserves. Deriving the size from the counts is
             // what stops a published summary from describing a building that cannot be that size.
+            //
+            // The identity binds the two halves together, not each to its own offset: a payload that moved a
+            // count from one half to the other without changing the combined size would still satisfy it.
+            // Which half declares what is read from the source's own positions and is not recoverable from
+            // these numbers, so that is the limit of what a published section can be held to.
             int used = (DaggerfallBlocks.RmbBuildingHeaderBytes * 2) + Body(building.Exterior) + Body(building.Interior) + building.PaddingBytes;
             if (used != building.ByteLength)
             {
