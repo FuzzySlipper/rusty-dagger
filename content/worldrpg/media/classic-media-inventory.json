@@ -129,20 +129,20 @@
     },
     {
       "path": "worldrpg/media/ui/authored/inventory-grid-slot-slate-v1.png",
-      "byteLength": 1970798,
-      "sha256": "f19aca28a45f24c61cc55af1ee2be864a742ffcdb5f8f7fd46e4cd55b643a7b3",
+      "byteLength": 103350,
+      "sha256": "fe1d578fe5a8ef7a7fb7b74bdad5fab09458fdb8afe74895cdfe538eb01149d5",
       "mediaId": "inventory.skin.grid-slot-slate.v1"
     },
     {
       "path": "worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png",
-      "byteLength": 2387369,
-      "sha256": "a54e0ca6bcc5f9ec2df87cb967365b844f0f9a7572150005a7eddcd1d448805c",
+      "byteLength": 102872,
+      "sha256": "5a8c1e79eb36efbcf4a54d3e911c3a118f70580cba2490c6a330792bd33f8a49",
       "mediaId": "inventory.skin.panel-slate.v1"
     },
     {
       "path": "worldrpg/media/ui/authored/inventory-titlebar-slate-v1.png",
-      "byteLength": 1671134,
-      "sha256": "80d2fe6b0c7f9fb089d3d2ca6fb6a0ec053331bb1874ceb94c3dad8341d584d2",
+      "byteLength": 40009,
+      "sha256": "bc2f1b1e3ec4852aa156a9d149da4110bfce97afd03c3722e74926bf5a223fb4",
       "mediaId": "inventory.skin.titlebar-slate.v1"
     },
     {

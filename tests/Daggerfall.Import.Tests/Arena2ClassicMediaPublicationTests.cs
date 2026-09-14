@@ -64,6 +64,38 @@ public sealed class Arena2ClassicMediaPublicationTests
     }
 
     [Fact]
+    public void PublishesAuthoredUiArtAsABoundedDerivativeOfItsSource()
+    {
+        // A 1254x1254 opaque plate, the shape the authored inventory skins actually have.
+        byte[] source = SolidPng(1254, 1254, [204, 187, 136, 255]);
+        Arena2ClassicMediaPublication publication = Arena2ClassicMediaPublication.Create(CreateInputs(), AuthoredProfile(
+            new ClassicAuthoredUiAsset("inventory.skin.panel-slate.v1", "media/ui/authored/inventory-skin-panel-slate-v1.png", "ui-original/inventory-panel-slate-v1.png", source, "generator", "prompt")));
+
+        NormalizedMediaDescriptor published = publication.MediaManifest.Resources.Single(resource => resource.Id == "inventory.skin.panel-slate.v1");
+        Assert.Equal((256, 256), (published.SourceWidth, published.SourceHeight));
+        byte[] bytes = Artifact(publication, "media/ui/authored/inventory-skin-panel-slate-v1.png");
+        Assert.True(bytes.Length < 512 * 1024, $"the published skin is {bytes.Length} bytes");
+        DeterministicPngImage decoded = DeterministicPngReader.ReadRgba8(bytes, "published skin");
+        Assert.Equal((256, 256), (decoded.Width, decoded.Height));
+        Assert.Equal([204, 187, 136, 255], decoded.Rgba[..4]);
+        // The source is untouched: the publication derives an artifact, it does not rewrite the operator's file.
+        Assert.Equal(1254, DeterministicPngReader.ReadRgba8(source, "source").Width);
+    }
+
+    [Fact]
+    public void RefusesAnAuthoredUiArtifactPastTheDomDecorationBound()
+    {
+        // A noise plate does not compress, so a bound that only counted pixels would let it through.
+        byte[] noisy = NoisePng(1024, 1024);
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() => Arena2ClassicMediaPublication.Create(
+            CreateInputs(),
+            AuthoredProfile(new ClassicAuthoredUiAsset("inventory.skin.noisy", "media/ui/authored/noisy.png", "ui-original/noisy.png", noisy, "generator", "prompt")),
+            new Arena2ClassicMediaPublicationOptions(AuthoredUiMaximumArtifactBytes: 4096)));
+        Assert.Contains("inventory.skin.noisy", failure.Message, StringComparison.Ordinal);
+        Assert.Contains("4096-byte bound", failure.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void PublishesOneSemanticSlotPerAdmittedUiImage()
     {
         Arena2ClassicMediaPublication first = Arena2ClassicMediaPublication.Create(CreateInputs());
@@ -420,6 +452,33 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreateFont());
 
     private static byte[] Read(string directory, string fileName) => File.ReadAllBytes(Path.Combine(directory, fileName));
+
+    private static Arena2ClassicMediaProfile AuthoredProfile(params ClassicAuthoredUiAsset[] assets) =>
+        new(AuthoredUiManifest: new ClassicAuthoredUiManifestInput("ui-authored-assets.json", [1, 2, 3]), AuthoredUiAssets: assets);
+
+    private static byte[] SolidPng(int width, int height, byte[] rgba)
+    {
+        byte[] pixels = new byte[checked(width * height * 4)];
+        for (int index = 0; index < pixels.Length; index += 4)
+        {
+            rgba.CopyTo(pixels, index);
+        }
+
+        return DeterministicPngEncoder.EncodeRgba8(width, height, pixels);
+    }
+
+    private static byte[] NoisePng(int width, int height)
+    {
+        byte[] pixels = new byte[checked(width * height * 4)];
+        uint state = 0x9E3779B9;
+        for (int index = 0; index < pixels.Length; index++)
+        {
+            state = unchecked((state * 1664525) + 1013904223);
+            pixels[index] = (byte)(state >> 24);
+        }
+
+        return DeterministicPngEncoder.EncodeRgba8(width, height, pixels);
+    }
 
     private static byte[] CreatePalette()
     {
