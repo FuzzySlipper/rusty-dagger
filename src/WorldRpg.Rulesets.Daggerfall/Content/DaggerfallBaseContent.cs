@@ -640,7 +640,7 @@ internal static class DaggerfallBaseContent
             // payload is refused rather than read as a product whose text is uniformly missing. The
             // diagnostic is what the caller sees, since reading aborts on it.
             diagnostics.Add("Base payload publishes no text section; every text lookup resolves to nothing until it is republished.");
-            return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), new Dictionary<string, string>(StringComparer.Ordinal), [], []);
+            return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), [], []);
         }
 
         int schemaVersion = Integer(section, "schemaVersion", diagnostics);
@@ -692,7 +692,8 @@ internal static class DaggerfallBaseContent
             DaggerfallTextKey key = new(kind, id);
             string source = Text(record, "source", diagnostics);
             int index = Integer(record, "index", diagnostics);
-            int offset = Integer(record, "offset", diagnostics);
+            long offset = Long(record, "offset", diagnostics);
+            if (offset < 0) diagnostics.Add($"Published text key '{key}' begins at the negative source byte {offset}.");
             int byteLength = Integer(record, "byteLength", diagnostics);
             int subrecords = Integer(record, "subrecords", diagnostics);
             string stateName = Text(record, "state", diagnostics);
@@ -717,8 +718,7 @@ internal static class DaggerfallBaseContent
                 continue;
             }
 
-            DaggerfallTextState state = DaggerfallTextState.Read;
-            if (!Enum.TryParse(stateName, ignoreCase: true, out state) || !Enum.IsDefined(state))
+            if (!TryReadName(stateName, out DaggerfallTextState state))
             {
                 diagnostics.Add($"Published text key '{key}' states the state '{stateName}', which the contract does not declare.");
             }
@@ -726,12 +726,12 @@ internal static class DaggerfallBaseContent
             // A value is either read or it is not, and the two say different things: a read value's bytes
             // are described, and a malformed one's reason is the fact. One claiming both would leave a
             // consumer unable to tell an empty value from a value that was never readable.
-            if (state == DaggerfallTextState.Read && (byteLength < 1 || subrecords < 1 || reason.Length != 0))
+            if (state == DaggerfallTextState.Read && (byteLength < 1 || reason.Length != 0))
             {
-                diagnostics.Add($"Published text key '{key}' is readable but spans {byteLength} bytes in {subrecords} variants, or states a reason it is not readable.");
+                diagnostics.Add($"Published text key '{key}' is readable but spans {byteLength} bytes, or states a reason it is not readable.");
             }
 
-            if (state == DaggerfallTextState.Malformed && (reason.Length == 0 || byteLength != 0 || subrecords != 0))
+            if (state == DaggerfallTextState.Malformed && (string.IsNullOrWhiteSpace(reason) || byteLength != 0 || subrecords != 0))
             {
                 diagnostics.Add($"Published text key '{key}' is malformed in {byteLength} bytes and {subrecords} variants, or states no reason.");
             }
@@ -761,6 +761,14 @@ internal static class DaggerfallBaseContent
                 diagnostics.Add($"Published text key '{key}' is malformed and still carries {tokens.Count} tokens.");
             }
 
+            // The variant count is not a separate claim: the separators the value publishes are what
+            // divide it, so a count that disagrees with them describes a value no consumer can divide.
+            int dividers = 1 + tokens.Count(token => token.Code == DaggerfallTextCode.SubrecordSeparator);
+            if (state == DaggerfallTextState.Read && subrecords != dividers)
+            {
+                diagnostics.Add($"Published text key '{key}' states {subrecords} variants where its separators divide it into {dividers}.");
+            }
+
             // Each source's values are published as a group in its own order, so a caller reads one
             // source's ordinals without interleaving another's.
             if (!StringComparer.Ordinal.Equals(source, previousSource))
@@ -782,20 +790,32 @@ internal static class DaggerfallBaseContent
             if (published != source.Records) diagnostics.Add($"Text source '{path}' declares {source.Records} records and publishes {published}.");
         }
 
-        // The macro index is derived from the values, so it has to agree with them in both directions:
+        // The macro index is derived from the values, so it is checked against them in both directions:
         // an index that dropped a symbol would leave a consumer expanding text with a macro nothing
-        // accounts for, and one that invented an entry would report a symbol the corpus lacks.
+        // accounts for, and one that invented an entry would report a symbol the corpus lacks. What is
+        // *not* checked here is how often a symbol is spelled, because that is a fact about a value's
+        // text that only the reader's own macro grammar produces, and that grammar is source-format
+        // knowledge which stays in the importer rather than being re-implemented here.
         List<DaggerfallTextMacro> macros = [];
         HashSet<string> indexed = new(StringComparer.Ordinal);
         foreach (JsonElement macro in Array(section, "macros", diagnostics))
         {
             string symbol = Text(macro, "symbol", diagnostics);
             int records = Integer(macro, "records", diagnostics);
-            int occurrences = Integer(macro, "occurrences", diagnostics);
-            string disposition = Text(macro, "disposition", diagnostics);
-            if (records <= 0 || occurrences < records) diagnostics.Add($"Published macro '{symbol}' is carried by {records} values in {occurrences} occurrences, which cannot both hold.");
+            string dispositionName = Text(macro, "disposition", diagnostics);
+            if (records <= 0) diagnostics.Add($"Published macro '{symbol}' is indexed against {records} values.");
             if (!indexed.Add(symbol)) diagnostics.Add($"Published macro '{symbol}' is indexed twice.");
-            macros.Add(new DaggerfallTextMacro(symbol, records, occurrences, disposition));
+
+            // A consumer decides what to do with a symbol by its disposition, so a spelling the contract
+            // does not declare is refused here rather than read as a disposition nobody published. Whether
+            // the donor's table really accounts for the symbol that way is the importer's check: the table
+            // is imported donor knowledge, not something this assembly re-derives.
+            if (!TryReadName(dispositionName, out DaggerfallTextMacroDisposition disposition))
+            {
+                diagnostics.Add($"Published macro '{symbol}' states the disposition '{dispositionName}', which the contract does not declare.");
+            }
+
+            macros.Add(new DaggerfallTextMacro(symbol, records, disposition));
         }
 
         foreach (DaggerfallTextValue value in values.Values)
@@ -812,7 +832,7 @@ internal static class DaggerfallBaseContent
             if (carried != macro.Records) diagnostics.Add($"Published macro '{macro.Symbol}' is indexed against {macro.Records} values where {carried} carry it.");
         }
 
-        return new DaggerfallTextSet(values, sources.ToDictionary(source => source.Key, source => source.Value.Language, StringComparer.Ordinal), pendingKinds, macros);
+        return new DaggerfallTextSet(values, pendingKinds, macros);
     }
 
     /// <summary>
@@ -823,7 +843,7 @@ internal static class DaggerfallBaseContent
     private static DaggerfallTextElement? TextElement(JsonElement token, DaggerfallTextKey key, DaggerfallContentDiagnostics diagnostics)
     {
         string codeName = Text(token, "code", diagnostics);
-        if (!Enum.TryParse(codeName, ignoreCase: true, out DaggerfallTextCode code) || !Enum.IsDefined(code))
+        if (!TryReadName(codeName, out DaggerfallTextCode code))
         {
             diagnostics.Add($"Published text key '{key}' carries the element kind '{codeName}', which the contract does not declare.");
             return null;
@@ -863,9 +883,30 @@ internal static class DaggerfallBaseContent
     private static DaggerfallTextKind TextKind(JsonElement value, DaggerfallContentDiagnostics diagnostics)
     {
         string name = Text(value, "kind", diagnostics);
-        if (Enum.TryParse(name, ignoreCase: true, out DaggerfallTextKind kind) && Enum.IsDefined(kind)) return kind;
+        if (TryReadName(name, out DaggerfallTextKind kind)) return kind;
         diagnostics.Add($"Published text names the source family '{name}', which the contract does not declare.");
         return DaggerfallTextKind.Resource;
+    }
+
+    /// <summary>
+    /// Reads one name from a closed set the published dialect writes by name.
+    /// </summary>
+    /// <remarks>
+    /// The set is closed and the spelling starts with a letter, because a name that merely parses is not
+    /// a value a consumer can act on: <c>Enum.TryParse</c> accepts a numeric spelling too, so a pack
+    /// stating <c>"state": "1"</c> would be read as the second member of the enum and one stating
+    /// <c>"code": "-1"</c> as a text run. Case is not significant, since the meaning is the name.
+    /// </remarks>
+    private static bool TryReadName<TEnum>(string name, out TEnum value)
+        where TEnum : struct, Enum
+    {
+        if (name.Length != 0 && char.IsAsciiLetter(name[0]) && Enum.TryParse(name, ignoreCase: true, out value) && Enum.IsDefined(value))
+        {
+            return true;
+        }
+
+        value = default;
+        return false;
     }
 
     /// <summary>

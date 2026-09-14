@@ -351123,1009 +351123,841 @@
       {
         "symbol": "%",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%1am",
         "records": 76,
-        "occurrences": 128,
         "disposition": "handled"
       },
       {
         "symbol": "%1bm",
         "records": 76,
-        "occurrences": 131,
         "disposition": "handled"
       },
       {
         "symbol": "%1com",
         "records": 12,
-        "occurrences": 67,
         "disposition": "handled"
       },
       {
         "symbol": "%1hn",
         "records": 1,
-        "occurrences": 5,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%2am",
         "records": 76,
-        "occurrences": 128,
         "disposition": "handled"
       },
       {
         "symbol": "%2bm",
         "records": 76,
-        "occurrences": 131,
         "disposition": "handled"
       },
       {
         "symbol": "%2com",
         "records": 3,
-        "occurrences": 26,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%2hn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%3hn",
         "records": 1,
-        "occurrences": 4,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%a",
         "records": 11,
-        "occurrences": 30,
         "disposition": "handled"
       },
       {
         "symbol": "%ach",
         "records": 100,
-        "occurrences": 140,
         "disposition": "handled"
       },
       {
         "symbol": "%adj",
         "records": 1,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%adr",
         "records": 102,
-        "occurrences": 167,
         "disposition": "handled"
       },
       {
         "symbol": "%agi",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%an",
         "records": 1,
-        "occurrences": 9,
         "disposition": "handled"
       },
       {
         "symbol": "%ark",
         "records": 8,
-        "occurrences": 8,
         "disposition": "handled"
       },
       {
         "symbol": "%arm",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%ba",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%bch",
         "records": 100,
-        "occurrences": 140,
         "disposition": "handled"
       },
       {
         "symbol": "%bdr",
         "records": 102,
-        "occurrences": 167,
         "disposition": "handled"
       },
       {
         "symbol": "%bn",
         "records": 1,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%bt",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%clc",
         "records": 100,
-        "occurrences": 134,
         "disposition": "handled"
       },
       {
         "symbol": "%cld",
         "records": 103,
-        "occurrences": 173,
         "disposition": "handled"
       },
       {
         "symbol": "%clm",
         "records": 76,
-        "occurrences": 131,
         "disposition": "handled"
       },
       {
         "symbol": "%cn",
         "records": 31,
-        "occurrences": 39,
         "disposition": "handled"
       },
       {
         "symbol": "%cn2",
         "records": 1,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%cpn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%cri",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%crn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%cs",
         "records": 1,
-        "occurrences": 1,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%ct",
         "records": 9,
-        "occurrences": 9,
         "disposition": "handled"
       },
       {
         "symbol": "%dae",
         "records": 3,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%dam",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%dat",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%dbp",
         "records": 1,
-        "occurrences": 1,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%dfs",
         "records": 1,
-        "occurrences": 2,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%di",
         "records": 1,
-        "occurrences": 9,
         "disposition": "handled"
       },
       {
         "symbol": "%dip",
         "records": 3,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%dn",
         "records": 3,
-        "occurrences": 28,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%dng",
         "records": 8,
-        "occurrences": 8,
         "disposition": "handled"
       },
       {
         "symbol": "%dts",
         "records": 6,
-        "occurrences": 9,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%dwr",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%enc",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%end",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%fa",
         "records": 2,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%fae",
         "records": 2,
-        "occurrences": 7,
         "disposition": "handled"
       },
       {
         "symbol": "%fcn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%fe",
         "records": 2,
-        "occurrences": 6,
         "disposition": "handled"
       },
       {
         "symbol": "%fea",
         "records": 2,
-        "occurrences": 6,
         "disposition": "handled"
       },
       {
         "symbol": "%fl1",
         "records": 3,
-        "occurrences": 7,
         "disposition": "handled"
       },
       {
         "symbol": "%fl2",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%fn",
         "records": 12,
-        "occurrences": 45,
         "disposition": "handled"
       },
       {
         "symbol": "%fn2",
         "records": 1,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%fnpc",
         "records": 19,
-        "occurrences": 39,
         "disposition": "handled"
       },
       {
         "symbol": "%fon",
         "records": 9,
-        "occurrences": 15,
         "disposition": "handled"
       },
       {
         "symbol": "%fpa",
         "records": 2,
-        "occurrences": 6,
         "disposition": "handled"
       },
       {
         "symbol": "%fpc",
         "records": 17,
-        "occurrences": 39,
         "disposition": "handled"
       },
       {
         "symbol": "%fx1",
         "records": 10,
-        "occurrences": 29,
         "disposition": "handled"
       },
       {
         "symbol": "%fx2",
         "records": 12,
-        "occurrences": 37,
         "disposition": "handled"
       },
       {
         "symbol": "%g",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%g2",
         "records": 2,
-        "occurrences": 4,
         "disposition": "handled"
       },
       {
         "symbol": "%g3",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%gdd",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%gii",
         "records": 2,
-        "occurrences": 4,
         "disposition": "handled"
       },
       {
         "symbol": "%god",
         "records": 3,
-        "occurrences": 6,
         "disposition": "handled"
       },
       {
         "symbol": "%gtp",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%hea",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%hmd",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%hnr",
         "records": 7,
-        "occurrences": 18,
         "disposition": "handled"
       },
       {
         "symbol": "%hnt",
         "records": 21,
-        "occurrences": 123,
         "disposition": "handled"
       },
       {
         "symbol": "%hnt2",
         "records": 9,
-        "occurrences": 31,
         "disposition": "handled"
       },
       {
         "symbol": "%hol",
         "records": 1,
-        "occurrences": 3,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%hpn",
         "records": 7,
-        "occurrences": 8,
         "disposition": "handled"
       },
       {
         "symbol": "%hpw",
         "records": 9,
-        "occurrences": 14,
         "disposition": "handled"
       },
       {
         "symbol": "%hrg",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%hs",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%htwn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%imp",
         "records": 8,
-        "occurrences": 13,
         "disposition": "handled"
       },
       {
         "symbol": "%int",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%it",
         "records": 5,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%key",
         "records": 41,
-        "occurrences": 149,
         "disposition": "handled"
       },
       {
         "symbol": "%key2",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%kg",
         "records": 15,
-        "occurrences": 15,
         "disposition": "handled"
       },
       {
         "symbol": "%lev",
         "records": 51,
-        "occurrences": 80,
         "disposition": "handled"
       },
       {
         "symbol": "%ln",
         "records": 6,
-        "occurrences": 63,
         "disposition": "handled"
       },
       {
         "symbol": "%loc",
         "records": 2,
-        "occurrences": 12,
         "disposition": "handled"
       },
       {
         "symbol": "%lp",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%lt1",
         "records": 3,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%ltn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%luc",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%mad",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%map",
         "records": 1,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%mat",
         "records": 3,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%mit",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%ml",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%mn",
         "records": 8,
-        "occurrences": 48,
         "disposition": "handled"
       },
       {
         "symbol": "%mn2",
         "records": 1,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%mod",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%mpw",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%n",
         "records": 11,
-        "occurrences": 36,
         "disposition": "handled"
       },
       {
         "symbol": "%nrn",
         "records": 7,
-        "occurrences": 15,
         "disposition": "handled"
       },
       {
         "symbol": "%nt",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%ol1",
         "records": 2,
-        "occurrences": 4,
         "disposition": "handled"
       },
       {
         "symbol": "%olf",
         "records": 2,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%on",
         "records": 4,
-        "occurrences": 26,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%oth",
         "records": 8,
-        "occurrences": 10,
         "disposition": "handled"
       },
       {
         "symbol": "%pc",
         "records": 1,
-        "occurrences": 1,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%pcf",
         "records": 57,
-        "occurrences": 102,
         "disposition": "handled"
       },
       {
         "symbol": "%pcn",
         "records": 60,
-        "occurrences": 72,
         "disposition": "handled"
       },
       {
         "symbol": "%pcnf",
         "records": 1,
-        "occurrences": 1,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%pct",
         "records": 2,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%pdg",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%pen",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%per",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%pfn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%plq",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%pnq",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%po",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%pp1",
         "records": 1,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%pp2",
         "records": 1,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%pqn",
         "records": 2,
-        "occurrences": 14,
         "disposition": "handled"
       },
       {
         "symbol": "%pqp",
         "records": 2,
-        "occurrences": 14,
         "disposition": "handled"
       },
       {
         "symbol": "%prn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "unrecognised"
       },
       {
         "symbol": "%ptm",
         "records": 1,
-        "occurrences": 3,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%q1",
         "records": 18,
-        "occurrences": 25,
         "disposition": "handled"
       },
       {
         "symbol": "%q10",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%q12",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%q1a",
         "records": 7,
-        "occurrences": 7,
         "disposition": "handled"
       },
       {
         "symbol": "%q1b",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%q2",
         "records": 15,
-        "occurrences": 15,
         "disposition": "handled"
       },
       {
         "symbol": "%q2a",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%q3",
         "records": 12,
-        "occurrences": 13,
         "disposition": "handled"
       },
       {
         "symbol": "%q3a",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%q3b",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%q4",
         "records": 12,
-        "occurrences": 13,
         "disposition": "handled"
       },
       {
         "symbol": "%q5",
         "records": 11,
-        "occurrences": 12,
         "disposition": "handled"
       },
       {
         "symbol": "%q6",
         "records": 3,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%q8",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%q9",
         "records": 2,
-        "occurrences": 2,
         "disposition": "handled"
       },
       {
         "symbol": "%qdt",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%qot",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%qua",
         "records": 10,
-        "occurrences": 10,
         "disposition": "handled"
       },
       {
         "symbol": "%r1",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%r2",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%r3",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%r4",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%r5",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%ra",
         "records": 32,
-        "occurrences": 57,
         "disposition": "handled"
       },
       {
         "symbol": "%reg",
         "records": 24,
-        "occurrences": 35,
         "disposition": "handled"
       },
       {
         "symbol": "%rn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%ski",
         "records": 2,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%spc",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%spd",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%spt",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%str",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%sub",
         "records": 1,
-        "occurrences": 8,
         "disposition": "handled"
       },
       {
         "symbol": "%t",
         "records": 7,
-        "occurrences": 7,
         "disposition": "handled"
       },
       {
         "symbol": "%tcn",
         "records": 1,
-        "occurrences": 1,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%thd",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%tim",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%vn",
         "records": 2,
-        "occurrences": 24,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%wdm",
         "records": 3,
-        "occurrences": 3,
         "disposition": "handled"
       },
       {
         "symbol": "%wep",
         "records": 5,
-        "occurrences": 5,
         "disposition": "handled"
       },
       {
         "symbol": "%wil",
         "records": 1,
-        "occurrences": 1,
         "disposition": "handled"
       },
       {
         "symbol": "%wpn",
         "records": 2,
-        "occurrences": 2,
         "disposition": "donorUnresolved"
       },
       {
         "symbol": "%wth",
         "records": 7,
-        "occurrences": 7,
         "disposition": "handled"
       }
     ]

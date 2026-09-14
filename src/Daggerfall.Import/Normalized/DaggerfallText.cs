@@ -72,7 +72,13 @@ public sealed record DaggerfallTextSource(
 
         NormalizedImportDocument.RequireLogicalId(RecordId, nameof(RecordId));
         NormalizedImportDocument.RequireLogicalPath(Path, nameof(Path));
-        NormalizedImportDocument.RequireLogicalId(Language, nameof(Language));
+
+        // The language is the caller's assertion about bytes that declare none, so a failure names the
+        // source and the value it was given rather than a parameter name the caller never wrote.
+        if (string.IsNullOrWhiteSpace(Language) || Language.Any(char.IsWhiteSpace))
+        {
+            throw new InvalidOperationException($"Text source '{Path}' must state a language tag such as 'en'; it states '{Language}'.");
+        }
         if (ByteLength <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(ByteLength), ByteLength, $"Text source '{Path}' must retain a positive byte length.");
@@ -179,7 +185,7 @@ public sealed record DaggerfallTextToken(
 /// <param name="Key">The value's address in the text key space.</param>
 /// <param name="Source">The logical path of the source that carries it.</param>
 /// <param name="Index">The value's ordinal in the source's own order.</param>
-/// <param name="Offset">The source byte its text begins at.</param>
+/// <param name="Offset">The source byte its text begins at, over the unsigned range the source states.</param>
 /// <param name="ByteLength">The bytes it spans including its terminator, zero when unreadable.</param>
 /// <param name="Subrecords">How many variants its separator bytes divide it into, at least one when read.</param>
 /// <param name="State">Whether its bytes could be read.</param>
@@ -190,7 +196,7 @@ public sealed record DaggerfallTextRecord(
     DaggerfallTextKey Key,
     string Source,
     int Index,
-    int Offset,
+    long Offset,
     int ByteLength,
     int Subrecords,
     Arena2TextState State,
@@ -202,9 +208,14 @@ public sealed record DaggerfallTextRecord(
     {
         Key.Validate();
         NormalizedImportDocument.RequireLogicalId(Source, nameof(Source));
-        if (Index < 0 || Offset < 0)
+        if (Index < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(Index), Index, $"Published text key '{Key}' cannot carry a negative ordinal or offset.");
+            throw new ArgumentOutOfRangeException(nameof(Index), Index, $"Published text key '{Key}' cannot carry a negative ordinal.");
+        }
+
+        if (Offset < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(Offset), Offset, $"Published text key '{Key}' cannot begin at a negative source byte.");
         }
 
         // A record is either read or it is not, and the two states say different things to a consumer:
@@ -213,9 +224,13 @@ public sealed record DaggerfallTextRecord(
         // value that was never readable.
         if (State == Arena2TextState.Read)
         {
-            if (ByteLength < 1 || Subrecords < 1)
+            // The variant count is not a separate claim about the value: the separators the token stream
+            // carries are what divide it, so a count that disagrees with them describes a value no
+            // consumer can reconstruct.
+            int dividers = 1 + Tokens.Count(token => token.Code == Arena2TextCode.SubrecordSeparator);
+            if (ByteLength < 1 || Subrecords != dividers)
             {
-                throw new InvalidOperationException($"Published text key '{Key}' is readable but spans {ByteLength} bytes in {Subrecords} variants.");
+                throw new InvalidOperationException($"Published text key '{Key}' is readable but spans {ByteLength} bytes in {Subrecords} variants where its separators divide it into {dividers}.");
             }
 
             if (Reason.Length != 0)
@@ -253,15 +268,32 @@ public sealed record DaggerfallTextRecord(
         {
             token.Validate(Key);
         }
+
+        // The symbol list is derived from the text, so it is checked against the text rather than trusted:
+        // a value whose list omitted a symbol it spells would leave a resolver expanding text with a macro
+        // nothing had told it to expect, and the published index is derived from these lists in turn.
+        string[] carried = [.. Tokens.Where(token => token.Code == Arena2TextCode.Text).SelectMany(token => TextMacroScanner.Distinct(token.Text!)).Distinct(StringComparer.Ordinal)];
+        if (!carried.SequenceEqual(Macros, StringComparer.Ordinal))
+        {
+            throw new InvalidOperationException($"Published text key '{Key}' lists the macros [{string.Join(", ", Macros)}] where its text carries [{string.Join(", ", carried)}].");
+        }
     }
 }
 
-/// <summary>One distinct macro symbol the published text carries.</summary>
+/// <summary>
+/// One distinct macro symbol the published text carries.
+/// </summary>
+/// <remarks>
+/// The index states which values carry a symbol rather than how many times the corpus spells it. The
+/// count of spellings is a fact about a value's text that only the reader's own macro grammar can
+/// produce, and that grammar is source-format knowledge which stays in this assembly — so a spelling
+/// count published here would be a number no consumer could check against the records they hold. The
+/// corpus's own frequencies are asserted where the grammar lives, in this assembly's tests.
+/// </remarks>
 /// <param name="Symbol">The symbol as the source spells it, marker included.</param>
 /// <param name="Records">How many published values carry it.</param>
-/// <param name="Occurrences">How many times the corpus spells it.</param>
 /// <param name="Disposition">How the donor's own macro table accounts for it.</param>
-public sealed record DaggerfallTextMacro(string Symbol, int Records, int Occurrences, TextMacroDisposition Disposition)
+public sealed record DaggerfallTextMacro(string Symbol, int Records, TextMacroDisposition Disposition)
 {
     public void Validate()
     {
@@ -270,9 +302,9 @@ public sealed record DaggerfallTextMacro(string Symbol, int Records, int Occurre
             throw new ArgumentException($"Published macro '{Symbol}' does not begin with the macro marker.", nameof(Symbol));
         }
 
-        if (Records <= 0 || Occurrences < Records)
+        if (Records <= 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(Occurrences), Occurrences, $"Published macro '{Symbol}' is carried by {Records} values in {Occurrences} occurrences, which cannot both hold.");
+            throw new ArgumentOutOfRangeException(nameof(Records), Records, $"Published macro '{Symbol}' is carried by {Records} values.");
         }
 
         if (Arena2TextMacroSymbols.Classify(Symbol) != Disposition)
@@ -339,7 +371,7 @@ public sealed record DaggerfallText(
         HashSet<DaggerfallTextKey> keys = [];
         HashSet<string> grouped = new(StringComparer.Ordinal);
         Dictionary<string, int> recordsPerSource = new(StringComparer.Ordinal);
-        Dictionary<string, (int Records, int Occurrences)> macroCounts = new(StringComparer.Ordinal);
+        Dictionary<string, int> macroCounts = new(StringComparer.Ordinal);
         int previousIndex = -1;
         string previousSource = string.Empty;
         foreach (DaggerfallTextRecord record in Records)
@@ -387,8 +419,7 @@ public sealed record DaggerfallText(
             previousIndex = record.Index;
             foreach (string macro in record.Macros)
             {
-                (int Records, int Occurrences) counts = macroCounts.GetValueOrDefault(macro);
-                macroCounts[macro] = (counts.Records + 1, counts.Occurrences + Occurrences(record, macro));
+                macroCounts[macro] = macroCounts.GetValueOrDefault(macro) + 1;
             }
         }
 
@@ -408,14 +439,14 @@ public sealed record DaggerfallText(
         foreach (DaggerfallTextMacro macro in Macros)
         {
             macro.Validate();
-            if (!macroCounts.TryGetValue(macro.Symbol, out (int Records, int Occurrences) expected))
+            if (!macroCounts.TryGetValue(macro.Symbol, out int carried))
             {
                 throw new InvalidOperationException($"Published macro '{macro.Symbol}' is carried by no published value.");
             }
 
-            if (macro.Records != expected.Records || macro.Occurrences != expected.Occurrences)
+            if (macro.Records != carried)
             {
-                throw new InvalidOperationException($"Published macro '{macro.Symbol}' states {macro.Records} values in {macro.Occurrences} occurrences where the records carry {expected.Records} in {expected.Occurrences}.");
+                throw new InvalidOperationException($"Published macro '{macro.Symbol}' states {macro.Records} values where the records carry it in {carried}.");
             }
         }
 
@@ -428,11 +459,6 @@ public sealed record DaggerfallText(
         }
     }
 
-    /// <summary>How many times one record spells a symbol, which is its occurrences in that record's text runs.</summary>
-    internal static int Occurrences(DaggerfallTextRecord record, string symbol) =>
-        record.Tokens
-            .Where(token => token.Code == Arena2TextCode.Text && token.Text is not null)
-            .Sum(token => TextMacroScanner.Scan(token.Text!).Count(carried => StringComparer.Ordinal.Equals(carried, symbol)));
 }
 
 /// <summary>
@@ -513,23 +539,22 @@ public static class DaggerfallTextBuilder
         token.Code is Arena2TextCode.FontPrefix or Arena2TextCode.PositionPrefix ? token.X : null);
 
     /// <summary>
-    /// The distinct macro symbols the records carry, how many values and occurrences each accounts for,
-    /// and how the donor's own table accounts for the symbol.
+    /// The distinct macro symbols the records carry, how many values carry each, and how the donor's own
+    /// table accounts for the symbol.
     /// </summary>
     private static IEnumerable<DaggerfallTextMacro> MacroIndex(IReadOnlyList<DaggerfallTextRecord> records)
     {
-        Dictionary<string, (int Records, int Occurrences)> counts = new(StringComparer.Ordinal);
+        Dictionary<string, int> counts = new(StringComparer.Ordinal);
         foreach (DaggerfallTextRecord record in records)
         {
             foreach (string symbol in record.Macros)
             {
-                (int Records, int Occurrences) current = counts.GetValueOrDefault(symbol);
-                counts[symbol] = (current.Records + 1, current.Occurrences + DaggerfallText.Occurrences(record, symbol));
+                counts[symbol] = counts.GetValueOrDefault(symbol) + 1;
             }
         }
 
         return counts
             .OrderBy(pair => pair.Key, StringComparer.Ordinal)
-            .Select(pair => new DaggerfallTextMacro(pair.Key, pair.Value.Records, pair.Value.Occurrences, Arena2TextMacroSymbols.Classify(pair.Key)));
+            .Select(pair => new DaggerfallTextMacro(pair.Key, pair.Value, Arena2TextMacroSymbols.Classify(pair.Key)));
     }
 }

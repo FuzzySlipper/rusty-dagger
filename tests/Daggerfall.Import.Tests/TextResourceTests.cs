@@ -68,13 +68,26 @@ public sealed class TextResourceTests
         // The donor's own reader consumes the byte after a position prefix without asking whether it is
         // printable, so "c" here is the payload and only "d" is text. A reader that treated the payload
         // as text would publish a position of zero and a word the donor never produces.
-        Arena2TextCatalog catalog = TextResourceReader.Read(Resource((1, [.. "ab"u8, 0xfb, .. "cd"u8])), "fixture/TEXT.RSC");
+        Arena2TextCatalog catalog = TextResourceReader.Read(
+            Resource(
+                (1, [.. "ab"u8, 0xfb, .. "cd"u8]),
+                (2, [.. "ab"u8, 0xfb, 0x05, 0xfc])),
+            "fixture/TEXT.RSC");
 
         Arena2TextRecord record = catalog.Records[0];
         Assert.Equal([Arena2TextCode.Text, Arena2TextCode.PositionPrefix, Arena2TextCode.Text], record.Tokens.Select(token => token.Code));
         Assert.Equal("ab", record.Tokens[0].Text);
         Assert.Equal('c', record.Tokens[1].X);
         Assert.Equal("d", record.Tokens[2].Text);
+        Assert.Equal(0, record.Tokens[2].X);
+
+        // The payload belongs to the prefix that stated it, so the code after one carries none of its
+        // own: a tokenizer that kept one payload for the whole record would give every later code a
+        // position the source never stated, which only a code can show because a run is always zero.
+        Arena2TextRecord preceded = catalog.Records[1];
+        Assert.Equal([Arena2TextCode.Text, Arena2TextCode.PositionPrefix, Arena2TextCode.JustifyLeft], preceded.Tokens.Select(token => token.Code));
+        Assert.Equal(5, preceded.Tokens[1].X);
+        Assert.Equal(0, preceded.Tokens[2].X);
     }
 
     [Fact]
@@ -217,17 +230,46 @@ public sealed class TextResourceTests
     }
 
     [Fact]
-    public void A_record_that_starts_inside_another_is_published_as_malformed()
+    public void A_record_that_names_another_records_terminator_reads_as_a_record_with_no_words()
     {
+        // The donor reads each entry from its own offset to the next terminator, so an entry naming the
+        // terminator another record ends at reads length one and no tokens. Refusing it as an overlap
+        // would publish text the donor reads as unreadable, and inventing a rule here is exactly what
+        // the reader must not do.
+        byte[] bytes = Resource((1, "abcdefgh"u8.ToArray()), (2, "second"u8.ToArray()));
+        Write32(bytes, OffsetField(1), DataStart(2) + 8);
+
+        IReadOnlyList<Arena2TextRecord> records = TextResourceReader.Read(bytes, "fixture/TEXT.RSC").Records;
+
+        Assert.Equal([Arena2TextState.Read, Arena2TextState.Read], records.Select(record => record.State));
+        Assert.Equal(1, records[1].ByteLength);
+        Assert.Empty(records[1].Tokens);
+        Assert.Empty(records[1].Macros);
+        Assert.Equal(1, records[1].Subrecords);
+
+        // The same shape survives publication: a value the source leaves empty is readable and carries
+        // no words, which is the source's fact rather than a value that could not be read.
+        DaggerfallText text = DaggerfallTextBuilder.Build(bytes, "local/arena2/TEXT.RSC", Inventory(), "en");
+        DaggerfallTextRecord published = text.Records[1];
+        Assert.Equal(Arena2TextState.Read, published.State);
+        Assert.Empty(published.Tokens);
+        Assert.Equal(1, published.ByteLength);
+    }
+
+    [Fact]
+    public void A_record_that_names_a_byte_inside_another_records_run_reads_its_own_suffix()
+    {
+        // An entry may name a byte a neighbour's run passes through. The directory is the authority on
+        // where a record's text is, so the record reads from there to the next terminator; the donor
+        // does the same, and both records stay addressable.
         byte[] bytes = Resource((1, "abcdefgh"u8.ToArray()), (2, "second"u8.ToArray()));
         Write32(bytes, OffsetField(1), DataStart(2) + 4);
 
         IReadOnlyList<Arena2TextRecord> records = TextResourceReader.Read(bytes, "fixture/TEXT.RSC").Records;
 
-        // The first record owns its whole region, so the second cannot also own part of it.
-        Assert.Equal(Arena2TextState.Read, records[0].State);
-        Assert.Equal(Arena2TextState.Malformed, records[1].State);
-        Assert.Contains($"inside the record that ends at byte {DataStart(2) + 9}", records[1].Reason, StringComparison.Ordinal);
+        Assert.Equal([Arena2TextState.Read, Arena2TextState.Read], records.Select(record => record.State));
+        Assert.Equal("efgh", records[1].Tokens[0].Text);
+        Assert.Equal(5, records[1].ByteLength);
     }
 
     [Fact]
@@ -244,7 +286,8 @@ public sealed class TextResourceTests
         Assert.Equal([Arena2TextState.Read, Arena2TextState.Read], records.Select(record => record.State));
         Assert.Equal(records[0].Offset, records[1].Offset);
         Assert.Equal(records[0].ByteLength, records[1].ByteLength);
-        Assert.Equal(records[0].Tokens.Select(token => token.Text), records[1].Tokens.Select(token => token.Text));
+        Assert.Equal("shared text", records[0].Tokens[0].Text);
+        Assert.Equal("shared text", records[1].Tokens[0].Text);
     }
 
     [Fact]
@@ -267,7 +310,6 @@ public sealed class TextResourceTests
         // The directory covers the record region exactly: 1396 distinct offsets for 1408 entries, so
         // twelve entries share another key's region, and the last record ends at the file's last byte.
         Assert.Equal(1396, text.Records.Select(record => record.Offset).Distinct().Count());
-        Assert.Equal(12, text.Records.Count - text.Records.Select(record => record.Offset).Distinct().Count());
         IReadOnlyList<DaggerfallTextRecord> byOffset = [.. text.Records.OrderBy(record => record.Offset)];
         Assert.Equal(source.ByteLength, byOffset[^1].Offset + byOffset[^1].ByteLength);
         Assert.All(byOffset.Zip(byOffset.Skip(1)).Where(pair => pair.First.Offset != pair.Second.Offset), pair => Assert.Equal(pair.First.Offset + pair.First.ByteLength, pair.Second.Offset));
@@ -285,7 +327,7 @@ public sealed class TextResourceTests
         Assert.Equal(141, text.Macros.Count(macro => macro.Disposition == TextMacroDisposition.Handled));
         Assert.Equal(18, text.Macros.Count(macro => macro.Disposition == TextMacroDisposition.DonorUnresolved));
         Assert.Equal(9, text.Macros.Count(macro => macro.Disposition == TextMacroDisposition.Unrecognised));
-        Assert.Equal(3339, text.Macros.Sum(macro => macro.Occurrences));
+        Assert.Equal(3339, Occurrences(text));
         Assert.Equal(448, text.Records.Count(record => record.Macros.Count != 0));
         Assert.Equal(TextMacroDisposition.Handled, text.Macros.Single(macro => macro.Symbol == "%str").Disposition);
         Assert.Equal(TextMacroDisposition.DonorUnresolved, text.Macros.Single(macro => macro.Symbol == "%hol").Disposition);
@@ -297,6 +339,69 @@ public sealed class TextResourceTests
             ["biography", "book", "name", "rumor"],
             text.PendingKinds.Select(pending => pending.Kind.ToString().ToLowerInvariant()).Order());
         Assert.All(text.PendingKinds, pending => Assert.True(pending.OwnerTask is 7951 or 7941));
+    }
+
+    [Fact]
+    public void Refuses_a_variant_count_that_disagrees_with_the_separators()
+    {
+        // The separators a value publishes are what divide it into variants a consumer selects between,
+        // so a count that disagrees with them describes a value nobody can divide.
+        DaggerfallTextRecord record = Supplied().Records.Single(value => value.Key.Id == "11");
+
+        Assert.Contains("variants where its separators divide it into", Assert.Throws<InvalidOperationException>(() => (record with { Subrecords = 99 }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_a_symbol_list_that_does_not_match_the_text_it_describes()
+    {
+        // The list is derived from the text, so it is checked against the text rather than trusted: a
+        // value whose list omitted a symbol it spells would leave a resolver expanding macros nothing
+        // told it to expect, and the published index is derived from these lists in turn.
+        DaggerfallTextRecord record = Supplied().Records[0];
+
+        Assert.Contains("where its text carries", Assert.Throws<InvalidOperationException>(() => (record with { Macros = [] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("where its text carries", Assert.Throws<InvalidOperationException>(() => (record with { Macros = [.. record.Macros, "%zzz"] }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Publishes_a_corrupt_offset_as_the_unsigned_byte_it_declares()
+    {
+        // The directory states an unsigned offset, so a corrupt entry is published as the byte it
+        // declares. Wrapping it into a negative one would state a byte the file never named, and the
+        // published record's own validation would then refuse the value instead of the reader reporting
+        // the source defect.
+        foreach ((byte[] declared, long expected) in new[]
+        {
+            (new byte[] { 0xff, 0xff, 0xff, 0xff }, 4294967295L),
+            (new byte[] { 0x00, 0x00, 0x00, 0x80 }, 2147483648L),
+        })
+        {
+            byte[] bytes = Resource((1, "text"u8.ToArray()));
+            for (int index = 0; index < declared.Length; index++)
+            {
+                bytes[OffsetField(0) + index] = declared[index];
+            }
+
+            DaggerfallText text = DaggerfallTextBuilder.Build(bytes, "local/arena2/TEXT.RSC", Inventory(), "en");
+
+            Assert.Equal(expected, text.Records[0].Offset);
+            Assert.Equal(Arena2TextState.Malformed, text.Records[0].State);
+            Assert.Contains($"names byte {expected} for its text, past the file's", text.Records[0].Reason, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public void Refuses_a_language_that_is_not_a_tag()
+    {
+        // The language is the caller's assertion about bytes that declare none, so a failure names the
+        // source and the value it was given rather than a parameter name the caller never wrote.
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallTextBuilder.Build(
+            Resource((1, "text"u8.ToArray())),
+            "local/arena2/TEXT.RSC",
+            Inventory(),
+            "not a tag"));
+
+        Assert.Contains("must state a language tag such as 'en'; it states 'not a tag'", error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -362,6 +467,16 @@ public sealed class TextResourceTests
     }
 
     [Fact]
+    public void Refuses_a_source_byte_the_source_cannot_state()
+    {
+        // The directory's offset is unsigned, so no source can name a negative byte: a published record
+        // that did would be describing a position nothing could have read.
+        DaggerfallTextRecord record = Supplied().Records[0];
+
+        Assert.Contains("cannot begin at a negative source byte", Assert.Throws<ArgumentOutOfRangeException>(() => (record with { Offset = -1 }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Refuses_a_token_whose_members_disagree_with_its_kind()
     {
         DaggerfallText text = Supplied();
@@ -387,8 +502,8 @@ public sealed class TextResourceTests
         // The index is derived from the records, so a consumer expanding text with a symbol the index
         // does not account for, or reading a count the records do not support, is a defect either way.
         Assert.Contains("index does not account for", Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros.Where(value => value.Symbol != "%str")] }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("where the records carry", Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros.Where(value => value.Symbol != "%str"), macro with { Records = macro.Records + 1, Occurrences = macro.Occurrences + 1 }] }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("carried by no published value", Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros, new DaggerfallTextMacro("%zzz", 1, 1, TextMacroDisposition.Unrecognised)] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("where the records carry it in", Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros.Where(value => value.Symbol != "%str"), macro with { Records = macro.Records + 1 }] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("carried by no published value", Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros, new DaggerfallTextMacro("%zzz", 1, TextMacroDisposition.Unrecognised)] }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -433,12 +548,51 @@ public sealed class TextResourceTests
     {
         // The distinction is the donor's own: a symbol its table names with no handler is a decision it
         // made, and reporting it as unrecognised would hide that behind a gap in this table.
-        Assert.True(Arena2TextMacroSymbols.SymbolCount > 200);
+        Assert.Equal(217, Arena2TextMacroSymbols.SymbolCount);
         Assert.Equal(TextMacroDisposition.Handled, Arena2TextMacroSymbols.Classify("%fx1"));
         Assert.Equal(TextMacroDisposition.Handled, Arena2TextMacroSymbols.Classify("%mpw"));
         Assert.Equal(TextMacroDisposition.DonorUnresolved, Arena2TextMacroSymbols.Classify("%htwn"));
         Assert.Equal(TextMacroDisposition.Unrecognised, Arena2TextMacroSymbols.Classify("%pc"));
         Assert.Equal(TextMacroDisposition.Unrecognised, Arena2TextMacroSymbols.Classify("%notasymbol"));
+    }
+
+    /// <summary>
+    /// How many times the published values spell a macro symbol.
+    /// </summary>
+    /// <remarks>
+    /// The scan is written here rather than read from a published total: the section says which values
+    /// carry a symbol, and how often the corpus spells one is a fact about a value's text that only a
+    /// scanner over that text can produce. Re-deriving it in the test is what makes the corpus's own
+    /// frequency an independent fact rather than a number the reader also computed.
+    /// </remarks>
+    private static int Occurrences(DaggerfallText text)
+    {
+        const string Terminators = " %.,'?!/(){}[]\";:|";
+        int total = 0;
+        foreach (DaggerfallTextToken token in text.Records.SelectMany(record => record.Tokens).Where(token => token.Code == Arena2TextCode.Text))
+        {
+            string run = token.Text!;
+            int position = 0;
+            while (position < run.Length)
+            {
+                int marker = run.IndexOf('%', position);
+                if (marker < 0)
+                {
+                    break;
+                }
+
+                int end = marker + 1;
+                while (end < run.Length && Terminators.IndexOf(run[end], StringComparison.Ordinal) < 0)
+                {
+                    end++;
+                }
+
+                total++;
+                position = end;
+            }
+        }
+
+        return total;
     }
 
     private static DaggerfallText Supplied() => DaggerfallTextBuilder.Build(
