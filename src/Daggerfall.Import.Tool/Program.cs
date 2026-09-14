@@ -1940,7 +1940,9 @@ internal static class Program
                 string name = Path.GetFileName(path);
                 if (!int.TryParse(name["TEXTURE.".Length..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int leafId))
                 {
-                    continue;
+                    // A supplied name that carries no leaf number would leave a material looking unsupplied
+                    // while the corpus supplies it, so it is refused exactly as the leaf command refuses it.
+                    throw new InvalidOperationException($"'{name}' does not carry a texture leaf number, so it cannot be enumerated as a leaf.");
                 }
 
                 leaves.Add((leafId, name, File.ReadAllBytes(path)));

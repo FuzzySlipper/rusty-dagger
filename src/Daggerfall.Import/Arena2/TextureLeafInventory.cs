@@ -152,7 +152,7 @@ public sealed class TextureLeafInventory
     }
 
     /// <summary>Gets one leaf by id.</summary>
-    public bool TryGet(int id, out TextureLeafRecord? leaf) => byId.TryGetValue(id, out leaf);
+    public bool TryGet(int id, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out TextureLeafRecord? leaf) => byId.TryGetValue(id, out leaf);
 
     /// <summary>
     /// Requires a leaf to be supplied, naming the consumer that asked for it. A caller that
