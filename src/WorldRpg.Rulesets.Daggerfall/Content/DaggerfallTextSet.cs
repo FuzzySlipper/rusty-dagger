@@ -64,7 +64,7 @@ internal sealed record DaggerfallTextValue(
     string Source,
     string Language,
     int Index,
-    int Offset,
+    long Offset,
     int ByteLength,
     int Subrecords,
     DaggerfallTextState State,
@@ -85,12 +85,28 @@ internal sealed record DaggerfallTextValue(
 /// <param name="Reason">What the family addresses and where its records come from.</param>
 internal sealed record DaggerfallTextPendingKind(DaggerfallTextKind Kind, int OwnerTask, string Reason);
 
-/// <summary>One distinct macro symbol the published text carries, and how the donor accounts for it.</summary>
+/// <summary>How the donor's own macro table accounts for a symbol.</summary>
+internal enum DaggerfallTextMacroDisposition
+{
+    /// <summary>The donor's table maps the symbol to a handler.</summary>
+    Handled,
+
+    /// <summary>The donor's table names the symbol and maps it to no handler, so it leaves it unresolved too.</summary>
+    DonorUnresolved,
+
+    /// <summary>The donor's table does not name the symbol at all.</summary>
+    Unrecognised,
+}
+
+/// <summary>
+/// One distinct macro symbol the published text carries, and how the donor accounts for it. The index
+/// says which values carry a symbol; a spelling count would be a claim about a value's text that only
+/// the reader's source-format macro grammar can produce, so the pack does not make it.
+/// </summary>
 /// <param name="Symbol">The symbol as the source spells it, marker included.</param>
 /// <param name="Records">How many published values carry it.</param>
-/// <param name="Occurrences">How many times the corpus spells it.</param>
 /// <param name="Disposition">Whether the donor's macro table handles it, names it without a handler, or does not name it.</param>
-internal sealed record DaggerfallTextMacro(string Symbol, int Records, int Occurrences, string Disposition);
+internal sealed record DaggerfallTextMacro(string Symbol, int Records, DaggerfallTextMacroDisposition Disposition);
 
 /// <summary>What a lookup answered.</summary>
 internal enum DaggerfallTextResolution
@@ -112,14 +128,14 @@ internal enum DaggerfallTextResolution
 /// </summary>
 internal sealed record DaggerfallTextSet(
     IReadOnlyDictionary<DaggerfallTextKey, DaggerfallTextValue> Values,
-    IReadOnlyDictionary<string, string> SourceLanguages,
     IReadOnlyList<DaggerfallTextPendingKind> PendingKinds,
     IReadOnlyList<DaggerfallTextMacro> Macros)
 {
-    /// <summary>Every key the pack carries, in key order.</summary>
-    internal IEnumerable<DaggerfallTextKey> Keys => Values.Keys.OrderBy(key => key.Kind).ThenBy(key => key.Id, StringComparer.Ordinal);
-
-    /// <summary>Resolves a key to what the pack carries for it, or reports that it carries nothing.</summary>
+    /// <summary>
+    /// Resolves a key to what the pack carries for it, or reports that it carries nothing. A key the
+    /// pack lacks is a miss rather than an empty string, so "this text is not here" stays distinguishable
+    /// from a value the source itself leaves empty, which resolves as readable and carries no words.
+    /// </summary>
     internal DaggerfallTextResolution Resolve(DaggerfallTextKey key, out DaggerfallTextValue? value)
     {
         if (!Values.TryGetValue(key, out value))

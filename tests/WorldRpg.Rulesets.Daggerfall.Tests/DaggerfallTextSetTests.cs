@@ -30,7 +30,7 @@ public sealed class DaggerfallTextSetTests
         Assert.Equal("en", value.Language);
         Assert.Equal("STRENGTH", value.TextRuns.First());
         Assert.Equal(0, value.Index);
-        Assert.Equal(8456, value.Offset);
+        Assert.Equal(8456L, value.Offset);
         Assert.Equal(284, value.ByteLength);
         Assert.Equal(1, value.Subrecords);
         Assert.Equal(DaggerfallTextState.Read, value.State);
@@ -81,16 +81,20 @@ public sealed class DaggerfallTextSetTests
         DaggerfallTextSet text = Definitions().Text;
 
         Assert.Equal(168, text.Macros.Count);
-        Assert.Equal(141, text.Macros.Count(macro => macro.Disposition == "handled"));
-        Assert.Equal(18, text.Macros.Count(macro => macro.Disposition == "donorUnresolved"));
-        Assert.Equal(9, text.Macros.Count(macro => macro.Disposition == "unrecognised"));
-        Assert.Equal(3339, text.Macros.Sum(macro => macro.Occurrences));
+        Assert.Equal(141, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Handled));
+        Assert.Equal(18, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.DonorUnresolved));
+        Assert.Equal(9, text.Macros.Count(macro => macro.Disposition == DaggerfallTextMacroDisposition.Unrecognised));
+
+        // The index says which values carry a symbol. How often the corpus spells one is a fact about a
+        // value's text that only the reader's own macro grammar produces, so the pack does not state it
+        // and nothing here reads it: the reader checks the index against the values instead.
+        Assert.Equal(168, text.Macros.Select(macro => macro.Symbol).Distinct(StringComparer.Ordinal).Count());
 
         // The distinction is the donor's own table, so a symbol it names without a handler is not
         // reported as absent from it, and a symbol it never names is not reported as one it decided on.
-        Assert.Equal("handled", text.Macros.Single(macro => macro.Symbol == "%str").Disposition);
-        Assert.Equal("donorUnresolved", text.Macros.Single(macro => macro.Symbol == "%hol").Disposition);
-        Assert.Equal("unrecognised", text.Macros.Single(macro => macro.Symbol == "%pc").Disposition);
+        Assert.Equal(DaggerfallTextMacroDisposition.Handled, text.Macros.Single(macro => macro.Symbol == "%str").Disposition);
+        Assert.Equal(DaggerfallTextMacroDisposition.DonorUnresolved, text.Macros.Single(macro => macro.Symbol == "%hol").Disposition);
+        Assert.Equal(DaggerfallTextMacroDisposition.Unrecognised, text.Macros.Single(macro => macro.Symbol == "%pc").Disposition);
 
         // A value's own symbols are the ones a resolver expands in it, in the order it carries them.
         DaggerfallTextValue spell = text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "1202"));
@@ -114,6 +118,75 @@ public sealed class DaggerfallTextSetTests
         // The control for every mutation below: the harness rewrites the payload through JSON, so this
         // states that the rewrite alone is not what a mutation test is observing.
         Assert.Equal(1408, Definitions(_ => { }).Text.Values.Count);
+    }
+
+    [Fact]
+    public void Rejects_a_variant_count_that_disagrees_with_the_separators_it_publishes()
+    {
+        // The separators are what divide the value into the variants a random answer selects between, so
+        // a count that disagrees with them describes a value no consumer can divide.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Records(payload).Single(record => record!.AsObject()["key"]!.AsObject()["id"]!.GetValue<string>() == "11").AsObject()["subrecords"] = 99)));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("variants where its separators divide it into 5", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Rejects_a_macro_disposition_the_contract_does_not_declare()
+    {
+        // A consumer decides what to do with a symbol by its disposition, so a spelling the contract does
+        // not declare is refused rather than read as a disposition nobody published.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Macros(payload)[0]!.AsObject()["disposition"] = "probably")));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("states the disposition 'probably', which the contract does not declare", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Rejects_a_malformed_value_whose_reason_is_only_whitespace()
+    {
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload =>
+            {
+                JsonObject record = Records(payload)[0]!.AsObject();
+                Malformed(record);
+                record["reason"] = " ";
+            })));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("or states no reason", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Rejects_a_readable_value_that_states_a_reason()
+    {
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Records(payload)[0]!.AsObject()["reason"] = "because the fixture says so")));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("or states a reason it is not readable", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Rejects_a_payload_on_a_code_that_takes_none()
+    {
+        // A payload belongs to the prefix that states it, so a code that takes none and carries one would
+        // be applied at a position the source never gave it.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Tokens(payload)[1]!.AsObject()["x"] = 4)));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("or with a payload it does not take", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Refuses_a_name_that_is_a_number_and_accepts_one_spelled_in_another_case()
+    {
+        // The published dialect writes a name from a closed set, so a numeric spelling - which parses to a
+        // member but is not one the producer writes - is refused, while the case of a real name carries no
+        // meaning and is read.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Records(payload)[0]!.AsObject()["state"] = "1")));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("states the state '1', which the contract does not declare", StringComparison.Ordinal));
+        Assert.Equal(DaggerfallTextState.Read, Definitions(payload => Records(payload)[0]!.AsObject()["state"] = "Read").Text.Require(new DaggerfallTextKey(DaggerfallTextKind.Resource, "0")).State);
     }
 
     [Fact]
@@ -191,7 +264,7 @@ public sealed class DaggerfallTextSetTests
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
             Payload(payload => Records(payload)[0]!.AsObject()["byteLength"] = 0)));
 
-        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("spans 0 bytes in 1 variants", StringComparison.Ordinal));
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("is readable but spans 0 bytes", StringComparison.Ordinal));
     }
 
     [Fact]

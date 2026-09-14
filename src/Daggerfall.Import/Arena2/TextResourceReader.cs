@@ -64,7 +64,7 @@ public enum Arena2TextState
 public sealed record Arena2TextRecord(
     int Id,
     int Index,
-    int Offset,
+    long Offset,
     int ByteLength,
     int Subrecords,
     Arena2TextState State,
@@ -90,6 +90,13 @@ public sealed record Arena2TextCatalog(int HeaderLength, int DataStart, IReadOnl
 /// or which never terminates is published as malformed with the reason rather than dropped — the key
 /// exists in the source either way, and a lookup that answers "no such text" for it would report a
 /// source fact as an absence.
+/// <para>
+/// Entries are read independently, which is what the donor does and what its own callers rely on: two
+/// entries may name one offset and read the same text, an entry may name a byte another record's run
+/// passes through, and an entry naming another record's terminator reads a record with no words in it.
+/// None of those is an overlap to refuse — the directory is the authority on where a record's text is,
+/// and a rule invented here would publish text the donor reads as unreadable.
+/// </para>
 /// </remarks>
 public static class TextResourceReader
 {
@@ -148,16 +155,20 @@ public static class TextResourceReader
             throw new Arena2FormatException(label, 0, $"declares a directory ending at byte {dataStart}, past its {bytes.Length} bytes");
         }
 
-        (int Id, int Offset)[] directory = new (int, int)[count];
+        (int Id, long Offset)[] directory = new (int, long)[count];
         Dictionary<int, int> byId = [];
         for (int index = 0; index < count; index++)
         {
             int position = HeaderLengthBytes + (index * DirectoryEntryBytes);
             int id = bytes[position] | (bytes[position + 1] << 8);
-            int offset = bytes[position + 2]
+
+            // The source states an unsigned 32-bit offset, so it is read over that whole range: a corrupt
+            // entry is published as the byte it declares rather than wrapping into a negative one that
+            // the file never stated, which would then fail the published record's own validation.
+            long offset = (uint)(bytes[position + 2]
                 | (bytes[position + 3] << 8)
                 | (bytes[position + 4] << 16)
-                | (bytes[position + 5] << 24);
+                | (bytes[position + 5] << 24));
 
             // Two records claiming one key would leave one of them unreachable through every lookup the
             // pack offers, which is a collision rather than a recoverable difference, so the file is
@@ -177,11 +188,10 @@ public static class TextResourceReader
             records.Add(ReadRecord(bytes, directory[index].Id, index, directory[index].Offset, dataStart));
         }
 
-        MarkOverlaps(records);
         return new Arena2TextCatalog(headerLength, dataStart, records);
     }
 
-    private static Arena2TextRecord ReadRecord(byte[] bytes, int id, int index, int offset, int dataStart)
+    private static Arena2TextRecord ReadRecord(byte[] bytes, int id, int index, long offset, int dataStart)
     {
         if (offset < dataStart)
         {
@@ -193,14 +203,14 @@ public static class TextResourceReader
             return Unreadable(id, index, offset, $"names byte {offset} for its text, past the file's {bytes.Length} bytes");
         }
 
-        int terminator = Array.IndexOf(bytes, Terminator, offset);
+        int terminator = Array.IndexOf(bytes, Terminator, (int)offset);
         if (terminator < 0)
         {
             return Unreadable(id, index, offset, $"carries no {Terminator:X2} terminator from byte {offset}");
         }
 
-        int byteLength = terminator - offset + 1;
-        IReadOnlyList<Arena2TextToken> tokens = Tokenize(bytes, offset, terminator);
+        int byteLength = terminator - (int)offset + 1;
+        IReadOnlyList<Arena2TextToken> tokens = Tokenize(bytes, (int)offset, terminator);
         return new Arena2TextRecord(
             id,
             index,
@@ -213,7 +223,7 @@ public static class TextResourceReader
             tokens);
     }
 
-    private static Arena2TextRecord Unreadable(int id, int index, int offset, string reason) =>
+    private static Arena2TextRecord Unreadable(int id, int index, long offset, string reason) =>
         new(id, index, offset, 0, 0, Arena2TextState.Malformed, reason, [], []);
 
     /// <summary>
@@ -313,35 +323,4 @@ public static class TextResourceReader
     private static Arena2TextCode Code(byte value) =>
         Enum.IsDefined((Arena2TextCode)value) ? (Arena2TextCode)value : Arena2TextCode.Unknown;
 
-    /// <summary>
-    /// Marks a record whose bytes begin inside a region another record owns without beginning at its
-    /// start.
-    /// </summary>
-    /// <remarks>
-    /// Two entries naming the same offset is a fact of the corpus rather than a defect: several keys
-    /// share one region and therefore read the same text, and both keys stay addressable. A region that
-    /// merely overlaps another's part way through is different — the later record's text would not be
-    /// its own — so that one is published as malformed instead of tokenized from a neighbour's bytes.
-    /// </remarks>
-    private static void MarkOverlaps(List<Arena2TextRecord> records)
-    {
-        int previousEnd = -1;
-        int previousOffset = -1;
-        foreach (Arena2TextRecord record in records.Where(record => record.State == Arena2TextState.Read).OrderBy(record => record.Offset))
-        {
-            if (record.Offset == previousOffset)
-            {
-                continue;
-            }
-
-            if (record.Offset < previousEnd)
-            {
-                records[record.Index] = Unreadable(record.Id, record.Index, record.Offset, $"begins at byte {record.Offset}, inside the record that ends at byte {previousEnd}");
-                continue;
-            }
-
-            previousOffset = record.Offset;
-            previousEnd = record.Offset + record.ByteLength;
-        }
-    }
 }
