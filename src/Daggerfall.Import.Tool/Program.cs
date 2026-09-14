@@ -875,18 +875,20 @@ internal static class Program
             throw new ArgumentException("the pack carries no blocks section, which is where mesh use sites come from: run the blocks command first");
         }
 
-        List<DaggerfallGeometryUseSite> useSites = [];
-        foreach (JsonNode? block in blocks["records"]!.AsArray())
-        {
-            if (block!["objects"]?["modelIds"] is not JsonArray models)
-            {
-                continue;
-            }
+        // The section is read through its own contract rather than by matching member names here. A pack
+        // whose block section this build cannot read has to refuse: walking members by name would fold a
+        // shape it does not recognize into a geometry section where every mesh is unused, which is the
+        // opposite of the closure set this inventory exists to publish.
+        DaggerfallBlocks publishedBlocks = blocks.Deserialize<DaggerfallBlocks>(PublishedJson.SectionRead)
+            ?? throw new ArgumentException("the pack's blocks section could not be read");
+        publishedBlocks.Validate();
 
-            string key = block["sourceKey"]!.GetValue<string>();
-            foreach (JsonNode? model in models)
+        List<DaggerfallGeometryUseSite> useSites = [];
+        foreach (DaggerfallBlockRecord block in publishedBlocks.Records)
+        {
+            foreach (string model in block.Objects?.ModelIds ?? [])
             {
-                useSites.Add(new DaggerfallGeometryUseSite(model!.GetValue<string>(), key));
+                useSites.Add(new DaggerfallGeometryUseSite(model, block.SourceKey));
             }
         }
 

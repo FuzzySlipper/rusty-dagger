@@ -12,6 +12,9 @@ public sealed record Arch3dMesh(string Source, string Version, int DeclaredPoint
 /// <summary>Decoder for numeric ARCH3D.BSA mesh records.</summary>
 public static class Arch3dDecoder
 {
+    /// <summary>The version strings the mesh format declares, which are the ones this decoder admits.</summary>
+    public static readonly IReadOnlyList<string> Versions = ["v2.5", "v2.6", "v2.7"];
+
     private const int HeaderBytes = 64;
     private const int PlaneHeaderBytes = 8;
     private const int PlanePointBytes = 8;
@@ -27,7 +30,7 @@ public static class Arch3dDecoder
         }
 
         string version = header.ReadNullTerminatedAscii(4);
-        if (version is not "v2.5" and not "v2.6" and not "v2.7")
+        if (!Versions.Contains(version, StringComparer.Ordinal))
         {
             throw header.Error($"unsupported ARCH3D version {version}");
         }

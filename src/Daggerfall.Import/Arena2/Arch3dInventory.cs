@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+using Daggerfall.Import.Normalized;
 
 namespace Daggerfall.Import.Arena2;
 
@@ -123,16 +123,19 @@ public static class Arch3dInventoryReader
         }
 
         List<Arch3dMeshRecord> records = new(archive.Records.Count);
-        Dictionary<uint, int> firstByNumber = [];
-        Dictionary<string, int> firstByPayload = new(StringComparer.Ordinal);
+        Dictionary<ContentDigest, int> firstByPayload = [];
         foreach (BsaRecord record in archive.Records)
         {
             uint recordId = record.NumericId!.Value;
-            string payloadHash = Convert.ToHexString(SHA256.HashData(archive.GetPayload(record).Span));
-            int? duplicateOf = firstByNumber.TryGetValue(recordId, out int firstNumber) ? firstNumber : null;
-            int? payloadDuplicateOf = firstByPayload.TryGetValue(payloadHash, out int firstPayload) ? firstPayload : null;
-            firstByNumber.TryAdd(recordId, record.Ordinal);
-            firstByPayload.TryAdd(payloadHash, record.Ordinal);
+
+            // Which record a number reaches is the archive's own answer, so it is asked rather than
+            // re-derived: the container already resolves a lookup to the first directory-order match.
+            int? duplicateOf = archive.TryGetByNumericId(recordId, out BsaRecord? first) && first!.Ordinal != record.Ordinal
+                ? first.Ordinal
+                : null;
+            ContentDigest payload = ContentDigest.Compute(archive.GetPayload(record).Span);
+            int? payloadDuplicateOf = firstByPayload.TryGetValue(payload, out int firstPayload) ? firstPayload : null;
+            firstByPayload.TryAdd(payload, record.Ordinal);
 
             Arch3dMeshFacts? facts = null;
             string reason = string.Empty;
