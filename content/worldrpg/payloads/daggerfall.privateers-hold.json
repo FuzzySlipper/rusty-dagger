@@ -90,6 +90,10 @@
     "look": {
       "yawRadians": 3.1415927,
       "pitchRadians": 0
+    },
+    "site": {
+      "region": 17,
+      "index": 179
     }
   },
   "placements": [

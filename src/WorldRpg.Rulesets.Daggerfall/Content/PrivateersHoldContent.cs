@@ -26,6 +26,12 @@ internal static class PrivateersHoldContent
             if (DaggerfallBaseContent.Integer(root, "schemaVersion", diagnostics) != SchemaVersion) diagnostics.Add($"Privateer's Hold payload schemaVersion must be {SchemaVersion}.");
             AdmittedFiles files = AdmittedFiles.Copy(content, diagnostics);
             ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics);
+            // A starting site the published locations do not carry would leave the session standing at a
+            // location nothing can name, so it is refused against the section that does carry them.
+            if (start.Site is { } startSite && !definitions.Locations.Keys.Contains((startSite.Region, startSite.Index)))
+            {
+                diagnostics.Add($"Privateer's Hold startingState.site names location {startSite}, which the published locations do not carry.");
+            }
             PrivateersHoldInputs inputs = ReadNormalizedClosure(
                 files,
                 root,
@@ -109,7 +115,8 @@ internal static class PrivateersHoldContent
             materials,
             new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites),
             audio,
-            classicPresentation);
+            classicPresentation,
+            start.Site);
     }
 
     private static Dictionary<long, AuthoredActor> ReadNormalizedPlacements(JsonElement root, DaggerfallDefinitions definitions, DaggerfallContentDiagnostics diagnostics)
@@ -712,7 +719,41 @@ internal static class PrivateersHoldContent
         WorldPoint position = Point(DaggerfallBaseContent.Property(value, "position", diagnostics), "startingState.position", diagnostics);
         JsonElement look = DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(value, "look", diagnostics), "startingState.look", diagnostics);
         PlayerInitialLook initialLook = new(DaggerfallBaseContent.Number(look, "yawRadians", diagnostics), DaggerfallBaseContent.Number(look, "pitchRadians", diagnostics));
-        return new(position, initialLook);
+        return new(position, initialLook, ReadStartSite(value, diagnostics));
+    }
+
+    /// <summary>
+    /// The site the scenario starts at, when it declares one.
+    /// </summary>
+    /// <remarks>
+    /// A scenario that starts the player somewhere in the world names the location it starts them at by
+    /// region and index, because the display name is not unique. The site is optional: a scenario whose
+    /// start is not a location the pack publishes - a test fixture's, or a later scenario that begins in
+    /// transit - simply has none, and the session then starts at no site rather than at an invented one.
+    /// </remarks>
+    private static DaggerfallSiteId? ReadStartSite(JsonElement value, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (value.ValueKind != JsonValueKind.Object || !value.TryGetProperty("site", out JsonElement site) || site.ValueKind == JsonValueKind.Null)
+        {
+            return null;
+        }
+
+        if (site.ValueKind != JsonValueKind.Object)
+        {
+            diagnostics.Add("startingState.site must be an object naming the location's region and index.");
+            return null;
+        }
+
+        JsonElement region = DaggerfallBaseContent.Property(site, "region", diagnostics);
+        JsonElement index = DaggerfallBaseContent.Property(site, "index", diagnostics);
+        if (region.ValueKind != JsonValueKind.Number || !region.TryGetInt32(out int regionIndex) || regionIndex < 0
+            || index.ValueKind != JsonValueKind.Number || !index.TryGetInt32(out int locationIndex) || locationIndex < 0)
+        {
+            diagnostics.Add("startingState.site must name a non-negative region and index.");
+            return null;
+        }
+
+        return new DaggerfallSiteId(regionIndex, locationIndex);
     }
 
     private static ulong UnsignedInteger(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
@@ -805,7 +846,7 @@ internal sealed class AdmittedFiles
     internal byte[]? GetExactlyOne(string path) => ContainsExactlyOne(path) ? _files[path][0].ToArray() : null;
 }
 
-internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look);
+internal sealed record ScenarioStart(WorldPoint Position, PlayerInitialLook Look, DaggerfallSiteId? Site);
 internal sealed record AuthoredWorldAppearance(Color Tint, Transform Transform, bool Visible, RenderLayer Layer);
 internal sealed record ContentArtifact(string Path, ContentSha256 Sha256);
 internal sealed record NormalizedMaterial(uint Slot, string TexturePath, ContentSha256 TextureSha256);
@@ -854,7 +895,7 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     internal IReadOnlyList<NormalizedAttackSequence> AttackSequences { get; init; } = Array.Empty<NormalizedAttackSequence>();
     internal NormalizedActorSprite? Corpse { get; init; }
 }
-internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null)
+internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null)
 {
     internal ProjectFacts Project { get; } = project;
     internal SpatialContentArtifact SpatialArtifact { get; } = spatialArtifact;
@@ -865,6 +906,12 @@ internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentA
     internal IReadOnlyDictionary<long, NormalizedActorSprite> ActorSprites { get; } = new ReadOnlyDictionary<long, NormalizedActorSprite>(actorSprites.ToDictionary());
     internal IReadOnlyList<NormalizedAudioClip> Audio { get; } = Array.AsReadOnly((audio ?? []).ToArray());
     internal NormalizedClassicPresentation ClassicPresentation { get; } = classicPresentation ?? NormalizedClassicPresentation.Empty;
+
+    /// <summary>
+    /// The site the scenario starts the player at, when it declares one. It is the session's starting
+    /// site and not an authority over a save: a save that records where the player is keeps them there.
+    /// </summary>
+    internal DaggerfallSiteId? Site { get; } = site;
 }
 
 internal sealed class ProjectFacts(WorldPoint? playerPosition, IReadOnlyDictionary<long, AuthoredActor> actors)

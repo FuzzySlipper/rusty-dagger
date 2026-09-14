@@ -55,6 +55,17 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private readonly List<SaveRestoreNotice> _restoreNotices;
     private IReadOnlyList<DaggerfallOwnerSave> _carriedOwnerSections;
     private readonly World.DaggerfallWorldTime _time;
+    private readonly World.DaggerfallSiteContext _site;
+
+    /// <summary>
+    /// Where the session is: the active site, the region it belongs to and the sites play has revealed.
+    /// </summary>
+    /// <remarks>
+    /// This is the one owner of location context in the session, which is what lets a region consumer -
+    /// a holiday, a price, a service - read the region the player is actually standing in rather than
+    /// carrying a second copy of it.
+    /// </remarks>
+    internal World.DaggerfallSiteContext Site => _site;
 
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
@@ -232,6 +243,16 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                     : DaggerfallCalendar.Start,
                 saved?.Calendar?.RemainderSeconds ?? 0d,
                 tuning.Time.GameSecondsPerRealSecond);
+            // A save that carries a site section is where the player actually is, including when that is
+            // nowhere. A save with no section at all predates site persistence, so it starts at the site
+            // its own bundle starts at rather than at a location invented for it.
+            _site = saved?.Site is { } restoredSite
+                ? new World.DaggerfallSiteContext(
+                    definitions.Locations,
+                    ToSiteId(restoredSite.Active),
+                    ToSiteId(restoredSite.ReturnAnchor),
+                    restoredSite.Discovered.Select(id => new DaggerfallSiteId(id.Region, id.Index)))
+                : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
@@ -390,8 +411,12 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                         : throw new InvalidOperationException($"Save owner '{owner.OwnerId}' captured no section; a durable owner must write the state it owns.")))
                 .Concat(_carriedOwnerSections)
                 .OrderBy(section => section.OwnerId, StringComparer.Ordinal)],
-            new DaggerfallCalendarSave(_time.Calendar.Year, _time.Calendar.Month, _time.Calendar.Day, _time.Calendar.Hour, _time.Calendar.Minute, _time.Calendar.Second, _time.RemainderSeconds)));
+            new DaggerfallCalendarSave(_time.Calendar.Year, _time.Calendar.Month, _time.Calendar.Day, _time.Calendar.Hour, _time.Calendar.Minute, _time.Calendar.Second, _time.RemainderSeconds),
+            _site.Capture()));
     }
+
+    private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) =>
+        id is null ? null : new DaggerfallSiteId(id.Region, id.Index);
 
     public ProductUpdateResult Update(ProductUpdate update)
     {

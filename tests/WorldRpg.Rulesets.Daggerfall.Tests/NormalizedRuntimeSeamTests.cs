@@ -1904,6 +1904,85 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void The_session_starts_at_the_site_its_bundle_declares_and_a_save_keeps_its_own()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        ResolvedCompositionIdentity composition = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases));
+
+        // Where a scenario starts the player is published content rather than a constant the ruleset
+        // carries, and the session starts there with the region the rest of the product reads.
+        Assert.Equal(new DaggerfallSiteId(17, 179), inputs.Site);
+        using (DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            Assert.Equal(new DaggerfallSiteId(17, 179), session.Site.Active);
+            Assert.Equal(17, session.Site.Region);
+            Assert.Equal("Privateer's Hold", session.Site.ActiveSite!.Name);
+            Assert.Equal(DaggerfallSiteKind.DungeonLabyrinth, session.Site.ActiveSite.Kind);
+        }
+
+        // A save that records where the player is keeps them there, in a region the scenario never names:
+        // resuming must not walk them back to the bundle's starting site.
+        DaggerfallSavePayload saved = CapturedSave(root) with
+        {
+            Site = new DaggerfallSiteSave(new DaggerfallSiteIdSave(31, 0), new DaggerfallSiteIdSave(31, 1), [new DaggerfallSiteIdSave(31, 0)]),
+        };
+        using DaggerfallSession resumed = DaggerfallSession.Restore(engine.Context, composition, definitions, inputs, DaggerfallTuning.Defaults, DaggerfallSavePayload.Encode(saved), RandomMinimum.Create());
+        Assert.Equal(new DaggerfallSiteId(31, 0), resumed.Site.Active);
+        Assert.Equal(new DaggerfallSiteId(31, 1), resumed.Site.ReturnAnchor);
+        Assert.Equal(31, resumed.Site.Region);
+        Assert.Equal("Mantellan Crux", resumed.Site.ActiveSite!.Name);
+        Assert.True(resumed.Site.IsDiscovered(new DaggerfallSiteId(31, 0)));
+
+        // And it survives the session's own capture, so a second reload does not lose it. The parts are
+        // compared rather than the section: its discovered sites are an array, and record equality over
+        // an array member is reference equality, so comparing the section would assert the wrong thing.
+        DaggerfallSiteSave recaptured = DaggerfallSavePayload.Read(resumed.CaptureSave()).Payload.Site!;
+        DaggerfallSiteSave captured = resumed.Site.Capture();
+        Assert.Equal(captured.Active, recaptured.Active);
+        Assert.Equal(captured.ReturnAnchor, recaptured.ReturnAnchor);
+        Assert.Equal(captured.Discovered, recaptured.Discovered);
+    }
+
+    [Fact]
+    public void Restore_reports_and_drops_a_saved_site_the_selected_content_no_longer_carries()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallSavePayload saved = CapturedSave(root) with
+        {
+            // One site the content still carries and one it does not, in one section, so what separates
+            // keeping from dropping is the content rather than the shape.
+            Site = new DaggerfallSiteSave(
+                new DaggerfallSiteIdSave(17, 999999),
+                new DaggerfallSiteIdSave(17, 4),
+                [new DaggerfallSiteIdSave(17, 179), new DaggerfallSiteIdSave(17, 999999)]),
+        };
+
+        DaggerfallRestorePlan plan = saved.ResolveRestore(definitions, inputs, DaggerfallTuning.Defaults, RandomMinimum.Create());
+
+        Assert.Equal(2, plan.Notices.Count(notice => notice.Code == "unexplained-site"));
+        Assert.Contains(plan.Notices, notice => notice.Message.Contains("17/999999", StringComparison.Ordinal));
+        Assert.Null(plan.Payload.Site!.Active);
+        Assert.Equal(new DaggerfallSiteIdSave(17, 4), plan.Payload.Site.ReturnAnchor);
+        Assert.Equal([new DaggerfallSiteIdSave(17, 179)], plan.Payload.Site.Discovered);
+
+        // The kept sites still resolve, so the drop is confined to the identity nothing publishes, and
+        // the region still comes from the anchor when the active site is the one that was dropped.
+        World.DaggerfallSiteContext site = new(definitions.Locations, null, new DaggerfallSiteId(17, 4), [new DaggerfallSiteId(17, 179)]);
+        Assert.Equal("Charing", site.Require(new DaggerfallSiteId(17, 4)).Name);
+        Assert.Equal(17, site.Region);
+        Assert.True(site.IsDiscovered(new DaggerfallSiteId(17, 179)));
+    }
+
+    [Fact]
     public void Restore_reports_saved_values_the_selected_content_disagrees_with_and_still_restores()
     {
         string root = RepositoryRoot();
