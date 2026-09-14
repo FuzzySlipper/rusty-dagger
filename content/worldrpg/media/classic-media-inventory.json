@@ -4,22 +4,24 @@
   "unreadableFamilies": [
     {
       "family": ".CEL",
+      "kind": "class-question animation",
       "files": [
         "MAGE.CEL",
         "ROGUE.CEL",
         "WARRIOR.CEL"
       ],
-      "reason": "no decoder in this repository: the classic animation is colour-cycled and the donor reads it through its own FLC reader",
+      "reason": "no publisher in this repository: the FLC container and its frames are read, but no artifact is published from them and nothing plays them back, so the file carries no canvas here",
       "donorAnchor": "Assets/Scripts/API/FlcFile.cs"
     },
     {
       "family": ".BSS",
+      "kind": "compass sprite bank",
       "files": [
         "CMPA00I0.BSS",
         "CMPA01I0.BSS",
         "CMPA02I0.BSS"
       ],
-      "reason": "no decoder in this repository: the donor reads these sound-bank streams through its own BSS reader",
+      "reason": "no publisher in this repository: the BSS container\u0027s image frames are read, but no artifact is published from them, so the compass the donor draws from these files has no published canvas here",
       "donorAnchor": "Assets/Scripts/API/BssFile.cs"
     }
   ],
