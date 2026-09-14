@@ -68,6 +68,11 @@ internal static class Program
                 return RunClassicMediaCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "mobile-ledger")
+            {
+                return RunMobileLedgerCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "locations")
             {
                 return RunLocationsCommand(args);
@@ -196,6 +201,34 @@ internal static class Program
         }
 
         Console.WriteLine($"families: {inventory.UndocumentedFamilies.Count} supplied but undocumented [{string.Join(", ", inventory.UndocumentedFamilies)}], {inventory.MissingDocumentedFamilies.Count} documented but not supplied [{string.Join(", ", inventory.MissingDocumentedFamilies)}]");
+        return 0;
+    }
+
+    /// <summary>
+    /// Reconciles the donor's static mobile table with the published pack and reports every entry
+    /// nothing published carries. Coverage of the donor's mobiles is reported, not assumed: an entry
+    /// the pack does not publish is named here rather than staying invisible.
+    /// </summary>
+    private static int RunMobileLedgerCommand(IReadOnlyList<string> args)
+    {
+        if (args.Count != 5 || args[1] != "--donor" || args[3] != "--pack")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool mobile-ledger --donor ENEMY_BASICS.cs --pack PACK.json");
+        }
+
+        MobileLedger ledger = MobileLedgerBuilder.Build(File.ReadAllText(args[2]), File.ReadAllText(args[4]));
+        Console.WriteLine($"donor mobiles: {ledger.DonorEntries}, published actors: {ledger.PublishedActors}, catalog enemies: {ledger.CatalogEntries}");
+        Console.WriteLine($"published {ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.Published)}, variants {ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.PublishedVariant)}, human mobiles {ledger.Entries.Count(entry => entry.Disposition == MobileLedgerDisposition.HumanClass)}, unpublished {ledger.Unpublished.Count}");
+        foreach (MobileLedgerEntry entry in ledger.Unpublished)
+        {
+            Console.WriteLine($"unpublished: id {entry.Id} '{entry.Name}' - {entry.Note}");
+        }
+
+        foreach (MobileLedgerEntry entry in ledger.Entries.Where(entry => entry.Disposition == MobileLedgerDisposition.PublishedVariant))
+        {
+            Console.WriteLine($"variant: id {entry.Id} '{entry.Name}' - {entry.Note}");
+        }
+
         return 0;
     }
 
