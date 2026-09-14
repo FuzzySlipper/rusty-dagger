@@ -488,17 +488,27 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void The_pad_owns_its_controls_and_the_product_manifest_declares_none_of_them_twice()
+    public void The_pad_owns_its_controls_and_the_compiled_product_mapping_declares_none_of_them()
     {
         string root = RepositoryRoot();
         // Pad bindings are tuning because the Engine's controller vocabulary is positional and a
         // different pad has to be a configuration change rather than a rebuild. That makes the
-        // product manifest the wrong place for a controller trigger: declaring one there would
-        // describe the same press twice, once as a mapped intent and once as the raw fact the pad
-        // tuning reads, and nothing else would notice.
-        string manifest = File.ReadAllText(Path.Combine(root, "src/WorldRpg.Host/WorldRpg.Host.csproj"));
-        Assert.DoesNotContain("Trigger=\"controller-", manifest, StringComparison.Ordinal);
-        // The pad tuning has to be present and non-empty for that ownership to mean anything.
+        // compiled product mapping the wrong place for a controller trigger: declaring one there
+        // would describe the same press twice, once as a mapped intent and once as the raw fact the
+        // pad tuning reads, and nothing else would notice.
+        //
+        // The check reads the artifact the runtime reads rather than one spelling in one build file,
+        // so it sees any declaration site and any legal MSBuild form. It is build output, so its
+        // absence is a failure: a guard that passes when it cannot read what it guards is worse than
+        // no guard.
+        string manifest = Path.Combine(root, "src/WorldRpg.Host/obj/Rusty.Engine/Product/product.json");
+        Assert.True(File.Exists(manifest), $"The compiled product manifest '{manifest}' is missing; the host composition has to be built before this suite reads it.");
+        using JsonDocument product = JsonDocument.Parse(File.ReadAllBytes(manifest));
+        string[] triggers = [.. product.RootElement.GetProperty("input").GetProperty("mappings").EnumerateArray()
+            .Select(mapping => mapping.GetProperty("trigger").GetString() ?? string.Empty)];
+        Assert.NotEmpty(triggers);
+        Assert.DoesNotContain(triggers, trigger => trigger.StartsWith("controller-", StringComparison.Ordinal));
+        // The ownership claim is only meaningful while the tuning table is the one carrying the pad.
         Assert.NotEmpty(DaggerfallTuning.Defaults.ControllerInput.Actions);
     }
 
