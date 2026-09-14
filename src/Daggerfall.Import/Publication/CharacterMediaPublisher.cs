@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Publication;
 
@@ -12,10 +13,12 @@ namespace Daggerfall.Import.Normalization;
 /// <param name="Artifacts">Every published canvas, ordered by media identity.</param>
 /// <param name="Refusals">Every canvas that could not be published, with its identity and the reason.</param>
 /// <param name="UnreadableFamilies">The supplied formats whose canvases are absent here, with the reason.</param>
+/// <param name="UnpublishableFiles">The supplied files those entries account for, by file name, with the reason.</param>
 public sealed record CharacterMediaPassResult(
     IReadOnlyList<CharacterMediaArtifact> Artifacts,
     IReadOnlyList<string> Refusals,
-    IReadOnlyList<CharacterMediaUnreadableFamily> UnreadableFamilies)
+    IReadOnlyList<CharacterMediaUnreadableFamily> UnreadableFamilies,
+    IReadOnlyDictionary<string, string> UnpublishableFiles)
 {
     /// <summary>The media identities this pass actually published.</summary>
     public IReadOnlySet<string> PublishedMediaIds { get; } =
@@ -44,22 +47,18 @@ public static class CharacterMediaPublisher
     /// <summary>The index's generator identity, so an index that drifted from its producer is visible.</summary>
     public const string IndexGenerator = "daggerfall-import-tool character-presentation";
 
+    /// <summary>The palette source of a canvas painted in the palette its own container carries.</summary>
+    public const string EmbeddedPaletteSource = "embedded-in-source-file";
+
+    /// <summary>The palette source of a canvas painted in a supplied palette file.</summary>
+    public const string SuppliedPaletteSource = "supplied-palette-file";
+
     /// <summary>
     /// Why an RCI grid's cells carry no artifact here. The cells are enumerated from the file's byte
     /// arithmetic and their shape is known, but nothing in this repository slices a cell's pixels.
     /// </summary>
     private const string RciGridReason =
         "the RCI reader enumerates the grid's cells by shape from the file's own byte arithmetic, and nothing in this repository slices a cell's pixels, so the cells are addressable and unpublishable";
-
-    /// <summary>
-    /// Where an artifact's palette comes from. A classic animation's frames are painted in the palette
-    /// inside the container while every other family here is read with a supplied palette file, and the
-    /// difference is what tells a consumer whether re-encoding may lose it.
-    /// </summary>
-    private static string PaletteSource(CharacterCanvasReference reference) =>
-        reference.Path.EndsWith(".CEL", StringComparison.OrdinalIgnoreCase)
-            ? "embedded-in-source-file"
-            : "supplied-palette-file";
 
     /// <summary>The donor class that reads each format nothing here reads.</summary>
     private static readonly Dictionary<string, string> DonorReaders = new(StringComparer.Ordinal)
@@ -85,6 +84,20 @@ public static class CharacterMediaPublisher
         ArgumentNullException.ThrowIfNull(sources);
         ArgumentNullException.ThrowIfNull(palettes);
         ArgumentNullException.ThrowIfNull(inventory);
+
+        // Two references with one identity would emit and index the same artifact twice, which a consumer
+        // could not tell apart; the enumeration derives unique identities, so this is a guard against a
+        // caller that hand-builds a set rather than a case the derivation produces.
+        string[] duplicateIdentities = [.. set.Canvases
+            .GroupBy(canvas => canvas.MediaId, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .Order(StringComparer.Ordinal)];
+        if (duplicateIdentities.Length != 0)
+        {
+            throw new InvalidOperationException(
+                $"{duplicateIdentities.Length} character media identity(ies) are claimed by more than one canvas reference, so one artifact would be published under one name twice: {string.Join(", ", duplicateIdentities)}.");
+        }
 
         List<CharacterMediaArtifact> artifacts = [];
         List<string> refusals = [];
@@ -126,7 +139,74 @@ public static class CharacterMediaPublisher
                 $"A published consumer binds {unpublished.Length} character canvas(es) this pass could not publish, so the reference would resolve to nothing: {string.Join(", ", unpublished)}. Reasons: {string.Join(" | ", refusals)}");
         }
 
-        return new(artifacts, refusals, UnreadableFamilies(inventory, refusedSources));
+        return new(artifacts, refusals, UnreadableFamilies(inventory, refusedSources), UnpublishableFiles(inventory, refusedSources, refusals));
+    }
+
+    /// <summary>
+    /// The published identity of a palette no supplied file names: a digest of its own colours.
+    /// </summary>
+    /// <remarks>
+    /// A classic animation carries its palette inside the container, so there is no file name to state and
+    /// naming the palette the reference happens to carry would describe colours the artifact does not have.
+    /// The digest is the palette's own identity, which lets a consumer tell two embedded palettes apart and
+    /// compare one it extracts itself against the published fact.
+    /// </remarks>
+    private static string PaletteIdentity(Arena2Palette palette)
+    {
+        byte[] colors = new byte[palette.Colors.Length * 3];
+        for (int index = 0; index < palette.Colors.Length; index++)
+        {
+            Rgb24 color = palette.Colors.Span[index];
+            colors[(index * 3) + 0] = color.Red;
+            colors[(index * 3) + 1] = color.Green;
+            colors[(index * 3) + 2] = color.Blue;
+        }
+
+        return $"embedded-palette-sha256:{Convert.ToHexStringLower(SHA256.HashData(colors))[..16]}";
+    }
+
+    /// <summary>
+    /// Every supplied file whose canvases produced no artifact, with the reason the reader gave.
+    /// </summary>
+    /// <remarks>
+    /// This is the per-file half of the same fact the unreadable families state in aggregate, and the pack's
+    /// file records need it: a format this repository reads but cannot take pixels from - a BSS frame, a
+    /// grid cell - reads successfully and refuses later, at decode, so a record that only asked whether the
+    /// file was read would call it readable and unused while its canvases do not exist.
+    /// </remarks>
+    /// <param name="inventory">The supplied files.</param>
+    /// <param name="refusedSources">The supplied files whose canvases produced no artifact.</param>
+    /// <param name="refusals">The refusal each canvas gave, which is where the reason comes from.</param>
+    private static IReadOnlyDictionary<string, string> UnpublishableFiles(
+        CharacterMediaInventory inventory,
+        IReadOnlySet<string> refusedSources,
+        IReadOnlyList<string> refusals)
+    {
+        Dictionary<string, string> reasons = new(StringComparer.Ordinal);
+        foreach (CharacterMediaRecord file in inventory.Files)
+        {
+            string name = System.IO.Path.GetFileName(file.Path);
+            if (!refusedSources.Contains(name)) continue;
+            // The reader's own refusal is the reason, and it names the file and the gap in it: the first
+            // mention is enough, because the rest are its siblings from the same file.
+            reasons[name] = refusals.FirstOrDefault(refusal => refusal.Contains(name, StringComparison.Ordinal))
+                ?? $"The file supplies {file.CanvasCount} canvas(es) and none of them could be published here.";
+        }
+
+        return reasons;
+    }
+
+    /// <summary>Why a supplied file's canvases produced no artifact.</summary>
+    private enum UnpublishableCause
+    {
+        /// <summary>No reader here opened the file at all.</summary>
+        NoReader,
+
+        /// <summary>The container read and refused, or its pixels have no decoder: the gap is past the reader.</summary>
+        NoPixelDecoder,
+
+        /// <summary>The grid's cells are enumerated from byte arithmetic and nothing slices their pixels.</summary>
+        NoCellSlicer,
     }
 
     /// <summary>
@@ -136,8 +216,9 @@ public static class CharacterMediaPublisher
     /// <remarks>
     /// The subject is the pass's own result rather than a second reading of it: a supplied file is named
     /// here when it carries canvases and none of them produced an artifact, and the reason is the refusal
-    /// the readers gave. Deriving this from the decode shapes alone would have to re-decide which shapes
-    /// publish, which is the decision that just went wrong.
+    /// the readers gave. Entries are keyed by the family and the cause, so a file no reader could open is
+    /// never described with the reason that belongs to a container that read and refused - the two are
+    /// different gaps, and one of them would be a false claim about a family this run publishes from.
     /// </remarks>
     /// <param name="inventory">The supplied files, so a file no reader read is still accounted for.</param>
     /// <param name="refusedSources">The supplied files whose canvases produced no artifact.</param>
@@ -145,49 +226,78 @@ public static class CharacterMediaPublisher
         CharacterMediaInventory inventory,
         IReadOnlySet<string> refusedSources)
     {
-        Dictionary<string, List<string>> unread = new(StringComparer.Ordinal);
-        List<string> rciGrid = [];
+        Dictionary<(string Family, UnpublishableCause Cause), List<string>> grouped = [];
         foreach (CharacterMediaRecord file in inventory.Files.OrderBy(file => file.Path, StringComparer.Ordinal))
         {
             string name = System.IO.Path.GetFileName(file.Path);
             // A canvas the pass refused takes its file out of the published set; a file whose format no
             // reader read was never a candidate. Both are canvases that are not here.
             if (!refusedSources.Contains(name) && file.Decode != Arena2CanvasKind.Unread) continue;
-            if (file.Decode == Arena2CanvasKind.RciGrid)
+            UnpublishableCause cause = file.Decode switch
             {
-                rciGrid.Add(name);
-                continue;
-            }
-
-            if (!unread.TryGetValue(file.Family, out List<string>? families)) unread[file.Family] = families = [];
-            families.Add(name);
+                Arena2CanvasKind.Unread => UnpublishableCause.NoReader,
+                Arena2CanvasKind.RciGrid => UnpublishableCause.NoCellSlicer,
+                _ => UnpublishableCause.NoPixelDecoder,
+            };
+            (string Family, UnpublishableCause Cause) key = (file.Family, cause);
+            if (!grouped.TryGetValue(key, out List<string>? files)) grouped[key] = files = [];
+            files.Add(name);
         }
 
         List<CharacterMediaUnreadableFamily> unreadable = [];
-        foreach ((string family, List<string> files) in unread.OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        foreach (((string family, UnpublishableCause cause), List<string> files) in grouped
+            .OrderBy(entry => entry.Key.Family, StringComparer.Ordinal)
+            .ThenBy(entry => entry.Key.Cause))
         {
             string reader = DonorReaders.GetValueOrDefault(family, string.Empty);
-            unreadable.Add(new CharacterMediaUnreadableFamily(
-                family,
-                $"{family} container",
-                files,
-                reader.Length == 0
-                    ? $"nothing in this repository reads the {family} format, and no donor reader is recorded for it, so its files carry no canvas here"
-                    : $"nothing in this repository reads the {family} format: the donor reads it with {reader}, and without it the file's canvases have no pixels here rather than an approximation",
-                reader));
-        }
-
-        if (rciGrid.Count != 0)
-        {
-            unreadable.Add(new CharacterMediaUnreadableFamily(
-                "FACE",
-                "fixed-cell RCI grid",
-                rciGrid,
-                RciGridReason,
-                string.Empty));
+            unreadable.Add(cause switch
+            {
+                UnpublishableCause.NoCellSlicer => new CharacterMediaUnreadableFamily(
+                    family,
+                    "fixed-cell RCI grid",
+                    files,
+                    RciGridReason,
+                    string.Empty),
+                UnpublishableCause.NoPixelDecoder => new CharacterMediaUnreadableFamily(
+                    family,
+                    Kind(family, files, inventory),
+                    files,
+                    $"these supplied file(s) read as a {Kind(family, files, inventory)} and none of their canvases could be decoded into pixels here, so the gap is a missing pixel decoder rather than a missing reader; the donor's own reader is where that behaviour lives",
+                    reader),
+                _ => reader.Length == 0
+                    ? new CharacterMediaUnreadableFamily(
+                        family,
+                        Kind(family, files, inventory),
+                        files,
+                        $"nothing in this repository reads the {family} format, and no donor reader is recorded for it, so its files carry no canvas here",
+                        string.Empty)
+                    : new CharacterMediaUnreadableFamily(
+                        family,
+                        Kind(family, files, inventory),
+                        files,
+                        $"nothing in this repository reads the {family} format: the donor reads it with {reader}, and without it the file's canvases have no pixels here rather than an approximation",
+                        reader),
+            });
         }
 
         return unreadable;
+    }
+
+    /// <summary>What the files of one entry are, named by the kind the reader established.</summary>
+    private static string Kind(string family, IReadOnlyList<string> files, CharacterMediaInventory inventory)
+    {
+        Arena2CanvasKind? kind = inventory.Files
+            .Where(file => files.Contains(System.IO.Path.GetFileName(file.Path), StringComparer.OrdinalIgnoreCase))
+            .Select(file => (Arena2CanvasKind?)file.Decode)
+            .FirstOrDefault();
+        return kind switch
+        {
+            Arena2CanvasKind.RciGrid => "fixed-cell RCI grid",
+            Arena2CanvasKind.BssFrames => "BSS sprite container",
+            Arena2CanvasKind.Unread => $"{family} file no reader here opens",
+            null => $"{family} container",
+            _ => $"{family} container read as {kind}",
+        };
     }
 
     /// <summary>
@@ -202,8 +312,18 @@ public static class CharacterMediaPublisher
     /// </remarks>
     /// <param name="pass">The pass, which is where the artifacts and the absent families come from.</param>
     /// <param name="set">The reference set with its bindings established, which is what the index states.</param>
-    public static byte[] WriteIndex(CharacterMediaPassResult pass, CharacterMediaReferenceSet set)
+    /// <param name="contentGroup">
+    /// The content group the index is published under, or null for the group-relative paths the publication
+    /// itself states. A consumer resolves an artifact by its content-relative name, and the classic media
+    /// index states that name, so the group is applied here rather than by each caller.
+    /// </param>
+    public static byte[] WriteIndex(CharacterMediaPassResult pass, CharacterMediaReferenceSet set, string? contentGroup = null)
     {
+        if (contentGroup is not null)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(contentGroup);
+        }
+
         ArgumentNullException.ThrowIfNull(pass);
         ArgumentNullException.ThrowIfNull(set);
         Dictionary<string, CharacterCanvasReference> references = new(StringComparer.Ordinal);
@@ -230,32 +350,54 @@ public static class CharacterMediaPublisher
                 reference.Family,
                 System.IO.Path.GetFileName(reference.Path),
                 reference.CanvasIndex,
-                reference.Palette,
-                PaletteSource(reference),
+                // The palette the pixels were painted in: a container that carries its own is painted in
+                // that one, and stating the reference's instead would send a consumer repainting the
+                // canvas to the wrong colours while the bytes looked right.
+                artifact.OwnPalette ? PaletteIdentity(artifact.Palette) : reference.Palette,
+                artifact.PaletteSource,
                 reference.Binding,
                 reference.Consumer));
         }
 
+        // The document is built rather than serialized from a record so the entry keys are the classic
+        // index's own: it publishes the same facts under 'path', 'byteLength' and 'sha256', and a reader
+        // that resolves one group should not have to special-case the other's key names.
         JsonSerializerOptions options = new(PublishedJson.Section);
-        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(
-            new CharacterMediaIndexDocument(
-                IndexSchemaVersion,
-                IndexGenerator,
-                [.. pass.UnreadableFamilies.Select(family => new CharacterMediaUnreadableFamily(
+        JsonArray artifacts = [];
+        foreach (CharacterMediaIndexEntry entry in entries)
+        {
+            artifacts.Add(new JsonObject
+            {
+                ["mediaId"] = entry.MediaId,
+                ["path"] = contentGroup is null ? entry.Path : $"{contentGroup}/{entry.Path}",
+                ["byteLength"] = entry.ByteLength,
+                ["sha256"] = entry.Sha256,
+                ["width"] = entry.Width,
+                ["height"] = entry.Height,
+                ["family"] = entry.Family,
+                ["sourceFile"] = entry.SourceFile,
+                ["canvasIndex"] = entry.CanvasIndex,
+                ["palette"] = entry.Palette,
+                ["paletteSource"] = entry.PaletteSource,
+                ["binding"] = entry.Binding == MediaBinding.Admitted ? "admitted" : "requiredPending",
+                ["consumer"] = entry.Consumer,
+            });
+        }
+
+        JsonObject document = new()
+        {
+            ["schemaVersion"] = IndexSchemaVersion,
+            ["generator"] = IndexGenerator,
+            ["unreadableFamilies"] = JsonSerializer.SerializeToNode(
+                pass.UnreadableFamilies.Select(family => new CharacterMediaUnreadableFamily(
                     family.Family,
                     family.Kind,
                     [.. family.Files.Order(StringComparer.Ordinal)],
                     family.Reason,
-                    family.DonorAnchor))],
-                entries),
-            options);
-        return [.. bytes, (byte)'\n'];
+                    family.DonorAnchor)).ToArray(),
+                options),
+            ["artifacts"] = artifacts,
+        };
+        return [.. System.Text.Encoding.UTF8.GetBytes(document.ToJsonString(options)), (byte)'\n'];
     }
-
-    /// <summary>The published index document: its shape, its producer, what it could not publish, and its canvases.</summary>
-    private sealed record CharacterMediaIndexDocument(
-        int SchemaVersion,
-        string Generator,
-        IReadOnlyList<CharacterMediaUnreadableFamily> UnreadableFamilies,
-        IReadOnlyList<CharacterMediaIndexEntry> Artifacts);
 }

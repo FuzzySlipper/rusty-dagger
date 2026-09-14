@@ -583,6 +583,11 @@ internal static class Program
             palettes[name] = PaletteDecoder.Decode(File.ReadAllBytes(file), $"arena2/{name}");
         }
 
+        // The documented inventory is what the corpus is supposed to hold for this family, so it is checked
+        // against the corpus in both directions: a documented file the corpus lacks is a source gap, and a
+        // corpus file the inventory does not document is one this publication would emit without a record.
+        string[] undocumented = ReconcileDocumentedInventory(values["--inventory"], sources.Select(entry => entry.Path));
+
         IReadOnlyList<DaggerfallRaceKey> races = ReadPackRaces(packFile);
         IReadOnlyDictionary<string, string> careers = ReadPackCareers(packFile);
         string source = Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2));
@@ -600,29 +605,37 @@ internal static class Program
             sources.ToDictionary(entry => entry.Path, entry => entry.Bytes, StringComparer.Ordinal),
             palettes,
             unbound);
-        IReadOnlySet<string> bound = CharacterMediaReferences.FilesBoundByCharacterSheet(unbound, ReadPlayerDonorRaceId(packFile));
+        IReadOnlySet<string> bound = CharacterMediaReferences.FilesBoundByCharacterSheet(unbound);
         CharacterMediaReferenceSet referenced = CharacterMediaReferences.WithBoundFiles(derived, bound, CharacterMediaReferences.CharacterSheetConsumer);
 
-        // A reference a consumer binds has to resolve to a published canvas: binding a file whose artifact
-        // the pass refused would publish a reference to nothing, which is the failure the binding exists to
-        // make impossible rather than to discover in a session.
-        string[] unboundArtifacts = [.. referenced.Canvases
+        // A reference a consumer binds has to resolve to a published canvas: binding a source whose artifact
+        // the pass could not emit would publish a reference to nothing, which is the failure the binding
+        // exists to make impossible rather than to discover in a session. A source whose format nothing here
+        // reads is the same failure, so both halves are checked rather than only the enumerated canvases.
+        string[] unboundSources = [.. referenced.Canvases
             .Where(canvas => canvas.Binding == MediaBinding.Admitted && !pass.PublishedMediaIds.Contains(canvas.MediaId))
-            .Select(canvas => canvas.MediaId)
-            .Distinct(StringComparer.Ordinal)
-            .Order(StringComparer.Ordinal)];
-        if (unboundArtifacts.Length != 0)
+            .Select(canvas => System.IO.Path.GetFileName(canvas.Path))
+            .Concat(referenced.Unavailable
+                .Where(file => file.Binding == MediaBinding.Admitted)
+                .Select(file => System.IO.Path.GetFileName(file.Path)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)];
+        if (unboundSources.Length != 0)
         {
             throw new InvalidOperationException(
-                $"{CharacterMediaReferences.CharacterSheetConsumer} binds {unboundArtifacts.Length} canvas(es) this pass did not publish: {string.Join(", ", unboundArtifacts)}.");
+                $"{CharacterMediaReferences.CharacterSheetConsumer} binds {unboundSources.Length} supplied file(s) this pass published no canvas from: {string.Join(", ", unboundSources)}.");
         }
 
         CharacterMediaInventory characters = CharacterMediaInventory.Enumerate(sources, bound, CharacterMediaReferences.CharacterSheetConsumer, source);
-        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, suppliedPalettes, races, careers);
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, suppliedPalettes, races, careers, pass.UnpublishableFiles);
         presentation.Validate(pass.PublishedMediaIds);
 
-        int pending = presentation.Layers.Count(layer => layer.Binding == MediaBinding.RequiredPending) + presentation.Faces.Count(face => face.Binding == MediaBinding.RequiredPending);
-        int admitted = presentation.Layers.Count + presentation.Faces.Count - pending;
+        // Every reference, not the layers and faces alone: a career portrait is bound too, and reporting
+        // only part of the set understates what the pack claims a consumer draws.
+        int pending = presentation.Layers.Count(layer => layer.Binding == MediaBinding.RequiredPending)
+            + presentation.Faces.Count(face => face.Binding == MediaBinding.RequiredPending)
+            + presentation.Careers.Count(portrait => portrait.Binding == MediaBinding.RequiredPending);
+        int admitted = presentation.Layers.Count + presentation.Faces.Count + presentation.Careers.Count - pending;
         Console.WriteLine($"character presentation: {characters.Files.Count} supplied files, {pass.Artifacts.Count} published canvases, {pass.Refusals.Count} refused, {presentation.Layers.Count} layers over {races.Count} races, {presentation.Faces.Count} faction faces, {presentation.Careers.Count} career portraits, {presentation.CareersWithoutPortrait.Count} careers without one");
         Console.WriteLine($"  binding: {admitted} reference(s) bound by {CharacterMediaReferences.CharacterSheetConsumer}, {pending} required-pending; {pass.UnreadableFamilies.Count} unreadable family entry(ies)");
         foreach (string refusal in pass.Refusals.Take(2))
@@ -630,9 +643,24 @@ internal static class Program
             Console.WriteLine($"  refusal: {refusal}");
         }
 
+        Console.WriteLine($"  inventory: {characters.Files.Count - undocumented.Length} documented supplied file(s) reconciled with the corpus");
+        foreach (string file in undocumented)
+        {
+            Console.WriteLine($"  warning: '{file}' is in the corpus and not in the documented inventory");
+        }
+
         foreach (string race in presentation.Layers.Select(layer => layer.Race).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
             Console.WriteLine($"  {race}: {presentation.Layers.Count(layer => layer.Race == race)} layers");
+        }
+
+        // The races the catalogs publish and the ones the supplied media covers are two facts: a race in the
+        // catalog with no layer section is a stated gap, and a layer section no catalog race claims is art
+        // nothing resolves - either way the reader sees it here rather than inferring it from a layer count.
+        string[] unresolved = [.. races.Select(race => race.Id).Where(id => !presentation.Layers.Any(layer => layer.Race == id))];
+        if (unresolved.Length != 0)
+        {
+            Console.WriteLine($"  warning: {unresolved.Length} catalog race(s) publish no layers here: {string.Join(", ", unresolved)}");
         }
 
         foreach (DaggerfallRaceWithoutMedia gap in presentation.RacesWithoutMedia.Take(4))
@@ -646,8 +674,21 @@ internal static class Program
             return 0;
         }
 
-        // The artifacts and their index are written together, so an index that names a canvas the tree
-        // does not carry cannot survive a rebuild: the index is generated from the artifacts themselves.
+        byte[] indexBytes = CharacterMediaPublisher.WriteIndex(pass, referenced, values["--group"]);
+        string characterRoot = Path.Combine(outRoot, "media", "character");
+        string indexFile = Path.Combine(outRoot, CharacterMediaPublisher.IndexRelativePath.Replace('/', Path.DirectorySeparatorChar));
+
+        // A rebuild writes what this run published; it does not delete what an earlier run published and this
+        // one did not, and an artifact whose identity changed would otherwise sit in the tree unindexed while
+        // the index looked complete. This refuses rather than deleting, because the tree is the product's
+        // content and a file nothing here wrote is not this command's to remove.
+        string[] stale = [.. StaleArtifacts(characterRoot, indexBytes, indexFile)];
+        if (stale.Length != 0)
+        {
+            throw new InvalidOperationException(
+                $"{stale.Length} file(s) under {characterRoot} are not artifacts this run publishes, so the delivered tree would carry content no index names: {string.Join(", ", stale)}. Remove them, or republish from the corpus that produced them.");
+        }
+
         foreach (CharacterMediaArtifact artifact in pass.Artifacts)
         {
             string path = Path.Combine(outRoot, artifact.RelativePath.Replace('/', Path.DirectorySeparatorChar));
@@ -655,9 +696,8 @@ internal static class Program
             File.WriteAllBytes(path, artifact.Bytes);
         }
 
-        string indexFile = Path.Combine(outRoot, CharacterMediaPublisher.IndexRelativePath.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(indexFile)!);
-        File.WriteAllBytes(indexFile, GroupQualifiedIndex(pass, referenced, values["--group"]));
+        File.WriteAllBytes(indexFile, indexBytes);
         Console.WriteLine($"content: {pass.Artifacts.Count} character artifacts and their index written under {outRoot}");
 
         JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
@@ -668,52 +708,59 @@ internal static class Program
     }
 
     /// <summary>
-    /// The generated character index with each artifact's path prefixed by the content group, which is the
-    /// naming the published inventory uses: a consumer resolves a media identity to a name it can read from
-    /// admitted content, so the index states the content-relative path rather than the group-relative one.
+    /// Checks the documented character-media inventory against the supplied corpus, in both directions, and
+    /// returns the supplied files no documented row carries.
     /// </summary>
     /// <remarks>
-    /// The publication states group-relative paths because it does not name the group; this is the one place
-    /// that knows it, which is why the prefix is added here rather than by each consumer.
+    /// The inventory is the independent record of what this family is supposed to hold, so it is what makes
+    /// the corpus checkable rather than self-describing: a documented file the corpus lacks fails, and a
+    /// supplied file with no row is reported. The documented paths are cited root-relative
+    /// (<c>local/arena2/BODY00I0.IMG</c>) while the publication sees bare names, so membership is by file
+    /// name, which is the same rule the inventory's own family enumeration uses.
     /// </remarks>
-    private static byte[] GroupQualifiedIndex(CharacterMediaPassResult pass, CharacterMediaReferenceSet set, string group)
+    private static string[] ReconcileDocumentedInventory(string inventoryFile, IEnumerable<string> supplied)
     {
-        JsonObject index = JsonNode.Parse(CharacterMediaPublisher.WriteIndex(pass, set))!.AsObject();
-        foreach (JsonNode? artifact in index["artifacts"]!.AsArray())
+        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(inventoryFile));
+        HashSet<string> documented = [.. rows
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-021"))
+            .Select(row => Path.GetFileName(row.PathOrPattern))
+            .Where(name => name is { Length: > 0 })
+            .Select(name => name!)];
+        if (documented.Count == 0)
         {
-            JsonObject entry = artifact!.AsObject();
-            entry["relativePath"] = $"{group}/{entry["relativePath"]!.GetValue<string>()}";
+            throw new InvalidOperationException($"'{inventoryFile}' documents no CNT-021 character media files, so it cannot be the inventory this publication is reconciled against.");
         }
 
-        return System.Text.Encoding.UTF8.GetBytes(index.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        string[] names = [.. supplied
+            .Select(Path.GetFileName)
+            .Where(name => name is { Length: > 0 })
+            .Select(name => name!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        string[] missing = [.. documented.Where(name => !names.Contains(name, StringComparer.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)];
+        if (missing.Length != 0)
+        {
+            throw new InvalidOperationException(
+                $"{missing.Length} documented character media file(s) are not in the supplied corpus, so the publication would account for a family the source does not carry: {string.Join(", ", missing)}.");
+        }
+
+        return [.. names.Where(name => !documented.Contains(name, StringComparer.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)];
     }
 
     /// <summary>
-    /// The donor race value of the player's actor, which is the race the character sheet resolves and
-    /// therefore the paper-doll files a published consumer binds.
+    /// The files already under the character group that the index this run is about to write does not name,
+    /// with the index itself excluded.
     /// </summary>
-    /// <remarks>
-    /// The race is the pack's own authored fact rather than a rule this tool invents, and the file set it
-    /// maps to comes from <see cref="CharacterMediaReferences.FilesBoundByCharacterSheet"/>: a race with
-    /// no paper-doll media binds nothing, which is the honest answer rather than binding a race's art onto
-    /// an actor that does not declare it.
-    /// </remarks>
-    private static int ReadPlayerDonorRaceId(string packFile)
+    private static IEnumerable<string> StaleArtifacts(string characterRoot, byte[] indexBytes, string indexFile)
     {
-        JsonNode root = JsonNode.Parse(File.ReadAllText(packFile))!;
-        JsonObject player = root["actors"]!.AsArray()
-            .Select(actor => actor!.AsObject())
-            .Single(actor => actor["id"]!.GetValue<string>() == "player");
-        string? race = player["race"]?.GetValue<string>();
-        if (string.IsNullOrWhiteSpace(race))
+        if (!Directory.Exists(characterRoot)) yield break;
+        JsonObject index = JsonNode.Parse(indexBytes)!.AsObject();
+        HashSet<string> published = [.. index["artifacts"]!.AsArray()
+            .Select(artifact => Path.GetFileName(artifact!["path"]!.GetValue<string>()))];
+        published.Add(Path.GetFileName(indexFile));
+        foreach (string path in Directory.EnumerateFiles(characterRoot).OrderBy(path => path, StringComparer.Ordinal))
         {
-            return 0;
+            if (!published.Contains(Path.GetFileName(path))) yield return Path.GetFileName(path);
         }
-
-        JsonObject? catalogRace = root["catalogs"]!["races"]!.AsArray()
-            .Select(value => value!.AsObject())
-            .FirstOrDefault(value => value["id"]!.GetValue<string>() == race);
-        return catalogRace?["donorRaceId"]?.GetValue<int>() ?? 0;
     }
 
     /// <summary>
