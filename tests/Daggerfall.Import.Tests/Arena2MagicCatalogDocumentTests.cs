@@ -42,6 +42,7 @@ public sealed class Arena2MagicCatalogDocumentTests
         JsonArray enchantments = item[0]!["enchantments"]!.AsArray();
         Assert.Equal("spell.001", enchantments[0]!["spell"]!.GetValue<string>());
         Assert.True(enchantments[0]!["spellIdentityShared"]!.GetValue<bool>());
+        Assert.Equal("cast-when-used", enchantments[0]!["paramMeaning"]!.GetValue<string>());
         Assert.Null(enchantments[1]!["spell"]);
         JsonObject unresolved = Assert.Single(document["unresolvedLinks"]!.AsArray())!.AsObject();
         Assert.Equal(99, unresolved["spellIdentity"]!.GetValue<int>());
@@ -113,8 +114,9 @@ public sealed class Arena2MagicCatalogDocumentTests
         System.Text.Encoding.Latin1.GetBytes("The Masque of Clavicus").CopyTo(bytes, offset);
         bytes[offset + Arena2MagicReader.MagicItemNameLength] = 2;
         int enchantments = offset + Arena2MagicReader.MagicItemNameLength + 3;
-        // The first slot names spell identity 7, which both published spells carry.
-        bytes[enchantments] = 32;
+        // The first slot is a cast-when-used enchantment naming spell identity 7, which both published
+        // spells carry; only a spell-carrying type is read as a link at all.
+        bytes[enchantments] = 0;
         bytes[enchantments + 1] = 7;
         bytes[enchantments + 2] = unchecked((byte)-1);
         bytes[enchantments + 3] = unchecked((byte)-1);
@@ -126,8 +128,9 @@ public sealed class Arena2MagicCatalogDocumentTests
 
         bytes[enchantments + 2] = unchecked((byte)-1);
         bytes[enchantments + 3] = unchecked((byte)-1);
-        // The second slot names spell identity 99, which no published spell carries.
-        bytes[enchantments + 4] = 26;
+        // The second slot is a cast-when-strikes enchantment naming spell identity 99, which no published
+        // spell carries, so it is the one link that stays unresolved.
+        bytes[enchantments + 4] = 2;
         bytes[enchantments + 5] = unchecked((byte)99);
         return bytes;
     }

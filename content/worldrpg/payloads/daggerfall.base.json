@@ -257437,6 +257437,7 @@
             "key": "magic-item.0000.enchantment.1",
             "type": 26,
             "param": 0,
+            "paramMeaning": "artifact-effect",
             "spell": null,
             "spellIdentityShared": false
           }
@@ -257457,7 +257458,8 @@
             "key": "magic-item.0001.enchantment.1",
             "type": 26,
             "param": 1,
-            "spell": "spell.001",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257477,7 +257479,8 @@
             "key": "magic-item.0002.enchantment.1",
             "type": 26,
             "param": 2,
-            "spell": "spell.002",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257497,7 +257500,8 @@
             "key": "magic-item.0003.enchantment.1",
             "type": 26,
             "param": 3,
-            "spell": "spell.003",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257517,7 +257521,8 @@
             "key": "magic-item.0004.enchantment.1",
             "type": 26,
             "param": 4,
-            "spell": "spell.004",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257537,7 +257542,8 @@
             "key": "magic-item.0005.enchantment.1",
             "type": 26,
             "param": 5,
-            "spell": "spell.005",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257557,7 +257563,8 @@
             "key": "magic-item.0006.enchantment.1",
             "type": 26,
             "param": 6,
-            "spell": "spell.006",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257577,7 +257584,8 @@
             "key": "magic-item.0007.enchantment.1",
             "type": 26,
             "param": 7,
-            "spell": "spell.007",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257597,7 +257605,8 @@
             "key": "magic-item.0008.enchantment.1",
             "type": 26,
             "param": 8,
-            "spell": "spell.008",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257617,7 +257626,8 @@
             "key": "magic-item.0009.enchantment.1",
             "type": 26,
             "param": 9,
-            "spell": "spell.009",
+            "paramMeaning": "artifact-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257637,6 +257647,7 @@
             "key": "magic-item.0010.enchantment.1",
             "type": 0,
             "param": 23,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.022",
             "spellIdentityShared": false
           }
@@ -257657,6 +257668,7 @@
             "key": "magic-item.0011.enchantment.1",
             "type": 1,
             "param": 83,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.076",
             "spellIdentityShared": false
           }
@@ -257677,6 +257689,7 @@
             "key": "magic-item.0012.enchantment.1",
             "type": 0,
             "param": 33,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.032",
             "spellIdentityShared": false
           }
@@ -257697,6 +257710,7 @@
             "key": "magic-item.0013.enchantment.1",
             "type": 0,
             "param": 36,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.035",
             "spellIdentityShared": false
           }
@@ -257717,6 +257731,7 @@
             "key": "magic-item.0014.enchantment.1",
             "type": 0,
             "param": 5,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.005",
             "spellIdentityShared": false
           }
@@ -257737,6 +257752,7 @@
             "key": "magic-item.0015.enchantment.1",
             "type": 0,
             "param": 19,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.019",
             "spellIdentityShared": false
           }
@@ -257757,6 +257773,7 @@
             "key": "magic-item.0016.enchantment.1",
             "type": 0,
             "param": 18,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.018",
             "spellIdentityShared": false
           }
@@ -257777,6 +257794,7 @@
             "key": "magic-item.0017.enchantment.1",
             "type": 0,
             "param": 15,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.015",
             "spellIdentityShared": false
           }
@@ -257797,7 +257815,8 @@
             "key": "magic-item.0018.enchantment.1",
             "type": 6,
             "param": 1,
-            "spell": "spell.001",
+            "paramMeaning": "vampiric-effect",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -257817,6 +257836,7 @@
             "key": "magic-item.0019.enchantment.1",
             "type": 0,
             "param": 7,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.007",
             "spellIdentityShared": false
           }
@@ -257837,6 +257857,7 @@
             "key": "magic-item.0020.enchantment.1",
             "type": 0,
             "param": 4,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.004",
             "spellIdentityShared": false
           }
@@ -257857,6 +257878,7 @@
             "key": "magic-item.0021.enchantment.1",
             "type": 1,
             "param": 41,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.040",
             "spellIdentityShared": false
           }
@@ -257877,6 +257899,7 @@
             "key": "magic-item.0022.enchantment.1",
             "type": 9,
             "param": -1,
+            "paramMeaning": "spell-absorption",
             "spell": null,
             "spellIdentityShared": false
           }
@@ -257897,6 +257920,7 @@
             "key": "magic-item.0023.enchantment.1",
             "type": 0,
             "param": 40,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.039",
             "spellIdentityShared": false
           }
@@ -257917,6 +257941,7 @@
             "key": "magic-item.0024.enchantment.1",
             "type": 0,
             "param": 37,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.036",
             "spellIdentityShared": false
           }
@@ -257937,6 +257962,7 @@
             "key": "magic-item.0025.enchantment.1",
             "type": 0,
             "param": 17,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.017",
             "spellIdentityShared": false
           }
@@ -257957,6 +257983,7 @@
             "key": "magic-item.0026.enchantment.1",
             "type": 0,
             "param": 8,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.008",
             "spellIdentityShared": false
           }
@@ -257977,6 +258004,7 @@
             "key": "magic-item.0027.enchantment.1",
             "type": 2,
             "param": 50,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.047",
             "spellIdentityShared": false
           }
@@ -257997,6 +258025,7 @@
             "key": "magic-item.0028.enchantment.1",
             "type": 0,
             "param": 28,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.027",
             "spellIdentityShared": false
           }
@@ -258017,7 +258046,8 @@
             "key": "magic-item.0029.enchantment.1",
             "type": 10,
             "param": 7,
-            "spell": "spell.007",
+            "paramMeaning": "skill",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -258037,6 +258067,7 @@
             "key": "magic-item.0030.enchantment.1",
             "type": 0,
             "param": 14,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.014",
             "spellIdentityShared": false
           }
@@ -258057,6 +258088,7 @@
             "key": "magic-item.0031.enchantment.1",
             "type": 0,
             "param": 20,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.020",
             "spellIdentityShared": false
           }
@@ -258077,6 +258109,7 @@
             "key": "magic-item.0032.enchantment.1",
             "type": 0,
             "param": 31,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.030",
             "spellIdentityShared": false
           }
@@ -258097,6 +258130,7 @@
             "key": "magic-item.0033.enchantment.1",
             "type": 0,
             "param": 25,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.024",
             "spellIdentityShared": false
           }
@@ -258117,6 +258151,7 @@
             "key": "magic-item.0034.enchantment.1",
             "type": 0,
             "param": 64,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.061",
             "spellIdentityShared": false
           }
@@ -258137,6 +258172,7 @@
             "key": "magic-item.0035.enchantment.1",
             "type": 1,
             "param": 82,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.075",
             "spellIdentityShared": false
           }
@@ -258157,6 +258193,7 @@
             "key": "magic-item.0036.enchantment.1",
             "type": 0,
             "param": 10,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.010",
             "spellIdentityShared": false
           }
@@ -258177,6 +258214,7 @@
             "key": "magic-item.0037.enchantment.1",
             "type": 1,
             "param": 84,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.077",
             "spellIdentityShared": false
           }
@@ -258197,6 +258235,7 @@
             "key": "magic-item.0038.enchantment.1",
             "type": 1,
             "param": 85,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.078",
             "spellIdentityShared": false
           }
@@ -258217,6 +258256,7 @@
             "key": "magic-item.0039.enchantment.1",
             "type": 1,
             "param": 86,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.079",
             "spellIdentityShared": false
           }
@@ -258237,6 +258277,7 @@
             "key": "magic-item.0040.enchantment.1",
             "type": 1,
             "param": 87,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.080",
             "spellIdentityShared": false
           }
@@ -258257,6 +258298,7 @@
             "key": "magic-item.0041.enchantment.1",
             "type": 1,
             "param": 88,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.081",
             "spellIdentityShared": false
           }
@@ -258277,6 +258319,7 @@
             "key": "magic-item.0042.enchantment.1",
             "type": 1,
             "param": 89,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.082",
             "spellIdentityShared": false
           }
@@ -258297,6 +258340,7 @@
             "key": "magic-item.0043.enchantment.1",
             "type": 2,
             "param": 55,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.052",
             "spellIdentityShared": false
           }
@@ -258317,6 +258361,7 @@
             "key": "magic-item.0044.enchantment.1",
             "type": 0,
             "param": 29,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.028",
             "spellIdentityShared": false
           }
@@ -258337,6 +258382,7 @@
             "key": "magic-item.0045.enchantment.1",
             "type": 0,
             "param": 35,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.034",
             "spellIdentityShared": false
           }
@@ -258357,6 +258403,7 @@
             "key": "magic-item.0046.enchantment.1",
             "type": 2,
             "param": 50,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.047",
             "spellIdentityShared": false
           },
@@ -258364,6 +258411,7 @@
             "key": "magic-item.0046.enchantment.2",
             "type": 2,
             "param": 52,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.049",
             "spellIdentityShared": false
           }
@@ -258384,6 +258432,7 @@
             "key": "magic-item.0047.enchantment.1",
             "type": 1,
             "param": 86,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.079",
             "spellIdentityShared": false
           },
@@ -258391,6 +258440,7 @@
             "key": "magic-item.0047.enchantment.2",
             "type": 0,
             "param": 64,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.061",
             "spellIdentityShared": false
           },
@@ -258398,6 +258448,7 @@
             "key": "magic-item.0047.enchantment.3",
             "type": 0,
             "param": 30,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.029",
             "spellIdentityShared": false
           }
@@ -258418,6 +258469,7 @@
             "key": "magic-item.0048.enchantment.1",
             "type": 2,
             "param": 31,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.030",
             "spellIdentityShared": false
           },
@@ -258425,6 +258477,7 @@
             "key": "magic-item.0048.enchantment.2",
             "type": 2,
             "param": 53,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.050",
             "spellIdentityShared": false
           },
@@ -258432,6 +258485,7 @@
             "key": "magic-item.0048.enchantment.3",
             "type": 2,
             "param": 54,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.051",
             "spellIdentityShared": false
           }
@@ -258452,6 +258506,7 @@
             "key": "magic-item.0049.enchantment.1",
             "type": 1,
             "param": 83,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.076",
             "spellIdentityShared": false
           },
@@ -258459,6 +258514,7 @@
             "key": "magic-item.0049.enchantment.2",
             "type": 0,
             "param": 24,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.023",
             "spellIdentityShared": false
           },
@@ -258466,6 +258522,7 @@
             "key": "magic-item.0049.enchantment.3",
             "type": 9,
             "param": -1,
+            "paramMeaning": "spell-absorption",
             "spell": null,
             "spellIdentityShared": false
           }
@@ -258486,6 +258543,7 @@
             "key": "magic-item.0050.enchantment.1",
             "type": 0,
             "param": 64,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.061",
             "spellIdentityShared": false
           },
@@ -258493,6 +258551,7 @@
             "key": "magic-item.0050.enchantment.2",
             "type": 0,
             "param": 30,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.029",
             "spellIdentityShared": false
           },
@@ -258500,6 +258559,7 @@
             "key": "magic-item.0050.enchantment.3",
             "type": 0,
             "param": 12,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.012",
             "spellIdentityShared": false
           },
@@ -258507,7 +258567,8 @@
             "key": "magic-item.0050.enchantment.4",
             "type": 10,
             "param": 29,
-            "spell": "spell.028",
+            "paramMeaning": "skill",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -258527,6 +258588,7 @@
             "key": "magic-item.0051.enchantment.1",
             "type": 5,
             "param": 0,
+            "paramMeaning": "health-regeneration",
             "spell": null,
             "spellIdentityShared": false
           },
@@ -258534,6 +258596,7 @@
             "key": "magic-item.0051.enchantment.2",
             "type": 0,
             "param": 15,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.015",
             "spellIdentityShared": false
           },
@@ -258541,6 +258604,7 @@
             "key": "magic-item.0051.enchantment.3",
             "type": 0,
             "param": 22,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.021",
             "spellIdentityShared": false
           }
@@ -258561,6 +258625,7 @@
             "key": "magic-item.0052.enchantment.1",
             "type": 1,
             "param": 47,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.045",
             "spellIdentityShared": false
           },
@@ -258568,6 +258633,7 @@
             "key": "magic-item.0052.enchantment.2",
             "type": 5,
             "param": 0,
+            "paramMeaning": "health-regeneration",
             "spell": null,
             "spellIdentityShared": false
           }
@@ -258588,6 +258654,7 @@
             "key": "magic-item.0053.enchantment.1",
             "type": 0,
             "param": 6,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.006",
             "spellIdentityShared": false
           },
@@ -258595,6 +258662,7 @@
             "key": "magic-item.0053.enchantment.2",
             "type": 1,
             "param": 86,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.079",
             "spellIdentityShared": false
           }
@@ -258615,6 +258683,7 @@
             "key": "magic-item.0054.enchantment.1",
             "type": 12,
             "param": -1,
+            "paramMeaning": "armor-strength",
             "spell": null,
             "spellIdentityShared": false
           },
@@ -258622,6 +258691,7 @@
             "key": "magic-item.0054.enchantment.2",
             "type": 0,
             "param": 22,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.021",
             "spellIdentityShared": false
           },
@@ -258629,6 +258699,7 @@
             "key": "magic-item.0054.enchantment.3",
             "type": 0,
             "param": 12,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.012",
             "spellIdentityShared": false
           },
@@ -258636,6 +258707,7 @@
             "key": "magic-item.0054.enchantment.4",
             "type": 0,
             "param": 17,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.017",
             "spellIdentityShared": false
           }
@@ -258656,6 +258728,7 @@
             "key": "magic-item.0055.enchantment.1",
             "type": 0,
             "param": 12,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.012",
             "spellIdentityShared": false
           },
@@ -258663,6 +258736,7 @@
             "key": "magic-item.0055.enchantment.2",
             "type": 1,
             "param": 46,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.044",
             "spellIdentityShared": false
           },
@@ -258670,6 +258744,7 @@
             "key": "magic-item.0055.enchantment.3",
             "type": 0,
             "param": 17,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.017",
             "spellIdentityShared": false
           },
@@ -258677,6 +258752,7 @@
             "key": "magic-item.0055.enchantment.4",
             "type": 12,
             "param": -1,
+            "paramMeaning": "armor-strength",
             "spell": null,
             "spellIdentityShared": false
           }
@@ -258697,6 +258773,7 @@
             "key": "magic-item.0056.enchantment.1",
             "type": 1,
             "param": 46,
+            "paramMeaning": "cast-when-held",
             "spell": "spell.044",
             "spellIdentityShared": false
           },
@@ -258704,6 +258781,7 @@
             "key": "magic-item.0056.enchantment.2",
             "type": 0,
             "param": 10,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.010",
             "spellIdentityShared": false
           }
@@ -258724,6 +258802,7 @@
             "key": "magic-item.0057.enchantment.1",
             "type": 0,
             "param": 18,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.018",
             "spellIdentityShared": false
           },
@@ -258731,7 +258810,8 @@
             "key": "magic-item.0057.enchantment.2",
             "type": 10,
             "param": 20,
-            "spell": "spell.020",
+            "paramMeaning": "skill",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
@@ -258751,6 +258831,7 @@
             "key": "magic-item.0058.enchantment.1",
             "type": 2,
             "param": 52,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.049",
             "spellIdentityShared": false
           },
@@ -258758,6 +258839,7 @@
             "key": "magic-item.0058.enchantment.2",
             "type": 2,
             "param": 67,
+            "paramMeaning": "cast-when-strikes",
             "spell": "spell.063",
             "spellIdentityShared": false
           },
@@ -258765,6 +258847,7 @@
             "key": "magic-item.0058.enchantment.3",
             "type": 0,
             "param": 28,
+            "paramMeaning": "cast-when-used",
             "spell": "spell.027",
             "spellIdentityShared": false
           },
@@ -258772,32 +258855,14 @@
             "key": "magic-item.0058.enchantment.4",
             "type": 10,
             "param": 29,
-            "spell": "spell.028",
+            "paramMeaning": "skill",
+            "spell": null,
             "spellIdentityShared": false
           }
         ]
       }
     ],
-    "unresolvedLinks": [
-      {
-        "enchantment": "magic-item.0000.enchantment.1",
-        "item": "magic-item.0000",
-        "spellIdentity": 0,
-        "reason": "no published spell carries this identity"
-      },
-      {
-        "enchantment": "magic-item.0051.enchantment.1",
-        "item": "magic-item.0051",
-        "spellIdentity": 0,
-        "reason": "no published spell carries this identity"
-      },
-      {
-        "enchantment": "magic-item.0052.enchantment.2",
-        "item": "magic-item.0052",
-        "spellIdentity": 0,
-        "reason": "no published spell carries this identity"
-      }
-    ],
+    "unresolvedLinks": [],
     "dispositions": []
   }
 }

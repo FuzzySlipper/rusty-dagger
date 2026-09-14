@@ -24,6 +24,47 @@ public static class Arena2MagicCatalogDocument
     /// <summary>The documented inventory record that owns the magical sources.</summary>
     public const string SourceRecordId = "CNT-012";
 
+    /// <summary>
+    /// The enchantment types whose parameter is a spell identity. The donor's own enumeration names what
+    /// every other type's parameter means instead - an enemy group, a skill, a social group, an artifact
+    /// effect - so a parameter is read as a spell link only where the source says it is one.
+    /// </summary>
+    private static readonly Dictionary<int, string> SpellCarryingEnchantments = new()
+    {
+        [0] = "cast-when-used",
+        [1] = "cast-when-held",
+        [2] = "cast-when-strikes",
+    };
+
+    /// <summary>What a non-spell enchantment's parameter names, from the donor's enumeration.</summary>
+    private static readonly Dictionary<int, string> ParameterMeanings = new()
+    {
+        [3] = "extra-spell-points",
+        [4] = "enemy-group",
+        [5] = "health-regeneration",
+        [6] = "vampiric-effect",
+        [7] = "weight-allowance",
+        [8] = "object-repair",
+        [9] = "spell-absorption",
+        [10] = "skill",
+        [11] = "feather-weight",
+        [12] = "armor-strength",
+        [13] = "talent",
+        [14] = "social-group",
+        [15] = "soul-bound",
+        [16] = "item-deterioration",
+        [17] = "user-damage",
+        [18] = "vision-problem",
+        [19] = "walking-problem",
+        [20] = "damage-against",
+        [21] = "health-leech",
+        [22] = "reactions-from",
+        [23] = "extra-weight",
+        [24] = "armor-weakness",
+        [25] = "reputation-with",
+        [26] = "artifact-effect",
+    };
+
     /// <summary>Builds the document's JSON from the two source files' bytes.</summary>
     public static Arena2MagicCatalogPublication Build(byte[] spellBytes, byte[] magicBytes, string spellLabel, string magicLabel)
     {
@@ -94,13 +135,17 @@ public static class Arena2MagicCatalogDocument
                 string enchantmentKey = $"{itemKey}.enchantment.{slot + 1}";
                 string? spellKey = null;
                 bool ambiguous = false;
-                if (enchantment.Param >= 0 && byIdentity.TryGetValue(enchantment.Param, out List<string>? candidates))
+                bool namesSpell = SpellCarryingEnchantments.ContainsKey(enchantment.Type);
+                if (namesSpell && byIdentity.TryGetValue(enchantment.Param, out List<string>? candidates))
                 {
                     spellKey = candidates[0];
                     ambiguous = candidates.Count > 1;
                 }
-                else if (enchantment.Param >= 0)
+                else if (namesSpell)
                 {
+                    // Only a type whose parameter is a spell identity can leave a link unresolved;
+                    // reading every parameter that way reported an enchantment's enemy group as a
+                    // missing spell.
                     unresolved.Add(new JsonObject
                     {
                         ["enchantment"] = enchantmentKey,
@@ -115,6 +160,9 @@ public static class Arena2MagicCatalogDocument
                     ["key"] = enchantmentKey,
                     ["type"] = enchantment.Type,
                     ["param"] = enchantment.Param,
+                    ["paramMeaning"] = namesSpell
+                        ? SpellCarryingEnchantments[enchantment.Type]
+                        : ParameterMeanings.TryGetValue(enchantment.Type, out string? meaning) ? meaning : "unknown",
                     ["spell"] = spellKey,
                     ["spellIdentityShared"] = ambiguous,
                 });
