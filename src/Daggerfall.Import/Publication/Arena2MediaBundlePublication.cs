@@ -113,12 +113,15 @@ public sealed record Arena2MediaBundlePublication(
     public static Arena2MediaBundlePublication Create(
         DungeonNormalizationResult dungeon,
         Arena2DungeonMediaPublication dungeonMedia,
-        Arena2ClassicMediaPublication classicMedia)
+        Arena2ClassicMediaPublication classicMedia,
+        GeometryPublication geometry)
     {
         ArgumentNullException.ThrowIfNull(dungeon);
         ArgumentNullException.ThrowIfNull(dungeonMedia);
         ArgumentNullException.ThrowIfNull(classicMedia);
+        ArgumentNullException.ThrowIfNull(geometry);
         dungeon.Validate();
+        geometry.Validate();
 
         ValidateDungeonMedia(dungeonMedia);
         ValidateClassicMedia(classicMedia);
@@ -136,7 +139,13 @@ public sealed record Arena2MediaBundlePublication(
 
         Dictionary<string, string> spatialPathsById = dungeon.SpatialPublication.Artifacts
             .ToDictionary(artifact => artifact.Id, artifact => artifact.RelativePath, StringComparer.Ordinal);
+        Dictionary<string, string> geometryPathsById = geometry.Artifacts
+            .ToDictionary(artifact => artifact.Id, artifact => artifact.RelativePath, StringComparer.Ordinal);
         List<ImportPublicationArtifact> artifacts = [
+            .. geometry.Artifacts.Select(artifact => new ImportPublicationArtifact(
+                artifact.RelativePath,
+                artifact.Bytes.Span,
+                artifact.DependsOnArtifactIds.Select(id => geometryPathsById[id]).ToArray())),
             .. dungeon.SpatialPublication.Artifacts.Select(artifact => new ImportPublicationArtifact(
                 artifact.RelativePath,
                 artifact.Bytes.Span,
@@ -155,6 +164,7 @@ public sealed record Arena2MediaBundlePublication(
 
         string[] normalizedDependencies = [
             .. dungeon.SpatialPublication.Artifacts.Select(artifact => artifact.RelativePath),
+            .. geometry.Artifacts.Select(artifact => artifact.RelativePath),
             DungeonMediaManifestRelativePath,
             ClassicMediaManifestRelativePath,
         ];
