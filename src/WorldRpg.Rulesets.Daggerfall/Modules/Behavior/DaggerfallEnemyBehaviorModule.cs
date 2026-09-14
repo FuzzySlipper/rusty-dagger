@@ -89,13 +89,24 @@ internal sealed class DaggerfallEnemyBehaviorModule
                     .OrderBy(value => value.Distance).ToArray();
                 PerceptionPair pair = pairs.FirstOrDefault();
                 bool visible = pairs.Length == 1 && pair.Kind == PerceptionPairKind.Visible;
+                // The Engine classifies the pair and owns its distance; the reach the ruleset admits is
+                // tuned wide enough to span the two conventions those poses use, because an actor
+                // stands on its probed floor contact while the player's pose is its character position
+                // about a body above that floor (measured live: an adjacent pair reads ~1.44).
                 desired = !visible ? EnemyBehaviorState.Idle
                     : pair.Distance <= _tuning.AttackReach ? EnemyBehaviorState.Attack
                     : EnemyBehaviorState.Chase;
                 if (desired == EnemyBehaviorState.Chase)
                 {
+                    // The Engine's navigation is a floor-cell projection: it converts the goal to a cell
+                    // and refuses a goal outside the walkable set instead of snapping it. The player's
+                    // pose is its character position, roughly a capsule above the floor the navigation
+                    // covers, so asking for the pose itself is refused with GoalNotWalkable and no actor
+                    // ever moves. The chase therefore asks for the player's ground position on the
+                    // chaser's own floor: same cell, walkable by construction, and still refused when the
+                    // player really is somewhere this actor cannot walk.
                     navigation = _navigation.Evaluate(actor, new ActorNavigationRequest(
-                        playerPosition,
+                        new WorldPoint(playerPosition.X, actor.Position.Y, playerPosition.Z),
                         checked(_tuning.ChaseSpeedUnitsPerSecond * deltaSeconds),
                         _tuning.NavigationMaximumVisited));
                 }

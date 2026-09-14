@@ -554,10 +554,10 @@ public sealed class NormalizedRuntimeSeamTests
         perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
         session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
 
-        Assert.Equal("No target in melee reach (42 compared: 41 out of range, 1 out of cone, 0 cast, 0 occluded)", session.Presentation.LastOutcome);
+        Assert.Equal("No target in melee reach (42 observer(s) against 42 target(s), 42 compared: 41 out of range, 1 out of cone, 0 cast, 0 occluded)", session.Presentation.LastOutcome);
         // The same line is what the DOM draws, so a human sees the counters too.
         Dictionary<string, object?> published = (Dictionary<string, object?>)engine.Published()!;
-        Assert.Contains("No target in melee reach (42 compared", (string)published["lastOutcome"]!, StringComparison.Ordinal);
+        Assert.Contains("No target in melee reach (42 observer(s) against 42 target(s)", (string)published["lastOutcome"]!, StringComparison.Ordinal);
     }
 
     [Fact]

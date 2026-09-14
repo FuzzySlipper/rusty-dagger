@@ -26,6 +26,9 @@ internal sealed class DaggerfallOutcomePresentation(
                     AttackRejection.InsufficientStamina => "Too exhausted to attack",
                     AttackRejection.InsufficientWeaponMaterial => "Weapon material cannot harm this target",
                     AttackRejection.TargetDefeated => "Target already defeated",
+                    // An actor that reached its swing with no authored policy is a missing capability,
+                    // not a silent miss, so the line says which actor and what is missing.
+                    AttackRejection.NoAttackPolicy => rejected.ActorId is { } attacker ? $"No authored attack for {Name(attacker)}" : "No authored attack policy",
                     _ => "Melee request rejected",
                 });
                 break;
@@ -56,8 +59,10 @@ internal sealed class DaggerfallOutcomePresentation(
     {
         if (meleeEvidence?.Invoke() is not { } evidence) return "No target in melee reach";
         PerceptionReadoutLeaseReceipt receipt = evidence.Receipt;
-        return $"No target in melee reach ({receipt.SelectionComparisons} compared: {receipt.DistanceRejects} out of range, {receipt.FacingRejects} out of cone, {receipt.VisibilityCasts} cast, {receipt.OcclusionRejects} occluded)";
+        return $"No target in melee reach ({receipt.SelectedObservers} observer(s) against {receipt.SelectedTargets} target(s), {receipt.SelectionComparisons} compared: {receipt.DistanceRejects} out of range, {receipt.FacingRejects} out of cone, {receipt.VisibilityCasts} cast, {receipt.OcclusionRejects} occluded)";
     }
+
+    private string Name(long entityId) => Actor(entityId, out DaggerfallActorDefinition definition) ? definition.Id.Value : $"actor {entityId}";
 
     private bool Actor(long entityId, out DaggerfallActorDefinition definition) => actors.TryGetValue(entityId, out definition!);
 }
