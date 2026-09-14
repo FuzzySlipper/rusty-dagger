@@ -40,19 +40,29 @@ public sealed class EmbeddedPaletteScreenTests
         Assert.Contains("64000", why, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void PublishesTheScreenInItsOwnPaletteColours()
+    /// <summary>
+    /// Every one of the six supplied screens is published in its own palette, not just the first one that
+    /// happened to have a consumer: a screen admitted later through a different path would show up here.
+    /// </summary>
+    [Theory]
+    [InlineData("DIE_00I0.IMG", "screen-death")]
+    [InlineData("CHGN00I0.IMG", "screen-character-generation")]
+    [InlineData("PICK02I0.IMG", "screen-pick-02")]
+    [InlineData("PICK03I0.IMG", "screen-pick-03")]
+    [InlineData("PRIS00I0.IMG", "screen-intro")]
+    [InlineData("TITL00I0.IMG", "screen-title")]
+    public void PublishesTheScreenInItsOwnPaletteColours(string fileName, string artifact)
     {
         string root = RepositoryRoot();
-        byte[] screen = ReadArena2(DeathScreen);
-        Assert.True(ImgDecoder.TryReadEmbeddedPalette(screen, DeathScreen, out Arena2Palette? palette, out string reason), reason);
+        byte[] screen = ReadArena2(fileName);
+        Assert.True(ImgDecoder.TryReadEmbeddedPalette(screen, fileName, out Arena2Palette? palette, out string reason), reason);
 
         // The published artifact must be the canvas painted in the file's own palette: a pixel's colour is
         // the palette entry its index names, which is four times the raw channel. Pairing the canvas with
         // another palette, or dropping the scaling, changes every colour and fails here.
         DeterministicPngImage published = DeterministicPngReader.ReadRgba8(
-            File.ReadAllBytes(Path.Combine(root, "content", "worldrpg", "media", "ui", "screen-death.png")), "screen.death");
-        IndexedImg canvas = ImgDecoder.DecodeHeaderless(screen.AsSpan(0, 320 * 200), DeathScreen);
+            File.ReadAllBytes(Path.Combine(root, "content", "worldrpg", "media", "ui", artifact + ".png")), artifact);
+        IndexedImg canvas = ImgDecoder.DecodeHeaderless(screen.AsSpan(0, 320 * 200), fileName);
         Assert.Equal((320, 200), (published.Width, published.Height));
         Assert.Equal((canvas.Width, canvas.Height), (published.Width, published.Height));
 
