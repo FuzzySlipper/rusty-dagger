@@ -43,7 +43,8 @@ public sealed class GeometryPublicationTests
         // Every record the archive declares is classified exactly once, whatever the pack referenced.
         Assert.Equal(10251, publication.Summary.Records);
         Assert.Equal(1, publication.Summary.Published);
-        Assert.Equal(0, publication.Summary.Unresolved);
+        Assert.Equal(0, publication.Summary.Unresolvable);
+        Assert.Equal(0, publication.Summary.Missing);
         Assert.Equal(14, publication.Summary.Duplicate);
         Assert.Equal(10251 - 1 - 14, publication.Summary.Unused);
     }
@@ -98,7 +99,13 @@ public sealed class GeometryPublicationTests
         Assert.Contains("could not be decoded", publication.UnresolvedMeshes[0].Reason, StringComparison.Ordinal);
         Assert.Contains("declares no drawable plane", publication.UnresolvedMeshes[1].Reason, StringComparison.Ordinal);
         Assert.Contains("carries no record numbered 999999", publication.UnresolvedMeshes[2].Reason, StringComparison.Ordinal);
-        Assert.Equal(3, publication.Summary.Unresolved);
+        Assert.Equal(2, publication.Summary.Unresolvable);
+        Assert.Equal(1, publication.Summary.Missing);
+        Assert.Equal(0, publication.Summary.Unused);
+
+        // The classes partition the records and no class can be negative, which is what the mixed-unit
+        // arithmetic this replaced could state while still validating.
+        Assert.Equal(publication.Summary.Records, publication.Summary.Published + publication.Summary.Unresolvable + publication.Summary.Duplicate + publication.Summary.Unused);
         Assert.Equal(1, publication.Summary.Published);
     }
 
@@ -176,6 +183,8 @@ public sealed class GeometryPublicationTests
         GeometryMeshArtifact mesh = publication.Meshes[0];
 
         Assert.Contains("does not match the", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Published = 2 } }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("no set of records can have", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Unused = -1, Duplicate = publication.Summary.Duplicate + 1 } }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("where the section carries", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Missing = 1, Unused = publication.Summary.Unused - 1 } }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("hashes to", Assert.Throws<InvalidOperationException>(() => (publication with { Meshes = [mesh with { ContentDigest = new string('a', 64) }] }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("does not carry", Assert.Throws<InvalidOperationException>(() => (publication with { Meshes = [mesh with { ArtifactId = "geometry/mesh-999" }] }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("publishes mesh", Assert.Throws<InvalidOperationException>(() => (publication with { UnresolvedMeshes = [new GeometryUnresolvedMeshReference(mesh.MeshId, "the fixture says so")] }).Validate()).Message, StringComparison.Ordinal);

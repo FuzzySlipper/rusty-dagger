@@ -63,13 +63,18 @@ public sealed record GeometryMeshArtifact(
 /// <param name="Reason">Why the archive cannot serve it.</param>
 public sealed record GeometryUnresolvedMeshReference(string MeshId, string Reason);
 
-/// <summary>How the published set relates to every record the inventory classifies.</summary>
+/// <summary>
+/// How the published set relates to every record the inventory classifies: the four record classes
+/// partition the archive, and the numbers a pack names that no record carries are counted beside them
+/// because they are not records at all.
+/// </summary>
 /// <param name="Records">Every record the archive declares.</param>
 /// <param name="Published">Records a normalized pack references and the archive serves.</param>
-/// <param name="Unresolved">Numbers a pack references that no readable record answers.</param>
+/// <param name="Unresolvable">Records a lookup reaches that cannot serve the number a pack names.</param>
+/// <param name="Missing">Numbers a pack names that the archive carries no record for.</param>
 /// <param name="Duplicate">Records carrying a number an earlier record already answers.</param>
 /// <param name="Unused">Records a lookup reaches that no normalized pack references.</param>
-public sealed record GeometryPublicationSummary(int Records, int Published, int Unresolved, int Duplicate, int Unused);
+public sealed record GeometryPublicationSummary(int Records, int Published, int Unresolvable, int Missing, int Duplicate, int Unused);
 
 /// <summary>
 /// The geometry a normalized dungeon or exterior pack references, published as one deterministic artifact
@@ -205,19 +210,24 @@ public sealed record GeometryPublication(
 
         // Every record the archive declares is in exactly one class, so the summary is a partition of the
         // corpus rather than a claim about the published subset alone.
-        GeometryPublicationSummary expected = Summary with
+        if (Summary.Published != Meshes.Count)
         {
-            Published = Meshes.Count,
-            Unresolved = UnresolvedMeshes.Count,
-            Duplicate = Summary.Duplicate,
-            Unused = Summary.Unused,
-        };
-        if (Summary != expected)
-        {
-            throw new InvalidOperationException($"Published geometry summary {Summary} does not match the {Meshes.Count} published and {UnresolvedMeshes.Count} unresolved meshes it carries.");
+            throw new InvalidOperationException($"Published geometry summary {Summary} does not match the {Meshes.Count} published meshes it carries.");
         }
 
-        if (Summary.Published + Summary.Unresolved + Summary.Duplicate + Summary.Unused != Summary.Records)
+        if (Summary.Published < 0 || Summary.Unresolvable < 0 || Summary.Missing < 0 || Summary.Duplicate < 0 || Summary.Unused < 0)
+        {
+            throw new InvalidOperationException($"Published geometry summary {Summary} carries a class count no set of records can have.");
+        }
+
+        if (Summary.Unresolvable + Summary.Missing != UnresolvedMeshes.Count)
+        {
+            throw new InvalidOperationException($"Published geometry summary {Summary} reports {Summary.Unresolvable + Summary.Missing} unresolved numbers where the section carries {UnresolvedMeshes.Count}.");
+        }
+
+        // Four record classes, one archive: every record is published, unresolvable, a reused number, or
+        // unused, and the numbers no record carries are counted beside the classes rather than in one.
+        if (Summary.Published + Summary.Unresolvable + Summary.Duplicate + Summary.Unused != Summary.Records)
         {
             throw new InvalidOperationException($"Published geometry summary {Summary} does not account for every record the archive declares.");
         }
@@ -253,13 +263,6 @@ public static class GeometryPublicationBuilder
         ArgumentNullException.ThrowIfNull(request.Textures);
         Arch3dMeshInventory inventory = request.Inventory;
 
-        Dictionary<uint, Arch3dMeshRecord> firstByNumber = [];
-        foreach (Arch3dMeshRecord record in inventory.Records)
-        {
-            firstByNumber.TryAdd(record.RecordId, record);
-        }
-
-        Dictionary<int, TextureLeafRecord> leaves = request.Textures.Leaves.ToDictionary(leaf => leaf.Id);
         SortedDictionary<uint, string> referenced = [];
         foreach (string meshId in request.ReferencedMeshIds)
         {
@@ -275,16 +278,23 @@ public static class GeometryPublicationBuilder
         List<GeometryMeshArtifact> meshes = [];
         List<GeometryUnresolvedMeshReference> unresolved = [];
         List<GeometryMaterialLink> unresolvedMaterials = [];
+        int unresolvable = 0;
+        int missing = 0;
         foreach ((uint number, string spelling) in referenced)
         {
-            if (!firstByNumber.TryGetValue(number, out Arch3dMeshRecord? record))
+            // The record a lookup reaches is the inventory's own answer, so it is read from the column
+            // that states it rather than derived again from list order.
+            Arch3dMeshRecord? record = inventory.Records.FirstOrDefault(candidate => candidate.RecordId == number && candidate.DuplicateOf is null);
+            if (record is null)
             {
+                missing++;
                 unresolved.Add(new GeometryUnresolvedMeshReference(spelling, $"the archive carries no record numbered {number}"));
                 continue;
             }
 
             if (record.State != Arch3dRecordState.Read)
             {
+                unresolvable++;
                 unresolved.Add(new GeometryUnresolvedMeshReference(spelling, $"record {record.Ordinal} carries number {number} and could not be decoded: {record.Reason}"));
                 continue;
             }
@@ -307,7 +317,7 @@ public static class GeometryPublicationBuilder
                 (ushort archive, ushort textureRecord) = (plane.TextureArchive, plane.TextureRecord);
                 if (!byTexture.TryGetValue((archive, textureRecord), out GeometryMaterialLink? material))
                 {
-                    material = Resolve(archive, textureRecord, leaves);
+                    material = Resolve(archive, textureRecord, request.Textures);
                     byTexture.Add((archive, textureRecord), material);
                     materials.Add(material);
                     if (material.Disposition != GeometryMaterialDisposition.Resolved)
@@ -343,6 +353,7 @@ public static class GeometryPublicationBuilder
 
             if (triangles.Count == 0 || groups.Count == 0)
             {
+                unresolvable++;
                 unresolved.Add(new GeometryUnresolvedMeshReference(spelling, $"record {record.Ordinal} carries number {number} and declares no drawable plane"));
                 continue;
             }
@@ -372,9 +383,10 @@ public static class GeometryPublicationBuilder
         GeometryPublicationSummary summary = new(
             inventory.Records.Count,
             meshes.Count,
-            unresolved.Count,
+            unresolvable,
+            missing,
             duplicates,
-            inventory.Records.Count - meshes.Count - unresolved.Count - duplicates);
+            inventory.Records.Count - meshes.Count - unresolvable - duplicates);
 
         GeometryPublication publication = new(
             GeometryPublication.CurrentSchemaVersion,
@@ -393,10 +405,10 @@ public static class GeometryPublicationBuilder
     private static ReadOnlySpan<byte> Payload(ReadOnlyMemory<byte> bytes, Arch3dMeshRecord record) =>
         bytes.Span.Slice((int)record.Offset, record.ByteLength);
 
-    private static GeometryMaterialLink Resolve(ushort archive, ushort record, Dictionary<int, TextureLeafRecord> leaves)
+    private static GeometryMaterialLink Resolve(ushort archive, ushort record, TextureLeafInventory textures)
     {
         string materialId = $"material/texture-{archive}-{record}";
-        if (!leaves.TryGetValue(archive, out TextureLeafRecord? leaf) || leaf.Disposition == TextureLeafDisposition.NotSupplied)
+        if (!textures.TryGet(archive, out TextureLeafRecord? leaf) || leaf is null || leaf.Disposition == TextureLeafDisposition.NotSupplied)
         {
             return new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureNotSupplied, $"the corpus does not supply texture archive {archive}");
         }

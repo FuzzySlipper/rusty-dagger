@@ -311,6 +311,7 @@ public static class DungeonNormalizer
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
         private readonly SortedSet<string> referencedMeshIds = new(StringComparer.Ordinal);
         private readonly List<GeometryUnresolvedMeshReference> unresolvedMeshReferences = [];
+        private readonly HashSet<string> unresolvedMeshIds = new(StringComparer.Ordinal);
         private readonly Dictionary<(ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId), GeometryBuilder> geometry = [];
         private readonly List<NormalizedLightPlacement> lights = [];
         private readonly List<NormalizedBillboardPlacement> billboards = [];
@@ -438,7 +439,15 @@ public static class DungeonNormalizer
                 {
                     // A placement whose mesh the archive cannot serve keeps the fact that it named one: the
                     // reference is reported unresolved and no geometry stands in for what is not there.
-                    unresolvedMeshReferences.Add(new GeometryUnresolvedMeshReference(model.ModelId, reason));
+                    AddUnresolvedMesh(model.ModelId, reason: reason);
+                    continue;
+                }
+
+                if (!mesh.Planes.Any(plane => plane.Points.Count >= 3))
+                {
+                    // The record decodes but declares nothing drawable, which is the same edge the geometry
+                    // publication refuses: reporting it here keeps one definition of an unserved mesh.
+                    AddUnresolvedMesh(model.ModelId, reason: $"ARCH3D.BSA model '{model.ModelId}' declares no drawable plane");
                     continue;
                 }
 
@@ -573,6 +582,18 @@ public static class DungeonNormalizer
                 [.. unresolvedMeshReferences.OrderBy(reference => reference.MeshId, StringComparer.Ordinal)]);
             result.Validate();
             return result;
+        }
+
+        /// <summary>
+        /// Records one unresolved mesh number. A pack that places the same missing mesh twice names one
+        /// number, so it reports one reference: the number is what the archive could not serve.
+        /// </summary>
+        private void AddUnresolvedMesh(string meshId, string reason)
+        {
+            if (unresolvedMeshIds.Add(meshId))
+            {
+                unresolvedMeshReferences.Add(new GeometryUnresolvedMeshReference(meshId, reason));
+            }
         }
 
         private static float ToMetres(int sourceUnits) => sourceUnits * SourceUnitMetres;
