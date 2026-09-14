@@ -6,11 +6,12 @@ namespace WorldRpg.Rulesets.Daggerfall.Content;
 /// </summary>
 /// <remarks>
 /// The map table packs this into a five-bit field (<c>MapsFile.cs</c> reads it as
-/// <c>(4 * bitfield) >> 27</c>), so every value below is representable and nothing outside
-/// <see cref="TownCity"/>..<see cref="HomeYourShips"/> can arrive from the source. The donor's
-/// <c>None = 0xffff</c> member is deliberately not modelled: it does not fit the field, and it marks a
-/// location the map table has no entry for at all. That is a question of whether a site record exists,
-/// which is answered by the record being absent, rather than a kind a published record can carry.
+/// <c>(4 * bitfield) >> 27</c>), so the field carries <c>0..31</c>. Every member below is representable,
+/// and so are <c>15..31</c> - values that name no kind and are refused against the record carrying them
+/// rather than defaulted. The donor's <c>None = 0xffff</c> member is deliberately not modelled: it does
+/// not fit the field at all, and it marks a location the map table has no entry for. That is a question
+/// of whether a site record exists, which is answered by the record being absent, rather than a kind a
+/// published record can carry.
 /// </remarks>
 internal enum DaggerfallSiteKind
 {
@@ -65,9 +66,10 @@ internal enum DaggerfallSiteKind
 /// </summary>
 /// <remarks>
 /// This pair, and not the display name, is what identifies a site. The published corpus carries 15,251
-/// locations under 12,672 distinct names: 1,467 names appear in more than one place, and 129 of those
-/// repeat <em>within a single region</em>, so a name is not a key and a lookup that treats it as one
-/// silently resolves to whichever record it happened to see first.
+/// locations under 12,672 distinct names: 1,467 names appear in more than one place, and within a single
+/// region 129 (region, name) pairs - across 44 distinct names - share their name with another location,
+/// so a name is not a key and a lookup that treats it as one silently resolves to whichever record it
+/// happened to see first.
 /// </remarks>
 /// <param name="Region">The source region index.</param>
 /// <param name="Index">The location's ordinal in the region's names table.</param>
@@ -136,6 +138,19 @@ internal static class DaggerfallSiteKinds
     /// <param name="index">The record's index, for the message.</param>
     internal static string UnnameableMessage(int published, int region, int index) =>
         $"Published location {index} of region {region} carries locationType {published}, which is not one of the {PublishedCount} site kinds the map table's type field names (0..{PublishedCount - 1}).";
+
+    /// <summary>What a JSON value actually was, for a diagnostic that has to name it.</summary>
+    /// <param name="value">The value the record carried.</param>
+    internal static string Describe(System.Text.Json.JsonElement value) => value.ValueKind switch
+    {
+        System.Text.Json.JsonValueKind.Undefined => "nothing at all",
+        System.Text.Json.JsonValueKind.Null => "null",
+        System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False => $"the boolean {value.GetRawText()}",
+        System.Text.Json.JsonValueKind.Number => $"the number {value.GetRawText()}, which is not a 32-bit integer",
+        System.Text.Json.JsonValueKind.String => $"the string {value.GetRawText()}",
+        System.Text.Json.JsonValueKind.Array => "an array",
+        _ => "an object",
+    };
 
     /// <summary>Reads a published <c>locationType</c> into the kind it names, or refuses the value.</summary>
     /// <param name="published">The record's <c>locationType</c>.</param>

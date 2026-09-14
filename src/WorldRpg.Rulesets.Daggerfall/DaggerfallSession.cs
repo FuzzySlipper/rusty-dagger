@@ -251,7 +251,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                     definitions.Locations,
                     ToSiteId(restoredSite.Active),
                     ToSiteId(restoredSite.ReturnAnchor),
-                    restoredSite.Discovered.Select(id => new DaggerfallSiteId(id.Region, id.Index)))
+                    restoredSite.Discovered.Select(id => id.Require()))
                 : new World.DaggerfallSiteContext(definitions.Locations, inputs.Site, null, []);
             _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
@@ -415,8 +415,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             _site.Capture()));
     }
 
-    private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) =>
-        id is null ? null : new DaggerfallSiteId(id.Region, id.Index);
+    private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
 
     public ProductUpdateResult Update(ProductUpdate update)
     {

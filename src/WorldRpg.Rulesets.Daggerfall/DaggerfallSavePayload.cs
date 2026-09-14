@@ -65,7 +65,7 @@ internal sealed record DaggerfallSavePayload(
             throw new ArgumentException("The save payload does not belong to the Daggerfall ruleset.", nameof(payload));
         if (payload.SchemaVersion == CurrentSchemaVersion)
         {
-            return ReadCurrent(payload);
+            return ReportAbsentSite(ReadCurrent(payload));
         }
 
         if (payload.SchemaVersion == CalendarlessSchemaVersion)
@@ -76,27 +76,49 @@ internal sealed record DaggerfallSavePayload(
             DaggerfallSaveRead calendarless = new(
                 DeserializeCurrent(payload) with { SchemaVersion = CurrentSchemaVersion },
                 []);
-            return new DaggerfallSaveRead(calendarless.Payload,
+            return ReportAbsentSite(new DaggerfallSaveRead(calendarless.Payload,
             [
                 .. calendarless.Notices,
                 new SaveRestoreNotice("save-schema-calendarless",
                     $"The save was written as Daggerfall schema {CalendarlessSchemaVersion} and was read as schema {CurrentSchemaVersion}: it carries no calendar, so the world's clock starts where the corpus starts rather than at the time the save was written."),
-            ]);
+            ]));
         }
 
         if (payload.SchemaVersion == MigratableSchemaVersion)
         {
             DaggerfallSavePayloadV1 legacy = ReadLegacy(payload);
             DaggerfallSavePayload migrated = legacy.Migrate();
-            return new DaggerfallSaveRead(migrated.Validate(),
+            return ReportAbsentSite(new DaggerfallSaveRead(migrated.Validate(),
             [
                 new SaveRestoreNotice("save-schema-migrated",
                     $"The save was written as Daggerfall schema {MigratableSchemaVersion} and was read as schema {CurrentSchemaVersion}: the reservation list became the item kind's reservations, cursor {legacy.NextUniqueItemEntityId} became the progress marker, and no identities were recorded as removed."),
-            ]);
+            ]));
         }
 
         throw new ArgumentException($"Daggerfall save schema {payload.SchemaVersion} is not supported.", nameof(payload));
     }
+
+    /// <summary>
+    /// Reports a save that carries no site section, whichever schema it was written at.
+    /// </summary>
+    /// <remarks>
+    /// A save with no site section at all predates site persistence, which is not the same fact as a
+    /// section that records no active site: the first has nothing to say about where the player is, and
+    /// the second says the player is at no site. The section is left absent so the session can tell the
+    /// two apart and start such a save where its bundle starts - and because it does, the fallback is
+    /// reported here rather than left to be inferred. Every path that can produce a siteless payload
+    /// goes through this, so an older schema's restore does not silently default where a newer one
+    /// explains itself.
+    /// </remarks>
+    private static DaggerfallSaveRead ReportAbsentSite(DaggerfallSaveRead read) =>
+        read.Payload.Site is null
+            ? new DaggerfallSaveRead(read.Payload,
+            [
+                .. read.Notices,
+                new SaveRestoreNotice("site-section-absent",
+                    "The save was written before the session persisted its site and carries none; the session starts at the bundle's own starting site rather than at the site the save would have recorded."),
+            ])
+            : read;
 
     /// <summary>
     /// Reads the bytes of a save written at any schema this code can interpret.
@@ -138,13 +160,8 @@ internal sealed record DaggerfallSavePayload(
         // A save with no site section at all predates site persistence, which is not the same fact as a
         // section that records no active site: the first has nothing to say about where the player is,
         // and the second says the player is at no site. The section is left absent so the session can
-        // tell the two apart and start such a save where its bundle starts.
-        if (value.Site is null)
-        {
-            notices.Add(new SaveRestoreNotice("site-section-absent",
-                "The save was written before the session persisted its site and carries none; the session starts at the bundle's own starting site rather than at the site the save would have recorded."));
-        }
-
+        // tell the two apart and start such a save where its bundle starts; the reporting of that is
+        // shared with the older-schema paths in Read rather than duplicated here.
         return new DaggerfallSaveRead(value.Validate(), notices);
     }
 
@@ -417,7 +434,11 @@ internal sealed record DaggerfallSavePayload(
             return null;
         }
 
-        HashSet<(int Region, int Index)> carried = [.. locations.Keys];
+        // Asked of the records rather than the key set: a key set carries every (region, index) the
+        // section mentions, while only a record can actually resolve to a name and a kind. The loader
+        // refuses a pack whose kind it cannot name, so the two agree today - but a site is kept here
+        // because it can be resolved, not because it was counted.
+        HashSet<(int Region, int Index)> carried = [.. locations.Records.Select(record => (record.Region, record.Index))];
         DaggerfallSiteIdSave? Explain(DaggerfallSiteIdSave? id, string owner)
         {
             if (id is null)
@@ -425,13 +446,14 @@ internal sealed record DaggerfallSavePayload(
                 return null;
             }
 
-            if (carried.Contains((id.Region, id.Index)))
+            DaggerfallSiteId identity = id.Require();
+            if (carried.Contains((identity.Region, identity.Index)))
             {
                 return id;
             }
 
             notices.Add(new SaveRestoreNotice("unexplained-site",
-                $"Saved {owner} {id.Region}/{id.Index} is not a location the selected content carries, so it is not restored."));
+                $"Saved {owner} {identity} is not a location the selected content carries, so it is not restored."));
             return null;
         }
 
@@ -444,7 +466,19 @@ internal sealed record DaggerfallSavePayload(
             }
         }
 
-        return new DaggerfallSiteSave(Explain(section.Active, "active site"), Explain(section.ReturnAnchor, "return anchor"), [.. discovered]);
+        DaggerfallSiteIdSave? active = Explain(section.Active, "active site");
+        DaggerfallSiteIdSave? anchor = Explain(section.ReturnAnchor, "return anchor");
+        if (active is null && section.Active is not null)
+        {
+            // The player's own site is not in this content, so there is nothing to return from: keeping
+            // the anchor would leave the first Leave moving a player who is nowhere onto a site they were
+            // never shown to be at. Both go, and the section says the one thing it can still say.
+            anchor = null;
+            notices.Add(new SaveRestoreNotice("site-restored-nowhere",
+                "The save places the player at a site the selected content does not carry, and a return anchor is only meaningful from a site the player is at, so the player is restored at no site and no anchor is kept."));
+        }
+
+        return new DaggerfallSiteSave(active, anchor, [.. discovered]);
     }
 
     /// <summary>
@@ -768,14 +802,35 @@ internal sealed record DaggerfallCalendarSave(
     double RemainderSeconds);
 
 /// <summary>A site identity as a save carries it: the region it belongs to and its index within it.</summary>
-/// <param name="Region">The source region index.</param>
-/// <param name="Index">The location's ordinal in the region's names table.</param>
-internal sealed record DaggerfallSiteIdSave(int Region, int Index)
+/// <remarks>
+/// Both members are nullable so that an <em>absent</em> one is representable. A non-nullable member
+/// missing from the JSON defaults to zero, and region 0 index 0 is a real location, so a save that named
+/// no site at all would silently place the player at the first location in the corpus rather than being
+/// refused. Nullability here is what lets <see cref="Validate"/> tell "no region" from "region zero".
+/// </remarks>
+/// <param name="Region">The source region index, or null when the save did not carry one.</param>
+/// <param name="Index">The location's ordinal in the region's names table, or null when absent.</param>
+internal sealed record DaggerfallSiteIdSave(int? Region, int? Index)
 {
     internal void Validate(string owner)
     {
-        if (Region < 0 || Index < 0) throw new ArgumentException($"A saved {owner} must name a non-negative region and index.");
+        if (Region is not int region || Index is not int index)
+        {
+            throw new ArgumentException(
+                $"A saved {owner} must name both a region and an index; it carries region {(Region is null ? "absent" : Region)} and index {(Index is null ? "absent" : Index)}.");
+        }
+
+        if (region < 0 || index < 0)
+        {
+            throw new ArgumentException($"A saved {owner} must name a non-negative region and index; it names {region}/{index}.");
+        }
     }
+
+    /// <summary>The identity this names, for a caller that has already validated the section.</summary>
+    internal DaggerfallSiteId Require() =>
+        Region is int region && Index is int index
+            ? new DaggerfallSiteId(region, index)
+            : throw new InvalidOperationException("A saved site identity must be validated before its identity is read.");
 }
 
 /// <summary>
@@ -797,15 +852,33 @@ internal sealed record DaggerfallSiteSave(DaggerfallSiteIdSave? Active, Daggerfa
 {
     internal void Validate()
     {
-        ArgumentNullException.ThrowIfNull(Discovered);
+        if (Discovered is null)
+        {
+            throw new ArgumentException("A saved site section must record the sites play revealed, as an empty list when it revealed none; the list is absent.");
+        }
+
         Active?.Validate("active site");
         ReturnAnchor?.Validate("return anchor");
+
+        // A return anchor only means anything while the player is somewhere for a return to start from.
+        // Nothing in the product can produce this pair - Enter sets the anchor only from an active site
+        // and Leave clears it - so a save carrying one without the other would leave the first Leave
+        // moving a player who is nowhere onto a site they were never shown to be at.
+        if (ReturnAnchor is not null && Active is null)
+        {
+            throw new ArgumentException("A saved site section records a return anchor for a player it places at no site, so returning has nowhere to return from.");
+        }
+
         HashSet<(int Region, int Index)> seen = [];
         foreach (DaggerfallSiteIdSave id in Discovered)
         {
-            ArgumentNullException.ThrowIfNull(id);
-            id.Validate("discovered site");
-            if (!seen.Add((id.Region, id.Index))) throw new ArgumentException("A save must record each revealed site once.");
+            if (id is null)
+            {
+                throw new ArgumentException("A saved site section lists a revealed site that names nothing.");
+            }
+
+            id.Validate("revealed site");
+            if (!seen.Add((id.Region!.Value, id.Index!.Value))) throw new ArgumentException("A save must record each revealed site once.");
         }
     }
 }
