@@ -106,9 +106,6 @@ public sealed record DaggerfallGeometry(
     /// <summary>Shape version this publication writes.</summary>
     public const int CurrentSchemaVersion = 1;
 
-    /// <summary>The version strings the mesh format states, as the decoder admits them.</summary>
-    public static readonly IReadOnlyList<string> Versions = ["v2.5", "v2.6", "v2.7"];
-
     /// <summary>Checks that every claim this publication makes about the corpus holds together.</summary>
     public void Validate()
     {
@@ -129,7 +126,7 @@ public sealed record DaggerfallGeometry(
         Dictionary<string, DaggerfallGeometrySource> byPath = Sources.ToDictionary(source => source.Path, StringComparer.Ordinal);
         Dictionary<string, int> perSource = new(StringComparer.Ordinal);
         Dictionary<long, int> firstByNumber = [];
-        Dictionary<string, int> readableByNumber = new(StringComparer.Ordinal);
+        Dictionary<uint, int> readableByNumber = [];
         string previousSource = string.Empty;
         int previousOrdinal = -1;
         foreach (DaggerfallGeometryRecord record in Records)
@@ -179,9 +176,9 @@ public sealed record DaggerfallGeometry(
             }
 
             firstByNumber.TryAdd(record.RecordId, record.Ordinal);
-            if (record.State == DaggerfallGeometryState.Read)
+            if (record.State == DaggerfallGeometryState.Read && record.RecordId <= uint.MaxValue)
             {
-                readableByNumber.TryAdd(record.RecordId.ToString(CultureInfo.InvariantCulture), record.Ordinal);
+                readableByNumber.TryAdd((uint)record.RecordId, record.Ordinal);
             }
 
             perSource[record.Source] = perSource.GetValueOrDefault(record.Source) + 1;
@@ -199,12 +196,26 @@ public sealed record DaggerfallGeometry(
         // A number a block names is unresolved exactly when no readable record answers it, so a section
         // that listed one the archive serves, or omitted one it cannot, would be reporting the wrong
         // closure set.
-        NormalizedImportDocument.ValidateUnique(UnresolvedUseSites, unresolved => unresolved.MeshId, "unresolved mesh number");
+        // The rule is about numbers, and a block spells a number as the dungeon source stores it — five
+        // characters, so mesh 9004 appears as "09004". Comparing the spellings instead of the numbers would
+        // let a section report a number unresolved in the spelling the corpus actually uses while the
+        // record that answers it sits in the same section.
+        HashSet<uint> reported = [];
         foreach (DaggerfallGeometryUnresolvedRecord unresolved in UnresolvedUseSites)
         {
-            if (readableByNumber.ContainsKey(unresolved.MeshId))
+            if (!uint.TryParse(unresolved.MeshId, NumberStyles.None, CultureInfo.InvariantCulture, out uint number))
             {
-                throw new InvalidOperationException($"Published mesh number '{unresolved.MeshId}' is reported unresolved where record {readableByNumber[unresolved.MeshId]} answers it.");
+                throw new InvalidOperationException($"Published mesh number '{unresolved.MeshId}' is not a mesh number.");
+            }
+
+            if (!reported.Add(number))
+            {
+                throw new InvalidOperationException($"Published mesh number '{unresolved.MeshId}' is reported unresolved twice.");
+            }
+
+            if (readableByNumber.TryGetValue(number, out int ordinal))
+            {
+                throw new InvalidOperationException($"Published mesh number '{unresolved.MeshId}' is reported unresolved where record {ordinal} answers it.");
             }
 
             if (string.IsNullOrWhiteSpace(unresolved.Reason) || unresolved.UseSites.Count == 0)
@@ -240,7 +251,10 @@ internal static class DaggerfallGeometryValidation
     internal static void Validate(this DaggerfallGeometryRecord record)
     {
         NormalizedImportDocument.RequireLogicalPath(record.Source, nameof(record.Source));
-        if (record.Ordinal < 0 || record.Offset < 0 || record.ByteLength < 1)
+        // A record with no bytes is a shape the archive can state: nothing can be decoded from it, and it
+        // is published as malformed with that reason rather than refusing the inventory of every other
+        // record the file carries.
+        if (record.Ordinal < 0 || record.Offset < 0 || record.ByteLength < 0)
         {
             throw new InvalidOperationException($"Published mesh record {record.Ordinal} carries offset {record.Offset} and length {record.ByteLength}, which cannot both describe a record.");
         }
@@ -301,7 +315,7 @@ internal static class DaggerfallGeometryValidation
     /// <summary>Checks what a decoded mesh states about itself.</summary>
     internal static void Validate(this DaggerfallGeometryFacts facts, int ordinal)
     {
-        if (!DaggerfallGeometry.Versions.Contains(facts.Version, StringComparer.Ordinal))
+        if (!Arch3dDecoder.Versions.Contains(facts.Version, StringComparer.Ordinal))
         {
             throw new InvalidOperationException($"Published mesh record {ordinal} states the version '{facts.Version}', which the format does not declare.");
         }

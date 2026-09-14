@@ -169,6 +169,25 @@ public sealed class GeometryInventoryTests
     }
 
     [Fact]
+    public void Publishes_a_record_the_archive_states_has_no_bytes()
+    {
+        // A numeric directory can state a record of no bytes. Nothing decodes from it, so it is malformed
+        // with that reason and keeps its number, rather than abandoning the inventory around it.
+        DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
+            NumericArchive((9004, []), (9005, Mesh())),
+            "local/arena2/ARCH3D.BSA",
+            Inventory(),
+            []);
+
+        Assert.Equal(DaggerfallGeometryState.Malformed, geometry.Records[0].State);
+        Assert.Equal(0, geometry.Records[0].ByteLength);
+        Assert.Equal(9004, geometry.Records[0].RecordId);
+        Assert.Contains("requires at least 64 bytes, got 0", geometry.Records[0].Reason, StringComparison.Ordinal);
+        Assert.Equal(DaggerfallGeometryDisposition.Unused, geometry.Records[0].Disposition);
+        Assert.Equal(DaggerfallGeometryState.Read, geometry.Records[1].State);
+    }
+
+    [Fact]
     public void Refuses_a_named_archive_because_its_records_carry_no_numbers()
     {
         // ARCH3D.BSA is the numeric variant. A named archive has no number to look a mesh up by, so
@@ -207,6 +226,15 @@ public sealed class GeometryInventoryTests
         Assert.NotEqual(predecessor.RecordId, duplicate.RecordId);
         Assert.Contains("where number", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, duplicate.Ordinal, duplicate with { DuplicateOf = duplicate.Ordinal - 1 }) }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("not an earlier ordinal", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, duplicate.Ordinal, duplicate with { DuplicateOf = duplicate.Ordinal + 1 }) }).Validate()).Message, StringComparison.Ordinal);
+
+        // The byte column is checked the same way round, and the two checks are not the same question: the
+        // record's own rule refuses a pointer that does not come before it, and the section's rule refuses
+        // one that does but whose bytes cannot be the same because their lengths differ.
+        DaggerfallGeometryRecord repeat = geometry.Records.First(record => record.PayloadDuplicateOf is not null);
+        Assert.Contains("not an earlier ordinal", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, repeat.Ordinal, repeat with { PayloadDuplicateOf = repeat.Ordinal + 1 }) }).Validate()).Message, StringComparison.Ordinal);
+
+        DaggerfallGeometryRecord shorter = geometry.Records.First(record => record.Ordinal > 0 && record.ByteLength != geometry.Records[0].ByteLength);
+        Assert.Contains("not an earlier record of the same length", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, shorter.Ordinal, shorter with { PayloadDuplicateOf = 0 }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -232,6 +260,13 @@ public sealed class GeometryInventoryTests
 
         // The version set is the format's, so a record stating another one cannot have come from it.
         Assert.Contains("the format does not declare", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, record.Ordinal, record with { Facts = record.Facts! with { Version = "v9.9" } }) }).Validate()).Message, StringComparison.Ordinal);
+
+        // A record that states why it is malformed cannot also state what it read: both halves of the rule
+        // are checked, so a reason beside facts is refused as well as facts beside no reason.
+        Assert.Contains("facts it could not read", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, record.Ordinal, record with { State = DaggerfallGeometryState.Malformed, Reason = "the fixture says so" }) }).Validate()).Message, StringComparison.Ordinal);
+
+        // A number is four bytes in the source, so a wider one cannot have come from the file.
+        Assert.Contains("four-byte number cannot state", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, record.Ordinal, record with { RecordId = 4_294_967_296 }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -252,6 +287,50 @@ public sealed class GeometryInventoryTests
 
         Assert.Contains("answers it", Assert.Throws<InvalidOperationException>(() => (geometry with { UnresolvedUseSites = [new DaggerfallGeometryUnresolvedRecord(answered.RecordId.ToString(), ["B0000001.RDB"], "the fixture says so")] }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("no reason or no use site", Assert.Throws<InvalidOperationException>(() => (geometry with { UnresolvedUseSites = [new DaggerfallGeometryUnresolvedRecord("999999", [], "the fixture says so")] }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_a_source_whose_declared_count_is_not_what_the_section_carries()
+    {
+        DaggerfallGeometry geometry = Corpus.Value;
+
+        Assert.Contains("declares 10250 records and publishes 10251", Assert.Throws<InvalidOperationException>(() => (geometry with { Sources = [geometry.Sources[0] with { DeclaredLength = 10250 }] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("Geometry schema must be 1 but is 2", Assert.Throws<InvalidOperationException>(() => (geometry with { SchemaVersion = 2 }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_an_unresolved_number_spelled_the_way_the_blocks_spell_it()
+    {
+        // The rule is about numbers, and a block spells a number as the dungeon source stores it. A section
+        // reporting "09004" unresolved while record 9004 answers it has to be refused in that spelling too,
+        // because that is the spelling the corpus actually uses.
+        DaggerfallGeometry geometry = Corpus.Value;
+        DaggerfallGeometryUnresolvedRecord reported = new("09004", ["B0000000.RDB"], "the fixture says so");
+
+        Assert.Equal(DaggerfallGeometryDisposition.Referenced, geometry.Records.Single(record => record.RecordId == 9004).Disposition);
+        Assert.Contains("answers it", Assert.Throws<InvalidOperationException>(() => (geometry with { UnresolvedUseSites = [reported] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("answers it", Assert.Throws<InvalidOperationException>(() => (geometry with { UnresolvedUseSites = [reported with { MeshId = "9004" }] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("not a mesh number", Assert.Throws<InvalidOperationException>(() => (geometry with { UnresolvedUseSites = [reported with { MeshId = "nine thousand" }] }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Refuses_a_blocks_section_whose_members_are_not_the_ones_it_declares()
+    {
+        // A section read with its unknown members ignored answers a different question than it states: a
+        // renamed model list reads as an empty one, and the geometry folded from it reports every mesh as
+        // unused — the opposite of the closure set this inventory exists to publish.
+        System.Text.Json.Nodes.JsonObject pack = System.Text.Json.Nodes.JsonNode.Parse(
+            File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json")))!.AsObject();
+        System.Text.Json.Nodes.JsonArray records = pack["blocks"]!["records"]!.AsArray();
+        System.Text.Json.Nodes.JsonObject objects = records
+            .Select(record => record!["objects"] as System.Text.Json.Nodes.JsonObject)
+            .First(value => value is not null && value.ContainsKey("modelIds"))!;
+        objects["modelIdsX"] = objects["modelIds"]!.DeepClone();
+        objects.Remove("modelIds");
+        string json = pack["blocks"]!.ToJsonString();
+
+        Assert.Throws<System.Text.Json.JsonException>(() => System.Text.Json.JsonSerializer.Deserialize<DaggerfallBlocks>(json, PublishedJson.SectionRead));
+        Assert.NotNull(System.Text.Json.JsonSerializer.Deserialize<DaggerfallBlocks>(json, PublishedJson.Section));
     }
 
     [Fact]

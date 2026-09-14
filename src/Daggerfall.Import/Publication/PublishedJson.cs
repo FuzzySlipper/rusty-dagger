@@ -24,4 +24,19 @@ public static class PublishedJson
         NumberHandling = JsonNumberHandling.Strict,
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
+
+    /// <summary>
+    /// The options a published section is read back with: the writing dialect, refusing a member no type
+    /// declares rather than ignoring it.
+    /// </summary>
+    /// <remarks>
+    /// A reader that ignores what it does not recognize can answer a different question than the section
+    /// states — a renamed list reads as an empty one and a section folded from it says the opposite of what
+    /// the pack carries. Reading is therefore strict, while the writing options stay permissive so a
+    /// section can still be written by a build that is newer than its reader.
+    /// </remarks>
+    public static readonly JsonSerializerOptions SectionRead = new(Section)
+    {
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+    };
 }
