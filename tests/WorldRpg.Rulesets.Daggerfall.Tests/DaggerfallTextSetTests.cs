@@ -190,6 +190,38 @@ public sealed class DaggerfallTextSetTests
     }
 
     [Fact]
+    public void Rejects_a_macro_index_entry_that_no_value_carries_or_that_appears_twice()
+    {
+        // An index entry nothing carries would report a symbol the corpus lacks, and one indexed twice
+        // would leave a consumer reading one of the two rows and never the other.
+        DaggerfallContentException phantom = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Macros(payload).Add(JsonNode.Parse("""{"symbol":"%zzz","records":1,"disposition":"unrecognised"}""")))));
+
+        Assert.Contains(phantom.Diagnostics, diagnostic => diagnostic.Contains("is indexed against 1 values where 0 carry it", StringComparison.Ordinal));
+
+        DaggerfallContentException zero = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Macros(payload).Add(JsonNode.Parse("""{"symbol":"%zzz","records":0,"disposition":"unrecognised"}""")))));
+
+        Assert.Contains(zero.Diagnostics, diagnostic => diagnostic.Contains("is indexed against 0 values", StringComparison.Ordinal));
+
+        DaggerfallContentException twice = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Macros(payload).Add(Macros(payload)[0]!.DeepClone()))));
+
+        Assert.Contains(twice.Diagnostics, diagnostic => diagnostic.Contains("is indexed twice", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Rejects_a_value_that_begins_at_a_negative_source_byte()
+    {
+        // The source's offsets are unsigned, so a published value at a negative byte describes a position
+        // nothing could have read.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Records(payload)[0]!.AsObject()["offset"] = -5)));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("begins at the negative source byte -5", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Rejects_a_payload_that_publishes_no_text_section()
     {
         DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(

@@ -158,6 +158,23 @@ public sealed class TextResourceTests
     }
 
     [Fact]
+    public void Refuses_a_directory_that_does_not_end_with_the_formats_sentinel()
+    {
+        // The record count is one less than the directory declares, so the slot it stops short of has to be
+        // the sentinel. A directory ending another way has not described its own extent, and reading one
+        // record fewer than it declares would drop its last record without saying so.
+        byte[] bytes = Resource((1, "one"u8.ToArray()), (2, "two"u8.ToArray()));
+        int sentinel = TextResourceReader.HeaderLengthBytes + (2 * TextResourceReader.DirectoryEntryBytes);
+        Write16(bytes, sentinel, 3);
+        Write32(bytes, sentinel + 2, 0);
+
+        Arena2FormatException error = Assert.Throws<Arena2FormatException>(() => TextResourceReader.Read(bytes, "fixture/TEXT.RSC"));
+
+        Assert.Contains($"ends its directory at id 3 pointing at 0 where the format ends it with the sentinel {Arena2FormatConstants.ClassicDirectorySentinelId}", error.Message, StringComparison.Ordinal);
+        Assert.Contains("so the record it describes would be dropped", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Refuses_a_resource_that_declares_one_key_twice()
     {
         // Two directory entries claiming one key leave one of them unreachable through every lookup the
@@ -361,6 +378,10 @@ public sealed class TextResourceTests
 
         Assert.Contains("where its text carries", Assert.Throws<InvalidOperationException>(() => (record with { Macros = [] }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("where its text carries", Assert.Throws<InvalidOperationException>(() => (record with { Macros = [.. record.Macros, "%zzz"] }).Validate()).Message, StringComparison.Ordinal);
+
+        // The list is in first-appearance order, which is what a resolver expanding in place reads, so a
+        // reordered list is a different claim rather than the same one.
+        Assert.Contains("where its text carries", Assert.Throws<InvalidOperationException>(() => (record with { Macros = [.. record.Macros.Reverse()] }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -507,6 +528,19 @@ public sealed class TextResourceTests
     }
 
     [Fact]
+    public void Refuses_a_macro_index_entry_nothing_carries_or_carries_twice()
+    {
+        // An entry for a symbol no value carries would report a symbol the corpus lacks, and a symbol
+        // indexed twice would leave a consumer reading one of the two rows and never the other.
+        DaggerfallText text = Supplied();
+        DaggerfallTextMacro first = text.Macros[0];
+
+        Assert.Contains("carried by no published value", Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros, new DaggerfallTextMacro("%zzz", 1, TextMacroDisposition.Unrecognised)] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("is carried by 0 values", Assert.Throws<ArgumentOutOfRangeException>(() => (text with { Macros = [.. text.Macros, new DaggerfallTextMacro("%zzz", 0, TextMacroDisposition.Unrecognised)] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(() => (text with { Macros = [.. text.Macros, first] }).Validate());
+    }
+
+    [Fact]
     public void Refuses_a_macro_whose_disposition_is_not_how_the_donor_table_accounts_for_it()
     {
         DaggerfallText text = Supplied();
@@ -627,6 +661,11 @@ public sealed class TextResourceTests
             bytes[text++] = TextResourceReader.Terminator;
         }
 
+        // The slot the record count stops short of is the format's sentinel: the reserved id pointing at
+        // the end of the file, which is what tells a reader the directory described its own extent.
+        int sentinel = TextResourceReader.HeaderLengthBytes + (records.Length * TextResourceReader.DirectoryEntryBytes);
+        Write16(bytes, sentinel, Arena2FormatConstants.ClassicDirectorySentinelId);
+        Write32(bytes, sentinel + 2, bytes.Length);
         return bytes;
     }
 

@@ -104,14 +104,16 @@ public static class TextResourceReader
     public const string FileName = "TEXT.RSC";
 
     /// <summary>The bytes the file's directory length occupies.</summary>
-    public const int HeaderLengthBytes = 2;
+    public const int HeaderLengthBytes = Arena2FormatConstants.ClassicDirectorySizeBytes;
 
     /// <summary>One directory entry: a record's key and the offset its text starts at.</summary>
-    public const int DirectoryEntryBytes = 6;
+    public const int DirectoryEntryBytes = Arena2FormatConstants.ClassicDirectoryEntryBytes;
 
     /// <summary>
-    /// Directory entries the file declares but does not use as records, which is what makes the
-    /// donor's count one less than the declared length accounts for.
+    /// The directory slot the format reserves past the records it describes. It is the format's sentinel
+    /// entry — the id the format reserves, pointing at the end of the file — so the record count is one
+    /// less than the declared directory accounts for and the slot being skipped is verified below rather
+    /// than assumed.
     /// </summary>
     public const int DirectoryExtraEntries = 1;
 
@@ -180,6 +182,21 @@ public static class TextResourceReader
 
             byId.Add(id, index);
             directory[index] = (id, offset);
+        }
+
+        // The slot the record count stops short of is the format's sentinel: the reserved id pointing at
+        // the end of the file, which is how the quest companion reader establishes the same layout for its
+        // own directories. A file whose directory does not end that way has not described its own extent,
+        // and reading one record fewer than it declares would drop its last record without saying so.
+        int sentinel = HeaderLengthBytes + (count * DirectoryEntryBytes);
+        int sentinelId = bytes[sentinel] | (bytes[sentinel + 1] << 8);
+        long sentinelOffset = (uint)(bytes[sentinel + 2]
+            | (bytes[sentinel + 3] << 8)
+            | (bytes[sentinel + 4] << 16)
+            | (bytes[sentinel + 5] << 24));
+        if (sentinelId != Arena2FormatConstants.ClassicDirectorySentinelId || sentinelOffset != bytes.Length)
+        {
+            throw new Arena2FormatException(label, sentinel, $"ends its directory at id {sentinelId} pointing at {sentinelOffset} where the format ends it with the sentinel {Arena2FormatConstants.ClassicDirectorySentinelId} at {bytes.Length}, so the record it describes would be dropped");
         }
 
         List<Arena2TextRecord> records = new(count);

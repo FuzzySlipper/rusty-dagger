@@ -43,13 +43,13 @@ public sealed record QuestResourceEnvelope(
     string Note)
 {
     /// <summary>The size of one directory entry: a two-byte id and a four-byte offset.</summary>
-    public const int DirectoryEntryBytes = 6;
+    public const int DirectoryEntryBytes = Arena2FormatConstants.ClassicDirectoryEntryBytes;
 
     /// <summary>The sentinel id that ends every directory.</summary>
-    public const ushort SentinelId = 0xffff;
+    public const ushort SentinelId = Arena2FormatConstants.ClassicDirectorySentinelId;
 
     /// <summary>The bytes the directory size field occupies.</summary>
-    public const int DirectorySizeBytes = 2;
+    public const int DirectorySizeBytes = Arena2FormatConstants.ClassicDirectorySizeBytes;
 
     /// <summary>Decodes one quest resource companion's envelope.</summary>
     public static QuestResourceEnvelope Decode(ReadOnlySpan<byte> bytes, string path)
