@@ -288,6 +288,13 @@ public sealed class BlockInventoryTests
         // A sub-record's own size is derived from what its halves declare, so a summary whose halves do not
         // add up to the bytes it reserves describes a building that cannot be that size.
         Assert.Contains("states building 0 places", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, wall.Ordinal, wall with { Rmb = wall.Rmb! with { Buildings = [wall.Rmb!.Buildings[0] with { PaddingBytes = 1 }] } }) }).Validate()).Message, StringComparison.Ordinal);
+
+        // The other direction matters as much: a sub-record whose halves account for fewer bytes than it
+        // reserves is a building that cannot be that size either. MARKAA00's second sub-record reserves one
+        // padding byte, so publishing none of it leaves the halves one byte short.
+        DaggerfallBlockRecord mark = blocks.Records.Single(record => record.SourceKey == "MARKAA00.RMB");
+        Assert.Equal(1, mark.Rmb!.Buildings[1].PaddingBytes);
+        Assert.Contains("states building 1 places", Assert.Throws<InvalidOperationException>(() => (blocks with { Records = Replaced(blocks, mark.Ordinal, mark with { Rmb = mark.Rmb! with { Buildings = [.. mark.Rmb!.Buildings.Select((building, index) => index == 1 ? building with { PaddingBytes = 0 } : building)] } }) }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -476,17 +483,17 @@ public sealed class BlockInventoryTests
                 ("MANY.RMB", Rmb(33, new int[33])),
                 ("TINY.RMB", Rmb(1, [33])),
                 ("OVER.RMB", Rmb(1, [34], exteriorObjects: 1)),
+                ("INSIDE.RMB", Rmb(1, [35], interiorObjects: 1)),
                 ("MISC.RMB", Rmb(1, [34], misc3d: 1))),
             "local/arena2/BLOCKS.BSA",
             Inventory());
 
-        Assert.Equal(
-            [DaggerfallBlockState.Malformed, DaggerfallBlockState.Malformed, DaggerfallBlockState.Malformed, DaggerfallBlockState.Malformed],
-            blocks.Records.Select(record => record.State));
+        Assert.All(blocks.Records, record => Assert.Equal(DaggerfallBlockState.Malformed, record.State));
         Assert.Contains("more than the header's 32 slots", blocks.Records[0].Reason, StringComparison.Ordinal);
         Assert.Contains("cannot hold its two 17-byte halves", blocks.Records[1].Reason, StringComparison.Ordinal);
         Assert.Contains("leaves no room for its inside half", blocks.Records[2].Reason, StringComparison.Ordinal);
-        Assert.Contains("past the record's", blocks.Records[3].Reason, StringComparison.Ordinal);
+        Assert.Contains("past the 35 bytes it reserves", blocks.Records[3].Reason, StringComparison.Ordinal);
+        Assert.Contains("past the record's", blocks.Records[4].Reason, StringComparison.Ordinal);
 
         // A sub-record whose halves fill exactly what it reserves is readable, padding and all.
         DaggerfallBlocks readable = DaggerfallBlocksBuilder.Build(NamedArchive(("FINE.RMB", Rmb(1, [35], name: "FINE.RMB"))), "local/arena2/BLOCKS.BSA", Inventory());
@@ -541,7 +548,7 @@ public sealed class BlockInventoryTests
     /// Builds a city block record of the given sub-record sizes, with each sub-record's two halves declaring
     /// nothing unless a count is asked for.
     /// </summary>
-    private static byte[] Rmb(byte declared, int[] sizes, string name = "", byte exteriorObjects = 0, byte misc3d = 0)
+    private static byte[] Rmb(byte declared, int[] sizes, string name = "", byte exteriorObjects = 0, byte interiorObjects = 0, byte misc3d = 0)
     {
         byte[] bytes = new byte[RmbBlockSummaryReader.HeaderBytes + sizes.Sum()];
         bytes[0] = declared;
@@ -554,6 +561,10 @@ public sealed class BlockInventoryTests
             if (index == 0 && sizes[index] != 0)
             {
                 bytes[position] = exteriorObjects;
+                if (sizes[index] >= RmbBlockSummaryReader.SubRecordHeaderBytes * 2)
+                {
+                    bytes[position + RmbBlockSummaryReader.SubRecordHeaderBytes] = interiorObjects;
+                }
             }
 
             position += sizes[index];
