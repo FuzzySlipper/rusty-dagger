@@ -31,6 +31,13 @@ internal sealed class DaggerfallUiArt
     private static readonly string[] AlwaysShown =
     [
         "screen.death",
+        // The supplied screens a mode is shown with. Each carries its own palette in the file, so the
+        // published bytes are the ones the classic reader would paint.
+        "screen.character-generation",
+        "screen.pick.02",
+        "screen.prison",
+        "screen.start-menu",
+        "screen.title",
         "window.character-sheet.chrome",
         // The authored inventory skins are drawn by the DOM's inventory and loot panels. They are
         // published at a bounded size rather than copied beside the UI, so the panel frame arrives

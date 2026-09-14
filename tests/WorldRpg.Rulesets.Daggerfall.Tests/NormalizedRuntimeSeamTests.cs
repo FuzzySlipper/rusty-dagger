@@ -3287,7 +3287,9 @@ public sealed class NormalizedRuntimeSeamTests
         // One artifact per identity the DOM draws: the mode screen, the chrome, the three authored
         // inventory skins the panels paint their frames with, plus every inventory icon the content
         // pack names for its items.
-        Assert.Equal(5 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
+        // The always-shown set plus every admitted item icon: the supplied screens a mode is shown with
+        // joined the set, so the count moves with it rather than being pinned to the older five.
+        Assert.Equal(10 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -3300,6 +3302,13 @@ public sealed class NormalizedRuntimeSeamTests
         [
             "screen.death",
             "window.character-sheet.chrome",
+            // The supplied screens a mode is shown with, each published in the palette its own file
+            // carries.
+            "screen.character-generation",
+            "screen.pick.02",
+            "screen.prison",
+            "screen.start-menu",
+            "screen.title",
             // The panel frames are published art now, not files staged beside the UI bundle.
             "inventory.skin.grid-slot-slate.v1",
             "inventory.skin.panel-slate.v1",
@@ -3382,6 +3391,18 @@ public sealed class NormalizedRuntimeSeamTests
         content.Add(Skin, skin);
         content.Add(Titlebar, titlebar);
         content.Add(Slot, slot);
+        // The supplied screens are served from the published group rather than fabricated: this fixture
+        // states a minimal inventory, so every identity the art set carries has to be present here, and
+        // reading the real artifacts keeps its entries honest about their bytes and digests.
+        string[] supplied = ["screen-character-generation", "screen-pick-02", "screen-prison", "screen-start-menu", "screen-title"];
+        Dictionary<string, (string Path, byte[] Bytes)> published = [];
+        foreach (string name in supplied)
+        {
+            string path = $"worldrpg/media/ui/{name}.png";
+            byte[] bytes = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "content", "worldrpg", "media", "ui", $"{name}.png"));
+            published[name] = (path, bytes);
+            content.Add(path, bytes);
+        }
         content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(new JsonObject
         {
             ["schemaVersion"] = 1,
@@ -3391,7 +3412,12 @@ public sealed class NormalizedRuntimeSeamTests
                 Entry("window.character-sheet.chrome", Chrome, chrome),
                 Entry("inventory.skin.panel-slate.v1", Skin, skin),
                 Entry("inventory.skin.titlebar-slate.v1", Titlebar, titlebar),
-                Entry("inventory.skin.grid-slot-slate.v1", Slot, slot)),
+                Entry("inventory.skin.grid-slot-slate.v1", Slot, slot),
+                Entry("screen.character-generation", published["screen-character-generation"].Path, published["screen-character-generation"].Bytes),
+                Entry("screen.pick.02", published["screen-pick-02"].Path, published["screen-pick-02"].Bytes),
+                Entry("screen.prison", published["screen-prison"].Path, published["screen-prison"].Bytes),
+                Entry("screen.start-menu", published["screen-start-menu"].Path, published["screen-start-menu"].Bytes),
+                Entry("screen.title", published["screen-title"].Path, published["screen-title"].Bytes)),
         }.ToJsonString()));
 
         DaggerfallUiArt art = DaggerfallUiArt.Read(content, []);
