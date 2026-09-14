@@ -120,7 +120,16 @@ public sealed record GeometryPublication(
     /// <summary>The index artifact's identity.</summary>
     public const string IndexArtifactId = "geometry/index";
 
-    /// <summary>Checks that every claim this publication makes about its own artifacts holds together.</summary>
+    /// <summary>
+    /// Checks that every claim this publication makes about its own artifacts holds together.
+    /// </summary>
+    /// <remarks>
+    /// This is self-consistency, not provenance: the publication does not carry the inventory it classified
+    /// through, so the duplicate and unused counts are checked against each other and against the records it
+    /// publishes rather than re-derived from the archive. A summary that lied consistently, in the section
+    /// and in the index both, would satisfy every rule here; the inventory is the authority for those two
+    /// columns, and re-deriving them would mean carrying it.
+    /// </remarks>
     public void Validate()
     {
         if (SchemaVersion != CurrentSchemaVersion)
