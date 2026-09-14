@@ -188,6 +188,61 @@ public sealed class GeometryInventoryTests
     }
 
     [Fact]
+    public void Publishes_the_honest_inventory_when_a_reused_number_is_unreadable_first()
+    {
+        // A lookup reaches the first record carrying a number, so when that one cannot be decoded the number
+        // is unserved — even though a later record carrying the same number decodes. Refusing the number
+        // because *a* record with it is readable would reject the honest inventory of the file.
+        DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
+            NumericArchive((77, new byte[32]), (77, Mesh())),
+            "local/arena2/ARCH3D.BSA",
+            Inventory(),
+            [new DaggerfallGeometryUseSite("00077", "B0000000.RDB")]);
+
+        DaggerfallGeometryRecord first = geometry.Records[0];
+        Assert.Equal(DaggerfallGeometryState.Malformed, first.State);
+        Assert.Equal(DaggerfallGeometryDisposition.Referenced, first.Disposition);
+        Assert.Equal(["B0000000.RDB"], first.UseSites);
+
+        DaggerfallGeometryRecord second = geometry.Records[1];
+        Assert.Equal(DaggerfallGeometryState.Read, second.State);
+        Assert.Equal(DaggerfallGeometryDisposition.Duplicate, second.Disposition);
+        Assert.Empty(second.UseSites);
+
+        DaggerfallGeometryUnresolvedRecord unresolved = Assert.Single(geometry.UnresolvedUseSites);
+        Assert.Equal("00077", unresolved.MeshId);
+        Assert.Contains("record 0 carries number 77 and could not be decoded", unresolved.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Reports_a_number_no_record_can_carry_rather_than_refusing_the_publication()
+    {
+        // A block can name a number the archive's four-byte space cannot hold. It is unanswerable, which is
+        // one unresolved entry, not a reason to abandon the ten thousand records beside it.
+        DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
+            NumericArchive((9004, Mesh())),
+            "local/arena2/ARCH3D.BSA",
+            Inventory(),
+            [new DaggerfallGeometryUseSite("4294967296", "B0000000.RDB"), new DaggerfallGeometryUseSite("9004", "B0000001.RDB")]);
+
+        DaggerfallGeometryUnresolvedRecord unresolved = Assert.Single(geometry.UnresolvedUseSites);
+        Assert.Equal("4294967296", unresolved.MeshId);
+        Assert.Contains("the archive carries no record numbered 4294967296", unresolved.Reason, StringComparison.Ordinal);
+        Assert.Equal(DaggerfallGeometryDisposition.Referenced, geometry.Records[0].Disposition);
+    }
+
+    [Fact]
+    public void Refuses_use_sites_on_a_record_a_lookup_cannot_reach()
+    {
+        // The blocks that name a number belong to the record a lookup reaches, so a later record carrying
+        // the same number cannot also carry them.
+        DaggerfallGeometry geometry = Corpus.Value;
+        DaggerfallGeometryRecord duplicate = geometry.Records.First(record => record.DuplicateOf is not null);
+
+        Assert.Contains("belong to the record a lookup reaches", Assert.Throws<InvalidOperationException>(() => (geometry with { Records = Replaced(geometry, duplicate.Ordinal, duplicate with { UseSites = ["B0000001.RDB"] }) }).Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Refuses_a_named_archive_because_its_records_carry_no_numbers()
     {
         // ARCH3D.BSA is the numeric variant. A named archive has no number to look a mesh up by, so

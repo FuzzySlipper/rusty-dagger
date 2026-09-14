@@ -176,7 +176,9 @@ public sealed record DaggerfallGeometry(
             }
 
             firstByNumber.TryAdd(record.RecordId, record.Ordinal);
-            if (record.State == DaggerfallGeometryState.Read && record.RecordId <= uint.MaxValue)
+            // Only the record a lookup reaches can answer a number: a later record carrying the same number
+            // is unreachable, so its readability says nothing about whether the number is served.
+            if (record.State == DaggerfallGeometryState.Read && record.DuplicateOf is null && record.RecordId <= uint.MaxValue)
             {
                 readableByNumber.TryAdd((uint)record.RecordId, record.Ordinal);
             }
@@ -200,10 +202,10 @@ public sealed record DaggerfallGeometry(
         // characters, so mesh 9004 appears as "09004". Comparing the spellings instead of the numbers would
         // let a section report a number unresolved in the spelling the corpus actually uses while the
         // record that answers it sits in the same section.
-        HashSet<uint> reported = [];
+        HashSet<ulong> reported = [];
         foreach (DaggerfallGeometryUnresolvedRecord unresolved in UnresolvedUseSites)
         {
-            if (!uint.TryParse(unresolved.MeshId, NumberStyles.None, CultureInfo.InvariantCulture, out uint number))
+            if (!ulong.TryParse(unresolved.MeshId, NumberStyles.None, CultureInfo.InvariantCulture, out ulong number))
             {
                 throw new InvalidOperationException($"Published mesh number '{unresolved.MeshId}' is not a mesh number.");
             }
@@ -213,7 +215,7 @@ public sealed record DaggerfallGeometry(
                 throw new InvalidOperationException($"Published mesh number '{unresolved.MeshId}' is reported unresolved twice.");
             }
 
-            if (readableByNumber.TryGetValue(number, out int ordinal))
+            if (number <= uint.MaxValue && readableByNumber.TryGetValue((uint)number, out int ordinal))
             {
                 throw new InvalidOperationException($"Published mesh number '{unresolved.MeshId}' is reported unresolved where record {ordinal} answers it.");
             }
@@ -288,6 +290,11 @@ internal static class DaggerfallGeometryValidation
         // What a lookup reaches decides the disposition, and what names it decides the rest: a later record
         // carrying a number an earlier one already answers is unreachable by that number, so its use sites
         // belong to the record a lookup actually finds.
+        if (record.DuplicateOf is not null && record.UseSites.Count != 0)
+        {
+            throw new InvalidOperationException($"Published mesh record {record.Ordinal} reuses a number an earlier record answers and still carries {record.UseSites.Count} use sites, which belong to the record a lookup reaches.");
+        }
+
         DaggerfallGeometryDisposition expected = record.DuplicateOf is not null
             ? DaggerfallGeometryDisposition.Duplicate
             : record.UseSites.Count != 0 ? DaggerfallGeometryDisposition.Referenced : DaggerfallGeometryDisposition.Unused;
@@ -370,11 +377,28 @@ public static class DaggerfallGeometryBuilder
         // kept beside it for the answer a block consumer needs.
         Dictionary<uint, SortedSet<string>> byNumber = [];
         Dictionary<uint, string> spellingByNumber = [];
+        Dictionary<ulong, SortedSet<string>> beyondSpace = [];
+        Dictionary<ulong, string> beyondSpelling = [];
         foreach (DaggerfallGeometryUseSite useSite in useSites)
         {
             if (!uint.TryParse(useSite.MeshId, NumberStyles.None, CultureInfo.InvariantCulture, out uint number))
             {
-                throw new InvalidOperationException($"The block '{useSite.Block}' names the mesh '{useSite.MeshId}', which is not a mesh number.");
+                // A block can name a number the archive's own four-byte space cannot hold. No record carries
+                // it, so it is an unanswerable use site like any other rather than a reason to abandon the
+                // inventory of the ten thousand records beside it.
+                if (!ulong.TryParse(useSite.MeshId, NumberStyles.None, CultureInfo.InvariantCulture, out ulong beyond))
+                {
+                    throw new InvalidOperationException($"The block '{useSite.Block}' names the mesh '{useSite.MeshId}', which is not a mesh number.");
+                }
+
+                if (!beyondSpace.TryGetValue(beyond, out SortedSet<string>? outside))
+                {
+                    beyondSpace[beyond] = outside = new SortedSet<string>(StringComparer.Ordinal);
+                    beyondSpelling[beyond] = useSite.MeshId;
+                }
+
+                outside.Add(useSite.Block);
+                continue;
             }
 
             if (!byNumber.TryGetValue(number, out SortedSet<string>? blocks))
@@ -427,6 +451,14 @@ public static class DaggerfallGeometryBuilder
         }
 
         List<DaggerfallGeometryUnresolvedRecord> unresolved = [];
+        foreach ((ulong beyond, SortedSet<string> outside) in beyondSpace.OrderBy(pair => pair.Key))
+        {
+            unresolved.Add(new DaggerfallGeometryUnresolvedRecord(
+                beyondSpelling[beyond],
+                [.. outside],
+                $"the archive carries no record numbered {beyond}"));
+        }
+
         foreach ((uint number, SortedSet<string> blocks) in byNumber.OrderBy(pair => pair.Key))
         {
             if (reachable.ContainsKey(number) && firstByNumber[number].State == Arch3dRecordState.Read)
@@ -441,6 +473,9 @@ public static class DaggerfallGeometryBuilder
                     ? $"record {record.Ordinal} carries number {number} and could not be decoded: {record.Reason}"
                     : $"the archive carries no record numbered {number}"));
         }
+
+        // Published in number order so the list reads the same however the use sites arrived.
+        unresolved.Sort((left, right) => ulong.Parse(left.MeshId, CultureInfo.InvariantCulture).CompareTo(ulong.Parse(right.MeshId, CultureInfo.InvariantCulture)));
 
         DaggerfallGeometry published = new(
             DaggerfallGeometry.CurrentSchemaVersion,
