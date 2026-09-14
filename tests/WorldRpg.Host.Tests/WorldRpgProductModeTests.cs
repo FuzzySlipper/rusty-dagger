@@ -211,8 +211,18 @@ public sealed class WorldRpgProductModeTests
         // screen exists to represent; a death especially would be the death of a world that never started.
         Assert.Equal(ProductModeChangeOutcome.Refused, gated.EnterModal().Outcome);
         Assert.Equal(ProductModeChangeOutcome.Refused, gated.MarkDead().Outcome);
+        // A replacement is refused too: it would put the entry screen behind a fresh world without the
+        // client having asked to leave it.
+        gated.Restart();
         Assert.Equal(ProductMode.Title, gated.Mode);
-        Assert.All(gated.ModeHistory.Where(change => change.To != ProductMode.Title).TakeLast(2), change =>
+        Assert.Equal(ProductModeChangeOutcome.Refused, gated.ModeHistory[^1].Outcome);
+        // A resume and a modal closing are routes into ordinary play as well, and each would report an
+        // event that never happened: a resume of a product that is not paused, a modal that was never
+        // opened. The direction alone is not the gate; the entry screen's own request is.
+        gated.Resume();
+        gated.ExitModal();
+        Assert.Equal(ProductMode.Title, gated.Mode);
+        Assert.All(gated.ModeHistory.Where(change => change.To != ProductMode.Title).TakeLast(5), change =>
         {
             Assert.Equal(ProductModeChangeOutcome.Refused, change.Outcome);
             Assert.Contains("entry screen", change.Reason, StringComparison.Ordinal);

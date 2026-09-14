@@ -176,10 +176,13 @@ internal sealed class DaggerfallHudProjection(IUiService ui, IReadOnlyList<Dagge
         return builder.Object(("id", builder.String(resource.Id)), ("label", builder.String(resource.Label)), ("current", builder.Number(value.Current.Raw)), ("maximum", builder.Number(value.Bounds.Maximum.Raw)));
     }
 
+    /// <summary>The wire name of the entry-screen mode, stated once for the projection and its readers.</summary>
+    internal const string TitleModeName = "title";
+
     /// <summary>The wire name of the mode the product decided, lowercased for a thin DOM consumer.</summary>
     private static string Mode(ProductMode mode) => mode switch
     {
-        ProductMode.Title => "title",
+        ProductMode.Title => TitleModeName,
         ProductMode.Playing => "playing",
         ProductMode.Paused => "paused",
         ProductMode.Modal => "modal",

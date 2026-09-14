@@ -534,19 +534,33 @@ public sealed class PublishedContentDeliveryTests
     /// <remarks>
     /// The DOM decides which screen a mode shows from a table it owns, and that table is the one place a
     /// screen identity is written in the client. Nothing in the C# suites can execute the DOM, so this
-    /// reads the table it ships and holds it to the product's own contract: the inventory states which
-    /// slot each screen fills, and the mode whose name is that slot is the mode that shows it. A rename on
-    /// either side of that wire, or a screen swapped for another one, fails here rather than leaving a
-    /// mode whose screen is not the one the product published for it.
+    /// reads the table it ships and holds it to the product's own contract in the three ways that are
+    /// checkable from here: the mode names are the ones the product publishes, every screen is one the
+    /// inventory delivered, and every delivered screen is either shown by a mode or named by the client as
+    /// having none.
+    /// <para>
+    /// What this does not check is which published screen a mode is bound to, because nothing in the
+    /// content states that pairing: the inventory records the screen a slot fills and the mode is a wire
+    /// name the ruleset derives, and the two vocabularies differ where the domains do ("dead" against
+    /// "death"). Pointing the title mode at some other published screen would leave the title screen
+    /// delivered and unselected, which the accounting above fails on; pointing it at one screen while a
+    /// second screen takes the first's place is indistinguishable to a reader that only knows both names
+    /// exist. Closing that needs an artifact-to-mode statement, which is a decision about the content
+    /// rather than a test.
+    /// </para>
     /// </remarks>
     [Fact]
     public void The_dom_mode_screen_table_names_published_screens_for_published_modes()
     {
         string source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src/ui/screens.ts"));
+        // The mode is written as the shared constant in one entry and as a literal in the other, so both
+        // spellings are read: the point is the pair, not how the client spells the mode in the table.
         (string Mode, string Screen)[] table =
         [
-            .. Regex.Matches(source, @"\{\s*mode:\s*'(?<mode>[^']+)'\s*,\s*screen:\s*'(?<screen>[^']+)'\s*\}")
-                .Select(match => (match.Groups["mode"].Value, match.Groups["screen"].Value)),
+            .. Regex.Matches(source, @"\{\s*mode:\s*(?:'(?<literal>[^']+)'|(?<constant>[A-Za-z_][A-Za-z0-9_]*))\s*,\s*screen:\s*'(?<screen>[^']+)'\s*\}")
+                .Select(match => (
+                    match.Groups["literal"].Success ? match.Groups["literal"].Value : TitleModeConstant(source, match.Groups["constant"].Value),
+                    match.Groups["screen"].Value)),
         ];
         Assert.NotEmpty(table);
 
@@ -568,24 +582,56 @@ public sealed class PublishedContentDeliveryTests
 
         // Each screen the table names is one the inventory published, which is what makes the mode's
         // screen arrive at all: a name with no artifact behind it is a mode that shows nothing.
-        //
-        // The mode is not required to equal the slot. The two name different things and already differ
-        // where the domains differ - the dead mode shows the screen the inventory slots as "death" - so a
-        // name check here would be testing the vocabulary rather than the binding. The slot is read to
-        // prove the pairing is a real published one rather than an identity that merely looks right.
         Assert.All(table, entry =>
         {
             Assert.True(slotOf.TryGetValue(entry.Screen, out string? slot), $"'{entry.Screen}' is not a published screen.");
             Assert.False(string.IsNullOrWhiteSpace(slot));
         });
 
-        // The two modes whose screen replaces the HUD rather than joining it, in the order the table lists
-        // them: this is the client's whole claim about which modes own a screen.
-        Assert.Equal(["title", "dead"], table.Select(entry => entry.Mode));
+        // Every screen the product delivers is accounted for: one the table shows, or one the client
+        // states has no mode yet. That is what makes a *swap* fail rather than pass on both names existing
+        // - pointing the title mode at the prison screen would leave the title screen delivered and
+        // selected by nothing, which is exactly the state the mode-less list exists to make deliberate.
+        string[] modeLess = [.. Regex.Matches(source, @"MODE_LESS_SCREENS[^=]*=\s*\[(?<items>[^\]]*)\]", RegexOptions.Singleline)
+            .SelectMany(match => Regex.Matches(match.Groups["items"].Value, "'(?<screen>[^']+)'"))
+            .Select(match => match.Groups["screen"].Value)];
+        string[] delivered = [.. slotOf.Keys.Where(identity => identity.StartsWith("screen.", StringComparison.Ordinal)).Order(StringComparer.Ordinal)];
+        string[] accounted = [.. table.Select(entry => entry.Screen).Concat(modeLess).Order(StringComparer.Ordinal)];
+        Assert.Equal(delivered, accounted);
+
+        // The client's whole claim about which modes own a screen and which screen each owns: the two
+        // whose screen replaces the HUD rather than joining it, in the order the table lists them. The
+        // pairing is pinned as literals the way the mode list already was, because which published screen
+        // a mode shows is the client's claim about the product and this is the only place outside the
+        // client it is written down. The mode and the inventory's slot name differ where the domains do -
+        // the dead mode shows the screen slotted "death" - so this states the pair rather than deriving it.
+        Assert.Equal(
+            [("title", "screen.title"), ("dead", "screen.death")],
+            table);
+
+        // The mode the entry screen is keyed by is stated once on each side rather than written out twice
+        // where a rename could miss one.
+        Assert.Contains($"TITLE_MODE = '{DaggerfallHudProjection.TitleModeName}'", source, StringComparison.Ordinal);
+
+        // And the client's own reader uses that constant for both halves of the entry screen: the condition
+        // the mode is tested by and the screen the mode is resolved to. Those two have to be the same mode -
+        // a reader that showed one mode's screen under another mode's condition would leave the screen it
+        // names delivered and never shown - and this is the only place outside the client that can say so.
+        string consumer = File.ReadAllText(Path.Combine(RepositoryRoot(), "src/ui/main.ts"));
+        Assert.Contains("=== TITLE_MODE", consumer, StringComparison.Ordinal);
+        Assert.Contains("screenForMode(TITLE_MODE)", consumer, StringComparison.Ordinal);
 
         // The action the entry screen sends is the one the product answers, and the wire is one word: a
         // rename on either side leaves the button that does nothing.
         Assert.Contains($"BEGIN_ACTION = '{WorldRpgProduct.EntryScreenAction}'", source, StringComparison.Ordinal);
+    }
+
+    /// <summary>The value a name in the client's table stands for, read from where it is declared.</summary>
+    private static string TitleModeConstant(string source, string name)
+    {
+        Match declared = Regex.Match(source, $@"const {name} = '(?<value>[^']+)'");
+        Assert.True(declared.Success, $"'{name}' is used in the table and not declared in the file.");
+        return declared.Groups["value"].Value;
     }
 
     private static ProductContent AdmittedContent()
