@@ -88,6 +88,11 @@ internal static class Program
                 return RunLocationsCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "geometry")
+            {
+                return RunGeometryCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "blocks")
             {
                 return RunBlocksCommand(args);
@@ -831,6 +836,92 @@ internal static class Program
         pack["text"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(text, PublishedJson.Section));
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: text updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Enumerates the classic mesh archive into the base pack, so a mesh identity is published whether or
+    /// not anything references it and the blocks that do reference one can be answered.
+    /// </summary>
+    /// <remarks>
+    /// The use sites come from the pack's own block section: which blocks name a mesh is a fact the block
+    /// inventory publishes, and reading it there keeps one owner for it. Running this before blocks exists
+    /// is refused rather than publishing an inventory whose use sites are silently empty.
+    /// </remarks>
+    private static int RunGeometryCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool geometry --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        if (pack["blocks"] is not JsonObject blocks)
+        {
+            throw new ArgumentException("the pack carries no blocks section, which is where mesh use sites come from: run the blocks command first");
+        }
+
+        List<DaggerfallGeometryUseSite> useSites = [];
+        foreach (JsonNode? block in blocks["records"]!.AsArray())
+        {
+            if (block!["objects"]?["modelIds"] is not JsonArray models)
+            {
+                continue;
+            }
+
+            string key = block["sourceKey"]!.GetValue<string>();
+            foreach (JsonNode? model in models)
+            {
+                useSites.Add(new DaggerfallGeometryUseSite(model!.GetValue<string>(), key));
+            }
+        }
+
+        // The documented inventory decides the logical source identity, so the bytes are read under the
+        // path the repository documents rather than under whatever directory the caller happened to name.
+        string source = Path.Combine(values["--arena2"], Arch3dInventoryReader.FileName);
+        DaggerfallGeometry geometry = DaggerfallGeometryBuilder.Build(
+            File.ReadAllBytes(source),
+            source,
+            SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])),
+            useSites);
+
+        DaggerfallGeometrySource publishedSource = geometry.Sources[0];
+        Console.WriteLine($"geometry: {geometry.Records.Count} records from {publishedSource.Path}, declared {publishedSource.DeclaredLength}, {geometry.Records.Count(record => record.State == DaggerfallGeometryState.Malformed)} malformed, {geometry.Records.Sum(record => record.Facts?.Planes ?? 0)} planes");
+        foreach (IGrouping<DaggerfallGeometryDisposition, DaggerfallGeometryRecord> disposition in geometry.Records.GroupBy(record => record.Disposition).OrderBy(group => group.Key))
+        {
+            Console.WriteLine($"  {disposition.Count()} {disposition.Key.ToString().ToLowerInvariant()}");
+        }
+
+        foreach (IGrouping<string, DaggerfallGeometryRecord> version in geometry.Records.Where(record => record.Facts is not null).GroupBy(record => record.Facts!.Version).OrderBy(group => group.Key, StringComparer.Ordinal))
+        {
+            Console.WriteLine($"  {version.Count()} records state {version.Key}");
+        }
+
+        Console.WriteLine($"  {geometry.Records.Count(record => record.DuplicateOf is not null)} records reuse an earlier number, {geometry.Records.Count(record => record.PayloadDuplicateOf is not null)} repeat an earlier record's bytes");
+        Console.WriteLine($"  unresolved use sites: {(geometry.UnresolvedUseSites.Count == 0 ? "none" : string.Join(", ", geometry.UnresolvedUseSites.Select(unresolved => unresolved.MeshId))) }");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish this inventory into it)");
+            return 0;
+        }
+
+        pack["geometry"] = JsonNode.Parse(JsonSerializer.Serialize(geometry, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: geometry updated in {values["--pack"]}");
         return 0;
     }
 
