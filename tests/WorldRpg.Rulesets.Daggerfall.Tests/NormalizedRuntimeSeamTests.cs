@@ -561,6 +561,34 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_held_attack_button_cannot_hide_what_actually_happened()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        DaggerfallActorDefinition rat = definitions.RequireActor(new DaggerfallActorId("rat"));
+        PresentationState presentation = new("Ready");
+        DaggerfallOutcomePresentation outcomes = new(presentation, new Dictionary<long, DaggerfallActorDefinition> { [2008] = rat });
+
+        // A hit lands, and then the attack button stays held: the cooldown rejection repeats every
+        // update, and the player still has to be able to read what happened.
+        outcomes.React(new AttackHitFact(1, 2008, 7, 3, false, 1, 100));
+        Assert.Equal("Hit rat for 7 damage", presentation.LastOutcome);
+        for (int repeat = 0; repeat < 40; repeat++)
+        {
+            outcomes.React(new AttackRejectedFact(AttackRejection.Cooldown));
+        }
+
+        Assert.Equal("Hit rat for 7 damage", presentation.LastOutcome);
+
+        // A miss reports the roll the same way, and once the result has aged out the rejection shows.
+        outcomes.React(new AttackMissedFact(1, 2008, 41, 8, false, 1, 200));
+        Assert.Equal("Missed rat (41 vs 8)", presentation.LastOutcome);
+        presentation.Advance(PresentationState.LifetimeSeconds);
+        outcomes.React(new AttackRejectedFact(AttackRejection.Cooldown));
+        Assert.Equal("Cooldown", presentation.LastOutcome);
+    }
+
+    [Fact]
     public void Every_placed_attacker_has_a_policy_keyed_on_a_skill_it_carries()
     {
         string root = RepositoryRoot();
