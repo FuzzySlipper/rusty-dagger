@@ -118,6 +118,61 @@ public sealed class PublishedContentDeliveryTests
     /// resolves a published name to bytes: the UI art the DOM draws is named here rather than staged
     /// beside the UI, and the identity is the one the pack's own manifest publishes for the same bytes.
     /// </summary>
+    /// <summary>
+    /// The character presentation section is the reference record a character or social UI binds. Its
+    /// enumeration must match the corpus (#7933 counted the FACE family's canvases from the files), and a
+    /// reference it cannot yet resolve must say so rather than looking like a working binding.
+    /// </summary>
+    [Fact]
+    public void The_character_presentation_references_enumerate_their_canvases_and_state_what_is_pending()
+    {
+        ProductContent content = AdmittedContent();
+        JsonElement presentation = JsonDocument.Parse(content.ReadBytes("worldrpg/payloads/daggerfall.base.json").ToArray())
+            .RootElement.GetProperty("characterPresentation");
+
+        // #7933's enumeration: the 17 FACE files supply 221 canvases - 16 files of ten records each plus
+        // the 61-cell FACES.CIF grid - and the four NITE files are one canvas each at the shape their
+        // length establishes.
+        JsonElement[] files = [.. presentation.GetProperty("files").EnumerateArray()];
+        JsonElement[] faces = [.. files.Where(file => file.GetProperty("family").GetString() == "FACE")];
+        Assert.Equal(17, faces.Length);
+        Assert.Equal(221, faces.Sum(file => file.GetProperty("canvasCount").GetInt32()));
+        Assert.Equal(4, files.Count(file => file.GetProperty("family").GetString()!.StartsWith("NITE", StringComparison.Ordinal)));
+        Assert.All(files.Where(file => file.GetProperty("family").GetString()!.StartsWith("NITE", StringComparison.Ordinal)),
+            file => Assert.Equal(1, file.GetProperty("canvasCount").GetInt32()));
+
+        // A file kept unread or unbound states why; a silent omission is what the task forbids.
+        Assert.All(files, file =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(file.GetProperty("family").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(file.GetProperty("outcome").GetString()));
+            Assert.False(string.IsNullOrWhiteSpace(file.GetProperty("reason").GetString()));
+        });
+        Assert.Contains(files, file => file.GetProperty("outcome").GetString() == "unreferenced");
+
+        // Every published reference states either that it resolves or that it is still pending, with the
+        // file and palette it would need. Today the character media are not published as artifacts, so
+        // they are pending - and the record says so instead of pretending to bind.
+        foreach (string section in new[] { "layers", "faces" })
+        {
+            JsonElement[] references = [.. presentation.GetProperty(section).EnumerateArray()];
+            Assert.NotEmpty(references);
+            Assert.All(references, reference =>
+            {
+                Assert.Contains(reference.GetProperty("binding").GetString(), new[] { "resolved", "requiredPending" });
+                Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("mediaId").GetString()));
+                Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("sourceFile").GetString()));
+                Assert.False(string.IsNullOrWhiteSpace(reference.GetProperty("palette").GetString()));
+            });
+            // Nothing claims to be resolved yet: the count is pinned so that publishing the media has to
+            // move it deliberately rather than by accident.
+            Assert.Equal(0, references.Count(reference => reference.GetProperty("binding").GetString() == "resolved"));
+        }
+
+        Assert.Equal(61, presentation.GetProperty("faces").GetArrayLength());
+        Assert.Equal(200, presentation.GetProperty("layers").GetArrayLength());
+    }
+
     [Fact]
     public void The_generated_inventory_states_the_media_identity_of_each_published_artifact()
     {
