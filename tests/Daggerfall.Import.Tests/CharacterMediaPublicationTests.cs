@@ -42,6 +42,17 @@ public sealed class CharacterMediaPublicationTests
             Assert.DoesNotContain(".CIF", artifact.RelativePath, StringComparison.Ordinal);
             Assert.True(artifact.Width > 0 && artifact.Height > 0);
         });
+        // A career portrait publishes from its animation, in the palette the container carries.
+        CharacterCanvasReference[] portraits =
+        [
+            new("character.career.mage.portrait", "MAGE.CEL", "CEL", "career-portrait", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "the canvas the reference names"),
+        ];
+        CharacterMediaPublicationResult publishedPortrait = CharacterMediaPublication.Publish("CEL", portraits, sources, palette);
+        Assert.True(publishedPortrait.Refusals.Count == 0, $"refused: {string.Join(" | ", publishedPortrait.Refusals)}");
+        CharacterMediaArtifact portrait = Assert.Single(publishedPortrait.Artifacts);
+        Assert.Equal("media/character/character-career-mage-portrait.png", portrait.RelativePath);
+        Assert.True(portrait.Width > 0 && portrait.Height > 0 && portrait.Bytes.Length > 100);
+
         // A family the references do not carry publishes nothing rather than guessing at a file list.
         Assert.Empty(CharacterMediaPublication.Publish("BODY", references, sources, palette).Artifacts);
     }
@@ -71,6 +82,9 @@ public sealed class CharacterMediaPublicationTests
         {
             ["FACES.CIF"] = File.ReadAllBytes(Path.Combine(arena2, "FACES.CIF")),
             ["FACE00I0.CIF"] = File.ReadAllBytes(Path.Combine(arena2, "FACE00I0.CIF")),
+            // A career portrait: a classic animation whose frames are the canvases and whose container
+            // carries the palette they are painted in.
+            ["MAGE.CEL"] = File.ReadAllBytes(Path.Combine(arena2, "MAGE.CEL")),
         };
         return (sources, PaletteDecoder.Decode(File.ReadAllBytes(Path.Combine(arena2, "ART_PAL.COL")), "arena2/ART_PAL.COL"));
     }

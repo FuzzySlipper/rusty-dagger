@@ -61,61 +61,82 @@ public static class CharacterMediaPublication
                 continue;
             }
 
-            if (!TryDecodeCanvas(file, bytes.Span, reference.CanvasIndex, out IndexedImg? image, out string reason))
+            if (!TryDecodeCanvas(file, bytes.Span, reference.CanvasIndex, out CharacterCanvas? canvas, out string reason))
             {
                 refusals.Add($"'{reference.MediaId}' cannot be published: {reason}");
                 continue;
             }
 
-            byte[] png = Encode(image!, palette);
-            artifacts.Add(new CharacterMediaArtifact(reference.MediaId, $"media/character/{Slug(reference.MediaId)}.png", png, image!.Width, image!.Height));
+            // A classic animation carries its own palette; every other family is painted in the shared
+            // one, which is what the publisher resolves its canvases through.
+            byte[] png = Encode(canvas!.Width, canvas.Height, canvas.Pixels, canvas.OwnPalette ?? palette);
+            artifacts.Add(new CharacterMediaArtifact(reference.MediaId, $"media/character/{Slug(reference.MediaId)}.png", png, canvas.Width, canvas.Height));
         }
 
         return new CharacterMediaPublicationResult(artifacts, refusals);
     }
 
+    /// <summary>One decoded canvas: its shape, its indexed pixels, and the palette its own file carries.</summary>
+    private sealed record CharacterCanvas(int Width, int Height, byte[] Pixels, Arena2Palette? OwnPalette);
+
     /// <summary>
     /// Decodes one canvas of a supplied file. The reader that owns the format decides the shape, so a
     /// canvas index past the end is a refusal rather than a wrapped read.
     /// </summary>
-    private static bool TryDecodeCanvas(string file, ReadOnlySpan<byte> bytes, int canvasIndex, out IndexedImg? image, out string reason)
+    private static bool TryDecodeCanvas(string file, ReadOnlySpan<byte> bytes, int canvasIndex, out CharacterCanvas? canvas, out string reason)
     {
+        canvas = null;
         try
         {
             Arena2CanvasSet set = Arena2CanvasReader.Read(bytes, file);
             if (canvasIndex < 0 || canvasIndex >= set.Canvases.Count)
             {
-                image = null;
                 reason = $"'{file}' carries {set.Canvases.Count} canvas(es), so canvas {canvasIndex} does not exist";
                 return false;
             }
 
-            Arena2Canvas canvas = set.Canvases[canvasIndex];
+            Arena2Canvas enumerated = set.Canvases[canvasIndex];
+            if (file.EndsWith(".CEL", StringComparison.OrdinalIgnoreCase))
+            {
+                // A classic animation's frames are the canvases, and the container carries the palette
+                // the frames are painted in.
+                IReadOnlyList<FlcDecoder.FlcFrameImage> frames = FlcDecoder.DecodeFrames(bytes, file, out Arena2Palette? own);
+                if (enumerated.Record < 0 || enumerated.Record >= frames.Count)
+                {
+                    reason = $"'{file}' decodes {frames.Count} frame(s), so frame {enumerated.Record} does not exist";
+                    return false;
+                }
+
+                FlcDecoder.FlcFrameImage frame = frames[enumerated.Record];
+                canvas = new CharacterCanvas(frame.Width, frame.Height, frame.Pixels, own);
+                reason = string.Empty;
+                return true;
+            }
+
             IReadOnlyList<IndexedImg> records = file.EndsWith(".CIF", StringComparison.OrdinalIgnoreCase) && !file.Contains("WEAPO", StringComparison.OrdinalIgnoreCase)
                 ? ImgDecoder.DecodeRecordSequence(bytes, file)
                 : [ImgDecoder.Decode(bytes, file)];
-            if (canvas.Record < 0 || canvas.Record >= records.Count)
+            if (enumerated.Record < 0 || enumerated.Record >= records.Count)
             {
-                image = null;
-                reason = $"'{file}' decodes {records.Count} record(s), so record {canvas.Record} does not exist";
+                reason = $"'{file}' decodes {records.Count} record(s), so record {enumerated.Record} does not exist";
                 return false;
             }
 
-            image = records[canvas.Record];
+            IndexedImg image = records[enumerated.Record];
+            canvas = new CharacterCanvas(image.Width, image.Height, image.Pixels.ToArray(), null);
             reason = string.Empty;
             return true;
         }
         catch (Arena2FormatException failure)
         {
-            image = null;
             reason = failure.Message;
             return false;
         }
     }
 
-    private static byte[] Encode(IndexedImg image, Arena2Palette palette)
+    private static byte[] Encode(int width, int height, ReadOnlySpan<byte> indexed, Arena2Palette palette)
     {
-        Rgba32[] colors = palette.ToRgba(image.Pixels.Span, PaletteAlphaMode.IndexZeroTransparent);
+        Rgba32[] colors = palette.ToRgba(indexed, PaletteAlphaMode.IndexZeroTransparent);
         byte[] rgba = new byte[checked(colors.Length * 4)];
         for (int index = 0; index < colors.Length; index++)
         {
@@ -126,7 +147,7 @@ public static class CharacterMediaPublication
             rgba[target + 3] = colors[index].Alpha;
         }
 
-        return DeterministicPngEncoder.EncodeRgba8(image.Width, image.Height, rgba);
+        return DeterministicPngEncoder.EncodeRgba8(width, height, rgba);
     }
 
     private static string Slug(string value) => value.Replace('.', '-');
