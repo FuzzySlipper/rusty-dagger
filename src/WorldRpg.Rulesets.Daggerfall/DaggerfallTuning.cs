@@ -54,6 +54,12 @@ internal sealed record DaggerfallTuning(
     {
         using JsonDocument document = JsonDocument.Parse(payload.ToArray());
         JsonElement root = document.RootElement;
+        // This profile used to tune one reach for every enemy in the world. Reach is authored on the
+        // attack that carries it now, so a profile still naming it is refused rather than loaded with its
+        // intent quietly dropped: an operator who had tuned melee reach would otherwise get the authored
+        // value back with no way to tell why their tuning stopped applying.
+        if (root.TryGetProperty("enemyBehavior", out JsonElement obsoleteBehavior) && obsoleteBehavior.TryGetProperty("attackReach", out _))
+            throw new InvalidOperationException("Tuning profile enemyBehavior.attackReach is obsolete: how far an attack carries is authored on the action, not on the enemy behaviour tuning. Remove the key and set reach on the actions that need it.");
         JsonElement controls = root.GetProperty("playerControl");
         JsonElement spatial = root.GetProperty("spatial");
         JsonElement camera = root.GetProperty("camera");

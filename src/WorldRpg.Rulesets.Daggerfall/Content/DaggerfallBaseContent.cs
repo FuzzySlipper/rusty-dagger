@@ -1222,8 +1222,15 @@ internal static class DaggerfallBaseContent
             // How far an attack carries is the attack's own property. A fixed action without a reach would
             // have to borrow one from somewhere else, which is how a bow and a dagger ended up reaching the
             // same distance.
-            if (action.Interpretation != "player-equipped-melee" && reach is not > 0d) diagnostics.Add($"Fixed action '{action.Id}' must declare the positive reach it carries to.");
+            // Every action that swings carries its own reach, the player's included: the melee targeting
+            // bound takes the player action's reach as the query's own distance limit and refuses a
+            // non-positive one, so an action authoring 0 here loads and then throws on every swing.
+            if (reach is not > 0d) diagnostics.Add($"Action '{action.Id}' must declare the positive reach it carries to.");
             if (action.Interpretation == "fixed-melee" && reach > MaximumMeleeReach) diagnostics.Add($"Melee action '{action.Id}' reaches {reach} beyond any melee distance '{MaximumMeleeReach}'.");
+            // A reached target the Engine will not resolve past its own detection range is an attack the
+            // ruleset admits and the query then rejects, which reads as a miss rather than as the authoring
+            // mistake it is.
+            if (action.Interpretation == "fixed-ranged" && reach > MaximumRangedReach) diagnostics.Add($"Ranged action '{action.Id}' reaches {reach} beyond the range an attacker perceives '{MaximumRangedReach}'.");
         }
     }
 
@@ -1760,6 +1767,12 @@ internal static class DaggerfallBaseContent
     /// reads to a player as a miss rather than as the authoring mistake it is.
     /// </remarks>
     private const double MaximumMeleeReach = 2.25d;
+
+    /// <summary>
+    /// The furthest a ranged action may reach, which is the detection distance an attacker sees the player
+    /// within. The two have to agree or the reach is a number the perception query never resolves.
+    /// </summary>
+    private const double MaximumRangedReach = 12d;
 
     private const int CatalogSchemaVersion = 1;
     private const int CharacterPresentationSchemaVersion = 1;

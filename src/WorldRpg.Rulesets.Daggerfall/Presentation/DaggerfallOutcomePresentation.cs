@@ -41,13 +41,19 @@ internal sealed class DaggerfallOutcomePresentation(
                     _ => "Melee request rejected",
                 });
                 break;
-            case AttackMissedFact missed when Actor(missed.TargetId, out DaggerfallActorDefinition definition):
+            // The line names whoever the player needs to know about. A swing the player made names the
+            // actor it landed on; a swing that landed on the player names the attacker, because "Hit
+            // player for 5 damage" tells the player nothing they did not already know and nothing about
+            // which of the enemies in front of them is doing it.
+            case AttackMissedFact missed when Actor(missed.EnemyAttack ? missed.AttackerId : missed.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
-                presentation.SetOutcome(missed.EnemyAttack ? $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})" : $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})");
+                presentation.SetOutcome(missed.EnemyAttack
+                    ? $"{definition.Id.Value} missed you ({missed.Roll} vs {missed.Chance})"
+                    : $"Missed {definition.Id.Value} ({missed.Roll} vs {missed.Chance})");
                 break;
-            case AttackHitFact hit when Actor(hit.TargetId, out DaggerfallActorDefinition definition):
+            case AttackHitFact hit when Actor(hit.EnemyAttack ? hit.AttackerId : hit.TargetId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
-                presentation.SetOutcome(hit.EnemyAttack ? $"Hit {definition.Id.Value} for {hit.Damage} damage" : $"Hit {definition.Id.Value} for {hit.Damage} damage");
+                presentation.SetOutcome(hit.EnemyAttack ? $"{definition.Id.Value} hit you for {hit.Damage} damage" : $"Hit {definition.Id.Value} for {hit.Damage} damage");
                 break;
             case ActorDiedFact died when Actor(died.ActorId, out DaggerfallActorDefinition definition):
                 _lineIsResult = true;
