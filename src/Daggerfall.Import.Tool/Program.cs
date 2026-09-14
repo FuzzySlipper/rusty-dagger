@@ -88,6 +88,11 @@ internal static class Program
                 return RunLocationsCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "blocks")
+            {
+                return RunBlocksCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "text")
             {
                 return RunTextCommand(args);
@@ -826,6 +831,67 @@ internal static class Program
         pack["text"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(text, PublishedJson.Section));
         File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: text updated in {values["--pack"]}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Enumerates the classic block archive into the base pack, so the tasks that publish dungeons,
+    /// exteriors and geometry start from one inventory of what the corpus carries rather than decoding
+    /// the archive again and disagreeing about what a name means.
+    /// </summary>
+    private static int RunBlocksCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool blocks --arena2 SOURCE_DIR --pack PACK.json --inventory CSV [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        // The documented inventory decides the logical source identity, so the bytes are read under the
+        // path the repository documents rather than under whatever directory the caller happened to name.
+        string source = Path.Combine(values["--arena2"], BlockRecordInventoryReader.FileName);
+        DaggerfallBlocks blocks = DaggerfallBlocksBuilder.Build(
+            File.ReadAllBytes(source),
+            source,
+            SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])));
+
+        DaggerfallBlockSource publishedSource = blocks.Sources[0];
+        Console.WriteLine($"blocks: {blocks.Records.Count} records from {publishedSource.Path}, declared {publishedSource.DeclaredLength}, {blocks.Records.Count(record => record.State == DaggerfallBlockState.Malformed)} malformed");
+        foreach (IGrouping<DaggerfallBlockKind, DaggerfallBlockRecord> kind in blocks.Records.GroupBy(record => record.Kind).OrderBy(group => group.Key))
+        {
+            Console.WriteLine($"  {kind.Count()} {kind.Key.ToString().ToLowerInvariant()}");
+        }
+
+        Console.WriteLine($"  rdb types: {string.Join(", ", blocks.Records.Where(record => record.Kind == DaggerfallBlockKind.Rdb).GroupBy(record => record.RdbName!.Type).OrderBy(group => group.Key).Select(group => $"{group.Key.ToString().ToLowerInvariant()} {group.Count()}"))}");
+        string[] unresolved = [.. blocks.Records.Where(record => record.State == DaggerfallBlockState.Malformed).Select(record => record.SourceKey)];
+        if (unresolved.Length != 0)
+        {
+            Console.WriteLine($"  malformed records: {string.Join(", ", unresolved)}");
+        }
+
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish this inventory into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        pack["blocks"] = JsonNode.Parse(JsonSerializer.Serialize(blocks, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: blocks updated in {values["--pack"]}");
         return 0;
     }
 
