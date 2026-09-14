@@ -186,6 +186,13 @@ transfers one unique item. Empty loot stays open until Exit. Transfers recheck
 visibility, range and the displayed revision; rejected transfers leave contents
 unchanged. Both panels are also available from the game menu.
 
+Controller menus use the Engine-owned interface input observations: **Start**
+opens the menu, **D-pad up/down** or a fresh **left-stick up/down** deflection
+moves visible focus, **A** activates the focused control, and **B/Start** returns
+from a submenu or closes the main menu. **Back** opens inventory and **Y** opens
+the character sheet. **A** also activates Begin on the title screen. Menu
+selection has no repeat timer; neutralize the stick before another step.
+
 ## Content and migration boundary
 
 The product is C#-only. Useful donor semantics have been translated into loaded
@@ -209,3 +216,13 @@ CoreCLR staging. NativeAOT is a separate fidelity target and is opt-in:
 `./scripts/verify.sh --aot`. Hosted CI is not
 declared until immutable Engine artifacts are published for clean runners; do
 not replace it with a cloned Engine checkout or downstream provider build.
+
+To regenerate only the staged Product, use:
+
+```sh
+dotnet msbuild src/WorldRpg.Host/WorldRpg.Host.csproj -t:StageRustyEngineCoreClrProduct -p:Configuration=Release
+```
+
+A plain `dotnet build` compiles assemblies without invoking that staging target.
+For real-host verification, use ordinary `rusty dev`; the host's `--exercise`
+option expects Engine fixture content and callbacks, not this product.
