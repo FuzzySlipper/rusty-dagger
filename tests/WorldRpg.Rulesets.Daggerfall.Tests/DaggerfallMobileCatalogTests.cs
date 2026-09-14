@@ -95,6 +95,29 @@ public sealed class DaggerfallMobileCatalogTests
             $"the missing catalog was not named: {string.Join(" | ", missing.Diagnostics)}");
     }
 
+    [Fact]
+    public void RefusesAnActorWhoseMobileReferenceDangles()
+    {
+        // An actor's mobile id is a media reference, so a reference the catalog does not carry is refused
+        // with the actor and the id named rather than leaving the actor without a source record.
+        JsonObject payload = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject rat = payload["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "rat")!.AsObject();
+        rat["mobileId"] = 999;
+        DaggerfallContentException dangling = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(payload.ToJsonString())));
+        Assert.True(
+            dangling.Diagnostics.Any(message => message.Contains("'rat'", StringComparison.Ordinal) && message.Contains("mobile 999", StringComparison.Ordinal) && message.Contains("does not carry", StringComparison.Ordinal)),
+            $"the dangling mobile reference was not named: {string.Join(" | ", dangling.Diagnostics)}");
+
+        // A reference that resolves to another actor would give this actor that mobile's media.
+        JsonObject swapped = JsonNode.Parse(PayloadJson())!.AsObject();
+        JsonObject imp = swapped["actors"]!.AsArray().First(actor => actor!["id"]!.GetValue<string>() == "imp")!.AsObject();
+        imp["mobileId"] = 0;
+        DaggerfallContentException mismatch = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(swapped.ToJsonString())));
+        Assert.True(
+            mismatch.Diagnostics.Any(message => message.Contains("'imp'", StringComparison.Ordinal) && message.Contains("resolves to actor 'rat'", StringComparison.Ordinal)),
+            $"the mismatched mobile reference was not named: {string.Join(" | ", mismatch.Diagnostics)}");
+    }
+
     private static byte[] Payload() => System.Text.Encoding.UTF8.GetBytes(PayloadJson());
 
     private static string PayloadJson() => File.ReadAllText(Path.Combine(
