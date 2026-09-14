@@ -172,6 +172,16 @@ public sealed class TextResourceTests
 
         Assert.Contains($"ends its directory at id 3 pointing at 0 where the format ends it with the sentinel {Arena2FormatConstants.ClassicDirectorySentinelId}", error.Message, StringComparison.Ordinal);
         Assert.Contains("so the record it describes would be dropped", error.Message, StringComparison.Ordinal);
+
+        // The offset half of the rule is load-bearing rather than decorative: a slot carrying the reserved
+        // id while pointing somewhere else has not described the file's extent either, and an id-only check
+        // would read one record fewer than the directory declares.
+        byte[] misplaced = Resource((1, "one"u8.ToArray()));
+        int slot = TextResourceReader.HeaderLengthBytes + TextResourceReader.DirectoryEntryBytes;
+        Write16(misplaced, slot, Arena2FormatConstants.ClassicDirectorySentinelId);
+        Write32(misplaced, slot + 2, slot);
+
+        Assert.Contains($"pointing at {slot} where the format ends it", Assert.Throws<Arena2FormatException>(() => TextResourceReader.Read(misplaced, "fixture/TEXT.RSC")).Message, StringComparison.Ordinal);
     }
 
     [Fact]
