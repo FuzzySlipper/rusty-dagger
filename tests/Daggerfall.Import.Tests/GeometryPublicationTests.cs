@@ -166,6 +166,92 @@ public sealed class GeometryPublicationTests
     }
 
     [Fact]
+    public void Reports_a_texture_record_that_declares_nothing_to_bind()
+    {
+        // The leaf parsed, which is not the same as its record being bindable: eight records in the corpus
+        // declare no frame, and the donor's own reader returns nothing for them. A material that called
+        // those resolved would state a texture exists where the corpus has nothing to draw.
+        TextureLeafInventory textures = Textures();
+
+        Assert.True(textures.TryGetRecord(81, 4, out TextureRecordFacts? empty));
+        Assert.Equal(0, empty!.Frames);
+        Assert.True(textures.TryGetRecord(436, 0, out TextureRecordFacts? first));
+        Assert.Equal(0, first!.Frames);
+
+        // Every record the leaves carry states its own facts, and a record the leaf does not carry is not
+        // answerable at all rather than answered by an aggregate.
+        Assert.All(textures.Decoded, leaf => Assert.Equal(leaf.Records, leaf.RecordFacts.Count));
+        Assert.All(textures.Decoded.SelectMany(leaf => leaf.RecordFacts), facts => Assert.True(facts.Width >= 0 && facts.Height >= 0));
+        Assert.False(textures.TryGetRecord(81, 999, out _));
+        Assert.False(textures.TryGetRecord(34, 0, out _));
+    }
+
+    [Fact]
+    public void Publishes_a_number_once_however_its_spelling_arrives()
+    {
+        // One number, one spelling in the publication: a pack that spells a missing number two ways cannot
+        // make two runs publish different bytes.
+        GeometryPublication first = Publish(["999998", "0999998"], Textures());
+        GeometryPublication second = Publish(["0999998", "999998"], Textures());
+
+        Assert.Single(first.UnresolvedMeshes);
+        Assert.Equal(first.UnresolvedMeshes[0].MeshId, second.UnresolvedMeshes[0].MeshId);
+        Assert.Equal(
+            first.Artifacts.Select(artifact => (artifact.RelativePath, artifact.ContentDigest.Value)),
+            second.Artifacts.Select(artifact => (artifact.RelativePath, artifact.ContentDigest.Value)));
+    }
+
+    [Fact]
+    public void Refuses_an_index_that_does_not_describe_the_records()
+    {
+        // The index is what a consumer reads, so it is parsed and compared rather than trusted.
+        GeometryPublication publication = Publish(["55000"], Textures());
+        GeneratedSpatialArtifact index = publication.Artifacts.Single(artifact => artifact.RelativePath == GeometryPublication.IndexRelativePath);
+        GeometryIndex document = System.Text.Json.JsonSerializer.Deserialize<GeometryIndex>(index.Bytes.Span, Daggerfall.Import.Publication.PublishedJson.SectionRead)!;
+
+        GeneratedSpatialArtifact tampered = new(
+            index.Id,
+            index.RelativePath,
+            System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(document with { Meshes = [document.Meshes[0] with { SourceOrdinal = document.Meshes[0].SourceOrdinal + 100 }] }, Daggerfall.Import.Publication.PublishedJson.Section),
+            index.DependsOnArtifactIds);
+        GeometryPublication moved = publication with { Artifacts = [.. publication.Artifacts.Where(artifact => artifact.RelativePath != GeometryPublication.IndexRelativePath), tampered] };
+
+        Assert.Contains("index does not describe the records", Assert.Throws<InvalidOperationException>(() => moved.Validate()).Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Takes_a_polygons_normal_from_a_triangle_that_has_area()
+    {
+        // A polygon whose leading points are collinear still states its own plane: substituting an up vector
+        // for a polygon that spans a plane is publishing a geometric fact the source never stated.
+        List<NormalizedVector3> collinear = [new(0F, 0F, 0F), new(1F, 0F, 0F), new(2F, 0F, 0F), new(1F, 1F, 0F)];
+        NormalizedVector3 normal = MeshGeometry.Normal(collinear);
+
+        Assert.Equal(0F, normal.X, 0.0001F);
+        Assert.Equal(0F, normal.Y, 0.0001F);
+        Assert.Equal(1F, MathF.Abs(normal.Z), 0.0001F);
+
+        // A polygon with no area at all keeps the documented fallback.
+        Assert.Equal(new NormalizedVector3(0F, 1F, 0F), MeshGeometry.Normal([new(0F, 0F, 0F), new(1F, 0F, 0F), new(2F, 0F, 0F)]));
+
+        // The fan, the frame and the bounds are the same owner the dungeon's own geometry uses.
+        List<NormalizedVector3> vertices = [];
+        List<NormalizedVector3> normals = [];
+        List<NormalizedVector2> uvs = [];
+        List<NormalizedTriangle> triangles = [];
+        (int first, int count) = MeshGeometry.AppendPolygon(vertices, normals, uvs, triangles, collinear, [new(0F, 0F), new(1F, 0F), new(1F, 1F), new(0F, 1F)], normal);
+        Assert.Equal(0, first);
+        Assert.Equal(2, count);
+        Assert.Equal(4, vertices.Count);
+        Assert.Equal(4, normals.Count);
+        Assert.Equal(4, uvs.Count);
+        Assert.All(triangles, triangle => Assert.InRange(triangle.FirstVertex, 0, 3));
+        Assert.All(triangles, triangle => Assert.InRange(triangle.ThirdVertex, 0, 3));
+        Assert.Equal(0F, MeshGeometry.Bounds(vertices).Minimum.X);
+        Assert.Equal(2F, MeshGeometry.Bounds(vertices).Maximum.X);
+    }
+
+    [Fact]
     public void Refuses_a_reference_that_is_not_a_mesh_number()
     {
         byte[] archive = File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA"));
@@ -182,9 +268,9 @@ public sealed class GeometryPublicationTests
         GeometryPublication publication = Publish(["55000"], Textures());
         GeometryMeshArtifact mesh = publication.Meshes[0];
 
-        Assert.Contains("does not match the", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Published = 2 } }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("no set of records can have", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Unused = -1, Duplicate = publication.Summary.Duplicate + 1 } }).Validate()).Message, StringComparison.Ordinal);
-        Assert.Contains("where the section carries", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Missing = 1, Unused = publication.Summary.Unused - 1 } }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("index does not describe the records", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Published = 2 } }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("index does not describe the records", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Unused = -1, Duplicate = publication.Summary.Duplicate + 1 } }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("index does not describe the records", Assert.Throws<InvalidOperationException>(() => (publication with { Summary = publication.Summary with { Missing = 1, Unused = publication.Summary.Unused - 1 } }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("hashes to", Assert.Throws<InvalidOperationException>(() => (publication with { Meshes = [mesh with { ContentDigest = new string('a', 64) }] }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("does not carry", Assert.Throws<InvalidOperationException>(() => (publication with { Meshes = [mesh with { ArtifactId = "geometry/mesh-999" }] }).Validate()).Message, StringComparison.Ordinal);
         Assert.Contains("publishes mesh", Assert.Throws<InvalidOperationException>(() => (publication with { UnresolvedMeshes = [new GeometryUnresolvedMeshReference(mesh.MeshId, "the fixture says so")] }).Validate()).Message, StringComparison.Ordinal);

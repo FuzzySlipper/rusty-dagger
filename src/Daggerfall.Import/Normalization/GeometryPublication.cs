@@ -20,6 +20,12 @@ public enum GeometryMaterialDisposition
 
     /// <summary>The archive is supplied and parsed, but it carries no such record.</summary>
     TextureRecordMissing,
+
+    /// <summary>
+    /// The archive carries the record, but the record declares nothing a material can bind: no frame, or
+    /// an extent with no area. The donor's own reader returns nothing for such a record.
+    /// </summary>
+    TextureRecordUnusable,
 }
 
 /// <summary>One texture a mesh selects, and whether the corpus can serve it.</summary>
@@ -208,6 +214,31 @@ public sealed record GeometryPublication(
             }
         }
 
+        // The unresolved list is what the meshes select and cannot have: dropping a reference would leave a
+        // consumer binding a material nothing states is missing.
+        GeometryMaterialLink[] selectedUnresolved = [.. Meshes
+            .SelectMany(mesh => mesh.Materials)
+            .Where(material => material.Disposition != GeometryMaterialDisposition.Resolved)];
+        if (selectedUnresolved.Length != UnresolvedMaterials.Count || selectedUnresolved.Any(material => !UnresolvedMaterials.Contains(material)))
+        {
+            throw new InvalidOperationException($"Published geometry carries {UnresolvedMaterials.Count} unresolved materials where its {Meshes.Count} meshes select {selectedUnresolved.Length}.");
+        }
+
+        // The index is what a consumer reads, so it is parsed and compared rather than trusted: bytes that
+        // name a mesh the section does not carry, or a summary the records do not support, are refused.
+        GeometryIndex document = JsonSerializer.Deserialize<GeometryIndex>(index.Bytes.Span, PublishedJson.SectionRead)
+            ?? throw new InvalidOperationException($"Published geometry index at '{IndexRelativePath}' could not be read.");
+        if (document.SchemaVersion != SchemaVersion
+            || !StringComparer.Ordinal.Equals(document.InventorySource, InventorySource)
+            || document.Summary != Summary
+            || !document.Meshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.SourceOrdinal, mesh.ArtifactId, mesh.RelativePath, mesh.Vertices, mesh.Triangles, mesh.ContentDigest))
+                .SequenceEqual(Meshes.Select(mesh => (mesh.MeshId, mesh.SourceRecordId, mesh.SourceOrdinal, mesh.ArtifactId, mesh.RelativePath, mesh.Vertices, mesh.Triangles, mesh.ContentDigest)))
+            || !document.UnresolvedMeshes.Select(mesh => (mesh.MeshId, mesh.Reason))
+                .SequenceEqual(UnresolvedMeshes.Select(mesh => (mesh.MeshId, mesh.Reason))))
+        {
+            throw new InvalidOperationException("Published geometry index does not describe the records the section carries.");
+        }
+
         // Every record the archive declares is in exactly one class, so the summary is a partition of the
         // corpus rather than a claim about the published subset alone.
         if (Summary.Published != Meshes.Count)
@@ -271,7 +302,12 @@ public static class GeometryPublicationBuilder
                 throw new InvalidOperationException($"A normalized pack references the mesh '{meshId}', which is not a mesh number.");
             }
 
-            referenced.TryAdd(number, meshId);
+            // One number, one spelling in the publication, whichever order the pack listed them in: the
+            // lexicographically smaller wins so two runs over one set cannot disagree on bytes.
+            if (!referenced.TryAdd(number, meshId) && StringComparer.Ordinal.Compare(meshId, referenced[number]) < 0)
+            {
+                referenced[number] = meshId;
+            }
         }
 
         List<GeneratedSpatialArtifact> artifacts = [];
@@ -326,29 +362,18 @@ public static class GeometryPublicationBuilder
                     }
                 }
 
-                int vertexStart = vertices.Count;
-                int triangleStart = triangles.Count;
                 List<NormalizedVector3> polygon = new(plane.Points.Count);
+                List<NormalizedVector2> planeUvs = new(plane.Points.Count);
                 foreach (Arch3dPoint point in plane.Points)
                 {
-                    Arena2ImportPoint placed = Arena2SourceTransform.ToImportPoint(point);
-                    NormalizedVector3 vertex = new(placed.XMetres, placed.YMetres, -placed.ZMetres);
-                    polygon.Add(vertex);
-                    vertices.Add(vertex);
-
                     // The source's own corrected coordinates travel with the mesh: a texture's extent is a
                     // fact about the material, and binding the two is the consumer's business.
-                    uvs.Add(new(point.U, point.V));
+                    polygon.Add(MeshGeometry.ToRightHanded(Arena2SourceTransform.ToImportPoint(point)));
+                    planeUvs.Add(new(point.U, point.V));
                 }
 
-                NormalizedVector3 normal = Normal(polygon[0], polygon[1], polygon[2]);
-                normals.AddRange(Enumerable.Repeat(normal, polygon.Count));
-                for (int index = 1; index < polygon.Count - 1; index++)
-                {
-                    triangles.Add(new(vertexStart, vertexStart + index, vertexStart + index + 1));
-                }
-
-                groups.Add(new NormalizedMaterialGroup(material.MaterialResourceId, triangleStart, polygon.Count - 2, false));
+                (int fanStart, int fanCount) = MeshGeometry.AppendPolygon(vertices, normals, uvs, triangles, polygon, planeUvs, MeshGeometry.Normal(polygon));
+                groups.Add(new NormalizedMaterialGroup(material.MaterialResourceId, fanStart, fanCount, false));
             }
 
             if (triangles.Count == 0 || groups.Count == 0)
@@ -361,7 +386,7 @@ public static class GeometryPublicationBuilder
             string meshId = number.ToString(CultureInfo.InvariantCulture);
             NormalizedMesh normalized = new NormalizedMesh(NormalizedMesh.CurrentSchemaVersion, meshId, MeshArtifactId(number), vertices, normals, uvs, triangles, groups).Canonicalize();
             normalized.Validate();
-            byte[] bytes = StaticMeshJson.Serialize(meshId, Bounds(vertices), MeshAssembly.Create([normalized]));
+            byte[] bytes = StaticMeshJson.Serialize(meshId, MeshGeometry.Bounds(vertices), MeshAssembly.Create([normalized]));
             GeneratedSpatialArtifact artifact = new(MeshArtifactId(number), MeshRelativePath(number), bytes, []);
             artifacts.Add(artifact);
             meshes.Add(new GeometryMeshArtifact(
@@ -418,9 +443,22 @@ public static class GeometryPublicationBuilder
             return new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureMalformed, $"texture archive {archive} could not be parsed: {leaf.Note}");
         }
 
-        return record >= leaf.Records
-            ? new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordMissing, $"texture archive {archive} carries {leaf.Records} records, so record {record} is missing")
-            : new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.Resolved, string.Empty);
+        if (record >= leaf.Records || !textures.TryGetRecord(archive, record, out TextureRecordFacts? facts) || facts is null)
+        {
+            return new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordMissing, $"texture archive {archive} carries {leaf.Records} records, so record {record} is missing");
+        }
+
+        // The leaf parsed and carries the record, which is not the same as the record being bindable:
+        // eight records in the corpus declare no frame or no extent, and calling those resolved would
+        // state that a material exists where the corpus has nothing to draw.
+        if (facts.Frames == 0)
+        {
+            return new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordUnusable, $"texture archive {archive} record {record} declares no frame");
+        }
+
+        return facts.Width > 0 && facts.Height > 0
+            ? new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.Resolved, string.Empty)
+            : new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordUnusable, $"texture archive {archive} record {record} declares the extent {facts.Width}x{facts.Height}");
     }
 
     private static GeneratedSpatialArtifact Index(
@@ -434,25 +472,6 @@ public static class GeometryPublicationBuilder
         return new GeneratedSpatialArtifact(GeometryPublication.IndexArtifactId, GeometryPublication.IndexRelativePath, bytes, [.. meshes.Select(mesh => mesh.ArtifactId).OrderBy(id => id, StringComparer.Ordinal)]);
     }
 
-    private static NormalizedBounds Bounds(IReadOnlyList<NormalizedVector3> vertices) => new(
-        NormalizedBounds.CurrentSchemaVersion,
-        new(vertices.Min(vertex => vertex.X), vertices.Min(vertex => vertex.Y), vertices.Min(vertex => vertex.Z)),
-        new(vertices.Max(vertex => vertex.X), vertices.Max(vertex => vertex.Y), vertices.Max(vertex => vertex.Z)));
-
-    private static NormalizedVector3 Normal(NormalizedVector3 first, NormalizedVector3 second, NormalizedVector3 third)
-    {
-        float ax = second.X - first.X;
-        float ay = second.Y - first.Y;
-        float az = second.Z - first.Z;
-        float bx = third.X - first.X;
-        float by = third.Y - first.Y;
-        float bz = third.Z - first.Z;
-        float x = (ay * bz) - (az * by);
-        float y = (az * bx) - (ax * bz);
-        float z = (ax * by) - (ay * bx);
-        float length = MathF.Sqrt((x * x) + (y * y) + (z * z));
-        return length > 1E-12F ? new(x / length, y / length, z / length) : new(0F, 1F, 0F);
-    }
 }
 
 /// <summary>What one geometry publication holds, written as the index artifact.</summary>
