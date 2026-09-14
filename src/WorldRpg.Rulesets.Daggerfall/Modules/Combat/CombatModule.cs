@@ -211,6 +211,13 @@ internal sealed class CombatModule
         }
 
         DaggerfallAttackDefinition attack = ResolveFixedAttack(attacker.Definition, authoredAction, authoredCooldown);
+        // How far this attack carries is the attack's own authored reach, which is what lets a bow and a
+        // dagger in the same world differ. The behavior owner gates on the same number it reads here.
+        if (attack.Reach is not > 0d)
+        {
+            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, attackerId));
+            return false;
+        }
         ExplicitMeleeRequest request = new(attackerId, targetId, generation, simulationStep, fixedDeltaSeconds);
         int chance = HitChance(attacker, target, attack.Skill);
         int roll = Draw(request, attackerId, targetId, CombatRandomKey.HitSalt, 1, 100, enemy: true);
@@ -329,8 +336,22 @@ internal sealed class CombatModule
 
     private static bool IsDefeated(Combatant combatant) => combatant.Mechanics.ReadTrack(TrackId.Parse(HealthTrack)).Current.Raw <= 0;
     private static DaggerfallAttackDefinition ResolveFixedAttack(DaggerfallActorDefinition actor, DaggerfallActionDefinition action, double cooldown) => action.AttackRangeIndex is int index
-        ? new DaggerfallAttackDefinition(action.Skill, actor.Attacks[index].MinimumDamage, actor.Attacks[index].MaximumDamage, cooldown)
-        : new DaggerfallAttackDefinition(action.Skill, action.MinimumDamage!.Value, action.MaximumDamage!.Value, cooldown);
+        ? new DaggerfallAttackDefinition(action.Skill, actor.Attacks[index].MinimumDamage, actor.Attacks[index].MaximumDamage, cooldown, Reach: action.Reach)
+        : new DaggerfallAttackDefinition(action.Skill, action.MinimumDamage!.Value, action.MaximumDamage!.Value, cooldown, Reach: action.Reach);
+
+    /// <summary>
+    /// How far the given actor's authored attack carries, or null when it has no attack to carry.
+    /// </summary>
+    /// <remarks>
+    /// The behavior owner reads this to decide whether the player is in reach, so the gate that decides an
+    /// attack happens and the attack that then resolves use one number from one place.
+    /// </remarks>
+    internal double? ReachOf(long entityId) => _definitions.TryGetValue(entityId, out DaggerfallActorDefinition? attacker)
+        && attacker.ActionId is { } actionId
+        && _actions.TryGetValue(actionId, out DaggerfallActionDefinition? action)
+        && action.Reach is > 0d
+        ? action.Reach
+        : null;
     private DaggerfallWeaponDefinition? ReadWeapon(EquipmentRead equipment, string slot)
     {
         if (!equipment.TryGet(new WorldRpg.Kit.Inventory.EquipmentSlotId(slot), out WorldRpg.Kit.Inventory.UniqueInventoryItem item)

@@ -589,28 +589,35 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
-    public void An_actor_with_no_attack_policy_is_dispositioned_by_a_donor_erratum()
+    public void The_archer_carries_a_ranged_policy_its_donor_record_supports()
     {
         string root = RepositoryRoot();
         DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
 
-        // Every placed actor either carries a policy or is named by a donor erratum; an actor that is
-        // simply missing one would be indistinguishable from an oversight.
-        PrivateersHoldInputs inputs = ReadInputs(root);
-        string[] withoutPolicy = [.. inputs.Project.Actors.Values
-            .Select(placement => definitions.RequireActor(placement.ActorId))
-            .Where(actor => actor.ActionId is null)
-            .Select(actor => actor.Id.Value)
-            .Order(StringComparer.Ordinal)];
-        Assert.Equal(["archer"], withoutPolicy);
+        // The archer's policy is a fact about the source, not a preference: its published donor record
+        // declares a ranged attack group and carries no melee damage range at all, so the attack it is
+        // given is ranged and its own attacks stay empty.
+        DaggerfallMobileDefinition archerMobile = definitions.Mobiles.Mobiles[141];
+        Assert.Equal("archer", archerMobile.Actor);
+        Assert.True(archerMobile.HasRangedAttack1, "the donor record must declare the archer's ranged attack");
+        Assert.False(archerMobile.HasRangedAttack2, "the donor record must declare which ranged group the archer uses");
+        Assert.Null(archerMobile.DamageRange);
 
-        // The archer's exception is a fact about the source, not a preference: its published donor record
-        // declares a ranged attack and carries no melee damage range at all.
-        DaggerfallMobileDefinition archer = definitions.Mobiles.Mobiles[141];
-        Assert.Equal("archer", archer.Actor);
-        Assert.True(archer.HasRangedAttack1, "the donor record must declare the archer's ranged attack");
-        Assert.Null(archer.DamageRange);
-        Assert.Contains(definitions.DonorErrata, erratum => erratum.Id == "archer-ranged-attack-is-not-implemented");
+        DaggerfallActorDefinition archer = definitions.RequireActor(new DaggerfallActorId("archer"));
+        Assert.Equal("archer-shot", archer.ActionId);
+        Assert.Empty(archer.Attacks);
+        DaggerfallActionDefinition shot = definitions.Actions["archer-shot"];
+        Assert.Equal("fixed-ranged", shot.Interpretation);
+        // The archer swings the skill its record carries, with the damage the corpus's own bows carry:
+        // archery, and the iron bow range both published bows sit inside.
+        Assert.Equal("archery", shot.Skill);
+        Assert.Equal((4, 18), (shot.MinimumDamage, shot.MaximumDamage));
+        Assert.Equal(4, definitions.Items[new DaggerfallItemId("iron-short-bow")].Weapon!.MinimumDamage);
+        Assert.Equal(18, definitions.Items[new DaggerfallItemId("iron-long-bow")].Weapon!.MaximumDamage);
+        // A shot carries further than a swing, and the erratum that named the gap is gone: the capability
+        // it recorded now exists, so leaving it would be a claim the corpus no longer supports.
+        Assert.True(shot.Reach > definitions.Actions["monster-strike"].Reach, "a shot must carry further than a swing");
+        Assert.DoesNotContain(definitions.DonorErrata, erratum => erratum.Id == "archer-ranged-attack-is-not-implemented");
         // The thief is the opposite case: no donor damage range either, but the donor's own enemy setup
         // gives it a melee policy, which is why it is authored rather than dispositioned away.
         DaggerfallMobileDefinition thief = definitions.Mobiles.Mobiles[138];
@@ -628,16 +635,12 @@ public sealed class NormalizedRuntimeSeamTests
         foreach (AuthoredActor placement in inputs.Project.Actors.Values)
         {
             DaggerfallActorDefinition definition = definitions.RequireActor(placement.ActorId);
-            if (definition.ActionId is null)
-            {
-                // No policy is only honest where there is no melee to admit: the archer's ranged
-                // attacks are unauthored, so it carries no invented swing.
-                Assert.Empty(definition.Attacks);
-                continue;
-            }
-
-            DaggerfallActionDefinition action = definitions.Actions[definition.ActionId];
-            Assert.Equal("fixed-melee", action.Interpretation);
+            // Every placed actor carries a policy. There is no exception list: the archer's ranged attack
+            // is the capability this check was waiting for, and an actor placed without one is an oversight
+            // rather than a disposition.
+            Assert.NotNull(definition.ActionId);
+            DaggerfallActionDefinition action = definitions.Actions[definition.ActionId!];
+            Assert.Contains(action.Interpretation, new[] { "fixed-melee", "fixed-ranged" });
             // A swing either uses one of the actor's own authored damage ranges or carries authored
             // damage of its own; anything else would admit an attack with no damage frame.
             Assert.True(
@@ -2934,6 +2937,66 @@ public sealed class NormalizedRuntimeSeamTests
         facts.Deliver(delivered.Add);
         Assert.Single(delivered.OfType<CorpseSearchedEmptyFact>());
         Assert.Null(loot.PrepareLoot(new PlayerControlState(new WorldPoint(0, 0, 0), 0, 0), ForwardLook()));
+    }
+
+    /// <summary>
+    /// The archer's ranged policy: it damages the player from further than any melee reaches, without ever
+    /// closing, and stops when the player is out of its own attack's range.
+    /// </summary>
+    /// <remarks>
+    /// This is the capability the archer erratum recorded as missing. The distance the Engine classifies is
+    /// the fixture's, set well past melee reach and inside the archer's own authored reach; the archer's
+    /// state and the damage that lands are the ruleset's answer to it.
+    /// </remarks>
+    [Fact]
+    public void The_archer_damages_the_player_from_beyond_melee_reach_without_closing()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        long archer = 2004;
+        Assert.Equal("archer", inputs.Project.Actors[archer].ActorId.Value);
+        double shotReach = definitions.Actions["archer-shot"].Reach!.Value;
+        // Past every melee reach this corpus authors, and inside the archer's own.
+        double separation = definitions.Actions.Values.Where(action => action.Interpretation == "fixed-melee").Max(action => action.Reach!.Value) + 1d;
+        Assert.True(separation < shotReach, "the fixture's separation must sit between melee reach and the archer's shot");
+
+        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        // The archer sees the player at that separation, facing them, with the line clear.
+        perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, separation, 1d, PerceptionPairKind.Visible, 1d));
+        // The swing is decided on the admitted step and lands when its authored damage frame is reached.
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        // It shot rather than closed: the state is the ranged attack, the player took damage, and no
+        // navigation was asked for, which is what "without closing" means here.
+        Assert.Equal(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
+        Assert.Null(session.LastEnemyBehavior[archer].Navigation);
+        long healthAfterShot = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        Assert.True(healthAfterShot < healthBefore, "the archer's shot must damage the player at that separation");
+
+        // The same shot cannot land twice, and out past its own reach it stops entirely rather than
+        // chasing: a ranged attacker that walks into melee is a melee attacker.
+        appearance.AdvanceReceiptForAll = null;
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.Equal(healthAfterShot, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, shotReach + 1d, 1d, PerceptionPairKind.Visible, 1d));
+        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        Assert.NotEqual(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
+
+        // Every placed actor carries a policy, the archer included: an actor that cannot attack is a
+        // missing capability its owner has to see, and there is no exception list left to hide one in.
+        Assert.All(inputs.Project.Actors.Values, placement =>
+            Assert.NotNull(definitions.RequireActor(placement.ActorId).ActionId));
     }
 
     [Fact]

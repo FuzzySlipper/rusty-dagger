@@ -53,7 +53,7 @@ internal sealed record DaggerfallVitalValues(int HealthMaximum, int StaminaMaxim
 internal sealed record DaggerfallVitalRange(int Minimum, int Maximum);
 internal sealed record DaggerfallCombatProfile(DaggerfallTrackId Health, DaggerfallTrackId? AttackCost);
 internal sealed record DaggerfallAttackRange(int MinimumDamage, int MaximumDamage);
-internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds, string? Material = null, int DamageBonus = 0);
+internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamage, int MaximumDamage, double CooldownSeconds, string? Material = null, int DamageBonus = 0, double? Reach = null);
 internal sealed record DaggerfallRewardPolicy(int ExperienceReward);
 internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
 /// <summary>

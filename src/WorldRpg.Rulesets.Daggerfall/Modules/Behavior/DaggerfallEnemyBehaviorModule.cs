@@ -93,8 +93,13 @@ internal sealed class DaggerfallEnemyBehaviorModule
                 // tuned wide enough to span the two conventions those poses use, because an actor
                 // stands on its probed floor contact while the player's pose is its character position
                 // about a body above that floor (measured live: an adjacent pair reads ~1.44).
-                desired = !visible ? EnemyBehaviorState.Idle
-                    : pair.Distance <= _tuning.AttackReach ? EnemyBehaviorState.Attack
+                // Reach is the attacker's own: a monster swings when it is close enough for its hands and
+                // an archer shoots from where a bow carries. An actor with no authored attack has no reach
+                // and never enters the attack state, which is the honest outcome for one the corpus places
+                // without a policy rather than a silent miss the player cannot tell from a bad roll.
+                double? reach = _combat.ReachOf(actor.EntityId);
+                desired = !visible || reach is null ? EnemyBehaviorState.Idle
+                    : pair.Distance <= reach.Value ? EnemyBehaviorState.Attack
                     : EnemyBehaviorState.Chase;
                 if (desired == EnemyBehaviorState.Chase)
                 {
