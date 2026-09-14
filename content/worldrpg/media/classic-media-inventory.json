@@ -21,7 +21,7 @@
         "CMPA01I0.BSS",
         "CMPA02I0.BSS"
       ],
-      "reason": "no publisher in this repository: the BSS container\u0027s image frames are read, but no artifact is published from them, so the compass the donor draws from these files has no published canvas here",
+      "reason": "no publisher in this repository: the BSS container header is read and its frame arithmetic verified, but no frame\u0027s pixels are extracted or published, so the compass the donor draws from these files has no published canvas here",
       "donorAnchor": "Assets/Scripts/API/BssFile.cs"
     }
   ],
