@@ -2983,6 +2983,16 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Null(session.LastEnemyBehavior[archer].Navigation);
         long healthAfterShot = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
         Assert.True(healthAfterShot < healthBefore, "the archer's shot must damage the player at that separation");
+        // The line names the attacker, so the player can tell which of the enemies in front of them is
+        // doing it: a hit the player took reads as the actor that landed it.
+        string shotOutcome = engine.PublishedField("lastOutcome");
+        Assert.Contains("archer", shotOutcome, StringComparison.Ordinal);
+
+        // The facing limit is the Engine's and the behaviour honours it: an attacker turned away does not
+        // shoot, which is the same evidence kind the melee behaviour test uses for the other actor.
+        perception.Receipt = Receipt(new PerceptionPair(checked((ulong)archer), 1, separation, 0d, PerceptionPairKind.FacingRejected, 0d));
+        session.Update(new ProductUpdate(OuterUpdate(2), []));
+        Assert.NotEqual(EnemyBehaviorState.Attack, session.LastEnemyBehavior[archer].State);
 
         // The same shot cannot land twice, and out past its own reach it stops entirely rather than
         // chasing: a ranged attacker that walks into melee is a melee attacker.
