@@ -536,6 +536,67 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_melee_request_that_found_nothing_reports_what_the_query_actually_saw()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        // Every placed actor is outside melee reach: the receipt says so, and the product has to say so
+        // too rather than printing the same line it would print in a world where nothing is visible.
+        perception.Receipt = new PerceptionReadoutLeaseReceipt(ReadOnlyMemory<PerceptionPair>.Empty, ReadOnlyMemory<PerceptionAggregate>.Empty, 0, false, 0, 1, 42, 42, 42, 41, 1, 0, 0);
+        session.Update(new ProductUpdate(OuterUpdate(1), [PadButton(ControllerButton.Button0, InputEdge.Pressed)]));
+
+        Assert.Equal("No target in melee reach (42 compared: 41 out of range, 1 out of cone, 0 cast, 0 occluded)", session.Presentation.LastOutcome);
+        // The same line is what the DOM draws, so a human sees the counters too.
+        Dictionary<string, object?> published = (Dictionary<string, object?>)engine.Published()!;
+        Assert.Contains("No target in melee reach (42 compared", (string)published["lastOutcome"]!, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Every_placed_attacker_has_a_policy_keyed_on_a_skill_it_carries()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<DaggerfallActorId> swinging = [];
+        foreach (AuthoredActor placement in inputs.Project.Actors.Values)
+        {
+            DaggerfallActorDefinition definition = definitions.RequireActor(placement.ActorId);
+            if (definition.ActionId is null)
+            {
+                // No policy is only honest where there is no melee to admit: the archer's ranged
+                // attacks are unauthored, so it carries no invented swing.
+                Assert.Empty(definition.Attacks);
+                continue;
+            }
+
+            DaggerfallActionDefinition action = definitions.Actions[definition.ActionId];
+            Assert.Equal("fixed-melee", action.Interpretation);
+            // A swing either uses one of the actor's own authored damage ranges or carries authored
+            // damage of its own; anything else would admit an attack with no damage frame.
+            Assert.True(
+                action.AttackRangeIndex is not null || (action.MinimumDamage is > 0 && action.MaximumDamage is > 0),
+                $"'{placement.ActorId.Value}' swings with '{action.Id}', which names neither a damage range nor damage.");
+            // The donor resolves a monster's swing with a skill its record carries; a swing keyed on a
+            // skill the actor reads as zero would be a hit chance the donor never describes.
+            Assert.True(definition.Stats.Values[new DaggerfallStatId(action.Skill)] > 0, $"'{placement.ActorId.Value}' swings with '{action.Skill}', which its record does not carry.");
+            swinging.Add(placement.ActorId);
+        }
+
+        Assert.Contains(new DaggerfallActorId("imp"), swinging);
+        Assert.Contains(new DaggerfallActorId("giant-bat"), swinging);
+        Assert.Contains(new DaggerfallActorId("orc"), swinging);
+    }
+
+    [Fact]
     public void Two_panel_buttons_in_one_slice_leave_the_later_request_standing()
     {
         string root = RepositoryRoot();
