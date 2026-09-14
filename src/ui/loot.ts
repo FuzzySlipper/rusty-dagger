@@ -37,6 +37,17 @@ export function mountLoot(root: HTMLElement, claim: (action: LootAction) => void
   };
   shell.addEventListener('click', onClick);
   const render = (value: LootProjection | null): void => {
+    // The panel frame is published art like the inventory's; a session that cannot deliver it says
+    // which identity is missing instead of showing an unaccounted fallback.
+    const frame = image('inventory.skin.panel-slate.v1');
+    shell.style.setProperty('--loot-panel-art', frame === null ? 'none' : `url("${frame}")`);
+    if (frame === null) {
+      shell.setAttribute('data-art-missing', 'inventory.skin.panel-slate.v1');
+      console.warn('loot frame art is not published by this session: inventory.skin.panel-slate.v1');
+    } else {
+      shell.removeAttribute('data-art-missing');
+    }
+
     if (value === null) { current = null; return; }
     heading.textContent = value.title;
     status.textContent = value.message;

@@ -3254,9 +3254,10 @@ public sealed class NormalizedRuntimeSeamTests
         Dictionary<string, object?> images = Assert.IsType<object?[]>(art["images"])
             .Cast<Dictionary<string, object?>>()
             .ToDictionary(image => Assert.IsType<string>(image["id"]), image => (object?)Assert.IsType<string>(image["image"]), StringComparer.Ordinal);
-        // One artifact per identity the DOM draws: the chrome and authored skins this presentation
-        // shows, plus every inventory icon the content pack names for its items.
-        Assert.Equal(2 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
+        // One artifact per identity the DOM draws: the mode screen, the chrome, the three authored
+        // inventory skins the panels paint their frames with, plus every inventory icon the content
+        // pack names for its items.
+        Assert.Equal(5 + inputs.ClassicPresentation.InventoryIcons.Count, images.Count);
         Assert.All(images.Values, image => Assert.StartsWith("data:image/png;base64,", Assert.IsType<string>(image), StringComparison.Ordinal));
 
         // The bytes are the published artifacts, read from admitted content by their content name.
@@ -3269,6 +3270,10 @@ public sealed class NormalizedRuntimeSeamTests
         [
             "screen.death",
             "window.character-sheet.chrome",
+            // The panel frames are published art now, not files staged beside the UI bundle.
+            "inventory.skin.grid-slot-slate.v1",
+            "inventory.skin.panel-slate.v1",
+            "inventory.skin.titlebar-slate.v1",
             .. inputs.ClassicPresentation.InventoryIcons.Values,
         ];
         Assert.Equal([.. expected.Order(StringComparer.Ordinal)], [.. images.Keys.Order(StringComparer.Ordinal)]);
@@ -3336,19 +3341,34 @@ public sealed class NormalizedRuntimeSeamTests
         byte[] chrome = [1, 2, 3, 4];
         const string Screen = "worldrpg/media/ui/screen-death.png";
         const string Chrome = "worldrpg/media/ui/window-character-sheet-chrome.png";
+        byte[] skin = [9, 8, 7];
+        byte[] titlebar = [6, 5, 4];
+        byte[] slot = [3, 2, 1];
+        const string Skin = "worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png";
+        const string Titlebar = "worldrpg/media/ui/authored/inventory-titlebar-slate-v1.png";
+        const string Slot = "worldrpg/media/ui/authored/inventory-grid-slot-slate-v1.png";
         content.Add(Screen, large);
         content.Add(Chrome, chrome);
+        content.Add(Skin, skin);
+        content.Add(Titlebar, titlebar);
+        content.Add(Slot, slot);
         content.Add(DaggerfallUiArt.InventoryPath, Encoding.UTF8.GetBytes(new JsonObject
         {
             ["schemaVersion"] = 1,
             ["generator"] = "fixture",
-            ["artifacts"] = new JsonArray(Entry("screen.death", Screen, large), Entry("window.character-sheet.chrome", Chrome, chrome)),
+            ["artifacts"] = new JsonArray(
+                Entry("screen.death", Screen, large),
+                Entry("window.character-sheet.chrome", Chrome, chrome),
+                Entry("inventory.skin.panel-slate.v1", Skin, skin),
+                Entry("inventory.skin.titlebar-slate.v1", Titlebar, titlebar),
+                Entry("inventory.skin.grid-slot-slate.v1", Slot, slot)),
         }.ToJsonString()));
 
         DaggerfallUiArt art = DaggerfallUiArt.Read(content, []);
         Assert.Equal($"data:image/png;base64,{Convert.ToBase64String(large)}", art.Images.Single(image => image.Id == "screen.death").Image);
         Assert.Equal(2, content.Reads(Screen));
         Assert.Equal(1, content.Reads(Chrome));
+        Assert.Equal(1, content.Reads(Skin));
 
         static JsonObject Entry(string mediaId, string path, byte[] bytes) => new()
         {

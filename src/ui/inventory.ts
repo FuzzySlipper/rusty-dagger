@@ -264,7 +264,11 @@ export function mountInventory(
     // Published art can arrive after the state that names it, and the revision check above would
     // otherwise leave the panel painted without it.
     refresh(): void {
-      if (disposed || current === null) return;
+      if (disposed) return;
+      // Published art can arrive after the panel was mounted, so the frame's custom properties are
+      // re-applied even while the panel still holds no state to redraw.
+      applyAuthoredArt(shell);
+      if (current === null) return;
       render(current);
     },
     dispose(): void {
@@ -423,10 +427,29 @@ function renderOverflow(container: HTMLElement, items: readonly InventoryItem[])
 }
 
 function applyAuthoredArt(element: HTMLElement): void {
-  const art = (name: string): string => `url("${new URL(`./inventory-art/authored/${name}`, import.meta.url).href}")`;
-  element.style.setProperty('--inventory-panel-art', art('inventory-skin-panel-slate-v1.png'));
-  element.style.setProperty('--inventory-title-art', art('inventory-titlebar-slate-v1.png'));
-  element.style.setProperty('--inventory-slot-art', art('inventory-grid-slot-slate-v1.png'));
+  // The frame art is published content the product reads by media identity, not a file staged
+  // beside this bundle. A session that cannot deliver one says which, rather than painting a panel
+  // that silently lost its frame.
+  const missing: string[] = [];
+  const art = (id: string): string => {
+    const source = image(id);
+    if (source === null) {
+      missing.push(id);
+      return 'none';
+    }
+
+    return `url("${source}")`;
+  };
+  element.style.setProperty('--inventory-panel-art', art('inventory.skin.panel-slate.v1'));
+  element.style.setProperty('--inventory-title-art', art('inventory.skin.titlebar-slate.v1'));
+  element.style.setProperty('--inventory-slot-art', art('inventory.skin.grid-slot-slate.v1'));
+  if (missing.length === 0) {
+    element.removeAttribute('data-art-missing');
+    return;
+  }
+
+  element.setAttribute('data-art-missing', missing.join(' '));
+  console.warn(`inventory frame art is not published by this session: ${missing.join(', ')}`);
 }
 
 function emptyMark(): HTMLElement {

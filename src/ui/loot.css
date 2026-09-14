@@ -1,5 +1,6 @@
 .dagger-menu.has-loot { width: min(46rem, calc(100vw - 40px)); }
-.dagger-loot { padding: 12px; background: #20211b url('./inventory-art/authored/inventory-skin-panel-slate-v1.png') center / 100% 100%; border: 1px solid #a88b4f; }
+.dagger-loot { padding: 12px; background: #20211b var(--loot-panel-art, none) center / 100% 100%; border: 1px solid #a88b4f; }
+.dagger-loot[data-art-missing] { border-style: dashed; }
 .dagger-loot h2 { font: 700 1rem Georgia, serif; color: #f5df9d; }
 .dagger-loot-items { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
 .dagger-loot-items li { display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center; padding: 10px 4px; border-bottom: 1px solid #635b40; }
