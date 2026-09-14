@@ -73,6 +73,22 @@ public sealed class PublishedContentDeliveryTests
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
         Assert.Equal(80, listed.Count);
 
+        // The families this repository cannot read at all are stated with their files and the donor
+        // anchor, so a consumer that finds no artifact for one of them can tell "not published" from
+        // "not readable" instead of guessing.
+        (string Family, string[] Files, string Anchor)[] unreadable =
+        [
+            .. inventory.GetProperty("unreadableFamilies").EnumerateArray()
+                .Select(family => (
+                    family.GetProperty("family").GetString()!,
+                    family.GetProperty("files").EnumerateArray().Select(file => file.GetString()!).ToArray(),
+                    family.GetProperty("donorAnchor").GetString()!)),
+        ];
+        Assert.Equal([".CEL", ".BSS"], unreadable.Select(family => family.Family));
+        Assert.Equal(["MAGE.CEL", "ROGUE.CEL", "WARRIOR.CEL"], unreadable.Single(family => family.Family == ".CEL").Files);
+        Assert.Equal(["CMPA00I0.BSS", "CMPA01I0.BSS", "CMPA02I0.BSS"], unreadable.Single(family => family.Family == ".BSS").Files);
+        Assert.All(unreadable, family => Assert.StartsWith("Assets/Scripts/API/", family.Anchor, StringComparison.Ordinal));
+
         // The six screens drawn with the palette inside their own file state that conversion fact with
         // its donor anchor, so a consumer can tell why their colours are what they are - and nothing
         // else in the inventory claims a palette it does not carry.
