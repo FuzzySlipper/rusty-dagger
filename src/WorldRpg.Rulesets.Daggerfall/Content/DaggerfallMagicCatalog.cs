@@ -67,13 +67,6 @@ internal sealed record DaggerfallMagicCatalogSet(
     IReadOnlyList<DaggerfallMagicDisposition> Dispositions,
     IReadOnlyList<string> SourceRecords)
 {
-    /// <summary>An empty catalog, for a payload that predates the publication.</summary>
-    internal static DaggerfallMagicCatalogSet Empty { get; } = new(
-        new Dictionary<string, DaggerfallSpellDefinition>(StringComparer.Ordinal),
-        new Dictionary<string, DaggerfallMagicItemDefinition>(StringComparer.Ordinal),
-        [],
-        []);
-
     /// <summary>Every enchantment that resolved to a published spell, in key order.</summary>
     internal IEnumerable<DaggerfallMagicEnchantmentDefinition> ResolvedLinks =>
         MagicItems.Values

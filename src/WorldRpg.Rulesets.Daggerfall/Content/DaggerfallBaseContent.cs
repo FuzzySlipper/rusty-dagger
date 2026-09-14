@@ -602,8 +602,9 @@ internal static class DaggerfallBaseContent
     {
         if (!root.TryGetProperty("mobiles", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
-            // Every published actor's parameters would resolve to nothing, so the loss is named where the
-            // payload is read rather than surfacing later as a missing record.
+            // The payload must publish the catalog: every published actor's parameters would resolve to
+            // nothing without it. The diagnostic is what a caller sees - reading aborts on it - so the
+            // return below is never observed.
             diagnostics.Add("Base payload publishes no mobile catalog section; donor mobile parameters resolve to nothing until it is republished.");
             return new DaggerfallMobileCatalogSet(
                 new Dictionary<int, DaggerfallMobileDefinition>(),
@@ -717,10 +718,15 @@ internal static class DaggerfallBaseContent
     {
         if (!root.TryGetProperty("magic", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
-            // A payload that predates the publication still loads; the loss is named rather than
-            // silently resolving no spell at all.
+            // The payload must publish the catalog: every spell and every enchantment link would resolve
+            // to nothing without it. The diagnostic is what a caller sees - reading aborts on it - so the
+            // return below is never observed.
             diagnostics.Add("Base payload publishes no magic catalog section; spells and enchantment links resolve to nothing until it is republished.");
-            return DaggerfallMagicCatalogSet.Empty;
+            return new DaggerfallMagicCatalogSet(
+                new Dictionary<string, DaggerfallSpellDefinition>(StringComparer.Ordinal),
+                new Dictionary<string, DaggerfallMagicItemDefinition>(StringComparer.Ordinal),
+                [],
+                []);
         }
 
         Dictionary<string, DaggerfallSpellDefinition> spells = new(StringComparer.Ordinal);
