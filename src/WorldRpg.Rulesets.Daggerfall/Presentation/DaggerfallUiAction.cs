@@ -55,7 +55,11 @@ internal static class DaggerfallUiAction
             if (action == "loot-close")
                 return fields.SetEquals(["action", "container"]) && !string.IsNullOrWhiteSpace(container)
                     ? new(action, Container: container) : null;
-            return fields.Count == 1 && action is "attack" or "inventory" or "character" or "loot" ? new(action) : null;
+            // "begin" is the entry screen's own action, which the product answers: the session accepts the
+            // shape so a slice carrying it is a known action it does not act on, rather than an
+            // unrecognized one it reports over the screen that asked.
+            return fields.Count == 1 && action is "attack" or "inventory" or "character" or "loot" or "begin"
+                ? new(action) : null;
         }
         catch (Exception error) when (error is JsonException or InvalidOperationException) { return null; }
     }

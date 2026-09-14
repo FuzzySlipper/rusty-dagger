@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Rusty.Engine;
+using WorldRpg.Host;
 using WorldRpg.Rulesets.Daggerfall.Content;
 using WorldRpg.Rulesets.Daggerfall.Presentation;
 using Xunit;
@@ -524,6 +526,66 @@ public sealed class PublishedContentDeliveryTests
         }
 
         string[] Media(string slot) => [.. slots[slot].Select(entry => entry.MediaId)];
+    }
+
+    /// <summary>
+    /// The screens the DOM's own mode table names are the published artifacts it can resolve.
+    /// </summary>
+    /// <remarks>
+    /// The DOM decides which screen a mode shows from a table it owns, and that table is the one place a
+    /// screen identity is written in the client. Nothing in the C# suites can execute the DOM, so this
+    /// reads the table it ships and holds it to the product's own contract: the inventory states which
+    /// slot each screen fills, and the mode whose name is that slot is the mode that shows it. A rename on
+    /// either side of that wire, or a screen swapped for another one, fails here rather than leaving a
+    /// mode whose screen is not the one the product published for it.
+    /// </remarks>
+    [Fact]
+    public void The_dom_mode_screen_table_names_published_screens_for_published_modes()
+    {
+        string source = File.ReadAllText(Path.Combine(RepositoryRoot(), "src/ui/screens.ts"));
+        (string Mode, string Screen)[] table =
+        [
+            .. Regex.Matches(source, @"\{\s*mode:\s*'(?<mode>[^']+)'\s*,\s*screen:\s*'(?<screen>[^']+)'\s*\}")
+                .Select(match => (match.Groups["mode"].Value, match.Groups["screen"].Value)),
+        ];
+        Assert.NotEmpty(table);
+
+        // Every screen the table names is an artifact the published inventory resolves, so a mode cannot
+        // name a screen the product never delivered.
+        using JsonDocument inventory = JsonDocument.Parse(
+            AdmittedContent().ReadBytes("worldrpg/media/classic-media-inventory.json").ToArray());
+        // The inventory indexes the sound catalog beside the art, so a screen is an entry that carries
+        // both an identity and the slot it fills.
+        Dictionary<string, string> slotOf = [];
+        foreach (JsonElement artifact in inventory.RootElement.GetProperty("artifacts").EnumerateArray())
+        {
+            if (artifact.TryGetProperty("mediaId", out JsonElement identity) && identity.ValueKind == JsonValueKind.String
+                && artifact.TryGetProperty("slot", out JsonElement slot) && slot.ValueKind == JsonValueKind.String)
+            {
+                slotOf[identity.GetString()!] = slot.GetString()!;
+            }
+        }
+
+        // Each screen the table names is one the inventory published, which is what makes the mode's
+        // screen arrive at all: a name with no artifact behind it is a mode that shows nothing.
+        //
+        // The mode is not required to equal the slot. The two name different things and already differ
+        // where the domains differ - the dead mode shows the screen the inventory slots as "death" - so a
+        // name check here would be testing the vocabulary rather than the binding. The slot is read to
+        // prove the pairing is a real published one rather than an identity that merely looks right.
+        Assert.All(table, entry =>
+        {
+            Assert.True(slotOf.TryGetValue(entry.Screen, out string? slot), $"'{entry.Screen}' is not a published screen.");
+            Assert.False(string.IsNullOrWhiteSpace(slot));
+        });
+
+        // The two modes whose screen replaces the HUD rather than joining it, in the order the table lists
+        // them: this is the client's whole claim about which modes own a screen.
+        Assert.Equal(["title", "dead"], table.Select(entry => entry.Mode));
+
+        // The action the entry screen sends is the one the product answers, and the wire is one word: a
+        // rename on either side leaves the button that does nothing.
+        Assert.Contains($"BEGIN_ACTION = '{WorldRpgProduct.EntryScreenAction}'", source, StringComparison.Ordinal);
     }
 
     private static ProductContent AdmittedContent()

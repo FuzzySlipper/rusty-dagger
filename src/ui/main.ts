@@ -4,6 +4,7 @@ import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from '.
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
 import { mountCharacter, isCharacterProjection, type CharacterProjection } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
+import { BEGIN_ACTION, screenForMode } from './screens.js';
 
 interface ProjectionEnvelope {
   readonly contract: string;
@@ -280,12 +281,12 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const redrawEntry = (): void => {
     entryRoot.hidden = !titleMode;
     if (!titleMode) return;
-    const entry = image('screen.title');
+    const entry = image(screenForMode('title')!);
     if (entry !== null) entryScreen.src = entry;
   };
   shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.addEventListener('click', () => {
     context.intents?.claim('dagger.ui', {
-      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: 'begin' },
+      kind: 'product-payload', contract: 'dagger.ui.action.v1', data: { action: BEGIN_ACTION },
     });
   });
   let lastPanelRevision: string | null = null;

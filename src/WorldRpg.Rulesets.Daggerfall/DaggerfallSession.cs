@@ -482,6 +482,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             DaggerfallPlayerUiAction? action = DaggerfallUiAction.Parse(inputEvent.PayloadData.Span);
             switch (action?.Action)
             {
+                // The entry screen's own action is the product's to answer, so the session knows the
+                // shape and does nothing with it; the product has already left the mode by the time an
+                // action in ordinary play could arrive.
+                case "begin": break;
                 case "attack": if (playing && !opensInteraction) firstStep.Request(DaggerfallInput.Attack); break;
                 // A reloaded DOM holds no art and asks for the revision it is missing; the projection
                 // answers on its next snapshot rather than a second delivery channel existing.
