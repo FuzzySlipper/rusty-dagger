@@ -37,11 +37,11 @@ internal static class DaggerfallBaseContent
             IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools = ReadLootCategoryPools(root, diagnostics);
             IReadOnlyList<DaggerfallDonorErratum> donorErrata = ReadDonorErrata(root, diagnostics);
             DaggerfallCatalogSet catalogs = ReadCatalogs(root, vocabulary, actors, items, diagnostics);
-            ValidateActorIdentities(actors, catalogs, diagnostics);
+            DaggerfallMobileCatalogSet mobiles = ReadMobileCatalog(root, actors, diagnostics);
+            ValidateActorIdentities(actors, catalogs, mobiles, diagnostics);
             DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
-            DaggerfallMobileCatalogSet mobiles = ReadMobileCatalog(root, actors, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
@@ -443,6 +443,7 @@ internal static class DaggerfallBaseContent
     private static void ValidateActorIdentities(
         IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors,
         DaggerfallCatalogSet catalogs,
+        DaggerfallMobileCatalogSet mobiles,
         DaggerfallContentDiagnostics diagnostics)
     {
         foreach (DaggerfallActorDefinition actor in actors.Values)
@@ -455,6 +456,22 @@ internal static class DaggerfallBaseContent
             if (actor.Career is { } career && !catalogs.Careers.Any(candidate => candidate.Id == career))
             {
                 diagnostics.Add($"Actor '{actor.Id.Value}' names career '{career}', which the catalogs do not publish.");
+            }
+
+            // An actor's mobile id is a media reference: it names the donor record whose textures, sounds
+            // and corpse the actor wears. A reference the published catalog does not carry would leave the
+            // actor with no source record, and one that resolves to a different actor would silently give
+            // it another mobile's media.
+            if (actor.MobileId is { } mobileId)
+            {
+                if (!mobiles.Mobiles.TryGetValue(mobileId, out DaggerfallMobileDefinition? mobile))
+                {
+                    diagnostics.Add($"Actor '{actor.Id.Value}' names mobile {mobileId}, which the published mobile catalog does not carry.");
+                }
+                else if (mobile.Actor is { } owner && owner != actor.Id.Value)
+                {
+                    diagnostics.Add($"Actor '{actor.Id.Value}' names mobile {mobileId}, which the published catalog resolves to actor '{owner}'.");
+                }
             }
         }
     }
