@@ -1475,7 +1475,13 @@ internal static class Program
                     sources.ClassicMediaInputs,
                     options.ClassicMediaProfile with { AuthoredOverlays = classicOverlays },
                     new Arena2ClassicMediaPublicationOptions(MaximumSourceBytes: MaximumIndividualSourceBytes));
-                return Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia).Plan;
+                DungeonLogicalSource archSource = sources.DungeonSources.Single(source => source.Label.EndsWith("ARCH3D.BSA", StringComparison.Ordinal));
+                GeometryPublication geometry = GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
+                    Arch3dInventoryReader.Read(archSource.Bytes.ToArray(), archSource.Label),
+                    archSource.Bytes,
+                    result.ReferencedMeshIds,
+                    sources.TextureLeaves()));
+                return Arena2MediaBundlePublication.Create(result, dungeonMedia, classicMedia, geometry).Plan;
             }
             catch (InvalidOperationException exception) when (TryRequiredTexture(exception.Message, out string? textureName))
             {
@@ -1922,6 +1928,27 @@ internal static class Program
         /// closure enter this source set. Classic-only TEXTURE archives never
         /// reach the dungeon media exact-closure validator.
         /// </summary>
+        /// <summary>
+        /// Every texture leaf the corpus supplies, read so a material reference resolves against what is
+        /// actually there rather than against whatever this pass happened to load.
+        /// </summary>
+        public TextureLeafInventory TextureLeaves()
+        {
+            List<(int Id, string Path, ReadOnlyMemory<byte> Bytes)> leaves = [];
+            foreach (string path in Directory.EnumerateFiles(arena2Directory, "TEXTURE.*"))
+            {
+                string name = Path.GetFileName(path);
+                if (!int.TryParse(name["TEXTURE.".Length..], NumberStyles.Integer, CultureInfo.InvariantCulture, out int leafId))
+                {
+                    continue;
+                }
+
+                leaves.Add((leafId, name, File.ReadAllBytes(path)));
+            }
+
+            return TextureLeafInventory.Enumerate(leaves, Path.GetFileName(Path.TrimEndingDirectorySeparator(arena2Directory)));
+        }
+
         public IReadOnlyList<Arena2DungeonMediaSource> DungeonMediaSources => dungeonSourceNames
             .Where(name => name is "PAL.PAL" || IsTextureLeaf(name))
             .OrderBy(name => name, StringComparer.Ordinal)

@@ -55,10 +55,12 @@ public sealed class DungeonNormalizerTests
         Replace(malformed, "MAPS.BSA", [1, 2, 3]);
         Assert.Throws<Arena2FormatException>(() => DungeonNormalizer.Normalize(Request(malformed)));
 
+        // A placement whose mesh the archive cannot serve is preserved as an unresolved reference rather
+        // than thrown: only when nothing at all can be built does normalization fail on empty geometry.
         DungeonLogicalSource[] missingModel = CreateSources();
         Replace(missingModel, "ARCH3D.BSA", CreateNumericBsa((99U, CreateArch3dFixture())));
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => DungeonNormalizer.Normalize(Request(missingModel)));
-        Assert.Contains("missing numeric model", exception.Message, StringComparison.Ordinal);
+        Assert.Contains("produced no static geometry", exception.Message, StringComparison.Ordinal);
     }
 
     [Fact]

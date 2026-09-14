@@ -1,3 +1,4 @@
+using Daggerfall.Import.Arena2;
 using System.Text;
 using Daggerfall.Import.Normalization;
 using Daggerfall.Import.Normalized;
@@ -32,6 +33,7 @@ public sealed class Arena2MediaBundlePublicationTests
         ImportPublicationManifestArtifact normalized = first.Plan.Manifest.Artifacts.Single(artifact => artifact.RelativePath == Arena2MediaBundlePublication.NormalizedDocumentRelativePath);
         Assert.Equal(
             [
+                "geometry/index.json",
                 Arena2MediaBundlePublication.ClassicMediaManifestRelativePath,
                 Arena2MediaBundlePublication.DungeonMediaManifestRelativePath,
                 "resources/test/catalog.json",
@@ -59,10 +61,10 @@ public sealed class Arena2MediaBundlePublicationTests
         DungeonNormalizationResult dungeon = CreateDungeon();
         Arena2DungeonMediaPublication dungeonMedia = CreateDungeonMedia();
         Arena2ClassicMediaPublication conflict = CreateClassicMedia(sourceDigest: ContentDigest.Compute("different"u8));
-        Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(dungeon, dungeonMedia, conflict));
+        Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(dungeon, dungeonMedia, conflict, CreateGeometry()));
 
         Arena2ClassicMediaPublication duplicate = CreateClassicMedia(artifactPath: "media/dungeon/materials/minimal.png");
-        Assert.Throws<ArgumentException>(() => Arena2MediaBundlePublication.Create(dungeon, dungeonMedia, duplicate));
+        Assert.Throws<ArgumentException>(() => Arena2MediaBundlePublication.Create(dungeon, dungeonMedia, duplicate, CreateGeometry()));
     }
 
     [Fact]
@@ -74,7 +76,7 @@ public sealed class Arena2MediaBundlePublicationTests
             WeaponMedia = [new ClassicWeaponMediaManifest("weapon.minimal", [WeaponActions(classic).First() with { FrameCount = 2 }])],
         };
 
-        Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(CreateDungeon(), CreateDungeonMedia(), classic));
+        Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(CreateDungeon(), CreateDungeonMedia(), classic, CreateGeometry()));
     }
 
     [Fact]
@@ -89,7 +91,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
             CreateDungeon(),
             CreateDungeonMedia(),
-            classic with { MediaManifest = invalidManifest }));
+            classic with { MediaManifest = invalidManifest }, CreateGeometry()));
     }
 
     [Fact]
@@ -106,7 +108,7 @@ public sealed class Arena2MediaBundlePublicationTests
             Billboards = [billboard with { Frames = [badLayout] }],
         };
 
-        Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(CreateDungeon(), dungeonMedia, CreateClassicMedia()));
+        Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(CreateDungeon(), dungeonMedia, CreateClassicMedia(), CreateGeometry()));
     }
 
     [Fact]
@@ -116,7 +118,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
             CreateDungeon(),
             CreateDungeonMedia(),
-            WithWeaponActions(classic, WeaponActions(classic).Take(6).ToArray())));
+            WithWeaponActions(classic, WeaponActions(classic).Take(6).ToArray()), CreateGeometry()));
 
         ClassicWeaponActionManifest idle = WeaponActions(classic).Single(action => action.Action == ClassicDaggerWeaponAction.Idle);
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
@@ -127,7 +129,7 @@ public sealed class Arena2MediaBundlePublicationTests
                 WeaponMedia = [new ClassicWeaponMediaManifest("weapon.minimal", WeaponActions(classic).Select(action => action.Action == ClassicDaggerWeaponAction.Idle
                     ? idle with { FrameStart = 1 }
                     : action).ToArray())],
-            }));
+            }, CreateGeometry()));
     }
 
     [Fact]
@@ -145,7 +147,7 @@ public sealed class Arena2MediaBundlePublicationTests
                 Effects = classic.Effects.Select(value => value.Effect == effect.Effect
                     ? value with { SourceRecordOrdinal = 99 }
                     : value).ToArray(),
-            }));
+            }, CreateGeometry()));
     }
 
     [Fact]
@@ -161,7 +163,7 @@ public sealed class Arena2MediaBundlePublicationTests
                 Effects = classic.Effects.Select(value => value.Effect == effect.Effect
                     ? effect with { Timing = new ClassicSpriteTiming(5F, false) }
                     : value).ToArray(),
-            }));
+            }, CreateGeometry()));
 
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
             CreateDungeon(),
@@ -171,7 +173,7 @@ public sealed class Arena2MediaBundlePublicationTests
                 Effects = classic.Effects.Select(value => value.Effect == effect.Effect
                     ? effect with { Timing = new ClassicSpriteTiming(10F, true) }
                     : value).ToArray(),
-            }));
+            }, CreateGeometry()));
 
         NormalizedMediaManifest descriptorWithChangedTiming = new(classic.MediaManifest.Resources.Select(resource =>
             resource.Id == effect.MediaId
@@ -180,7 +182,7 @@ public sealed class Arena2MediaBundlePublicationTests
         Assert.Throws<InvalidOperationException>(() => Arena2MediaBundlePublication.Create(
             CreateDungeon(),
             CreateDungeonMedia(),
-            classic with { MediaManifest = descriptorWithChangedTiming }));
+            classic with { MediaManifest = descriptorWithChangedTiming }, CreateGeometry()));
     }
 
     [Fact]
@@ -200,7 +202,7 @@ public sealed class Arena2MediaBundlePublicationTests
                 Effects = classic.Effects.Select(effect => effect.MediaId == effectId
                     ? effect with { Timing = new ClassicSpriteTiming(7F, true) }
                     : effect).ToArray(),
-            });
+            }, CreateGeometry());
 
         Assert.Contains(publication.Plan.Artifacts, artifact => artifact.RelativePath == Arena2MediaBundlePublication.ClassicMediaManifestRelativePath);
     }
@@ -213,7 +215,7 @@ public sealed class Arena2MediaBundlePublicationTests
             classic = WithWeaponActions(classic, WeaponActions(classic).Reverse().ToArray());
         }
 
-        return Arena2MediaBundlePublication.Create(CreateDungeon(), CreateDungeonMedia(), classic);
+        return Arena2MediaBundlePublication.Create(CreateDungeon(), CreateDungeonMedia(), classic, CreateGeometry());
     }
 
     private static DungeonNormalizationResult CreateDungeon()
@@ -298,7 +300,7 @@ public sealed class Arena2MediaBundlePublicationTests
             navigation,
             world,
             [texture, material]).Canonicalize();
-        return new(document, [], spatial);
+        return new(document, [], spatial, [], []);
     }
 
     private static Arena2DungeonMediaPublication CreateDungeonMedia()
@@ -434,5 +436,25 @@ public sealed class Arena2MediaBundlePublicationTests
             Enumerable.Range(0, frameCount)
                 .Select(index => new NormalizedAtlasFrame($"{id}/{index}", index, index, 0, 1, 1, 1, 1, false))
                 .ToArray());
+    }
+
+    /// <summary>A geometry publication for the fixture, over a mesh the fixture's own archive carries.</summary>
+    private static GeometryPublication CreateGeometry()
+    {
+        byte[] mesh = new byte[64];
+        "v2.7"u8.CopyTo(mesh);
+        byte[] bytes = new byte[Arena2FormatConstants.BsaHeaderBytes + mesh.Length + Arena2FormatConstants.NumericBsaDirectoryEntryBytes];
+        bytes[0] = 1;
+        bytes[2] = (byte)(Arena2FormatConstants.NumericBsaDirectoryType & 0xff);
+        bytes[3] = (byte)(Arena2FormatConstants.NumericBsaDirectoryType >> 8);
+        mesh.CopyTo(bytes, Arena2FormatConstants.BsaHeaderBytes);
+        BitConverter.GetBytes(9004u).CopyTo(bytes, Arena2FormatConstants.BsaHeaderBytes + mesh.Length);
+        BitConverter.GetBytes(mesh.Length).CopyTo(bytes, Arena2FormatConstants.BsaHeaderBytes + mesh.Length + 4);
+        Arch3dMeshInventory inventory = Arch3dInventoryReader.Read(bytes, "local/arena2/ARCH3D.BSA");
+        return GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
+            inventory,
+            bytes,
+            ["9004"],
+            TextureLeafInventory.Enumerate([], "local/arena2")));
     }
 }

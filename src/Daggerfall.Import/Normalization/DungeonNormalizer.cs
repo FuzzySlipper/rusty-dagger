@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Diagnostics.CodeAnalysis;
 using System.Collections.ObjectModel;
 using System.Text;
 using Daggerfall.Import.Arena2;
@@ -171,7 +173,9 @@ public sealed record DungeonRecordProvenance(string Id, string Kind, string Sour
 public sealed record DungeonNormalizationResult(
     NormalizedImportDocument Document,
     IReadOnlyList<DungeonRecordProvenance> RecordProvenance,
-    DungeonSpatialPublication SpatialPublication)
+    DungeonSpatialPublication SpatialPublication,
+    IReadOnlyList<string> ReferencedMeshIds,
+    IReadOnlyList<GeometryUnresolvedMeshReference> UnresolvedMeshReferences)
 {
     public void Validate()
     {
@@ -186,6 +190,30 @@ public sealed record DungeonNormalizationResult(
         }
 
         SpatialPublication.ValidateAgainst(Document);
+        NormalizedImportDocument.ValidateUnique(ReferencedMeshIds, meshId => meshId, "referenced mesh number");
+        foreach (string meshId in ReferencedMeshIds)
+        {
+            if (!uint.TryParse(meshId, NumberStyles.None, CultureInfo.InvariantCulture, out _))
+            {
+                throw new InvalidOperationException($"The normalized pack references the mesh '{meshId}', which is not a mesh number.");
+            }
+        }
+
+        // A reference the archive cannot serve is a fact about the pack: it named the mesh, and the pack
+        // has to say so rather than quietly carrying the placement without its geometry.
+        NormalizedImportDocument.ValidateUnique(UnresolvedMeshReferences, reference => reference.MeshId, "unresolved mesh reference");
+        foreach (GeometryUnresolvedMeshReference reference in UnresolvedMeshReferences)
+        {
+            if (!ReferencedMeshIds.Contains(reference.MeshId, StringComparer.Ordinal))
+            {
+                throw new InvalidOperationException($"The normalized pack reports mesh '{reference.MeshId}' unresolved without referencing it.");
+            }
+
+            if (string.IsNullOrWhiteSpace(reference.Reason))
+            {
+                throw new InvalidOperationException($"The normalized pack reports mesh '{reference.MeshId}' unresolved without a reason.");
+            }
+        }
     }
 }
 
@@ -281,6 +309,8 @@ public static class DungeonNormalizer
         private readonly ushort[] textureTable;
         private readonly ushort climateBase;
         private readonly Dictionary<(ushort Archive, ushort Record), TextureInfo> textures = [];
+        private readonly SortedSet<string> referencedMeshIds = new(StringComparer.Ordinal);
+        private readonly List<GeometryUnresolvedMeshReference> unresolvedMeshReferences = [];
         private readonly Dictionary<(ushort Archive, ushort Record, bool ParticipatesInCollision, string? DoorId), GeometryBuilder> geometry = [];
         private readonly List<NormalizedLightPlacement> lights = [];
         private readonly List<NormalizedBillboardPlacement> billboards = [];
@@ -403,7 +433,15 @@ public static class DungeonNormalizer
                     AddProvenance(doorId, "rdb-action-door", blocks.Source, index);
                 }
 
-                Arch3dMesh mesh = ResolveMesh(model.ModelId);
+                referencedMeshIds.Add(model.ModelId);
+                if (!TryResolveMesh(model.ModelId, out Arch3dMesh? mesh, out string reason))
+                {
+                    // A placement whose mesh the archive cannot serve keeps the fact that it named one: the
+                    // reference is reported unresolved and no geometry stands in for what is not there.
+                    unresolvedMeshReferences.Add(new GeometryUnresolvedMeshReference(model.ModelId, reason));
+                    continue;
+                }
+
                 Matrix3 rotation = Matrix3.ForModel(model);
                 foreach (Arch3dPlane plane in mesh.Planes)
                 {
@@ -527,7 +565,12 @@ public static class DungeonNormalizer
                 navigation,
                 world,
                 resources).Canonicalize();
-            DungeonNormalizationResult result = new(document, provenance.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(), spatialPublication);
+            DungeonNormalizationResult result = new(
+                document,
+                provenance.OrderBy(value => value.Id, StringComparer.Ordinal).ToArray(),
+                spatialPublication,
+                [.. referencedMeshIds],
+                [.. unresolvedMeshReferences.OrderBy(reference => reference.MeshId, StringComparer.Ordinal)]);
             result.Validate();
             return result;
         }
@@ -611,14 +654,31 @@ public static class DungeonNormalizer
             return texture;
         }
 
-        private Arch3dMesh ResolveMesh(string sourceModelId)
+        /// <summary>
+        /// Resolves one placement's mesh, reporting rather than throwing when the archive cannot serve it.
+        /// </summary>
+        private bool TryResolveMesh(string sourceModelId, [NotNullWhen(true)] out Arch3dMesh? mesh, out string reason)
         {
-            if (!uint.TryParse(sourceModelId, out uint recordId) || !arch.TryGetByNumericId(recordId, out BsaRecord? record) || record is null)
+            mesh = null;
+            reason = string.Empty;
+            if (!uint.TryParse(sourceModelId, NumberStyles.None, CultureInfo.InvariantCulture, out uint recordId)
+                || !arch.TryGetByNumericId(recordId, out BsaRecord? record)
+                || record is null)
             {
-                throw new InvalidOperationException($"ARCH3D.BSA is missing numeric model '{sourceModelId}'.");
+                reason = $"ARCH3D.BSA carries no numeric model '{sourceModelId}'";
+                return false;
             }
 
-            return Arch3dDecoder.Decode(arch.GetPayload(record).Span, arch.Source, recordId);
+            try
+            {
+                mesh = Arch3dDecoder.Decode(arch.GetPayload(record).Span, arch.Source, recordId);
+                return true;
+            }
+            catch (Arena2FormatException error)
+            {
+                reason = $"ARCH3D.BSA model '{sourceModelId}' at record {record.Ordinal} could not be decoded: {error.Message}";
+                return false;
+            }
         }
 
         private (ushort Archive, ushort Record) RemapTexture(ushort archiveId, ushort recordId) =>
