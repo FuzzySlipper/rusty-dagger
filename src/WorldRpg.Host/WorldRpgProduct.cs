@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Rusty.Engine;
 using Rusty.Engine.Persistence;
 using WorldRpg.Kit;
@@ -159,13 +160,33 @@ public sealed class WorldRpgProduct : IEngineProduct
         return (composition, selected);
     }
 
+    /// <summary>
+    /// Starts the product at its entry screen, which is the mode a run begins in.
+    /// </summary>
+    /// <remarks>
+    /// The world does not start here: the session holds input and time while the entry screen is up, so
+    /// this publishes the projection a new client needs and leaves the mode for <see cref="Begin"/>. The
+    /// Engine calls this once through the generated product exports, so the entry screen is what a client
+    /// sees before anything has happened in the world.
+    /// </remarks>
     public void Start()
     {
         if (_shutdown) return;
         _started = true;
-        Apply(ProductMode.Playing, "the product started and ordinary play resumes");
+        Apply(ProductMode.Title, "the product started at its entry screen");
         _session.PublishInitial();
     }
+
+    /// <summary>
+    /// Leaves the entry screen for ordinary play, which is the product's own decision to make.
+    /// </summary>
+    /// <remarks>
+    /// A client asks by sending the semantic action the Engine delivers, which <see cref="Update"/>
+    /// answers; this is the same transition for a caller that already holds the product, such as the
+    /// launcher or a test. Asking while the product is not at its entry screen is refused and recorded
+    /// rather than silently ignored.
+    /// </remarks>
+    public ProductModeChange Begin() => Apply(ProductMode.Playing, "the entry screen asked for ordinary play");
 
     /// <summary>Republishes the current session projection when the Engine attaches a new presentation client.</summary>
     public void Attach()
@@ -240,6 +261,13 @@ public sealed class WorldRpgProduct : IEngineProduct
         // A modal or a death still forwards the update, because the presentation that shows them
         // has to keep publishing; the session decides what the mode means for its own world.
         if (!_started || _shutdown || _mode == ProductMode.Paused) return ProductUpdateResult.None;
+        // The entry screen's own action leaves that mode before the session runs, so the world takes no
+        // step in the update that asked for play: the request is to begin, not to begin after a turn.
+        if (_mode == ProductMode.Title && RequestsEntryScreenAction(update.Input))
+        {
+            Apply(ProductMode.Playing, "the entry screen asked for ordinary play");
+        }
+
         // Settle what the session asked for before it runs again: a resumed save whose player is
         // already dead asks for death on the first look, and that must land before the world takes
         // a step rather than after it.
@@ -247,6 +275,61 @@ public sealed class WorldRpgProduct : IEngineProduct
         ProductUpdateResult result = _session.Update(update);
         AdoptSessionRequest();
         return result;
+    }
+
+    /// <summary>
+    /// Whether an admitted input slice carries the entry screen's own action.
+    /// </summary>
+    /// <remarks>
+    /// This is the same wire the ruleset reads player actions from, and the same contract string, because
+    /// the Engine delivers one kind of semantic action rather than one per consumer. The product reads one
+    /// action name here and passes the slice through unchanged, so the ruleset still sees everything the
+    /// entry screen sent and decides for itself that it means nothing in the mode it is in.
+    /// </remarks>
+    private static bool RequestsEntryScreenAction(ReadOnlySpan<ProductInputEvent> input)
+    {
+        foreach (ProductInputEvent inputEvent in input)
+        {
+            if (inputEvent.ValueKind != InputValueKind.ProductPayload
+                || !inputEvent.PayloadContract.Span.SequenceEqual(EntryScreenActionContract)) continue;
+            if (IsEntryScreenAction(inputEvent.PayloadData.Span)) return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>The payload contract a UI semantic action arrives under.</summary>
+    private static ReadOnlySpan<byte> EntryScreenActionContract => "dagger.ui.action.v1"u8;
+
+    /// <summary>
+    /// Whether an action payload names the entry screen's action, without interpreting the rest of it.
+    /// </summary>
+    /// <remarks>
+    /// A payload that does not parse, names another action, or carries fields this does not expect is not
+    /// the entry screen's action, so the product leaves the mode alone and the ruleset reports it - which
+    /// is where a malformed action already lands today.
+    /// </remarks>
+    private static bool IsEntryScreenAction(ReadOnlySpan<byte> payload)
+    {
+        if (payload.IsEmpty || payload.Length > 1024) return false;
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(payload.ToArray());
+            JsonElement root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return false;
+            bool named = false;
+            bool begin = false;
+            foreach (JsonProperty property in root.EnumerateObject())
+            {
+                if (property.Name != "action" || property.Value.ValueKind != JsonValueKind.String) continue;
+                if (named) return false;
+                named = true;
+                begin = property.Value.ValueEquals("begin");
+            }
+
+            return named && begin && root.EnumerateObject().Count() == 1;
+        }
+        catch (JsonException) { return false; }
     }
 
     /// <summary>

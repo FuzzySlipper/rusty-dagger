@@ -464,8 +464,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         ProductUpdateState firstStep = new(deltaSeconds);
         // A mode that is not ordinary play interprets no gameplay input and advances no world
         // time. The modal's own semantic actions still apply, because a modal that cannot act is
-        // not a modal; everything else is dropped and the presentation still publishes so the
-        // player can see the mode they are in.
+        // not a modal; everything else - including the entry screen's own action, which the product
+        // answers before this runs - is dropped and the presentation still publishes so the player
+        // can see the mode they are in.
         bool playing = _mode == ProductMode.Playing;
         bool modal = _mode == ProductMode.Modal;
         // The slice that opens an interaction admits no attack. A key pressed in the same admitted
@@ -558,6 +559,10 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             // The Kit actor state already owns the question of whether the player is defeated.
             if (State.Actors.Player.IsDefeated) return ProductMode.Dead;
             if (_mode == ProductMode.Dead) return null;
+            // The menu pair is what this asks about: a mode the product holds on its own, such as the
+            // entry screen, has no loot container to follow, so this asks for nothing rather than
+            // dragging the world into ordinary play behind the product's back.
+            if (_mode is not (ProductMode.Playing or ProductMode.Modal)) return null;
             bool open = _lootUi.Read() is not null;
             return open == (_mode == ProductMode.Modal) ? null : open ? ProductMode.Modal : ProductMode.Playing;
         }
@@ -583,6 +588,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         ProductMode.Modal => _lootUi.Read() is not null ? _lootUi.Message : "Interaction open.",
         ProductMode.Dead => "You have died.",
         ProductMode.Paused => "Paused.",
+        // The entry screen says its own thing; a status line would compete with the screen that is up.
+        ProductMode.Title => string.Empty,
         _ => string.Empty,
     };
 

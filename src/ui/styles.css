@@ -38,6 +38,14 @@
 .dagger-death { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; }
 .dagger-death[hidden] { display: none; }
 .dagger-death-screen { max-width: min(100%, 1280px); max-height: 100%; image-rendering: pixelated; }
+
+/* The entry screen the title mode owns, laid out the way the death screen is: the published artifact
+   fills the frame and this stylesheet carries layout only. */
+.dagger-entry { position: absolute; inset: 0; display: grid; place-items: center; background: #05060a; pointer-events: auto; }
+.dagger-entry[hidden] { display: none; }
+.dagger-entry-screen { max-width: min(100%, 1280px); max-height: 100%; image-rendering: pixelated; }
+.dagger-entry-begin { position: absolute; bottom: 12%; padding: 8px 22px; font: inherit; color: #f6ddb0; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); cursor: pointer; }
+.dagger-entry-begin:hover { background: rgba(40, 30, 12, .85); }
 .dagger-composition { position: absolute; right: 24px; top: 22px; max-width: min(42rem, calc(100vw - 48px)); padding: 10px 12px; background: rgba(2, 4, 4, .78); border: 1px solid rgba(198, 160, 90, .65); font: .7rem ui-monospace, monospace; }
 .dagger-composition > strong { color: #d9bf80; text-transform: uppercase; letter-spacing: .08em; }
 .dagger-composition dl { margin: 8px 0 0; display: grid; gap: 4px; }
