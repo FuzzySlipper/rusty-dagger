@@ -11,7 +11,16 @@ interface ProjectionEnvelope {
   readonly value: unknown;
 }
 
+interface ControllerUiObservation {
+  readonly context: 'interface';
+  readonly fact:
+    | { readonly kind: 'controller-button'; readonly button: string; readonly edge: 'pressed' | 'released' }
+    | { readonly kind: 'controller-axis'; readonly axis: string; readonly value: number }
+    | { readonly kind: 'controller-button-value'; readonly button: string; readonly value: number };
+}
+
 interface ProductUiContext {
+  readonly input?: { subscribe(observer: (input: ControllerUiObservation) => void): () => void };
   readonly ui: {
     setInteractionMode(mode: 'gameplay' | 'interface'): void;
     focusGameplay(): void;
@@ -51,6 +60,12 @@ interface CompositionIdentity {
 
 /** Snapshots between repeated requests for art this DOM has not received. */
 const ART_REQUEST_INTERVAL = 120;
+const MENU_CONTROLLER = Object.freeze({
+  accept: 'button-0', back: 'button-1', character: 'button-3',
+  inventory: 'button-8', menu: 'button-9', previous: 'button-12', next: 'button-13',
+  navigationAxis: 'axis-1', navigationThreshold: 0.55,
+});
+const MENU_FOCUSABLE = 'button:not(:disabled),select:not(:disabled),input:not(:disabled),a[href],[tabindex="0"]';
 
 export function mountProductUi(root: HTMLElement, context: ProductUiContext): { dispose(): void } {
   const stylesheet = document.createElement('link');
@@ -173,14 +188,16 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     home.querySelector<HTMLButtonElement>(`[data-action="${previous ?? 'resume'}"]`)!.focus();
   };
   const closeMenu = (): void => {
+    controllerDirection = 0;
     if (activePanel === 'loot') closeLoot();
     closeDebug();
     activePanel = null;
     menu.close();
-    context.ui.setInteractionMode('gameplay');
-    context.ui.focusGameplay();
+    context.ui.setInteractionMode(titleMode ? 'interface' : 'gameplay');
+    if (!titleMode) context.ui.focusGameplay();
   };
   const openMenu = (): void => {
+    controllerDirection = 0;
     context.ui.setInteractionMode('interface');
     menu.showModal();
     showHome();
@@ -231,6 +248,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   // Capture before Engine input sees navigation keys. Escape's native dialog
   // cancellation is suppressed so one physical press performs exactly one step.
   const onKeyDown = (event: KeyboardEvent): void => {
+    shell.classList.remove('controller-navigation');
     if (menu.open && event.code === 'Tab') {
       const buttons = Array.from(menu.querySelectorAll<HTMLElement>('button:not(:disabled),select:not(:disabled),input:not(:disabled),[tabindex="0"]'))
         .filter((button) => button.getClientRects().length > 0);
@@ -261,6 +279,47 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
       }
     }
   };
+  // The Engine owns controller sampling and interface/gameplay arbitration.
+  // This adapter assigns only DOM menu meaning and reuses click/menu handlers.
+  let controllerDirection = 0;
+  const controllerScope = (): HTMLElement | null => menu.open ? menu : !entryRoot.hidden ? entryRoot : null;
+  const focusControllerItem = (direction: number): void => {
+    const scope = controllerScope();
+    if (scope === null) return;
+    const items = Array.from(scope.querySelectorAll<HTMLElement>(MENU_FOCUSABLE))
+      .filter(item => item.getClientRects().length > 0);
+    if (items.length === 0) return;
+    const current = items.indexOf(document.activeElement as HTMLElement);
+    const next = current < 0 ? (direction < 0 ? items.length - 1 : 0)
+      : (current + direction + items.length) % items.length;
+    items[next]?.focus();
+  };
+  const unsubscribeController = context.input?.subscribe(({ fact }) => {
+    shell.classList.add('controller-navigation');
+    if (fact.kind === 'controller-axis' && fact.axis === MENU_CONTROLLER.navigationAxis) {
+      const direction = Math.abs(fact.value) < MENU_CONTROLLER.navigationThreshold ? 0 : Math.sign(fact.value);
+      if (direction !== 0 && direction !== controllerDirection) focusControllerItem(direction);
+      controllerDirection = direction;
+      return;
+    }
+    if (fact.kind !== 'controller-button' || fact.edge !== 'pressed') return;
+    if (fact.button === MENU_CONTROLLER.previous) focusControllerItem(-1);
+    else if (fact.button === MENU_CONTROLLER.next) focusControllerItem(1);
+    else if (fact.button === MENU_CONTROLLER.accept) {
+      const scope = controllerScope();
+      if (scope === null) return;
+      let active = document.activeElement as HTMLElement | null;
+      if (active === null || !scope.contains(active) || !active.matches(MENU_FOCUSABLE)) {
+        focusControllerItem(1);
+        active = document.activeElement as HTMLElement | null;
+      }
+      if (active !== null && scope.contains(active)) active.click();
+    } else if (menu.open) {
+      if (fact.button === MENU_CONTROLLER.back || fact.button === MENU_CONTROLLER.menu) dismiss();
+      else if (fact.button === MENU_CONTROLLER.inventory) runMenuAction('inventory');
+      else if (fact.button === MENU_CONTROLLER.character) runMenuAction('character');
+    }
+  });
   const onCancel = (event: Event): void => event.preventDefault();
   // One named handler, so the listener dispose removes is the listener this mount added.
   const onMenuToggle = (): void => runMenuAction('menu');
@@ -279,7 +338,13 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   // the screen does is ask the product to begin. The product decides, so the answer is the mode changing
   // rather than this hiding itself.
   const redrawEntry = (): void => {
+    const wasVisible = !entryRoot.hidden;
     entryRoot.hidden = !titleMode;
+    if (wasVisible !== titleMode && !menu.open) {
+      controllerDirection = 0;
+      context.ui.setInteractionMode(titleMode ? 'interface' : 'gameplay');
+      if (!titleMode) context.ui.focusGameplay();
+    }
     if (!titleMode) return;
     const entry = image(screenForMode(TITLE_MODE)!);
     if (entry !== null) entryScreen.src = entry;
@@ -370,6 +435,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     composition.replaceChildren(...diagnosticRows(value.composition));
   }) ?? (() => {});
   return { dispose: () => {
+    unsubscribeController?.();
     unsubscribe();
     closeDebug();
     inventoryView.dispose();
