@@ -480,6 +480,17 @@ public sealed class CharacterMediaPublicationTests
             () => CharacterMediaPublisher.PublishAll(broken, withoutNite, palettes, inventory));
         Assert.Contains("NITE00I0.IMG", error.Message, StringComparison.Ordinal);
         Assert.Contains("binds", error.Message, StringComparison.Ordinal);
+
+        // The refusal names exactly the canvases that file carries, not merely something: a message that
+        // listed every canvas would satisfy a substring check while saying nothing about which binding broke.
+        string[] unpublished = [.. broken.Canvases
+            .Where(canvas => canvas.Binding == MediaBinding.Admitted)
+            .Select(canvas => canvas.MediaId)
+            .Order(StringComparer.Ordinal)];
+        string boundBreak = Assert.Single(unpublished);
+        Assert.Contains(boundBreak, error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("NITE01I0.IMG", error.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("BODY00I0.IMG", error.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
