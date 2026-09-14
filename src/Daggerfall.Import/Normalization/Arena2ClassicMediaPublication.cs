@@ -46,7 +46,9 @@ public sealed record Arena2ClassicMediaPublicationOptions(
     int MaximumAtlasDimension = 4096,
     long MaximumSourceBytes = 16L * 1024 * 1024,
     long MaximumArtifactBytes = 16L * 1024 * 1024,
-    long MaximumTotalArtifactBytes = 64L * 1024 * 1024)
+    long MaximumTotalArtifactBytes = 64L * 1024 * 1024,
+    int AuthoredUiMaximumDimension = 256,
+    long AuthoredUiMaximumArtifactBytes = 512L * 1024)
 {
     internal void Validate()
     {
@@ -56,6 +58,14 @@ public sealed record Arena2ClassicMediaPublicationOptions(
             || MaximumTotalArtifactBytes <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(MaximumAtlasDimension), "Classic-media publication quotas must be positive.");
+        }
+
+        // An authored UI artifact is decoration the DOM paints, not a source plate: it is published at
+        // a size a projection can carry, and a source that cannot be brought inside the bound is a
+        // refusal rather than a silent multi-megabyte snapshot.
+        if (AuthoredUiMaximumDimension <= 0 || AuthoredUiMaximumArtifactBytes <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(AuthoredUiMaximumDimension), "Authored UI publication bounds must be positive.");
         }
     }
 }
@@ -904,8 +914,20 @@ public sealed record Arena2ClassicMediaPublication(
                 throw new InvalidOperationException($"Authored UI asset '{asset.Id}' exceeds the image dimension quota.");
             }
 
-            RequireArtifactQuota(asset.PngBytes, options, asset.Id);
-            artifacts.Add(new(asset.Id, NormalizedMediaKind.UserInterface, asset.RelativePath, asset.PngBytes, width, height, null, "image/png"));
+            // The operator's file is the source, not the published artifact. Decoration that the DOM
+            // paints is published at a bounded size, derived here rather than copied, so the delivered
+            // tree carries something a snapshot can afford and the oversized plate stays outside it.
+            DeterministicPngImage source = DeterministicPngReader.ReadRgba8(asset.PngBytes, asset.Id);
+            DeterministicPngImage published = DeterministicImageResample.FitWithin(source, options.AuthoredUiMaximumDimension, asset.Id);
+            byte[] bytes = source == published ? asset.PngBytes : DeterministicPngEncoder.EncodeRgba8(published.Width, published.Height, published.Rgba);
+            if (bytes.LongLength > options.AuthoredUiMaximumArtifactBytes)
+            {
+                throw new InvalidOperationException(
+                    $"Authored UI asset '{asset.Id}' publishes as {bytes.LongLength} bytes, past the {options.AuthoredUiMaximumArtifactBytes}-byte bound for DOM decoration; normalize the source instead of shipping it.");
+            }
+
+            RequireArtifactQuota(bytes, options, asset.Id);
+            artifacts.Add(new(asset.Id, NormalizedMediaKind.UserInterface, asset.RelativePath, bytes, published.Width, published.Height, null, "image/png"));
             metadata.Add(new(asset.Id, asset.RelativePath, asset.SourceLabel, asset.Generator, asset.Prompt));
         }
 
