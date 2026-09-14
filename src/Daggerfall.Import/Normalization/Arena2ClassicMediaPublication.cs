@@ -30,6 +30,11 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Inve00I0Img,
     byte[] Info00I0Img,
     byte[] Die00I0Img,
+    byte[] Book00I0Img,
+    byte[] Rest00I0Img,
+    byte[] Shop00I0Img,
+    byte[] Gild00I0Img,
+    byte[] Bank00I0Img,
     byte[] Texture207,
     byte[] Texture216,
     byte[] Texture234,
@@ -178,11 +183,47 @@ public enum ClassicUiImage
     InventoryChrome,
     CharacterSheetChrome,
 
+    /// <summary>The book reader's page panel (donor <c>DaggerfallBookReaderWindow</c>).</summary>
+    BookReader,
+
+    /// <summary>The rest dialog's type panel (donor <c>DaggerfallRestWindow</c>).</summary>
+    RestPanel,
+
+    /// <summary>The trade window's haggling cost panel (donor <c>DaggerfallTradeWindow</c>).</summary>
+    MerchantCostPanel,
+
+    /// <summary>The guild service popup's base panel (donor <c>DaggerfallGuildServicePopupWindow</c>).</summary>
+    GuildServicePanel,
+
+    /// <summary>The banking window's panel (donor <c>DaggerfallBankingWindow</c>).</summary>
+    BankPanel,
+
     /// <summary>
     /// The screen the product shows when the player dies: a full-screen image that carries its own
     /// palette, unlike the other UI images, which is why the publication asks the source for one.
     /// </summary>
     ScreenDeath,
+}
+
+/// <summary>
+/// The semantic screen a published UI image fills. A slot is what a consumer binds
+/// ("the book reader's page", "the rest dialog"), so it is published beside the
+/// media identity rather than inferred from a file name at each call site.
+/// </summary>
+public enum ClassicUiSlot
+{
+    HudChrome,
+    HudVitalHealth,
+    HudVitalFatigue,
+    HudVitalMagicka,
+    Inventory,
+    CharacterSheet,
+    Book,
+    Rest,
+    Merchant,
+    Guild,
+    Bank,
+    Death,
 }
 
 /// <summary>A discoverable frame cadence and repeat policy; it owns no playback.</summary>
@@ -270,6 +311,29 @@ public sealed record ClassicUiImageManifest(
     short SourceYOffset,
     bool IsHeaderless)
 {
+    /// <summary>
+    /// The semantic screen this image fills. It is derived rather than configured, because a role and
+    /// its slot disagreeing would publish an image no consumer could bind to the screen it feeds.
+    /// </summary>
+    public ClassicUiSlot Slot => SlotOf(Image);
+
+    internal static ClassicUiSlot SlotOf(ClassicUiImage image) => image switch
+    {
+        ClassicUiImage.HudChromeMain => ClassicUiSlot.HudChrome,
+        ClassicUiImage.HudVitalHealth => ClassicUiSlot.HudVitalHealth,
+        ClassicUiImage.HudVitalFatigue => ClassicUiSlot.HudVitalFatigue,
+        ClassicUiImage.HudVitalMagicka => ClassicUiSlot.HudVitalMagicka,
+        ClassicUiImage.InventoryChrome => ClassicUiSlot.Inventory,
+        ClassicUiImage.CharacterSheetChrome => ClassicUiSlot.CharacterSheet,
+        ClassicUiImage.BookReader => ClassicUiSlot.Book,
+        ClassicUiImage.RestPanel => ClassicUiSlot.Rest,
+        ClassicUiImage.MerchantCostPanel => ClassicUiSlot.Merchant,
+        ClassicUiImage.GuildServicePanel => ClassicUiSlot.Guild,
+        ClassicUiImage.BankPanel => ClassicUiSlot.Bank,
+        ClassicUiImage.ScreenDeath => ClassicUiSlot.Death,
+        _ => throw new ArgumentOutOfRangeException(nameof(image), image, "An admitted UI image with no slot is an artifact no consumer can bind."),
+    };
+
     internal void Validate()
     {
         if (!Enum.IsDefined(Image))
@@ -475,6 +539,15 @@ public sealed record Arena2ClassicMediaPublication(
         // The one screen named so far is a mode's rather than a window's: the product shows it when the
         // player dies, and nothing named it before because no consumer had asked for it.
         new(ClassicUiImage.ScreenDeath, "screen.death", "DIE_00I0.IMG", true),
+
+        // Service screens and panels, each named by the donor window that reads it: the book reader's
+        // page, the rest dialog's type panel, the trade window's cost panel, the guild service popup
+        // and the banking window.
+        new(ClassicUiImage.BookReader, "window.book.reader", "BOOK00I0.IMG", false),
+        new(ClassicUiImage.RestPanel, "window.rest.panel", "REST00I0.IMG", false),
+        new(ClassicUiImage.MerchantCostPanel, "window.merchant.cost", "SHOP00I0.IMG", false),
+        new(ClassicUiImage.GuildServicePanel, "window.guild.service", "GILD00I0.IMG", false),
+        new(ClassicUiImage.BankPanel, "window.bank.panel", "BANK00I0.IMG", false),
     ];
 
     private static readonly InventoryIconSource[] InventoryIconSources =
@@ -1413,6 +1486,11 @@ public sealed record Arena2ClassicMediaPublication(
             Main04I0Img = inputs.Main04I0Img;
             Main05I0Img = inputs.Main05I0Img;
             Inve00I0Img = inputs.Inve00I0Img;
+            Book00I0Img = inputs.Book00I0Img;
+            Rest00I0Img = inputs.Rest00I0Img;
+            Shop00I0Img = inputs.Shop00I0Img;
+            Gild00I0Img = inputs.Gild00I0Img;
+            Bank00I0Img = inputs.Bank00I0Img;
             Die00I0Img = inputs.Die00I0Img;
             Info00I0Img = inputs.Info00I0Img;
             Texture207 = inputs.Texture207;
@@ -1441,6 +1519,11 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Main04I0Img { get; }
         public byte[] Main05I0Img { get; }
         public byte[] Inve00I0Img { get; }
+        public byte[] Book00I0Img { get; }
+        public byte[] Rest00I0Img { get; }
+        public byte[] Shop00I0Img { get; }
+        public byte[] Gild00I0Img { get; }
+        public byte[] Bank00I0Img { get; }
 
         public byte[] Die00I0Img { get; }
         public byte[] Info00I0Img { get; }
@@ -1461,6 +1544,8 @@ public sealed record Arena2ClassicMediaPublication(
                 ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
                 ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img),
+                ("BOOK00I0.IMG", inputs.Book00I0Img), ("REST00I0.IMG", inputs.Rest00I0Img), ("SHOP00I0.IMG", inputs.Shop00I0Img),
+                ("GILD00I0.IMG", inputs.Gild00I0Img), ("BANK00I0.IMG", inputs.Bank00I0Img),
                 ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
                 ("TEXTURE.234", inputs.Texture234), ("TEXTURE.245", inputs.Texture245), ("FONT0003.FNT", inputs.Font0003Fnt),
             ];
@@ -1509,6 +1594,11 @@ public sealed record Arena2ClassicMediaPublication(
             "MAIN05I0.IMG" => (ImgDecoder.Decode(Main05I0Img, "arena2/MAIN05I0.IMG"), null),
             "INVE00I0.IMG" => (ImgDecoder.DecodeHeaderless(Inve00I0Img, "arena2/INVE00I0.IMG"), null),
             "INFO00I0.IMG" => (ImgDecoder.DecodeHeaderless(Info00I0Img, "arena2/INFO00I0.IMG"), null),
+            "BOOK00I0.IMG" => (ImgDecoder.DecodeHeaderless(Book00I0Img, "arena2/BOOK00I0.IMG"), null),
+            "REST00I0.IMG" => (ImgDecoder.Decode(Rest00I0Img, "arena2/REST00I0.IMG"), null),
+            "SHOP00I0.IMG" => (ImgDecoder.Decode(Shop00I0Img, "arena2/SHOP00I0.IMG"), null),
+            "GILD00I0.IMG" => (ImgDecoder.Decode(Gild00I0Img, "arena2/GILD00I0.IMG"), null),
+            "BANK00I0.IMG" => (ImgDecoder.Decode(Bank00I0Img, "arena2/BANK00I0.IMG"), null),
             "DIE_00I0.IMG" => Screen(Die00I0Img, "arena2/DIE_00I0.IMG"),
             _ => throw new ArgumentOutOfRangeException(nameof(fileName)),
         };

@@ -149,25 +149,29 @@
       "path": "worldrpg/media/ui/hud-chrome-main.png",
       "byteLength": 9484,
       "sha256": "2f587e1597475b606d24a3dcafec155c85b4d5485db3336a24b32ebf897cb233",
-      "mediaId": "hud.chrome.main"
+      "mediaId": "hud.chrome.main",
+      "slot": "hudChrome"
     },
     {
       "path": "worldrpg/media/ui/hud-vital-fatigue.png",
       "byteLength": 226,
       "sha256": "844f73ab04722a176ee69cc4c0cec0acccd012f0c01856649dca96b25cc88634",
-      "mediaId": "hud.vital.fatigue"
+      "mediaId": "hud.vital.fatigue",
+      "slot": "hudVitalFatigue"
     },
     {
       "path": "worldrpg/media/ui/hud-vital-health.png",
       "byteLength": 230,
       "sha256": "d8ea5b3f369cc05c33d20ac5022eeb0711bedaac6afc7b97bfaba5956666d859",
-      "mediaId": "hud.vital.health"
+      "mediaId": "hud.vital.health",
+      "slot": "hudVitalHealth"
     },
     {
       "path": "worldrpg/media/ui/hud-vital-magicka.png",
       "byteLength": 229,
       "sha256": "602ea19d376f6ab701bddd4a9e1d0d2fd097bad36f9c59b735e41b316d8ca52e",
-      "mediaId": "hud.vital.magicka"
+      "mediaId": "hud.vital.magicka",
+      "slot": "hudVitalMagicka"
     },
     {
       "path": "worldrpg/media/ui/inventory-icons/inventory-icon-arrow.png",
@@ -359,19 +363,57 @@
       "path": "worldrpg/media/ui/screen-death.png",
       "byteLength": 63124,
       "sha256": "792feeb481c4e587acc6f4d627d331336c0c50d13c59b996252c88ed14b34289",
-      "mediaId": "screen.death"
+      "mediaId": "screen.death",
+      "slot": "death"
+    },
+    {
+      "path": "worldrpg/media/ui/window-bank-panel.png",
+      "byteLength": 18345,
+      "sha256": "a02eeb48c42648f8502309bf9cfcc836237c303637823da0ab2457a9a4e625e7",
+      "mediaId": "window.bank.panel",
+      "slot": "bank"
+    },
+    {
+      "path": "worldrpg/media/ui/window-book-reader.png",
+      "byteLength": 3789,
+      "sha256": "387c5044af65e3687cffa4ea46a6f584974dd89ab91ea37eb7d14509fd45f31a",
+      "mediaId": "window.book.reader",
+      "slot": "book"
     },
     {
       "path": "worldrpg/media/ui/window-character-sheet-chrome.png",
       "byteLength": 35236,
       "sha256": "10b005fc1385cd2612ead1dfd0bf79374e9b8a2ca7c4731ca1b83305330de818",
-      "mediaId": "window.character-sheet.chrome"
+      "mediaId": "window.character-sheet.chrome",
+      "slot": "characterSheet"
+    },
+    {
+      "path": "worldrpg/media/ui/window-guild-service.png",
+      "byteLength": 3615,
+      "sha256": "2911b48a9bf1f05026fe9652210932dce6ac4bf3872d8d78b451c59021fd9d06",
+      "mediaId": "window.guild.service",
+      "slot": "guild"
     },
     {
       "path": "worldrpg/media/ui/window-inventory-chrome.png",
       "byteLength": 25725,
       "sha256": "24b3fd3f6c5e7ade04ff18d79e623aa4247853878b15dfc7d79ad744c1526cd9",
-      "mediaId": "window.inventory.chrome"
+      "mediaId": "window.inventory.chrome",
+      "slot": "inventory"
+    },
+    {
+      "path": "worldrpg/media/ui/window-merchant-cost.png",
+      "byteLength": 771,
+      "sha256": "804d678f18797dd1a41d4bc8997cf316b9bb88de1089e8d46fb9c304fb4a6bf5",
+      "mediaId": "window.merchant.cost",
+      "slot": "merchant"
+    },
+    {
+      "path": "worldrpg/media/ui/window-rest-panel.png",
+      "byteLength": 3502,
+      "sha256": "659e59a8af5a496d972af1cb2a64eb75961bacdc57362f2beeb8e8d34bdb836b",
+      "mediaId": "window.rest.panel",
+      "slot": "rest"
     }
   ]
 }
