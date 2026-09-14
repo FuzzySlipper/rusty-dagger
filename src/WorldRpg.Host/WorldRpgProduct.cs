@@ -11,6 +11,15 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// <summary>How many recent mode decisions are kept for diagnosis.</summary>
     public const int ModeHistoryLimit = 16;
 
+    /// <summary>
+    /// The action a client sends to leave the entry screen.
+    /// </summary>
+    /// <remarks>
+    /// The client and the product have to agree on this word, so it is stated once here and the DOM's own
+    /// table is checked against it rather than the two being written out separately and drifting.
+    /// </remarks>
+    public const string EntryScreenAction = "begin";
+
     private readonly ProductCreateContext _context;
     private readonly ResolvedGameComposition _composition;
     private readonly IGameRuleset _ruleset;
@@ -19,6 +28,7 @@ public sealed class WorldRpgProduct : IEngineProduct
     private readonly ResolvedCompositionIdentity _compositionIdentity;
     private bool _started;
     private bool _shutdown;
+    private readonly bool _resumed;
     private ProductMode _mode = ProductMode.Playing;
 
     public WorldRpgProduct(ProductCreateContext context)
@@ -60,6 +70,9 @@ public sealed class WorldRpgProduct : IEngineProduct
         _ruleset = ruleset;
         _compositionIdentity = composition.Identity;
         _session = session;
+        // A resumed product is already past the entry screen: the world has been played, so starting it
+        // again behind a screen that offers to begin would offer to begin a run that is already running.
+        _resumed = true;
     }
 
     /// <summary>The mode the product runs its session under.</summary>
@@ -165,15 +178,29 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// </summary>
     /// <remarks>
     /// The world does not start here: the session holds input and time while the entry screen is up, so
-    /// this publishes the projection a new client needs and leaves the mode for <see cref="Begin"/>. The
-    /// Engine calls this once through the generated product exports, so the entry screen is what a client
-    /// sees before anything has happened in the world.
+    /// this tells it which mode it is starting in and publishes once, which is the projection a client
+    /// that just attached reads. The Engine calls this once through the generated product exports, so the
+    /// entry screen is what a client sees before anything has happened in the world; a product resumed
+    /// from a save starts in ordinary play instead, because the screen exists to begin a run rather than
+    /// to begin one already in progress.
+    /// <para>
+    /// The mode is set here rather than applied through <see cref="Apply"/>, which republishes: this
+    /// publication is the projection a client reads, and a second one would be a mode change for a mode
+    /// the product has not left yet. The decision is still recorded, so a caller that needs to know why
+    /// the product is where it is reads the history it always did.
+    /// </para>
     /// </remarks>
     public void Start()
     {
-        if (_shutdown) return;
+        if (_shutdown || _started) return;
         _started = true;
-        Apply(ProductMode.Title, "the product started at its entry screen");
+        ProductMode start = _resumed ? ProductMode.Playing : ProductMode.Title;
+        ProductMode from = _mode;
+        _mode = start;
+        if (_session is IModeAwareGameSession aware) aware.ApplyProductMode(start);
+        Record(new(from, start,
+            from == start ? ProductModeChangeOutcome.AlreadyInMode : ProductModeChangeOutcome.Applied,
+            _resumed ? "the resumed product started in the world it restored" : "the product started at its entry screen"));
         _session.PublishInitial();
     }
 
@@ -261,12 +288,7 @@ public sealed class WorldRpgProduct : IEngineProduct
         // A modal or a death still forwards the update, because the presentation that shows them
         // has to keep publishing; the session decides what the mode means for its own world.
         if (!_started || _shutdown || _mode == ProductMode.Paused) return ProductUpdateResult.None;
-        // The entry screen's own action leaves that mode before the session runs, so the world takes no
-        // step in the update that asked for play: the request is to begin, not to begin after a turn.
-        if (_mode == ProductMode.Title && RequestsEntryScreenAction(update.Input))
-        {
-            Apply(ProductMode.Playing, "the entry screen asked for ordinary play");
-        }
+        bool begin = _mode == ProductMode.Title && RequestsEntryScreenAction(update.Input);
 
         // Settle what the session asked for before it runs again: a resumed save whose player is
         // already dead asks for death on the first look, and that must land before the world takes
@@ -274,6 +296,14 @@ public sealed class WorldRpgProduct : IEngineProduct
         AdoptSessionRequest();
         ProductUpdateResult result = _session.Update(update);
         AdoptSessionRequest();
+
+        // The entry screen's own action leaves that mode after the session has run, not before: the
+        // session is still in the entry-screen mode for that update, so it interprets no gameplay input
+        // and takes no world step, and the action it cannot use is dropped by the same gate every other
+        // action is. Applying the mode first would put the session into ordinary play in time to act on
+        // the very slice that only asked for play, and to report the request it cannot interpret as an
+        // unrecognized action. The transition publishes the presentation it changed.
+        if (begin) Apply(ProductMode.Playing, "the entry screen asked for ordinary play");
         return result;
     }
 
@@ -324,7 +354,7 @@ public sealed class WorldRpgProduct : IEngineProduct
                 if (property.Name != "action" || property.Value.ValueKind != JsonValueKind.String) continue;
                 if (named) return false;
                 named = true;
-                begin = property.Value.ValueEquals("begin");
+                begin = property.Value.ValueEquals(EntryScreenAction);
             }
 
             return named && begin && root.EnumerateObject().Count() == 1;
@@ -348,14 +378,24 @@ public sealed class WorldRpgProduct : IEngineProduct
     /// death outranks an open modal, which outranks a pause; a pause cancels an open modal; a
     /// resume does not close one, because only the interaction that owns input ends it; a modal
     /// needs ordinary play, so a paused product must resume first; a modal or a death needs a
-    /// session that can apply it; death is left only by a session replacement; and a request that
-    /// names the current mode is already in it rather than an error.
+    /// session that can apply it; death is left only by a session replacement; the entry screen
+    /// leaves only for ordinary play, because it is the product's own gate rather than a state a
+    /// caller can step over; and a request that names the current mode is already in it rather than
+    /// an error.
     /// </summary>
     private ProductModeChange Apply(ProductMode requested, string reason, bool closesModal = false)
     {
         if (_shutdown) return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product is shut down"));
         if (!_started) return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the product has not started"));
         if (requested == _mode) return Record(new(_mode, _mode, ProductModeChangeOutcome.AlreadyInMode, reason));
+        if (_mode == ProductMode.Title && requested != ProductMode.Playing)
+        {
+            // The entry screen owns the product until a client begins: a pause, a modal, a death or a
+            // second entry screen would each be a caller stepping over the one decision the screen exists
+            // to represent, and a death especially would be a death of a world that never started.
+            return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "the entry screen leaves only for ordinary play; begin first"));
+        }
+
         if (_mode == ProductMode.Dead)
         {
             return Record(new(_mode, _mode, ProductModeChangeOutcome.Refused, "a dead player leaves that mode only by a session replacement, not by a mode change"));

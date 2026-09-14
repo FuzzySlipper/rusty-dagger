@@ -145,6 +145,12 @@ public sealed class WorldRpgSaveStoreTests
         Assert.False(entry.IsBlocking);
         using WorldRpgProduct? product = result.Product;
         Assert.NotNull(product);
+
+        // A resumed product has already been past the entry screen: starting it shows the world the save
+        // restored rather than a screen offering to begin a run that is already in progress.
+        product.Start();
+        Assert.Equal(ProductMode.Playing, product.Mode);
+        Assert.Equal("the resumed product started in the world it restored", product.ModeHistory[^1].Reason);
     }
 
     private sealed class ReportingRuleset : ISaveableGameRuleset

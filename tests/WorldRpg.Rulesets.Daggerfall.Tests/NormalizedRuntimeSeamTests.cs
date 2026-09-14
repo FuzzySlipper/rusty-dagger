@@ -4023,7 +4023,10 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal("title", engine.PublishedField("mode"));
 
         // The session asks the product for nothing while the entry screen holds: it has no loot container
-        // to follow, and the mode is the product's own decision rather than one it reports.
+        // to follow, and the mode is the product's own decision rather than one it reports. (The case with
+        // a container open is the modal test's, which has the corpse this fixture does not: a container
+        // cannot be opened from a world that has not started, so the state it protects is unreachable
+        // here and is covered where it is reachable.)
         Assert.Null(session.PendingModeRequest);
 
         // A gameplay action read while the entry screen holds is dropped rather than acted on, so a key
@@ -4039,10 +4042,27 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(ProductMode.Title, session.Mode);
         Assert.Equal(stepsBefore, spatial.StepCalls);
 
+        // A status line would compete with the screen that is up, so the entry screen says nothing.
+        Assert.Equal(string.Empty, engine.PublishedField("lastOutcome"));
+
+        // A slice carrying the entry screen's own action is a shape this knows and does not act on rather
+        // than an unrecognized one: the product answers it, and reporting it over the screen that asked
+        // would put a message on the entry screen for doing the one thing the entry screen does.
+        ProductInputEvent begin = Input(InputEventKind.DirectDigital) with
+        {
+            ValueKind = InputValueKind.ProductPayload,
+            PayloadContract = "dagger.ui.action.v1"u8.ToArray(),
+            PayloadData = Encoding.UTF8.GetBytes("""{"action":"begin"}"""),
+        };
+        session.Update(new ProductUpdate(OuterUpdate(3), [begin]));
+        Assert.DoesNotContain("Unrecognized", engine.PublishedField("lastOutcome"), StringComparison.Ordinal);
+        Assert.Equal(ProductMode.Title, session.Mode);
+        Assert.Equal(stepsBefore, spatial.StepCalls);
+
         // Leaving the entry screen is the product's transition, and ordinary play resumes under it.
         session.ApplyProductMode(ProductMode.Playing);
         Assert.Equal("playing", engine.PublishedField("mode"));
-        session.Update(new ProductUpdate(OuterUpdate(3), []));
+        session.Update(new ProductUpdate(OuterUpdate(4), []));
         Assert.True(spatial.StepCalls > stepsBefore, "ordinary play admits world time again");
     }
 
@@ -4094,6 +4114,17 @@ public sealed class NormalizedRuntimeSeamTests
         // The product decides, and the session applies it.
         session.ApplyProductMode(ProductMode.Modal);
         Assert.Equal(ProductMode.Modal, session.Mode);
+
+        // A product that holds the world somewhere other than play asks for nothing, even with this
+        // container open: the request follows the container, so a held world with one open would otherwise
+        // ask to be put back into a modal - or into play - behind the product's back. The entry screen is
+        // that held world here; a pause is the same fact with a different mode.
+        session.ApplyProductMode(ProductMode.Title);
+        Assert.NotEqual(ProductMode.Modal, session.PendingModeRequest);
+        Assert.NotEqual(ProductMode.Playing, session.PendingModeRequest);
+        session.ApplyProductMode(ProductMode.Paused);
+        Assert.NotEqual(ProductMode.Modal, session.PendingModeRequest);
+        session.ApplyProductMode(ProductMode.Modal);
 
         // Held movement reaches no world step while a modal owns input, and the modal's own action
         // still lands: the gold moves even though the world does not.

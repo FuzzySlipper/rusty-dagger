@@ -187,13 +187,41 @@ public sealed class WorldRpgProductModeTests
         Assert.Equal(ProductMode.Title, ruleset.LastApplied);
         Assert.Equal(ProductModeChangeOutcome.Applied, product.ModeHistory[^1].Outcome);
 
-        // The entry screen's own action is the client's one way to leave it, and the product applies it
-        // before the session runs, so the update that asked to begin does not also take a world step.
-        product.Update(Semantic("""{"action":"begin"}"""));
-        Assert.True(product.Mode == ProductMode.Playing, $"mode={product.Mode} history={product.ModeHistory[^1]}");
-        Assert.Equal(ProductMode.Playing, product.Mode);
-        Assert.Equal(ProductMode.Playing, ruleset.LastApplied);
-        Assert.Equal(1, ruleset.Updates);
+        // The entry screen's own action is the client's one way to leave it. The transition lands after
+        // the update that carried it, so the session ran that update while it was still in the entry-screen
+        // mode: the world took no step in it, and the slice that carried the request was dropped by the same
+        // gate as any other action a held world does not interpret.
+        ModeRecordingRuleset beginRuleset = new();
+        using WorldRpgProduct begin = Product(beginRuleset);
+        begin.Start();
+        begin.Update(Semantic("""{"action":"begin"}"""));
+        Assert.Equal(ProductMode.Playing, begin.Mode);
+        Assert.Equal(ProductMode.Playing, beginRuleset.LastApplied);
+        Assert.Equal(1, beginRuleset.Updates);
+        Assert.Equal(ProductMode.Title, beginRuleset.ModeAtUpdate);
+
+        // The world really is held for that update in the ruleset too, which is the half a fake session
+        // cannot show: the seam test below counts admitted steps across the same transition.
+
+        // The entry screen is the product's own gate, not a state a caller can step over: every other
+        // transition is refused while it is up, and each refusal says the screen is why.
+        using WorldRpgProduct gated = Product();
+        gated.Start();
+        // A modal, a death and a second entry screen are each a caller stepping over the one decision the
+        // screen exists to represent; a death especially would be the death of a world that never started.
+        Assert.Equal(ProductModeChangeOutcome.Refused, gated.EnterModal().Outcome);
+        Assert.Equal(ProductModeChangeOutcome.Refused, gated.MarkDead().Outcome);
+        Assert.Equal(ProductMode.Title, gated.Mode);
+        Assert.All(gated.ModeHistory.Where(change => change.To != ProductMode.Title).TakeLast(2), change =>
+        {
+            Assert.Equal(ProductModeChangeOutcome.Refused, change.Outcome);
+            Assert.Contains("entry screen", change.Reason, StringComparison.Ordinal);
+        });
+
+        // Starting again does not put a running product back behind the entry screen.
+        ProductMode afterStart = begin.Mode;
+        begin.Start();
+        Assert.Equal(afterStart, begin.Mode);
 
         // An action the entry screen does not answer leaves the mode where it is.
         using WorldRpgProduct second = Product();
@@ -201,10 +229,23 @@ public sealed class WorldRpgProductModeTests
         second.Update(Semantic("""{"action":"inventory"}"""));
         Assert.Equal(ProductMode.Title, second.Mode);
 
-        // A payload that names the action twice is not a shape this reads, so the mode stays and the
-        // refusal is the ruleset's to report rather than the product's to guess at.
-        second.Update(Semantic("""{"action":"begin","action":"begin"}"""));
-        Assert.Equal(ProductMode.Title, second.Mode);
+
+        // A payload is the entry screen's action only in one shape. A second field, a repeated name, a
+        // value that is not a string, a case variant and a root that is not an object are each not it, so
+        // the mode stays and the refusal is the ruleset's to report rather than the product's to guess at.
+        foreach (string shape in new[]
+        {
+            """{"action":"begin","extra":1}""",
+            """{"action":"begin","action":"begin"}""",
+            """{"action":3}""",
+            """{"action":"Begin"}""",
+            """["begin"]""",
+        })
+        {
+            second.Update(Semantic(shape));
+            Assert.Equal(ProductMode.Title, second.Mode);
+        }
+
         // Asking to begin from a mode that is not the entry screen is refused and recorded, so a caller
         // that skipped the entry screen is visible rather than silently put into play.
         second.Update(Semantic("""{"action":"begin"}"""));
@@ -284,11 +325,26 @@ public sealed class WorldRpgProductModeTests
         }
 
         internal void Count() => Updates++;
+
+        /// <summary>The mode the session saw while updating, which is the product's decision already applied.</summary>
+        internal ProductMode? ModeAtUpdate { get; private set; }
+
+        /// <summary>The mode the session was in at the moment the first update reached it.</summary>
+        internal ProductMode? ModeBeforeUpdate { get; private set; }
+
+        internal void Observe(ProductMode? mode)
+        {
+            ModeAtUpdate = mode;
+            ModeBeforeUpdate ??= mode;
+        }
     }
 
     private sealed class ModeRecordingSession(ModeRecordingRuleset owner) : IGameSession, IModeAwareGameSession
     {
         internal ProductMode? LastApplied { get; private set; }
+
+        /// <summary>The mode the product had put this session in when its update ran.</summary>
+        internal ProductMode? ModeAtUpdate { get; private set; }
 
         internal bool Disposed { get; private set; }
 
@@ -303,6 +359,10 @@ public sealed class WorldRpgProductModeTests
         public ProductUpdateResult Update(ProductUpdate update)
         {
             owner.Count();
+            // The mode the product had applied when the update arrived: a transition made after this call
+            // is invisible here, which is what tells "held during the asking update" from "put into play
+            // in time to act on it".
+            owner.Observe(LastApplied);
             return ProductUpdateResult.None;
         }
 
