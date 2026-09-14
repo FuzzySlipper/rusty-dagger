@@ -73,7 +73,18 @@ public static class CharacterMediaPublication
             Arena2Palette? named = canvas!.OwnPalette;
             if (named is null)
             {
-                if (!palettes.TryGetValue(System.IO.Path.GetFileName(reference.Palette), out named))
+                string expected = CharacterMediaReferences.PaletteFor(file);
+                string named_ = System.IO.Path.GetFileName(reference.Palette);
+                if (!string.Equals(named_, expected, StringComparison.OrdinalIgnoreCase))
+                {
+                    // A palette that exists but belongs to another family is as wrong as a missing one:
+                    // the classic reader pairs this file with 'expected', and trusting the reference
+                    // would publish every colour wrong while looking successful.
+                    refusals.Add($"'{reference.MediaId}' names palette '{reference.Palette}', but '{file}' is read with '{expected}'.");
+                    continue;
+                }
+
+                if (!palettes.TryGetValue(named_, out named))
                 {
                     refusals.Add($"'{reference.MediaId}' names palette '{reference.Palette}', which the supplied corpus does not carry.");
                     continue;

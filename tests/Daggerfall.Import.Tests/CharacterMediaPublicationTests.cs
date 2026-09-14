@@ -87,13 +87,16 @@ public sealed class CharacterMediaPublicationTests
             // A palette the corpus does not carry is a refusal, because painting it with a default
             // publishes every colour wrong while looking successful.
             new("character.nite.01", "NITE01I0.IMG", "NITE", "nite", "an unstated consumer", MediaBinding.RequiredPending, 0, "NOTHERE.COL", [], "the canvas the reference names"),
+            // So is a palette that exists but belongs to another family: ART_PAL.COL is supplied, and
+            // pairing the NITE family with it publishes every opaque pixel wrong.
+            new("character.nite.02", "NITE02I0.IMG", "NITE", "nite", "an unstated consumer", MediaBinding.RequiredPending, 0, "ART_PAL.COL", [], "the canvas the reference names"),
         ];
 
         CharacterMediaPublicationResult published = CharacterMediaPublication.Publish("NITE", references, sources, palettes);
 
-        Assert.True(published.Refusals.Count == 1, $"refused: {string.Join(" | ", published.Refusals)}");
-        Assert.Contains("character.nite.01", published.Refusals[0], StringComparison.Ordinal);
-        Assert.Contains("NOTHERE.COL", published.Refusals[0], StringComparison.Ordinal);
+        Assert.True(published.Refusals.Count == 2, $"refused: {string.Join(" | ", published.Refusals)}");
+        Assert.Contains(published.Refusals, refusal => refusal.Contains("character.nite.01", StringComparison.Ordinal) && refusal.Contains("NOTHERE.COL", StringComparison.Ordinal));
+        Assert.Contains(published.Refusals, refusal => refusal.Contains("character.nite.02", StringComparison.Ordinal) && refusal.Contains("NIGHTSKY.COL", StringComparison.Ordinal));
         CharacterMediaArtifact nite = Assert.Single(published.Artifacts);
         Assert.Equal("character.nite.00", nite.MediaId);
         // 512x219 is the shape the NITE file's length establishes.
@@ -112,6 +115,7 @@ public sealed class CharacterMediaPublicationTests
             ["MAGE.CEL"] = File.ReadAllBytes(Path.Combine(arena2, "MAGE.CEL")),
             ["NITE00I0.IMG"] = File.ReadAllBytes(Path.Combine(arena2, "NITE00I0.IMG")),
             ["NITE01I0.IMG"] = File.ReadAllBytes(Path.Combine(arena2, "NITE01I0.IMG")),
+            ["NITE02I0.IMG"] = File.ReadAllBytes(Path.Combine(arena2, "NITE02I0.IMG")),
         };
         Dictionary<string, Arena2Palette> palettes = new(StringComparer.Ordinal)
         {
