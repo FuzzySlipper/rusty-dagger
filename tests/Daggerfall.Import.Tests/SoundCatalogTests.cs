@@ -217,6 +217,7 @@ public sealed class SoundCatalogTests
         Read("ART_PAL.COL"), Read("TEXTURE.380"), Read("PAL.PAL"), Read("DAGGER.SND"),
         Read("MAIN00I0.IMG"), Read("MAIN03I0.IMG"), Read("MAIN04I0.IMG"), Read("MAIN05I0.IMG"),
         Read("INVE00I0.IMG"), Read("INFO00I0.IMG"), Read("DIE_00I0.IMG"),
+        Read("CHGN00I0.IMG"), Read("PICK02I0.IMG"), Read("PICK03I0.IMG"), Read("PRIS00I0.IMG"), Read("TITL00I0.IMG"),
         Read("BOOK00I0.IMG"), Read("REST00I0.IMG"), Read("SHOP00I0.IMG"), Read("GILD00I0.IMG"), Read("BANK00I0.IMG"),
         Read("REST01I0.IMG"), Read("REST02I0.IMG"), Read("INVE08I0.IMG"), Read("INVE10I0.IMG"), Read("INVE11I0.IMG"),
         Read("INVE12I0.IMG"), Read("INVE14I0.IMG"), Read("GILD01I0.IMG"),

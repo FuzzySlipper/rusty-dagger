@@ -360,11 +360,46 @@
       "mediaId": "inventory.icon.tower-shield"
     },
     {
+      "path": "worldrpg/media/ui/screen-character-generation.png",
+      "byteLength": 21244,
+      "sha256": "07fda9a04c9179789e34cfad57afefedd298cc17ba0ddfca92805791e7f56484",
+      "mediaId": "screen.character-generation",
+      "slot": "characterGeneration"
+    },
+    {
       "path": "worldrpg/media/ui/screen-death.png",
       "byteLength": 63124,
       "sha256": "792feeb481c4e587acc6f4d627d331336c0c50d13c59b996252c88ed14b34289",
       "mediaId": "screen.death",
       "slot": "death"
+    },
+    {
+      "path": "worldrpg/media/ui/screen-intro.png",
+      "byteLength": 43450,
+      "sha256": "2bc15220a4359d4517a028d07e46d2a818a48f317c52125b4dc98e8b86dd8ad4",
+      "mediaId": "screen.intro",
+      "slot": "intro"
+    },
+    {
+      "path": "worldrpg/media/ui/screen-pick-02.png",
+      "byteLength": 41063,
+      "sha256": "d05e1accee5d4bb03950969f6654b26e4a941d4c76bd4e300adce6d7f15126df",
+      "mediaId": "screen.pick.02",
+      "slot": "pick"
+    },
+    {
+      "path": "worldrpg/media/ui/screen-pick-03.png",
+      "byteLength": 41081,
+      "sha256": "1853159a1bfe841d8f1f9d7099a40b9851ecc49f2f6fede12b78e1fdc4c72b83",
+      "mediaId": "screen.pick.03",
+      "slot": "pick"
+    },
+    {
+      "path": "worldrpg/media/ui/screen-title.png",
+      "byteLength": 44933,
+      "sha256": "c0a99b8f0d4ef48c578ff73ed5f40c172f048bad1ed619fd6a79339b861b9203",
+      "mediaId": "screen.title",
+      "slot": "title"
     },
     {
       "path": "worldrpg/media/ui/window-bank-panel.png",

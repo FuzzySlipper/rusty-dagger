@@ -30,6 +30,11 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Inve00I0Img,
     byte[] Info00I0Img,
     byte[] Die00I0Img,
+    byte[] Chgn00I0Img,
+    byte[] Pick02I0Img,
+    byte[] Pick03I0Img,
+    byte[] Pris00I0Img,
+    byte[] Titl00I0Img,
     byte[] Book00I0Img,
     byte[] Rest00I0Img,
     byte[] Shop00I0Img,
@@ -245,6 +250,21 @@ public enum ClassicUiImage
     /// palette, unlike the other UI images, which is why the publication asks the source for one.
     /// </summary>
     ScreenDeath,
+
+    /// <summary>The character-generation screen, which carries its own palette.</summary>
+    CharacterGenerationScreen,
+
+    /// <summary>The first class and background pick screen, which carries its own palette.</summary>
+    PickScreen02,
+
+    /// <summary>The second class and background pick screen, which carries its own palette.</summary>
+    PickScreen03,
+
+    /// <summary>The opening screen, which carries its own palette.</summary>
+    IntroScreen,
+
+    /// <summary>The title screen, which carries its own palette.</summary>
+    TitleScreen,
 }
 
 /// <summary>
@@ -266,6 +286,18 @@ public enum ClassicUiSlot
     Guild,
     Bank,
     Death,
+
+    /// <summary>The character-generation screen.</summary>
+    CharacterGeneration,
+
+    /// <summary>The class and background pick screens, which the player chooses from.</summary>
+    Pick,
+
+    /// <summary>The opening screen.</summary>
+    Intro,
+
+    /// <summary>The title screen.</summary>
+    Title,
 }
 
 /// <summary>A discoverable frame cadence and repeat policy; it owns no playback.</summary>
@@ -381,6 +413,11 @@ public sealed record ClassicUiImageManifest(
         ClassicUiImage.MerchantRepairButtons => ClassicUiSlot.Merchant,
         ClassicUiImage.MerchantIdentifyButtons => ClassicUiSlot.Merchant,
         ClassicUiImage.ScreenDeath => ClassicUiSlot.Death,
+        ClassicUiImage.CharacterGenerationScreen => ClassicUiSlot.CharacterGeneration,
+        ClassicUiImage.PickScreen02 => ClassicUiSlot.Pick,
+        ClassicUiImage.PickScreen03 => ClassicUiSlot.Pick,
+        ClassicUiImage.IntroScreen => ClassicUiSlot.Intro,
+        ClassicUiImage.TitleScreen => ClassicUiSlot.Title,
         _ => throw new ArgumentOutOfRangeException(nameof(image), image, "An admitted UI image with no slot is an artifact no consumer can bind."),
     };
 
@@ -589,6 +626,13 @@ public sealed record Arena2ClassicMediaPublication(
         // The one screen named so far is a mode's rather than a window's: the product shows it when the
         // player dies, and nothing named it before because no consumer had asked for it.
         new(ClassicUiImage.ScreenDeath, "screen.death", "DIE_00I0.IMG", true),
+        // These five carry a 768-byte palette after the canvas like the death screen does, so each is
+        // published in its own colours rather than paired with an external palette.
+        new(ClassicUiImage.CharacterGenerationScreen, "screen.character-generation", "CHGN00I0.IMG", true),
+        new(ClassicUiImage.PickScreen02, "screen.pick.02", "PICK02I0.IMG", true),
+        new(ClassicUiImage.PickScreen03, "screen.pick.03", "PICK03I0.IMG", true),
+        new(ClassicUiImage.IntroScreen, "screen.intro", "PRIS00I0.IMG", true),
+        new(ClassicUiImage.TitleScreen, "screen.title", "TITL00I0.IMG", true),
 
         // Service screens and panels, each named by the donor window that reads it: the book reader's
         // page, the rest dialog's type panel, the trade window's cost panel, the guild service popup
@@ -1573,6 +1617,11 @@ public sealed record Arena2ClassicMediaPublication(
             Gild00I0Img = inputs.Gild00I0Img;
             Bank00I0Img = inputs.Bank00I0Img;
             Die00I0Img = inputs.Die00I0Img;
+            Chgn00I0Img = inputs.Chgn00I0Img;
+            Pick02I0Img = inputs.Pick02I0Img;
+            Pick03I0Img = inputs.Pick03I0Img;
+            Pris00I0Img = inputs.Pris00I0Img;
+            Titl00I0Img = inputs.Titl00I0Img;
             Info00I0Img = inputs.Info00I0Img;
             Texture207 = inputs.Texture207;
             Texture216 = inputs.Texture216;
@@ -1615,6 +1664,11 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Bank00I0Img { get; }
 
         public byte[] Die00I0Img { get; }
+        public byte[] Chgn00I0Img { get; }
+        public byte[] Pick02I0Img { get; }
+        public byte[] Pick03I0Img { get; }
+        public byte[] Pris00I0Img { get; }
+        public byte[] Titl00I0Img { get; }
         public byte[] Info00I0Img { get; }
         public byte[] Texture207 { get; }
         public byte[] Texture216 { get; }
@@ -1632,7 +1686,8 @@ public sealed record Arena2ClassicMediaPublication(
                 ("WEAPON08.CIF", inputs.Weapon08Cif), ("WEAPON09.CIF", inputs.Weapon09Cif), ("WEAPON10.CIF", inputs.Weapon10Cif),
                 ("ART_PAL.COL", inputs.ArtPalette), ("TEXTURE.380", inputs.Texture380), ("PAL.PAL", inputs.Palette),
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
-                ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img),
+                ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img), ("CHGN00I0.IMG", inputs.Chgn00I0Img), ("PICK02I0.IMG", inputs.Pick02I0Img),
+                ("PICK03I0.IMG", inputs.Pick03I0Img), ("PRIS00I0.IMG", inputs.Pris00I0Img), ("TITL00I0.IMG", inputs.Titl00I0Img),
                 ("BOOK00I0.IMG", inputs.Book00I0Img), ("REST00I0.IMG", inputs.Rest00I0Img), ("SHOP00I0.IMG", inputs.Shop00I0Img),
                 ("REST01I0.IMG", inputs.Rest01I0Img), ("REST02I0.IMG", inputs.Rest02I0Img), ("GILD01I0.IMG", inputs.Gild01I0Img),
                 ("INVE08I0.IMG", inputs.Inve08I0Img), ("INVE10I0.IMG", inputs.Inve10I0Img), ("INVE11I0.IMG", inputs.Inve11I0Img),
@@ -1700,6 +1755,11 @@ public sealed record Arena2ClassicMediaPublication(
             "INVE14I0.IMG" => (ImgDecoder.Decode(Inve14I0Img, "arena2/INVE14I0.IMG"), null),
             "GILD01I0.IMG" => (ImgDecoder.Decode(Gild01I0Img, "arena2/GILD01I0.IMG"), null),
             "DIE_00I0.IMG" => Screen(Die00I0Img, "arena2/DIE_00I0.IMG"),
+            "CHGN00I0.IMG" => Screen(Chgn00I0Img, "arena2/CHGN00I0.IMG"),
+            "PICK02I0.IMG" => Screen(Pick02I0Img, "arena2/PICK02I0.IMG"),
+            "PICK03I0.IMG" => Screen(Pick03I0Img, "arena2/PICK03I0.IMG"),
+            "PRIS00I0.IMG" => Screen(Pris00I0Img, "arena2/PRIS00I0.IMG"),
+            "TITL00I0.IMG" => Screen(Titl00I0Img, "arena2/TITL00I0.IMG"),
             _ => throw new ArgumentOutOfRangeException(nameof(fileName)),
         };
 
