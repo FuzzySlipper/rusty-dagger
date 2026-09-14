@@ -258,9 +258,11 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     }
   };
   const onCancel = (event: Event): void => event.preventDefault();
+  // One named handler, so the listener dispose removes is the listener this mount added.
+  const onMenuToggle = (): void => runMenuAction('menu');
   menu.addEventListener('cancel', onCancel);
   menu.addEventListener('click', onMenuClick);
-  menuToggle.addEventListener('click', () => runMenuAction('menu'));
+  menuToggle.addEventListener('click', onMenuToggle);
   document.addEventListener('keydown', onKeyDown, true);
   // The published art arrives inside a snapshot: bytes the session read from admitted content, keyed
   // by the pack's media identity. The DOM holds the last block it saw and asks the product for the
@@ -351,7 +353,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     document.removeEventListener('keydown', onKeyDown, true);
     menu.removeEventListener('cancel', onCancel);
     menu.removeEventListener('click', onMenuClick);
-    menuToggle.removeEventListener('click', openMenu);
+    menuToggle.removeEventListener('click', onMenuToggle);
     if (menu.open) menu.close();
     stylesheet.remove();
     inventoryStylesheet.remove();

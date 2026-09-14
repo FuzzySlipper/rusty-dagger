@@ -26,6 +26,9 @@ namespace WorldRpg.Rulesets.Daggerfall;
 internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSession, IModeAwareGameSession
 {
     private const ulong PlayerMechanicsEntityId = (ulong)DaggerfallActorIdentity.PlayerEntityId;
+
+    /// <summary>Admitted world seconds a panel request stands before the DOM is assumed not to need it.</summary>
+    private const double PanelRequestLifetimeSeconds = 1d;
     private readonly IRandomService _random;
     private readonly PlayerInputSystem _input;
     private ProductMode _mode = ProductMode.Playing;
@@ -57,6 +60,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private ulong? _latestSimulationStep;
     private string? _panelRequest;
     private ulong _panelRequestRevision;
+    private double _panelRequestRemainingSeconds;
     private bool _disposed;
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, IReadOnlyList<IDaggerfallSaveOwner>? saveOwners = null)
@@ -510,6 +514,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         // The world's clock runs on the same admitted duration the message line ages by, scaled by the
         // tuning the corpus authors, so there is one clock and it is this one.
         _time.Advance(deltaSeconds * facts.AdmittedStepCount);
+        AgePanelRequest(deltaSeconds * facts.AdmittedStepCount);
 
         // One admitted update owns one input slice. Later catch-up steps derive
         // only committed held keyboard/mapped-direction intent; direct axes,
@@ -615,9 +620,12 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         // A panel button asks the DOM for a panel during ordinary play, which is where the keyboard's
         // own I, C and Escape are heard. While a modal or a death holds the world the DOM already has
         // a panel in front of the player, so a request there would fight the mode rather than serve it.
+        // Two panel buttons in one admitted slice ask in a fixed order and the last one stands, which
+        // is what the DOM's own key handling does with two keys in one frame: one panel can open, so
+        // the earlier press must not swallow the later one.
         if (update.IsRequested(DaggerfallInput.Inventory)) RequestPanel(DaggerfallPanel.Inventory);
-        else if (update.IsRequested(DaggerfallInput.Character)) RequestPanel(DaggerfallPanel.Character);
-        else if (update.IsRequested(DaggerfallInput.Menu)) RequestPanel(DaggerfallPanel.Menu);
+        if (update.IsRequested(DaggerfallInput.Character)) RequestPanel(DaggerfallPanel.Character);
+        if (update.IsRequested(DaggerfallInput.Menu)) RequestPanel(DaggerfallPanel.Menu);
         DeliverFacts();
         PublishPresentation();
     }
@@ -774,6 +782,24 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     {
         _panelRequest = panel;
         _panelRequestRevision = checked(_panelRequestRevision + 1);
+        _panelRequestRemainingSeconds = PanelRequestLifetimeSeconds;
+    }
+
+    /// <summary>
+    /// Ages a standing panel request on the same admitted world time everything else ages on.
+    /// </summary>
+    /// <remarks>
+    /// Opening a panel is an event, not state: the product does not own whether one is open, so a
+    /// request that outlived the DOM that performed it would re-open a panel nobody asked for on the
+    /// next page load — and a player holding only a pad has no way back out of it. The window is
+    /// generous because the DOM acts on the next snapshot, and it is admitted world time because
+    /// there is one clock here.
+    /// </remarks>
+    private void AgePanelRequest(double deltaSeconds)
+    {
+        if (_panelRequest is null) return;
+        _panelRequestRemainingSeconds -= deltaSeconds;
+        if (_panelRequestRemainingSeconds <= 0d) _panelRequest = null;
     }
 
     internal static ItemDefinition ToManagedItem(DaggerfallItemDefinition item)

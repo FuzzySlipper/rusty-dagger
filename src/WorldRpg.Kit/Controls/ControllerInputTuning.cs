@@ -62,8 +62,16 @@ public sealed record ControllerInputTuning(
         Named(MovementY, nameof(MovementY));
         Named(LookX, nameof(LookX));
         Named(LookY, nameof(LookY));
-        if (MovementX == LookX || MovementX == LookY || MovementY == LookX || MovementY == LookY)
-            throw new ArgumentException("One controller axis cannot drive both movement and look.");
+        // One axis means one thing. A pad that pointed strafe and forward at the same stick direction
+        // would drive both from one movement, and the misconfiguration is refused here rather than
+        // showing up as gameplay nobody can explain.
+        ControllerAxis[] roleAxes = [MovementX, MovementY, LookX, LookY];
+        for (int role = 0; role < roleAxes.Length; role++)
+        {
+            if (Array.IndexOf(roleAxes, roleAxes[role]) != role)
+                throw new ArgumentException($"Controller axis '{roleAxes[role]}' is bound to more than one of movement and look, and one axis cannot mean two things.", nameof(MovementX));
+        }
+
         Deadzone(MovementDeadzone, nameof(MovementDeadzone));
         Deadzone(LookDeadzone, nameof(LookDeadzone));
         Positive(MovementStrafeSensitivity, nameof(MovementStrafeSensitivity));
@@ -75,6 +83,10 @@ public sealed record ControllerInputTuning(
         foreach (ControllerActionBinding binding in Actions)
         {
             Named(binding.Button, nameof(binding.Button));
+            // An unnamed action is a button that presses nothing, which is indistinguishable from a
+            // binding someone believed was working.
+            if (string.IsNullOrWhiteSpace(binding.Action.Value))
+                throw new ArgumentException($"Controller button '{binding.Button}' is bound to no action.", nameof(Actions));
             if (!bound.Add(binding.Button))
                 throw new ArgumentException($"Controller button '{binding.Button}' is bound to more than one action, and one press cannot mean two things.");
         }

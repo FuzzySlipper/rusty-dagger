@@ -133,7 +133,11 @@ internal sealed record DaggerfallTuning(
         foreach (JsonElement binding in controller.GetProperty("actions").EnumerateArray())
             actions.Add(new ControllerActionBinding(
                 ReadControllerButton(binding.GetProperty("button").GetInt32()),
-                new InputActionId(binding.GetProperty("action").GetString() ?? throw new JsonException("A controller action binding must name an action."))));
+                // A named-but-empty action is the same dead button as a missing one, so it is refused
+                // here rather than loaded as a binding that presses nothing.
+                new InputActionId(binding.GetProperty("action").GetString() is { Length: > 0 } action && !string.IsNullOrWhiteSpace(action)
+                    ? action
+                    : throw new JsonException("A controller action binding must name an action."))));
         return new ControllerInputTuning(
             ReadControllerAxis(controller.GetProperty("movementXAxis").GetInt32()),
             ReadControllerAxis(controller.GetProperty("movementYAxis").GetInt32()),
