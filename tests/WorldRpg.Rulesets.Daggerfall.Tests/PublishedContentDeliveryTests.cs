@@ -72,6 +72,29 @@ public sealed class PublishedContentDeliveryTests
         // describes the whole archive, and the inventory indexes both because both are content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
         Assert.Equal(80, listed.Count);
+
+        // The six screens drawn with the palette inside their own file state that conversion fact with
+        // its donor anchor, so a consumer can tell why their colours are what they are - and nothing
+        // else in the inventory claims a palette it does not carry.
+        (string MediaId, string Source, int Scale, string Anchor)[] palettes =
+        [
+            .. inventory.GetProperty("artifacts").EnumerateArray()
+                .Where(entry => entry.TryGetProperty("palette", out _))
+                .Select(entry => (
+                    entry.GetProperty("mediaId").GetString()!,
+                    entry.GetProperty("palette").GetProperty("source").GetString()!,
+                    entry.GetProperty("palette").GetProperty("channelScale").GetInt32(),
+                    entry.GetProperty("palette").GetProperty("donorAnchor").GetString()!)),
+        ];
+        Assert.Equal(
+            ["screen.character-generation", "screen.death", "screen.intro", "screen.pick.02", "screen.pick.03", "screen.title"],
+            palettes.Select(palette => palette.MediaId).Order(StringComparer.Ordinal));
+        Assert.All(palettes, palette =>
+        {
+            Assert.Equal("embedded-in-source-file", palette.Source);
+            Assert.Equal(4, palette.Scale);
+            Assert.Equal("ImgFile.ReadPalette", palette.Anchor);
+        });
     }
 
     /// <summary>
