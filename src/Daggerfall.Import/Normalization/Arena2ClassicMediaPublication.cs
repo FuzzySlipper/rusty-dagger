@@ -35,6 +35,14 @@ public sealed record Arena2ClassicMediaInputs(
     byte[] Shop00I0Img,
     byte[] Gild00I0Img,
     byte[] Bank00I0Img,
+    byte[] Rest01I0Img,
+    byte[] Rest02I0Img,
+    byte[] Inve08I0Img,
+    byte[] Inve10I0Img,
+    byte[] Inve11I0Img,
+    byte[] Inve12I0Img,
+    byte[] Inve14I0Img,
+    byte[] Gild01I0Img,
     byte[] Texture207,
     byte[] Texture216,
     byte[] Texture234,
@@ -205,6 +213,30 @@ public enum ClassicUiImage
     /// <summary>The guild service popup's base panel (donor <c>DaggerfallGuildServicePopupWindow</c>).</summary>
     GuildServicePanel,
 
+    /// <summary>The guild service popup's member panel, which replaces the base art for a member.</summary>
+    GuildMemberPanel,
+
+    /// <summary>The rest dialog's "hours past" counter (donor <c>DaggerfallRestWindow</c>).</summary>
+    RestHoursPastPanel,
+
+    /// <summary>The rest dialog's "hours remaining" counter (donor <c>DaggerfallRestWindow</c>).</summary>
+    RestHoursRemainingPanel,
+
+    /// <summary>The trade window's buy button bar (donor <c>DaggerfallTradeWindow</c>).</summary>
+    MerchantBuyButtons,
+
+    /// <summary>The trade window's sell button bar.</summary>
+    MerchantSellButtons,
+
+    /// <summary>The trade window's sell-for-gold button bar.</summary>
+    MerchantSellGoldButtons,
+
+    /// <summary>The trade window's repair button bar.</summary>
+    MerchantRepairButtons,
+
+    /// <summary>The trade window's identify button bar.</summary>
+    MerchantIdentifyButtons,
+
     /// <summary>The banking window's panel (donor <c>DaggerfallBankingWindow</c>).</summary>
     BankPanel,
 
@@ -339,7 +371,15 @@ public sealed record ClassicUiImageManifest(
         ClassicUiImage.RestPanel => ClassicUiSlot.Rest,
         ClassicUiImage.MerchantCostPanel => ClassicUiSlot.Merchant,
         ClassicUiImage.GuildServicePanel => ClassicUiSlot.Guild,
+        ClassicUiImage.GuildMemberPanel => ClassicUiSlot.Guild,
         ClassicUiImage.BankPanel => ClassicUiSlot.Bank,
+        ClassicUiImage.RestHoursPastPanel => ClassicUiSlot.Rest,
+        ClassicUiImage.RestHoursRemainingPanel => ClassicUiSlot.Rest,
+        ClassicUiImage.MerchantBuyButtons => ClassicUiSlot.Merchant,
+        ClassicUiImage.MerchantSellButtons => ClassicUiSlot.Merchant,
+        ClassicUiImage.MerchantSellGoldButtons => ClassicUiSlot.Merchant,
+        ClassicUiImage.MerchantRepairButtons => ClassicUiSlot.Merchant,
+        ClassicUiImage.MerchantIdentifyButtons => ClassicUiSlot.Merchant,
         ClassicUiImage.ScreenDeath => ClassicUiSlot.Death,
         _ => throw new ArgumentOutOfRangeException(nameof(image), image, "An admitted UI image with no slot is an artifact no consumer can bind."),
     };
@@ -558,6 +598,17 @@ public sealed record Arena2ClassicMediaPublication(
         new(ClassicUiImage.MerchantCostPanel, "window.merchant.cost", "SHOP00I0.IMG", false),
         new(ClassicUiImage.GuildServicePanel, "window.guild.service", "GILD00I0.IMG", false),
         new(ClassicUiImage.BankPanel, "window.bank.panel", "BANK00I0.IMG", false),
+
+        // A slot names a screen; a screen the donor composes from several images publishes each part
+        // under its own media identity, because the panel and its counters are not interchangeable.
+        new(ClassicUiImage.RestHoursPastPanel, "window.rest.hours-past", "REST01I0.IMG", false),
+        new(ClassicUiImage.RestHoursRemainingPanel, "window.rest.hours-remaining", "REST02I0.IMG", false),
+        new(ClassicUiImage.MerchantBuyButtons, "window.merchant.buttons.buy", "INVE08I0.IMG", false),
+        new(ClassicUiImage.MerchantSellButtons, "window.merchant.buttons.sell", "INVE10I0.IMG", false),
+        new(ClassicUiImage.MerchantSellGoldButtons, "window.merchant.buttons.sell-gold", "INVE11I0.IMG", false),
+        new(ClassicUiImage.MerchantRepairButtons, "window.merchant.buttons.repair", "INVE12I0.IMG", false),
+        new(ClassicUiImage.MerchantIdentifyButtons, "window.merchant.buttons.identify", "INVE14I0.IMG", false),
+        new(ClassicUiImage.GuildMemberPanel, "window.guild.member", "GILD01I0.IMG", false),
     ];
 
     private static readonly InventoryIconSource[] InventoryIconSources =
@@ -1509,6 +1560,14 @@ public sealed record Arena2ClassicMediaPublication(
             Main05I0Img = inputs.Main05I0Img;
             Inve00I0Img = inputs.Inve00I0Img;
             Book00I0Img = inputs.Book00I0Img;
+            Rest01I0Img = inputs.Rest01I0Img;
+            Rest02I0Img = inputs.Rest02I0Img;
+            Inve08I0Img = inputs.Inve08I0Img;
+            Inve10I0Img = inputs.Inve10I0Img;
+            Inve11I0Img = inputs.Inve11I0Img;
+            Inve12I0Img = inputs.Inve12I0Img;
+            Inve14I0Img = inputs.Inve14I0Img;
+            Gild01I0Img = inputs.Gild01I0Img;
             Rest00I0Img = inputs.Rest00I0Img;
             Shop00I0Img = inputs.Shop00I0Img;
             Gild00I0Img = inputs.Gild00I0Img;
@@ -1542,6 +1601,14 @@ public sealed record Arena2ClassicMediaPublication(
         public byte[] Main05I0Img { get; }
         public byte[] Inve00I0Img { get; }
         public byte[] Book00I0Img { get; }
+        public byte[] Rest01I0Img { get; }
+        public byte[] Rest02I0Img { get; }
+        public byte[] Inve08I0Img { get; }
+        public byte[] Inve10I0Img { get; }
+        public byte[] Inve11I0Img { get; }
+        public byte[] Inve12I0Img { get; }
+        public byte[] Inve14I0Img { get; }
+        public byte[] Gild01I0Img { get; }
         public byte[] Rest00I0Img { get; }
         public byte[] Shop00I0Img { get; }
         public byte[] Gild00I0Img { get; }
@@ -1567,6 +1634,9 @@ public sealed record Arena2ClassicMediaPublication(
                 ("DAGGER.SND", inputs.DaggerSound), ("MAIN00I0.IMG", inputs.Main00I0Img), ("MAIN03I0.IMG", inputs.Main03I0Img),
                 ("MAIN04I0.IMG", inputs.Main04I0Img), ("MAIN05I0.IMG", inputs.Main05I0Img), ("INVE00I0.IMG", inputs.Inve00I0Img), ("DIE_00I0.IMG", inputs.Die00I0Img),
                 ("BOOK00I0.IMG", inputs.Book00I0Img), ("REST00I0.IMG", inputs.Rest00I0Img), ("SHOP00I0.IMG", inputs.Shop00I0Img),
+                ("REST01I0.IMG", inputs.Rest01I0Img), ("REST02I0.IMG", inputs.Rest02I0Img), ("GILD01I0.IMG", inputs.Gild01I0Img),
+                ("INVE08I0.IMG", inputs.Inve08I0Img), ("INVE10I0.IMG", inputs.Inve10I0Img), ("INVE11I0.IMG", inputs.Inve11I0Img),
+                ("INVE12I0.IMG", inputs.Inve12I0Img), ("INVE14I0.IMG", inputs.Inve14I0Img),
                 ("GILD00I0.IMG", inputs.Gild00I0Img), ("BANK00I0.IMG", inputs.Bank00I0Img),
                 ("INFO00I0.IMG", inputs.Info00I0Img), ("TEXTURE.207", inputs.Texture207), ("TEXTURE.216", inputs.Texture216),
                 ("TEXTURE.234", inputs.Texture234), ("TEXTURE.245", inputs.Texture245), ("FONT0003.FNT", inputs.Font0003Fnt),
@@ -1621,6 +1691,14 @@ public sealed record Arena2ClassicMediaPublication(
             "SHOP00I0.IMG" => (ImgDecoder.Decode(Shop00I0Img, "arena2/SHOP00I0.IMG"), null),
             "GILD00I0.IMG" => (ImgDecoder.Decode(Gild00I0Img, "arena2/GILD00I0.IMG"), null),
             "BANK00I0.IMG" => (ImgDecoder.Decode(Bank00I0Img, "arena2/BANK00I0.IMG"), null),
+            "REST01I0.IMG" => (ImgDecoder.Decode(Rest01I0Img, "arena2/REST01I0.IMG"), null),
+            "REST02I0.IMG" => (ImgDecoder.Decode(Rest02I0Img, "arena2/REST02I0.IMG"), null),
+            "INVE08I0.IMG" => (ImgDecoder.Decode(Inve08I0Img, "arena2/INVE08I0.IMG"), null),
+            "INVE10I0.IMG" => (ImgDecoder.Decode(Inve10I0Img, "arena2/INVE10I0.IMG"), null),
+            "INVE11I0.IMG" => (ImgDecoder.Decode(Inve11I0Img, "arena2/INVE11I0.IMG"), null),
+            "INVE12I0.IMG" => (ImgDecoder.Decode(Inve12I0Img, "arena2/INVE12I0.IMG"), null),
+            "INVE14I0.IMG" => (ImgDecoder.Decode(Inve14I0Img, "arena2/INVE14I0.IMG"), null),
+            "GILD01I0.IMG" => (ImgDecoder.Decode(Gild01I0Img, "arena2/GILD01I0.IMG"), null),
             "DIE_00I0.IMG" => Screen(Die00I0Img, "arena2/DIE_00I0.IMG"),
             _ => throw new ArgumentOutOfRangeException(nameof(fileName)),
         };

@@ -68,10 +68,10 @@ public sealed class PublishedContentDeliveryTests
             .Select(file => Encoding.UTF8.GetString(file.Path.Span))
             .Where(path => !path.EndsWith("classic-media-inventory.json", StringComparison.Ordinal))];
         Assert.Equal(published.Order(StringComparer.Ordinal), listed.Order(StringComparer.Ordinal));
-        // The published group carries the sixty-six media artifacts and the sound catalog that
+        // The published group carries the seventy-four media artifacts and the sound catalog that
         // describes the whole archive, and the inventory indexes both because both are content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(67, listed.Count);
+        Assert.Equal(75, listed.Count);
     }
 
     /// <summary>
@@ -105,9 +105,15 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/ui/window-merchant-cost.png", identified["window.merchant.cost"].Path);
         Assert.Equal("worldrpg/media/ui/window-guild-service.png", identified["window.guild.service"].Path);
         Assert.Equal("worldrpg/media/ui/window-bank-panel.png", identified["window.bank.panel"].Path);
+        // The companions the donor composes those screens from are published beside the panels.
+        Assert.Equal("worldrpg/media/ui/window-rest-hours-past.png", identified["window.rest.hours-past"].Path);
+        Assert.Equal("worldrpg/media/ui/window-rest-hours-remaining.png", identified["window.rest.hours-remaining"].Path);
+        Assert.Equal("worldrpg/media/ui/window-guild-member.png", identified["window.guild.member"].Path);
+        Assert.Equal("worldrpg/media/ui/window-merchant-buttons-buy.png", identified["window.merchant.buttons.buy"].Path);
+        Assert.Equal("worldrpg/media/ui/window-merchant-buttons-identify.png", identified["window.merchant.buttons.identify"].Path);
         Assert.Equal("worldrpg/media/ui/inventory-icons/inventory-icon-iron-dagger.png", identified["inventory.icon.iron-dagger"].Path);
         Assert.Equal("worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png", identified["inventory.skin.panel-slate.v1"].Path);
-        Assert.Equal(66, identified.Count);
+        Assert.Equal(74, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -130,7 +136,12 @@ public sealed class PublishedContentDeliveryTests
             [.. identified.Keys.Where(packPaths.ContainsKey).Order(StringComparer.Ordinal)],
             [.. packPaths.Keys.Where(identified.ContainsKey).Order(StringComparer.Ordinal)]);
         Assert.Equal(
-            ["screen.death", "window.bank.panel", "window.book.reader", "window.guild.service", "window.merchant.cost", "window.rest.panel"],
+            [
+                "screen.death", "window.bank.panel", "window.book.reader", "window.guild.member", "window.guild.service",
+                "window.merchant.buttons.buy", "window.merchant.buttons.identify", "window.merchant.buttons.repair",
+                "window.merchant.buttons.sell", "window.merchant.buttons.sell-gold", "window.merchant.cost",
+                "window.rest.hours-past", "window.rest.hours-remaining", "window.rest.panel",
+            ],
             identified.Keys.Except(packPaths.Keys).Order(StringComparer.Ordinal));
         Assert.All(
             identified.Keys.Where(packPaths.ContainsKey),
@@ -178,35 +189,59 @@ public sealed class PublishedContentDeliveryTests
 
         // A slot is what a consumer binds, so the published inventory has to name one for every UI
         // image the pack carries, together with the media identity and the bytes it was decoded to.
-        Dictionary<string, (string Path, string Sha256)> slots = new(StringComparer.Ordinal);
+        Dictionary<string, List<(string Path, string Sha256, string MediaId)>> slots = new(StringComparer.Ordinal);
         foreach (JsonElement artifact in inventory.GetProperty("artifacts").EnumerateArray())
         {
             if (!artifact.TryGetProperty("slot", out JsonElement slot)) continue;
             string mediaId = artifact.GetProperty("mediaId").GetString()!;
-            Assert.True(slots.TryAdd(slot.GetString()!, (artifact.GetProperty("path").GetString()!, artifact.GetProperty("sha256").GetString()!)), $"Published UI slot '{slot.GetString()}' is claimed twice, so a consumer cannot tell which image fills it.");
             Assert.StartsWith("worldrpg/media/ui/", artifact.GetProperty("path").GetString()!, StringComparison.Ordinal);
             Assert.NotEmpty(mediaId);
+            if (!slots.TryGetValue(slot.GetString()!, out List<(string Path, string Sha256, string MediaId)>? filled)) slots[slot.GetString()!] = filled = [];
+            // One artifact per media identity: a slot may hold several, but the same identity twice
+            // would leave a consumer unable to tell which bytes belong to which part.
+            Assert.DoesNotContain(filled, entry => entry.MediaId == mediaId);
+            filled.Add((artifact.GetProperty("path").GetString()!, artifact.GetProperty("sha256").GetString()!, mediaId));
         }
 
         Assert.Equal(
             ["bank", "book", "characterSheet", "death", "guild", "hudChrome", "hudVitalFatigue", "hudVitalHealth", "hudVitalMagicka", "inventory", "merchant", "rest"],
             slots.Keys.OrderBy(name => name, StringComparer.Ordinal));
-        Assert.Equal("window.book.reader", Book("book"));
-        Assert.Equal("window.rest.panel", Book("rest"));
-        Assert.Equal("window.merchant.cost", Book("merchant"));
-        Assert.Equal("window.guild.service", Book("guild"));
-        Assert.Equal("window.inventory.chrome", Book("inventory"));
 
-        string Book(string slot)
+        // A slot names a screen. Where the donor composes a screen from several images, the slot holds
+        // every part: a rest dialog without its hour counters, a trade window without its button bars
+        // or a guild popup without its member art is a fragment, not the screen the slot names.
+        Assert.Equal(3, slots["rest"].Count);
+        Assert.Equal(6, slots["merchant"].Count);
+        Assert.Equal(2, slots["guild"].Count);
+        Assert.Single(slots["book"]);
+        Assert.Single(slots["bank"]);
+        Assert.Equal(
+            ["window.rest.hours-past", "window.rest.hours-remaining", "window.rest.panel"],
+            slots["rest"].Select(entry => entry.MediaId).Order(StringComparer.Ordinal));
+        Assert.Equal(
+            [
+                "window.merchant.buttons.buy", "window.merchant.buttons.identify", "window.merchant.buttons.repair",
+                "window.merchant.buttons.sell", "window.merchant.buttons.sell-gold", "window.merchant.cost",
+            ],
+            slots["merchant"].Select(entry => entry.MediaId).Order(StringComparer.Ordinal));
+        Assert.Equal(["window.guild.member", "window.guild.service"], slots["guild"].Select(entry => entry.MediaId).Order(StringComparer.Ordinal));
+
+        Assert.Contains("window.book.reader", Media("book"));
+        Assert.Contains("window.inventory.chrome", Media("inventory"));
+        Assert.Contains("window.bank.panel", Media("bank"));
+
+        // Every published part resolves to delivered bytes that still hash to the recorded digest.
+        foreach ((string slot, List<(string Path, string Sha256, string MediaId)> parts) in slots)
         {
-            (string path, string sha256) = slots[slot];
-            string file = Path.Combine(root, "content", path);
-            Assert.True(File.Exists(file), $"Published UI slot '{slot}' names '{path}', which is not part of the delivered content.");
-            Assert.Equal(sha256, Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file))));
-            return inventory.GetProperty("artifacts").EnumerateArray()
-                .Single(artifact => artifact.TryGetProperty("slot", out JsonElement value) && value.GetString() == slot)
-                .GetProperty("mediaId").GetString()!;
+            foreach ((string path, string sha256, _) in parts)
+            {
+                string file = Path.Combine(root, "content", path);
+                Assert.True(File.Exists(file), $"Published UI slot '{slot}' names '{path}', which is not part of the delivered content.");
+                Assert.Equal(sha256, Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file))));
+            }
         }
+
+        string[] Media(string slot) => [.. slots[slot].Select(entry => entry.MediaId)];
     }
 
     private static ProductContent AdmittedContent()
