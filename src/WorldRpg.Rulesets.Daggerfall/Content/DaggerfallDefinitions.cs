@@ -112,6 +112,7 @@ internal sealed record DaggerfallVocabulary(IReadOnlyList<DaggerfallStatId> Attr
 internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, DaggerfallVocabulary vocabulary, IReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition> actors, IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> items, IReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition> equipmentSlots, IReadOnlyDictionary<string, int> armorValuesByMaterial, IReadOnlyDictionary<string, DaggerfallActionDefinition> actions, IReadOnlyDictionary<string, DaggerfallLootTableDefinition> lootTables, IReadOnlyList<DaggerfallHudResourceDefinition> hudResources, IReadOnlyList<DaggerfallDeferredLootCategoryPool> lootCategoryPools, IReadOnlyList<DaggerfallDonorErratum> donorErrata, DaggerfallItemTemplateLedger itemTemplates,
     DaggerfallCharacterPresentationSet characterPresentation,
     DaggerfallLocationSet locations,
+    DaggerfallTextSet text,
     DaggerfallMagicCatalogSet magic,
     DaggerfallMobileCatalogSet mobiles)
 {
@@ -159,5 +160,12 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     /// section that kept nothing but its shape would leave every caller re-reading the payload.
     /// </summary>
     internal DaggerfallLocationSet Locations { get; } = locations;
+
+    /// <summary>
+    /// The published text a caller resolves a value through. A key the pack does not carry answers as a
+    /// miss and a value it carries but could not read answers with the reason, so neither is confused
+    /// with text that is legitimately empty.
+    /// </summary>
+    internal DaggerfallTextSet Text { get; } = text;
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");
 }

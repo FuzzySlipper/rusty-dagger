@@ -43,10 +43,11 @@ internal static class DaggerfallBaseContent
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
             DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
+            DaggerfallTextSet text = ReadText(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, magic, mobiles);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, text, magic, mobiles);
         }
         catch (JsonException exception)
         {
@@ -625,6 +626,260 @@ internal static class DaggerfallBaseContent
     /// carries a provenance and a disposition, that the summary agrees with the entries, and
     /// that no target claims a native fact while the native source is absent.
     /// </summary>
+    /// <summary>
+    /// Reads the published text section from the pack alone. Every value resolves by the key its own
+    /// source gave it, carries the language of the source it was read from, and states whether it was
+    /// readable — so a lookup answers with text, with a reason there is none, or with a miss, and never
+    /// with an empty string standing in for either.
+    /// </summary>
+    private static DaggerfallTextSet ReadText(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("text", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            // The section is the whole text contract: without it every key resolves to nothing, so the
+            // payload is refused rather than read as a product whose text is uniformly missing. The
+            // diagnostic is what the caller sees, since reading aborts on it.
+            diagnostics.Add("Base payload publishes no text section; every text lookup resolves to nothing until it is republished.");
+            return new DaggerfallTextSet(new Dictionary<DaggerfallTextKey, DaggerfallTextValue>(), new Dictionary<string, string>(StringComparer.Ordinal), [], []);
+        }
+
+        int schemaVersion = Integer(section, "schemaVersion", diagnostics);
+        if (schemaVersion != TextSchemaVersion) diagnostics.Add($"Published text must declare schemaVersion {TextSchemaVersion}.");
+
+        // A source is the language and family its values inherit, so two sources claiming one path would
+        // leave a value naming it with no one language and no one family.
+        Dictionary<string, (DaggerfallTextKind Kind, string Language, int Records)> sources = new(StringComparer.Ordinal);
+        foreach (JsonElement source in Array(section, "sources", diagnostics))
+        {
+            DaggerfallTextKind kind = TextKind(source, diagnostics);
+            _ = Text(source, "recordId", diagnostics);
+            string path = Text(source, "path", diagnostics);
+            string language = Text(source, "language", diagnostics);
+            long byteLength = Long(source, "byteLength", diagnostics);
+            _ = Integer(source, "declaredLength", diagnostics);
+            int records = Integer(source, "records", diagnostics);
+            if (byteLength <= 0) diagnostics.Add($"Published text source '{path}' retains {byteLength} bytes, so nothing says what was read.");
+            if (records < 0) diagnostics.Add($"Published text source '{path}' declares {records} records.");
+            if (!sources.TryAdd(path, (kind, language, records))) diagnostics.Add($"Published text source '{path}' is claimed twice, so a value naming it has no one language and family.");
+        }
+        if (sources.Count == 0) diagnostics.Add("Published text must name the sources its values were read from.");
+
+        // A family is either carried by a source or pending on the task that supplies it. Both would let
+        // a consumer read an empty family as a supplied one, or a supplied one as still missing.
+        List<DaggerfallTextPendingKind> pendingKinds = [];
+        HashSet<DaggerfallTextKind> declared = [];
+        foreach (JsonElement entry in Array(section, "pendingKinds", diagnostics))
+        {
+            DaggerfallTextKind kind = TextKind(entry, diagnostics);
+            int ownerTask = Integer(entry, "ownerTask", diagnostics);
+            string reason = Text(entry, "reason", diagnostics);
+            if (ownerTask <= 0) diagnostics.Add($"Pending text family '{kind}' names task {ownerTask}, which cannot own it.");
+            if (!declared.Add(kind)) diagnostics.Add($"Pending text family '{kind}' is declared twice, so nothing says whether its keys resolve.");
+            if (sources.Values.Any(source => source.Kind == kind)) diagnostics.Add($"Text family '{kind}' is published as pending and carried by a source, so a consumer cannot tell whether its keys resolve.");
+            pendingKinds.Add(new DaggerfallTextPendingKind(kind, ownerTask, reason));
+        }
+
+        Dictionary<DaggerfallTextKey, DaggerfallTextValue> values = [];
+        Dictionary<string, int> publishedPerSource = new(StringComparer.Ordinal);
+        HashSet<string> grouped = new(StringComparer.Ordinal);
+        string previousSource = string.Empty;
+        int previousIndex = -1;
+        foreach (JsonElement record in Array(section, "records", diagnostics))
+        {
+            JsonElement keyValue = Object(Property(record, "key", diagnostics), "key", diagnostics);
+            DaggerfallTextKind kind = TextKind(keyValue, diagnostics);
+            string id = Text(keyValue, "id", diagnostics);
+            DaggerfallTextKey key = new(kind, id);
+            string source = Text(record, "source", diagnostics);
+            int index = Integer(record, "index", diagnostics);
+            int offset = Integer(record, "offset", diagnostics);
+            int byteLength = Integer(record, "byteLength", diagnostics);
+            int subrecords = Integer(record, "subrecords", diagnostics);
+            string stateName = Text(record, "state", diagnostics);
+            string reason = EmptyAllowedText(record, "reason", diagnostics);
+
+            // A value whose source the section does not declare has no language and no family: the key
+            // would resolve and nothing would say what it was read from.
+            if (!sources.TryGetValue(source, out (DaggerfallTextKind Kind, string Language, int Records) owner))
+            {
+                diagnostics.Add($"Published text key '{key}' names source '{source}', which the section does not carry.");
+                continue;
+            }
+
+            if (owner.Kind != kind)
+            {
+                diagnostics.Add($"Published text key '{key}' belongs to family '{owner.Kind}' by its source and to '{kind}' by its key.");
+            }
+
+            if (!values.TryAdd(key, null!))
+            {
+                diagnostics.Add($"Published text carries '{key}' twice, so one of them is unreachable.");
+                continue;
+            }
+
+            DaggerfallTextState state = DaggerfallTextState.Read;
+            if (!Enum.TryParse(stateName, ignoreCase: true, out state) || !Enum.IsDefined(state))
+            {
+                diagnostics.Add($"Published text key '{key}' states the state '{stateName}', which the contract does not declare.");
+            }
+
+            // A value is either read or it is not, and the two say different things: a read value's bytes
+            // are described, and a malformed one's reason is the fact. One claiming both would leave a
+            // consumer unable to tell an empty value from a value that was never readable.
+            if (state == DaggerfallTextState.Read && (byteLength < 1 || subrecords < 1 || reason.Length != 0))
+            {
+                diagnostics.Add($"Published text key '{key}' is readable but spans {byteLength} bytes in {subrecords} variants, or states a reason it is not readable.");
+            }
+
+            if (state == DaggerfallTextState.Malformed && (reason.Length == 0 || byteLength != 0 || subrecords != 0))
+            {
+                diagnostics.Add($"Published text key '{key}' is malformed in {byteLength} bytes and {subrecords} variants, or states no reason.");
+            }
+
+            List<string> symbols = [];
+            foreach (JsonElement macro in Array(record, "macros", diagnostics))
+            {
+                if (macro.ValueKind != JsonValueKind.String || macro.GetString() is not { Length: > 0 } symbol)
+                {
+                    diagnostics.Add($"Published text key '{key}' names a macro with no symbol.");
+                    continue;
+                }
+
+                if (symbol[0] != '%') diagnostics.Add($"Published text key '{key}' names macro '{symbol}', which does not begin with the macro marker.");
+                if (!symbols.Contains(symbol, StringComparer.Ordinal)) symbols.Add(symbol);
+            }
+
+            List<DaggerfallTextElement> tokens = [];
+            foreach (JsonElement token in Array(record, "tokens", diagnostics))
+            {
+                DaggerfallTextElement? element = TextElement(token, key, diagnostics);
+                if (element is not null) tokens.Add(element);
+            }
+
+            if (state == DaggerfallTextState.Malformed && tokens.Count != 0)
+            {
+                diagnostics.Add($"Published text key '{key}' is malformed and still carries {tokens.Count} tokens.");
+            }
+
+            // Each source's values are published as a group in its own order, so a caller reads one
+            // source's ordinals without interleaving another's.
+            if (!StringComparer.Ordinal.Equals(source, previousSource))
+            {
+                if (!grouped.Add(source)) diagnostics.Add($"Published text source '{source}' is interleaved with another source rather than grouped.");
+                previousSource = source;
+                previousIndex = -1;
+            }
+
+            if (index <= previousIndex) diagnostics.Add($"Published text source '{source}' carries '{key}' at ordinal {index} after ordinal {previousIndex}, so its values are not in source order.");
+            previousIndex = index;
+            publishedPerSource[source] = publishedPerSource.GetValueOrDefault(source) + 1;
+            values[key] = new DaggerfallTextValue(key, source, owner.Language, index, offset, byteLength, subrecords, state, reason, symbols, tokens);
+        }
+
+        foreach ((string path, (DaggerfallTextKind Kind, string Language, int Records) source) in sources)
+        {
+            int published = publishedPerSource.GetValueOrDefault(path);
+            if (published != source.Records) diagnostics.Add($"Text source '{path}' declares {source.Records} records and publishes {published}.");
+        }
+
+        // The macro index is derived from the values, so it has to agree with them in both directions:
+        // an index that dropped a symbol would leave a consumer expanding text with a macro nothing
+        // accounts for, and one that invented an entry would report a symbol the corpus lacks.
+        List<DaggerfallTextMacro> macros = [];
+        HashSet<string> indexed = new(StringComparer.Ordinal);
+        foreach (JsonElement macro in Array(section, "macros", diagnostics))
+        {
+            string symbol = Text(macro, "symbol", diagnostics);
+            int records = Integer(macro, "records", diagnostics);
+            int occurrences = Integer(macro, "occurrences", diagnostics);
+            string disposition = Text(macro, "disposition", diagnostics);
+            if (records <= 0 || occurrences < records) diagnostics.Add($"Published macro '{symbol}' is carried by {records} values in {occurrences} occurrences, which cannot both hold.");
+            if (!indexed.Add(symbol)) diagnostics.Add($"Published macro '{symbol}' is indexed twice.");
+            macros.Add(new DaggerfallTextMacro(symbol, records, occurrences, disposition));
+        }
+
+        foreach (DaggerfallTextValue value in values.Values)
+        {
+            foreach (string symbol in value.Macros)
+            {
+                if (!indexed.Contains(symbol)) diagnostics.Add($"Published text key '{value.Key}' carries macro '{symbol}', which the published macro index does not account for.");
+            }
+        }
+
+        foreach (DaggerfallTextMacro macro in macros)
+        {
+            int carried = values.Values.Count(value => value.Macros.Contains(macro.Symbol, StringComparer.Ordinal));
+            if (carried != macro.Records) diagnostics.Add($"Published macro '{macro.Symbol}' is indexed against {macro.Records} values where {carried} carry it.");
+        }
+
+        return new DaggerfallTextSet(values, sources.ToDictionary(source => source.Key, source => source.Value.Language, StringComparer.Ordinal), pendingKinds, macros);
+    }
+
+    /// <summary>
+    /// Reads one published token. A run states its characters, an unnamed code states the byte it came
+    /// from, and only the two prefixes state a payload: a token whose absent and empty members disagree
+    /// with its kind would be applied as a different code than the one it names.
+    /// </summary>
+    private static DaggerfallTextElement? TextElement(JsonElement token, DaggerfallTextKey key, DaggerfallContentDiagnostics diagnostics)
+    {
+        string codeName = Text(token, "code", diagnostics);
+        if (!Enum.TryParse(codeName, ignoreCase: true, out DaggerfallTextCode code) || !Enum.IsDefined(code))
+        {
+            diagnostics.Add($"Published text key '{key}' carries the element kind '{codeName}', which the contract does not declare.");
+            return null;
+        }
+
+        string? text = OptionalText(token, "text", diagnostics);
+        int? value = OptionalInteger(token, "value", diagnostics);
+        int? x = OptionalInteger(token, "x", diagnostics);
+        bool prefixed = code is DaggerfallTextCode.FontPrefix or DaggerfallTextCode.PositionPrefix;
+        if (code == DaggerfallTextCode.Text)
+        {
+            if (text is null || value is not null || x is not null)
+            {
+                diagnostics.Add($"Published text key '{key}' carries a text element that holds no text or states a value a run does not have.");
+            }
+        }
+        else if (text is not null || (x is not null) != prefixed || (x is { } payload && payload is < 0 or > 0xff))
+        {
+            diagnostics.Add($"Published text key '{key}' carries code {code} with text, or with a payload it does not take.");
+        }
+        else if (code == DaggerfallTextCode.Unknown)
+        {
+            if (value is not { } byteValue || byteValue is < 0 or > 0xff || Enum.IsDefined((DaggerfallTextCode)byteValue))
+            {
+                diagnostics.Add($"Published text key '{key}' carries an unnamed code with no byte, or with byte {value} that a name covers.");
+            }
+        }
+        else if (value is not null)
+        {
+            diagnostics.Add($"Published text key '{key}' states byte {value} for the named code {code}.");
+        }
+
+        return new DaggerfallTextElement(code, text, value, x);
+    }
+
+    /// <summary>Reads the source family a published key or source names.</summary>
+    private static DaggerfallTextKind TextKind(JsonElement value, DaggerfallContentDiagnostics diagnostics)
+    {
+        string name = Text(value, "kind", diagnostics);
+        if (Enum.TryParse(name, ignoreCase: true, out DaggerfallTextKind kind) && Enum.IsDefined(kind)) return kind;
+        diagnostics.Add($"Published text names the source family '{name}', which the contract does not declare.");
+        return DaggerfallTextKind.Resource;
+    }
+
+    /// <summary>
+    /// Reads a string that may legitimately be empty: a readable text value states no reason it is not,
+    /// and that is a fact about the value rather than a property the payload failed to carry.
+    /// </summary>
+    private static string EmptyAllowedText(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement result = Property(value, property, diagnostics);
+        if (result.ValueKind == JsonValueKind.String) return result.GetString() ?? string.Empty;
+        diagnostics.Add($"'{property}' must be a string.");
+        return string.Empty;
+    }
+
     /// <summary>
     /// Reads the published mobile catalog from the pack alone. Each record states the donor's parameters,
     /// the actor this product publishes and the disposition reconciling them, so a consumer resolves a
@@ -1801,6 +2056,7 @@ internal static class DaggerfallBaseContent
     private const int CatalogSchemaVersion = 1;
     private const int CharacterPresentationSchemaVersion = 1;
     private const int LocationSchemaVersion = 1;
+    private const int TextSchemaVersion = 1;
 
     internal static JsonElement Object(JsonElement value, string name, DaggerfallContentDiagnostics diagnostics)
     {

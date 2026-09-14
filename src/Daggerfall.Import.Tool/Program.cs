@@ -88,6 +88,11 @@ internal static class Program
                 return RunLocationsCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "text")
+            {
+                return RunTextCommand(args);
+            }
+
             ToolOptions options = ToolOptions.Parse(args);
             ImportPublicationPlan plan = AttachSourceManifest(BuildPlan(options), options);
             switch (options.Command)
@@ -759,6 +764,68 @@ internal static class Program
         pack["locations"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(locations, PublishedJson.Section));
         File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: locations updated in {packFile}");
+        return 0;
+    }
+
+    /// <summary>
+    /// Reads the classic text resource into the base pack, so a text consumer resolves a value by the
+    /// key the source gives it and reads the macros and variants the value carries rather than a
+    /// rendered string this tool would have had to choose.
+    /// </summary>
+    private static int RunTextCommand(IReadOnlyList<string> args)
+    {
+        const string Usage = "usage: daggerfall-import-tool text --arena2 SOURCE_DIR --pack PACK.json --inventory CSV --language LANG [--update]";
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        Dictionary<string, string> values = new(StringComparer.Ordinal);
+        for (int index = 1; index < args.Count; index++)
+        {
+            string argument = args[index];
+            if (argument == "--update") continue;
+            if (!argument.StartsWith("--", StringComparison.Ordinal) || index + 1 >= args.Count || !values.TryAdd(argument, args[++index]))
+            {
+                throw new ArgumentException(Usage);
+            }
+        }
+
+        string[] accepted = ["--arena2", "--pack", "--inventory", "--language"];
+        if (values.Count != accepted.Length || accepted.Any(key => !values.ContainsKey(key)))
+        {
+            throw new ArgumentException(Usage);
+        }
+
+        // The documented inventory decides the logical source identity, so the bytes are read under the
+        // path the repository documents rather than under whatever directory the caller happened to name.
+        string source = Path.Combine(values["--arena2"], TextResourceReader.FileName);
+        DaggerfallText text = DaggerfallTextBuilder.Build(
+            File.ReadAllBytes(source),
+            source,
+            SourceManifestBuilder.ReadInventory(File.ReadAllBytes(values["--inventory"])),
+            values["--language"]);
+
+        DaggerfallTextSource publishedSource = text.Sources[0];
+        Console.WriteLine($"text: {text.Records.Count} records from {publishedSource.Path} in {publishedSource.Language}, {text.Records.Count(record => record.State == Arena2TextState.Malformed)} malformed, {text.Records.Count(record => record.State == Arena2TextState.Read)} readable");
+        foreach (IGrouping<TextMacroDisposition, DaggerfallTextMacro> disposition in text.Macros.GroupBy(macro => macro.Disposition).OrderBy(group => group.Key))
+        {
+            Console.WriteLine($"  {disposition.Count()} macros {disposition.Key.ToString().ToLowerInvariant()}");
+        }
+
+        string[] unrecognised = [.. text.Macros.Where(macro => macro.Disposition == TextMacroDisposition.Unrecognised).Select(macro => macro.Symbol)];
+        if (unrecognised.Length != 0)
+        {
+            Console.WriteLine($"  unrecognised symbols: {string.Join(", ", unrecognised)}");
+        }
+
+        Console.WriteLine($"  declared key families: {string.Join(", ", text.PendingKinds.Select(pending => $"{pending.Kind.ToString().ToLowerInvariant()} (task #{pending.OwnerTask})"))}");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish this text into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(values["--pack"]))!.AsObject();
+        pack["text"] = JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(text, PublishedJson.Section));
+        File.WriteAllText(values["--pack"], pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: text updated in {values["--pack"]}");
         return 0;
     }
 
