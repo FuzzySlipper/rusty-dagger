@@ -589,6 +589,36 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void An_actor_with_no_attack_policy_is_dispositioned_by_a_donor_erratum()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+
+        // Every placed actor either carries a policy or is named by a donor erratum; an actor that is
+        // simply missing one would be indistinguishable from an oversight.
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        string[] withoutPolicy = [.. inputs.Project.Actors.Values
+            .Select(placement => definitions.RequireActor(placement.ActorId))
+            .Where(actor => actor.ActionId is null)
+            .Select(actor => actor.Id.Value)
+            .Order(StringComparer.Ordinal)];
+        Assert.Equal(["archer"], withoutPolicy);
+
+        // The archer's exception is a fact about the source, not a preference: its published donor record
+        // declares a ranged attack and carries no melee damage range at all.
+        DaggerfallMobileDefinition archer = definitions.Mobiles.Mobiles[141];
+        Assert.Equal("archer", archer.Actor);
+        Assert.True(archer.HasRangedAttack1, "the donor record must declare the archer's ranged attack");
+        Assert.Null(archer.DamageRange);
+        Assert.Contains(definitions.DonorErrata, erratum => erratum.Id == "archer-ranged-attack-is-not-implemented");
+        // The thief is the opposite case: no donor damage range either, but the donor's own enemy setup
+        // gives it a melee policy, which is why it is authored rather than dispositioned away.
+        DaggerfallMobileDefinition thief = definitions.Mobiles.Mobiles[138];
+        Assert.Null(thief.DamageRange);
+        Assert.Equal("thief-strike", definitions.Actors[new DaggerfallActorId("thief")].ActionId);
+    }
+
+    [Fact]
     public void Every_placed_attacker_has_a_policy_keyed_on_a_skill_it_carries()
     {
         string root = RepositoryRoot();
