@@ -66,7 +66,10 @@ public sealed class DaggerfallCharacterMediaContentTests
         Assert.Equal(3, presentation.Careers.Count);
         DaggerfallCareerPortraitDefinition portrait = presentation.RequirePortrait("class00");
         Assert.Equal("character.portrait.mage.0", portrait.MediaId);
-        Assert.Equal(("MAGE.CEL", 15, "ART_PAL.COL"), (portrait.SourceFile, portrait.FrameCount, portrait.Palette));
+        Assert.Equal(("MAGE.CEL", 15), (portrait.SourceFile, portrait.FrameCount));
+        // A classic animation carries its palette, so the portrait states that palette's own identity rather
+        // than the one the classic reader pairs with the family - which would name colours it does not have.
+        Assert.StartsWith("embedded-palette-sha256:", portrait.Palette, StringComparison.Ordinal);
 
         // The portrait is matched by the career's class name, not by its identity: the catalog
         // identifies a career by its record position.

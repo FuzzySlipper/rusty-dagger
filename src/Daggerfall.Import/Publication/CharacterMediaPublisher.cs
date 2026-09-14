@@ -143,29 +143,6 @@ public static class CharacterMediaPublisher
     }
 
     /// <summary>
-    /// The published identity of a palette no supplied file names: a digest of its own colours.
-    /// </summary>
-    /// <remarks>
-    /// A classic animation carries its palette inside the container, so there is no file name to state and
-    /// naming the palette the reference happens to carry would describe colours the artifact does not have.
-    /// The digest is the palette's own identity, which lets a consumer tell two embedded palettes apart and
-    /// compare one it extracts itself against the published fact.
-    /// </remarks>
-    private static string PaletteIdentity(Arena2Palette palette)
-    {
-        byte[] colors = new byte[palette.Colors.Length * 3];
-        for (int index = 0; index < palette.Colors.Length; index++)
-        {
-            Rgb24 color = palette.Colors.Span[index];
-            colors[(index * 3) + 0] = color.Red;
-            colors[(index * 3) + 1] = color.Green;
-            colors[(index * 3) + 2] = color.Blue;
-        }
-
-        return $"embedded-palette-sha256:{Convert.ToHexStringLower(SHA256.HashData(colors))[..16]}";
-    }
-
-    /// <summary>
     /// Every supplied file whose canvases produced no artifact, with the reason the reader gave.
     /// </summary>
     /// <remarks>
@@ -264,23 +241,36 @@ public static class CharacterMediaPublisher
                     files,
                     $"these supplied file(s) read as a {Kind(family, files, inventory)} and none of their canvases could be decoded into pixels here, so the gap is a missing pixel decoder rather than a missing reader; the donor's own reader is where that behaviour lives",
                     reader),
-                _ => reader.Length == 0
-                    ? new CharacterMediaUnreadableFamily(
-                        family,
-                        Kind(family, files, inventory),
-                        files,
-                        $"nothing in this repository reads the {family} format, and no donor reader is recorded for it, so its files carry no canvas here",
-                        string.Empty)
-                    : new CharacterMediaUnreadableFamily(
-                        family,
-                        Kind(family, files, inventory),
-                        files,
-                        $"nothing in this repository reads the {family} format: the donor reads it with {reader}, and without it the file's canvases have no pixels here rather than an approximation",
-                        reader),
+                _ => NoReaderEntry(family, files, inventory, reader),
             });
         }
 
         return unreadable;
+    }
+
+    /// <summary>
+    /// The entry for files no reader here opened, with a reason that is true of the family it names.
+    /// </summary>
+    /// <remarks>
+    /// A file no reader opens in a family this run publishes from is a file-level gap, not a format nothing
+    /// reads: saying the latter would be false in the same run that reads its siblings, which is the kind of
+    /// claim this publication exists to avoid.
+    /// </remarks>
+    private static CharacterMediaUnreadableFamily NoReaderEntry(
+        string family,
+        IReadOnlyList<string> files,
+        CharacterMediaInventory inventory,
+        string reader)
+    {
+        bool familyReads = inventory.Files.Any(file =>
+            string.Equals(file.Family, family, StringComparison.Ordinal) && file.Decode != Arena2CanvasKind.Unread);
+        string kind = Kind(family, files, inventory);
+        string reason = familyReads
+            ? $"no reader here opened these supplied file(s): the {family} family's other files read, so this is a file-level gap - the file is not the shape this repository's reader accepts - rather than a format nothing reads"
+            : reader.Length == 0
+                ? $"nothing in this repository reads the {family} format, and no donor reader is recorded for it, so its files carry no canvas here"
+                : $"nothing in this repository reads the {family} format: the donor reads it with {reader}, and without it the file's canvases have no pixels here rather than an approximation";
+        return new CharacterMediaUnreadableFamily(family, kind, files, reason, familyReads ? string.Empty : reader);
     }
 
     /// <summary>What the files of one entry are, named by the kind the reader established.</summary>
@@ -353,7 +343,7 @@ public static class CharacterMediaPublisher
                 // The palette the pixels were painted in: a container that carries its own is painted in
                 // that one, and stating the reference's instead would send a consumer repainting the
                 // canvas to the wrong colours while the bytes looked right.
-                artifact.OwnPalette ? PaletteIdentity(artifact.Palette) : reference.Palette,
+                artifact.PaletteIdentity,
                 artifact.PaletteSource,
                 reference.Binding,
                 reference.Consumer));

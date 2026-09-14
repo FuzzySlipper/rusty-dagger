@@ -430,6 +430,36 @@ public sealed class CharacterMediaPublicationTests
     }
 
     /// <summary>
+    /// A file no reader opens inside a family this run publishes from is a file-level gap, not a format
+    /// nothing reads: an entry claiming otherwise would be false in the same run that reads its siblings.
+    /// </summary>
+    [Fact]
+    public void StatesAFileLevelGapWithoutClaimingTheFamilyIsUnreadable()
+    {
+        (Dictionary<string, ReadOnlyMemory<byte>> sources, Dictionary<string, Arena2Palette> palettes) = Corpus();
+        // A file the name rule puts in the FACE family whose bytes no reader accepts, alongside the 220
+        // canvases the family really publishes.
+        sources["FACE99I0.CIF"] = new byte[5000];
+        List<(string Path, ReadOnlyMemory<byte> Bytes)> supplied = [.. sources.Select(entry => (entry.Key, entry.Value))];
+        CharacterMediaInventory inventory = CharacterMediaInventory.Enumerate(supplied, new HashSet<string>(StringComparer.Ordinal), "arena2");
+        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, palettes.Keys.ToHashSet(StringComparer.Ordinal), sources);
+        CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(set, sources, palettes, inventory);
+
+        // The family now has two entries, keyed by cause: the grid whose cells nothing slices, and the file
+        // no reader opens. Neither may claim the family is a format nothing reads.
+        CharacterMediaUnreadableFamily face = pass.UnreadableFamilies.Single(family => family.Files.Contains("FACE99I0.CIF"));
+        Assert.Equal(["FACE99I0.CIF"], face.Files);
+        Assert.DoesNotContain("nothing in this repository reads the FACE format", face.Reason, StringComparison.Ordinal);
+        Assert.Contains("file-level gap", face.Reason, StringComparison.Ordinal);
+        // The family really does publish here, which is what makes the claim above false if it were made.
+        Assert.Contains(pass.Artifacts, artifact => artifact.Reference.Family == "FACE");
+        // The unavailable record says the same: no reader opened this file, not that the family has none.
+        CharacterMediaUnavailable unavailable = set.Unavailable.Single(entry => System.IO.Path.GetFileName(entry.Path) == "FACE99I0.CIF");
+        Assert.DoesNotContain("Nothing in this repository reads this format", unavailable.Reason, StringComparison.Ordinal);
+        Assert.Contains("No reader in this repository opened this file", unavailable.Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// A canvas a consumer is said to bind has to resolve to an artifact, or the pack would claim a live
     /// consumer draws art that was never emitted. The refusal names the canvas.
     /// </summary>

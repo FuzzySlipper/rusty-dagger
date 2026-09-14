@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 namespace Daggerfall.Import.Arena2;
 
 /// <summary>
@@ -102,6 +103,44 @@ public static class CharacterMediaReferences
         ["BSS"] = "Assets/Scripts/API/BssFile.cs",
     };
 
+    /// <summary>The prefix of a palette identity that names a container's own colours rather than a file.</summary>
+    private const string PaletteIdentityPrefix = "embedded-palette-sha256:";
+
+    /// <summary>The prefix of a palette identity that names a container's own colours rather than a file.</summary>
+    public const string EmbeddedPalettePrefix = "embedded-palette-sha256:";
+
+    /// <summary>
+    /// The published identity of a palette a container carries itself, which has no file name to state.
+    /// </summary>
+    /// <remarks>
+    /// A digest of the palette's own colours, so the reference and the emitted artifact state the same fact
+    /// about the same bytes rather than each describing the colours in its own words.
+    /// </remarks>
+    public static string EmbeddedPaletteIdentity(Arena2Palette palette)
+    {
+        ArgumentNullException.ThrowIfNull(palette);
+        byte[] colors = new byte[palette.Colors.Length * 3];
+        for (int index = 0; index < palette.Colors.Length; index++)
+        {
+            Rgb24 color = palette.Colors.Span[index];
+            colors[(index * 3) + 0] = color.Red;
+            colors[(index * 3) + 1] = color.Green;
+            colors[(index * 3) + 2] = color.Blue;
+        }
+
+        return $"{EmbeddedPalettePrefix}{Convert.ToHexString(SHA256.HashData(colors))[..16].ToLowerInvariant()}";
+    }
+
+    /// <summary>
+    /// The palette a supplied file carries itself, as a published identity, or null when it carries none.
+    /// </summary>
+    private static string? ContainerPalette(string path, ReadOnlySpan<byte> bytes)
+    {
+        if (!path.EndsWith(".CEL", StringComparison.OrdinalIgnoreCase) || bytes.IsEmpty) return null;
+        Arena2Palette? palette = FlcDecoder.ReadContainerPalette(bytes, System.IO.Path.GetFileName(path));
+        return palette is null ? null : EmbeddedPaletteIdentity(palette);
+    }
+
     /// <summary>The classic reader's palette rule for one of these files.</summary>
     public static string PaletteFor(string path)
     {
@@ -114,13 +153,20 @@ public static class CharacterMediaReferences
     /// </summary>
     /// <param name="inventory">The character-media inventory to publish from.</param>
     /// <param name="suppliedPalettes">The palette files the caller supplies, by file name.</param>
+    /// <param name="sources">
+    /// The supplied corpus by file name, when the caller has it: a container that carries its own palette is
+    /// painted in that one, and stating the family's palette instead would describe colours the canvas does
+    /// not have. A caller without the bytes states the family's palette, which is what the classic reader
+    /// pairs for every family that carries none.
+    /// </param>
     /// <exception cref="InvalidOperationException">
     /// A canvas needs a palette or a companion layer the corpus does not supply, naming the file and
     /// the missing reference rather than painting it with a default or publishing it alone.
     /// </exception>
     public static CharacterMediaReferenceSet Derive(
         CharacterMediaInventory inventory,
-        IReadOnlySet<string> suppliedPalettes)
+        IReadOnlySet<string> suppliedPalettes,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? sources = null)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(suppliedPalettes);
@@ -147,13 +193,23 @@ public static class CharacterMediaReferences
                     file.Binding,
                     donorReader,
                     donorReader.Length == 0
-                        ? "Nothing in this repository reads this format, and no donor reader is recorded for it."
-                        : $"The donor reads this format with {donorReader}, which this repository does not have, so its canvases are unavailable rather than approximated."));
+                        ? $"No reader in this repository opened this file, and no donor reader is recorded for the '{file.Family}' format; the file supplies no canvas here rather than an approximation."
+                        : $"The donor reads this format with {donorReader}, and nothing in this repository opened this file, so its canvases are unavailable rather than approximated."));
                 continue;
             }
 
+            // A container that carries its own palette is painted in that one; the classic reader pairs a
+            // palette with the family for everything else. Stating the family's palette for an animation
+            // would describe colours the artifact does not have.
             string palette = PaletteFor(file.Path);
-            if (!suppliedPalettes.Contains(palette))
+            if (sources is not null && sources.TryGetValue(System.IO.Path.GetFileName(file.Path), out ReadOnlyMemory<byte> fileBytes))
+            {
+                palette = ContainerPalette(file.Path, fileBytes.Span) ?? palette;
+            }
+
+            // A supplied palette is required for a file the classic reader pairs one with; a container that
+            // carries its own needs no supplied file, so its identity is not looked up among them.
+            if (!palette.StartsWith(EmbeddedPalettePrefix, StringComparison.Ordinal) && !suppliedPalettes.Contains(palette))
             {
                 throw new InvalidOperationException(
                     $"'{System.IO.Path.GetFileName(file.Path)}' is read with '{palette}', which the caller does not supply, so its {file.CanvasCount} canvas(es) would be published with the wrong colours or with none.");
@@ -252,10 +308,17 @@ public static class CharacterMediaReferences
     /// <param name="set">The derived reference set, before any consumer is named.</param>
     /// <param name="admitted">The source files a published consumer binds, by file name.</param>
     /// <param name="consumer">The consumer that binds them, named as it is in the published references.</param>
+    /// <param name="paintedPalettes">
+    /// The palette each published canvas was actually painted in, by media identity. A derived reference
+    /// states the palette the classic reader would pair with the file, and a container that carries its own
+    /// palette is painted in that one instead, so the reference would name colours the artifact does not
+    /// have unless it is rewritten with what the emission used.
+    /// </param>
     public static CharacterMediaReferenceSet WithBoundFiles(
         CharacterMediaReferenceSet set,
         IReadOnlySet<string> admitted,
-        string consumer)
+        string consumer,
+        IReadOnlyDictionary<string, string>? paintedPalettes = null)
     {
         ArgumentNullException.ThrowIfNull(set);
         ArgumentNullException.ThrowIfNull(admitted);
@@ -269,6 +332,9 @@ public static class CharacterMediaReferences
                 {
                     Binding = bound ? MediaBinding.Admitted : MediaBinding.RequiredPending,
                     Consumer = bound ? consumer : canvas.Consumer,
+                    Palette = paintedPalettes is not null && paintedPalettes.TryGetValue(canvas.MediaId, out string? painted)
+                        ? painted
+                        : canvas.Palette,
                 };
             })],
             Unavailable = [.. set.Unavailable.Select(file =>

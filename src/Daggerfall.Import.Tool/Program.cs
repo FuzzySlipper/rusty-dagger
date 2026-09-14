@@ -599,13 +599,12 @@ internal static class Program
         // required-pending with its artifact written and indexed.
         CharacterMediaInventory unbound = CharacterMediaInventory.Enumerate(sources, new HashSet<string>(StringComparer.Ordinal), source);
         IReadOnlySet<string> suppliedPalettes = palettes.Keys.ToHashSet(StringComparer.Ordinal);
-        CharacterMediaReferenceSet derived = CharacterMediaReferences.Derive(unbound, suppliedPalettes);
-        CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(
-            derived,
-            sources.ToDictionary(entry => entry.Path, entry => entry.Bytes, StringComparer.Ordinal),
-            palettes,
-            unbound);
+        Dictionary<string, ReadOnlyMemory<byte>> corpus = sources.ToDictionary(entry => entry.Path, entry => entry.Bytes, StringComparer.Ordinal);
+        CharacterMediaReferenceSet derived = CharacterMediaReferences.Derive(unbound, suppliedPalettes, corpus);
+        CharacterMediaPassResult pass = CharacterMediaPublisher.PublishAll(derived, corpus, palettes, unbound);
         IReadOnlySet<string> bound = CharacterMediaReferences.FilesBoundByCharacterSheet(unbound);
+        // The references already state the palette each file is painted in - the derivation reads a
+        // container's own - so the rewrite only has to state the binding.
         CharacterMediaReferenceSet referenced = CharacterMediaReferences.WithBoundFiles(derived, bound, CharacterMediaReferences.CharacterSheetConsumer);
 
         // A reference a consumer binds has to resolve to a published canvas: binding a source whose artifact
@@ -627,7 +626,7 @@ internal static class Program
         }
 
         CharacterMediaInventory characters = CharacterMediaInventory.Enumerate(sources, bound, CharacterMediaReferences.CharacterSheetConsumer, source);
-        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, suppliedPalettes, races, careers, pass.UnpublishableFiles);
+        DaggerfallCharacterPresentation presentation = DaggerfallCharacterPresentationBuilder.Build(characters, suppliedPalettes, races, careers, pass.UnpublishableFiles, corpus);
         presentation.Validate(pass.PublishedMediaIds);
 
         // Every reference, not the layers and faces alone: a career portrait is bound too, and reporting
@@ -925,8 +924,11 @@ internal static class Program
         JsonArray unreadable = [];
         foreach ((string family, string kind, string reason, string anchor) in new[]
         {
-            (".CEL", "class-question animation", "no publisher in this repository: the FLC container and its frames are read, but no artifact is published from them and nothing plays them back, so the file carries no canvas here", "Assets/Scripts/API/FlcFile.cs"),
-            (".BSS", "compass sprite bank", "no publisher in this repository: the BSS container header is read and its frame arithmetic verified, but no frame's pixels are extracted or published, so the compass the donor draws from these files has no published canvas here", "Assets/Scripts/API/BssFile.cs"),
+            // The classic media group publishes no canvas from these two families. The character group does
+            // publish the class portraits from the CEL files, through its own command, so the reason says
+            // which group is speaking rather than claiming the bytes have no canvas anywhere.
+            (".CEL", "class-question animation", "no publisher in this group: the FLC container and its frames are read, and the character group publishes the class portraits from them, but nothing here emits an artifact from these files and nothing plays them back, so this group carries no canvas for them", "Assets/Scripts/API/FlcFile.cs"),
+            (".BSS", "compass sprite bank", "no publisher in this group: the BSS container header is read and its frame arithmetic verified, but no frame's pixels are extracted or published, so the compass the donor draws from these files has no published canvas here", "Assets/Scripts/API/BssFile.cs"),
             // No family entry for the CIF files: most of the corpus's CIFs are weapon, armour and painting
             // grammars this repository reads and publishes, and the face grammar it refuses is refused by
             // name when a face is read rather than being a family that carries no artifact at all.
