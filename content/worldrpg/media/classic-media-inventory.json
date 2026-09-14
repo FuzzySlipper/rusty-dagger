@@ -388,6 +388,13 @@
       "slot": "characterSheet"
     },
     {
+      "path": "worldrpg/media/ui/window-guild-member.png",
+      "byteLength": 3631,
+      "sha256": "875882585c4034979e59c6a26d35ad9f8b74539ab3d1b3f1716c9beeffe86c9f",
+      "mediaId": "window.guild.member",
+      "slot": "guild"
+    },
+    {
       "path": "worldrpg/media/ui/window-guild-service.png",
       "byteLength": 3615,
       "sha256": "2911b48a9bf1f05026fe9652210932dce6ac4bf3872d8d78b451c59021fd9d06",
@@ -402,11 +409,60 @@
       "slot": "inventory"
     },
     {
+      "path": "worldrpg/media/ui/window-merchant-buttons-buy.png",
+      "byteLength": 3995,
+      "sha256": "7b83d0767ed6971c8ce10d7b07b876da845756342e9fe8121c484dce077fdc30",
+      "mediaId": "window.merchant.buttons.buy",
+      "slot": "merchant"
+    },
+    {
+      "path": "worldrpg/media/ui/window-merchant-buttons-identify.png",
+      "byteLength": 4023,
+      "sha256": "ce7e299f5757c7eddc5d6677028ad96ed89127e50cddbb1d437ab2d35730b0ea",
+      "mediaId": "window.merchant.buttons.identify",
+      "slot": "merchant"
+    },
+    {
+      "path": "worldrpg/media/ui/window-merchant-buttons-repair.png",
+      "byteLength": 4018,
+      "sha256": "593fdaae18e33b5f3a0387f114cfa1bd0b06480dad2e34fd1f058f06682512f4",
+      "mediaId": "window.merchant.buttons.repair",
+      "slot": "merchant"
+    },
+    {
+      "path": "worldrpg/media/ui/window-merchant-buttons-sell-gold.png",
+      "byteLength": 4029,
+      "sha256": "1ba947a2a970327f3bd4ce87a6dace0ff3b0af5a948f5bc0773a4526ac1574d1",
+      "mediaId": "window.merchant.buttons.sell-gold",
+      "slot": "merchant"
+    },
+    {
+      "path": "worldrpg/media/ui/window-merchant-buttons-sell.png",
+      "byteLength": 4001,
+      "sha256": "e30551b560fcdb94e48437f80c24fbbf049a9201324b859aeaed2d10a657f147",
+      "mediaId": "window.merchant.buttons.sell",
+      "slot": "merchant"
+    },
+    {
       "path": "worldrpg/media/ui/window-merchant-cost.png",
       "byteLength": 771,
       "sha256": "804d678f18797dd1a41d4bc8997cf316b9bb88de1089e8d46fb9c304fb4a6bf5",
       "mediaId": "window.merchant.cost",
       "slot": "merchant"
+    },
+    {
+      "path": "worldrpg/media/ui/window-rest-hours-past.png",
+      "byteLength": 2524,
+      "sha256": "4f3c9145100a772f1984f4b0f78a8651e357055b61a7f8e6b4e1487dac84dcbf",
+      "mediaId": "window.rest.hours-past",
+      "slot": "rest"
+    },
+    {
+      "path": "worldrpg/media/ui/window-rest-hours-remaining.png",
+      "byteLength": 2560,
+      "sha256": "348ed6484f2b15d2d04f76327459f420f22369b22f86accff37cea701de4a72b",
+      "mediaId": "window.rest.hours-remaining",
+      "slot": "rest"
     },
     {
       "path": "worldrpg/media/ui/window-rest-panel.png",
