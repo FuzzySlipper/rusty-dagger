@@ -22,20 +22,22 @@ public sealed class DaggerfallCatalogContentTests
         Assert.DoesNotContain(definitions.Actors.Values, actor => actor.MobileId == 39);
         Assert.Equal(31, definitions.Items.Count);
         Assert.Equal(25, definitions.EquipmentSlots.Count);
-        Assert.Equal(5, definitions.Actions.Count);
+        Assert.Equal(6, definitions.Actions.Count);
         Assert.Equal(22, definitions.LootTables.Count);
         Assert.Equal(12, definitions.ArmorValuesByMaterial.Count);
         Assert.NotEmpty(definitions.RequireActor(new DaggerfallActorId("player")).Loadout);
         string expectedFingerprint = File.ReadAllText(Path.Combine(RepositoryRoot(), "tests/WorldRpg.Rulesets.Daggerfall.Tests/Fixtures/daggerfall.base.semantic.sha256")).Trim();
+        // The fixture records the pack's semantic content, so it moves when the pack's meaning moves: the
+        // archer gaining a ranged policy and the actions carrying their own reach are exactly that.
         Assert.Equal(expectedFingerprint, DaggerfallBaseContent.Fingerprint(definitions));
         Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40, 41, 42 }, definitions.Actors.Values.Where(actor => actor.Kind == "monster").Select(actor => actor.MobileId!.Value).Order());
-        Assert.Equal(new[] { "mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata", "archer-ranged-attack-is-not-implemented" }.Order(), definitions.DonorErrata.Select(erratum => erratum.Id).Order());
+        Assert.Equal(new[] { "mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata", "ranged-attacks-are-hitscan-and-consume-no-ammunition" }.Order(), definitions.DonorErrata.Select(erratum => erratum.Id).Order());
         Assert.All(definitions.LootCategoryPools, pool => Assert.Equal("deferred", pool.Status));
         Assert.Equal("both", definitions.Items[new DaggerfallItemId("iron-short-bow")].Weapon!.Handedness);
         Assert.Equal("right-hand", definitions.RequireActor(new DaggerfallActorId("player")).Loadout[0].EquipSlot!.Value.Value);
         Assert.Equal(8, definitions.RequireActor(new DaggerfallActorId("player")).HitPointsPerLevel);
         Assert.Equal(5, definitions.Actions["melee-attack"].StaminaCost);
-        Assert.Equal(["melee-attack", "monster-strike", "power-attack", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
+        Assert.Equal(["archer-shot", "melee-attack", "monster-strike", "power-attack", "skeleton-strike", "thief-strike"], definitions.Actions.Values.OrderBy(action => action.Id).Select(action => action.Id));
         Assert.Equal(0, definitions.Actions["monster-strike"].AttackRangeIndex);
         Assert.Null(definitions.Actions["monster-strike"].MinimumDamage);
         Assert.Equal(0.75, definitions.Actions["melee-attack"].CooldownSeconds);
@@ -64,7 +66,9 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Equal((11, 30), (archer.Health.Minimum, archer.Health.Maximum));
         Assert.Equal("knights-and-mages", archer.Team);
         Assert.Equal("C", archer.LootTableKey);
-        Assert.Null(archer.ActionId);
+        // The archer's policy is its ranged attack, not a melee swing: the donor record carries no melee
+        // damage range, so its own attacks stay empty and the bow's authored action supplies the damage.
+        Assert.Equal("archer-shot", archer.ActionId);
         Assert.Empty(archer.Attacks);
         Assert.Equal(55, archer.Stats[DaggerfallMechanicsIds.Strength]);
         Assert.Equal(43, archer.Stats[DaggerfallMechanicsIds.Intelligence]);

@@ -1186,7 +1186,7 @@ internal static class DaggerfallBaseContent
             if (actor.ActionId is { } associatedActionId && actions.TryGetValue(associatedActionId, out DaggerfallActionDefinition? action))
             {
                 if (actor.Kind == "player" && action.Interpretation != "player-equipped-melee") diagnostics.Add("Player action association must use player-equipped melee.");
-                if (actor.Kind != "player" && action.Interpretation != "fixed-melee") diagnostics.Add($"Actor '{actor.Id.Value}' action association is incompatible with its authored attacks.");
+                if (actor.Kind != "player" && action.Interpretation is not ("fixed-melee" or "fixed-ranged")) diagnostics.Add($"Actor '{actor.Id.Value}' action association is incompatible with its authored attacks.");
                 if (action.AttackRangeIndex is int index && (index < 0 || index >= actor.Attacks.Count)) diagnostics.Add($"Action '{action.Id}' references missing attack range {index} on actor '{actor.Id.Value}'.");
                 if (action.AttackRangeIndex is null && action.MinimumDamage is null && actor.Kind != "player") diagnostics.Add($"Fixed action '{action.Id}' needs either an actor attack range reference or direct damage.");
             }
@@ -1210,13 +1210,20 @@ internal static class DaggerfallBaseContent
         }
         foreach (DaggerfallActionDefinition action in actions.Values)
         {
+            double? reach = action.Reach;
             if (action.Skill != "equipped" && !vocabulary.Skills.Any(skill => skill.Value == action.Skill)) diagnostics.Add($"Action '{action.Id}' refers to unknown skill '{action.Skill}'.");
             if (action.Tags.Distinct(StringComparer.Ordinal).Count() != action.Tags.Count) diagnostics.Add($"Action '{action.Id}' repeats a tag.");
             if (action.CooldownSeconds is not double cooldown || cooldown <= 0d) diagnostics.Add($"Action '{action.Id}' must define a positive cooldown.");
             bool directRange = action.MinimumDamage is not null || action.MaximumDamage is not null;
-            if (action.Interpretation == "fixed-melee" && (action.AttackRangeIndex is not null) == directRange) diagnostics.Add($"Fixed action '{action.Id}' must use exactly one direct damage range or actor attackRangeIndex.");
+            bool fixedReach = action.Interpretation is "fixed-melee" or "fixed-ranged";
+            if (fixedReach && (action.AttackRangeIndex is not null) == directRange) diagnostics.Add($"Fixed action '{action.Id}' must use exactly one direct damage range or actor attackRangeIndex.");
             if (action.Interpretation == "player-equipped-melee" && (action.AttackRangeIndex is not null || directRange || action.StaminaCost is not > 0)) diagnostics.Add($"Player-equipped action '{action.Id}' must own a positive stamina cost and use equipped weapon damage.");
-            if (action.Interpretation == "fixed-melee" && action.StaminaCost is not null) diagnostics.Add($"Fixed action '{action.Id}' must not declare player stamina cost.");
+            if (fixedReach && action.StaminaCost is not null) diagnostics.Add($"Fixed action '{action.Id}' must not declare player stamina cost.");
+            // How far an attack carries is the attack's own property. A fixed action without a reach would
+            // have to borrow one from somewhere else, which is how a bow and a dagger ended up reaching the
+            // same distance.
+            if (action.Interpretation != "player-equipped-melee" && reach is not > 0d) diagnostics.Add($"Fixed action '{action.Id}' must declare the positive reach it carries to.");
+            if (action.Interpretation == "fixed-melee" && reach > MaximumMeleeReach) diagnostics.Add($"Melee action '{action.Id}' reaches {reach} beyond any melee distance '{MaximumMeleeReach}'.");
         }
     }
 
@@ -1661,7 +1668,7 @@ internal static class DaggerfallBaseContent
                 ? attackRangeIndex is null && !directRange
                 : (attackRangeIndex is not null) != directRange;
             bool valid = ValidId(id)
-                && interpretation is "player-equipped-melee" or "fixed-melee"
+                && interpretation is "player-equipped-melee" or "fixed-melee" or "fixed-ranged"
                 && tags.Length > 0 && tags.All(ValidId)
                 && (skill == "equipped" || ValidId(skill))
                 && reach is null or >= 0 and <= 100
@@ -1689,33 +1696,38 @@ internal static class DaggerfallBaseContent
         int[] expectedMobiles = [.. Enumerable.Range(0, 39), .. Enumerable.Range(40, 3)];
         int[] actualMobiles = actors.Values.Where(actor => actor.Kind == "monster").Select(actor => actor.MobileId ?? -1).Order().ToArray();
         if (actors.Count != 45 || actors.Values.Count(actor => actor.Kind == "monster") != 42 || !actualMobiles.SequenceEqual(expectedMobiles) || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thief) || thief.MobileId != 138 || !actors.TryGetValue(new("archer"), out DaggerfallActorDefinition? archer) || archer.MobileId != 141) diagnostics.Add("Daggerfall actor roster must contain exactly mobiles 0..38, 40..42, thief 138, archer 141, and player without a mobile id.");
-        if (items.Count != 31 || slots.Count != 25 || actions.Count != 5 || loot.Count != 22 || armorValues.Count != 12) diagnostics.Add("Daggerfall catalog cardinality does not match the adopted donor snapshot.");
+        if (items.Count != 31 || slots.Count != 25 || actions.Count != 6 || loot.Count != 22 || armorValues.Count != 12) diagnostics.Add("Daggerfall catalog cardinality does not match the adopted donor snapshot.");
         if (armorValues.Values.Any(value => value > MaximumAuthoredArmor)) diagnostics.Add("Armor values by material exceed the Daggerfall policy bound.");
         if (!actors.TryGetValue(new("player"), out DaggerfallActorDefinition? player) || player.Loadout.Count == 0) diagnostics.Add("Daggerfall player loadout is required.");
         if (!loot.ContainsKey("-") || Enumerable.Range('A', 21).Select(value => ((char)value).ToString()).Any(key => !loot.ContainsKey(key))) diagnostics.Add("Daggerfall loot keys must be '-' and A through U.");
-        Dictionary<string, (string Interpretation, string Skill)> expectedActions = new(StringComparer.Ordinal)
+        Dictionary<string, (string Interpretation, string Skill, string[] Tags)> expectedActions = new(StringComparer.Ordinal)
         {
-            ["melee-attack"] = ("player-equipped-melee", "equipped"),
-            ["power-attack"] = ("player-equipped-melee", "equipped"),
-            ["monster-strike"] = ("fixed-melee", "hand-to-hand"),
-            ["skeleton-strike"] = ("fixed-melee", "long-blade"),
-            ["thief-strike"] = ("fixed-melee", "short-blade"),
+            ["melee-attack"] = ("player-equipped-melee", "equipped", ["attack", "melee"]),
+            ["power-attack"] = ("player-equipped-melee", "equipped", ["attack", "melee"]),
+            ["monster-strike"] = ("fixed-melee", "hand-to-hand", ["attack", "melee"]),
+            ["skeleton-strike"] = ("fixed-melee", "long-blade", ["attack", "melee"]),
+            ["thief-strike"] = ("fixed-melee", "short-blade", ["attack", "melee"]),
+            // The archer's shot is the one adopted ranged action: the donor's mobile record declares the
+            // ranged attack group and no melee damage range, and the corpus's own bows carry the archery
+            // damage this borrows.
+            ["archer-shot"] = ("fixed-ranged", "archery", ["attack", "ranged"]),
         };
-        if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(["attack", "melee"]))) diagnostics.Add("Actions must be the exact five adopted ids, interpretations, skills, and tags.");
+        if (actions.Count != expectedActions.Count || actions.Any(pair => !expectedActions.TryGetValue(pair.Key, out (string Interpretation, string Skill, string[] Tags) expected) || pair.Value.Interpretation != expected.Interpretation || pair.Value.Skill != expected.Skill || !pair.Value.Tags.SequenceEqual(expected.Tags))) diagnostics.Add("Actions must be the exact six adopted ids, interpretations, skills, and tags.");
         if (!actions.TryGetValue("melee-attack", out DaggerfallActionDefinition? melee) || melee.StaminaCost != 5 || melee.MinimumDamage is not null || melee.MaximumDamage is not null || melee.AttackRangeIndex is not null
             || !actions.TryGetValue("power-attack", out DaggerfallActionDefinition? power) || power.StaminaCost != 25 || power.DamageBonus != 4 || power.MinimumDamage is not null || power.MaximumDamage is not null || power.AttackRangeIndex is not null
             || !actions.TryGetValue("monster-strike", out DaggerfallActionDefinition? monsterAction) || monsterAction.AttackRangeIndex != 0 || monsterAction.MinimumDamage is not null || monsterAction.MaximumDamage is not null
             || !actions.TryGetValue("skeleton-strike", out DaggerfallActionDefinition? skeletonAction) || skeletonAction.AttackRangeIndex != 0 || skeletonAction.MinimumDamage is not null || skeletonAction.MaximumDamage is not null
             || !actions.TryGetValue("thief-strike", out DaggerfallActionDefinition? thiefAction) || thiefAction.AttackRangeIndex is not null || thiefAction.MinimumDamage != 2 || thiefAction.MaximumDamage != 8) diagnostics.Add("Action damage and stamina ownership does not match the adopted actor/action catalog.");
-        // Every placed actor that swings has a policy: the donor resolves a weaponless monster's
-        // melee with its hand-to-hand skill and the damage range its own record carries, one
-        // enemy-class thief uses a short blade, and one monster uses a long blade.
+        // Every adopted actor that swings has a policy, and every adopted actor that fights at all is
+        // named here with the action it swings. This is a table of the adopted associations rather than of
+        // the exceptions: an actor added to the catalog without a policy fails the placed-attacker check
+        // in the suites, and an actor whose policy is quietly swapped fails here.
         string[] monsterStrikers = ["giant-bat", "imp", "orc", "rat"];
-        if (!actors.TryGetValue(new("player"), out DaggerfallActorDefinition? playerActionOwner) || playerActionOwner.ActionId != "melee-attack"
-            || !actors.TryGetValue(new("rat"), out DaggerfallActorDefinition? ratActionOwner) || ratActionOwner.ActionId != "monster-strike"
-            || !actors.TryGetValue(new("skeletal-warrior"), out DaggerfallActorDefinition? skeletonActionOwner) || skeletonActionOwner.ActionId != "skeleton-strike"
-            || !actors.TryGetValue(new("thief"), out DaggerfallActorDefinition? thiefActionOwner) || thiefActionOwner.ActionId != "thief-strike"
-            || monsterStrikers.Any(id => !actors.TryGetValue(new(id), out DaggerfallActorDefinition? striker) || striker.ActionId != "monster-strike")) diagnostics.Add("The adopted actor/action associations must remain explicit: the player, the four monster-strike creatures, the skeleton and the thief.");
+        Dictionary<string, string> swinging =
+            new(StringComparer.Ordinal) { ["player"] = "melee-attack", ["rat"] = "monster-strike", ["skeletal-warrior"] = "skeleton-strike", ["thief"] = "thief-strike", ["archer"] = "archer-shot" };
+        foreach (string id in monsterStrikers) swinging[id] = "monster-strike";
+        if (swinging.Any(pair => !actors.TryGetValue(new(pair.Key), out DaggerfallActorDefinition? owner) || owner.ActionId != pair.Value))
+            diagnostics.Add("The adopted actor/action associations must remain explicit: the player, the four monster-strike creatures, the skeleton, the thief and the archer.");
         if (actions.Values.Any(action => action.Id != "power-attack" && action.DamageBonus != 0)) diagnostics.Add("Only the authored power-attack may carry an action damage bonus.");
         string[] categories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
         if (pools.Count != categories.Length || !pools.Select(pool => pool.Id).Order().SequenceEqual(categories.Order()) || pools.Any(pool => pool.Status != "deferred" || string.IsNullOrWhiteSpace(pool.Reason))) diagnostics.Add("Deferred loot category pools must be the exact adopted category set with a reason.");
@@ -1725,11 +1737,11 @@ internal static class DaggerfallBaseContent
             "chain2-material-alias-is-not-authored",
             "bows-retain-donor-both-hands-policy",
             "loot-matrix-uses-fall-exe-errata",
-            // The archer is placed with a mobile whose donor record declares a ranged attack and carries
-            // no melee damage range, so it has no policy rather than an invented one.
-            "archer-ranged-attack-is-not-implemented",
+            // A shot is resolved when its authored damage frame is reached rather than travelling, and
+            // nothing is drawn from a quiver: the donor looses an arrow the pack's own arrow item models.
+            "ranged-attacks-are-hitscan-and-consume-no-ammunition",
         ];
-        if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, Chain2 omission, bow two-hand policy, loot errata, and the archer's ranged attack exactly.");
+        if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and the ranged delivery exactly.");
     }
 
     internal static JsonElement Property(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
@@ -1739,6 +1751,16 @@ internal static class DaggerfallBaseContent
         return default;
     }
     /// <summary>The published catalog shape this reader understands.</summary>
+    /// <summary>
+    /// The furthest a melee action may reach, which is the tunable melee query bound's own ceiling.
+    /// </summary>
+    /// <remarks>
+    /// A melee swing and the query that admits it have to agree: an action reaching past what the query
+    /// resolves would be an attack the ruleset admits and the Engine then reports as out of range, which
+    /// reads to a player as a miss rather than as the authoring mistake it is.
+    /// </remarks>
+    private const double MaximumMeleeReach = 2.25d;
+
     private const int CatalogSchemaVersion = 1;
     private const int CharacterPresentationSchemaVersion = 1;
     private const int LocationSchemaVersion = 1;

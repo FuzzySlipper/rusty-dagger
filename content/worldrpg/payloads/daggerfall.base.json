@@ -212,6 +212,7 @@
       "xpReward": 50,
       "team": "knights-and-mages",
       "lootTableKey": "C",
+      "action": "archer-shot",
       "attacks": []
     },
     {
@@ -2898,7 +2899,7 @@
       "skill": "hand-to-hand",
       "cooldownSeconds": 1.5,
       "attackRangeIndex": 0
-    },
+    , "reach": 2.0},
     {
       "id": "skeleton-strike",
       "tags": [
@@ -2909,6 +2910,19 @@
       "skill": "long-blade",
       "cooldownSeconds": 2,
       "attackRangeIndex": 0
+    , "reach": 2.0},
+    {
+      "id": "archer-shot",
+      "tags": [
+        "attack",
+        "ranged"
+      ],
+      "interpretation": "fixed-ranged",
+      "skill": "archery",
+      "cooldownSeconds": 2.0,
+      "reach": 10.0,
+      "minimumDamage": 4,
+      "maximumDamage": 18
     },
     {
       "id": "thief-strike",
@@ -2921,7 +2935,7 @@
       "cooldownSeconds": 1.2,
       "minimumDamage": 2,
       "maximumDamage": 8
-    },
+    , "reach": 2.0},
     {
       "id": "power-attack",
       "tags": [
@@ -3393,7 +3407,7 @@
     "chain2-material-alias-is-not-authored",
     "bows-retain-donor-both-hands-policy",
     "loot-matrix-uses-fall-exe-errata",
-    "archer-ranged-attack-is-not-implemented"
+    "ranged-attacks-are-hitscan-and-consume-no-ammunition"
   ],
   "catalogs": {
     "schemaVersion": 1,

@@ -30,7 +30,7 @@ internal sealed record DaggerfallTuning(
             MaximumStepHeight: .75f)),
         new FirstPersonCameraTuning(.75f, 65d, .1d, 100d),
         new DaggerfallMeleeTargetingTuning(2.25d, .5d),
-        new DaggerfallEnemyBehaviorTuning(12d, .5d, 1.25d, 3f, 32),
+        new DaggerfallEnemyBehaviorTuning(12d, .5d, 3f, 32),
         new DaggerfallLootInteractionTuning(2.25d, .5d),
         new DaggerfallTimeTuning(12d),
         new DaggerfallStaminaRecoveryTuning(5d, 2d),
@@ -93,7 +93,6 @@ internal sealed record DaggerfallTuning(
             new DaggerfallEnemyBehaviorTuning(
                 enemyBehavior.GetProperty("detectionDistance").GetDouble(),
                 enemyBehavior.GetProperty("minimumFacingCosine").GetDouble(),
-                enemyBehavior.GetProperty("attackReach").GetDouble(),
                 enemyBehavior.GetProperty("chaseSpeedUnitsPerSecond").GetSingle(),
                 checked((uint)enemyBehavior.GetProperty("navigationMaximumVisited").GetInt32()),
                 enemyBehavior.TryGetProperty("spawnGroundProbeLift", out JsonElement lift) ? lift.GetSingle() : Defaults.EnemyBehavior.SpawnGroundProbeLift,
@@ -227,11 +226,17 @@ internal sealed record DaggerfallLootInteractionTuning(double MaximumDistance, d
     }
 }
 
-/// <summary>Ruleset policy for visibility-led enemy chase and attack decisions.</summary>
+/// <summary>
+/// Ruleset policy for visibility-led enemy chase and attack decisions.
+/// </summary>
+/// <remarks>
+/// There is no reach here: how far an attack carries is a property of the attack, so it is authored on the
+/// action the actor swings with and read from there. A single tuned reach would make every enemy in the
+/// world reach the same distance, which is wrong the moment one of them carries a bow.
+/// </remarks>
 internal sealed record DaggerfallEnemyBehaviorTuning(
     double DetectionDistance,
     double MinimumFacingCosine,
-    double AttackReach,
     float ChaseSpeedUnitsPerSecond,
     uint NavigationMaximumVisited,
     float SpawnGroundProbeLift = .2f,
@@ -241,7 +246,6 @@ internal sealed record DaggerfallEnemyBehaviorTuning(
     {
         if (!double.IsFinite(DetectionDistance) || DetectionDistance <= 0d) throw new ArgumentOutOfRangeException(nameof(DetectionDistance));
         if (!double.IsFinite(MinimumFacingCosine) || MinimumFacingCosine is < -1d or > 1d) throw new ArgumentOutOfRangeException(nameof(MinimumFacingCosine));
-        if (!double.IsFinite(AttackReach) || AttackReach <= 0d || AttackReach > DetectionDistance) throw new ArgumentOutOfRangeException(nameof(AttackReach));
         if (!float.IsFinite(ChaseSpeedUnitsPerSecond) || ChaseSpeedUnitsPerSecond <= 0f) throw new ArgumentOutOfRangeException(nameof(ChaseSpeedUnitsPerSecond));
         if (!float.IsFinite(SpawnGroundProbeLift) || SpawnGroundProbeLift < 0f) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeLift));
         if (!double.IsFinite(SpawnGroundProbeDistance) || SpawnGroundProbeDistance <= SpawnGroundProbeLift) throw new ArgumentOutOfRangeException(nameof(SpawnGroundProbeDistance));
