@@ -73,6 +73,11 @@ internal static class Program
                 return RunMobileLedgerCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "magic-catalog")
+            {
+                return RunMagicCatalogCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "locations")
             {
                 return RunLocationsCommand(args);
@@ -201,6 +206,50 @@ internal static class Program
         }
 
         Console.WriteLine($"families: {inventory.UndocumentedFamilies.Count} supplied but undocumented [{string.Join(", ", inventory.UndocumentedFamilies)}], {inventory.MissingDocumentedFamilies.Count} documented but not supplied [{string.Join(", ", inventory.MissingDocumentedFamilies)}]");
+        return 0;
+    }
+
+    /// <summary>
+    /// Publishes the classic spell and magic-item catalogs into the base pack. Both source files are
+    /// required inputs: a catalog built from one of them would look complete while resolving half of what
+    /// the game defines, and SPELL.RSC is refused by name because it is not a file this corpus carries.
+    /// </summary>
+    private static int RunMagicCatalogCommand(IReadOnlyList<string> args)
+    {
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        if (args.Count != (update ? 6 : 5) || args[1] != "--arena2" || args[3] != "--pack")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool magic-catalog --arena2 SOURCE_DIR --pack PACK.json [--update]");
+        }
+
+        string arena2 = args[2];
+        string packFile = args[4];
+        foreach (string refused in Directory.EnumerateFiles(arena2, "*", SearchOption.TopDirectoryOnly))
+        {
+            if (string.Equals(Path.GetFileName(refused), "SPELL.RSC", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException($"'{refused}' is a SPELL.RSC input; the classic spell catalog lives in SPELLS.STD and this corpus carries no SPELL.RSC to read.");
+            }
+        }
+
+        string spellPath = Path.Combine(arena2, "SPELLS.STD");
+        string magicPath = Path.Combine(arena2, "MAGIC.DEF");
+        if (!File.Exists(spellPath)) throw new FileNotFoundException($"SPELLS.STD is required to build the spell catalog and is not in '{arena2}'.", spellPath);
+        if (!File.Exists(magicPath)) throw new FileNotFoundException($"MAGIC.DEF is required to build the magic-item catalog and is not in '{arena2}'.", magicPath);
+        Arena2MagicCatalogPublication publication = Arena2MagicCatalogDocument.Build(
+            File.ReadAllBytes(spellPath), File.ReadAllBytes(magicPath), "local/arena2/SPELLS.STD", "local/arena2/MAGIC.DEF");
+        Console.WriteLine($"magic catalog: {publication.Spells} spells, {publication.MagicItems} magic items, {publication.Enchantments} enchantments, {publication.UnresolvedLinks} unresolved spell links, {publication.Dispositions} dispositions");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish this catalog into it)");
+            return 0;
+        }
+
+        // Only the magic property is replaced; every other authored section keeps its own ordering.
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        pack["magic"] = JsonNode.Parse(publication.Json);
+        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: magic catalog updated in {packFile}");
         return 0;
     }
 
