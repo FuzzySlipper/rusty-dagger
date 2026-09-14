@@ -4,7 +4,7 @@ import { adopt, heldRevision, image, type ArtRequestAction, type UiArt } from '.
 import { mountInventory, type InventoryProjection, type InventoryAction } from './inventory.js';
 import { mountCharacter, isCharacterProjection, type CharacterProjection } from './character.js';
 import { mountLoot, type LootProjection, type LootAction } from './loot.js';
-import { BEGIN_ACTION, screenForMode } from './screens.js';
+import { BEGIN_ACTION, TITLE_MODE, screenForMode } from './screens.js';
 
 interface ProjectionEnvelope {
   readonly contract: string;
@@ -281,7 +281,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   const redrawEntry = (): void => {
     entryRoot.hidden = !titleMode;
     if (!titleMode) return;
-    const entry = image(screenForMode('title')!);
+    const entry = image(screenForMode(TITLE_MODE)!);
     if (entry !== null) entryScreen.src = entry;
   };
   shell.querySelector<HTMLButtonElement>('.dagger-entry-begin')!.addEventListener('click', () => {
@@ -295,7 +295,7 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
   });
   const redrawArt = (): void => {
     deathRoot.hidden = !deadMode;
-    const death = image('screen.death');
+    const death = image(screenForMode('dead')!);
     if (deadMode && death !== null) deathScreen.src = death;
     redrawEntry();
     // The panels memo their own state revision, so art that arrived after the state it draws has to
@@ -356,13 +356,13 @@ export function mountProductUi(root: HTMLElement, context: ProductUiContext): { 
     deadMode = value.mode === 'dead';
     deathRoot.hidden = !deadMode;
     if (deadMode) {
-      const death = image('screen.death');
+      const death = image(screenForMode('dead')!);
       if (death !== null) deathScreen.src = death;
     }
 
     // The entry screen is the mode's screen, the way the death screen is the dead mode's: the mode
     // value decides which one is up, and the artifact the mode names is what it shows.
-    titleMode = value.mode === 'title';
+    titleMode = value.mode === TITLE_MODE;
     redrawEntry();
 
     title.textContent = 'Exploring';

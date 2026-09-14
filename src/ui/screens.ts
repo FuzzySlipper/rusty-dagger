@@ -1,5 +1,3 @@
-import type { UiArt } from './art.js';
-
 /**
  * The screens a product mode owns, as the binding the mode and the artifact share.
  *
@@ -16,23 +14,42 @@ export interface ModeScreen {
 }
 
 /**
- * Every mode whose screen is a published artifact. A mode that is not here owns no screen, which is
- * the ordinary case: ordinary play, a pause and a modal draw the HUD rather than replacing it.
+ * Every mode whose screen replaces the HUD. A mode that is not here draws the HUD, which is the
+ * ordinary case: ordinary play, a pause and a modal add to it rather than standing in for it.
  */
+/** The mode the entry screen is keyed by, shared by the table and the code that reads it. */
+export const TITLE_MODE = 'title';
+
 export const MODE_SCREENS: readonly ModeScreen[] = [
-  { mode: 'title', screen: 'screen.title' },
+  { mode: TITLE_MODE, screen: 'screen.title' },
   { mode: 'dead', screen: 'screen.death' },
 ];
 
-/** The screen a mode owns, or null when the mode draws the HUD rather than a screen of its own. */
+/**
+ * The published screens no mode shows yet, named so the gap is a stated one rather than an omission.
+ *
+ * `screen.start-menu` is the donor's load, new and exit menu and `screen.prison` is where the original
+ * game opens; neither is a state this product's lifecycle has. `screen.character-generation` and
+ * `screen.pick.02` belong to a character-creation flow the product does not have yet. All four are
+ * admitted, slotted and delivered to the DOM, and nothing selects them. A delivered screen named in
+ * neither this list nor the table above is one the client forgot, which is what the delivery test checks.
+ */
+export const MODE_LESS_SCREENS: readonly string[] = [
+  'screen.character-generation',
+  'screen.pick.02',
+  'screen.prison',
+  'screen.start-menu',
+];
+
+/**
+ * The screen a mode owns, or null when the mode draws the HUD rather than a screen of its own.
+ *
+ * An unlisted mode and a differently-cased name both return null: the mode strings are the product's
+ * and this does not guess at one it was not given.
+ */
 export function screenForMode(mode: string): string | null {
   return MODE_SCREENS.find(entry => entry.mode === mode)?.screen ?? null;
 }
 
 /** The action a client sends to leave the entry screen, which is the product's decision to make. */
 export const BEGIN_ACTION = 'begin';
-
-/** The one source identity of a screen a mode shows, resolved from the art the product delivered. */
-export function screenArt(art: UiArt | null, screen: string, lookup: (id: string) => string | null): string | null {
-  return art === null ? null : lookup(screen);
-}
