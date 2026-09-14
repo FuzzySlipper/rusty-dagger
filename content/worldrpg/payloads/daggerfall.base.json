@@ -258864,5 +258864,2372 @@
     ],
     "unresolvedLinks": [],
     "dispositions": []
+  },
+  "mobiles": {
+    "schemaVersion": 1,
+    "sources": [
+      {
+        "recordId": "CNT-007",
+        "path": "research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs"
+      }
+    ],
+    "mobiles": [
+      {
+        "donorId": 0,
+        "donorName": "Rat",
+        "identity": "rat",
+        "actor": "rat",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Animal",
+        "maleTexture": 255,
+        "femaleTexture": 255,
+        "corpse": {
+          "archive": 401,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyRatMove",
+          "bark": "EnemyRatBark",
+          "attack": "EnemyRatAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 1,
+          "maximum": 4
+        },
+        "health": {
+          "minimum": 9,
+          "maximum": 16
+        },
+        "level": 1,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 2,
+        "team": "Vermin"
+      },
+      {
+        "donorId": 1,
+        "donorName": "Imp",
+        "identity": "imp",
+        "actor": "imp",
+        "disposition": "published",
+        "behaviour": "Flying",
+        "affinity": "Darkness",
+        "maleTexture": 256,
+        "femaleTexture": 256,
+        "corpse": {
+          "archive": 406,
+          "record": 5
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyImpMove",
+          "bark": "EnemyImpBark",
+          "attack": "EnemyImpAttack"
+        },
+        "minMetalToHit": "Steel",
+        "damage": {
+          "minimum": 2,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 11,
+          "maximum": 18
+        },
+        "level": 2,
+        "armorValue": 3,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 40,
+        "team": "Magic"
+      },
+      {
+        "donorId": 2,
+        "donorName": "Spriggan",
+        "identity": "spriggan",
+        "actor": "spriggan",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daylight",
+        "maleTexture": 257,
+        "femaleTexture": 257,
+        "corpse": {
+          "archive": 406,
+          "record": 3
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemySprigganMove",
+          "bark": "EnemySprigganBark",
+          "attack": "EnemySprigganAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 1,
+          "maximum": 8
+        },
+        "health": {
+          "minimum": 12,
+          "maximum": 26
+        },
+        "level": 3,
+        "armorValue": -4,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 240,
+        "team": "Spriggans"
+      },
+      {
+        "donorId": 3,
+        "donorName": "Giant Bat",
+        "identity": "giant-bat",
+        "actor": "giant-bat",
+        "disposition": "published",
+        "behaviour": "Flying",
+        "affinity": "Animal",
+        "maleTexture": 258,
+        "femaleTexture": 258,
+        "corpse": {
+          "archive": 401,
+          "record": 0
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyGiantBatMove",
+          "bark": "EnemyGiantBatBark",
+          "attack": "EnemyGiantBatAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 2,
+          "maximum": 12
+        },
+        "health": {
+          "minimum": 12,
+          "maximum": 26
+        },
+        "level": 3,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 80,
+        "team": "Vermin"
+      },
+      {
+        "donorId": 4,
+        "donorName": "Grizzly Bear",
+        "identity": "grizzly-bear",
+        "actor": "grizzly-bear",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Animal",
+        "maleTexture": 259,
+        "femaleTexture": 259,
+        "corpse": {
+          "archive": 401,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyBearMove",
+          "bark": "EnemyBearBark",
+          "attack": "EnemyBearAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 1,
+          "maximum": 8
+        },
+        "health": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "level": 4,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 1000,
+        "team": "Bears"
+      },
+      {
+        "donorId": 5,
+        "donorName": "Sabertooth Tiger",
+        "identity": "sabertooth-tiger",
+        "actor": "sabertooth-tiger",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Animal",
+        "maleTexture": 260,
+        "femaleTexture": 260,
+        "corpse": {
+          "archive": 401,
+          "record": 3
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyTigerMove",
+          "bark": "EnemyTigerBark",
+          "attack": "EnemyTigerAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 1,
+          "maximum": 10
+        },
+        "health": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "level": 4,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 1000,
+        "team": "Tigers"
+      },
+      {
+        "donorId": 6,
+        "donorName": "Spider",
+        "identity": "spider",
+        "actor": "spider",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Animal",
+        "maleTexture": 261,
+        "femaleTexture": 261,
+        "corpse": {
+          "archive": 401,
+          "record": 4
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemySpiderMove",
+          "bark": "EnemySpiderBark",
+          "attack": "EnemySpiderAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "level": 4,
+        "armorValue": 5,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 400,
+        "team": "Spiders"
+      },
+      {
+        "donorId": 7,
+        "donorName": "Orc",
+        "identity": "orc",
+        "actor": "orc",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 262,
+        "femaleTexture": 262,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyOrcMove",
+          "bark": "EnemyOrcBark",
+          "attack": "EnemyOrcAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 1,
+          "maximum": 6
+        },
+        "health": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "level": 5,
+        "armorValue": 7,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 600,
+        "team": "Orcs"
+      },
+      {
+        "donorId": 8,
+        "donorName": "Centaur",
+        "identity": "centaur",
+        "actor": "centaur",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daylight",
+        "maleTexture": 263,
+        "femaleTexture": 263,
+        "corpse": {
+          "archive": 406,
+          "record": 0
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyCentaurMove",
+          "bark": "EnemyCentaurBark",
+          "attack": "EnemyCentaurAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 14,
+          "maximum": 46
+        },
+        "level": 5,
+        "armorValue": 6,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 1200,
+        "team": "Centaurs"
+      },
+      {
+        "donorId": 9,
+        "donorName": "Werewolf",
+        "identity": "werewolf",
+        "actor": "werewolf",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 264,
+        "femaleTexture": 264,
+        "corpse": {
+          "archive": 96,
+          "record": 5
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyWerewolfMove",
+          "bark": "EnemyWerewolfBark",
+          "attack": "EnemyWerewolfAttack"
+        },
+        "minMetalToHit": "Silver",
+        "damage": {
+          "minimum": 1,
+          "maximum": 10
+        },
+        "health": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "level": 6,
+        "armorValue": 5,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 480,
+        "team": "Werecreatures"
+      },
+      {
+        "donorId": 10,
+        "donorName": "Nymph",
+        "identity": "nymph",
+        "actor": "nymph",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daylight",
+        "maleTexture": 265,
+        "femaleTexture": 265,
+        "corpse": {
+          "archive": 406,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyNymphMove",
+          "bark": "EnemyNymphBark",
+          "attack": "EnemyNymphAttack"
+        },
+        "minMetalToHit": "Silver",
+        "damage": {
+          "minimum": 1,
+          "maximum": 5
+        },
+        "health": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "level": 6,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 200,
+        "team": "Nymphs"
+      },
+      {
+        "donorId": 11,
+        "donorName": "Slaughterfish",
+        "identity": "slaughterfish",
+        "actor": "slaughterfish",
+        "disposition": "published",
+        "behaviour": "Aquatic",
+        "affinity": "Water",
+        "maleTexture": 266,
+        "femaleTexture": 266,
+        "corpse": {
+          "archive": 305,
+          "record": 1
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyEelMove",
+          "bark": "EnemyEelBark",
+          "attack": "EnemyEelAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 2,
+          "maximum": 12
+        },
+        "health": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "level": 7,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 400,
+        "team": "Aquatic"
+      },
+      {
+        "donorId": 12,
+        "donorName": "Orc Sergeant",
+        "identity": "orc-sergeant",
+        "actor": "orc-sergeant",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 267,
+        "femaleTexture": 267,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyOrcSergeantMove",
+          "bark": "EnemyOrcSergeantBark",
+          "attack": "EnemyOrcSergeantAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "level": 7,
+        "armorValue": 5,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 600,
+        "team": "Orcs"
+      },
+      {
+        "donorId": 13,
+        "donorName": "Harpy",
+        "identity": "harpy",
+        "actor": "harpy",
+        "disposition": "published",
+        "behaviour": "Flying",
+        "affinity": "Daylight",
+        "maleTexture": 268,
+        "femaleTexture": 268,
+        "corpse": {
+          "archive": 406,
+          "record": 4
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHarpyMove",
+          "bark": "EnemyHarpyBark",
+          "attack": "EnemyHarpyAttack"
+        },
+        "minMetalToHit": "Dwarven",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 16,
+          "maximum": 85
+        },
+        "level": 8,
+        "armorValue": 2,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 200,
+        "team": "Harpies"
+      },
+      {
+        "donorId": 14,
+        "donorName": "Wereboar",
+        "identity": "wereboar",
+        "actor": "wereboar",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 269,
+        "femaleTexture": 269,
+        "corpse": {
+          "archive": 96,
+          "record": 5
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyWereboarMove",
+          "bark": "EnemyWereboarBark",
+          "attack": "EnemyWereboarAttack"
+        },
+        "minMetalToHit": "Silver",
+        "damage": {
+          "minimum": 2,
+          "maximum": 12
+        },
+        "health": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "level": 8,
+        "armorValue": 3,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 560,
+        "team": "Werecreatures"
+      },
+      {
+        "donorId": 15,
+        "donorName": "Skeletal Warrior",
+        "identity": "skeletal-warrior",
+        "actor": "skeletal-warrior",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Undead",
+        "maleTexture": 270,
+        "femaleTexture": 270,
+        "corpse": {
+          "archive": 306,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemySkeletonMove",
+          "bark": "EnemySkeletonBark",
+          "attack": "EnemySkeletonAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "level": 9,
+        "armorValue": 2,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 80,
+        "team": "Undead"
+      },
+      {
+        "donorId": 16,
+        "donorName": "Giant",
+        "identity": "giant",
+        "actor": "giant",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daylight",
+        "maleTexture": 271,
+        "femaleTexture": 271,
+        "corpse": {
+          "archive": 406,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyGiantMove",
+          "bark": "EnemyGiantBark",
+          "attack": "EnemyGiantAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 10,
+          "maximum": 30
+        },
+        "health": {
+          "minimum": 18,
+          "maximum": 74
+        },
+        "level": 10,
+        "armorValue": 3,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 3000,
+        "team": "Giants"
+      },
+      {
+        "donorId": 17,
+        "donorName": "Zombie",
+        "identity": "zombie",
+        "actor": "zombie",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Undead",
+        "maleTexture": 272,
+        "femaleTexture": 272,
+        "corpse": {
+          "archive": 306,
+          "record": 4
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyZombieMove",
+          "bark": "EnemyZombieBark",
+          "attack": "EnemyZombieAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "health": {
+          "minimum": 52,
+          "maximum": 66
+        },
+        "level": 10,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 4000,
+        "team": "Undead"
+      },
+      {
+        "donorId": 18,
+        "donorName": "Ghost",
+        "identity": "ghost",
+        "actor": "ghost",
+        "disposition": "published",
+        "behaviour": "Spectral",
+        "affinity": "Undead",
+        "maleTexture": 273,
+        "femaleTexture": 273,
+        "corpse": {
+          "archive": 306,
+          "record": 0
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyGhostMove",
+          "bark": "EnemyGhostBark",
+          "attack": "EnemyGhostAttack"
+        },
+        "minMetalToHit": "Silver",
+        "damage": {
+          "minimum": 10,
+          "maximum": 35
+        },
+        "health": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "level": 11,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "Undead"
+      },
+      {
+        "donorId": 19,
+        "donorName": "Mummy",
+        "identity": "mummy",
+        "actor": "mummy",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Undead",
+        "maleTexture": 274,
+        "femaleTexture": 274,
+        "corpse": {
+          "archive": 306,
+          "record": 5
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyMummyMove",
+          "bark": "EnemyMummyBark",
+          "attack": "EnemyMummyAttack"
+        },
+        "minMetalToHit": "Silver",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 17,
+          "maximum": 66
+        },
+        "level": 11,
+        "armorValue": 2,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 300,
+        "team": "Undead"
+      },
+      {
+        "donorId": 20,
+        "donorName": "Giant Scorpion",
+        "identity": "giant-scorpion",
+        "actor": "giant-scorpion",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Animal",
+        "maleTexture": 275,
+        "femaleTexture": 275,
+        "corpse": {
+          "archive": 401,
+          "record": 5
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyScorpionMove",
+          "bark": "EnemyScorpionBark",
+          "attack": "EnemyScorpionAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 15,
+          "maximum": 25
+        },
+        "health": {
+          "minimum": 18,
+          "maximum": 74
+        },
+        "level": 12,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 600,
+        "team": "Scorpions"
+      },
+      {
+        "donorId": 21,
+        "donorName": "Orc Shaman",
+        "identity": "orc-shaman",
+        "actor": "orc-shaman",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 276,
+        "femaleTexture": 276,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyOrcShamanMove",
+          "bark": "EnemyOrcShamanBark",
+          "attack": "EnemyOrcShamanAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 2,
+          "maximum": 20
+        },
+        "health": {
+          "minimum": 18,
+          "maximum": 74
+        },
+        "level": 13,
+        "armorValue": 7,
+        "parrySounds": true,
+        "mapChance": 3,
+        "weight": 400,
+        "team": "Orcs"
+      },
+      {
+        "donorId": 22,
+        "donorName": "Gargoyle",
+        "identity": "gargoyle",
+        "actor": "gargoyle",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 277,
+        "femaleTexture": 277,
+        "corpse": {
+          "archive": 96,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyGargoyleMove",
+          "bark": "EnemyGargoyleBark",
+          "attack": "EnemyGargoyleAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 10,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 19,
+          "maximum": 82
+        },
+        "level": 14,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 300,
+        "team": "Magic"
+      },
+      {
+        "donorId": 23,
+        "donorName": "Wraith",
+        "identity": "wraith",
+        "actor": "wraith",
+        "disposition": "published",
+        "behaviour": "Spectral",
+        "affinity": "Undead",
+        "maleTexture": 278,
+        "femaleTexture": 278,
+        "corpse": {
+          "archive": 306,
+          "record": 0
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyWraithMove",
+          "bark": "EnemyWraithBark",
+          "attack": "EnemyWraithAttack"
+        },
+        "minMetalToHit": "Silver",
+        "damage": {
+          "minimum": 20,
+          "maximum": 45
+        },
+        "health": {
+          "minimum": 30,
+          "maximum": 90
+        },
+        "level": 15,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "Undead"
+      },
+      {
+        "donorId": 24,
+        "donorName": "Orc Warlord",
+        "identity": "orc-warlord",
+        "actor": "orc-warlord",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 279,
+        "femaleTexture": 279,
+        "corpse": {
+          "archive": 96,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyOrcWarlordMove",
+          "bark": "EnemyOrcWarlordBark",
+          "attack": "EnemyOrcWarlordAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 50
+        },
+        "health": {
+          "minimum": 20,
+          "maximum": 90
+        },
+        "level": 16,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 2,
+        "weight": 700,
+        "team": "Orcs"
+      },
+      {
+        "donorId": 25,
+        "donorName": "Frost Daedra",
+        "identity": "frost-daedra",
+        "actor": "frost-daedra",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daedra",
+        "maleTexture": 280,
+        "femaleTexture": 280,
+        "corpse": {
+          "archive": 400,
+          "record": 3
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyFrostDaedraMove",
+          "bark": "EnemyFrostDaedraBark",
+          "attack": "EnemyFrostDaedraAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 50,
+          "maximum": 100
+        },
+        "health": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "level": 17,
+        "armorValue": -5,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 800,
+        "team": "Daedra"
+      },
+      {
+        "donorId": 26,
+        "donorName": "Fire Daedra",
+        "identity": "fire-daedra",
+        "actor": "fire-daedra",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daedra",
+        "maleTexture": 281,
+        "femaleTexture": 281,
+        "corpse": {
+          "archive": 400,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyFireDaedraMove",
+          "bark": "EnemyFireDaedraBark",
+          "attack": "EnemyFireDaedraAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "health": {
+          "minimum": 26,
+          "maximum": 138
+        },
+        "level": 17,
+        "armorValue": 1,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 800,
+        "team": "Daedra"
+      },
+      {
+        "donorId": 27,
+        "donorName": "Daedroth",
+        "identity": "daedroth",
+        "actor": "daedroth",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daedra",
+        "maleTexture": 282,
+        "femaleTexture": 282,
+        "corpse": {
+          "archive": 400,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyLesserDaedraMove",
+          "bark": "EnemyLesserDaedraBark",
+          "attack": "EnemyLesserDaedraAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "health": {
+          "minimum": 27,
+          "maximum": 146
+        },
+        "level": 18,
+        "armorValue": 1,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 400,
+        "team": "Daedra"
+      },
+      {
+        "donorId": 28,
+        "donorName": "Vampire",
+        "identity": "vampire",
+        "actor": "vampire",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 283,
+        "femaleTexture": 283,
+        "corpse": {
+          "archive": 96,
+          "record": 3
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyFemaleVampireMove",
+          "bark": "EnemyFemaleVampireBark",
+          "attack": "EnemyFemaleVampireAttack"
+        },
+        "minMetalToHit": "Silver",
+        "damage": {
+          "minimum": 20,
+          "maximum": 50
+        },
+        "health": {
+          "minimum": 28,
+          "maximum": 154
+        },
+        "level": 19,
+        "armorValue": -2,
+        "parrySounds": false,
+        "mapChance": 3,
+        "weight": 400,
+        "team": "Undead"
+      },
+      {
+        "donorId": 29,
+        "donorName": "Daedra Seducer",
+        "identity": "daedra-seducer",
+        "actor": "daedra-seducer",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daedra",
+        "maleTexture": 284,
+        "femaleTexture": 284,
+        "corpse": {
+          "archive": 400,
+          "record": 6
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemySeducerMove",
+          "bark": "EnemySeducerBark",
+          "attack": "EnemySeducerAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "health": {
+          "minimum": 27,
+          "maximum": 146
+        },
+        "level": 19,
+        "armorValue": 1,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 200,
+        "team": "Daedra"
+      },
+      {
+        "donorId": 30,
+        "donorName": "Vampire Ancient",
+        "identity": "vampire-ancient",
+        "actor": "vampire-ancient",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Darkness",
+        "maleTexture": 285,
+        "femaleTexture": 285,
+        "corpse": {
+          "archive": 96,
+          "record": 3
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyVampireMove",
+          "bark": "EnemyVampireBark",
+          "attack": "EnemyVampireAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 20,
+          "maximum": 60
+        },
+        "health": {
+          "minimum": 30,
+          "maximum": 170
+        },
+        "level": 20,
+        "armorValue": -5,
+        "parrySounds": false,
+        "mapChance": 3,
+        "weight": 400,
+        "team": "Undead"
+      },
+      {
+        "donorId": 31,
+        "donorName": "Daedra Lord",
+        "identity": "daedra-lord",
+        "actor": "daedra-lord",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Daedra",
+        "maleTexture": 286,
+        "femaleTexture": 286,
+        "corpse": {
+          "archive": 400,
+          "record": 4
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyDaedraLordMove",
+          "bark": "EnemyDaedraLordBark",
+          "attack": "EnemyDaedraLordAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 15,
+          "maximum": 50
+        },
+        "health": {
+          "minimum": 35,
+          "maximum": 210
+        },
+        "level": 20,
+        "armorValue": -10,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 1000,
+        "team": "Daedra"
+      },
+      {
+        "donorId": 32,
+        "donorName": "Lich",
+        "identity": "lich",
+        "actor": "lich",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Undead",
+        "maleTexture": 287,
+        "femaleTexture": 287,
+        "corpse": {
+          "archive": 306,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyLichMove",
+          "bark": "EnemyLichBark",
+          "attack": "EnemyLichAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 70,
+          "maximum": 100
+        },
+        "health": {
+          "minimum": 30,
+          "maximum": 170
+        },
+        "level": 20,
+        "armorValue": -10,
+        "parrySounds": false,
+        "mapChance": 4,
+        "weight": 300,
+        "team": "Undead"
+      },
+      {
+        "donorId": 33,
+        "donorName": "Ancient Lich",
+        "identity": "ancient-lich",
+        "actor": "ancient-lich",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Undead",
+        "maleTexture": 288,
+        "femaleTexture": 288,
+        "corpse": {
+          "archive": 306,
+          "record": 3
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyLichKingMove",
+          "bark": "EnemyLichKingBark",
+          "attack": "EnemyLichKingAttack"
+        },
+        "minMetalToHit": "Mithril",
+        "damage": {
+          "minimum": 70,
+          "maximum": 100
+        },
+        "health": {
+          "minimum": 30,
+          "maximum": 170
+        },
+        "level": 21,
+        "armorValue": -12,
+        "parrySounds": false,
+        "mapChance": 4,
+        "weight": 300,
+        "team": "Undead"
+      },
+      {
+        "donorId": 34,
+        "donorName": "Dragonling",
+        "identity": "dragonling",
+        "actor": "dragonling",
+        "disposition": "published",
+        "behaviour": "Flying",
+        "affinity": "Daylight",
+        "maleTexture": 289,
+        "femaleTexture": 289,
+        "corpse": {
+          "archive": 96,
+          "record": 0
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyFaeryDragonMove",
+          "bark": "EnemyFaeryDragonBark",
+          "attack": "EnemyFaeryDragonAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 14,
+          "maximum": 42
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 10000,
+        "team": "Dragonlings"
+      },
+      {
+        "donorId": 35,
+        "donorName": "Fire Atronach",
+        "identity": "fire-atronach",
+        "actor": "fire-atronach",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Golem",
+        "maleTexture": 290,
+        "femaleTexture": 290,
+        "corpse": {
+          "archive": 405,
+          "record": 2
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyFireAtronachMove",
+          "bark": "EnemyFireAtronachBark",
+          "attack": "EnemyFireAtronachAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 1000,
+        "team": "Magic"
+      },
+      {
+        "donorId": 36,
+        "donorName": "Iron Atronach",
+        "identity": "iron-atronach",
+        "actor": "iron-atronach",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Golem",
+        "maleTexture": 291,
+        "femaleTexture": 291,
+        "corpse": {
+          "archive": 405,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyIronAtronachMove",
+          "bark": "EnemyIronAtronachBark",
+          "attack": "EnemyIronAtronachAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 1000,
+        "team": "Magic"
+      },
+      {
+        "donorId": 37,
+        "donorName": "Flesh Atronach",
+        "identity": "flesh-atronach",
+        "actor": "flesh-atronach",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Golem",
+        "maleTexture": 292,
+        "femaleTexture": 292,
+        "corpse": {
+          "archive": 405,
+          "record": 0
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyFleshAtronachMove",
+          "bark": "EnemyFleshAtronachBark",
+          "attack": "EnemyFleshAtronachAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 1000,
+        "team": "Magic"
+      },
+      {
+        "donorId": 38,
+        "donorName": "Ice Atronach",
+        "identity": "ice-atronach",
+        "actor": "ice-atronach",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Golem",
+        "maleTexture": 293,
+        "femaleTexture": 293,
+        "corpse": {
+          "archive": 405,
+          "record": 3
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyIceAtronachMove",
+          "bark": "EnemyIceAtronachBark",
+          "attack": "EnemyIceAtronachAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 25,
+          "maximum": 130
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 1000,
+        "team": "Magic"
+      },
+      {
+        "donorId": 39,
+        "donorName": "Horse (unused, but can appear in merchant-sold soul traps)",
+        "identity": "horse",
+        "actor": null,
+        "disposition": "unpublished",
+        "behaviour": "",
+        "affinity": "",
+        "maleTexture": 0,
+        "femaleTexture": 0,
+        "corpse": {
+          "archive": 0,
+          "record": 0
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "",
+          "bark": "",
+          "attack": ""
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 0,
+        "team": ""
+      },
+      {
+        "donorId": 40,
+        "donorName": "Dragonling",
+        "identity": "dragonling",
+        "actor": "dragonling-40",
+        "disposition": "published-variant",
+        "behaviour": "Flying",
+        "affinity": "Daylight",
+        "maleTexture": 295,
+        "femaleTexture": 295,
+        "corpse": {
+          "archive": 96,
+          "record": 0
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyFaeryDragonMove",
+          "bark": "EnemyFaeryDragonBark",
+          "attack": "EnemyFaeryDragonAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 14,
+          "maximum": 42
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 10000,
+        "team": "Dragonlings"
+      },
+      {
+        "donorId": 41,
+        "donorName": "Dreugh",
+        "identity": "dreugh",
+        "actor": "dreugh",
+        "disposition": "published",
+        "behaviour": "Aquatic",
+        "affinity": "Water",
+        "maleTexture": 296,
+        "femaleTexture": 296,
+        "corpse": {
+          "archive": 305,
+          "record": 0
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyDreughMove",
+          "bark": "EnemyDreughBark",
+          "attack": "EnemyDreughAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 13,
+          "maximum": 34
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 600,
+        "team": "Aquatic"
+      },
+      {
+        "donorId": 42,
+        "donorName": "Lamia",
+        "identity": "lamia",
+        "actor": "lamia",
+        "disposition": "published",
+        "behaviour": "Aquatic",
+        "affinity": "Water",
+        "maleTexture": 297,
+        "femaleTexture": 297,
+        "corpse": {
+          "archive": 305,
+          "record": 2
+        },
+        "hasIdle": false,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyLamiaMove",
+          "bark": "EnemyLamiaBark",
+          "attack": "EnemyLamiaAttack"
+        },
+        "minMetalToHit": "None",
+        "damage": {
+          "minimum": 5,
+          "maximum": 15
+        },
+        "health": {
+          "minimum": 16,
+          "maximum": 58
+        },
+        "level": 16,
+        "armorValue": 6,
+        "parrySounds": false,
+        "mapChance": 0,
+        "weight": 200,
+        "team": "Aquatic"
+      },
+      {
+        "donorId": 128,
+        "donorName": "Mage",
+        "identity": "mage",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 486,
+        "femaleTexture": 485,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 3,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 129,
+        "donorName": "Spellsword",
+        "identity": "spellsword",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 476,
+        "femaleTexture": 475,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 130,
+        "donorName": "Battlemage",
+        "identity": "battlemage",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 490,
+        "femaleTexture": 489,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": true,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 2,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 131,
+        "donorName": "Sorcerer",
+        "identity": "sorcerer",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 478,
+        "femaleTexture": 477,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 3,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 132,
+        "donorName": "Healer",
+        "identity": "healer",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 486,
+        "femaleTexture": 485,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": false,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 133,
+        "donorName": "Nightblade",
+        "identity": "nightblade",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 490,
+        "femaleTexture": 489,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": true,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "Criminals"
+      },
+      {
+        "donorId": 134,
+        "donorName": "Bard",
+        "identity": "bard",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 2,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 135,
+        "donorName": "Burglar",
+        "identity": "burglar",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "Criminals"
+      },
+      {
+        "donorId": 136,
+        "donorName": "Rogue",
+        "identity": "rogue",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 480,
+        "femaleTexture": 479,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "Criminals"
+      },
+      {
+        "donorId": 137,
+        "donorName": "Acrobat",
+        "identity": "acrobat",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 138,
+        "donorName": "Thief",
+        "identity": "thief",
+        "actor": "thief",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 484,
+        "femaleTexture": 483,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 2,
+        "weight": 0,
+        "team": "Criminals"
+      },
+      {
+        "donorId": 139,
+        "donorName": "Assassin",
+        "identity": "assassin",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 480,
+        "femaleTexture": 479,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 0,
+        "team": "Criminals"
+      },
+      {
+        "donorId": 140,
+        "donorName": "Monk",
+        "identity": "monk",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 141,
+        "donorName": "Archer",
+        "identity": "archer",
+        "actor": "archer",
+        "disposition": "published",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 482,
+        "femaleTexture": 481,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 142,
+        "donorName": "Ranger",
+        "identity": "ranger",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 482,
+        "femaleTexture": 481,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 143,
+        "donorName": "Barbarian",
+        "identity": "barbarian",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 0,
+        "team": "Criminals"
+      },
+      {
+        "donorId": 144,
+        "donorName": "Warrior",
+        "identity": "warrior",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 145,
+        "donorName": "Knight",
+        "identity": "knight",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "General",
+        "affinity": "Human",
+        "maleTexture": 488,
+        "femaleTexture": 487,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": true,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "EnemyHumanBark",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 1,
+        "weight": 0,
+        "team": "KnightsAndMages"
+      },
+      {
+        "donorId": 146,
+        "donorName": "City Watch - The Haltmeister",
+        "identity": "city-watch-the-haltmeister",
+        "actor": null,
+        "disposition": "human-mobile",
+        "behaviour": "Guard",
+        "affinity": "Human",
+        "maleTexture": 399,
+        "femaleTexture": 399,
+        "corpse": {
+          "archive": 380,
+          "record": 1
+        },
+        "hasIdle": true,
+        "hasRangedAttack1": false,
+        "hasRangedAttack2": false,
+        "sounds": {
+          "move": "EnemyHumanMove",
+          "bark": "Halt",
+          "attack": "EnemyHumanAttack"
+        },
+        "minMetalToHit": "",
+        "damage": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "health": {
+          "minimum": 0,
+          "maximum": 0
+        },
+        "level": 0,
+        "armorValue": 0,
+        "parrySounds": true,
+        "mapChance": 0,
+        "weight": 0,
+        "team": "CityWatch"
+      }
+    ]
   }
 }

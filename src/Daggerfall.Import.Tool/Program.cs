@@ -78,6 +78,11 @@ internal static class Program
                 return RunMagicCatalogCommand(args);
             }
 
+            if (args.Length != 0 && args[0] == "mobile-catalog")
+            {
+                return RunMobileCatalogCommand(args);
+            }
+
             if (args.Length != 0 && args[0] == "locations")
             {
                 return RunLocationsCommand(args);
@@ -206,6 +211,38 @@ internal static class Program
         }
 
         Console.WriteLine($"families: {inventory.UndocumentedFamilies.Count} supplied but undocumented [{string.Join(", ", inventory.UndocumentedFamilies)}], {inventory.MissingDocumentedFamilies.Count} documented but not supplied [{string.Join(", ", inventory.MissingDocumentedFamilies)}]");
+        return 0;
+    }
+
+    /// <summary>
+    /// Publishes the donor's static mobile table into the base pack as one normalized record per mobile.
+    /// The donor's table is the parameter authority and the pack is the identity authority; a mobile the
+    /// pack does not publish keeps its parameters and states its disposition rather than disappearing.
+    /// </summary>
+    private static int RunMobileCatalogCommand(IReadOnlyList<string> args)
+    {
+        bool update = args.Contains("--update", StringComparer.Ordinal);
+        if (args.Count != (update ? 6 : 5) || args[1] != "--donor" || args[3] != "--pack")
+        {
+            throw new ArgumentException("usage: daggerfall-import-tool mobile-catalog --donor ENEMY_BASICS.cs --pack PACK.json [--update]");
+        }
+
+        string donorFile = args[2];
+        string packFile = args[4];
+        if (!File.Exists(donorFile)) throw new FileNotFoundException($"The donor's static mobile table is required to publish mobile parameters and is not at '{donorFile}'.", donorFile);
+        Arena2MobileCatalogPublication publication = Arena2MobileCatalogDocument.Build(
+            File.ReadAllText(donorFile), File.ReadAllText(packFile), "research/daggerfall-unity/Assets/Scripts/Utility/EnemyBasics.cs");
+        Console.WriteLine($"mobile catalog: {publication.Mobiles} donor mobiles, {publication.Published} published, {publication.HumanMobiles} human mobiles, {publication.Unpublished} unpublished");
+        if (!update)
+        {
+            Console.WriteLine("pack: not written (rerun with --update to publish this catalog into it)");
+            return 0;
+        }
+
+        JsonNode pack = JsonNode.Parse(File.ReadAllText(packFile))!.AsObject();
+        pack["mobiles"] = JsonNode.Parse(publication.Json);
+        File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
+        Console.WriteLine($"pack: mobile catalog updated in {packFile}");
         return 0;
     }
 
