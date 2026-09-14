@@ -27,7 +27,11 @@ internal static class PrivateersHoldContent
             AdmittedFiles files = AdmittedFiles.Copy(content, diagnostics);
             ScenarioStart start = ReadStart(DaggerfallBaseContent.Object(DaggerfallBaseContent.Property(root, "startingState", diagnostics), "startingState", diagnostics), diagnostics);
             // A starting site the published locations do not carry would leave the session standing at a
-            // location nothing can name, so it is refused against the section that does carry them.
+            // location nothing can name, so it is refused against the section that does carry them. The
+            // identity set answers this question; `ResolveSite` asks the records instead, because there
+            // the question is whether a site can resolve to a name and a kind. The two can only differ on
+            // a pack carrying a location kind the ruleset cannot name, and loading such a pack already
+            // fails, so no reader ever sees them disagree.
             if (start.Site is { } startSite && !definitions.Locations.Keys.Contains((startSite.Region, startSite.Index)))
             {
                 diagnostics.Add($"Privateer's Hold startingState.site names location {startSite}, which the published locations do not carry.");
