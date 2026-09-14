@@ -98,6 +98,19 @@ public sealed class Arena2ClassicMediaPublicationTests
     }
 
     [Fact]
+    public void RefusesAScreenWhoseOwnPaletteCannotBeRead()
+    {
+        // A screen of the right canvas shape but not the documented file length has no palette to read,
+        // and the publication must say so - naming the screen - rather than fall back to the shared art
+        // palette and publish every colour wrong while looking successful.
+        InvalidOperationException failure = Assert.Throws<InvalidOperationException>(() =>
+            Daggerfall.Import.Normalization.Arena2ClassicMediaPublication.Create(CreateInputs(new byte[320 * 200])));
+
+        Assert.True(failure.Message.Contains("DIE_00I0", StringComparison.Ordinal) && failure.Message.Contains("palette", StringComparison.Ordinal),
+            $"the refusal must name the screen and the palette it could not read: {failure.Message}");
+    }
+
+    [Fact]
     public void PublishesOneSemanticSlotPerAdmittedUiImage()
     {
         Arena2ClassicMediaPublication first = Arena2ClassicMediaPublication.Create(CreateInputs());
@@ -118,14 +131,14 @@ public sealed class Arena2ClassicMediaPublicationTests
                 ClassicUiSlot.HudVitalMagicka, ClassicUiSlot.Inventory, ClassicUiSlot.CharacterSheet,
                 ClassicUiSlot.Book, ClassicUiSlot.Rest, ClassicUiSlot.Merchant, ClassicUiSlot.Guild,
                 ClassicUiSlot.Bank, ClassicUiSlot.Death,
-                ClassicUiSlot.CharacterGeneration, ClassicUiSlot.Pick, ClassicUiSlot.Intro, ClassicUiSlot.Title,
+                ClassicUiSlot.CharacterGeneration, ClassicUiSlot.Pick, ClassicUiSlot.StartMenu, ClassicUiSlot.Prison, ClassicUiSlot.Title,
             ],
             first.UiImages.Select(image => image.Slot).Distinct().OrderBy(slot => slot));
         // The five supplied screens carry their own palettes, so each fills its own slot; the two pick
         // screens share one, because a consumer choosing a class binds both.
         Assert.Equal(
-            ["screen.character-generation", "screen.intro", "screen.pick.02", "screen.pick.03", "screen.title"],
-            first.UiImages.Where(image => image.Slot is ClassicUiSlot.CharacterGeneration or ClassicUiSlot.Pick or ClassicUiSlot.Intro or ClassicUiSlot.Title)
+            ["screen.character-generation", "screen.pick.02", "screen.prison", "screen.start-menu", "screen.title"],
+            first.UiImages.Where(image => image.Slot is ClassicUiSlot.CharacterGeneration or ClassicUiSlot.Pick or ClassicUiSlot.StartMenu or ClassicUiSlot.Prison or ClassicUiSlot.Title)
                 .Select(image => image.MediaId)
                 .Order(StringComparer.Ordinal));
         Assert.Equal(
@@ -449,7 +462,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal("data", Encoding.ASCII.GetString(wave, 36, 4));
     }
 
-    private static Arena2ClassicMediaInputs CreateInputs() => new(
+    private static Arena2ClassicMediaInputs CreateInputs(byte[]? brokenScreen = null) => new(
         CreateWeaponCif(),
         CreateWeaponCif(),
         CreateWeaponCif(),
@@ -469,8 +482,10 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreateHeaderedImage(4),
         new byte[320 * 200],
         new byte[320 * 200],
-        new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
-        // The five remaining screens of the same shape: a 320x200 canvas with its own trailing palette.
+        // The death screen's own bytes, or a caller-supplied file that is not the documented shape, which
+        // proves the publication refuses rather than painting a screen with the shared palette.
+        brokenScreen ?? new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
+        // The four remaining screens of the same shape: a 320x200 canvas with its own trailing palette.
         new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
         new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
         new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],

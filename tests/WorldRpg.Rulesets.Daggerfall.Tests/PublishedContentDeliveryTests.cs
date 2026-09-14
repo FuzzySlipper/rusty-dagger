@@ -103,7 +103,7 @@ public sealed class PublishedContentDeliveryTests
                     entry.GetProperty("palette").GetProperty("donorAnchor").GetString()!)),
         ];
         Assert.Equal(
-            ["screen.character-generation", "screen.death", "screen.intro", "screen.pick.02", "screen.pick.03", "screen.title"],
+            ["screen.character-generation", "screen.death", "screen.pick.02", "screen.prison", "screen.start-menu", "screen.title"],
             palettes.Select(palette => palette.MediaId).Order(StringComparer.Ordinal));
         Assert.All(palettes, palette =>
         {
@@ -178,7 +178,7 @@ public sealed class PublishedContentDeliveryTests
             [
                 // The five screens that carry their own palette joined the closure, so the import bundle
                 // that predates them trails five more identities.
-                "screen.character-generation", "screen.death", "screen.intro", "screen.pick.02", "screen.pick.03", "screen.title",
+                "screen.character-generation", "screen.death", "screen.pick.02", "screen.prison", "screen.start-menu", "screen.title",
                 "window.bank.panel", "window.book.reader", "window.guild.member", "window.guild.service",
                 "window.merchant.buttons.buy", "window.merchant.buttons.identify", "window.merchant.buttons.repair",
                 "window.merchant.buttons.sell", "window.merchant.buttons.sell-gold", "window.merchant.cost",
@@ -248,7 +248,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal(
             [
                 "bank", "book", "characterGeneration", "characterSheet", "death", "guild", "hudChrome", "hudVitalFatigue",
-                "hudVitalHealth", "hudVitalMagicka", "intro", "inventory", "merchant", "pick", "rest", "title",
+                "hudVitalHealth", "hudVitalMagicka", "inventory", "merchant", "pick", "prison", "rest", "startMenu", "title",
             ],
             slots.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
