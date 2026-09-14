@@ -1,9 +1,67 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Daggerfall.Import.Arena2;
+using Daggerfall.Import.Publication;
 
 namespace Daggerfall.Import.Normalization;
 
 /// <summary>One published character canvas: its media identity and the PNG written for it.</summary>
-public sealed record CharacterMediaArtifact(string MediaId, string RelativePath, byte[] Bytes, int Width, int Height);
+/// <param name="Reference">The canvas reference this artifact is the emission of.</param>
+/// <param name="RelativePath">The content-relative path the artifact is written to.</param>
+/// <param name="Bytes">The encoded PNG.</param>
+/// <param name="Width">The canvas width in pixels.</param>
+/// <param name="Height">The canvas height in pixels.</param>
+public sealed record CharacterMediaArtifact(CharacterCanvasReference Reference, string RelativePath, byte[] Bytes, int Width, int Height)
+{
+    /// <summary>The stable identity of this canvas as a published artifact.</summary>
+    public string MediaId => Reference.MediaId;
+}
+
+/// <summary>
+/// One published character canvas as the generated index states it, so a consumer resolves a media
+/// identity to bytes and can tell what the artifact was decoded from.
+/// </summary>
+/// <param name="MediaId">The stable identity of the canvas.</param>
+/// <param name="RelativePath">The content-group-relative path the artifact is written to.</param>
+/// <param name="ByteLength">The artifact's length in bytes.</param>
+/// <param name="Sha256">The artifact's digest, so a consumer can refuse bytes that are not these.</param>
+/// <param name="Width">The canvas width in pixels.</param>
+/// <param name="Height">The canvas height in pixels.</param>
+/// <param name="Family">The documented family the canvas came from.</param>
+/// <param name="SourceFile">The supplied source file the canvas came from.</param>
+/// <param name="CanvasIndex">The canvas's index within its file, which is its record, frame or cell.</param>
+/// <param name="Palette">The palette the canvas is painted in, whether supplied or carried by the file.</param>
+/// <param name="PaletteSource">Where that palette comes from, which is a fact about the colours.</param>
+/// <param name="Binding">Whether a published consumer binds the canvas, or it is still required-pending.</param>
+/// <param name="Consumer">The consumer that binds it, or the inventory's label for one that does not.</param>
+public sealed record CharacterMediaIndexEntry(
+    string MediaId,
+    string RelativePath,
+    long ByteLength,
+    string Sha256,
+    int Width,
+    int Height,
+    string Family,
+    string SourceFile,
+    int CanvasIndex,
+    string Palette,
+    string PaletteSource,
+    MediaBinding Binding,
+    string Consumer);
+
+/// <summary>One family or file whose canvases this repository cannot publish, stated with the reason.</summary>
+/// <param name="Family">The documented family, or the shape when only part of a family is unreadable.</param>
+/// <param name="Kind">What the supplied files carry.</param>
+/// <param name="Files">The supplied files this entry accounts for.</param>
+/// <param name="Reason">Why their canvases are unavailable here, naming what would have to exist.</param>
+/// <param name="DonorAnchor">The donor class that reads the format, or empty when no reader exists anywhere.</param>
+public sealed record CharacterMediaUnreadableFamily(
+    string Family,
+    string Kind,
+    IReadOnlyList<string> Files,
+    string Reason,
+    string DonorAnchor);
 
 /// <summary>What one publication pass produced and what it could not.</summary>
 public sealed record CharacterMediaPublicationResult(
@@ -92,7 +150,7 @@ public static class CharacterMediaPublication
             }
 
             byte[] png = Encode(canvas.Width, canvas.Height, canvas.Pixels, named);
-            artifacts.Add(new CharacterMediaArtifact(reference.MediaId, $"media/character/{Slug(reference.MediaId)}.png", png, canvas.Width, canvas.Height));
+            artifacts.Add(new CharacterMediaArtifact(reference, $"media/character/{Slug(reference.MediaId)}.png", png, canvas.Width, canvas.Height));
         }
 
         return new CharacterMediaPublicationResult(artifacts, refusals);
@@ -100,7 +158,6 @@ public static class CharacterMediaPublication
 
     /// <summary>One decoded canvas: its shape, its indexed pixels, and the palette its own file carries.</summary>
     private sealed record CharacterCanvas(int Width, int Height, byte[] Pixels, Arena2Palette? OwnPalette);
-
     /// <summary>
     /// Decodes one canvas of a supplied file. The reader that owns the format decides the shape, so a
     /// canvas index past the end is a refusal rather than a wrapped read.
