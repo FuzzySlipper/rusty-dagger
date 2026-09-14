@@ -333,6 +333,43 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(.5d, tuning.MeleeTargeting.MinimumFacingCosine);
     }
 
+    /// <summary>
+    /// The tuning profile shape the ruleset reads is the one it ships, and a profile still carrying the
+    /// key that used to tune enemy reach is refused rather than loaded with its intent dropped.
+    /// </summary>
+    /// <remarks>
+    /// Reach is authored on the action that carries it now, so the key is no longer read. Loading a profile
+    /// that still names it would apply every other value and silently discard the tuning the operator set,
+    /// which is the kind of difference no diagnostic would ever surface.
+    /// </remarks>
+    [Fact]
+    public void An_obsolete_enemy_reach_tuning_key_is_refused_rather_than_ignored()
+    {
+        string root = RepositoryRoot();
+        string path = Path.Combine(root, "content/worldrpg/tuning-payloads/daggerfall.defaults.json");
+        using JsonDocument profile = JsonDocument.Parse(File.ReadAllBytes(path));
+        Dictionary<string, object?> mutated = [];
+        foreach (JsonProperty property in profile.RootElement.EnumerateObject())
+        {
+            if (property.NameEquals("enemyBehavior"))
+            {
+                Dictionary<string, object?> behavior = [];
+                foreach (JsonProperty entry in property.Value.EnumerateObject()) behavior[entry.Name] = entry.Value.Clone();
+                behavior["attackReach"] = 9.99;
+                mutated[property.Name] = behavior;
+                continue;
+            }
+
+            mutated[property.Name] = property.Value.Clone();
+        }
+
+        string obsolete = JsonSerializer.Serialize(mutated);
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => DaggerfallTuning.Read(Encoding.UTF8.GetBytes(obsolete)));
+        Assert.Contains("attackReach", error.Message, StringComparison.Ordinal);
+        // The shipped profile does not carry it, so the refusal is the shape's and not the payload's.
+        Assert.DoesNotContain("attackReach", File.ReadAllText(path), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void The_pads_mapping_is_tuning_and_every_payload_agrees_with_the_ruleset_defaults()
     {
