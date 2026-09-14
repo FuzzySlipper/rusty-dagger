@@ -32,6 +32,12 @@ internal sealed class DaggerfallUiArt
     [
         "screen.death",
         "window.character-sheet.chrome",
+        // The authored inventory skins are drawn by the DOM's inventory and loot panels. They are
+        // published at a bounded size rather than copied beside the UI, so the panel frame arrives
+        // through the same named read as every other artifact.
+        "inventory.skin.grid-slot-slate.v1",
+        "inventory.skin.panel-slate.v1",
+        "inventory.skin.titlebar-slate.v1",
     ];
 
     /// <summary>

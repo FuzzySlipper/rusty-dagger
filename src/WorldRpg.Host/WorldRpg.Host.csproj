@@ -55,13 +55,9 @@
     <Exec Command="npm --prefix &quot;$(MSBuildThisFileDirectory)../..&quot; exec -- tsc --target ES2022 --module ES2022 --moduleResolution bundler --strict --noEmitOnError --outDir &quot;$(RustyEngineProductUiRoot)&quot; &quot;$(MSBuildThisFileDirectory)../ui/main.ts&quot;" />
     <ItemGroup>
       <ProductUiStylesheet Include="$(MSBuildThisFileDirectory)../ui/*.css" />
-      <!-- The classic UI art is published content the product reads by name and delivers in its
-           projection, so no copy of it is staged here. The authored inventory skins are the
-           exception until their delivery medium settles (task #8263): they are two megabytes each,
-           which is a lazy fetch rather than something to push through a UI snapshot. -->
-      <AuthoredInventorySkin Include="$(MSBuildThisFileDirectory)../../content/worldrpg/imports/privateers-hold/media/ui/authored/*.png" />
+      <!-- Every UI artifact, including the authored inventory skins, is published content the product
+           reads by media identity and delivers in its projection, so nothing is staged here. -->
     </ItemGroup>
     <Copy SourceFiles="@(ProductUiStylesheet)" DestinationFolder="$(RustyEngineProductUiRoot)" />
-    <Copy SourceFiles="@(AuthoredInventorySkin)" DestinationFolder="$(RustyEngineProductUiRoot)/inventory-art/authored" />
   </Target>
 </Project>
