@@ -60,6 +60,58 @@ public static class CharacterMediaPublisher
     private const string RciGridReason =
         "the RCI reader enumerates the grid's cells by shape from the file's own byte arithmetic, and nothing in this repository slices a cell's pixels, so the cells are addressable and unpublishable";
 
+    /// <summary>The documented family id the character-media inventory rows cite.</summary>
+    public const string CharacterMediaFamilyId = "CNT-021";
+
+    /// <summary>
+    /// Checks the documented character-media inventory against the supplied corpus, in both directions.
+    /// </summary>
+    /// <remarks>
+    /// The inventory is the independent record of what this family is supposed to hold, so it is what makes
+    /// the corpus checkable rather than self-describing: a documented file the corpus lacks is a source gap
+    /// worth refusing over, while a supplied file with no row is content this publication would emit without
+    /// a record, which is reported and kept. The documented paths are cited root-relative
+    /// (<c>local/arena2/BODY00I0.IMG</c>) while the publication sees bare names, so membership is by file
+    /// name - the same rule the inventory's own family enumeration uses.
+    /// </remarks>
+    /// <param name="inventoryCsv">The documented inventory, as its published bytes.</param>
+    /// <param name="supplied">The supplied corpus, by path or file name.</param>
+    /// <returns>The supplied files no documented row carries, ordered by name.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// The inventory documents no character-media file, or documents one the corpus does not supply.
+    /// </exception>
+    public static IReadOnlyList<string> ReconcileDocumentedInventory(
+        ReadOnlySpan<byte> inventoryCsv,
+        IEnumerable<string> supplied)
+    {
+        ArgumentNullException.ThrowIfNull(supplied);
+        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(inventoryCsv);
+        HashSet<string> documented = [.. rows
+            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, CharacterMediaFamilyId))
+            .Select(row => System.IO.Path.GetFileName(row.PathOrPattern))
+            .Where(name => name is { Length: > 0 })
+            .Select(name => name!)];
+        if (documented.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"The inventory documents no {CharacterMediaFamilyId} character media files, so it cannot be the record this publication is reconciled against.");
+        }
+
+        string[] names = [.. supplied
+            .Select(System.IO.Path.GetFileName)
+            .Where(name => name is { Length: > 0 })
+            .Select(name => name!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        string[] missing = [.. documented.Where(name => !names.Contains(name, StringComparer.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)];
+        if (missing.Length != 0)
+        {
+            throw new InvalidOperationException(
+                $"{missing.Length} documented character media file(s) are not in the supplied corpus, so the publication would account for a family the source does not carry: {string.Join(", ", missing)}.");
+        }
+
+        return [.. names.Where(name => !documented.Contains(name, StringComparer.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)];
+    }
+
     /// <summary>The donor class that reads each format nothing here reads.</summary>
     private static readonly Dictionary<string, string> DonorReaders = new(StringComparer.Ordinal)
     {

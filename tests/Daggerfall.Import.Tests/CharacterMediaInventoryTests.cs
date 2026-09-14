@@ -277,6 +277,27 @@ public sealed class CharacterMediaInventoryTests
         InvalidOperationException dangling = Assert.Throws<InvalidOperationException>(() => broken.Validate(published));
         Assert.Contains("resolve to nothing", dangling.Message, StringComparison.Ordinal);
 
+        // The same rule for the other two kinds of reference, which the layer case above would not catch:
+        // a face or a career a consumer binds has to resolve as well, and each refusal names its subject.
+        DaggerfallFactionFace face = presentation.Faces[0];
+        DaggerfallCharacterPresentation brokenFace = presentation with
+        {
+            Faces = [presentation.Faces[0] with { Binding = MediaBinding.Admitted }, .. presentation.Faces.Skip(1)],
+        };
+        InvalidOperationException danglingFace = Assert.Throws<InvalidOperationException>(() => brokenFace.Validate(published.Where(id => id != face.MediaId).ToHashSet(StringComparer.Ordinal)));
+        Assert.Contains($"Faction face {face.Index}", danglingFace.Message, StringComparison.Ordinal);
+        Assert.Contains(face.MediaId, danglingFace.Message, StringComparison.Ordinal);
+        DaggerfallCareerPortrait portrait = presentation.Careers[0];
+        DaggerfallCharacterPresentation brokenCareer = presentation with
+        {
+            Careers = [portrait with { Binding = MediaBinding.Admitted }, .. presentation.Careers.Skip(1)],
+        };
+        InvalidOperationException danglingCareer = Assert.Throws<InvalidOperationException>(() => brokenCareer.Validate(published.Where(id => id != portrait.MediaId).ToHashSet(StringComparer.Ordinal)));
+        Assert.Contains($"Career '{portrait.CareerId}'", danglingCareer.Message, StringComparison.Ordinal);
+        // A pending reference needs no artifact: that is the stated gap the faction faces are.
+        Assert.All(presentation.Faces, value => Assert.Equal(MediaBinding.RequiredPending, value.Binding));
+        presentation.Validate(published.Where(id => presentation.Faces.All(face => face.MediaId != id)).ToHashSet(StringComparer.Ordinal));
+
         // Every race the corpus draws contributes its background, four bodies and twenty heads, and
         // every layer names a palette rather than defaulting to one.
         Assert.Equal(8 * (1 + 4 + (2 * DaggerfallCharacterPresentationBuilder.HeadsPerRaceAndGender)), presentation.Layers.Count);

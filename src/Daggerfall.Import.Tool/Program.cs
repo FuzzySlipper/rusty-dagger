@@ -586,7 +586,7 @@ internal static class Program
         // The documented inventory is what the corpus is supposed to hold for this family, so it is checked
         // against the corpus in both directions: a documented file the corpus lacks is a source gap, and a
         // corpus file the inventory does not document is one this publication would emit without a record.
-        string[] undocumented = ReconcileDocumentedInventory(values["--inventory"], sources.Select(entry => entry.Path));
+        string[] undocumented = [.. CharacterMediaPublisher.ReconcileDocumentedInventory(File.ReadAllBytes(values["--inventory"]), sources.Select(entry => entry.Path))];
 
         IReadOnlyList<DaggerfallRaceKey> races = ReadPackRaces(packFile);
         IReadOnlyDictionary<string, string> careers = ReadPackCareers(packFile);
@@ -704,45 +704,6 @@ internal static class Program
         File.WriteAllText(packFile, pack.ToJsonString(new JsonSerializerOptions { WriteIndented = true }) + "\n");
         Console.WriteLine($"pack: characterPresentation updated in {packFile}");
         return 0;
-    }
-
-    /// <summary>
-    /// Checks the documented character-media inventory against the supplied corpus, in both directions, and
-    /// returns the supplied files no documented row carries.
-    /// </summary>
-    /// <remarks>
-    /// The inventory is the independent record of what this family is supposed to hold, so it is what makes
-    /// the corpus checkable rather than self-describing: a documented file the corpus lacks fails, and a
-    /// supplied file with no row is reported. The documented paths are cited root-relative
-    /// (<c>local/arena2/BODY00I0.IMG</c>) while the publication sees bare names, so membership is by file
-    /// name, which is the same rule the inventory's own family enumeration uses.
-    /// </remarks>
-    private static string[] ReconcileDocumentedInventory(string inventoryFile, IEnumerable<string> supplied)
-    {
-        IReadOnlyList<SourceInventoryRow> rows = SourceManifestBuilder.ReadInventory(File.ReadAllBytes(inventoryFile));
-        HashSet<string> documented = [.. rows
-            .Where(row => row.RowType == "file" && StringComparer.Ordinal.Equals(row.FamilyId, "CNT-021"))
-            .Select(row => Path.GetFileName(row.PathOrPattern))
-            .Where(name => name is { Length: > 0 })
-            .Select(name => name!)];
-        if (documented.Count == 0)
-        {
-            throw new InvalidOperationException($"'{inventoryFile}' documents no CNT-021 character media files, so it cannot be the inventory this publication is reconciled against.");
-        }
-
-        string[] names = [.. supplied
-            .Select(Path.GetFileName)
-            .Where(name => name is { Length: > 0 })
-            .Select(name => name!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)];
-        string[] missing = [.. documented.Where(name => !names.Contains(name, StringComparer.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)];
-        if (missing.Length != 0)
-        {
-            throw new InvalidOperationException(
-                $"{missing.Length} documented character media file(s) are not in the supplied corpus, so the publication would account for a family the source does not carry: {string.Join(", ", missing)}.");
-        }
-
-        return [.. names.Where(name => !documented.Contains(name, StringComparer.OrdinalIgnoreCase)).Order(StringComparer.OrdinalIgnoreCase)];
     }
 
     /// <summary>
