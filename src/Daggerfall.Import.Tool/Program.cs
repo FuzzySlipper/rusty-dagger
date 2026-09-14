@@ -743,10 +743,39 @@ internal static class Program
             return entry;
         }
 
+        // A family this repository cannot read is stated rather than left as an absence: a consumer that
+        // finds no artifact for one of these files must be able to tell "not published" from "not
+        // readable", and the donor anchor says where the original behaviour lives.
+        JsonArray unreadable = [];
+        foreach ((string family, string reason, string anchor) in new[]
+        {
+            (".CEL", "no decoder in this repository: the classic animation is colour-cycled and the donor reads it through its own FLC reader", "Assets/Scripts/API/FlcFile.cs"),
+            (".BSS", "no decoder in this repository: the donor reads these sound-bank streams through its own BSS reader", "Assets/Scripts/API/BssFile.cs"),
+            // No family entry for the CIF files: most of the corpus's CIFs are weapon, armour and painting
+            // grammars this repository reads and publishes, and the face grammar it refuses is refused by
+            // name when a face is read rather than being a family that carries no artifact at all.
+        })
+        {
+            string[] files = [.. Directory.EnumerateFiles(arena2, "*" + family, SearchOption.TopDirectoryOnly)
+                .Select(Path.GetFileName)
+                .Where(name => name is not null)
+                .Select(name => name!)
+                .Order(StringComparer.OrdinalIgnoreCase)];
+            if (files.Length == 0) continue;
+            unreadable.Add(new JsonObject
+            {
+                ["family"] = family,
+                ["files"] = new JsonArray([.. files.Select(file => JsonValue.Create(file))]),
+                ["reason"] = reason,
+                ["donorAnchor"] = anchor,
+            });
+        }
+
         JsonObject inventory = new()
         {
             ["schemaVersion"] = 1,
             ["generator"] = "daggerfall-import-tool classic-media",
+            ["unreadableFamilies"] = unreadable,
             ["artifacts"] = new JsonArray([.. published
                 .OrderBy(artifact => artifact.RelativePath, StringComparer.Ordinal)
                 .Select(artifact => (JsonNode)InventoryEntry(artifact))]),
