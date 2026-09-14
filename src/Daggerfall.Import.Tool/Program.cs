@@ -587,6 +587,11 @@ internal static class Program
         // whether the content it admitted is the content this publication produced. An artifact that
         // carries a media identity states it here, which is how a consumer resolves a published name
         // to bytes through generated data rather than a list kept beside it.
+        // A published UI image states the semantic screen it fills, so a consumer binds "the book
+        // reader" rather than a file name it would have to know.
+        Dictionary<string, string> slots = publication.UiImages
+            .GroupBy(image => image.MediaId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Single().Slot.ToString(), StringComparer.Ordinal);
         JsonObject InventoryEntry(ImportPublicationArtifact artifact)
         {
             JsonObject entry = new()
@@ -595,7 +600,12 @@ internal static class Program
                 ["byteLength"] = artifact.Bytes.Length,
                 ["sha256"] = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(artifact.Bytes.Span)),
             };
-            if (artifact.MediaId is { } mediaId) entry["mediaId"] = mediaId;
+            if (artifact.MediaId is { } mediaId)
+            {
+                entry["mediaId"] = mediaId;
+                if (slots.TryGetValue(mediaId, out string? slot)) entry["slot"] = char.ToLowerInvariant(slot[0]) + slot[1..];
+            }
+
             return entry;
         }
 
@@ -1410,6 +1420,11 @@ internal static class Program
             Require("INVE00I0.IMG").Bytes.ToArray(),
             Require("INFO00I0.IMG").Bytes.ToArray(),
             Require("DIE_00I0.IMG").Bytes.ToArray(),
+            Require("BOOK00I0.IMG").Bytes.ToArray(),
+            Require("REST00I0.IMG").Bytes.ToArray(),
+            Require("SHOP00I0.IMG").Bytes.ToArray(),
+            Require("GILD00I0.IMG").Bytes.ToArray(),
+            Require("BANK00I0.IMG").Bytes.ToArray(),
             Require("TEXTURE.207").Bytes.ToArray(),
             Require("TEXTURE.216").Bytes.ToArray(),
             Require("TEXTURE.234").Bytes.ToArray(),
@@ -1489,6 +1504,11 @@ internal static class Program
         "INVE00I0.IMG",
         "INFO00I0.IMG",
         "DIE_00I0.IMG",
+        "BOOK00I0.IMG",
+        "REST00I0.IMG",
+        "SHOP00I0.IMG",
+        "GILD00I0.IMG",
+        "BANK00I0.IMG",
         "FONT0003.FNT",
         "TEXTURE.380",
         "TEXTURE.207",

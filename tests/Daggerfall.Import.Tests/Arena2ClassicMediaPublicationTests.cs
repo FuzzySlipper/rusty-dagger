@@ -17,11 +17,11 @@ public sealed class Arena2ClassicMediaPublicationTests
         Arena2ClassicMediaPublication first = Arena2ClassicMediaPublication.Create(inputs);
         Arena2ClassicMediaPublication second = Arena2ClassicMediaPublication.Create(inputs);
 
-        // The death screen is one more artifact and one more resource: naming an image admits it.
-        Assert.Equal(58, first.Artifacts.Count);
-        Assert.Equal(58, first.MediaManifest.Resources.Count);
-        // One more admitted source file, because the screen is now read as well as named.
-        Assert.Equal(25, first.Sources.Count);
+        // Five service screens are five more artifacts and resources: naming an image admits it.
+        Assert.Equal(63, first.Artifacts.Count);
+        Assert.Equal(63, first.MediaManifest.Resources.Count);
+        // Five more admitted source files, because those images are read as well as named.
+        Assert.Equal(30, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -44,8 +44,8 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(4, first.Effects.Count);
         Assert.All(first.Effects, effect => Assert.False(effect.Timing.Loop));
         Assert.Equal(6, first.Audio.Count);
-// Six windows and now one screen: the death screen is a mode's image rather than a window's.
-        Assert.Equal(7, first.UiImages.Count);
+// Six windows, one mode screen, and the four service panels the donor windows read.
+        Assert.Equal(12, first.UiImages.Count);
         Assert.Equal(31, first.InventoryIcons.Count);
         Assert.Equal(240, first.Font.Glyphs.Count);
 
@@ -61,6 +61,40 @@ public sealed class Arena2ClassicMediaPublicationTests
         byte[] wave = Artifact(first, "media/audio/audio-melee-dagger-swing.wav");
         AssertWave(wave);
         Assert.Equal("arena2/DAGGER.SND", first.Sources.Single(source => source.SourcePath == "arena2/DAGGER.SND").SourcePath);
+    }
+
+    [Fact]
+    public void PublishesOneSemanticSlotPerAdmittedUiImage()
+    {
+        Arena2ClassicMediaPublication first = Arena2ClassicMediaPublication.Create(CreateInputs());
+        Arena2ClassicMediaPublication second = Arena2ClassicMediaPublication.Create(CreateInputs());
+
+        // Every role in the admitted closure is published as one image, so "every image fills a slot"
+        // is a statement about the closure rather than about the images someone remembered to add.
+        Assert.Equal(
+            Enum.GetValues<ClassicUiImage>().OrderBy(image => image),
+            first.UiImages.Select(image => image.Image).OrderBy(image => image));
+
+        // The slots a consumer binds: the windows the product already drew, the service screens the
+        // donor windows read, and the mode screens.
+        Assert.Equal(
+            [
+                ClassicUiSlot.HudChrome, ClassicUiSlot.HudVitalHealth, ClassicUiSlot.HudVitalFatigue,
+                ClassicUiSlot.HudVitalMagicka, ClassicUiSlot.Inventory, ClassicUiSlot.CharacterSheet,
+                ClassicUiSlot.Book, ClassicUiSlot.Rest, ClassicUiSlot.Merchant, ClassicUiSlot.Guild,
+                ClassicUiSlot.Bank, ClassicUiSlot.Death,
+            ],
+            first.UiImages.Select(image => image.Slot).OrderBy(slot => slot));
+
+        // A slot travels with the media identity and the exact source record it was decoded from, and
+        // the publication emits the artifact under that identity.
+        ClassicUiImageManifest book = first.UiImages.Single(image => image.Slot == ClassicUiSlot.Book);
+        Assert.Equal("window.book.reader", book.MediaId);
+        Assert.Equal("BOOK00I0.IMG", book.SourceFile);
+        Assert.Contains(first.Artifacts, artifact => artifact.MediaId == book.MediaId);
+        Assert.Equal(
+            first.UiImages.Select(image => (image.Image, image.Slot, image.MediaId)),
+            second.UiImages.Select(image => (image.Image, image.Slot, image.MediaId)));
     }
 
     [Fact]
@@ -294,10 +328,11 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "WEAPON01.CIF"), Read(arena2, "WEAPON02.CIF"), Read(arena2, "WEAPON04.CIF"), Read(arena2, "WEAPON05.CIF"), Read(arena2, "WEAPON06.CIF"), Read(arena2, "WEAPON07.CIF"), Read(arena2, "WEAPON08.CIF"), Read(arena2, "WEAPON09.CIF"), Read(arena2, "WEAPON10.CIF"),
             Read(arena2, "ART_PAL.COL"), Read(arena2, "TEXTURE.380"), Read(arena2, "PAL.PAL"), Read(arena2, "DAGGER.SND"),
             Read(arena2, "MAIN00I0.IMG"), Read(arena2, "MAIN03I0.IMG"), Read(arena2, "MAIN04I0.IMG"), Read(arena2, "MAIN05I0.IMG"), Read(arena2, "INVE00I0.IMG"), Read(arena2, "INFO00I0.IMG"), Read(arena2, "DIE_00I0.IMG"),
+            Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(58, publication.Artifacts.Count);
+        Assert.Equal(63, publication.Artifacts.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
     }
@@ -373,6 +408,11 @@ public sealed class Arena2ClassicMediaPublicationTests
         new byte[320 * 200],
         new byte[320 * 200],
         new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
+        new byte[320 * 200],
+        CreateHeaderedImage(5),
+        CreateHeaderedImage(6),
+        CreateHeaderedImage(7),
+        CreateHeaderedImage(8),
         CreateTextureArchive(17),
         CreateTextureArchive(2),
         CreateTextureArchive(27),
