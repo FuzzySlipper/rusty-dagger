@@ -7,7 +7,7 @@ internal interface IProductFact : IWorldRpgFact;
 internal sealed record ActorDamagedFact(long ActorId, int Amount) : IProductFact;
 internal sealed record ActorDiedFact(long ActorId, long KillerId, int AppliedDamage, ulong OriginatingGeneration, ulong OriginatingSequence) : IProductFact;
 internal enum AttackRejection { MissingPlayerPosition, NoTargetInReach, UnknownExplicitCombatant, TargetDefeated, Cooldown, NoAttackPolicy, InsufficientStamina, StaminaSpendNotAccepted, InsufficientWeaponMaterial }
-internal sealed record AttackRejectedFact(AttackRejection Reason) : IProductFact;
+internal sealed record AttackRejectedFact(AttackRejection Reason, long? ActorId = null) : IProductFact;
 /// <summary>One player melee swing passed cooldown and stamina admission, independently of its target outcome.</summary>
 internal sealed record PlayerAttackStartedFact(ulong OriginatingGeneration, ulong OriginatingSimulationStep) : IProductFact;
 /// <summary>

@@ -78,7 +78,7 @@
   "enemyBehavior": {
     "detectionDistance": 12.0,
     "minimumFacingCosine": 0.5,
-    "attackReach": 1.25,
+    "attackReach": 2.0,
     "chaseSpeedUnitsPerSecond": 3.0,
     "navigationMaximumVisited": 32
   },

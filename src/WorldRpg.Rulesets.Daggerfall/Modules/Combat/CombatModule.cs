@@ -204,7 +204,9 @@ internal sealed class CombatModule
             || !_actions.TryGetValue(actionId, out DaggerfallActionDefinition? authoredAction)
             || authoredAction.CooldownSeconds is not double authoredCooldown)
         {
-            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy));
+            // The actor is named here because an enemy that cannot swing is a missing capability its
+            // owner has to see, not a silent miss the player cannot tell from a bad roll.
+            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, attackerId));
             return false;
         }
 
