@@ -23,7 +23,7 @@ public enum TextureLeafDisposition
 /// <param name="Frames">How many frames it declares.</param>
 /// <param name="Width">The width it declares.</param>
 /// <param name="Height">The height it declares.</param>
-public sealed record TextureRecordFacts(int RecordIndex, int Frames, int Width, int Height);
+public sealed record TextureRecordFacts(int RecordIndex, int Frames, int Width, int Height, string UnreadableReason);
 
 /// <summary>One supplied leaf's facts: how many records it carries and how many frames they declare.</summary>
 public sealed record TextureLeafRecord(
@@ -141,7 +141,23 @@ public sealed class TextureLeafInventory
                     // exactly the case a material reference has to refuse.
                     TextureRecordInfo info = archive.GetRecordInfo(record);
                     frames += info.FrameCount;
-                    recordFacts.Add(new TextureRecordFacts(record, info.FrameCount, info.Width, info.Height));
+                    // A header is a promise, not a picture: a record can declare a frame and carry no bytes
+                    // for it. Proving the first frame decodes here is the only place the bytes are in hand,
+                    // and it is what lets a material reference be reported honestly rather than hopefully.
+                    string unreadable = string.Empty;
+                    if (info.FrameCount > 0)
+                    {
+                        try
+                        {
+                            _ = archive.DecodeFrame(record, 0);
+                        }
+                        catch (Exception failure) when (failure is Arena2FormatException or ArgumentOutOfRangeException)
+                        {
+                            unreadable = failure.Message;
+                        }
+                    }
+
+                    recordFacts.Add(new TextureRecordFacts(record, info.FrameCount, info.Width, info.Height, unreadable));
                 }
 
                 if (archive.RecordCount == 0 || frames == 0)
