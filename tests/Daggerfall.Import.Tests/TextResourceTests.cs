@@ -421,9 +421,11 @@ public sealed class TextResourceTests
     {
         DaggerfallText text = Supplied();
 
-        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => (text with { Records = [text.Records[1], text.Records[0], .. text.Records.Skip(2)] }).Validate());
-
-        Assert.Contains("not in source order", error.Message, StringComparison.Ordinal);
+        // Out of order and claiming another record's ordinal are different defects: the first leaves a
+        // reader's position meaningless, and the second leaves one of two values unaddressable inside the
+        // group. Only the strict comparison refuses both.
+        Assert.Contains("not in source order", Assert.Throws<InvalidOperationException>(() => (text with { Records = [text.Records[1], text.Records[0], .. text.Records.Skip(2)] }).Validate()).Message, StringComparison.Ordinal);
+        Assert.Contains("not in source order", Assert.Throws<InvalidOperationException>(() => (text with { Records = [text.Records[0], text.Records[1] with { Index = text.Records[0].Index }, .. text.Records.Skip(2)] }).Validate()).Message, StringComparison.Ordinal);
     }
 
     [Fact]

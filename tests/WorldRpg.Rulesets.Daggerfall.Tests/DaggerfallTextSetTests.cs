@@ -195,6 +195,28 @@ public sealed class DaggerfallTextSetTests
     }
 
     [Fact]
+    public void Rejects_a_state_the_contract_does_not_declare()
+    {
+        // A state a consumer does not know is not a readable value: reading it as one would hide the
+        // defect behind text the pack never said it carried.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Records(payload)[0]!.AsObject()["state"] = "repaired")));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("states the state 'repaired', which the contract does not declare", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Rejects_a_run_that_states_a_byte()
+    {
+        // A named code carries its byte in its name and a run carries none at all, so a run stating one
+        // would be applied as a code it does not claim to be.
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(
+            Payload(payload => Tokens(payload)[0]!.AsObject()["value"] = -1)));
+
+        Assert.Contains(error.Diagnostics, diagnostic => diagnostic.Contains("holds no text or states a value a run does not have", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Rejects_a_value_that_is_not_in_its_sources_order()
     {
         // A source's ordinals are what a caller reads its values by, so two values claiming one ordinal
