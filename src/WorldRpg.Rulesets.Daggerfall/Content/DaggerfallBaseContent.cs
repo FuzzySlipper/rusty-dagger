@@ -1719,8 +1719,17 @@ internal static class DaggerfallBaseContent
         if (actions.Values.Any(action => action.Id != "power-attack" && action.DamageBonus != 0)) diagnostics.Add("Only the authored power-attack may carry an action damage bonus.");
         string[] categories = ["plant1", "plant2", "creature1", "creature2", "creature3", "misc1", "misc2", "armor", "weapons", "magic", "clothing", "books", "religious"];
         if (pools.Count != categories.Length || !pools.Select(pool => pool.Id).Order().SequenceEqual(categories.Order()) || pools.Any(pool => pool.Status != "deferred" || string.IsNullOrWhiteSpace(pool.Reason))) diagnostics.Add("Deferred loot category pools must be the exact adopted category set with a reason.");
-        string[] expectedErrata = ["mobile-39-horse-is-explicitly-absent", "chain2-material-alias-is-not-authored", "bows-retain-donor-both-hands-policy", "loot-matrix-uses-fall-exe-errata"];
-        if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, Chain2 omission, bow two-hand policy, and loot errata exactly.");
+        string[] expectedErrata =
+        [
+            "mobile-39-horse-is-explicitly-absent",
+            "chain2-material-alias-is-not-authored",
+            "bows-retain-donor-both-hands-policy",
+            "loot-matrix-uses-fall-exe-errata",
+            // The archer is placed with a mobile whose donor record declares a ranged attack and carries
+            // no melee damage range, so it has no policy rather than an invented one.
+            "archer-ranged-attack-is-not-implemented",
+        ];
+        if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, Chain2 omission, bow two-hand policy, loot errata, and the archer's ranged attack exactly.");
     }
 
     internal static JsonElement Property(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
