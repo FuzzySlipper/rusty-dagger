@@ -751,7 +751,7 @@ internal static class Program
         foreach ((string family, string kind, string reason, string anchor) in new[]
         {
             (".CEL", "class-question animation", "no publisher in this repository: the FLC container and its frames are read, but no artifact is published from them and nothing plays them back, so the file carries no canvas here", "Assets/Scripts/API/FlcFile.cs"),
-            (".BSS", "compass sprite bank", "no publisher in this repository: the BSS container's image frames are read, but no artifact is published from them, so the compass the donor draws from these files has no published canvas here", "Assets/Scripts/API/BssFile.cs"),
+            (".BSS", "compass sprite bank", "no publisher in this repository: the BSS container header is read and its frame arithmetic verified, but no frame's pixels are extracted or published, so the compass the donor draws from these files has no published canvas here", "Assets/Scripts/API/BssFile.cs"),
             // No family entry for the CIF files: most of the corpus's CIFs are weapon, armour and painting
             // grammars this repository reads and publishes, and the face grammar it refuses is refused by
             // name when a face is read rather than being a family that carries no artifact at all.
