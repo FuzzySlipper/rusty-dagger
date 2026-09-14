@@ -19,10 +19,10 @@ public sealed class Arena2ClassicMediaPublicationTests
 
         // Five service screens and their donor companions are thirteen more artifacts and resources:
         // naming an image admits it.
-        Assert.Equal(71, first.Artifacts.Count);
-        Assert.Equal(71, first.MediaManifest.Resources.Count);
+        Assert.Equal(76, first.Artifacts.Count);
+        Assert.Equal(76, first.MediaManifest.Resources.Count);
         // Thirteen more admitted source files, because those images are read as well as named.
-        Assert.Equal(38, first.Sources.Count);
+        Assert.Equal(43, first.Sources.Count);
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath).OrderBy(path => path, StringComparer.Ordinal), first.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.Equal(first.Artifacts.Select(artifact => artifact.RelativePath), second.Artifacts.Select(artifact => artifact.RelativePath));
         Assert.All(first.Artifacts.Zip(second.Artifacts), pair => Assert.Equal(pair.First.Bytes.ToArray(), pair.Second.Bytes.ToArray()));
@@ -47,7 +47,7 @@ public sealed class Arena2ClassicMediaPublicationTests
         Assert.Equal(6, first.Audio.Count);
 // Six windows, one mode screen, and the service panels the donor windows read, each part of a
         // screen the donor composes from several images published under its own media identity.
-        Assert.Equal(20, first.UiImages.Count);
+        Assert.Equal(25, first.UiImages.Count);
         Assert.Equal(31, first.InventoryIcons.Count);
         Assert.Equal(240, first.Font.Glyphs.Count);
 
@@ -118,8 +118,16 @@ public sealed class Arena2ClassicMediaPublicationTests
                 ClassicUiSlot.HudVitalMagicka, ClassicUiSlot.Inventory, ClassicUiSlot.CharacterSheet,
                 ClassicUiSlot.Book, ClassicUiSlot.Rest, ClassicUiSlot.Merchant, ClassicUiSlot.Guild,
                 ClassicUiSlot.Bank, ClassicUiSlot.Death,
+                ClassicUiSlot.CharacterGeneration, ClassicUiSlot.Pick, ClassicUiSlot.Intro, ClassicUiSlot.Title,
             ],
             first.UiImages.Select(image => image.Slot).Distinct().OrderBy(slot => slot));
+        // The five supplied screens carry their own palettes, so each fills its own slot; the two pick
+        // screens share one, because a consumer choosing a class binds both.
+        Assert.Equal(
+            ["screen.character-generation", "screen.intro", "screen.pick.02", "screen.pick.03", "screen.title"],
+            first.UiImages.Where(image => image.Slot is ClassicUiSlot.CharacterGeneration or ClassicUiSlot.Pick or ClassicUiSlot.Intro or ClassicUiSlot.Title)
+                .Select(image => image.MediaId)
+                .Order(StringComparer.Ordinal));
         Assert.Equal(
             ["window.rest.hours-past", "window.rest.hours-remaining", "window.rest.panel"],
             first.UiImages.Where(image => image.Slot == ClassicUiSlot.Rest).Select(image => image.MediaId).Order(StringComparer.Ordinal));
@@ -379,13 +387,14 @@ public sealed class Arena2ClassicMediaPublicationTests
             Read(arena2, "WEAPON01.CIF"), Read(arena2, "WEAPON02.CIF"), Read(arena2, "WEAPON04.CIF"), Read(arena2, "WEAPON05.CIF"), Read(arena2, "WEAPON06.CIF"), Read(arena2, "WEAPON07.CIF"), Read(arena2, "WEAPON08.CIF"), Read(arena2, "WEAPON09.CIF"), Read(arena2, "WEAPON10.CIF"),
             Read(arena2, "ART_PAL.COL"), Read(arena2, "TEXTURE.380"), Read(arena2, "PAL.PAL"), Read(arena2, "DAGGER.SND"),
             Read(arena2, "MAIN00I0.IMG"), Read(arena2, "MAIN03I0.IMG"), Read(arena2, "MAIN04I0.IMG"), Read(arena2, "MAIN05I0.IMG"), Read(arena2, "INVE00I0.IMG"), Read(arena2, "INFO00I0.IMG"), Read(arena2, "DIE_00I0.IMG"),
+            Read(arena2, "CHGN00I0.IMG"), Read(arena2, "PICK02I0.IMG"), Read(arena2, "PICK03I0.IMG"), Read(arena2, "PRIS00I0.IMG"), Read(arena2, "TITL00I0.IMG"),
             Read(arena2, "BOOK00I0.IMG"), Read(arena2, "REST00I0.IMG"), Read(arena2, "SHOP00I0.IMG"), Read(arena2, "GILD00I0.IMG"), Read(arena2, "BANK00I0.IMG"),
             Read(arena2, "REST01I0.IMG"), Read(arena2, "REST02I0.IMG"), Read(arena2, "INVE08I0.IMG"), Read(arena2, "INVE10I0.IMG"), Read(arena2, "INVE11I0.IMG"),
             Read(arena2, "INVE12I0.IMG"), Read(arena2, "INVE14I0.IMG"), Read(arena2, "GILD01I0.IMG"),
             Read(arena2, "TEXTURE.207"), Read(arena2, "TEXTURE.216"), Read(arena2, "TEXTURE.234"), Read(arena2, "TEXTURE.245"), Read(arena2, "FONT0003.FNT")));
 
         Assert.Equal(31, WeaponActions(publication, "weapon.dagger.steel").Sum(action => action.FrameCount));
-        Assert.Equal(71, publication.Artifacts.Count);
+        Assert.Equal(76, publication.Artifacts.Count);
         AssertPng(Artifact(publication, "media/combat/weapon-dagger-steel-atlas.png"), 3840, 600);
         Assert.All(publication.Audio, clip => Assert.Equal(11_025U, clip.SampleRate));
     }
@@ -460,6 +469,12 @@ public sealed class Arena2ClassicMediaPublicationTests
         CreateHeaderedImage(4),
         new byte[320 * 200],
         new byte[320 * 200],
+        new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
+        // The five remaining screens of the same shape: a 320x200 canvas with its own trailing palette.
+        new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
+        new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
+        new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
+        new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
         new byte[Daggerfall.Import.Arena2.ImgDecoder.EmbeddedPaletteScreenBytes],
         new byte[320 * 200],
         CreateHeaderedImage(5),

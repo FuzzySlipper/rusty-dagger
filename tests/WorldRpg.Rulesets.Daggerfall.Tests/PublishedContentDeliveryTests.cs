@@ -35,7 +35,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.NotEmpty(chrome.Bytes.ToArray());
 
         // A name the content does not carry fails as a miss rather than resolving to something else.
-        Assert.False(content.TryReadFile("worldrpg/media/ui/screen-title.png", out _));
+        Assert.False(content.TryReadFile("worldrpg/media/ui/screen-no-such-artifact.png", out _));
 
         // The directory read sees the published group without being told its members: this is what the
         // generated inventory replaces a hand-maintained list with.
@@ -71,7 +71,7 @@ public sealed class PublishedContentDeliveryTests
         // The published group carries the seventy-four media artifacts and the sound catalog that
         // describes the whole archive, and the inventory indexes both because both are content.
         Assert.Contains("worldrpg/media/audio/classic-sound-catalog.json", listed);
-        Assert.Equal(75, listed.Count);
+        Assert.Equal(80, listed.Count);
     }
 
     /// <summary>
@@ -113,7 +113,7 @@ public sealed class PublishedContentDeliveryTests
         Assert.Equal("worldrpg/media/ui/window-merchant-buttons-identify.png", identified["window.merchant.buttons.identify"].Path);
         Assert.Equal("worldrpg/media/ui/inventory-icons/inventory-icon-iron-dagger.png", identified["inventory.icon.iron-dagger"].Path);
         Assert.Equal("worldrpg/media/ui/authored/inventory-skin-panel-slate-v1.png", identified["inventory.skin.panel-slate.v1"].Path);
-        Assert.Equal(74, identified.Count);
+        Assert.Equal(79, identified.Count);
 
         // The identities the group states are the identities the pack publishes for the same images,
         // so a consumer that asks by media name cannot be answered with a different artifact.
@@ -137,7 +137,10 @@ public sealed class PublishedContentDeliveryTests
             [.. packPaths.Keys.Where(identified.ContainsKey).Order(StringComparer.Ordinal)]);
         Assert.Equal(
             [
-                "screen.death", "window.bank.panel", "window.book.reader", "window.guild.member", "window.guild.service",
+                // The five screens that carry their own palette joined the closure, so the import bundle
+                // that predates them trails five more identities.
+                "screen.character-generation", "screen.death", "screen.intro", "screen.pick.02", "screen.pick.03", "screen.title",
+                "window.bank.panel", "window.book.reader", "window.guild.member", "window.guild.service",
                 "window.merchant.buttons.buy", "window.merchant.buttons.identify", "window.merchant.buttons.repair",
                 "window.merchant.buttons.sell", "window.merchant.buttons.sell-gold", "window.merchant.cost",
                 "window.rest.hours-past", "window.rest.hours-remaining", "window.rest.panel",
@@ -204,7 +207,10 @@ public sealed class PublishedContentDeliveryTests
         }
 
         Assert.Equal(
-            ["bank", "book", "characterSheet", "death", "guild", "hudChrome", "hudVitalFatigue", "hudVitalHealth", "hudVitalMagicka", "inventory", "merchant", "rest"],
+            [
+                "bank", "book", "characterGeneration", "characterSheet", "death", "guild", "hudChrome", "hudVitalFatigue",
+                "hudVitalHealth", "hudVitalMagicka", "intro", "inventory", "merchant", "pick", "rest", "title",
+            ],
             slots.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
         // A slot names a screen. Where the donor composes a screen from several images, the slot holds
