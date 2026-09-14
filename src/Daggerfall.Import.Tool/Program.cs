@@ -711,6 +711,12 @@ internal static class Program
         Dictionary<string, string> slots = publication.UiImages
             .GroupBy(image => image.MediaId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.Single().Slot.ToString(), StringComparer.Ordinal);
+        // A screen drawn with the palette inside its own file states that as a conversion fact with its
+        // donor anchor: the bytes are the file's trailing palette scaled by four, which is why dropping
+        // the scale darkens every colour in the artifact.
+        Dictionary<string, bool> ownPalettes = publication.UiImages
+            .GroupBy(image => image.MediaId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Single().OwnEmbeddedPalette, StringComparer.Ordinal);
         JsonObject InventoryEntry(ImportPublicationArtifact artifact)
         {
             JsonObject entry = new()
@@ -723,6 +729,15 @@ internal static class Program
             {
                 entry["mediaId"] = mediaId;
                 if (slots.TryGetValue(mediaId, out string? slot)) entry["slot"] = char.ToLowerInvariant(slot[0]) + slot[1..];
+                if (ownPalettes.TryGetValue(mediaId, out bool own) && own)
+                {
+                    entry["palette"] = new JsonObject
+                    {
+                        ["source"] = "embedded-in-source-file",
+                        ["channelScale"] = 4,
+                        ["donorAnchor"] = "ImgFile.ReadPalette",
+                    };
+                }
             }
 
             return entry;

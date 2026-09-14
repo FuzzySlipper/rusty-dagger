@@ -383,7 +383,8 @@ public sealed record ClassicUiImageManifest(
     string SourceFile,
     short SourceXOffset,
     short SourceYOffset,
-    bool IsHeaderless)
+    bool IsHeaderless,
+    bool OwnEmbeddedPalette = false)
 {
     /// <summary>
     /// The semantic screen this image fills. It is derived rather than configured, because a role and
@@ -901,7 +902,10 @@ public sealed record Arena2ClassicMediaPublication(
             byte[] png = EncodePalettePng(image.Width, image.Height, image.Pixels.Span, ownPalette ?? palette);
             RequireArtifactQuota(png, options, mapping.MediaId);
             result.Add(new(mapping.MediaId, NormalizedMediaKind.UserInterface, $"media/ui/{Slug(mapping.MediaId)}.png", png, image.Width, image.Height, null, "image/png"));
-            ClassicUiImageManifest manifest = new(mapping.Image, mapping.MediaId, mapping.SourceFile, image.XOffset, image.YOffset, image.IsHeaderless);
+            // A screen that carries its own palette is published in it, and the record says so: the
+            // colours are the file's own trailing palette scaled by four, not the shared art palette.
+            ClassicUiImageManifest manifest = new(
+                mapping.Image, mapping.MediaId, mapping.SourceFile, image.XOffset, image.YOffset, image.IsHeaderless, ownPalette is not null);
             manifest.Validate();
             semantic.Add(manifest);
         }
