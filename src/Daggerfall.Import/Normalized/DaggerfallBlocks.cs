@@ -246,13 +246,8 @@ public sealed record DaggerfallBlocks(
         int previousOrdinal = -1;
         foreach (DaggerfallBlockRecord record in Records)
         {
-            // A record's identity is its archive's directory ordinal, so an ordinal that repeats or skips
-            // would leave two records claiming one identity or one identity addressing nothing.
-            if (record.Ordinal != previousOrdinal + 1)
-            {
-                throw new InvalidOperationException($"Published block '{record.SourceKey}' carries ordinal {record.Ordinal} where the section is ordered by ordinal and the previous record was {previousOrdinal}.");
-            }
-
+            // Each source's records are published as a group in its own order, so a consumer reads one
+            // archive's ordinals without another's interleaving them.
             if (!StringComparer.Ordinal.Equals(record.Source, previousSource))
             {
                 if (perSource.ContainsKey(record.Source))
@@ -262,6 +257,14 @@ public sealed record DaggerfallBlocks(
 
                 previousSource = record.Source;
                 previousOrdinal = -1;
+            }
+
+            // A record's identity is its own archive's directory ordinal, so an ordinal that repeats or
+            // skips within its source would leave two records claiming one identity or one identity
+            // addressing nothing.
+            if (record.Ordinal != previousOrdinal + 1)
+            {
+                throw new InvalidOperationException($"Published block '{record.SourceKey}' carries ordinal {record.Ordinal} where the section is ordered by ordinal and the previous record of '{record.Source}' was {previousOrdinal}.");
             }
 
             previousOrdinal = record.Ordinal;
