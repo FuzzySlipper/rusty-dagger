@@ -40,11 +40,12 @@ internal static class DaggerfallBaseContent
             ValidateActorIdentities(actors, catalogs, diagnostics);
             DaggerfallItemTemplateLedger itemTemplates = ReadItemTemplateLedger(root, catalogs, items.Count, diagnostics);
             DaggerfallCharacterPresentationSet characterPresentation = ReadCharacterPresentation(root, catalogs, diagnostics);
+            DaggerfallMagicCatalogSet magic = ReadMagicCatalog(root, diagnostics);
             DaggerfallLocationSet locations = ReadLocations(root, diagnostics);
             ValidateReferences(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, hud, diagnostics);
             ValidateCatalog(vocabulary, actors, items, equipmentSlots, armorValues, actions, lootTables, lootCategoryPools, donorErrata, diagnostics);
             diagnostics.ThrowIfAny();
-            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations);
+            return new DaggerfallDefinitions(catalogs, vocabulary, new ReadOnlyDictionary<DaggerfallActorId, DaggerfallActorDefinition>(actors), new ReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition>(items), new ReadOnlyDictionary<DaggerfallEquipmentSlotId, DaggerfallEquipmentSlotDefinition>(equipmentSlots), new ReadOnlyDictionary<string, int>(armorValues), new ReadOnlyDictionary<string, DaggerfallActionDefinition>(actions), new ReadOnlyDictionary<string, DaggerfallLootTableDefinition>(lootTables), System.Array.AsReadOnly(hud.ToArray()), lootCategoryPools, donorErrata, itemTemplates, characterPresentation, locations, magic);
         }
         catch (JsonException exception)
         {
@@ -588,6 +589,126 @@ internal static class DaggerfallBaseContent
     /// carries a provenance and a disposition, that the summary agrees with the entries, and
     /// that no target claims a native fact while the native source is absent.
     /// </summary>
+    /// <summary>
+    /// Reads the published magical catalogs from the pack alone. A spell keeps the identity the source
+    /// gave it, an enchantment that named a spell resolves to that spell's key, and anything the
+    /// publication could not carry is reported: a link to a key no spell defines, a spell that claims a
+    /// shared identity no other spell shares, and a record the source stated without a spell.
+    /// </summary>
+    private static DaggerfallMagicCatalogSet ReadMagicCatalog(JsonElement root, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!root.TryGetProperty("magic", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
+        {
+            // A payload that predates the publication still loads; the loss is named rather than
+            // silently resolving no spell at all.
+            diagnostics.Add("Base payload publishes no magic catalog section; spells and enchantment links resolve to nothing until it is republished.");
+            return DaggerfallMagicCatalogSet.Empty;
+        }
+
+        Dictionary<string, DaggerfallSpellDefinition> spells = new(StringComparer.Ordinal);
+        Dictionary<int, int> identityUse = [];
+        foreach (JsonElement spell in Array(section, "spells", diagnostics))
+        {
+            string key = Text(spell, "key", diagnostics);
+            if (string.IsNullOrWhiteSpace(key) || !spells.TryAdd(key, null!))
+            {
+                diagnostics.Add($"Published spell key '{key}' is empty or claimed twice, so a consumer cannot resolve it to one spell.");
+                continue;
+            }
+
+            int identity = Integer(spell, "identity", diagnostics);
+            bool identityShared = Boolean(spell, "identityShared", diagnostics);
+            identityUse[identity] = identityUse.TryGetValue(identity, out int seen) ? seen + 1 : 1;
+            List<DaggerfallSpellEffectDefinition> effects = [];
+            foreach (JsonElement effect in Array(spell, "effects", diagnostics))
+            {
+                JsonElement duration = Object(Property(effect, "duration", diagnostics), "duration", diagnostics);
+                JsonElement chance = Object(Property(effect, "chance", diagnostics), "chance", diagnostics);
+                JsonElement magnitude = Object(Property(effect, "magnitude", diagnostics), "magnitude", diagnostics);
+                effects.Add(new DaggerfallSpellEffectDefinition(
+                    Text(effect, "key", diagnostics),
+                    Integer(effect, "type", diagnostics),
+                    Integer(effect, "subType", diagnostics),
+                    Integer(duration, "base", diagnostics), Integer(duration, "mod", diagnostics), Integer(duration, "perLevel", diagnostics),
+                    Integer(chance, "base", diagnostics), Integer(chance, "mod", diagnostics), Integer(chance, "perLevel", diagnostics),
+                    Integer(magnitude, "baseLow", diagnostics), Integer(magnitude, "baseHigh", diagnostics),
+                    Integer(magnitude, "levelBase", diagnostics), Integer(magnitude, "levelHigh", diagnostics), Integer(magnitude, "perLevel", diagnostics)));
+            }
+
+            spells[key] = new DaggerfallSpellDefinition(
+                key, identity, identityShared, Text(spell, "name", diagnostics),
+                Integer(spell, "element", diagnostics), Integer(spell, "rangeType", diagnostics),
+                Integer(spell, "cost", diagnostics), Integer(spell, "icon", diagnostics), effects);
+        }
+
+        foreach ((string key, DaggerfallSpellDefinition spell) in spells)
+        {
+            bool actuallyShared = identityUse.TryGetValue(spell.Identity, out int uses) && uses > 1;
+            if (spell.IdentityShared != actuallyShared)
+            {
+                // The flag is what tells a consumer whether an identity is ambiguous; disagreeing with the
+                // catalog's own records would make it resolve the wrong spell.
+                diagnostics.Add($"Published spell '{key}' reports identity {spell.Identity} as {(spell.IdentityShared ? "shared" : "unique")}, but the catalog carries {(actuallyShared ? "more than one" : "one")} record with it.");
+            }
+        }
+
+        Dictionary<string, DaggerfallMagicItemDefinition> items = new(StringComparer.Ordinal);
+        foreach (JsonElement item in Array(section, "magicItems", diagnostics))
+        {
+            string key = Text(item, "key", diagnostics);
+            if (string.IsNullOrWhiteSpace(key) || !items.TryAdd(key, null!))
+            {
+                diagnostics.Add($"Published magic-item key '{key}' is empty or claimed twice, so a consumer cannot resolve it to one template.");
+                continue;
+            }
+
+            List<DaggerfallMagicEnchantmentDefinition> enchantments = [];
+            foreach (JsonElement enchantment in Array(item, "enchantments", diagnostics))
+            {
+                string enchantmentKey = Text(enchantment, "key", diagnostics);
+                string? spellKey = enchantment.TryGetProperty("spell", out JsonElement link) && link.ValueKind == JsonValueKind.String ? link.GetString() : null;
+                if (spellKey is not null && !spells.ContainsKey(spellKey))
+                {
+                    diagnostics.Add($"Published enchantment '{enchantmentKey}' names spell '{spellKey}', which the catalog does not define.");
+                    spellKey = null;
+                }
+
+                enchantments.Add(new DaggerfallMagicEnchantmentDefinition(
+                    enchantmentKey,
+                    Integer(enchantment, "type", diagnostics),
+                    Integer(enchantment, "param", diagnostics),
+                    Text(enchantment, "paramMeaning", diagnostics),
+                    spellKey,
+                    Boolean(enchantment, "spellIdentityShared", diagnostics)));
+            }
+
+            items[key] = new DaggerfallMagicItemDefinition(
+                key, Long(item, "offset", diagnostics), Text(item, "name", diagnostics),
+                Integer(item, "type", diagnostics), Integer(item, "group", diagnostics), Integer(item, "groupIndex", diagnostics),
+                Integer(item, "uses", diagnostics), Integer(item, "value", diagnostics), Integer(item, "material", diagnostics), enchantments);
+        }
+
+        List<DaggerfallMagicDisposition> dispositions = [];
+        foreach (JsonElement disposition in Array(section, "dispositions", diagnostics))
+        {
+            dispositions.Add(new DaggerfallMagicDisposition(
+                Long(disposition, "offset", diagnostics), Text(disposition, "kind", diagnostics), Text(disposition, "reason", diagnostics)));
+        }
+
+        List<string> sources = [];
+        foreach (JsonElement source in Array(section, "sources", diagnostics))
+        {
+            sources.Add(Text(source, "recordId", diagnostics));
+        }
+
+        if (spells.Count == 0)
+        {
+            diagnostics.Add("The published magic catalog carries no spell, so nothing resolves through it.");
+        }
+
+        return new DaggerfallMagicCatalogSet(spells, items, dispositions, sources);
+    }
+
     private static DaggerfallItemTemplateLedger ReadItemTemplateLedger(JsonElement root, DaggerfallCatalogSet catalogs, int publishedItems, DaggerfallContentDiagnostics diagnostics)
     {
         if (!root.TryGetProperty("itemTemplateLedger", out JsonElement value) || value.ValueKind != JsonValueKind.Object)
@@ -1499,6 +1620,22 @@ internal static class DaggerfallBaseContent
         diagnostics.Add($"'{property}' must be an integer.");
         return 0;
     }
+    internal static long Long(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement result = Property(value, property, diagnostics);
+        if (result.ValueKind == JsonValueKind.Number && result.TryGetInt64(out long integer)) return integer;
+        diagnostics.Add($"'{property}' must be an integer.");
+        return 0;
+    }
+
+    internal static bool Boolean(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
+    {
+        JsonElement result = Property(value, property, diagnostics);
+        if (result.ValueKind is JsonValueKind.True or JsonValueKind.False) return result.GetBoolean();
+        diagnostics.Add($"'{property}' must be a boolean.");
+        return false;
+    }
+
     internal static int? OptionalInteger(JsonElement value, string property, DaggerfallContentDiagnostics diagnostics)
     {
         if (!value.TryGetProperty(property, out JsonElement result) || result.ValueKind == JsonValueKind.Null) return null;
