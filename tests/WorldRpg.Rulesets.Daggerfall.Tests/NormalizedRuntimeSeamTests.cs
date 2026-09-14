@@ -359,7 +359,7 @@ public sealed class NormalizedRuntimeSeamTests
             definitions.Catalogs, definitions.Vocabulary, unreached, definitions.Items, definitions.EquipmentSlots,
             definitions.ArmorValuesByMaterial, definitions.Actions, definitions.LootTables, definitions.HudResources,
             definitions.LootCategoryPools, definitions.DonorErrata, definitions.ItemTemplates,
-            definitions.CharacterPresentation, definitions.Locations, definitions.Magic, definitions.Mobiles);
+            definitions.CharacterPresentation, definitions.Locations, definitions.Text, definitions.Magic, definitions.Mobiles);
 
         List<string> releases = [];
         ContentFake content = new(releases);
