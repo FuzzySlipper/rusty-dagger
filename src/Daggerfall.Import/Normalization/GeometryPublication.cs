@@ -465,9 +465,17 @@ public static class GeometryPublicationBuilder
             return new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordUnusable, $"texture archive {archive} record {record} declares no frame");
         }
 
-        return facts.Width > 0 && facts.Height > 0
+        if (facts.Width <= 0 || facts.Height <= 0)
+        {
+            return new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordUnusable, $"texture archive {archive} record {record} declares the extent {facts.Width}x{facts.Height}");
+        }
+
+        // The record states a frame and an extent, which is still not the same as the corpus carrying the
+        // picture: the leaf owner proved the frame decodes where the bytes were in hand, and a record it
+        // could not read is reported with the decoder's own reason rather than called bindable.
+        return facts.UnreadableReason.Length == 0
             ? new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.Resolved, string.Empty)
-            : new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordUnusable, $"texture archive {archive} record {record} declares the extent {facts.Width}x{facts.Height}");
+            : new GeometryMaterialLink(archive, record, materialId, GeometryMaterialDisposition.TextureRecordUnusable, $"texture archive {archive} record {record} cannot be read: {facts.UnreadableReason}");
     }
 
     private static GeneratedSpatialArtifact Index(

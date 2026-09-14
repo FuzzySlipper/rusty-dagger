@@ -181,6 +181,38 @@ public sealed class GeometryPublicationTests
         // Every record the leaves carry states its own facts, and a record the leaf does not carry is not
         // answerable at all rather than answered by an aggregate.
         Assert.All(textures.Decoded, leaf => Assert.Equal(leaf.Records, leaf.RecordFacts.Count));
+
+        // The per-record read flag is derived from an actual decode rather than from the header, so it is
+        // checked against one: a record the owner calls readable has a frame that decodes, and one it
+        // cannot read says why.
+        int checkedRecords = 0;
+        int unreadable = 0;
+        foreach (TextureLeafRecord leaf in textures.Decoded.Take(24))
+        {
+            TextureArchive archive = TextureArchive.Parse(
+                File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2", leaf.Path)),
+                leaf.Path,
+                null);
+            foreach (TextureRecordFacts facts in leaf.RecordFacts.Where(facts => facts.Frames > 0))
+            {
+                bool decodes = true;
+                try
+                {
+                    _ = archive.DecodeFrame(facts.RecordIndex, 0);
+                }
+                catch (Exception failure) when (failure is Arena2FormatException or ArgumentOutOfRangeException)
+                {
+                    decodes = false;
+                }
+
+                Assert.Equal(decodes, facts.UnreadableReason.Length == 0);
+                checkedRecords++;
+                unreadable += decodes ? 0 : 1;
+            }
+        }
+
+        Assert.True(checkedRecords > 100, $"the sample covers {checkedRecords} records");
+        Assert.True(unreadable >= 0);
         Assert.All(textures.Decoded.SelectMany(leaf => leaf.RecordFacts), facts => Assert.True(facts.Width >= 0 && facts.Height >= 0));
         Assert.False(textures.TryGetRecord(81, 999, out _));
         Assert.False(textures.TryGetRecord(34, 0, out _));
