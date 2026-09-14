@@ -334,6 +334,56 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     /// <summary>
+    /// An attacker with no authored reach stays idle even at point-blank range, rather than entering the
+    /// attack state and leaving combat to refuse behind it.
+    /// </summary>
+    /// <remarks>
+    /// The behavior module reads the actor's authored reach to decide whether it can attack and the combat
+    /// module refuses an attack with no reach. Reading a missing reach as zero distance would make those two
+    /// disagree in the one direction a player sees: a state machine that says the actor attacked, a
+    /// navigation receipt that says it never moved, and no damage. The shipped pack gives every placed actor
+    /// a policy - the content check refuses one that does not - so this is built from definitions with the
+    /// policies stripped, and it asserts Idle rather than merely not-Attack: a separation inside a reach the
+    /// actor does not have is exactly where the two readings differ, and the difference is Idle against
+    /// Chase.
+    /// </remarks>
+    [Fact]
+    public void An_attacker_with_no_authored_reach_stays_idle_at_point_blank_range()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        Dictionary<DaggerfallActorId, DaggerfallActorDefinition> unreached =
+            definitions.Actors.ToDictionary(pair => pair.Key, pair => pair.Value with { ActionId = null });
+        DaggerfallDefinitions withoutPolicies = new(
+            definitions.Catalogs, definitions.Vocabulary, unreached, definitions.Items, definitions.EquipmentSlots,
+            definitions.ArmorValuesByMaterial, definitions.Actions, definitions.LootTables, definitions.HudResources,
+            definitions.LootCategoryPools, definitions.DonorErrata, definitions.ItemTemplates,
+            definitions.CharacterPresentation, definitions.Locations, definitions.Magic, definitions.Mobiles);
+
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        AppearanceFake appearance = new(releases);
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, appearance, perception.Service);
+        // Inside melee distance and facing, with the line clear: the one configuration where a missing reach
+        // read as zero would admit an attack.
+        perception.Receipt = Receipt([.. inputs.Project.Actors.Values.Select(placement =>
+            new PerceptionPair(checked((ulong)placement.EntityId), (ulong)DaggerfallActorIdentity.PlayerEntityId, 0.5d, 1d, PerceptionPairKind.Visible, 1d))]);
+        using DaggerfallSession session = new(engine.Context, withoutPolicies, inputs, DaggerfallTuning.Defaults);
+        long healthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+        appearance.AdvanceReceiptForAll = CrossedMarker(1);
+
+        session.Update(new ProductUpdate(OuterUpdate(1), []));
+
+        Assert.All(session.LastEnemyBehavior.Values, evidence =>
+            Assert.Equal(EnemyBehaviorState.Idle, evidence.State));
+        Assert.Equal(healthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+    }
+
+    /// <summary>
     /// The tuning profile shape the ruleset reads is the one it ships, and a profile still carrying the
     /// key that used to tune enemy reach is refused rather than loaded with its intent dropped.
     /// </summary>

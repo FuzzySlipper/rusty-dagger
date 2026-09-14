@@ -151,6 +151,33 @@ public sealed class DaggerfallCatalogContentTests
         Assert.Throws<DaggerfallContentException>(() => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
     }
 
+    /// <summary>
+    /// An action that reaches past what its own kind of attack can resolve is refused, naming the action.
+    /// </summary>
+    /// <remarks>
+    /// The bounds are code constants rather than authored values, so no pack in the corpus exercises them:
+    /// melee is capped at the distance the melee query resolves and ranged at the distance an attacker
+    /// perceives the player within. A reach past either is a number nothing would ever use, and the failure
+    /// has to name the action so the author knows which one to fix.
+    /// </remarks>
+    [Theory]
+    [InlineData("\"attackRangeIndex\": 0,\n      \"reach\": 2.0", "\"attackRangeIndex\": 0,\n      \"reach\": 50.0", "beyond any melee distance")]
+    [InlineData("\"reach\": 10.0,", "\"reach\": 100.0,", "beyond the range an attacker perceives")]
+    // An action with no reach at all is the case the combat module's own refusal guards, and the one an
+    // author is most likely to produce by omission. Validation owns it: the swing a missing reach would
+    // admit is refused here rather than at the first attack.
+    [InlineData("\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0,\n      \"reach\": 2.0", "\"cooldownSeconds\": 1.5,\n      \"attackRangeIndex\": 0", "must declare the positive reach")]
+    public void RejectsAnActionThatReachesFurtherThanItsKindOfAttackResolves(string before, string after, string expected)
+    {
+        string payload = File.ReadAllText(Path.Combine(RepositoryRoot(), "content/worldrpg/payloads/daggerfall.base.json"));
+        string tampered = payload.Replace(before, after, StringComparison.Ordinal);
+        Assert.NotEqual(payload, tampered);
+
+        DaggerfallContentException error = Assert.Throws<DaggerfallContentException>(
+            () => DaggerfallBaseContent.Read(System.Text.Encoding.UTF8.GetBytes(tampered)));
+        Assert.Contains(expected, error.Message, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("\"itemTemplateLedger\"", "\"itemTemplateLedgerAbsent\"")]
     [InlineData("\"provenance\": \"no-donor-group\"", "\"provenance\": \"\"")]
