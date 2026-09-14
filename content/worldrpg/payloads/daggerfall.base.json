@@ -10471,7 +10471,7 @@
         "careerId": "class00",
         "mediaId": "character.portrait.mage.0",
         "sourceFile": "MAGE.CEL",
-        "palette": "ART_PAL.COL",
+        "palette": "embedded-palette-sha256:6f05da1ff280c75d",
         "frameCount": 15,
         "binding": "admitted",
         "consumer": "the character sheet"
@@ -10480,7 +10480,7 @@
         "careerId": "class08",
         "mediaId": "character.portrait.rogue.0",
         "sourceFile": "ROGUE.CEL",
-        "palette": "ART_PAL.COL",
+        "palette": "embedded-palette-sha256:6f05da1ff280c75d",
         "frameCount": 10,
         "binding": "admitted",
         "consumer": "the character sheet"
@@ -10489,7 +10489,7 @@
         "careerId": "class16",
         "mediaId": "character.portrait.warrior.0",
         "sourceFile": "WARRIOR.CEL",
-        "palette": "ART_PAL.COL",
+        "palette": "embedded-palette-sha256:6f05da1ff280c75d",
         "frameCount": 15,
         "binding": "admitted",
         "consumer": "the character sheet"
@@ -10791,63 +10791,63 @@
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR01I0.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR02I0.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR02I1.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR03I0.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR03I1.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR04I0.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR05I0.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CHAR05I1.IMG",
         "family": "CHAR",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CHAR\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CHAR\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CMPA00I0.BSS",
@@ -10875,70 +10875,70 @@
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST01I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST02I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST03I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST04I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST05I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST06I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST07I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST08I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "CUST09I0.IMG",
         "family": "CUST",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027CUST\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027CUST\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "FACE00I0.CIF",
@@ -11071,28 +11071,28 @@
         "family": "NITE",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027NITE\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "NITE01I0.IMG",
         "family": "NITE",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027NITE\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "NITE02I0.IMG",
         "family": "NITE",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027NITE\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "NITE03I0.IMG",
         "family": "NITE",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027NITE\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027NITE\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "ROGUE.CEL",
@@ -11162,7 +11162,7 @@
         "family": "SCBG",
         "canvasCount": 1,
         "outcome": "unreferenced",
-        "reason": "The file reads and no layer here uses it: the \u0027SCBG\u0027 family has no paper-doll role in this section yet."
+        "reason": "The file reads and no layer in this section resolves it: the \u0027SCBG\u0027 family publishes layers, and this file is not one a published race is drawn from."
       },
       {
         "path": "WARRIOR.CEL",

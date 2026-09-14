@@ -248,7 +248,32 @@ public sealed class PublishedContentDeliveryTests
         {
             Assert.Equal("admitted", portrait.GetProperty("binding").GetString());
             Assert.Equal("the character sheet", portrait.GetProperty("consumer").GetString());
+            // The section states the palette the pixels are really in. A classic animation carries its own,
+            // so naming the family's paired palette here would describe colours the portrait does not have -
+            // and the generated index, which a consumer resolves the bytes through, states the same fact.
+            Assert.StartsWith("embedded-palette-sha256:", portrait.GetProperty("palette").GetString(), StringComparison.Ordinal);
         });
+        JsonElement characterIndex = JsonDocument.Parse(
+            content.ReadBytes("worldrpg/media/character/character-media-inventory.json").ToArray()).RootElement;
+        Dictionary<string, string> painted = [];
+        foreach (JsonElement artifact in characterIndex.GetProperty("artifacts").EnumerateArray())
+        {
+            painted[artifact.GetProperty("mediaId").GetString()!] = artifact.GetProperty("palette").GetString()!;
+        }
+
+        // Every reference whose canvas was published states the same palette as the index entry for that
+        // canvas: a consumer resolving either record paints the same colours. The faction faces have no
+        // artifact and so no entry, which is the pending state the section already states.
+        foreach (JsonElement[] references in new[] { layers, factionFaces, careers })
+        {
+            Assert.All(references.Where(reference => painted.ContainsKey(reference.GetProperty("mediaId").GetString()!)), reference =>
+            {
+                string mediaId = reference.GetProperty("mediaId").GetString()!;
+                Assert.Equal(painted[mediaId], reference.GetProperty("palette").GetString());
+            });
+        }
+
+        Assert.All(factionFaces, face => Assert.False(painted.ContainsKey(face.GetProperty("mediaId").GetString()!)));
 
         // A supplied file whose canvases could not be published is recorded as unreadable with the
         // refusal that names it - not as a file that read and went unused, which would say the opposite

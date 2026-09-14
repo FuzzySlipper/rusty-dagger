@@ -61,7 +61,7 @@ public sealed record DaggerfallFactionFace(int Index, string MediaId, string Sou
 /// <param name="CareerId">The catalog career identity.</param>
 /// <param name="MediaId">The published identity of the portrait's first frame.</param>
 /// <param name="SourceFile">The supplied source file, an animation whose frames are the portrait.</param>
-/// <param name="Palette">The palette the frames carry.</param>
+/// <param name="Palette">The palette the frames are painted in, which a container-palette animation carries itself.</param>
 /// <param name="FrameCount">How many frames the portrait animates through.</param>
 /// <param name="Binding">Whether a consumer binds it, or it is still required-pending.</param>
 /// <param name="Consumer">The consumer the inventory recorded, which states that none binds it yet when none does.</param>
@@ -214,18 +214,23 @@ public static class DaggerfallCharacterPresentationBuilder
     /// parses but cannot take pixels from supplies no canvas, and calling it merely unused would say the
     /// opposite of what the generated media index states.
     /// </param>
+    /// <param name="sources">
+    /// The supplied corpus by file name, when the caller has it: a container that carries its own palette is
+    /// painted in that one, and the section states which palette each reference is painted in.
+    /// </param>
     public static DaggerfallCharacterPresentation Build(
         CharacterMediaInventory inventory,
         IReadOnlySet<string> suppliedPalettes,
         IReadOnlyList<DaggerfallRaceKey> races,
         IReadOnlyDictionary<string, string> careers,
-        IReadOnlyDictionary<string, string>? unpublishable = null)
+        IReadOnlyDictionary<string, string>? unpublishable = null,
+        IReadOnlyDictionary<string, ReadOnlyMemory<byte>>? sources = null)
     {
         ArgumentNullException.ThrowIfNull(inventory);
         ArgumentNullException.ThrowIfNull(races);
         ArgumentNullException.ThrowIfNull(careers);
         IReadOnlyDictionary<string, string> unread = unpublishable ?? new Dictionary<string, string>(StringComparer.Ordinal);
-        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, suppliedPalettes);
+        CharacterMediaReferenceSet set = CharacterMediaReferences.Derive(inventory, suppliedPalettes, sources);
         // Looked up by source file and canvas index rather than by a second derivation of the media
         // id: the derivation owns naming, and a builder that re-derived it would be a second place
         // for the two to disagree.
@@ -350,7 +355,7 @@ public static class DaggerfallCharacterPresentationBuilder
                 ? new DaggerfallCharacterFile(name, file.Family, file.CanvasCount, CharacterFileOutcome.Referenced,
                     "A layer in this section is drawn from this file's canvases.")
                 : new DaggerfallCharacterFile(name, file.Family, file.CanvasCount, CharacterFileOutcome.Unreferenced,
-                    $"The file reads and no layer here uses it: the '{file.Family}' family has no paper-doll role in this section yet."));
+                    $"The file reads and no layer in this section resolves it: the '{file.Family}' family publishes layers, and this file is not one a published race is drawn from."));
         }
 
         return new DaggerfallCharacterPresentation(

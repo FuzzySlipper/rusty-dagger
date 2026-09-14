@@ -286,6 +286,39 @@ public static class FlcDecoder
         return images;
     }
 
+    /// <summary>
+    /// Reads the palette a container carries, without decoding a frame.
+    /// </summary>
+    /// <remarks>
+    /// A caller that only needs the colours - to state which palette a portrait is painted in - should not
+    /// have to decode forty frames to learn it, and a caller that does decode should not have a second rule
+    /// for finding the palette.
+    /// </remarks>
+    /// <param name="bytes">The container's bytes.</param>
+    /// <param name="source">Logical source identity, for diagnostics.</param>
+    /// <returns>The last palette the container's frames carry, or null when it carries none.</returns>
+    public static Arena2Palette? ReadContainerPalette(ReadOnlySpan<byte> bytes, string source)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        if (!TryRead(bytes, source, out FlcContainer? container, out string reason))
+        {
+            throw new Arena2FormatException(source, 0, reason);
+        }
+
+        Arena2Palette? palette = null;
+        foreach (FlcFrame frame in container!.Frames)
+        {
+            foreach (FlcChunk chunk in frame.Chunks)
+            {
+                ReadOnlySpan<byte> payload = bytes[(chunk.Offset + 6)..(chunk.Offset + chunk.Size)];
+                if (chunk.Type == Color256ChunkType) palette = ReadPalette(payload, source, frame.Index, scale: 1);
+                else if (chunk.Type == Color64ChunkType) palette = ReadPalette(payload, source, frame.Index, scale: 4);
+            }
+        }
+
+        return palette;
+    }
+
     /// <summary>Reads the palette a container carries, in the donor's packet form.</summary>
     private static Arena2Palette ReadPalette(ReadOnlySpan<byte> payload, string source, int frame, int scale)
     {

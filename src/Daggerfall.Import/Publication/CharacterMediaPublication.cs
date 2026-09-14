@@ -33,6 +33,17 @@ public sealed record CharacterMediaArtifact(
     public string PaletteSource => OwnPalette
         ? CharacterMediaPublisher.EmbeddedPaletteSource
         : CharacterMediaPublisher.SuppliedPaletteSource;
+
+    /// <summary>
+    /// The published identity of the palette these pixels were painted in: the supplied file's name, or a
+    /// digest of a container palette's own colours, which has no file name to state.
+    /// </summary>
+    /// <remarks>
+    /// A reference cannot state this for a container palette - it only knows the fallback name the classic
+    /// reader would use for the family - and naming that fallback describes colours these bytes do not have,
+    /// so every consumer of the reference states this instead.
+    /// </remarks>
+    public string PaletteIdentity => OwnPalette ? CharacterMediaReferences.EmbeddedPaletteIdentity(Palette) : Reference.Palette;
 }
 
 /// <summary>
