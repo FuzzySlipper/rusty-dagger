@@ -55,6 +55,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
     private ulong? _latestUpdateGeneration;
     private ulong? _latestSimulationStep;
+    private string? _panelRequest;
+    private ulong _panelRequestRevision;
     private bool _disposed;
 
     internal DaggerfallSession(IEngineContext engine, DaggerfallDefinitions definitions, PrivateersHoldInputs inputs, DaggerfallTuning tuning, IReadOnlyList<IDaggerfallSaveOwner>? saveOwners = null)
@@ -226,7 +228,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                     : DaggerfallCalendar.Start,
                 saved?.Calendar?.RemainderSeconds ?? 0d,
                 tuning.Time.GameSecondsPerRealSecond);
-            _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings);
+            _input = new PlayerInputSystem(tuning.PlayerControl, DaggerfallInput.Controls, DaggerfallInput.Bindings, tuning.ControllerInput);
             _spatial = new SpatialMovementSystem(engine.Spatial, engine.Content, inputs.SpatialArtifact, tuning.Spatial);
             partiallyConstructed.Add(_spatial);
             if (saved is null)
@@ -610,6 +612,12 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             _pendingLoot ??= _lootUi.Open(State.PlayerControl, currentLook);
             Presentation.SetOutcome(_lootUi.Message);
         }
+        // A panel button asks the DOM for a panel during ordinary play, which is where the keyboard's
+        // own I, C and Escape are heard. While a modal or a death holds the world the DOM already has
+        // a panel in front of the player, so a request there would fight the mode rather than serve it.
+        if (update.IsRequested(DaggerfallInput.Inventory)) RequestPanel(DaggerfallPanel.Inventory);
+        else if (update.IsRequested(DaggerfallInput.Character)) RequestPanel(DaggerfallPanel.Character);
+        else if (update.IsRequested(DaggerfallInput.Menu)) RequestPanel(DaggerfallPanel.Menu);
         DeliverFacts();
         PublishPresentation();
     }
@@ -744,10 +752,28 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
 
     private void PublishPresentation()
     {
-        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression));
+        _hud.Publish(State.Actors.Player, State.Progression, Presentation, _mode, State.PlayerControl, Slots, _inventoryUi.Read(), _lootUi.Read(), _characterUi.Read(State.Actors.Player, State.Progression), LatestPanelRequest);
         _appearance.UpdateRightHandEquipment(State.Equipment.Read());
         _appearance.UpdateDirections(State.Actors, _camera.Viewpoint);
         _appearance.Publish(State.Actors);
+    }
+
+    /// <summary>
+    /// The panel the player asked for through a device the DOM has no channel of its own for.
+    /// </summary>
+    /// <remarks>
+    /// The keyboard reaches the panels because the DOM hears the keys itself; a pad reaches the
+    /// product. The panels stay where they are — the DOM owns whether one is open — so a button that
+    /// opens one travels as that panel's own menu action and the product invents no second notion of
+    /// a panel. The revision is what lets the DOM apply each request once while the request stays
+    /// published, the same way a published loot revision is recognised rather than replayed.
+    /// </remarks>
+    internal DaggerfallPanelRequest? LatestPanelRequest => _panelRequest is null ? null : new DaggerfallPanelRequest(_panelRequest, _panelRequestRevision);
+
+    private void RequestPanel(string panel)
+    {
+        _panelRequest = panel;
+        _panelRequestRevision = checked(_panelRequestRevision + 1);
     }
 
     internal static ItemDefinition ToManagedItem(DaggerfallItemDefinition item)
@@ -854,6 +880,9 @@ internal static class DaggerfallInput
     internal static readonly InputActionId ToggleWeapon = new("daggerfall.toggle-weapon");
     internal static readonly InputActionId Attack = new("daggerfall.attack");
     internal static readonly InputActionId Interact = new("daggerfall.interact");
+    internal static readonly InputActionId Inventory = new("daggerfall.inventory");
+    internal static readonly InputActionId Character = new("daggerfall.character");
+    internal static readonly InputActionId Menu = new("daggerfall.menu");
     internal static readonly PlayerControlBindings Controls = new(
         ["move"u8.ToArray(), "movement"u8.ToArray()],
         KeyboardControl.KeyW,
@@ -865,5 +894,21 @@ internal static class DaggerfallInput
         new(Attack, "attack"u8.ToArray()),
         new(ToggleWeapon, "toggle-weapon"u8.ToArray()),
         new(Interact, "interact"u8.ToArray()),
+    ];
+
+    /// <summary>
+    /// The pad's action buttons in the layout the browser shell delivers: the bottom face attacks, the
+    /// right face reaches for what the player is facing, the left face readies the weapon, the top
+    /// face opens the character sheet, select opens the pack, and start opens the menu. They are
+    /// product bindings rather than engine mappings because the Engine publishes positions and this is
+    /// the layer that knows what an action means.
+    /// </summary>
+    internal static readonly IReadOnlyList<ControllerActionBinding> PadActions = [
+        new(ControllerButton.Button0, Attack),
+        new(ControllerButton.Button1, Interact),
+        new(ControllerButton.Button2, ToggleWeapon),
+        new(ControllerButton.Button3, Character),
+        new(ControllerButton.Button8, Inventory),
+        new(ControllerButton.Button9, Menu),
     ];
 }

@@ -26,12 +26,47 @@ public sealed record PlayerControlBindings(
     KeyboardControl Right,
     DirectionalMovementBindings? DirectionalIntents = null);
 
+/// <summary>Input state that outlives one admitted slice until the device releases it or focus drops it.</summary>
+internal sealed class HeldPlayerInput
+{
+    internal HashSet<KeyboardControl> Keys { get; } = [];
+    internal HashSet<MovementDirection> Directions { get; } = [];
+    internal Dictionary<ControllerAxis, float> Axes { get; } = [];
+    internal HashSet<ControllerButton> Buttons { get; } = [];
+
+    internal HeldPlayerInput Copy()
+    {
+        HeldPlayerInput copy = new();
+        copy.CopyFrom(this);
+        return copy;
+    }
+
+    internal void CopyFrom(HeldPlayerInput source)
+    {
+        Keys.Clear();
+        Keys.UnionWith(source.Keys);
+        Directions.Clear();
+        Directions.UnionWith(source.Directions);
+        Axes.Clear();
+        foreach ((ControllerAxis axis, float value) in source.Axes) Axes[axis] = value;
+        Buttons.Clear();
+        Buttons.UnionWith(source.Buttons);
+    }
+
+    internal void Clear()
+    {
+        Keys.Clear();
+        Directions.Clear();
+        Axes.Clear();
+        Buttons.Clear();
+    }
+}
+
 /// <summary>A fully diagnosed input interpretation that has not changed persistent product state.</summary>
 public sealed class PreparedPlayerInput
 {
     private readonly PlayerInputSystem _owner;
-    private readonly HashSet<KeyboardControl> _held;
-    private readonly HashSet<MovementDirection> _mappedDirections;
+    private readonly HeldPlayerInput _held;
     private readonly HashSet<InputActionId> _actions;
     private readonly PlayerControlState _player;
     private readonly ulong _ownerRevision;
@@ -40,7 +75,7 @@ public sealed class PreparedPlayerInput
 
     private bool _consumed;
 
-    internal PreparedPlayerInput(PlayerInputSystem owner, PlayerControlState player, ulong ownerRevision, float startingYawRadians, float startingPitchRadians, HashSet<KeyboardControl> held, HashSet<MovementDirection> mappedDirections, HashSet<InputActionId> actions, Vector2 planarIntent, float yawRadians, float pitchRadians)
+    internal PreparedPlayerInput(PlayerInputSystem owner, PlayerControlState player, ulong ownerRevision, float startingYawRadians, float startingPitchRadians, HeldPlayerInput held, HashSet<InputActionId> actions, Vector2 planarIntent, float yawRadians, float pitchRadians)
     {
         _owner = owner;
         _player = player;
@@ -48,7 +83,6 @@ public sealed class PreparedPlayerInput
         _startingYawRadians = startingYawRadians;
         _startingPitchRadians = startingPitchRadians;
         _held = held;
-        _mappedDirections = mappedDirections;
         _actions = actions;
         PlanarIntent = planarIntent;
         YawRadians = yawRadians;
@@ -68,14 +102,11 @@ public sealed class PreparedPlayerInput
         if (_consumed) throw new InvalidOperationException("Prepared input was already consumed.");
     }
 
-    internal void CommitTo(PlayerInputSystem owner, HashSet<KeyboardControl> held, HashSet<MovementDirection> mappedDirections, ProductUpdateState update, PlayerControlState player)
+    internal void CommitTo(PlayerInputSystem owner, HeldPlayerInput held, ProductUpdateState update, PlayerControlState player)
     {
         EnsureCommittableBy(owner, player);
         _consumed = true;
-        held.Clear();
-        held.UnionWith(_held);
-        mappedDirections.Clear();
-        mappedDirections.UnionWith(_mappedDirections);
+        held.CopyFrom(_held);
         player.YawRadians = YawRadians;
         player.PitchRadians = PitchRadians;
         update.PlanarIntent = PlanarIntent;
@@ -85,19 +116,20 @@ public sealed class PreparedPlayerInput
 
 public sealed class PlayerInputSystem
 {
-    private readonly HashSet<KeyboardControl> _held = [];
-    private readonly HashSet<MovementDirection> _mappedDirections = [];
+    private readonly HeldPlayerInput _held = new();
     private readonly PlayerControlTuning _tuning;
     private readonly PlayerControlBindings _controls;
+    private readonly ControllerInputTuning? _controller;
     private readonly InputActionBinding[] _bindings;
     private ulong _revision;
 
     internal ulong Revision => _revision;
 
-    public PlayerInputSystem(PlayerControlTuning tuning, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null)
+    public PlayerInputSystem(PlayerControlTuning tuning, PlayerControlBindings controls, IEnumerable<InputActionBinding>? bindings = null, ControllerInputTuning? controller = null)
     {
         _tuning = (tuning ?? throw new ArgumentNullException(nameof(tuning))).Validate();
         _controls = controls ?? throw new ArgumentNullException(nameof(controls));
+        _controller = controller?.Validate();
         _bindings = bindings?.ToArray() ?? [];
     }
 
@@ -110,10 +142,11 @@ public sealed class PlayerInputSystem
         update.Validate();
         foreach (ProductInputEvent input in update.Inputs) Validate(input);
 
-        HashSet<KeyboardControl> held = new(_held);
-        HashSet<MovementDirection> mappedDirections = new(_mappedDirections);
+        HeldPlayerInput held = _held.Copy();
         HashSet<InputActionId> actions = [];
-        Vector2 planarIntent = update.PlanarIntent;
+        // Direct axes and digital movement describe this slice only; keyboard and mapped directions
+        // are held, and a controller axis stays where it was left until a later event moves it.
+        Vector2 sliceIntent = update.PlanarIntent;
         float startingYawRadians = player.YawRadians;
         float startingPitchRadians = player.PitchRadians;
         float yawRadians = startingYawRadians;
@@ -124,8 +157,7 @@ public sealed class PlayerInputSystem
             if (input.Kind == InputEventKind.Clear)
             {
                 held.Clear();
-                mappedDirections.Clear();
-                planarIntent = default;
+                sliceIntent = default;
             }
             else if (input.Kind == InputEventKind.PointerDelta)
             {
@@ -138,26 +170,41 @@ public sealed class PlayerInputSystem
             }
             else if (input.Kind == InputEventKind.DirectDigital || input.Kind == InputEventKind.MappedDigital)
             {
-                ApplyDigitalIntent(input, mappedDirections, actions, ref planarIntent);
+                ApplyDigitalIntent(input, held.Directions, actions, ref sliceIntent);
             }
             else if (input.Kind == InputEventKind.DirectAxis || input.Kind == InputEventKind.MappedAxis)
             {
-                ApplyAxisIntent(input, actions, ref planarIntent);
+                ApplyAxisIntent(input, actions, ref sliceIntent);
             }
             else if (input.Kind == InputEventKind.Key && IsMovementKey(input.Keyboard))
             {
-                if (input.Edge is InputEdge.Pressed or InputEdge.Held) held.Add(input.Keyboard);
+                if (input.Edge is InputEdge.Pressed or InputEdge.Held) held.Keys.Add(input.Keyboard);
                 else if (input.Edge == InputEdge.Released)
                 {
-                    held.Remove(input.Keyboard);
-                    ReleaseMappedDirection(input.Keyboard, mappedDirections);
+                    held.Keys.Remove(input.Keyboard);
+                    ReleaseMappedDirection(input.Keyboard, held.Directions);
                 }
             }
+            else if (input.Kind == InputEventKind.ControllerAxis) held.Axes[input.ControllerAxis] = input.X;
+            else if (input.Kind == InputEventKind.ControllerButton) ApplyControllerButton(input, held.Buttons, actions);
         }
 
-        if (planarIntent == Vector2.Zero)
-            planarIntent = PlanarIntent(held, mappedDirections);
-        return new PreparedPlayerInput(this, player, _revision, startingYawRadians, startingPitchRadians, held, mappedDirections, actions, planarIntent, yawRadians, pitchRadians);
+        if (sliceIntent == Vector2.Zero)
+            sliceIntent = PlanarIntent(held.Keys, held.Directions);
+        // A stick turned by an admitted span of time is a rate, so its look sample is scaled by that
+        // span and saturated at the same angular bound the pointer path already honours.
+        Vector2 stickLook = ControllerLookDelta(held.Axes, update.DeltaSeconds);
+        if (stickLook != Vector2.Zero)
+        {
+            LookRequest request = new(new LookState(yawRadians, pitchRadians), stickLook, ControllerLookConfiguration());
+            LookDiagnostic diagnostic = Look.Diagnose(request);
+            if (diagnostic is not (LookDiagnostic.Accepted or LookDiagnostic.DeltaLimitExceeded)) throw new InvalidOperationException($"Controller look request rejected: {diagnostic}.");
+            LookReceipt receipt = Look.IntegrateClamped(request);
+            yawRadians = receipt.After.YawRadians;
+            pitchRadians = receipt.After.PitchRadians;
+        }
+
+        return new PreparedPlayerInput(this, player, _revision, startingYawRadians, startingPitchRadians, held, actions, Combine(sliceIntent, ControllerMoveIntent(held.Axes)), yawRadians, pitchRadians);
     }
 
     /// <summary>Commits an already prepared candidate after the enclosing spatial proposal has succeeded.</summary>
@@ -166,7 +213,7 @@ public sealed class PlayerInputSystem
         ArgumentNullException.ThrowIfNull(candidate);
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(update);
-        candidate.CommitTo(this, _held, _mappedDirections, update, player);
+        candidate.CommitTo(this, _held, update, player);
         AdvanceRevision();
     }
 
@@ -193,19 +240,21 @@ public sealed class PlayerInputSystem
     public void Apply(PlayerControlState player, ProductUpdateState update) => Commit(Prepare(player, update), player, update);
 
     /// <summary>
-    /// Drops held movement keys and mapped-direction intent without interpreting an input slice.
+    /// Drops held movement keys, mapped-direction intent, and controller state without interpreting
+    /// an input slice.
     /// </summary>
     /// <remarks>
     /// This is what a focus or mode change needs: a key that was held when play paused, a modal
     /// opened or the player died must not keep moving the character after focus returns, and a
-    /// release the interpreter never sees would otherwise leave the key held forever. The
+    /// release the interpreter never sees would otherwise leave the key held forever. A stick is
+    /// dropped for the same reason — a pad left deflected through a mode change must not keep turning
+    /// the camera — and it re-engages on its next event rather than on the state it held before. The
     /// revision advances, so input prepared against the previous focus is rejected as stale
     /// instead of being committed after the change.
     /// </remarks>
     public void Neutralize()
     {
         _held.Clear();
-        _mappedDirections.Clear();
         AdvanceRevision();
     }
 
@@ -233,6 +282,27 @@ public sealed class PlayerInputSystem
         ReadOnlySpan<byte> intent = input.Intent.Span;
         if (IsMovementIntent(intent)) planarIntent = new Vector2(input.X, input.Y);
         CaptureSemanticAction(input, actions);
+    }
+
+    /// <summary>
+    /// Reads one positional controller button as a held button and, on the press edge, as the
+    /// semantic action the ruleset bound to it. The shell publishes an analog travel event for
+    /// trigger buttons alongside that press edge, so the edge is what an action reads and no
+    /// binding has to know whether its button is analog.
+    /// </summary>
+    private void ApplyControllerButton(ProductInputEvent input, HashSet<ControllerButton> buttons, HashSet<InputActionId> actions)
+    {
+        if (input.Edge == InputEdge.Released)
+        {
+            buttons.Remove(input.ControllerButton);
+            return;
+        }
+
+        if (input.Edge != InputEdge.Pressed) return;
+        buttons.Add(input.ControllerButton);
+        if (_controller is null) return;
+        foreach (ControllerActionBinding binding in _controller.Actions)
+            if (binding.Button == input.ControllerButton) actions.Add(binding.Action);
     }
 
     private void CaptureSemanticAction(ProductInputEvent input, HashSet<InputActionId> actions)
@@ -273,6 +343,42 @@ public sealed class PlayerInputSystem
 
     private static bool IsActive(MovementDirection direction, KeyboardControl key, IReadOnlySet<KeyboardControl> held, IReadOnlySet<MovementDirection> mappedDirections) => mappedDirections.Contains(direction) || held.Contains(key);
 
+    /// <summary>One stick's contribution to planar intent, in the same units the keyboard path produces.</summary>
+    private Vector2 ControllerMoveIntent(IReadOnlyDictionary<ControllerAxis, float> axes)
+    {
+        if (_controller is null) return Vector2.Zero;
+        return new Vector2(
+            Math.Clamp(Axis(axes, _controller.MovementX, _controller.MovementDeadzone) * _controller.MovementStrafeSensitivity * (_controller.InvertMovementX ? -1f : 1f), -1f, 1f),
+            Math.Clamp(Axis(axes, _controller.MovementY, _controller.MovementDeadzone) * _controller.MovementForwardSensitivity * (_controller.InvertMovementY ? -1f : 1f), -1f, 1f));
+    }
+
+    /// <summary>One stick's look travel for this admitted span, before the Engine's look scaling.</summary>
+    private Vector2 ControllerLookDelta(IReadOnlyDictionary<ControllerAxis, float> axes, float deltaSeconds)
+    {
+        if (_controller is null) return Vector2.Zero;
+        return new Vector2(
+            Axis(axes, _controller.LookX, _controller.LookDeadzone),
+            Axis(axes, _controller.LookY, _controller.LookDeadzone)) * deltaSeconds;
+    }
+
+    /// <summary>
+    /// The deflection of one axis with the deadzone removed: inside the deadzone the axis is
+    /// neutral, and beyond it the live travel is rescaled so the first movement past the deadzone
+    /// is slow rather than a jump to it.
+    /// </summary>
+    private static float Axis(IReadOnlyDictionary<ControllerAxis, float> axes, ControllerAxis axis, float deadzone)
+    {
+        if (!axes.TryGetValue(axis, out float value)) return 0f;
+        float magnitude = MathF.Abs(value);
+        if (magnitude <= deadzone) return 0f;
+        return MathF.CopySign(MathF.Min(1f, (magnitude - deadzone) / (1f - deadzone)), value);
+    }
+
+    /// <summary>Keyboard and stick intent add, because they are two devices asking for the same movement.</summary>
+    private static Vector2 Combine(Vector2 sliceIntent, Vector2 controllerIntent) => new(
+        Math.Clamp(sliceIntent.X + controllerIntent.X, -1f, 1f),
+        Math.Clamp(sliceIntent.Y + controllerIntent.Y, -1f, 1f));
+
     private void ReleaseMappedDirection(KeyboardControl key, HashSet<MovementDirection> mappedDirections)
     {
         if (key == _controls.Forward) mappedDirections.Remove(MovementDirection.Forward);
@@ -291,10 +397,30 @@ public sealed class PlayerInputSystem
         _tuning.InvertVertical,
         _tuning.WrapYaw);
 
+    /// <summary>
+    /// The stick's own look scaling: one unit of stick travel per second is this many radians, with
+    /// the same pitch clamp, per-update bound and yaw wrapping the pointer path uses.
+    /// </summary>
+    private LookConfig ControllerLookConfiguration() => new(
+        _controller!.LookYawRadiansPerSecond,
+        _controller.LookPitchRadiansPerSecond,
+        _tuning.PitchMinimumRadians,
+        _tuning.PitchMaximumRadians,
+        _tuning.MaximumLookDeltaRadians,
+        _controller.InvertLookX,
+        _controller.InvertLookY,
+        _tuning.WrapYaw);
+
     private static void Validate(ProductInputEvent input)
     {
         if (!float.IsFinite(input.X)) throw new ArgumentOutOfRangeException(nameof(input.X));
         if (!float.IsFinite(input.Y)) throw new ArgumentOutOfRangeException(nameof(input.Y));
+        // A press is a claim about a button and an axis event about an axis; an unnamed one cannot be
+        // interpreted, and silently dropping it would hide a device the product never hears from.
+        if (input.Kind == InputEventKind.ControllerAxis && input.ControllerAxis == ControllerAxis.None)
+            throw new InvalidOperationException("A controller axis event names no axis.");
+        if (input.Kind is InputEventKind.ControllerButton or InputEventKind.ControllerButtonValue && input.ControllerButton == ControllerButton.None)
+            throw new InvalidOperationException("A controller button event names no button.");
     }
 }
 
