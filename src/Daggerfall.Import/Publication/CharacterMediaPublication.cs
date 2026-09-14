@@ -36,17 +36,17 @@ public static class CharacterMediaPublication
     /// <param name="family">The family whose references are published, matched case-insensitively.</param>
     /// <param name="references">The enumerated canvas references, in the order the inventory produced them.</param>
     /// <param name="sources">The supplied corpus, by file name.</param>
-    /// <param name="palette">The shared palette every canvas without its own is painted in.</param>
+    /// <param name="palettes">The supplied palettes by file name, which is how a reference names its own.</param>
     public static CharacterMediaPublicationResult Publish(
         string family,
         IEnumerable<CharacterCanvasReference> references,
         IReadOnlyDictionary<string, ReadOnlyMemory<byte>> sources,
-        Arena2Palette palette)
+        IReadOnlyDictionary<string, Arena2Palette> palettes)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(family);
         ArgumentNullException.ThrowIfNull(references);
         ArgumentNullException.ThrowIfNull(sources);
-        ArgumentNullException.ThrowIfNull(palette);
+        ArgumentNullException.ThrowIfNull(palettes);
 
         List<CharacterMediaArtifact> artifacts = [];
         List<string> refusals = [];
@@ -67,9 +67,20 @@ public static class CharacterMediaPublication
                 continue;
             }
 
-            // A classic animation carries its own palette; every other family is painted in the shared
-            // one, which is what the publisher resolves its canvases through.
-            byte[] png = Encode(canvas!.Width, canvas.Height, canvas.Pixels, canvas.OwnPalette ?? palette);
+            // The palette the reference names, not a default: a family paired with the wrong palette
+            // publishes every colour wrong while looking successful, and the NITE files are paired with
+            // their own.
+            Arena2Palette? named = canvas!.OwnPalette;
+            if (named is null)
+            {
+                if (!palettes.TryGetValue(System.IO.Path.GetFileName(reference.Palette), out named))
+                {
+                    refusals.Add($"'{reference.MediaId}' names palette '{reference.Palette}', which the supplied corpus does not carry.");
+                    continue;
+                }
+            }
+
+            byte[] png = Encode(canvas.Width, canvas.Height, canvas.Pixels, named);
             artifacts.Add(new CharacterMediaArtifact(reference.MediaId, $"media/character/{Slug(reference.MediaId)}.png", png, canvas.Width, canvas.Height));
         }
 
@@ -113,9 +124,18 @@ public static class CharacterMediaPublication
                 return true;
             }
 
-            IReadOnlyList<IndexedImg> records = file.EndsWith(".CIF", StringComparison.OrdinalIgnoreCase) && !file.Contains("WEAPO", StringComparison.OrdinalIgnoreCase)
-                ? ImgDecoder.DecodeRecordSequence(bytes, file)
-                : [ImgDecoder.Decode(bytes, file)];
+            IReadOnlyList<IndexedImg> records = set.Kind switch
+            {
+                // The reader established which shape the file has; asking the other reader for it is how a
+                // headerless canvas ends up refused as a malformed headered one.
+                Arena2CanvasKind.HeaderlessCanvas => [ImgDecoder.DecodeHeaderless(bytes, file)],
+                Arena2CanvasKind.ImgRecordSequence when !file.Contains("WEAPO", StringComparison.OrdinalIgnoreCase) => ImgDecoder.DecodeRecordSequence(bytes, file),
+                Arena2CanvasKind.ImgRecord => [ImgDecoder.Decode(bytes, file)],
+                Arena2CanvasKind.RciGrid => throw new Arena2FormatException(file, 0,
+                    $"an RCI grid's {set.Canvases.Count} cells are enumerated by shape; this repository has no decoder that slices their pixels"),
+                _ => throw new Arena2FormatException(file, 0,
+                    $"the {set.Kind} shape of '{file}' has no pixel decoder here"),
+            };
             if (enumerated.Record < 0 || enumerated.Record >= records.Count)
             {
                 reason = $"'{file}' decodes {records.Count} record(s), so record {enumerated.Record} does not exist";
