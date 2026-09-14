@@ -133,7 +133,7 @@ public sealed class DaggerfallCharacterMediaContentTests
         DaggerfallDefinitions definitions = Read();
         DaggerfallLocationSet locations = definitions.Locations;
         Assert.Equal(1, locations.SchemaVersion);
-        Assert.Equal(15251, locations.Locations);
+        Assert.Equal(15251, locations.Records.Count);
         Assert.Equal(3959, locations.Dungeons);
         Assert.Equal(17, locations.RegionGaps);
 

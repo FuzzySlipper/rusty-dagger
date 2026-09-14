@@ -57,20 +57,19 @@ internal sealed record DaggerfallAttackDefinition(string Skill, int MinimumDamag
 internal sealed record DaggerfallRewardPolicy(int ExperienceReward);
 internal sealed record DaggerfallLoadoutEntry(DaggerfallItemId ItemId, ulong Quantity, ulong? UniqueEntityId, DaggerfallEquipmentSlotId? EquipSlot);
 /// <summary>
-/// The published locations, summarised: the section's shape version, the locations it carries, and
-/// how many dungeons and gaps it records. A later consumer reads the section itself; this is what the
-/// loader verified.
+/// The published locations: the section's shape version, the location records themselves, and how many
+/// dungeons and gaps it records.
 /// </summary>
 /// <param name="SchemaVersion">The section's shape version.</param>
 /// <param name="Keys">Every (region, index) the section carries, which is what a dungeon must name.</param>
-/// <param name="Locations">How many locations it publishes.</param>
+/// <param name="Records">Every location the section publishes, in the order it publishes them.</param>
 /// <param name="Dungeons">How many dungeons it publishes.</param>
 /// <param name="RegionGaps">How many regions it records as having no usable tables.</param>
 /// <param name="Regions">How many regions it records table provenance for, which is every region group.</param>
 internal sealed record DaggerfallLocationSet(
     int SchemaVersion,
     IReadOnlyCollection<(int Region, int Index)> Keys,
-    int Locations,
+    IReadOnlyList<DaggerfallSiteRecord> Records,
     int Dungeons,
     int RegionGaps,
     int Regions);
@@ -155,8 +154,9 @@ internal sealed class DaggerfallDefinitions(DaggerfallCatalogSet catalogs, Dagge
     internal DaggerfallCharacterPresentationSet CharacterPresentation { get; } = characterPresentation;
 
     /// <summary>
-    /// The published locations, validated where they are loaded: the site and world consumers are
-    /// later tasks, and what this holds until then is the guarantee that the section reads.
+    /// The published locations the site consumers resolve their identity, name and kind through. The
+    /// records are retained rather than only counted: a site lookup asks what a location is, and a
+    /// section that kept nothing but its shape would leave every caller re-reading the payload.
     /// </summary>
     internal DaggerfallLocationSet Locations { get; } = locations;
     internal DaggerfallActorDefinition RequireActor(DaggerfallActorId id) => Actors.TryGetValue(id, out DaggerfallActorDefinition? actor) ? actor : throw new InvalidOperationException($"Daggerfall definitions do not contain actor '{id.Value}'.");

@@ -295,7 +295,7 @@ internal static class DaggerfallBaseContent
         if (!root.TryGetProperty("locations", out JsonElement section) || section.ValueKind != JsonValueKind.Object)
         {
             diagnostics.Add("Base payload must publish a locations section.");
-            return new DaggerfallLocationSet(0, [], 0, 0, 0, 0);
+            return new DaggerfallLocationSet(0, [], [], 0, 0, 0);
         }
 
         int schemaVersion = Integer(section, "schemaVersion", diagnostics);
@@ -304,7 +304,7 @@ internal static class DaggerfallBaseContent
             diagnostics.Add($"Published locations must declare schemaVersion {LocationSchemaVersion}.");
         }
 
-        int locations = 0;
+        List<DaggerfallSiteRecord> records = [];
         HashSet<(int Region, int Index)> keys = [];
         foreach (JsonElement location in Array(section, "locations", diagnostics))
         {
@@ -314,8 +314,9 @@ internal static class DaggerfallBaseContent
             int mapId = Integer(location, "mapId", diagnostics);
             _ = Integer(location, "longitude", diagnostics);
             _ = Integer(location, "latitude", diagnostics);
-            _ = Integer(location, "dungeonType", diagnostics);
-            _ = Integer(location, "locationType", diagnostics);
+            int dungeonType = Integer(location, "dungeonType", diagnostics);
+            int locationType = Integer(location, "locationType", diagnostics);
+            bool discovered = Boolean(location, "discovered", diagnostics);
             if (!keys.Add((region, index)))
             {
                 diagnostics.Add($"Published locations carry region {region} index {index} twice, so one of them is unreachable.");
@@ -326,7 +327,16 @@ internal static class DaggerfallBaseContent
                 diagnostics.Add($"Published location {index} of region {region} names '{name}' on map {mapId}, which cannot be resolved.");
             }
 
-            locations++;
+            // A record whose kind this ruleset cannot name is reported against the record itself: the
+            // section is still readable, but a site consumer would answer from a kind nobody published.
+            if (DaggerfallSiteKinds.TryResolve(locationType, out DaggerfallSiteKind kind))
+            {
+                records.Add(new DaggerfallSiteRecord(new DaggerfallSiteId(region, index), name, mapId, dungeonType, kind, discovered));
+            }
+            else
+            {
+                diagnostics.Add(DaggerfallSiteKinds.UnnameableMessage(locationType, region, index));
+            }
         }
 
         int dungeons = 0;
@@ -429,7 +439,7 @@ internal static class DaggerfallBaseContent
             }
         }
 
-        return new DaggerfallLocationSet(schemaVersion, [.. keys], locations, dungeons, gaps, regions);
+        return new DaggerfallLocationSet(schemaVersion, [.. keys], [.. records], dungeons, gaps, regions);
     }
 
     /// <summary>

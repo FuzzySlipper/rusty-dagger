@@ -23,7 +23,8 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallCombatCooldownSave[] CombatCooldowns,
     DaggerfallContinuationSave? Continuation,
     DaggerfallOwnerSave[] Owners,
-    DaggerfallCalendarSave? Calendar = null)
+    DaggerfallCalendarSave? Calendar = null,
+    DaggerfallSiteSave? Site = null)
 {
     internal const uint CurrentSchemaVersion = 3;
 
@@ -134,6 +135,16 @@ internal sealed record DaggerfallSavePayload(
                 "The save was written before durable owner sections existed and carries none; the rest of its state is read unchanged."));
         }
 
+        // A save with no site section at all predates site persistence, which is not the same fact as a
+        // section that records no active site: the first has nothing to say about where the player is,
+        // and the second says the player is at no site. The section is left absent so the session can
+        // tell the two apart and start such a save where its bundle starts.
+        if (value.Site is null)
+        {
+            notices.Add(new SaveRestoreNotice("site-section-absent",
+                "The save was written before the session persisted its site and carries none; the session starts at the bundle's own starting site rather than at the site the save would have recorded."));
+        }
+
         return new DaggerfallSaveRead(value.Validate(), notices);
     }
 
@@ -215,6 +226,7 @@ internal sealed record DaggerfallSavePayload(
                 throw new ArgumentException("Combat readiness entries must be positive and distinct.");
         }
         Continuation?.Validate();
+        Site?.Validate();
         return this;
     }
 
@@ -386,7 +398,53 @@ internal sealed record DaggerfallSavePayload(
         }
 
         resolved = resolved with { Inventory = inventory, Corpses = [.. resolvedCorpses] };
+        resolved = resolved with { Site = ResolveSite(resolved.Site, definitions.Locations, notices) };
         return new DaggerfallRestorePlan(resolved, notices);
+    }
+
+    /// <summary>
+    /// Keeps the site state the selected content still carries and reports the rest.
+    /// </summary>
+    /// <remarks>
+    /// A site the bundle no longer publishes is a reference nothing here can explain. Leaving the player
+    /// at an identity nothing carries would make every later read of that site answer from a location
+    /// nobody published, so the reference is reported and dropped rather than materialized.
+    /// </remarks>
+    private static DaggerfallSiteSave? ResolveSite(DaggerfallSiteSave? section, DaggerfallLocationSet locations, List<SaveRestoreNotice> notices)
+    {
+        if (section is null)
+        {
+            return null;
+        }
+
+        HashSet<(int Region, int Index)> carried = [.. locations.Keys];
+        DaggerfallSiteIdSave? Explain(DaggerfallSiteIdSave? id, string owner)
+        {
+            if (id is null)
+            {
+                return null;
+            }
+
+            if (carried.Contains((id.Region, id.Index)))
+            {
+                return id;
+            }
+
+            notices.Add(new SaveRestoreNotice("unexplained-site",
+                $"Saved {owner} {id.Region}/{id.Index} is not a location the selected content carries, so it is not restored."));
+            return null;
+        }
+
+        List<DaggerfallSiteIdSave> discovered = [];
+        foreach (DaggerfallSiteIdSave id in section.Discovered)
+        {
+            if (Explain(id, "revealed site") is { } kept)
+            {
+                discovered.Add(kept);
+            }
+        }
+
+        return new DaggerfallSiteSave(Explain(section.Active, "active site"), Explain(section.ReturnAnchor, "return anchor"), [.. discovered]);
     }
 
     /// <summary>
@@ -681,8 +739,7 @@ internal sealed record DaggerfallStackSave(string ItemId, ulong Quantity);
 internal sealed record DaggerfallUniqueSave(string ItemId, ulong EntityId);
 internal sealed record DaggerfallEquipmentSave(string SlotId, ulong ItemEntityId);
 /// <summary>Ruleset-relative cooldown remaining at the save boundary, not a Host generation identity.</summary>
-internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);
-internal sealed record DaggerfallCorpseSave(long ActorId, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable, DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems)
+internal sealed record DaggerfallCombatCooldownSave(long AttackerId, ulong RemainingSteps);internal sealed record DaggerfallCorpseSave(long ActorId, ulong OriginatingSequence, bool IsRegistered, bool IsInteractable, DaggerfallStackSave[] Stacks, DaggerfallUniqueSave[] UniqueItems)
 {
     internal void Validate()
     {
@@ -709,6 +766,49 @@ internal sealed record DaggerfallCalendarSave(
     int Minute,
     int Second,
     double RemainderSeconds);
+
+/// <summary>A site identity as a save carries it: the region it belongs to and its index within it.</summary>
+/// <param name="Region">The source region index.</param>
+/// <param name="Index">The location's ordinal in the region's names table.</param>
+internal sealed record DaggerfallSiteIdSave(int Region, int Index)
+{
+    internal void Validate(string owner)
+    {
+        if (Region < 0 || Index < 0) throw new ArgumentException($"A saved {owner} must name a non-negative region and index.");
+    }
+}
+
+/// <summary>
+/// The session's site state as a save carries it: the site the player is at, the site they would return
+/// to, and the sites play has revealed.
+/// </summary>
+/// <remarks>
+/// Only the delta is here. Whether a site was discovered before play began is an authored fact the
+/// bundle still owns, so a reload re-derives it from the record rather than trusting a copy.
+/// <para>
+/// This section being absent and this section recording no active site are different facts: the first
+/// says the save has nothing to say about where the player is, the second says the player is at no site.
+/// </para>
+/// </remarks>
+/// <param name="Active">The site the player is at, or null when no site owns them.</param>
+/// <param name="ReturnAnchor">The site a return goes back to, or null when the player is not inside one.</param>
+/// <param name="Discovered">The sites play revealed, which the bundle did not already mark discovered.</param>
+internal sealed record DaggerfallSiteSave(DaggerfallSiteIdSave? Active, DaggerfallSiteIdSave? ReturnAnchor, DaggerfallSiteIdSave[] Discovered)
+{
+    internal void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Discovered);
+        Active?.Validate("active site");
+        ReturnAnchor?.Validate("return anchor");
+        HashSet<(int Region, int Index)> seen = [];
+        foreach (DaggerfallSiteIdSave id in Discovered)
+        {
+            ArgumentNullException.ThrowIfNull(id);
+            id.Validate("discovered site");
+            if (!seen.Add((id.Region, id.Index))) throw new ArgumentException("A save must record each revealed site once.");
+        }
+    }
+}
 
 internal sealed record DaggerfallPlayerSave(float X, float Y, float Z, float YawRadians, float PitchRadians, long Health, long Stamina, long Magicka)
 {
