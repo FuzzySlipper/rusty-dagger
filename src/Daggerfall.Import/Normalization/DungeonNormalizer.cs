@@ -353,14 +353,14 @@ public static class DungeonNormalizer
                 AddPlacement();
                 string id = $"light/{Slug(reference.SourceName)}/{index}";
                 AddProvenance(id, "rdb-light", blocks.Source, index);
-                NormalizedVector3 position = ToRightHanded(Place(light.X, light.Y, light.Z, reference));
+                NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(light.X, light.Y, light.Z, reference));
                 lights.Add(new(id, position, ToMetres(light.Radius) * LightRangeMultiplier, 1F));
             }
 
             for (int index = 0; index < block.Flats.Count; index++)
             {
                 RdbFlatSource flat = block.Flats[index];
-                NormalizedVector3 position = ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference));
+                NormalizedVector3 position = MeshGeometry.ToRightHanded(Place(flat.X, flat.Y, flat.Z, reference));
                 if (reference.IsStart && RdbSourceClassification.IsStartMarker(flat))
                 {
                     startMarker ??= new("marker/start", position);
@@ -430,7 +430,7 @@ public static class DungeonNormalizer
                     doorId = $"door/{Slug(reference.SourceName)}/{index}";
                     string doorResourceId = $"door/model-{Slug(model.ModelId)}";
                     Arena2EulerDegrees degrees = Arena2SourceTransform.ToEulerDegrees(model);
-                    doorDrafts.Add(new(doorId, doorResourceId, ToRightHanded(Place(model.X, model.Y, model.Z, reference)), new(degrees.X, degrees.Y, degrees.Z)));
+                    doorDrafts.Add(new(doorId, doorResourceId, MeshGeometry.ToRightHanded(Place(model.X, model.Y, model.Z, reference)), new(degrees.X, degrees.Y, degrees.Z)));
                     AddProvenance(doorId, "rdb-action-door", blocks.Source, index);
                 }
 
@@ -476,12 +476,12 @@ public static class DungeonNormalizer
                             rotated.XMetres + ToMetres(model.X) + origin.XMetres,
                             rotated.YMetres - ToMetres(model.Y) + origin.YMetres,
                             rotated.ZMetres + ToMetres(model.Z) + origin.ZMetres);
-                        polygon.Add(ToRightHanded(placed));
+                        polygon.Add(MeshGeometry.ToRightHanded(placed));
                         Arena2TextureUv uv = Arena2SourceTransform.ToTextureUv(point, texture.Width, texture.Height);
                         uvs.Add(new(uv.U, uv.V));
                     }
 
-                    NormalizedVector3 normal = Normal(polygon[0], polygon[1], polygon[2]);
+                    NormalizedVector3 normal = MeshGeometry.Normal(polygon);
                     group.AddPolygon(polygon, uvs, normal, AddVertices, AddTriangles);
                 }
             }
@@ -524,7 +524,7 @@ public static class DungeonNormalizer
                 }
             }
 
-            NormalizedBounds bounds = Bounds(allVertices);
+            NormalizedBounds bounds = MeshGeometry.Bounds(allVertices);
             NormalizedNavigationSurface navigation = Navigation(spatialArtifactId, meshes);
             List<NormalizedDoorPlacement> doors = doorDrafts
                 .OrderBy(door => door.Id, StringComparer.Ordinal)
@@ -767,16 +767,9 @@ public static class DungeonNormalizer
 
         public void AddPolygon(IReadOnlyList<NormalizedVector3> polygon, IReadOnlyList<NormalizedVector2> uvs, NormalizedVector3 normal, Action<int> addVertices, Action<int> addTriangles)
         {
-            int first = vertices.Count;
             addVertices(polygon.Count);
             addTriangles(polygon.Count - 2);
-            vertices.AddRange(polygon);
-            normals.AddRange(Enumerable.Repeat(normal, polygon.Count));
-            textureCoordinates.AddRange(uvs);
-            for (int index = 1; index < polygon.Count - 1; index++)
-            {
-                triangles.Add(new(first, first + index, first + index + 1));
-            }
+            _ = MeshGeometry.AppendPolygon(vertices, normals, textureCoordinates, triangles, polygon, uvs, normal);
         }
 
         public NormalizedMesh ToMesh(string id, string artifactId) => new(
@@ -827,38 +820,8 @@ public static class DungeonNormalizer
         private static float DegreesToRadians(float degrees) => degrees * (MathF.PI / 180F);
     }
 
-    private static NormalizedVector3 ToRightHanded(Arena2ImportPoint point) => new(point.XMetres, point.YMetres, -point.ZMetres);
 
-    private static NormalizedVector3 Normal(NormalizedVector3 first, NormalizedVector3 second, NormalizedVector3 third)
-    {
-        float ax = second.X - first.X;
-        float ay = second.Y - first.Y;
-        float az = second.Z - first.Z;
-        float bx = third.X - first.X;
-        float by = third.Y - first.Y;
-        float bz = third.Z - first.Z;
-        float x = (ay * bz) - (az * by);
-        float y = (az * bx) - (ax * bz);
-        float z = (ax * by) - (ay * bx);
-        float length = MathF.Sqrt((x * x) + (y * y) + (z * z));
-        return length > 1E-12F ? new(x / length, y / length, z / length) : new(0F, 1F, 0F);
-    }
 
-    private static NormalizedBounds Bounds(IReadOnlyList<NormalizedVector3> vertices)
-    {
-        if (vertices.Count == 0)
-        {
-            throw new InvalidOperationException("Dungeon geometry has no vertices.");
-        }
-
-        float minX = vertices.Min(vertex => vertex.X);
-        float minY = vertices.Min(vertex => vertex.Y);
-        float minZ = vertices.Min(vertex => vertex.Z);
-        float maxX = vertices.Max(vertex => vertex.X);
-        float maxY = vertices.Max(vertex => vertex.Y);
-        float maxZ = vertices.Max(vertex => vertex.Z);
-        return new(NormalizedBounds.CurrentSchemaVersion, new(minX, minY, minZ), new(maxX, maxY, maxZ));
-    }
 
     private static string Slug(string value)
     {

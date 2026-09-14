@@ -18,13 +18,22 @@ public enum TextureLeafDisposition
 /// enumeration established. A leaf that is not supplied is retained as a source fact
 /// rather than dropped, because the id is part of the range the corpus documents.
 /// </summary>
+/// <summary>One record inside a supplied leaf: the frames it declares and the extent it states.</summary>
+/// <param name="RecordIndex">The record's index within its archive.</param>
+/// <param name="Frames">How many frames it declares.</param>
+/// <param name="Width">The width it declares.</param>
+/// <param name="Height">The height it declares.</param>
+public sealed record TextureRecordFacts(int RecordIndex, int Frames, int Width, int Height);
+
+/// <summary>One supplied leaf's facts: how many records it carries and how many frames they declare.</summary>
 public sealed record TextureLeafRecord(
     int Id,
     string Path,
     TextureLeafDisposition Disposition,
     int Records,
     int Frames,
-    string Note);
+    string Note,
+    IReadOnlyList<TextureRecordFacts> RecordFacts);
 
 /// <summary>
 /// The texture-leaf inventory: every documented leaf id with its disposition, the record
@@ -112,7 +121,7 @@ public sealed class TextureLeafInventory
         {
             if (!supplied.TryGetValue(id, out (string Path, ReadOnlyMemory<byte> Bytes) entry))
             {
-                leaves.Add(new TextureLeafRecord(id, string.Empty, TextureLeafDisposition.NotSupplied, 0, 0, "No archive is supplied for this documented leaf id."));
+                leaves.Add(new TextureLeafRecord(id, string.Empty, TextureLeafDisposition.NotSupplied, 0, 0, "No archive is supplied for this documented leaf id.", []));
                 continue;
             }
 
@@ -124,9 +133,15 @@ public sealed class TextureLeafInventory
                 string label = $"TEXTURE.{id:000}";
                 TextureArchive archive = TextureArchive.Parse(entry.Bytes.Span, label, solidPalette);
                 int frames = 0;
+                List<TextureRecordFacts> recordFacts = new(archive.RecordCount);
                 for (int record = 0; record < archive.RecordCount; record++)
                 {
-                    frames += archive.GetRecordInfo(record).FrameCount;
+                    // The per-record facts are read here because a caller that can address a leaf cannot
+                    // otherwise tell a record with frames from one that declares none: the aggregate hides
+                    // exactly the case a material reference has to refuse.
+                    TextureRecordInfo info = archive.GetRecordInfo(record);
+                    frames += info.FrameCount;
+                    recordFacts.Add(new TextureRecordFacts(record, info.FrameCount, info.Width, info.Height));
                 }
 
                 if (archive.RecordCount == 0 || frames == 0)
@@ -134,21 +149,34 @@ public sealed class TextureLeafInventory
                     // A leaf with nothing to draw is not a decoded leaf: a header declaring
                     // no records, or records that all declare no frames, leaves a consumer
                     // with no addressable frame. One supplied leaf is exactly that.
-                    leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Malformed, archive.RecordCount, 0, "The archive declares no addressable frames."));
+                    leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Malformed, archive.RecordCount, 0, "The archive declares no addressable frames.", recordFacts));
                     continue;
                 }
 
-                leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Decoded, archive.RecordCount, frames, $"{archive.RecordCount} records, {frames} frames."));
+                leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Decoded, archive.RecordCount, frames, $"{archive.RecordCount} records, {frames} frames.", recordFacts));
             }
             catch (Arena2FormatException failure)
             {
                 // A supplied archive that does not parse is a source fact with the decoder's
                 // own reason, not a reason to lose the other 471.
-                leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Malformed, 0, 0, failure.Message));
+                leaves.Add(new TextureLeafRecord(id, entry.Path, TextureLeafDisposition.Malformed, 0, 0, failure.Message, []));
             }
         }
 
         return new TextureLeafInventory(source, leaves);
+    }
+
+    /// <summary>
+    /// Gets one record's facts inside a supplied leaf, or nothing when the leaf is not supplied, did not
+    /// parse, or carries no such record.
+    /// </summary>
+    public bool TryGetRecord(int id, int recordId, out TextureRecordFacts? facts)
+    {
+        facts = null;
+        return byId.TryGetValue(id, out TextureLeafRecord? leaf)
+            && recordId >= 0
+            && recordId < leaf.RecordFacts.Count
+            && (facts = leaf.RecordFacts[recordId]) is not null;
     }
 
     /// <summary>Gets one leaf by id.</summary>
