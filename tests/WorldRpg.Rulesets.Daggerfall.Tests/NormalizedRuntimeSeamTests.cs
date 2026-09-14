@@ -3296,6 +3296,22 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(
             $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/media/ui/screen-death.png")))}",
             images["screen.death"]);
+        // Every supplied screen arrives byte for byte from the artifact the inventory names, so a screen
+        // published from the wrong file - or from a re-encode that lost its palette - fails here rather
+        // than only differing in prefix.
+        foreach ((string id, string file) in new[]
+        {
+            ("screen.character-generation", "screen-character-generation"),
+            ("screen.pick.02", "screen-pick-02"),
+            ("screen.prison", "screen-prison"),
+            ("screen.start-menu", "screen-start-menu"),
+            ("screen.title", "screen-title"),
+        })
+        {
+            Assert.Equal(
+                $"data:image/png;base64,{Convert.ToBase64String(File.ReadAllBytes(Path.Combine(root, "content", "worldrpg", "media", "ui", $"{file}.png")))}",
+                images[id]);
+        }
         // The set is exactly what this presentation draws - the screens it shows plus the icons the
         // pack names - so an artifact silently added to or dropped from the payload fails here.
         string[] expected =
