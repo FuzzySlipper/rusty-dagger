@@ -223,206 +223,6 @@
         "generatedFrames": null
       },
       {
-        "id": "material/texture-119-0",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-119-0.png",
-        "contentDigest": "fa47dbf5f9ab2ca6f1121a40777ebe255f7f6eefbdbaa370418b92c2a6444106",
-        "byteLength": 1575,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-119-1",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-119-1.png",
-        "contentDigest": "92b253b4124fbd95d5b5ed9d16efe1c514d0b162ad81c7cf2f5a6157689c7135",
-        "byteLength": 1545,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-119-2",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-119-2.png",
-        "contentDigest": "4da8d976fc5ec4f42d1fb8c5643a41b28e42e6fdcb6908778b08977d09fb8941",
-        "byteLength": 2106,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-119-3",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-119-3.png",
-        "contentDigest": "225d73816d1869949e709a38de6b3a2895602b77cc59f38f5e0b2f8d2edb2ca5",
-        "byteLength": 2947,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-119-4",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-119-4.png",
-        "contentDigest": "1cc82f02b9e675f905394f8d96249ee4499c5087d2c1394f10c431408bc71707",
-        "byteLength": 1441,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-120-0",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-120-0.png",
-        "contentDigest": "d814c7627ffa912dab86327263295654ab5ecc26b98c0cf382210a875dc41241",
-        "byteLength": 1737,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-120-1",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-120-1.png",
-        "contentDigest": "e53f910e8e6358b85cf9dcc2282e29f2efd4e50740dcdacfdc585f57a2f14b36",
-        "byteLength": 1737,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-120-2",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-120-2.png",
-        "contentDigest": "39d54af87786dca365624422b2deeafc6136be38f9fe4dc1e8b8f924a059c0d8",
-        "byteLength": 2555,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-120-3",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-120-3.png",
-        "contentDigest": "31575e85218ade3bd44cd763bb6bd876e98ca6b5fe21b4a405edfe3ec24f878c",
-        "byteLength": 2117,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-120-4",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-120-4.png",
-        "contentDigest": "ca1678586395573ff37f2cdd959f58cb54ffdd2c7f20a59527df2308f567bf55",
-        "byteLength": 1397,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
         "id": "material/texture-121-0",
         "kind": "texture",
         "relativePath": "media/dungeon/materials/texture-121-0.png",
@@ -488,66 +288,6 @@
         "relativePath": "media/dungeon/materials/texture-121-3.png",
         "contentDigest": "0d67f855d602c16ccc99b508355f4c273be975f6f0605e538902ed46bf0cf1f3",
         "byteLength": 1857,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-122-0",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-122-0.png",
-        "contentDigest": "0845e114a23b7210389c2597d0427225d3467e532605a25340880aeb247c329f",
-        "byteLength": 2040,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-122-2",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-122-2.png",
-        "contentDigest": "f4047eb0a3432f57e31a5c5bfb69c11e270315862cf0f8a79b948f3d91fa2533",
-        "byteLength": 2052,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-122-3",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-122-3.png",
-        "contentDigest": "51e9ee0f55057965fa672dfdb4f168d5fa5c3a67c2f61bdd638d8ddb09a23861",
-        "byteLength": 2760,
         "mimeType": "image/png",
         "sourceWidth": 64,
         "sourceHeight": 64,
@@ -683,6 +423,266 @@
         "generatedFrames": null
       },
       {
+        "id": "material/texture-19-0",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-19-0.png",
+        "contentDigest": "10599f09b3ea4de30ed3a42c6763f882b9bd8f278e19fdbaeea3b7f579dcd30f",
+        "byteLength": 1282,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-19-1",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-19-1.png",
+        "contentDigest": "e82b21299d2b817c541de349092df9d580aa7b389cc06994ea863673edd5724a",
+        "byteLength": 1385,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-19-2",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-19-2.png",
+        "contentDigest": "a1601db6276491486cead068e50999405560ea664854471d0087f5f95b270896",
+        "byteLength": 3387,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-19-3",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-19-3.png",
+        "contentDigest": "e025f2cd3349562b890fb9574e32594fab127d225eec361449aba83bab9d8bf7",
+        "byteLength": 2906,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-19-4",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-19-4.png",
+        "contentDigest": "d814c7627ffa912dab86327263295654ab5ecc26b98c0cf382210a875dc41241",
+        "byteLength": 1737,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-20-0",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-20-0.png",
+        "contentDigest": "37648218a422cdfacc6ed662d5c3e9417efd8bb0b07ccdec67adbcbb352dbbc7",
+        "byteLength": 1772,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-20-1",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-20-1.png",
+        "contentDigest": "d50a9227f4e06cbef7d7e8bf1da8e1a92f360c71ca27ff210b63fc63bdcba7fe",
+        "byteLength": 1525,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-20-2",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-20-2.png",
+        "contentDigest": "6cc42ffa963200d3d94ca12d37b63280967ac981444e39a5e8a7a9df2baf3f99",
+        "byteLength": 2814,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-20-3",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-20-3.png",
+        "contentDigest": "883ba8ff2b01ae12e0d09b5210bead50e1621c928272594394ff20083874e027",
+        "byteLength": 1548,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-20-4",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-20-4.png",
+        "contentDigest": "761595bf949b7f22d6431815c166dd32b4d8a88f79bcd367e8777bd3bf4e2103",
+        "byteLength": 1113,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-22-0",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-22-0.png",
+        "contentDigest": "e953ed32ea1b662985a637e729879715f2fba377657d3b5d6d374bec37425739",
+        "byteLength": 1738,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-22-2",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-22-2.png",
+        "contentDigest": "77ac8c2999a12553d486a2e5f0b82907b04945969b6e58ee53c7606cbb79547b",
+        "byteLength": 2853,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-22-3",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-22-3.png",
+        "contentDigest": "4b453a2954c5f7d1dfe005dcd199f005b20f0d45c7657a771a95836ad0e47f05",
+        "byteLength": 2370,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
         "id": "material/texture-321-0",
         "kind": "texture",
         "relativePath": "media/dungeon/materials/texture-321-0.png",
@@ -771,6 +771,106 @@
         "mimeType": "image/png",
         "sourceWidth": 64,
         "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-368-0",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-368-0.png",
+        "contentDigest": "00042b5c01278ec5b1453db142f0c1af8e986e994d2076c4904e30e87c051697",
+        "byteLength": 1980,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 32,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-368-2",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-368-2.png",
+        "contentDigest": "8dd4afc92250a6829a604473aa15716bb48a0677251d4317578042942c4af178",
+        "byteLength": 2920,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-368-3",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-368-3.png",
+        "contentDigest": "d6edc43205f70ec7461eab39522a1fd8a627297c455a10151467da833cfdc325",
+        "byteLength": 2861,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 64,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-374-0",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-374-0.png",
+        "contentDigest": "c7e0fbf8e0c5c525c912abf71329f72f4b0ac9e73d66cdf34471975c864d11db",
+        "byteLength": 6081,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 128,
+        "atlasWidth": 0,
+        "atlasHeight": 0,
+        "frames": [],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": null
+      },
+      {
+        "id": "material/texture-374-2",
+        "kind": "texture",
+        "relativePath": "media/dungeon/materials/texture-374-2.png",
+        "contentDigest": "4a92c1fbd51854368780f8c61701bda8f64f5d9554f844669e6345233ccaf127",
+        "byteLength": 5717,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 128,
         "atlasWidth": 0,
         "atlasHeight": 0,
         "frames": [],
@@ -951,106 +1051,6 @@
         "mimeType": "image/png",
         "sourceWidth": 32,
         "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-468-0",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-468-0.png",
-        "contentDigest": "847062ed80bf0d1211161f87cffd5ea7dfbe04c27226c7e406f0d7737d0641d1",
-        "byteLength": 1600,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 32,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-468-2",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-468-2.png",
-        "contentDigest": "7fdb6c9bfb4060c64b8a214aba8a81f5f4de818f7ab57812924fe8ff58447408",
-        "byteLength": 1797,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-468-3",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-468-3.png",
-        "contentDigest": "0425a244bd56801b41fdab81aa8ba3d4cebf61cc702b94fcec88eeecd580bb6e",
-        "byteLength": 2296,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 64,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-474-0",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-474-0.png",
-        "contentDigest": "8e3174c28c21977fac7ef1c8fc76e4592ef5ba8d91c463ef3dfb10c977e4d255",
-        "byteLength": 6397,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 128,
-        "atlasWidth": 0,
-        "atlasHeight": 0,
-        "frames": [],
-        "displayName": null,
-        "pivot": null,
-        "displaySize": null,
-        "framesPerSecond": null,
-        "loop": null,
-        "sequence": null,
-        "generatedFrames": null
-      },
-      {
-        "id": "material/texture-474-2",
-        "kind": "texture",
-        "relativePath": "media/dungeon/materials/texture-474-2.png",
-        "contentDigest": "ed30faf8a727a4f3faa7f4063d50bf7401981d1e015abbb397d85779584e3ce3",
-        "byteLength": 5020,
-        "mimeType": "image/png",
-        "sourceWidth": 64,
-        "sourceHeight": 128,
         "atlasWidth": 0,
         "atlasHeight": 0,
         "frames": [],
@@ -6111,6 +6111,50 @@
         ]
       },
       {
+        "id": "sprite/mobile-1/corpse",
+        "kind": "enemySprite",
+        "relativePath": "media/dungeon/actors/mobile-1-corpse.png",
+        "contentDigest": "6169a351ea53613c32331754ae9405f11c04d48658430ede6b3b8c307d5f644e",
+        "byteLength": 2348,
+        "mimeType": "image/png",
+        "sourceWidth": 97,
+        "sourceHeight": 42,
+        "atlasWidth": 97,
+        "atlasHeight": 42,
+        "frames": [
+          {
+            "id": "frame/mobile-1/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 97,
+            "height": 42,
+            "sourceWidth": 97,
+            "sourceHeight": 42,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "frame/mobile-1/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 97,
+            "height": 42,
+            "sourceWidth": 97,
+            "sourceHeight": 42,
+            "mirrored": false
+          }
+        ]
+      },
+      {
         "id": "sprite/mobile-138",
         "kind": "enemySprite",
         "relativePath": "media/dungeon/actors/mobile-138.png",
@@ -8245,6 +8289,50 @@
         ]
       },
       {
+        "id": "sprite/mobile-138/corpse",
+        "kind": "enemySprite",
+        "relativePath": "media/dungeon/actors/mobile-138-corpse.png",
+        "contentDigest": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+        "byteLength": 2582,
+        "mimeType": "image/png",
+        "sourceWidth": 86,
+        "sourceHeight": 36,
+        "atlasWidth": 86,
+        "atlasHeight": 36,
+        "frames": [
+          {
+            "id": "frame/mobile-138/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 86,
+            "height": 36,
+            "sourceWidth": 86,
+            "sourceHeight": 36,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "frame/mobile-138/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 86,
+            "height": 36,
+            "sourceWidth": 86,
+            "sourceHeight": 36,
+            "mirrored": false
+          }
+        ]
+      },
+      {
         "id": "sprite/mobile-141",
         "kind": "enemySprite",
         "relativePath": "media/dungeon/actors/mobile-141.png",
@@ -10375,6 +10463,50 @@
             "sourceWidth": 81,
             "sourceHeight": 138,
             "mirrored": true
+          }
+        ]
+      },
+      {
+        "id": "sprite/mobile-141/corpse",
+        "kind": "enemySprite",
+        "relativePath": "media/dungeon/actors/mobile-141-corpse.png",
+        "contentDigest": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+        "byteLength": 2582,
+        "mimeType": "image/png",
+        "sourceWidth": 86,
+        "sourceHeight": 36,
+        "atlasWidth": 86,
+        "atlasHeight": 36,
+        "frames": [
+          {
+            "id": "frame/mobile-141/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 86,
+            "height": 36,
+            "sourceWidth": 86,
+            "sourceHeight": 36,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "frame/mobile-141/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 86,
+            "height": 36,
+            "sourceWidth": 86,
+            "sourceHeight": 36,
+            "mirrored": false
           }
         ]
       },
@@ -14163,6 +14295,50 @@
         ]
       },
       {
+        "id": "sprite/mobile-3/corpse",
+        "kind": "enemySprite",
+        "relativePath": "media/dungeon/actors/mobile-3-corpse.png",
+        "contentDigest": "f315c904d951015ed93e8d49e090c098587d0d1bc361a3981c487004774aca37",
+        "byteLength": 1356,
+        "mimeType": "image/png",
+        "sourceWidth": 64,
+        "sourceHeight": 29,
+        "atlasWidth": 64,
+        "atlasHeight": 29,
+        "frames": [
+          {
+            "id": "frame/mobile-3/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 64,
+            "height": 29,
+            "sourceWidth": 64,
+            "sourceHeight": 29,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "frame/mobile-3/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 64,
+            "height": 29,
+            "sourceWidth": 64,
+            "sourceHeight": 29,
+            "mirrored": false
+          }
+        ]
+      },
+      {
         "id": "sprite/mobile-7",
         "kind": "enemySprite",
         "relativePath": "media/dungeon/actors/mobile-7.png",
@@ -16293,6 +16469,50 @@
             "sourceWidth": 92,
             "sourceHeight": 149,
             "mirrored": true
+          }
+        ]
+      },
+      {
+        "id": "sprite/mobile-7/corpse",
+        "kind": "enemySprite",
+        "relativePath": "media/dungeon/actors/mobile-7-corpse.png",
+        "contentDigest": "f42092c7085799f077feddc2e4dfc0b42a1906911803f461e6a10e09c9249637",
+        "byteLength": 3458,
+        "mimeType": "image/png",
+        "sourceWidth": 102,
+        "sourceHeight": 46,
+        "atlasWidth": 102,
+        "atlasHeight": 46,
+        "frames": [
+          {
+            "id": "frame/mobile-7/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 102,
+            "height": 46,
+            "sourceWidth": 102,
+            "sourceHeight": 46,
+            "mirrored": false
+          }
+        ],
+        "displayName": null,
+        "pivot": null,
+        "displaySize": null,
+        "framesPerSecond": null,
+        "loop": null,
+        "sequence": null,
+        "generatedFrames": [
+          {
+            "id": "frame/mobile-7/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 102,
+            "height": 46,
+            "sourceWidth": 102,
+            "sourceHeight": 46,
+            "mirrored": false
           }
         ]
       },
@@ -18654,109 +18874,9 @@
       "mediaId": "material/texture-1-24"
     },
     {
-      "textureResourceId": "texture/119-0",
-      "materialResourceId": "material/texture-119-0",
-      "materialSlot": 11,
-      "textureArchive": 119,
-      "textureRecord": 0,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-119-0"
-    },
-    {
-      "textureResourceId": "texture/119-1",
-      "materialResourceId": "material/texture-119-1",
-      "materialSlot": 12,
-      "textureArchive": 119,
-      "textureRecord": 1,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-119-1"
-    },
-    {
-      "textureResourceId": "texture/119-2",
-      "materialResourceId": "material/texture-119-2",
-      "materialSlot": 13,
-      "textureArchive": 119,
-      "textureRecord": 2,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-119-2"
-    },
-    {
-      "textureResourceId": "texture/119-3",
-      "materialResourceId": "material/texture-119-3",
-      "materialSlot": 14,
-      "textureArchive": 119,
-      "textureRecord": 3,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-119-3"
-    },
-    {
-      "textureResourceId": "texture/119-4",
-      "materialResourceId": "material/texture-119-4",
-      "materialSlot": 15,
-      "textureArchive": 119,
-      "textureRecord": 4,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-119-4"
-    },
-    {
-      "textureResourceId": "texture/120-0",
-      "materialResourceId": "material/texture-120-0",
-      "materialSlot": 16,
-      "textureArchive": 120,
-      "textureRecord": 0,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-120-0"
-    },
-    {
-      "textureResourceId": "texture/120-1",
-      "materialResourceId": "material/texture-120-1",
-      "materialSlot": 17,
-      "textureArchive": 120,
-      "textureRecord": 1,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-120-1"
-    },
-    {
-      "textureResourceId": "texture/120-2",
-      "materialResourceId": "material/texture-120-2",
-      "materialSlot": 18,
-      "textureArchive": 120,
-      "textureRecord": 2,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-120-2"
-    },
-    {
-      "textureResourceId": "texture/120-3",
-      "materialResourceId": "material/texture-120-3",
-      "materialSlot": 19,
-      "textureArchive": 120,
-      "textureRecord": 3,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-120-3"
-    },
-    {
-      "textureResourceId": "texture/120-4",
-      "materialResourceId": "material/texture-120-4",
-      "materialSlot": 20,
-      "textureArchive": 120,
-      "textureRecord": 4,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-120-4"
-    },
-    {
       "textureResourceId": "texture/121-0",
       "materialResourceId": "material/texture-121-0",
-      "materialSlot": 21,
+      "materialSlot": 11,
       "textureArchive": 121,
       "textureRecord": 0,
       "width": 64,
@@ -18766,7 +18886,7 @@
     {
       "textureResourceId": "texture/121-1",
       "materialResourceId": "material/texture-121-1",
-      "materialSlot": 22,
+      "materialSlot": 12,
       "textureArchive": 121,
       "textureRecord": 1,
       "width": 64,
@@ -18776,7 +18896,7 @@
     {
       "textureResourceId": "texture/121-2",
       "materialResourceId": "material/texture-121-2",
-      "materialSlot": 23,
+      "materialSlot": 13,
       "textureArchive": 121,
       "textureRecord": 2,
       "width": 64,
@@ -18786,7 +18906,7 @@
     {
       "textureResourceId": "texture/121-3",
       "materialResourceId": "material/texture-121-3",
-      "materialSlot": 24,
+      "materialSlot": 14,
       "textureArchive": 121,
       "textureRecord": 3,
       "width": 64,
@@ -18794,39 +18914,9 @@
       "mediaId": "material/texture-121-3"
     },
     {
-      "textureResourceId": "texture/122-0",
-      "materialResourceId": "material/texture-122-0",
-      "materialSlot": 25,
-      "textureArchive": 122,
-      "textureRecord": 0,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-122-0"
-    },
-    {
-      "textureResourceId": "texture/122-2",
-      "materialResourceId": "material/texture-122-2",
-      "materialSlot": 26,
-      "textureArchive": 122,
-      "textureRecord": 2,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-122-2"
-    },
-    {
-      "textureResourceId": "texture/122-3",
-      "materialResourceId": "material/texture-122-3",
-      "materialSlot": 27,
-      "textureArchive": 122,
-      "textureRecord": 3,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-122-3"
-    },
-    {
       "textureResourceId": "texture/141-1",
       "materialResourceId": "material/texture-141-1",
-      "materialSlot": 28,
+      "materialSlot": 15,
       "textureArchive": 141,
       "textureRecord": 1,
       "width": 64,
@@ -18836,7 +18926,7 @@
     {
       "textureResourceId": "texture/141-2",
       "materialResourceId": "material/texture-141-2",
-      "materialSlot": 29,
+      "materialSlot": 16,
       "textureArchive": 141,
       "textureRecord": 2,
       "width": 64,
@@ -18846,7 +18936,7 @@
     {
       "textureResourceId": "texture/146-0",
       "materialResourceId": "material/texture-146-0",
-      "materialSlot": 30,
+      "materialSlot": 17,
       "textureArchive": 146,
       "textureRecord": 0,
       "width": 176,
@@ -18856,7 +18946,7 @@
     {
       "textureResourceId": "texture/146-1",
       "materialResourceId": "material/texture-146-1",
-      "materialSlot": 31,
+      "materialSlot": 18,
       "textureArchive": 146,
       "textureRecord": 1,
       "width": 16,
@@ -18866,7 +18956,7 @@
     {
       "textureResourceId": "texture/147-1",
       "materialResourceId": "material/texture-147-1",
-      "materialSlot": 32,
+      "materialSlot": 19,
       "textureArchive": 147,
       "textureRecord": 1,
       "width": 64,
@@ -18876,12 +18966,142 @@
     {
       "textureResourceId": "texture/147-2",
       "materialResourceId": "material/texture-147-2",
-      "materialSlot": 33,
+      "materialSlot": 20,
       "textureArchive": 147,
       "textureRecord": 2,
       "width": 64,
       "height": 64,
       "mediaId": "material/texture-147-2"
+    },
+    {
+      "textureResourceId": "texture/19-0",
+      "materialResourceId": "material/texture-19-0",
+      "materialSlot": 21,
+      "textureArchive": 19,
+      "textureRecord": 0,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-19-0"
+    },
+    {
+      "textureResourceId": "texture/19-1",
+      "materialResourceId": "material/texture-19-1",
+      "materialSlot": 22,
+      "textureArchive": 19,
+      "textureRecord": 1,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-19-1"
+    },
+    {
+      "textureResourceId": "texture/19-2",
+      "materialResourceId": "material/texture-19-2",
+      "materialSlot": 23,
+      "textureArchive": 19,
+      "textureRecord": 2,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-19-2"
+    },
+    {
+      "textureResourceId": "texture/19-3",
+      "materialResourceId": "material/texture-19-3",
+      "materialSlot": 24,
+      "textureArchive": 19,
+      "textureRecord": 3,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-19-3"
+    },
+    {
+      "textureResourceId": "texture/19-4",
+      "materialResourceId": "material/texture-19-4",
+      "materialSlot": 25,
+      "textureArchive": 19,
+      "textureRecord": 4,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-19-4"
+    },
+    {
+      "textureResourceId": "texture/20-0",
+      "materialResourceId": "material/texture-20-0",
+      "materialSlot": 26,
+      "textureArchive": 20,
+      "textureRecord": 0,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-20-0"
+    },
+    {
+      "textureResourceId": "texture/20-1",
+      "materialResourceId": "material/texture-20-1",
+      "materialSlot": 27,
+      "textureArchive": 20,
+      "textureRecord": 1,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-20-1"
+    },
+    {
+      "textureResourceId": "texture/20-2",
+      "materialResourceId": "material/texture-20-2",
+      "materialSlot": 28,
+      "textureArchive": 20,
+      "textureRecord": 2,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-20-2"
+    },
+    {
+      "textureResourceId": "texture/20-3",
+      "materialResourceId": "material/texture-20-3",
+      "materialSlot": 29,
+      "textureArchive": 20,
+      "textureRecord": 3,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-20-3"
+    },
+    {
+      "textureResourceId": "texture/20-4",
+      "materialResourceId": "material/texture-20-4",
+      "materialSlot": 30,
+      "textureArchive": 20,
+      "textureRecord": 4,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-20-4"
+    },
+    {
+      "textureResourceId": "texture/22-0",
+      "materialResourceId": "material/texture-22-0",
+      "materialSlot": 31,
+      "textureArchive": 22,
+      "textureRecord": 0,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-22-0"
+    },
+    {
+      "textureResourceId": "texture/22-2",
+      "materialResourceId": "material/texture-22-2",
+      "materialSlot": 32,
+      "textureArchive": 22,
+      "textureRecord": 2,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-22-2"
+    },
+    {
+      "textureResourceId": "texture/22-3",
+      "materialResourceId": "material/texture-22-3",
+      "materialSlot": 33,
+      "textureArchive": 22,
+      "textureRecord": 3,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-22-3"
     },
     {
       "textureResourceId": "texture/321-0",
@@ -18934,9 +19154,59 @@
       "mediaId": "material/texture-341-3"
     },
     {
+      "textureResourceId": "texture/368-0",
+      "materialResourceId": "material/texture-368-0",
+      "materialSlot": 39,
+      "textureArchive": 368,
+      "textureRecord": 0,
+      "width": 64,
+      "height": 32,
+      "mediaId": "material/texture-368-0"
+    },
+    {
+      "textureResourceId": "texture/368-2",
+      "materialResourceId": "material/texture-368-2",
+      "materialSlot": 40,
+      "textureArchive": 368,
+      "textureRecord": 2,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-368-2"
+    },
+    {
+      "textureResourceId": "texture/368-3",
+      "materialResourceId": "material/texture-368-3",
+      "materialSlot": 41,
+      "textureArchive": 368,
+      "textureRecord": 3,
+      "width": 64,
+      "height": 64,
+      "mediaId": "material/texture-368-3"
+    },
+    {
+      "textureResourceId": "texture/374-0",
+      "materialResourceId": "material/texture-374-0",
+      "materialSlot": 42,
+      "textureArchive": 374,
+      "textureRecord": 0,
+      "width": 64,
+      "height": 128,
+      "mediaId": "material/texture-374-0"
+    },
+    {
+      "textureResourceId": "texture/374-2",
+      "materialResourceId": "material/texture-374-2",
+      "materialSlot": 43,
+      "textureArchive": 374,
+      "textureRecord": 2,
+      "width": 64,
+      "height": 128,
+      "mediaId": "material/texture-374-2"
+    },
+    {
       "textureResourceId": "texture/41-1",
       "materialResourceId": "material/texture-41-1",
-      "materialSlot": 39,
+      "materialSlot": 44,
       "textureArchive": 41,
       "textureRecord": 1,
       "width": 64,
@@ -18946,7 +19216,7 @@
     {
       "textureResourceId": "texture/449-1",
       "materialResourceId": "material/texture-449-1",
-      "materialSlot": 40,
+      "materialSlot": 45,
       "textureArchive": 449,
       "textureRecord": 1,
       "width": 64,
@@ -18956,7 +19226,7 @@
     {
       "textureResourceId": "texture/449-2",
       "materialResourceId": "material/texture-449-2",
-      "materialSlot": 41,
+      "materialSlot": 46,
       "textureArchive": 449,
       "textureRecord": 2,
       "width": 64,
@@ -18966,7 +19236,7 @@
     {
       "textureResourceId": "texture/450-11",
       "materialResourceId": "material/texture-450-11",
-      "materialSlot": 42,
+      "materialSlot": 47,
       "textureArchive": 450,
       "textureRecord": 11,
       "width": 32,
@@ -18976,7 +19246,7 @@
     {
       "textureResourceId": "texture/450-5",
       "materialResourceId": "material/texture-450-5",
-      "materialSlot": 43,
+      "materialSlot": 48,
       "textureArchive": 450,
       "textureRecord": 5,
       "width": 32,
@@ -18986,7 +19256,7 @@
     {
       "textureResourceId": "texture/450-7",
       "materialResourceId": "material/texture-450-7",
-      "materialSlot": 44,
+      "materialSlot": 49,
       "textureArchive": 450,
       "textureRecord": 7,
       "width": 32,
@@ -18996,7 +19266,7 @@
     {
       "textureResourceId": "texture/450-9",
       "materialResourceId": "material/texture-450-9",
-      "materialSlot": 45,
+      "materialSlot": 50,
       "textureArchive": 450,
       "textureRecord": 9,
       "width": 32,
@@ -19006,7 +19276,7 @@
     {
       "textureResourceId": "texture/46-1",
       "materialResourceId": "material/texture-46-1",
-      "materialSlot": 46,
+      "materialSlot": 51,
       "textureArchive": 46,
       "textureRecord": 1,
       "width": 64,
@@ -19016,62 +19286,12 @@
     {
       "textureResourceId": "texture/46-2",
       "materialResourceId": "material/texture-46-2",
-      "materialSlot": 47,
+      "materialSlot": 52,
       "textureArchive": 46,
       "textureRecord": 2,
       "width": 32,
       "height": 32,
       "mediaId": "material/texture-46-2"
-    },
-    {
-      "textureResourceId": "texture/468-0",
-      "materialResourceId": "material/texture-468-0",
-      "materialSlot": 48,
-      "textureArchive": 468,
-      "textureRecord": 0,
-      "width": 64,
-      "height": 32,
-      "mediaId": "material/texture-468-0"
-    },
-    {
-      "textureResourceId": "texture/468-2",
-      "materialResourceId": "material/texture-468-2",
-      "materialSlot": 49,
-      "textureArchive": 468,
-      "textureRecord": 2,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-468-2"
-    },
-    {
-      "textureResourceId": "texture/468-3",
-      "materialResourceId": "material/texture-468-3",
-      "materialSlot": 50,
-      "textureArchive": 468,
-      "textureRecord": 3,
-      "width": 64,
-      "height": 64,
-      "mediaId": "material/texture-468-3"
-    },
-    {
-      "textureResourceId": "texture/474-0",
-      "materialResourceId": "material/texture-474-0",
-      "materialSlot": 51,
-      "textureArchive": 474,
-      "textureRecord": 0,
-      "width": 64,
-      "height": 128,
-      "mediaId": "material/texture-474-0"
-    },
-    {
-      "textureResourceId": "texture/474-2",
-      "materialResourceId": "material/texture-474-2",
-      "materialSlot": 52,
-      "textureArchive": 474,
-      "textureRecord": 2,
-      "width": 64,
-      "height": 128,
-      "mediaId": "material/texture-474-2"
     },
     {
       "textureResourceId": "texture/67-0",
@@ -26144,7 +26364,45 @@
           ]
         }
       ],
-      "corpse": null,
+      "corpse": {
+        "textureArchive": 406,
+        "textureRecord": 5,
+        "pivot": {
+          "x": 0.5,
+          "y": 0
+        },
+        "worldSize": {
+          "x": 1.2125,
+          "y": 0.52500004
+        },
+        "sourceWorldSize": {
+          "x": 1.2125,
+          "y": 0.52500004
+        },
+        "frame": {
+          "atlasFrameIndex": 0,
+          "sourceRecord": 5,
+          "sourceFrame": 0,
+          "orientation": 0,
+          "mirrored": false,
+          "atlasFrame": {
+            "id": "frame/mobile-1/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 97,
+            "height": 42,
+            "sourceWidth": 97,
+            "sourceHeight": 42,
+            "mirrored": false
+          },
+          "sourceWorldSize": {
+            "x": 1.2125,
+            "y": 0.52500004
+          }
+        },
+        "mediaId": "sprite/mobile-1/corpse"
+      },
       "mediaId": "sprite/mobile-1"
     },
     {
@@ -28383,7 +28641,45 @@
           ]
         }
       ],
-      "corpse": null,
+      "corpse": {
+        "textureArchive": 380,
+        "textureRecord": 1,
+        "pivot": {
+          "x": 0.5,
+          "y": 0
+        },
+        "worldSize": {
+          "x": 2.15,
+          "y": 0.90000004
+        },
+        "sourceWorldSize": {
+          "x": 2.15,
+          "y": 0.90000004
+        },
+        "frame": {
+          "atlasFrameIndex": 0,
+          "sourceRecord": 1,
+          "sourceFrame": 0,
+          "orientation": 0,
+          "mirrored": false,
+          "atlasFrame": {
+            "id": "frame/mobile-138/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 86,
+            "height": 36,
+            "sourceWidth": 86,
+            "sourceHeight": 36,
+            "mirrored": false
+          },
+          "sourceWorldSize": {
+            "x": 2.15,
+            "y": 0.90000004
+          }
+        },
+        "mediaId": "sprite/mobile-138/corpse"
+      },
       "mediaId": "sprite/mobile-138"
     },
     {
@@ -30602,7 +30898,45 @@
           ]
         }
       ],
-      "corpse": null,
+      "corpse": {
+        "textureArchive": 380,
+        "textureRecord": 1,
+        "pivot": {
+          "x": 0.5,
+          "y": 0
+        },
+        "worldSize": {
+          "x": 2.15,
+          "y": 0.90000004
+        },
+        "sourceWorldSize": {
+          "x": 2.15,
+          "y": 0.90000004
+        },
+        "frame": {
+          "atlasFrameIndex": 0,
+          "sourceRecord": 1,
+          "sourceFrame": 0,
+          "orientation": 0,
+          "mirrored": false,
+          "atlasFrame": {
+            "id": "frame/mobile-141/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 86,
+            "height": 36,
+            "sourceWidth": 86,
+            "sourceHeight": 36,
+            "mirrored": false
+          },
+          "sourceWorldSize": {
+            "x": 2.15,
+            "y": 0.90000004
+          }
+        },
+        "mediaId": "sprite/mobile-141/corpse"
+      },
       "mediaId": "sprite/mobile-141"
     },
     {
@@ -34509,7 +34843,45 @@
           ]
         }
       ],
-      "corpse": null,
+      "corpse": {
+        "textureArchive": 401,
+        "textureRecord": 0,
+        "pivot": {
+          "x": 0.5,
+          "y": 0
+        },
+        "worldSize": {
+          "x": 1.1625,
+          "y": 0.52675784
+        },
+        "sourceWorldSize": {
+          "x": 1.1625,
+          "y": 0.52675784
+        },
+        "frame": {
+          "atlasFrameIndex": 0,
+          "sourceRecord": 0,
+          "sourceFrame": 0,
+          "orientation": 0,
+          "mirrored": false,
+          "atlasFrame": {
+            "id": "frame/mobile-3/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 64,
+            "height": 29,
+            "sourceWidth": 64,
+            "sourceHeight": 29,
+            "mirrored": false
+          },
+          "sourceWorldSize": {
+            "x": 1.1625,
+            "y": 0.52675784
+          }
+        },
+        "mediaId": "sprite/mobile-3/corpse"
+      },
       "mediaId": "sprite/mobile-3"
     },
     {
@@ -36728,7 +37100,45 @@
           ]
         }
       ],
-      "corpse": null,
+      "corpse": {
+        "textureArchive": 96,
+        "textureRecord": 2,
+        "pivot": {
+          "x": 0.5,
+          "y": 0
+        },
+        "worldSize": {
+          "x": 1.8527344,
+          "y": 0.8355469
+        },
+        "sourceWorldSize": {
+          "x": 1.8527344,
+          "y": 0.8355469
+        },
+        "frame": {
+          "atlasFrameIndex": 0,
+          "sourceRecord": 2,
+          "sourceFrame": 0,
+          "orientation": 0,
+          "mirrored": false,
+          "atlasFrame": {
+            "id": "frame/mobile-7/corpse/0/0",
+            "frameIndex": 0,
+            "x": 0,
+            "y": 0,
+            "width": 102,
+            "height": 46,
+            "sourceWidth": 102,
+            "sourceHeight": 46,
+            "mirrored": false
+          },
+          "sourceWorldSize": {
+            "x": 1.8527344,
+            "y": 0.8355469
+          }
+        },
+        "mediaId": "sprite/mobile-7/corpse"
+      },
       "mediaId": "sprite/mobile-7"
     }
   ]

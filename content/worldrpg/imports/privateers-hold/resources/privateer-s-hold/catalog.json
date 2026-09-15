@@ -225,106 +225,6 @@
     },
     {
       "schemaVersion": 1,
-      "id": "material/texture-119-0",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-0"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-119-1",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-1"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-119-2",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-2"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-119-3",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-3"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-119-4",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-4"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-120-0",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-0"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-120-1",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-1"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-120-2",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-2"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-120-3",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-3"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-120-4",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-4"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
       "id": "material/texture-121-0",
       "kind": "material",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
@@ -360,36 +260,6 @@
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [
         "texture/121-3"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-122-0",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/122-0"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-122-2",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/122-2"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-122-3",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/122-3"
       ],
       "spriteFrames": []
     },
@@ -450,6 +320,106 @@
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [
         "texture/147-2"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-19-0",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-19-1",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-1"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-19-2",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-2"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-19-3",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-19-4",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-4"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-20-0",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-20-1",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-1"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-20-2",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-2"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-20-3",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-20-4",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-4"
       ],
       "spriteFrames": []
     },
@@ -785,6 +755,36 @@
     },
     {
       "schemaVersion": 1,
+      "id": "material/texture-22-0",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/22-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-22-2",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/22-2"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-22-3",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/22-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
       "id": "material/texture-321-0",
       "kind": "material",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
@@ -830,6 +830,56 @@
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [
         "texture/341-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-368-0",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/368-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-368-2",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/368-2"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-368-3",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/368-3"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-374-0",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/374-0"
+      ],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "material/texture-374-2",
+      "kind": "material",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/374-2"
       ],
       "spriteFrames": []
     },
@@ -920,56 +970,6 @@
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [
         "texture/46-2"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-468-0",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/468-0"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-468-2",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/468-2"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-468-3",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/468-3"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-474-0",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/474-0"
-      ],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "material/texture-474-2",
-      "kind": "material",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/474-2"
       ],
       "spriteFrames": []
     },
@@ -1508,236 +1508,6 @@
     },
     {
       "schemaVersion": 1,
-      "id": "sprite/texture-119-0",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-0"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-119-0",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-119-1",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-1"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-119-1",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-119-2",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-2"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-119-2",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-119-3",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-3"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-119-3",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-119-4",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/119-4"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-119-4",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-120-0",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-0"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-120-0",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-120-1",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-1"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-120-1",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-120-2",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-2"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-120-2",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-120-3",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-3"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-120-3",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-120-4",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/120-4"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-120-4",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
       "id": "sprite/texture-121-0",
       "kind": "sprite",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
@@ -1816,75 +1586,6 @@
       "spriteFrames": [
         {
           "id": "frame/texture-121-3",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-122-0",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/122-0"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-122-0",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-122-2",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/122-2"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-122-2",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-122-3",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/122-3"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-122-3",
           "frameIndex": 0,
           "x": 0,
           "y": 0,
@@ -2028,6 +1729,236 @@
           "y": 0,
           "width": 64,
           "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-19-0",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-0"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-19-0",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-19-1",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-1"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-19-1",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-19-2",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-2"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-19-2",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-19-3",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-3"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-19-3",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-19-4",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/19-4"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-19-4",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-20-0",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-0"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-20-0",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-20-1",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-1"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-20-1",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-20-2",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-2"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-20-2",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-20-3",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-3"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-20-3",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-20-4",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/20-4"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-20-4",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
           "pivot": {
             "x": 0.5,
             "y": 0
@@ -2796,6 +2727,75 @@
     },
     {
       "schemaVersion": 1,
+      "id": "sprite/texture-22-0",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/22-0"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-22-0",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-22-2",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/22-2"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-22-2",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-22-3",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/22-3"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-22-3",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
       "id": "sprite/texture-321-0",
       "kind": "sprite",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
@@ -2902,6 +2902,121 @@
           "y": 0,
           "width": 64,
           "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-368-0",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/368-0"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-368-0",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 32,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-368-2",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/368-2"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-368-2",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-368-3",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/368-3"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-368-3",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 64,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-374-0",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/374-0"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-374-0",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 128,
+          "pivot": {
+            "x": 0.5,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "schemaVersion": 1,
+      "id": "sprite/texture-374-2",
+      "kind": "sprite",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [
+        "texture/374-2"
+      ],
+      "spriteFrames": [
+        {
+          "id": "frame/texture-374-2",
+          "frameIndex": 0,
+          "x": 0,
+          "y": 0,
+          "width": 64,
+          "height": 128,
           "pivot": {
             "x": 0.5,
             "y": 0
@@ -3109,121 +3224,6 @@
           "y": 0,
           "width": 32,
           "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-468-0",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/468-0"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-468-0",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 32,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-468-2",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/468-2"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-468-2",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-468-3",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/468-3"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-468-3",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 64,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-474-0",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/474-0"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-474-0",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 128,
-          "pivot": {
-            "x": 0.5,
-            "y": 0
-          }
-        }
-      ]
-    },
-    {
-      "schemaVersion": 1,
-      "id": "sprite/texture-474-2",
-      "kind": "sprite",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [
-        "texture/474-2"
-      ],
-      "spriteFrames": [
-        {
-          "id": "frame/texture-474-2",
-          "frameIndex": 0,
-          "x": 0,
-          "y": 0,
-          "width": 64,
-          "height": 128,
           "pivot": {
             "x": 0.5,
             "y": 0
@@ -3965,86 +3965,6 @@
     },
     {
       "schemaVersion": 1,
-      "id": "texture/119-0",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/119-1",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/119-2",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/119-3",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/119-4",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/120-0",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/120-1",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/120-2",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/120-3",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/120-4",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
       "id": "texture/121-0",
       "kind": "texture",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
@@ -4070,30 +3990,6 @@
     {
       "schemaVersion": 1,
       "id": "texture/121-3",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/122-0",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/122-2",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/122-3",
       "kind": "texture",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [],
@@ -4142,6 +4038,86 @@
     {
       "schemaVersion": 1,
       "id": "texture/147-2",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/19-0",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/19-1",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/19-2",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/19-3",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/19-4",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/20-0",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/20-1",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/20-2",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/20-3",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/20-4",
       "kind": "texture",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [],
@@ -4413,6 +4389,30 @@
     },
     {
       "schemaVersion": 1,
+      "id": "texture/22-0",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/22-2",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/22-3",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
       "id": "texture/321-0",
       "kind": "texture",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
@@ -4446,6 +4446,46 @@
     {
       "schemaVersion": 1,
       "id": "texture/341-3",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/368-0",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/368-2",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/368-3",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/374-0",
+      "kind": "texture",
+      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
+      "dependencies": [],
+      "spriteFrames": []
+    },
+    {
+      "schemaVersion": 1,
+      "id": "texture/374-2",
       "kind": "texture",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [],
@@ -4518,46 +4558,6 @@
     {
       "schemaVersion": 1,
       "id": "texture/46-2",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/468-0",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/468-2",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/468-3",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/474-0",
-      "kind": "texture",
-      "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
-      "dependencies": [],
-      "spriteFrames": []
-    },
-    {
-      "schemaVersion": 1,
-      "id": "texture/474-2",
       "kind": "texture",
       "artifactId": "artifact/dungeon/privateer-s-hold/resource-catalog",
       "dependencies": [],

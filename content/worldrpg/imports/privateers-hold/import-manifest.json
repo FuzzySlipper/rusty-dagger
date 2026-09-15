@@ -14,9 +14,24 @@
       "byteLen": 776
     },
     {
+      "sourcePath": "arena2/BANK00I0.IMG",
+      "contentHash": "1d1122821846a6bf75f6ccf8cff03e0578c3e86ca065b917554aa449616c67d9",
+      "byteLen": 40737
+    },
+    {
       "sourcePath": "arena2/BLOCKS.BSA",
       "contentHash": "6f5a4c8d9401c1b00ef83eaac9b0c6c32f53cef6eaa4c7d7027deb739bde4795",
       "byteLen": 32884997
+    },
+    {
+      "sourcePath": "arena2/BOOK00I0.IMG",
+      "contentHash": "17e9379b0cf078872ae3208434943ca07c563b496d0bd6760d65e55735a98625",
+      "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/CHGN00I0.IMG",
+      "contentHash": "3e25f3ffa33d25a3e5b963e066f5fd03465e84c3405adcf937a88732ee76e5b7",
+      "byteLen": 64768
     },
     {
       "sourcePath": "arena2/CLIMATE.PAK",
@@ -29,9 +44,24 @@
       "byteLen": 7661766
     },
     {
+      "sourcePath": "arena2/DIE_00I0.IMG",
+      "contentHash": "af893c52b2cf9a7b8bcd073fbc6ea1ead04c7d725596d3da490c411fab723b0f",
+      "byteLen": 64768
+    },
+    {
       "sourcePath": "arena2/FONT0003.FNT",
       "contentHash": "53d4b92cfcd0d2158d9af2c2d6fa0f97736db571e80b8b2476ceae944673ef54",
       "byteLen": 8644
+    },
+    {
+      "sourcePath": "arena2/GILD00I0.IMG",
+      "contentHash": "ecc9ff86035142db9ecb0550022a9aa1594b98fcd459af2e65ff0ab13ec45140",
+      "byteLen": 6642
+    },
+    {
+      "sourcePath": "arena2/GILD01I0.IMG",
+      "contentHash": "b0bb6302970e826578ddba3079d86cf09051f2a69d963ee27a09a2d3c9019595",
+      "byteLen": 6642
     },
     {
       "sourcePath": "arena2/INFO00I0.IMG",
@@ -42,6 +72,31 @@
       "sourcePath": "arena2/INVE00I0.IMG",
       "contentHash": "ebbe1b8615db14c8c7011b8a2958b53bc7d43e3d8ee9ac40bd19f6134bee4b66",
       "byteLen": 64000
+    },
+    {
+      "sourcePath": "arena2/INVE08I0.IMG",
+      "contentHash": "f7aca19c0c039a0eb39fb3125ea1d56396f4cb4695889e3c4fbed1d784e5d33e",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE10I0.IMG",
+      "contentHash": "2a0330875302f75547c653d0fcf2d93d66cb54062455416911ebac85b7426385",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE11I0.IMG",
+      "contentHash": "63490b0d9af2f4be47573ce890169059c2f82d5af63c11807c71bce40510bbb6",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE12I0.IMG",
+      "contentHash": "b245a5ef3315423fff64dde1a51b1f2c07b4a4f1b7d755828e15e1757c3c5356",
+      "byteLen": 7422
+    },
+    {
+      "sourcePath": "arena2/INVE14I0.IMG",
+      "contentHash": "5e22b480843239f705004e6473bc505b53d2988287051a73a66ee05b67a7427f",
+      "byteLen": 7422
     },
     {
       "sourcePath": "arena2/MAIN00I0.IMG",
@@ -74,6 +129,41 @@
       "byteLen": 776
     },
     {
+      "sourcePath": "arena2/PICK02I0.IMG",
+      "contentHash": "20d3e5daf6bfed90d928602f05c9a9e61dce259759ffa149c514761c5561dc26",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/PICK03I0.IMG",
+      "contentHash": "d3b99cbe6d182fda6849dfbf6ed33e50a6e64ca29f550082c0f57cd825b7e1c0",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/PRIS00I0.IMG",
+      "contentHash": "3e790a47860d25b255de31a2aec35bae736b855e856b0309b0721de2c905d04d",
+      "byteLen": 64768
+    },
+    {
+      "sourcePath": "arena2/REST00I0.IMG",
+      "contentHash": "7f4bec7fa54cf633f786de30c763ae1ccbccfddfad5bec2c801acf4c550da42c",
+      "byteLen": 6326
+    },
+    {
+      "sourcePath": "arena2/REST01I0.IMG",
+      "contentHash": "8d9f0c27b38393ec9f9064041b6376352ea751d16fbc4de30ea09aecfe9d856a",
+      "byteLen": 4317
+    },
+    {
+      "sourcePath": "arena2/REST02I0.IMG",
+      "contentHash": "a5f49e72a85093e22503942ea57f02ba19952dfd2e8bc47e31a55eb634ec57a4",
+      "byteLen": 4317
+    },
+    {
+      "sourcePath": "arena2/SHOP00I0.IMG",
+      "contentHash": "bf13a875e558bae609e47cb12d228244c7ee250146b956f3343653e5c1f951b7",
+      "byteLen": 1011
+    },
+    {
       "sourcePath": "arena2/TEXTURE.000",
       "contentHash": "b6adacc9b6a7f604bb82d82136c593c9d23b59d9c3576a041ecc01951afae680",
       "byteLen": 2586
@@ -82,6 +172,21 @@
       "sourcePath": "arena2/TEXTURE.001",
       "contentHash": "cca317a742d13a6aa1ba323ba45d12c2e716f089cbd86e1d2b1e7c3262d66bfb",
       "byteLen": 2586
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.019",
+      "contentHash": "f0b0c1722317e2205224aec3096e4bbc4e431e272fb72b903d93eb2da7792893",
+      "byteLen": 16650
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.020",
+      "contentHash": "6bb41214dddaa706a3131d2ecff551864abae4ee0b1716b86ee0f2be895c70c1",
+      "byteLen": 16650
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.022",
+      "contentHash": "49d7dda4cc1ff0147c2a10b77954e19dd81cab2ee8844af1b47b152a8f82a8d8",
+      "byteLen": 16650
     },
     {
       "sourcePath": "arena2/TEXTURE.041",
@@ -124,24 +229,14 @@
       "byteLen": 23626
     },
     {
-      "sourcePath": "arena2/TEXTURE.119",
-      "contentHash": "005d4a05a7bc72dbb4bbc9915f6d022afcebbe294a2c7a40822d04e3c9c63dc3",
-      "byteLen": 19210
-    },
-    {
-      "sourcePath": "arena2/TEXTURE.120",
-      "contentHash": "6d0450088ebc46f23c4c1de82338d68d96e348d5cfb8ecbe8296a49ef7a601b4",
-      "byteLen": 19210
+      "sourcePath": "arena2/TEXTURE.096",
+      "contentHash": "63538968d94c63a2701f28b25fb3baebaac92fd1d94eb592900b86bd4268eb1c",
+      "byteLen": 36154
     },
     {
       "sourcePath": "arena2/TEXTURE.121",
       "contentHash": "d8cfd2170ce0868c9c1ca36e59f2bdc2882ebdbcad29863fc4bbc29cce9b336f",
       "byteLen": 30938
-    },
-    {
-      "sourcePath": "arena2/TEXTURE.122",
-      "contentHash": "6989496f5162c172b4f75b049ac3df62b1e4a61d7480888dec41cbf4429c3191",
-      "byteLen": 19770
     },
     {
       "sourcePath": "arena2/TEXTURE.141",
@@ -239,6 +334,16 @@
       "byteLen": 16602
     },
     {
+      "sourcePath": "arena2/TEXTURE.368",
+      "contentHash": "5846b6d926d9192db42c75a80acf4aeeb21c2d049fcf6934beabdd1a6fb4e6ef",
+      "byteLen": 33274
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.374",
+      "contentHash": "d224fb90df62685616e9a83357272806f144191e4855feced8a650b7d0cee0e1",
+      "byteLen": 35034
+    },
+    {
       "sourcePath": "arena2/TEXTURE.380",
       "contentHash": "5f7255f09d942e86cdcf559c8123c969382fd1fbf8c3d6d783d6dd40763fa4c5",
       "byteLen": 27519
@@ -247,6 +352,11 @@
       "sourcePath": "arena2/TEXTURE.401",
       "contentHash": "ed01c0564fe92a4707f14dd47e46ae12bc008c19efc85bf6e4ac597f19cde89e",
       "byteLen": 40506
+    },
+    {
+      "sourcePath": "arena2/TEXTURE.406",
+      "contentHash": "96f59d7192d9c5c859029caed812c49b627a3c9d8f0c45657bf4e301d183e4a3",
+      "byteLen": 38458
     },
     {
       "sourcePath": "arena2/TEXTURE.449",
@@ -259,16 +369,6 @@
       "byteLen": 74522
     },
     {
-      "sourcePath": "arena2/TEXTURE.468",
-      "contentHash": "65318f78425086dc85eac7d6d91f82b0120055ab7db4663e547fbac2b1eb9f11",
-      "byteLen": 33274
-    },
-    {
-      "sourcePath": "arena2/TEXTURE.474",
-      "contentHash": "db33cf551b0d848100f2f072623485edd46f41d122e000315256ec5342259097",
-      "byteLen": 35034
-    },
-    {
       "sourcePath": "arena2/TEXTURE.482",
       "contentHash": "01651358a870c7f97c58bcb88354c2db7c58efeacfd21487439822f00416ba08",
       "byteLen": 355018
@@ -277,6 +377,11 @@
       "sourcePath": "arena2/TEXTURE.484",
       "contentHash": "32c3c0e4f78792041c78d6555753cba819a593336bbc91771c6b90dccbd166c7",
       "byteLen": 327366
+    },
+    {
+      "sourcePath": "arena2/TITL00I0.IMG",
+      "contentHash": "52119f35c30e9d0f91753aebe1040fb190b7c60970b4392c61846a53e75cb27c",
+      "byteLen": 64768
     },
     {
       "sourcePath": "arena2/WEAPON01.CIF",
@@ -346,6 +451,972 @@
   ],
   "artifacts": [
     {
+      "relativePath": "geometry/index.json",
+      "contentHash": "669b41f3f592cfcb94c162c6b219c55e6c679afc4bd45d31f85f16ca656ffc11",
+      "byteLen": 141173,
+      "dependsOnPaths": [
+        "geometry/mesh-41017.json",
+        "geometry/mesh-41018.json",
+        "geometry/mesh-41020.json",
+        "geometry/mesh-41042.json",
+        "geometry/mesh-41109.json",
+        "geometry/mesh-41110.json",
+        "geometry/mesh-41112.json",
+        "geometry/mesh-41123.json",
+        "geometry/mesh-41302.json",
+        "geometry/mesh-41303.json",
+        "geometry/mesh-41305.json",
+        "geometry/mesh-41308.json",
+        "geometry/mesh-41311.json",
+        "geometry/mesh-41312.json",
+        "geometry/mesh-41313.json",
+        "geometry/mesh-41322.json",
+        "geometry/mesh-41327.json",
+        "geometry/mesh-41735.json",
+        "geometry/mesh-41822.json",
+        "geometry/mesh-41823.json",
+        "geometry/mesh-41824.json",
+        "geometry/mesh-41825.json",
+        "geometry/mesh-41826.json",
+        "geometry/mesh-41827.json",
+        "geometry/mesh-41828.json",
+        "geometry/mesh-41829.json",
+        "geometry/mesh-41830.json",
+        "geometry/mesh-41831.json",
+        "geometry/mesh-41832.json",
+        "geometry/mesh-41834.json",
+        "geometry/mesh-42509.json",
+        "geometry/mesh-42510.json",
+        "geometry/mesh-42533.json",
+        "geometry/mesh-42534.json",
+        "geometry/mesh-42545.json",
+        "geometry/mesh-42557.json",
+        "geometry/mesh-42558.json",
+        "geometry/mesh-42569.json",
+        "geometry/mesh-42570.json",
+        "geometry/mesh-55000.json",
+        "geometry/mesh-55001.json",
+        "geometry/mesh-55002.json",
+        "geometry/mesh-55003.json",
+        "geometry/mesh-55004.json",
+        "geometry/mesh-55005.json",
+        "geometry/mesh-55012.json",
+        "geometry/mesh-58006.json",
+        "geometry/mesh-58008.json",
+        "geometry/mesh-58009.json",
+        "geometry/mesh-58048.json",
+        "geometry/mesh-58049.json",
+        "geometry/mesh-58050.json",
+        "geometry/mesh-59007.json",
+        "geometry/mesh-60200.json",
+        "geometry/mesh-60500.json",
+        "geometry/mesh-61003.json",
+        "geometry/mesh-61004.json",
+        "geometry/mesh-61005.json",
+        "geometry/mesh-61006.json",
+        "geometry/mesh-61011.json",
+        "geometry/mesh-61014.json",
+        "geometry/mesh-61018.json",
+        "geometry/mesh-61019.json",
+        "geometry/mesh-61020.json",
+        "geometry/mesh-61024.json",
+        "geometry/mesh-61026.json",
+        "geometry/mesh-61027.json",
+        "geometry/mesh-61030.json",
+        "geometry/mesh-61202.json",
+        "geometry/mesh-61203.json",
+        "geometry/mesh-61204.json",
+        "geometry/mesh-61211.json",
+        "geometry/mesh-61218.json",
+        "geometry/mesh-61219.json",
+        "geometry/mesh-61220.json",
+        "geometry/mesh-62008.json",
+        "geometry/mesh-62009.json",
+        "geometry/mesh-62010.json",
+        "geometry/mesh-62323.json",
+        "geometry/mesh-62325.json",
+        "geometry/mesh-62328.json",
+        "geometry/mesh-63000.json",
+        "geometry/mesh-63004.json",
+        "geometry/mesh-63007.json",
+        "geometry/mesh-63023.json",
+        "geometry/mesh-63033.json",
+        "geometry/mesh-63047.json",
+        "geometry/mesh-63058.json",
+        "geometry/mesh-63200.json",
+        "geometry/mesh-63203.json",
+        "geometry/mesh-63204.json",
+        "geometry/mesh-63207.json",
+        "geometry/mesh-63229.json",
+        "geometry/mesh-63230.json",
+        "geometry/mesh-63233.json",
+        "geometry/mesh-63235.json",
+        "geometry/mesh-63240.json",
+        "geometry/mesh-63251.json",
+        "geometry/mesh-63256.json",
+        "geometry/mesh-67005.json",
+        "geometry/mesh-67008.json",
+        "geometry/mesh-67010.json",
+        "geometry/mesh-67011.json",
+        "geometry/mesh-67014.json",
+        "geometry/mesh-67015.json",
+        "geometry/mesh-67017.json",
+        "geometry/mesh-67018.json",
+        "geometry/mesh-67020.json",
+        "geometry/mesh-67023.json",
+        "geometry/mesh-67024.json",
+        "geometry/mesh-67025.json",
+        "geometry/mesh-67027.json",
+        "geometry/mesh-68000.json",
+        "geometry/mesh-70000.json",
+        "geometry/mesh-70007.json",
+        "geometry/mesh-70008.json",
+        "geometry/mesh-70014.json",
+        "geometry/mesh-70113.json",
+        "geometry/mesh-70114.json",
+        "geometry/mesh-70122.json",
+        "geometry/mesh-70300.json",
+        "geometry/mesh-70503.json",
+        "geometry/mesh-70703.json",
+        "geometry/mesh-70801.json",
+        "geometry/mesh-70806.json",
+        "geometry/mesh-71002.json",
+        "geometry/mesh-71011.json",
+        "geometry/mesh-71012.json",
+        "geometry/mesh-71106.json",
+        "geometry/mesh-72001.json",
+        "geometry/mesh-72002.json",
+        "geometry/mesh-72006.json",
+        "geometry/mesh-72007.json",
+        "geometry/mesh-72008.json",
+        "geometry/mesh-72011.json",
+        "geometry/mesh-72019.json",
+        "geometry/mesh-74009.json"
+      ]
+    },
+    {
+      "relativePath": "geometry/mesh-41017.json",
+      "contentHash": "29896f3d27608a54c926e7edbfb6e403d18afa5aa7c5d8dafe855b8d3bda0adc",
+      "byteLen": 3931,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41018.json",
+      "contentHash": "48320e68ee44dc3678e05944037353ec8dc49fcbacd9796fc48305d9c2e4e047",
+      "byteLen": 7029,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41020.json",
+      "contentHash": "b429632cf2b6dc5230322d79eafb3cbefb34b864f6b99d544d9f3cbdb7c9f6d8",
+      "byteLen": 12131,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41042.json",
+      "contentHash": "0b4913c76d327a4a26b6adfe974c9926b7944691b8b7242126c4edb7fe9ae730",
+      "byteLen": 11102,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41109.json",
+      "contentHash": "e8c8fc9c7fd62ffa9b4bf860342ba1df6f78806c47a80abb65691af407fc3aea",
+      "byteLen": 11707,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41110.json",
+      "contentHash": "0464530779462c91d2193236c073841dff8b6e9af871fa108d7e7bc3546b5079",
+      "byteLen": 11829,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41112.json",
+      "contentHash": "0703719b62778e0b624a809c58f978dd33a40a032fbfb0404a54332eed28f510",
+      "byteLen": 11750,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41123.json",
+      "contentHash": "50aee67215adca028783c3690e59674890f392d9aab47bcf4cca90d575c64c56",
+      "byteLen": 12487,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41302.json",
+      "contentHash": "418fc362e88e3611d614991feb11d58161fa27a874c33f3154126fe5a9e09873",
+      "byteLen": 23996,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41303.json",
+      "contentHash": "270ccc8ee33dba71c776dbb3ff83d94fa6327d8c90951b1061051e044e609960",
+      "byteLen": 18428,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41305.json",
+      "contentHash": "e495425acc8a7aa1dddd4f991f2d502de021aec5948ade36dbc7a848542c14f6",
+      "byteLen": 10030,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41308.json",
+      "contentHash": "fbb99e47927570b56a85a73a0269b82832c6bd793a1552cac75ba16dc96dfd9c",
+      "byteLen": 7099,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41311.json",
+      "contentHash": "da4ccc635664f2d6f0997210d5bcffaee01b9140d1eb024818fecac009e52f6b",
+      "byteLen": 6420,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41312.json",
+      "contentHash": "1bcd6882b92a78df318fb4a42a03d87e72c7e6a0c2eb9a90ce7e707f18da682e",
+      "byteLen": 29052,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41313.json",
+      "contentHash": "6c5c15d8b964cf7a7e7e8d99e369ad91d0eb499126feb6cb897f80fc891d9ae3",
+      "byteLen": 28478,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41322.json",
+      "contentHash": "fef430626df7b2152134d66c8517d5525716f1a55cd1f40f9cc3ff4ba96eed91",
+      "byteLen": 8527,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41327.json",
+      "contentHash": "a4c5e22cdc93c4821809954b27b7a0a546ffb725ad5a4604ecf3cd3b89db04a9",
+      "byteLen": 10984,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41735.json",
+      "contentHash": "6efe5147f4efd1e0544fd6f2310a0b10b8ef528cbf7a73904184bc42717ea55b",
+      "byteLen": 26125,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41822.json",
+      "contentHash": "40bc9488f2e9a51e0bf55871e4f56c0e6a89cdd23b259bad70cf1e3050c8449f",
+      "byteLen": 4247,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41823.json",
+      "contentHash": "3f719c6be144b55fa6d78460c84593960100bdd9ddf80fe22a6fd3fa241704c9",
+      "byteLen": 4158,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41824.json",
+      "contentHash": "fb9f56d4342b3d2fd9a64958c5863413d05dacc7305c1fa735c2f7bee37ddd98",
+      "byteLen": 4068,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41825.json",
+      "contentHash": "7cde26e1c6cf74f0e72f1190c2d269d3b9eb9b21ce096f933c3b19a2fe4ec85f",
+      "byteLen": 3791,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41826.json",
+      "contentHash": "8f4f5eabbe7eec04b88b207fdcee4affcd2ed77251935b21212bb1e5bfdd648f",
+      "byteLen": 3865,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41827.json",
+      "contentHash": "a919cd1b142e707fd81d5fc5bb06e8d54087a6753b2d9cf358ffc48d07fad7d7",
+      "byteLen": 3857,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41828.json",
+      "contentHash": "f84ed5b0c2a539d64078b27eb62d8a88cd52046ad06ddbd49d9475c82f740441",
+      "byteLen": 3762,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41829.json",
+      "contentHash": "43983a528254c1289b6485e834a3070e80f0fbb6bb6890cb6b64e9a38b89e155",
+      "byteLen": 3865,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41830.json",
+      "contentHash": "828b3607baba629e161f3f937bd103cd57ed1eef57c8feaa42ee61b3d9f33932",
+      "byteLen": 4099,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41831.json",
+      "contentHash": "57dfd9c6a117f1ee2f1957c240a1d1e910dea37cf1e1d72acf968a1effff85c9",
+      "byteLen": 3740,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41832.json",
+      "contentHash": "0c0ce6064fc86dc52f3ba0332d711ae1f67f4945e2853491666fedbc47d9022e",
+      "byteLen": 4249,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-41834.json",
+      "contentHash": "15850ca4d5339ae60935be33c90ae5112a70e973564fe7c3d98c5852844ddd43",
+      "byteLen": 4139,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42509.json",
+      "contentHash": "75fa0f22610834da11015e0173d48945a2e71955b2c31814bc5e59fc260ed7cb",
+      "byteLen": 3209,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42510.json",
+      "contentHash": "e3ef956f217617f4df9421142c59dacacba430412342cf0ab071ee26e80ff8a7",
+      "byteLen": 3209,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42533.json",
+      "contentHash": "0bb38a8fe0f894e36fc3b0d2637477e53c286de6c5561bd4ab63c96d03238611",
+      "byteLen": 3228,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42534.json",
+      "contentHash": "f0857b8c2ccb09e6db6dca1f75f59de9b812279605a14cf2ca4ed40904161f60",
+      "byteLen": 3227,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42545.json",
+      "contentHash": "5e252a099c5e5cf3264a9925b9ecebcf15e2f21a93374da15718f371fd517c82",
+      "byteLen": 6746,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42557.json",
+      "contentHash": "98762fc9750b9abc54e8c29cb13c0879fba4ec17e0fafa1110baffa04363762e",
+      "byteLen": 3231,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42558.json",
+      "contentHash": "4ecf29b6370c1b158cb417a9a03cb965333c9935832cf5b98da4a53707da319d",
+      "byteLen": 3231,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42569.json",
+      "contentHash": "5020b46363ecc0e49652776c586b60af97bf2a35b013bff0e2497233f815bae5",
+      "byteLen": 3231,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-42570.json",
+      "contentHash": "86093e616613a896a810799ac95854ba45edf333e03926fefd6bc0369e0fc861",
+      "byteLen": 3231,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-55000.json",
+      "contentHash": "1d9b8ae8d615d81ead8a35863d37f180754aed435e6e47cd331aa12936da660c",
+      "byteLen": 3830,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-55001.json",
+      "contentHash": "8a2d851f27b846bfb8a556d5eb151ae8300908e2f541d4370809ae982ce278ed",
+      "byteLen": 3830,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-55002.json",
+      "contentHash": "4b1336e6ade05a66562a9919afd911f65a0d02ad59751bcfb75d1b45fe603c5b",
+      "byteLen": 3830,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-55003.json",
+      "contentHash": "24814abd256a81c993b23eef4fa910d7dcf080f24f64539fde0c8536686d6929",
+      "byteLen": 3830,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-55004.json",
+      "contentHash": "e64fe503cf3f1c970c75e5d3c083102148f52390d062d1596baa66da973942bf",
+      "byteLen": 3830,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-55005.json",
+      "contentHash": "81f99ad7574156d8620ff91b3b792cc56afe6c595b2853a2ca5fc462c304da41",
+      "byteLen": 3830,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-55012.json",
+      "contentHash": "4d98544b731ddcd1cf62325c7f15a61c6ef6f7f8f4ed936bf6b26b08b3091543",
+      "byteLen": 4051,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-58006.json",
+      "contentHash": "12207d40b607367fa811fd54b4cd9ffe0166faebc3c5e7c5a00c15e8a01aa59f",
+      "byteLen": 10075,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-58008.json",
+      "contentHash": "2e7fe9f750de3c5409389d666b167d424037265301de0f0881a02a5b36ab18e3",
+      "byteLen": 32198,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-58009.json",
+      "contentHash": "1c0b71062ab5765db34a6f8f4a7643a63d2dc371152875860b1f2d3fa7db6487",
+      "byteLen": 38521,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-58048.json",
+      "contentHash": "11ce667d65757c193c1122e1c023abc2622480133800013831ec9c55c115f9d8",
+      "byteLen": 7636,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-58049.json",
+      "contentHash": "63098bccd22a17496ac74542bcf24e061bf4445a1ad8ebc43a713e77c19a0081",
+      "byteLen": 7635,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-58050.json",
+      "contentHash": "c9b144965e9fd5e288b9b374474e94e5e190fb0e41c0be44816188d6dda505b5",
+      "byteLen": 43769,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-59007.json",
+      "contentHash": "230593b85307f9cf5aea2b07eeba22ba9cfca3b70af79a533ac37ea3a69099d7",
+      "byteLen": 40667,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-60200.json",
+      "contentHash": "abfad9f03f5bf0c531408e356901ee367c72d0f4037419375e2dca42814d48ee",
+      "byteLen": 25142,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-60500.json",
+      "contentHash": "8384aa78ac465b54e752741d7a4187becdbf533acfe75d167b39d922fc34389d",
+      "byteLen": 4744,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61003.json",
+      "contentHash": "b02b9a99b6a57eb07f29b873207cc2cb3ad298bcef687d76b8903f0bfce70ce0",
+      "byteLen": 4786,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61004.json",
+      "contentHash": "a0a4555335a97cdc9278c674a2c4ad5543f944d3f4bcf1d235c7bf79c7d74519",
+      "byteLen": 13937,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61005.json",
+      "contentHash": "0d96ff97de5803c08124799acb3476ebcc3ca640b763bb07f2afc1b89ec6ab61",
+      "byteLen": 4983,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61006.json",
+      "contentHash": "9af4a7ec3f3bd21a94449d3d7bae02b64229ce432d9807367f7c9963136c67c2",
+      "byteLen": 4534,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61011.json",
+      "contentHash": "1480c82c9e2e29b667bfcd2c090cb0a2a99cc886afbf5ef9854849fd8f9916ba",
+      "byteLen": 9230,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61014.json",
+      "contentHash": "b6f509d9bfe8244a7a6242e66036e647661d193756a9e7971a5d45acb1e0bf1f",
+      "byteLen": 7999,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61018.json",
+      "contentHash": "9ee2068770a280c89cd490f19313cd135aa759d173e4bdc5101b2fa3dfa1fb62",
+      "byteLen": 25132,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61019.json",
+      "contentHash": "fb74af730e1ba682b9642e24937778ba19fec07026a4aa4de86cf34af7df97c6",
+      "byteLen": 10404,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61020.json",
+      "contentHash": "c802e8f35ebef0fbdab4a4ffbfc3a07ae4634cb9ea6be1ebda59a8d1ec39fe05",
+      "byteLen": 10693,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61024.json",
+      "contentHash": "f6c5a95193b746d42dd8aa9049670874fcb8646eaece34e2d26e38c6c2bd40df",
+      "byteLen": 12670,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61026.json",
+      "contentHash": "fba00077b5c1b3448d0f2d0d3213c5767ddb9dcd0c1f53501939fda4c34e2f68",
+      "byteLen": 5685,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61027.json",
+      "contentHash": "f4ca369e5c0b203f325b737e04d8ba05fa3fe13fd2c9e876c81b247b31f75f11",
+      "byteLen": 4386,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61030.json",
+      "contentHash": "ff6cfe9a70ca9489278352b9ab82389c248b782afd0709d8e7bb9af203395ce1",
+      "byteLen": 8344,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61202.json",
+      "contentHash": "dd7da09ddeb8fb0230a8ac8f9a240d27873b87d21358530ebcb2022372629fa0",
+      "byteLen": 8398,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61203.json",
+      "contentHash": "f91628f54b79b4cb55ed6e34250ed0536897bd7047b9926034320376a613b786",
+      "byteLen": 4786,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61204.json",
+      "contentHash": "ccd215e4343b9f35dc502861bcd0278ce45a3473afb9de8fa99b7eebc2686959",
+      "byteLen": 13937,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61211.json",
+      "contentHash": "50430814432b84b5f0ee8969836fa3391f5c6b782c03267c87134b74d288e657",
+      "byteLen": 9230,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61218.json",
+      "contentHash": "4c224e8b3c3f06f76192132250e04602f7300c5ccc93158821638ac3fbf3075a",
+      "byteLen": 25878,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61219.json",
+      "contentHash": "f746029845a71ee4d9e36fb40d8b614365e9e1f2868658882c4e7fb34d95c6bb",
+      "byteLen": 10404,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-61220.json",
+      "contentHash": "cdba25ddf743299dcbb229710f41f937fca7808191a21d0801a86c440983e199",
+      "byteLen": 10693,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-62008.json",
+      "contentHash": "7ed553ba7662ef51162fa714801e179db1663eb16b2eccdef3202d9b61506ee9",
+      "byteLen": 7885,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-62009.json",
+      "contentHash": "753a3ba9f49c9e8375dadafe6af840648b96b870f9bea0d16b676264287feb82",
+      "byteLen": 7881,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-62010.json",
+      "contentHash": "4cc1a7495393a9bcd59bb5905aaf9151f6f651605c8fc669240d2a128d77dde9",
+      "byteLen": 7884,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-62323.json",
+      "contentHash": "4eb6fa5a84e4bf00b327f847775d9ed2e52e96766681ad9bc64d1bb14acf2cab",
+      "byteLen": 31376,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-62325.json",
+      "contentHash": "73bb84ef3329c8f0c9ebe63381b396826c5cda55d26512fb05187a1794e99119",
+      "byteLen": 35769,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-62328.json",
+      "contentHash": "018ecc1576f2eb1b0d37a7372c3419b3487c688822d16288267114d93f1ca181",
+      "byteLen": 30594,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63000.json",
+      "contentHash": "0f3c5a017dabd97bd0f9f4f44877b4825d1b16a3cc27b32d9fa3c8fcad0a0e45",
+      "byteLen": 5065,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63004.json",
+      "contentHash": "0e14959037a18bd9e217d5e01eaf1b8f3f743dfff2e03ff9718b9126e37139d3",
+      "byteLen": 11147,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63007.json",
+      "contentHash": "2fbb428e4cb9c3b97dfe42afc2add205c46b9c01c0f5f547288ce4cfa7123f90",
+      "byteLen": 11164,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63023.json",
+      "contentHash": "462bbdd47dd4ee3f0d566f32f5113df017341b57168c8892545e9394ecd8f25f",
+      "byteLen": 9663,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63033.json",
+      "contentHash": "c4d58ad2afef1f0794ab8808297a2aad5058622e564dda04eeefede8dc42eab2",
+      "byteLen": 8242,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63047.json",
+      "contentHash": "97a30a004917c99fa4a09abe603bb9f264eecf7c4fa0db1e0057b63abd93b857",
+      "byteLen": 21882,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63058.json",
+      "contentHash": "c542660e7fd07bdab9fda25305d5f861ccd6aa4dcc6aef42bef03a9507979d00",
+      "byteLen": 16133,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63200.json",
+      "contentHash": "5ca4039b11b25aa5ff09d60fafbce57ab60790b5f7414299dcdb893abf86aa8c",
+      "byteLen": 5065,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63203.json",
+      "contentHash": "40dfed42a4cff5c28c50b89c8b4031483adf6adfeaf024efefcf7a6d4b18994e",
+      "byteLen": 5939,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63204.json",
+      "contentHash": "186cf4d4714497f72c7366b4c72b952c83262aa8f119593d46e58e0255ad3aec",
+      "byteLen": 11147,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63207.json",
+      "contentHash": "4bab189bd46f0c8efa73e6866ef2274454d6a31a811af90902068088c23977a5",
+      "byteLen": 11164,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63229.json",
+      "contentHash": "9ea21540bb0dfccc55f48326855feb6d99259091955514c9520d073a9d5954ca",
+      "byteLen": 15236,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63230.json",
+      "contentHash": "313a3a513742c704836b9f4b0a7295700edd4ea8d0751141e57fe45381b613bc",
+      "byteLen": 9864,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63233.json",
+      "contentHash": "3ea1cdd260353ba4c52430f61986e11c31a0ba794a626fc44f8e3338be90045f",
+      "byteLen": 8242,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63235.json",
+      "contentHash": "6f4528e08853d7919e2cac0919b7f175a9bf46feeb64722667a91d0a8ec85d92",
+      "byteLen": 4827,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63240.json",
+      "contentHash": "5873ae863b6260d22a29e9629ee5ff59d0fbb70ca2328b01d92377e289af1a44",
+      "byteLen": 4961,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63251.json",
+      "contentHash": "1c97724de041ac13863882049b87cc171847e7d48c69754db4776399400e0bb0",
+      "byteLen": 13491,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-63256.json",
+      "contentHash": "8d1beccd4a266a5df29b2c3fe3723a682be153c0674b1f5d1793ccc3510950f0",
+      "byteLen": 10554,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67005.json",
+      "contentHash": "d54a5071659b995cb7283a96a9029f16eb8df525c3e8f452f67fe6f003ac9e79",
+      "byteLen": 7148,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67008.json",
+      "contentHash": "d6a8a2649366a1f918e8c4832177e51ead53dccc0a8af653a18b2a2c4d30230b",
+      "byteLen": 5782,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67010.json",
+      "contentHash": "8f80b07f38e7c56fd55d72ea624b8fe5659f6a3fe4b73ac6f065faca991ecdf0",
+      "byteLen": 3425,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67011.json",
+      "contentHash": "cb19c04725293aa3d70f822553ff1c36964521139ea2852dcf2c051fc3a768cc",
+      "byteLen": 7587,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67014.json",
+      "contentHash": "16686d168c823b4370ffe69b514f9eda56e602cca90b148e7913bb7a178c5828",
+      "byteLen": 3844,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67015.json",
+      "contentHash": "824a54c2e6252059494da1344ae68702dc6e029dd450f86f7fd725859ef41866",
+      "byteLen": 3512,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67017.json",
+      "contentHash": "6597b179e449597de732508c537175bab360c5b29a68ea938a87cc25e7e9c25b",
+      "byteLen": 8153,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67018.json",
+      "contentHash": "b64940ba1efc231396a48fcc1824ab87390083ae1779d774a69b901ec908606a",
+      "byteLen": 8419,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67020.json",
+      "contentHash": "ba8d0f072a4f5b3a8c80ace0f20d995598f0e28387a94db058cd61ce88c81242",
+      "byteLen": 12524,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67023.json",
+      "contentHash": "612fa4c61db7dd8bb54bab930da44bbcb31172ac8605777c4770a520a92731d2",
+      "byteLen": 9811,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67024.json",
+      "contentHash": "1b60d0fb84feae4e2da50f2e40eea2e3df42be29c873378245bdee7fee46125f",
+      "byteLen": 3438,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67025.json",
+      "contentHash": "3867cedfbb51bcab6dbdbd94b34b377d49c505ccf4d868f37f7ae21df56dd927",
+      "byteLen": 24562,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-67027.json",
+      "contentHash": "6406c09a2e2e1ab2834865349da8f5b7ac8752bcda36cd59cb0db23924978027",
+      "byteLen": 5526,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-68000.json",
+      "contentHash": "d63cfb474302ebb9b97e422651243246545e94ee87f48b856c92fdd9a915528d",
+      "byteLen": 8193,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70000.json",
+      "contentHash": "a6385f7d7195e902902be80cabe6efee41574eb1a183f9a1910ccdfa4a4daa57",
+      "byteLen": 7923,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70007.json",
+      "contentHash": "d672ef8df05097f6af071bb7ed7a788002c5279e4d65be3eb4d13fc389195e70",
+      "byteLen": 7926,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70008.json",
+      "contentHash": "685f72fcd2c1c4dd1c7d639707d4b76bd082aa16b4a6eded0854a4f62b65c268",
+      "byteLen": 7919,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70014.json",
+      "contentHash": "a486c00ea14d0cba801bf17b99821eb6b83f67e2d6d0ca48260f633ce30ad988",
+      "byteLen": 7927,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70113.json",
+      "contentHash": "30deaa946bbae8caee4e994563269963c0225da3b763ed843686496a7c04e0c6",
+      "byteLen": 7920,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70114.json",
+      "contentHash": "cbdab76afeb796d3be4ad969cfff4bcbe4e26328d51fba249bb296aec07741a2",
+      "byteLen": 7920,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70122.json",
+      "contentHash": "e7a6e8bc0521050dc33f8cd7fd6c22842c665a2fef1a017ad65ccae0fc697c38",
+      "byteLen": 7954,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70300.json",
+      "contentHash": "bbc3a5e50ed38d5ad79f21841bb6cde0a075b90022757f894e646e090dee0c90",
+      "byteLen": 1507,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70503.json",
+      "contentHash": "31451576bb6e4d4b9a6a788a0bcace74af9e4a63e86a2be4dc60d2e33969004b",
+      "byteLen": 19897,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70703.json",
+      "contentHash": "1b3f746bd9abbfa29eb5f3c0b5c61592a6ee52f8508a6b65804cd6c0146a582b",
+      "byteLen": 19897,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70801.json",
+      "contentHash": "3bf7734cf337d28417d49750eca3a68eb1ba14148d2415a5ad3a718a580ea7c1",
+      "byteLen": 21744,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-70806.json",
+      "contentHash": "7f85a856b587ccca7bae4e3b9808fbef3a61eeabcdb4f4e2cbbd06c10846487d",
+      "byteLen": 23874,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-71002.json",
+      "contentHash": "75b693ebd6bd6d8d672b0c7434dbc2e43d5414c83ae10e6d792518be08445b01",
+      "byteLen": 24474,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-71011.json",
+      "contentHash": "85de602cc752bd4445dcdbe31385862f899345b1785555df0add27386c0d88a6",
+      "byteLen": 24163,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-71012.json",
+      "contentHash": "faccf65dcb68a07563d46504dbabeeb575751945b3ee177f5bef5afcac78b383",
+      "byteLen": 20203,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-71106.json",
+      "contentHash": "d1311d4e30284ac06b2100bed40d31a610243f5b83c9d234d1f744e0126bd838",
+      "byteLen": 11374,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-72001.json",
+      "contentHash": "7277de0a2d680aa19ecc065d421dc771c240d72626cc330ca053b3e47748beb9",
+      "byteLen": 11339,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-72002.json",
+      "contentHash": "c7487e8bb36d6c5ecfb71795b6290c9bf0414620b270cfb60e2a1a79034d068f",
+      "byteLen": 11432,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-72006.json",
+      "contentHash": "384e9306aed6f457262ca47b1dc2a172c75ee0427b49b7b07aa2bd9aac9fe5f8",
+      "byteLen": 16529,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-72007.json",
+      "contentHash": "0dfaf86ed22cf56e80552112132738016128f4db9f3bc9affebe65293e6585d3",
+      "byteLen": 16899,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-72008.json",
+      "contentHash": "14cb2755d14ef8855387f5e508d5d9c601c51aec3125f5642ee1ce9b8efad78a",
+      "byteLen": 16637,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-72011.json",
+      "contentHash": "fab84516d678c03c9a30c7b83c2307f0113e67736d5cec651ec8a5e456c7141c",
+      "byteLen": 8481,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-72019.json",
+      "contentHash": "b576638f57f94bb29cbfa2ac4d8a1f1a3e3848310bb70ab9132887a421f60614",
+      "byteLen": 4333,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "geometry/mesh-74009.json",
+      "contentHash": "d702a0dfc11534bf0a681901adaf82fed919ceca2f41efac343e012941ed1690",
+      "byteLen": 12742,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/audio/audio-melee-dagger-swing.wav",
       "contentHash": "52bef8e0b2e58e8ea4d9b00a5071d5c44f9beda27d57b0832c2e2d60046984fd",
       "byteLen": 1331,
@@ -383,8 +1454,8 @@
     },
     {
       "relativePath": "media/classic/manifest.json",
-      "contentHash": "c7acc92166828e383df6e829442d628cd914aeacc28e445ead0ec14d674f3ba0",
-      "byteLen": 406090,
+      "contentHash": "335b2a3dfb7f81cd637e0b4cb66f35ade1bfe581596820f53d08461f6150d197",
+      "byteLen": 423507,
       "dependsOnPaths": [
         "media/audio/audio-melee-dagger-swing.wav",
         "media/audio/audio-melee-hit-1.wav",
@@ -444,8 +1515,27 @@
         "media/ui/inventory-icons/inventory-icon-kite-shield.png",
         "media/ui/inventory-icons/inventory-icon-round-shield.png",
         "media/ui/inventory-icons/inventory-icon-tower-shield.png",
+        "media/ui/screen-character-generation.png",
+        "media/ui/screen-death.png",
+        "media/ui/screen-pick-02.png",
+        "media/ui/screen-prison.png",
+        "media/ui/screen-start-menu.png",
+        "media/ui/screen-title.png",
+        "media/ui/window-bank-panel.png",
+        "media/ui/window-book-reader.png",
         "media/ui/window-character-sheet-chrome.png",
-        "media/ui/window-inventory-chrome.png"
+        "media/ui/window-guild-member.png",
+        "media/ui/window-guild-service.png",
+        "media/ui/window-inventory-chrome.png",
+        "media/ui/window-merchant-buttons-buy.png",
+        "media/ui/window-merchant-buttons-identify.png",
+        "media/ui/window-merchant-buttons-repair.png",
+        "media/ui/window-merchant-buttons-sell-gold.png",
+        "media/ui/window-merchant-buttons-sell.png",
+        "media/ui/window-merchant-cost.png",
+        "media/ui/window-rest-hours-past.png",
+        "media/ui/window-rest-hours-remaining.png",
+        "media/ui/window-rest-panel.png"
       ]
     },
     {
@@ -515,15 +1605,33 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/dungeon/actors/mobile-1-corpse.png",
+      "contentHash": "6169a351ea53613c32331754ae9405f11c04d48658430ede6b3b8c307d5f644e",
+      "byteLen": 2348,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/dungeon/actors/mobile-1.png",
       "contentHash": "41ec62b495319b2a5513e1426cc1c045a9bd94d9b840eb5bca00d1acfd56c46c",
       "byteLen": 101518,
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/dungeon/actors/mobile-138-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/dungeon/actors/mobile-138.png",
       "contentHash": "99f0d5bc26ef5a44f883da6e057108b3d9fef5d6d1ef5bf0b0d5aeef47196568",
       "byteLen": 257398,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-141-corpse.png",
+      "contentHash": "24ef7cc5f423064d61c558156b37a4691f375774e6477aaac97076aac5e02ed6",
+      "byteLen": 2582,
       "dependsOnPaths": []
     },
     {
@@ -545,9 +1653,21 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/dungeon/actors/mobile-3-corpse.png",
+      "contentHash": "f315c904d951015ed93e8d49e090c098587d0d1bc361a3981c487004774aca37",
+      "byteLen": 1356,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/dungeon/actors/mobile-3.png",
       "contentHash": "ef0c812e67c0bdcd46935d7509672b83f236f5e403823076e4f4655f8b52aa43",
       "byteLen": 92375,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/actors/mobile-7-corpse.png",
+      "contentHash": "f42092c7085799f077feddc2e4dfc0b42a1906911803f461e6a10e09c9249637",
+      "byteLen": 3458,
       "dependsOnPaths": []
     },
     {
@@ -756,17 +1876,22 @@
     },
     {
       "relativePath": "media/dungeon/manifest.json",
-      "contentHash": "8bb722384cdde06fab36f9d7100003834668453b9b1948fd64831a55a748e39d",
-      "byteLen": 1029072,
+      "contentHash": "cd3adf811fda52800cf638e31d3f231c2c3b333d9f2cf23990409d179c039d9f",
+      "byteLen": 1039699,
       "dependsOnPaths": [
         "media/dungeon/actors/mobile-0-corpse.png",
         "media/dungeon/actors/mobile-0.png",
+        "media/dungeon/actors/mobile-1-corpse.png",
         "media/dungeon/actors/mobile-1.png",
+        "media/dungeon/actors/mobile-138-corpse.png",
         "media/dungeon/actors/mobile-138.png",
+        "media/dungeon/actors/mobile-141-corpse.png",
         "media/dungeon/actors/mobile-141.png",
         "media/dungeon/actors/mobile-15-corpse.png",
         "media/dungeon/actors/mobile-15.png",
+        "media/dungeon/actors/mobile-3-corpse.png",
         "media/dungeon/actors/mobile-3.png",
+        "media/dungeon/actors/mobile-7-corpse.png",
         "media/dungeon/actors/mobile-7.png",
         "media/dungeon/billboards/texture-203-5.png",
         "media/dungeon/billboards/texture-203-6.png",
@@ -812,34 +1937,39 @@
         "media/dungeon/materials/texture-0-79.png",
         "media/dungeon/materials/texture-0-89.png",
         "media/dungeon/materials/texture-1-24.png",
-        "media/dungeon/materials/texture-119-0.png",
-        "media/dungeon/materials/texture-119-1.png",
-        "media/dungeon/materials/texture-119-2.png",
-        "media/dungeon/materials/texture-119-3.png",
-        "media/dungeon/materials/texture-119-4.png",
-        "media/dungeon/materials/texture-120-0.png",
-        "media/dungeon/materials/texture-120-1.png",
-        "media/dungeon/materials/texture-120-2.png",
-        "media/dungeon/materials/texture-120-3.png",
-        "media/dungeon/materials/texture-120-4.png",
         "media/dungeon/materials/texture-121-0.png",
         "media/dungeon/materials/texture-121-1.png",
         "media/dungeon/materials/texture-121-2.png",
         "media/dungeon/materials/texture-121-3.png",
-        "media/dungeon/materials/texture-122-0.png",
-        "media/dungeon/materials/texture-122-2.png",
-        "media/dungeon/materials/texture-122-3.png",
         "media/dungeon/materials/texture-141-1.png",
         "media/dungeon/materials/texture-141-2.png",
         "media/dungeon/materials/texture-146-0.png",
         "media/dungeon/materials/texture-146-1.png",
         "media/dungeon/materials/texture-147-1.png",
         "media/dungeon/materials/texture-147-2.png",
+        "media/dungeon/materials/texture-19-0.png",
+        "media/dungeon/materials/texture-19-1.png",
+        "media/dungeon/materials/texture-19-2.png",
+        "media/dungeon/materials/texture-19-3.png",
+        "media/dungeon/materials/texture-19-4.png",
+        "media/dungeon/materials/texture-20-0.png",
+        "media/dungeon/materials/texture-20-1.png",
+        "media/dungeon/materials/texture-20-2.png",
+        "media/dungeon/materials/texture-20-3.png",
+        "media/dungeon/materials/texture-20-4.png",
+        "media/dungeon/materials/texture-22-0.png",
+        "media/dungeon/materials/texture-22-2.png",
+        "media/dungeon/materials/texture-22-3.png",
         "media/dungeon/materials/texture-321-0.png",
         "media/dungeon/materials/texture-321-1.png",
         "media/dungeon/materials/texture-321-2.png",
         "media/dungeon/materials/texture-341-0.png",
         "media/dungeon/materials/texture-341-3.png",
+        "media/dungeon/materials/texture-368-0.png",
+        "media/dungeon/materials/texture-368-2.png",
+        "media/dungeon/materials/texture-368-3.png",
+        "media/dungeon/materials/texture-374-0.png",
+        "media/dungeon/materials/texture-374-2.png",
         "media/dungeon/materials/texture-41-1.png",
         "media/dungeon/materials/texture-449-1.png",
         "media/dungeon/materials/texture-449-2.png",
@@ -849,11 +1979,6 @@
         "media/dungeon/materials/texture-450-9.png",
         "media/dungeon/materials/texture-46-1.png",
         "media/dungeon/materials/texture-46-2.png",
-        "media/dungeon/materials/texture-468-0.png",
-        "media/dungeon/materials/texture-468-2.png",
-        "media/dungeon/materials/texture-468-3.png",
-        "media/dungeon/materials/texture-474-0.png",
-        "media/dungeon/materials/texture-474-2.png",
         "media/dungeon/materials/texture-67-0.png",
         "media/dungeon/materials/texture-67-1.png",
         "media/dungeon/materials/texture-67-14.png",
@@ -951,66 +2076,6 @@
       "dependsOnPaths": []
     },
     {
-      "relativePath": "media/dungeon/materials/texture-119-0.png",
-      "contentHash": "fa47dbf5f9ab2ca6f1121a40777ebe255f7f6eefbdbaa370418b92c2a6444106",
-      "byteLen": 1575,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-119-1.png",
-      "contentHash": "92b253b4124fbd95d5b5ed9d16efe1c514d0b162ad81c7cf2f5a6157689c7135",
-      "byteLen": 1545,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-119-2.png",
-      "contentHash": "4da8d976fc5ec4f42d1fb8c5643a41b28e42e6fdcb6908778b08977d09fb8941",
-      "byteLen": 2106,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-119-3.png",
-      "contentHash": "225d73816d1869949e709a38de6b3a2895602b77cc59f38f5e0b2f8d2edb2ca5",
-      "byteLen": 2947,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-119-4.png",
-      "contentHash": "1cc82f02b9e675f905394f8d96249ee4499c5087d2c1394f10c431408bc71707",
-      "byteLen": 1441,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-120-0.png",
-      "contentHash": "d814c7627ffa912dab86327263295654ab5ecc26b98c0cf382210a875dc41241",
-      "byteLen": 1737,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-120-1.png",
-      "contentHash": "e53f910e8e6358b85cf9dcc2282e29f2efd4e50740dcdacfdc585f57a2f14b36",
-      "byteLen": 1737,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-120-2.png",
-      "contentHash": "39d54af87786dca365624422b2deeafc6136be38f9fe4dc1e8b8f924a059c0d8",
-      "byteLen": 2555,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-120-3.png",
-      "contentHash": "31575e85218ade3bd44cd763bb6bd876e98ca6b5fe21b4a405edfe3ec24f878c",
-      "byteLen": 2117,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-120-4.png",
-      "contentHash": "ca1678586395573ff37f2cdd959f58cb54ffdd2c7f20a59527df2308f567bf55",
-      "byteLen": 1397,
-      "dependsOnPaths": []
-    },
-    {
       "relativePath": "media/dungeon/materials/texture-121-0.png",
       "contentHash": "966172d30c65ff0cab73fa9d437791c91513b117f0e7d5f6bf89177f8713796c",
       "byteLen": 3226,
@@ -1032,24 +2097,6 @@
       "relativePath": "media/dungeon/materials/texture-121-3.png",
       "contentHash": "0d67f855d602c16ccc99b508355f4c273be975f6f0605e538902ed46bf0cf1f3",
       "byteLen": 1857,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-122-0.png",
-      "contentHash": "0845e114a23b7210389c2597d0427225d3467e532605a25340880aeb247c329f",
-      "byteLen": 2040,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-122-2.png",
-      "contentHash": "f4047eb0a3432f57e31a5c5bfb69c11e270315862cf0f8a79b948f3d91fa2533",
-      "byteLen": 2052,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-122-3.png",
-      "contentHash": "51e9ee0f55057965fa672dfdb4f168d5fa5c3a67c2f61bdd638d8ddb09a23861",
-      "byteLen": 2760,
       "dependsOnPaths": []
     },
     {
@@ -1089,6 +2136,84 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/dungeon/materials/texture-19-0.png",
+      "contentHash": "10599f09b3ea4de30ed3a42c6763f882b9bd8f278e19fdbaeea3b7f579dcd30f",
+      "byteLen": 1282,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-19-1.png",
+      "contentHash": "e82b21299d2b817c541de349092df9d580aa7b389cc06994ea863673edd5724a",
+      "byteLen": 1385,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-19-2.png",
+      "contentHash": "a1601db6276491486cead068e50999405560ea664854471d0087f5f95b270896",
+      "byteLen": 3387,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-19-3.png",
+      "contentHash": "e025f2cd3349562b890fb9574e32594fab127d225eec361449aba83bab9d8bf7",
+      "byteLen": 2906,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-19-4.png",
+      "contentHash": "d814c7627ffa912dab86327263295654ab5ecc26b98c0cf382210a875dc41241",
+      "byteLen": 1737,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-20-0.png",
+      "contentHash": "37648218a422cdfacc6ed662d5c3e9417efd8bb0b07ccdec67adbcbb352dbbc7",
+      "byteLen": 1772,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-20-1.png",
+      "contentHash": "d50a9227f4e06cbef7d7e8bf1da8e1a92f360c71ca27ff210b63fc63bdcba7fe",
+      "byteLen": 1525,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-20-2.png",
+      "contentHash": "6cc42ffa963200d3d94ca12d37b63280967ac981444e39a5e8a7a9df2baf3f99",
+      "byteLen": 2814,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-20-3.png",
+      "contentHash": "883ba8ff2b01ae12e0d09b5210bead50e1621c928272594394ff20083874e027",
+      "byteLen": 1548,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-20-4.png",
+      "contentHash": "761595bf949b7f22d6431815c166dd32b4d8a88f79bcd367e8777bd3bf4e2103",
+      "byteLen": 1113,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-22-0.png",
+      "contentHash": "e953ed32ea1b662985a637e729879715f2fba377657d3b5d6d374bec37425739",
+      "byteLen": 1738,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-22-2.png",
+      "contentHash": "77ac8c2999a12553d486a2e5f0b82907b04945969b6e58ee53c7606cbb79547b",
+      "byteLen": 2853,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-22-3.png",
+      "contentHash": "4b453a2954c5f7d1dfe005dcd199f005b20f0d45c7657a771a95836ad0e47f05",
+      "byteLen": 2370,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/dungeon/materials/texture-321-0.png",
       "contentHash": "0e4e16868719a6b9c4a7edb8ffad3931f6e7fcb59e8e7960b59fa21f70e4e94d",
       "byteLen": 4948,
@@ -1116,6 +2241,36 @@
       "relativePath": "media/dungeon/materials/texture-341-3.png",
       "contentHash": "b314bc0f00384ac83bd5058957289e0c08ade844d835c175594f46511bf671b3",
       "byteLen": 3131,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-368-0.png",
+      "contentHash": "00042b5c01278ec5b1453db142f0c1af8e986e994d2076c4904e30e87c051697",
+      "byteLen": 1980,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-368-2.png",
+      "contentHash": "8dd4afc92250a6829a604473aa15716bb48a0677251d4317578042942c4af178",
+      "byteLen": 2920,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-368-3.png",
+      "contentHash": "d6edc43205f70ec7461eab39522a1fd8a627297c455a10151467da833cfdc325",
+      "byteLen": 2861,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-374-0.png",
+      "contentHash": "c7e0fbf8e0c5c525c912abf71329f72f4b0ac9e73d66cdf34471975c864d11db",
+      "byteLen": 6081,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/dungeon/materials/texture-374-2.png",
+      "contentHash": "4a92c1fbd51854368780f8c61701bda8f64f5d9554f844669e6345233ccaf127",
+      "byteLen": 5717,
       "dependsOnPaths": []
     },
     {
@@ -1170,36 +2325,6 @@
       "relativePath": "media/dungeon/materials/texture-46-2.png",
       "contentHash": "e9da300ef1a7f6ce840eed096864f0fe35610f1b0ef657b8beb92026c7cd698e",
       "byteLen": 740,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-468-0.png",
-      "contentHash": "847062ed80bf0d1211161f87cffd5ea7dfbe04c27226c7e406f0d7737d0641d1",
-      "byteLen": 1600,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-468-2.png",
-      "contentHash": "7fdb6c9bfb4060c64b8a214aba8a81f5f4de818f7ab57812924fe8ff58447408",
-      "byteLen": 1797,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-468-3.png",
-      "contentHash": "0425a244bd56801b41fdab81aa8ba3d4cebf61cc702b94fcec88eeecd580bb6e",
-      "byteLen": 2296,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-474-0.png",
-      "contentHash": "8e3174c28c21977fac7ef1c8fc76e4592ef5ba8d91c463ef3dfb10c977e4d255",
-      "byteLen": 6397,
-      "dependsOnPaths": []
-    },
-    {
-      "relativePath": "media/dungeon/materials/texture-474-2.png",
-      "contentHash": "ed30faf8a727a4f3faa7f4063d50bf7401981d1e015abbb397d85779584e3ce3",
-      "byteLen": 5020,
       "dependsOnPaths": []
     },
     {
@@ -1402,20 +2527,20 @@
     },
     {
       "relativePath": "media/ui/authored/inventory-grid-slot-slate-v1.png",
-      "contentHash": "f19aca28a45f24c61cc55af1ee2be864a742ffcdb5f8f7fd46e4cd55b643a7b3",
-      "byteLen": 1970798,
+      "contentHash": "fe1d578fe5a8ef7a7fb7b74bdad5fab09458fdb8afe74895cdfe538eb01149d5",
+      "byteLen": 103350,
       "dependsOnPaths": []
     },
     {
       "relativePath": "media/ui/authored/inventory-skin-panel-slate-v1.png",
-      "contentHash": "a54e0ca6bcc5f9ec2df87cb967365b844f0f9a7572150005a7eddcd1d448805c",
-      "byteLen": 2387369,
+      "contentHash": "5a8c1e79eb36efbcf4a54d3e911c3a118f70580cba2490c6a330792bd33f8a49",
+      "byteLen": 102872,
       "dependsOnPaths": []
     },
     {
       "relativePath": "media/ui/authored/inventory-titlebar-slate-v1.png",
-      "contentHash": "80d2fe6b0c7f9fb089d3d2ca6fb6a0ec053331bb1874ceb94c3dad8341d584d2",
-      "byteLen": 1671134,
+      "contentHash": "bc2f1b1e3ec4852aa156a9d149da4110bfce97afd03c3722e74926bf5a223fb4",
+      "byteLen": 40009,
       "dependsOnPaths": []
     },
     {
@@ -1629,9 +2754,69 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/ui/screen-character-generation.png",
+      "contentHash": "07fda9a04c9179789e34cfad57afefedd298cc17ba0ddfca92805791e7f56484",
+      "byteLen": 21244,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-death.png",
+      "contentHash": "792feeb481c4e587acc6f4d627d331336c0c50d13c59b996252c88ed14b34289",
+      "byteLen": 63124,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-pick-02.png",
+      "contentHash": "d05e1accee5d4bb03950969f6654b26e4a941d4c76bd4e300adce6d7f15126df",
+      "byteLen": 41063,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-prison.png",
+      "contentHash": "2bc15220a4359d4517a028d07e46d2a818a48f317c52125b4dc98e8b86dd8ad4",
+      "byteLen": 43450,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-start-menu.png",
+      "contentHash": "1853159a1bfe841d8f1f9d7099a40b9851ecc49f2f6fede12b78e1fdc4c72b83",
+      "byteLen": 41081,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/screen-title.png",
+      "contentHash": "c0a99b8f0d4ef48c578ff73ed5f40c172f048bad1ed619fd6a79339b861b9203",
+      "byteLen": 44933,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-bank-panel.png",
+      "contentHash": "a02eeb48c42648f8502309bf9cfcc836237c303637823da0ab2457a9a4e625e7",
+      "byteLen": 18345,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-book-reader.png",
+      "contentHash": "387c5044af65e3687cffa4ea46a6f584974dd89ab91ea37eb7d14509fd45f31a",
+      "byteLen": 3789,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "media/ui/window-character-sheet-chrome.png",
       "contentHash": "10b005fc1385cd2612ead1dfd0bf79374e9b8a2ca7c4731ca1b83305330de818",
       "byteLen": 35236,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-guild-member.png",
+      "contentHash": "875882585c4034979e59c6a26d35ad9f8b74539ab3d1b3f1716c9beeffe86c9f",
+      "byteLen": 3631,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-guild-service.png",
+      "contentHash": "2911b48a9bf1f05026fe9652210932dce6ac4bf3872d8d78b451c59021fd9d06",
+      "byteLen": 3615,
       "dependsOnPaths": []
     },
     {
@@ -1641,10 +2826,202 @@
       "dependsOnPaths": []
     },
     {
+      "relativePath": "media/ui/window-merchant-buttons-buy.png",
+      "contentHash": "7b83d0767ed6971c8ce10d7b07b876da845756342e9fe8121c484dce077fdc30",
+      "byteLen": 3995,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-identify.png",
+      "contentHash": "ce7e299f5757c7eddc5d6677028ad96ed89127e50cddbb1d437ab2d35730b0ea",
+      "byteLen": 4023,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-repair.png",
+      "contentHash": "593fdaae18e33b5f3a0387f114cfa1bd0b06480dad2e34fd1f058f06682512f4",
+      "byteLen": 4018,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-sell-gold.png",
+      "contentHash": "1ba947a2a970327f3bd4ce87a6dace0ff3b0af5a948f5bc0773a4526ac1574d1",
+      "byteLen": 4029,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-buttons-sell.png",
+      "contentHash": "e30551b560fcdb94e48437f80c24fbbf049a9201324b859aeaed2d10a657f147",
+      "byteLen": 4001,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-merchant-cost.png",
+      "contentHash": "804d678f18797dd1a41d4bc8997cf316b9bb88de1089e8d46fb9c304fb4a6bf5",
+      "byteLen": 771,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-rest-hours-past.png",
+      "contentHash": "4f3c9145100a772f1984f4b0f78a8651e357055b61a7f8e6b4e1487dac84dcbf",
+      "byteLen": 2524,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-rest-hours-remaining.png",
+      "contentHash": "348ed6484f2b15d2d04f76327459f420f22369b22f86accff37cea701de4a72b",
+      "byteLen": 2560,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "media/ui/window-rest-panel.png",
+      "contentHash": "659e59a8af5a496d972af1cb2a64eb75961bacdc57362f2beeb8e8d34bdb836b",
+      "byteLen": 3502,
+      "dependsOnPaths": []
+    },
+    {
       "relativePath": "normalized.json",
-      "contentHash": "f83116be2ea91a653089523376e66ec428f3e3b816304b4078a34a67a5f2d3d0",
-      "byteLen": 7699827,
+      "contentHash": "070f45f1f57ce2554e94ab6ae99b1dbac8cd89cf27f202bfbf7a60a1cb2de263",
+      "byteLen": 7704830,
       "dependsOnPaths": [
+        "geometry/index.json",
+        "geometry/mesh-41017.json",
+        "geometry/mesh-41018.json",
+        "geometry/mesh-41020.json",
+        "geometry/mesh-41042.json",
+        "geometry/mesh-41109.json",
+        "geometry/mesh-41110.json",
+        "geometry/mesh-41112.json",
+        "geometry/mesh-41123.json",
+        "geometry/mesh-41302.json",
+        "geometry/mesh-41303.json",
+        "geometry/mesh-41305.json",
+        "geometry/mesh-41308.json",
+        "geometry/mesh-41311.json",
+        "geometry/mesh-41312.json",
+        "geometry/mesh-41313.json",
+        "geometry/mesh-41322.json",
+        "geometry/mesh-41327.json",
+        "geometry/mesh-41735.json",
+        "geometry/mesh-41822.json",
+        "geometry/mesh-41823.json",
+        "geometry/mesh-41824.json",
+        "geometry/mesh-41825.json",
+        "geometry/mesh-41826.json",
+        "geometry/mesh-41827.json",
+        "geometry/mesh-41828.json",
+        "geometry/mesh-41829.json",
+        "geometry/mesh-41830.json",
+        "geometry/mesh-41831.json",
+        "geometry/mesh-41832.json",
+        "geometry/mesh-41834.json",
+        "geometry/mesh-42509.json",
+        "geometry/mesh-42510.json",
+        "geometry/mesh-42533.json",
+        "geometry/mesh-42534.json",
+        "geometry/mesh-42545.json",
+        "geometry/mesh-42557.json",
+        "geometry/mesh-42558.json",
+        "geometry/mesh-42569.json",
+        "geometry/mesh-42570.json",
+        "geometry/mesh-55000.json",
+        "geometry/mesh-55001.json",
+        "geometry/mesh-55002.json",
+        "geometry/mesh-55003.json",
+        "geometry/mesh-55004.json",
+        "geometry/mesh-55005.json",
+        "geometry/mesh-55012.json",
+        "geometry/mesh-58006.json",
+        "geometry/mesh-58008.json",
+        "geometry/mesh-58009.json",
+        "geometry/mesh-58048.json",
+        "geometry/mesh-58049.json",
+        "geometry/mesh-58050.json",
+        "geometry/mesh-59007.json",
+        "geometry/mesh-60200.json",
+        "geometry/mesh-60500.json",
+        "geometry/mesh-61003.json",
+        "geometry/mesh-61004.json",
+        "geometry/mesh-61005.json",
+        "geometry/mesh-61006.json",
+        "geometry/mesh-61011.json",
+        "geometry/mesh-61014.json",
+        "geometry/mesh-61018.json",
+        "geometry/mesh-61019.json",
+        "geometry/mesh-61020.json",
+        "geometry/mesh-61024.json",
+        "geometry/mesh-61026.json",
+        "geometry/mesh-61027.json",
+        "geometry/mesh-61030.json",
+        "geometry/mesh-61202.json",
+        "geometry/mesh-61203.json",
+        "geometry/mesh-61204.json",
+        "geometry/mesh-61211.json",
+        "geometry/mesh-61218.json",
+        "geometry/mesh-61219.json",
+        "geometry/mesh-61220.json",
+        "geometry/mesh-62008.json",
+        "geometry/mesh-62009.json",
+        "geometry/mesh-62010.json",
+        "geometry/mesh-62323.json",
+        "geometry/mesh-62325.json",
+        "geometry/mesh-62328.json",
+        "geometry/mesh-63000.json",
+        "geometry/mesh-63004.json",
+        "geometry/mesh-63007.json",
+        "geometry/mesh-63023.json",
+        "geometry/mesh-63033.json",
+        "geometry/mesh-63047.json",
+        "geometry/mesh-63058.json",
+        "geometry/mesh-63200.json",
+        "geometry/mesh-63203.json",
+        "geometry/mesh-63204.json",
+        "geometry/mesh-63207.json",
+        "geometry/mesh-63229.json",
+        "geometry/mesh-63230.json",
+        "geometry/mesh-63233.json",
+        "geometry/mesh-63235.json",
+        "geometry/mesh-63240.json",
+        "geometry/mesh-63251.json",
+        "geometry/mesh-63256.json",
+        "geometry/mesh-67005.json",
+        "geometry/mesh-67008.json",
+        "geometry/mesh-67010.json",
+        "geometry/mesh-67011.json",
+        "geometry/mesh-67014.json",
+        "geometry/mesh-67015.json",
+        "geometry/mesh-67017.json",
+        "geometry/mesh-67018.json",
+        "geometry/mesh-67020.json",
+        "geometry/mesh-67023.json",
+        "geometry/mesh-67024.json",
+        "geometry/mesh-67025.json",
+        "geometry/mesh-67027.json",
+        "geometry/mesh-68000.json",
+        "geometry/mesh-70000.json",
+        "geometry/mesh-70007.json",
+        "geometry/mesh-70008.json",
+        "geometry/mesh-70014.json",
+        "geometry/mesh-70113.json",
+        "geometry/mesh-70114.json",
+        "geometry/mesh-70122.json",
+        "geometry/mesh-70300.json",
+        "geometry/mesh-70503.json",
+        "geometry/mesh-70703.json",
+        "geometry/mesh-70801.json",
+        "geometry/mesh-70806.json",
+        "geometry/mesh-71002.json",
+        "geometry/mesh-71011.json",
+        "geometry/mesh-71012.json",
+        "geometry/mesh-71106.json",
+        "geometry/mesh-72001.json",
+        "geometry/mesh-72002.json",
+        "geometry/mesh-72006.json",
+        "geometry/mesh-72007.json",
+        "geometry/mesh-72008.json",
+        "geometry/mesh-72011.json",
+        "geometry/mesh-72019.json",
+        "geometry/mesh-74009.json",
         "media/classic/manifest.json",
         "media/dungeon/manifest.json",
         "resources/privateer-s-hold/catalog.json",
@@ -1654,22 +3031,28 @@
     },
     {
       "relativePath": "resources/privateer-s-hold/catalog.json",
-      "contentHash": "a348b0fd239384ee20f8400f5678e86035392a47555d5290bd51b681402c8be1",
-      "byteLen": 115316,
+      "contentHash": "c53e1551cafa609fb77d30797c70fc477bf9558711d566034ac2dc2b87853da1",
+      "byteLen": 115238,
+      "dependsOnPaths": []
+    },
+    {
+      "relativePath": "sources/manifest.json",
+      "contentHash": "aeb05104165bcc62239896397480ea2a3729562bd799f679dc48b9c349cf28f6",
+      "byteLen": 6847422,
       "dependsOnPaths": []
     },
     {
       "relativePath": "spatial/privateer-s-hold/collision-navigation.json",
-      "contentHash": "f518ddc49fc49c16990475b5c407fbfdf6785bb907a256f4df06a59359817a63",
-      "byteLen": 3639830,
+      "contentHash": "ec550ca5d6505d78d24af8e9c41228c220da6c45bcda2b4d519a6ce24a908cd7",
+      "byteLen": 3639881,
       "dependsOnPaths": [
         "spatial/privateer-s-hold/static-mesh.json"
       ]
     },
     {
       "relativePath": "spatial/privateer-s-hold/static-mesh.json",
-      "contentHash": "4c8ec37072d3978f0fb161b67669b9cbd801fd57f4cb18f3df6fce4fe509d58d",
-      "byteLen": 2594262,
+      "contentHash": "59adf556505e03bde3bf6f0abbe7753cb72e0a16638a45f9b466b23587780ff6",
+      "byteLen": 2594304,
       "dependsOnPaths": []
     }
   ]
