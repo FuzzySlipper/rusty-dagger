@@ -22,6 +22,8 @@ public static class MobileSourceMetadata
     private static readonly ImmutableArray<Arena2MobileFrameRecord> HurtRecords = CreateOrientationRecords(10, 11, 12, 13, 14, false);
     private static readonly ImmutableArray<Arena2MobileFrameRecord> IdleRecords = CreateOrientationRecords(15, 16, 17, 18, 19, false);
     private static readonly ImmutableArray<Arena2MobileFrameRecord> RatIdleRecords = CreateOrientationRecords(15, 16, 17, 18, 19, true);
+    private static readonly ImmutableArray<Arena2MobileFrameRecord> RangedAttack1Records = CreateOrientationRecords(20, 21, 22, 23, 24, false);
+    private static readonly ImmutableArray<Arena2MobileFrameRecord> RangedAttack2Records = CreateOrientationRecords(25, 26, 27, 28, 29, false);
 
     private static readonly ImmutableArray<Arena2MobileSource> Sources = CreateSources();
 
@@ -61,6 +63,8 @@ public static class MobileSourceMetadata
             Arena2MobileFrameGroup.Hurt => HurtRecords,
             Arena2MobileFrameGroup.Idle => IdleRecords,
             Arena2MobileFrameGroup.RatIdle => RatIdleRecords,
+            Arena2MobileFrameGroup.RangedAttack1 => RangedAttack1Records,
+            Arena2MobileFrameGroup.RangedAttack2 => RangedAttack2Records,
             _ => throw new ArgumentOutOfRangeException(nameof(group), group, "The source frame group is not known."),
         };
     }
@@ -104,9 +108,14 @@ public static class MobileSourceMetadata
             CreateMobile(15, "SkeletalWarrior", 270, new(new(306), 1), Attack([0, 1, 2, 3, DamageBeatMarker, 4, 5]),
                 links: new("H", "EnemySkeletonMove", "EnemySkeletonBark", "EnemySkeletonAttack", ParrySounds: true, BloodIndex: 2, MapChance: 1)),
             CreateMobile(138, "Thief", 484, new(new(380), 1), Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0], Alternate(33, [4, 4, DamageBeatMarker, 5, 0, 0]), Alternate(33, [4, DamageBeatMarker, 5, 0, 0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5, 0])),
-                links: new("O", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 2)),
+                // The thief's ranged declaration is the donor's RangedAttack1Anims group: the humanoid
+                // bow sequence whose marked frame is the donor's shoot moment, not a damage frame.
+                links: new("O", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 2),
+                rangedAttackFrames: RangedAttack([3, 2, 0, 0, 0, DamageBeatMarker, 1, 1, 2, 3])),
             CreateMobile(141, "Archer", 482, new(new(380), 1), Attack([0, 1, DamageBeatMarker, 2, 3, 4, DamageBeatMarker, 5], Alternate(50, [3, 4, DamageBeatMarker, 5, 0])),
-                links: new("C", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0)),
+                // The archer carries the same donor RangedAttack1Anims sequence as the thief.
+                links: new("C", "EnemyHumanMove", "EnemyHumanBark", "EnemyHumanAttack", ParrySounds: true, BloodIndex: 0, MapChance: 0),
+                rangedAttackFrames: RangedAttack([3, 2, 0, 0, 0, DamageBeatMarker, 1, 1, 2, 3])),
         ];
 
         HashSet<Arena2MobileId> ids = [];
@@ -128,9 +137,10 @@ public static class MobileSourceMetadata
         Arena2MobileCorpseSource? corpse,
         Arena2MobileAttackSequence attackSequence,
         Arena2MobileAnimationSource? animation = null,
-        Arena2MobileForeignLinks? links = null)
+        Arena2MobileForeignLinks? links = null,
+        ImmutableArray<sbyte>? rangedAttackFrames = null)
     {
-        return new(new(id), sourceName, new(textureArchive), corpse, attackSequence, animation ?? Arena2MobileAnimationSource.Ordinary, links ?? Unlinked(id));
+        return new(new(id), sourceName, new(textureArchive), corpse, attackSequence, rangedAttackFrames, animation ?? Arena2MobileAnimationSource.Ordinary, links ?? Unlinked(id));
     }
 
     /// <summary>
@@ -144,6 +154,12 @@ public static class MobileSourceMetadata
     {
         ValidateFrames(primaryFrames, nameof(primaryFrames));
         return new(primaryFrames.ToImmutableArray(), alternates.ToImmutableArray());
+    }
+
+    private static ImmutableArray<sbyte> RangedAttack(sbyte[] frames)
+    {
+        ValidateFrames(frames, nameof(frames));
+        return frames.ToImmutableArray();
     }
 
     private static Arena2MobileAttackAlternate Alternate(byte chance, sbyte[] frames)
@@ -280,6 +296,7 @@ public sealed class Arena2MobileSource
         Arena2TextureArchiveId textureArchive,
         Arena2MobileCorpseSource? corpse,
         Arena2MobileAttackSequence attackSequence,
+        ImmutableArray<sbyte>? rangedAttackFrames,
         Arena2MobileAnimationSource animation,
         Arena2MobileForeignLinks links)
     {
@@ -288,6 +305,7 @@ public sealed class Arena2MobileSource
         TextureArchive = textureArchive;
         Corpse = corpse;
         AttackSequence = attackSequence;
+        RangedAttackFrames = rangedAttackFrames;
         ArgumentNullException.ThrowIfNull(animation);
         animation.Validate();
         Animation = animation;
@@ -310,6 +328,14 @@ public sealed class Arena2MobileSource
 
     /// <summary>Uninterpreted classic attack record-frame metadata.</summary>
     public Arena2MobileAttackSequence AttackSequence { get; }
+
+    /// <summary>
+    /// Optional unselected ranged-attack record-frame values in donor order. Presence is the
+    /// donor's HasRangedAttack1 fact, and -1 keeps its damage-beat meaning: in the donor's
+    /// ranged sequence that marked frame is the moment the missile is launched. The donor's
+    /// separate RangedAttack2 group names no adopted mobile, so no mobile declares it here.
+    /// </summary>
+    public ImmutableArray<sbyte>? RangedAttackFrames { get; }
 
     /// <summary>
     /// Source-backed rest selection and effective animation cadence. This
@@ -369,6 +395,8 @@ public enum Arena2MobileFrameGroup
     Hurt,
     Idle,
     RatIdle,
+    RangedAttack1,
+    RangedAttack2,
 }
 
 /// <summary>One texture record in an eight-sector source mapping.</summary>

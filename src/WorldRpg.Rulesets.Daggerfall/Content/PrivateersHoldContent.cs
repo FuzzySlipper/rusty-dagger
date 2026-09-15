@@ -270,12 +270,14 @@ internal static class PrivateersHoldContent
                 string? preferredRestState = DaggerfallBaseContent.OptionalText(actor, "preferredRestState", diagnostics);
                 if (preferredRestState is not null && !states.ContainsKey(preferredRestState)) diagnostics.Add($"Generated actor mobile '{mobileId}' preferredRestState '{preferredRestState}' is not a published state.");
                 IReadOnlyList<NormalizedAttackSequence> attacks = ReadAttackSequences(actor, states, mobileId, diagnostics);
+                NormalizedAttackSequence? rangedAttack = ReadRangedAttackSequence(actor, states, mobileId, diagnostics);
                 NormalizedActorSprite? corpse = ReadCorpse(actor, resources, publicationRoot, artifacts, mobileId, diagnostics);
                 if (!sprites.TryAdd(mobileId, new NormalizedActorSprite(texture.Path, texture.Hash, texture.AtlasWidth, texture.AtlasHeight, frames, texture.Frames[0].Id, pivot, size)
                 {
                     States = states,
                     PreferredRestState = preferredRestState,
                     AttackSequences = attacks,
+                    RangedAttackSequence = rangedAttack,
                     Corpse = corpse,
                 })) diagnostics.Add($"Generated actor media repeats mobile '{mobileId}'.");
             }
@@ -386,14 +388,31 @@ internal static class PrivateersHoldContent
         return Array.AsReadOnly(sequences.ToArray());
     }
 
-    private static void AddAttack(IReadOnlyList<int> source, int chance, NormalizedSpriteState state, int mobileId, DaggerfallContentDiagnostics diagnostics, List<NormalizedAttackSequence> target)
+    private static NormalizedAttackSequence? ReadRangedAttackSequence(JsonElement actor, IReadOnlyDictionary<string, NormalizedSpriteState> states, int mobileId, DaggerfallContentDiagnostics diagnostics)
+    {
+        if (!actor.TryGetProperty("sourceAttackSequence", out JsonElement source) || source.ValueKind != JsonValueKind.Object) return null;
+        // The manifest states the ranged frames as a nullable array: null names a mobile that
+        // declares no ranged attack, and the value is published only beside a rangedAttack1 state.
+        if (!source.TryGetProperty("rangedFrames", out JsonElement ranged) || ranged.ValueKind != JsonValueKind.Array) return null;
+        if (!states.TryGetValue("rangedAttack1", out NormalizedSpriteState? rangedState))
+        {
+            diagnostics.Add($"Generated actor mobile '{mobileId}' declares a ranged attack sequence without a rangedAttack1 state.");
+            return null;
+        }
+        List<int> frames = ranged.EnumerateArray().Select(value => value.TryGetInt32(out int frame) ? frame : int.MinValue).ToList();
+        List<NormalizedAttackSequence> target = [];
+        AddAttack(frames, 100, rangedState, mobileId, diagnostics, target, "rangedAttack1");
+        return target.Count > 0 ? target[0] : null;
+    }
+
+    private static void AddAttack(IReadOnlyList<int> source, int chance, NormalizedSpriteState state, int mobileId, DaggerfallContentDiagnostics diagnostics, List<NormalizedAttackSequence> target, string stateName = "primaryAttack")
     {
         if (chance is < 1 or > 100 || source.Count == 0 || source[^1] == -1 || state.Orientations.Values.Any(orientation => source.Any(frame => frame < -1 || frame >= orientation.Count)))
         {
             diagnostics.Add($"Generated actor mobile '{mobileId}' has an invalid attack sequence.");
             return;
         }
-        target.Add(new NormalizedAttackSequence(chance, source));
+        target.Add(new NormalizedAttackSequence(chance, source, stateName));
     }
 
     private static NormalizedActorSprite? ReadCorpse(JsonElement actor, IReadOnlyDictionary<string, MediaResource> resources, string publicationRoot, IReadOnlyDictionary<string, ContentSha256> artifacts, int mobileId, DaggerfallContentDiagnostics diagnostics)
@@ -869,7 +888,7 @@ internal sealed record NormalizedSpriteState(string Name, IReadOnlyList<uint> Fr
             : throw new InvalidOperationException($"Normalized Daggerfall sprite state '{Name}' lacks directional sector '{sector}'.");
     }
 }
-internal sealed record NormalizedAttackSequence(int Chance, IReadOnlyList<int> SourceFrames);
+internal sealed record NormalizedAttackSequence(int Chance, IReadOnlyList<int> SourceFrames, string State = "primaryAttack");
 internal sealed record NormalizedAudioClip(string Id, string Path, ContentSha256 Sha256);
 internal sealed record NormalizedClassicWeaponAction(string Name, int SourceRecordOrdinal, int FrameStart, int FrameCount, string Alignment, float ScreenOffset, float FramesPerSecond, bool Loops, short SourceXOffset, short SourceYOffset)
 {
@@ -897,6 +916,12 @@ internal sealed record NormalizedActorSprite(string TexturePath, ContentSha256 T
     /// <summary>Resolved Daggerfall rest-state policy. Null preserves the generic idle-then-move fallback.</summary>
     internal string? PreferredRestState { get; init; }
     internal IReadOnlyList<NormalizedAttackSequence> AttackSequences { get; init; } = Array.Empty<NormalizedAttackSequence>();
+    /// <summary>
+    /// The published ranged attack declaration, kept out of the melee alternate pool. A mobile
+    /// carrying it also publishes the rangedAttack1 state its frames play against; presence of
+    /// that published state is the donor's HasRangedAttack1 fact.
+    /// </summary>
+    internal NormalizedAttackSequence? RangedAttackSequence { get; init; }
     internal NormalizedActorSprite? Corpse { get; init; }
 }
 internal sealed class PrivateersHoldInputs(ProjectFacts project, SpatialContentArtifact spatialArtifact, ContentArtifact staticMesh, AuthoredWorldAppearance worldAppearance, PlayerInitialLook initialLook, IReadOnlyList<NormalizedMaterial> materials, IReadOnlyDictionary<long, NormalizedActorSprite> actorSprites, IReadOnlyList<NormalizedAudioClip>? audio = null, NormalizedClassicPresentation? classicPresentation = null, DaggerfallSiteId? site = null)

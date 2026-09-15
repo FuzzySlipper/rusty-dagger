@@ -469,9 +469,23 @@ internal sealed class PrivateersHoldAppearance : IDisposable
     /// </summary>
     private bool StartAttack(long entityId, long targetId, ulong generation, ulong simulationStep, PresentationEventIdentity presentationEvent)
     {
-        if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Live is null || visual.Sprite.AttackSequences.Count == 0) return false;
-        NormalizedAttackSequence selected = SelectAttack(visual.Sprite.AttackSequences, generation, simulationStep, entityId, targetId);
-        StartState(entityId, "primaryAttack", visual, selected);
+        if (!actors.TryGetValue(entityId, out ActorVisual? visual) || visual.Live is null || (visual.Sprite.AttackSequences.Count == 0 && visual.Sprite.RangedAttackSequence is null)) return false;
+        NormalizedAttackSequence selected;
+        string stateName;
+        if (visual.Sprite.RangedAttackSequence is { } ranged && visual.Sprite.States.ContainsKey(ranged.State))
+        {
+            // The donor plays a ranged mobile's ranged animation for every attack it makes, with
+            // no distance check; a published rangedAttack1 state is the HasRangedAttack1 fact, and
+            // the donor's RangedAttack2 variant names no adopted mobile.
+            selected = ranged;
+            stateName = ranged.State;
+        }
+        else
+        {
+            selected = SelectAttack(visual.Sprite.AttackSequences, generation, simulationStep, entityId, targetId);
+            stateName = "primaryAttack";
+        }
+        StartState(entityId, stateName, visual, selected);
         string hitCue = SelectHitCue(presentationEvent);
         visual.ActiveAttack = new ActiveAttackPresentation(presentationEvent, hitCue);
         bool hasDamageFrame = selected.SourceFrames.Contains(-1);

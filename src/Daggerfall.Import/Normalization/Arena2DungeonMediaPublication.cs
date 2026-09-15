@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using Daggerfall.Import.Arena2;
 using Daggerfall.Import.Normalized;
@@ -187,7 +188,8 @@ public sealed record DungeonMediaDisplayProfile(
     float HurtFramesPerSecond,
     float BillboardWorldScale,
     float ActorWorldScale,
-    float CorpseWorldScale)
+    float CorpseWorldScale,
+    float RangedAttackFramesPerSecond)
 {
     public static DungeonMediaDisplayProfile DaggerfallDefault { get; } = new(
         BillboardPivot: new(0.5F, 0.5F),
@@ -200,7 +202,8 @@ public sealed record DungeonMediaDisplayProfile(
         HurtFramesPerSecond: 4F,
         BillboardWorldScale: 1F,
         ActorWorldScale: 1F,
-        CorpseWorldScale: 1F);
+        CorpseWorldScale: 1F,
+        RangedAttackFramesPerSecond: 10F);
 
     public void Validate()
     {
@@ -215,6 +218,7 @@ public sealed record DungeonMediaDisplayProfile(
         ValidatePositive(BillboardWorldScale, nameof(BillboardWorldScale));
         ValidatePositive(ActorWorldScale, nameof(ActorWorldScale));
         ValidatePositive(CorpseWorldScale, nameof(CorpseWorldScale));
+        ValidatePositive(RangedAttackFramesPerSecond, nameof(RangedAttackFramesPerSecond));
     }
 
     public float FramesPerSecondFor(DungeonActorSpriteState state) => state switch
@@ -222,6 +226,7 @@ public sealed record DungeonMediaDisplayProfile(
         DungeonActorSpriteState.Move => MoveFramesPerSecond,
         DungeonActorSpriteState.Idle or DungeonActorSpriteState.RatIdle => IdleFramesPerSecond,
         DungeonActorSpriteState.PrimaryAttack => PrimaryAttackFramesPerSecond,
+        DungeonActorSpriteState.RangedAttack1 or DungeonActorSpriteState.RangedAttack2 => RangedAttackFramesPerSecond,
         DungeonActorSpriteState.Hurt => HurtFramesPerSecond,
         _ => throw new ArgumentOutOfRangeException(nameof(state)),
     };
@@ -284,6 +289,8 @@ public enum DungeonActorSpriteState
     Idle,
     RatIdle,
     PrimaryAttack,
+    RangedAttack1,
+    RangedAttack2,
     Hurt,
 }
 
@@ -332,13 +339,21 @@ public sealed record DungeonActorAttackAlternateSource(byte Chance, IReadOnlyLis
 }
 
 /// <summary>Offline source sequence facts only; consumers decide any attack semantics later.</summary>
-public sealed record DungeonActorAttackSequenceSource(IReadOnlyList<sbyte> PrimaryFrames, IReadOnlyList<DungeonActorAttackAlternateSource> Alternates)
+public sealed record DungeonActorAttackSequenceSource(
+    IReadOnlyList<sbyte> PrimaryFrames,
+    IReadOnlyList<DungeonActorAttackAlternateSource> Alternates,
+    IReadOnlyList<sbyte>? RangedFrames = null)
 {
     public void Validate()
     {
         if (PrimaryFrames is null || PrimaryFrames.Count == 0 || PrimaryFrames.Any(frame => frame < -1) || Alternates is null)
         {
             throw new ArgumentOutOfRangeException(nameof(PrimaryFrames), "Source attack sequences require frame or damage-beat values.");
+        }
+
+        if (RangedFrames is not null && (RangedFrames.Count == 0 || RangedFrames.Any(frame => frame < -1)))
+        {
+            throw new ArgumentOutOfRangeException(nameof(RangedFrames), "A source ranged attack sequence requires frame or damage-beat values when present.");
         }
 
         foreach (DungeonActorAttackAlternateSource alternate in Alternates)
@@ -462,6 +477,7 @@ public sealed record Arena2DungeonMediaPublication(
     private static readonly DungeonSpritePlaybackSource SourceMovePlayback = new(6F, true);
     private static readonly DungeonSpritePlaybackSource SourceIdlePlayback = new(4F, true);
     private static readonly DungeonSpritePlaybackSource SourcePrimaryAttackPlayback = new(10F, false);
+    private static readonly DungeonSpritePlaybackSource SourceRangedAttackPlayback = new(10F, false);
     private static readonly DungeonSpritePlaybackSource SourceHurtPlayback = new(4F, false);
 
     /// <summary>
@@ -733,7 +749,7 @@ public sealed record Arena2DungeonMediaPublication(
                 selection.ActorResourceId,
                 selection.Source,
                 ToSpriteState(selection.Source.Animation.PreferredRestGroup),
-                ToAttackSequenceSource(selection.Source.AttackSequence),
+                ToAttackSequenceSource(selection.Source.AttackSequence, selection.Source.RangedAttackFrames),
                 spriteResourceId,
                 MedianSourceWorldSize(layouts),
                 stateLayouts,
@@ -802,6 +818,11 @@ public sealed record Arena2DungeonMediaPublication(
         }
 
         yield return (DungeonActorSpriteState.PrimaryAttack, Arena2MobileFrameGroup.PrimaryAttack, SourcePrimaryAttackPlayback);
+        if (source.RangedAttackFrames is not null)
+        {
+            yield return (DungeonActorSpriteState.RangedAttack1, Arena2MobileFrameGroup.RangedAttack1, SourceRangedAttackPlayback);
+        }
+
         yield return (DungeonActorSpriteState.Hurt, Arena2MobileFrameGroup.Hurt, SourceHurtPlayback);
     }
 
@@ -841,13 +862,13 @@ public sealed record Arena2DungeonMediaPublication(
         return new(widths[middle], heights[middle]);
     }
 
-    private static DungeonActorAttackSequenceSource ToAttackSequenceSource(Arena2MobileAttackSequence source)
+    private static DungeonActorAttackSequenceSource ToAttackSequenceSource(Arena2MobileAttackSequence source, ImmutableArray<sbyte>? rangedFrames)
     {
         ArgumentNullException.ThrowIfNull(source);
         DungeonActorAttackAlternateSource[] alternates = source.Alternates
             .Select(alternate => new DungeonActorAttackAlternateSource(alternate.Chance, alternate.Frames.ToArray()))
             .ToArray();
-        DungeonActorAttackSequenceSource result = new(source.PrimaryFrames.ToArray(), alternates);
+        DungeonActorAttackSequenceSource result = new(source.PrimaryFrames.ToArray(), alternates, rangedFrames is { } frames ? frames.ToArray() : null);
         result.Validate();
         return result;
     }
@@ -857,6 +878,10 @@ public sealed record Arena2DungeonMediaPublication(
         Arena2MobileFrameGroup.Move => DungeonActorSpriteState.Move,
         Arena2MobileFrameGroup.Idle => DungeonActorSpriteState.Idle,
         Arena2MobileFrameGroup.RatIdle => DungeonActorSpriteState.RatIdle,
+        Arena2MobileFrameGroup.PrimaryAttack => DungeonActorSpriteState.PrimaryAttack,
+        Arena2MobileFrameGroup.RangedAttack1 => DungeonActorSpriteState.RangedAttack1,
+        Arena2MobileFrameGroup.RangedAttack2 => DungeonActorSpriteState.RangedAttack2,
+        Arena2MobileFrameGroup.Hurt => DungeonActorSpriteState.Hurt,
         _ => throw new ArgumentOutOfRangeException(nameof(group), group, "A preferred mobile rest group must map to a playable sprite state."),
     };
 
