@@ -24,9 +24,17 @@ internal sealed record DaggerfallSavePayload(
     DaggerfallContinuationSave? Continuation,
     DaggerfallOwnerSave[] Owners,
     DaggerfallCalendarSave? Calendar = null,
-    DaggerfallSiteSave? Site = null)
+    DaggerfallSiteSave? Site = null,
+    DaggerfallActorInventorySave[]? ActorInventories = null)
 {
-    internal const uint CurrentSchemaVersion = 3;
+    internal const uint CurrentSchemaVersion = 4;
+
+    /// <summary>
+    /// The schema before placed actors persisted their managed inventories, whose saves are
+    /// read with each ranged actor starting from its authored quiver rather than being
+    /// refused: a refilled quiver is recoverable drift, and refusing the save is not.
+    /// </summary>
+    internal const uint QuiverlessSchemaVersion = 3;
 
     /// <summary>
     /// The schema before the world's calendar was persisted, whose saves are read with a calendar that
@@ -81,6 +89,23 @@ internal sealed record DaggerfallSavePayload(
                 .. calendarless.Notices,
                 new SaveRestoreNotice("save-schema-calendarless",
                     $"The save was written as Daggerfall schema {CalendarlessSchemaVersion} and was read as schema {CurrentSchemaVersion}: it carries no calendar, so the world's clock starts where the corpus starts rather than at the time the save was written."),
+            ]));
+        }
+
+        if (payload.SchemaVersion == QuiverlessSchemaVersion)
+        {
+            // The older bytes read as the current shape with no actor inventory sections, so
+            // every ranged actor starts from its authored quiver and the drift is reported
+            // rather than refused: a refilled quiver is recoverable, and refusing a save the
+            // player made is not.
+            DaggerfallSaveRead quiverless = new(
+                DeserializeCurrent(payload) with { SchemaVersion = CurrentSchemaVersion },
+                []);
+            return ReportAbsentSite(new DaggerfallSaveRead(quiverless.Payload,
+            [
+                .. quiverless.Notices,
+                new SaveRestoreNotice("save-schema-quiverless",
+                    $"The save was written as Daggerfall schema {QuiverlessSchemaVersion} and was read as schema {CurrentSchemaVersion}: it carries no actor inventory sections, so ranged actors start from their authored quiver."),
             ]));
         }
 
@@ -227,10 +252,16 @@ internal sealed record DaggerfallSavePayload(
             if (corpse.ActorId <= 0 || !corpseActors.Add(corpse.ActorId)) throw new ArgumentException("Corpse actor identities must be positive and unique.");
             corpse.Validate();
         }
+        HashSet<long> inventoryActors = [];
+        foreach (DaggerfallActorInventorySave actorInventory in ActorInventories ?? [])
+        {
+            ArgumentNullException.ThrowIfNull(actorInventory);
+            if (actorInventory.EntityId <= 0 || !inventoryActors.Add(actorInventory.EntityId)) throw new ArgumentException("Actor inventory save identities must be positive and unique.");
+            actorInventory.Validate();
+        }
         HashSet<ulong> reserved = [];
         foreach (ulong value in ReservedUniqueItemEntityIds)
-            if (value == 0 || !reserved.Add(value)) throw new ArgumentException("Reserved unique entity identities must be non-zero and unique.");
-        // Authored content normally reserves identities below the cursor, but a
+            if (value == 0 || !reserved.Add(value)) throw new ArgumentException("Reserved unique entity identities must be non-zero and unique.");        // Authored content normally reserves identities below the cursor, but a
         // reservation at or above it is tolerated rather than refused: the allocator
         // treats a reservation as live content wherever it sits and skips it when
         // issuing, so such a save still restores correctly. Nothing is silently
@@ -738,6 +769,22 @@ internal sealed record DaggerfallSavePayloadV1(
             CombatCooldowns,
             Continuation,
             []);
+    }
+}
+
+/// <summary>One placed actor's managed inventory: today the ranged actors' quiver stacks.</summary>
+internal sealed record DaggerfallActorInventorySave(long EntityId, DaggerfallStackSave[] Stacks)
+{
+    internal void Validate()
+    {
+        if (EntityId <= 0) throw new ArgumentException("An actor inventory save must name a positive entity identity.");
+        ArgumentNullException.ThrowIfNull(Stacks);
+        HashSet<string> stackItems = new(StringComparer.Ordinal);
+        foreach (DaggerfallStackSave stack in Stacks)
+        {
+            ArgumentNullException.ThrowIfNull(stack);
+            if (string.IsNullOrWhiteSpace(stack.ItemId) || stack.Quantity == 0 || !stackItems.Add(stack.ItemId)) throw new ArgumentException("Actor inventory stacks must be unique non-empty positive entries.");
+        }
     }
 }
 

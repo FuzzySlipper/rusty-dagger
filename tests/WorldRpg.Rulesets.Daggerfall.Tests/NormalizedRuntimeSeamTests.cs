@@ -78,7 +78,7 @@ public sealed class NormalizedRuntimeSeamTests
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         authored[2000] = authored[2000] with { MinimumMaterial = "daedric" };
         DaggerfallMeleeTargetingModule targeting = new(perception.Service, targetingSpatial, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
-        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, definitions, authored, targeting);
+        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories, definitions, authored, targeting);
 
         long staminaBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("stamina")).Current.Raw;
         FactBuffer<IProductFact> facts = new();
@@ -4044,7 +4044,7 @@ public sealed class NormalizedRuntimeSeamTests
             placement => definitions.RequireActor(placement.ActorId));
         authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
         DaggerfallMeleeTargetingModule targeting = new(perception.Service, targetingSpatial, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
-        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, definitions, authored, targeting);
+        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories, definitions, authored, targeting);
         FactBuffer<IProductFact> facts = new();
 
         // The enemy decides a swing against the living player.
@@ -4069,6 +4069,115 @@ public sealed class NormalizedRuntimeSeamTests
         // pending entry for this exact (generation, attacker) key is gone.
         session.State.Actors.Player.Mechanics.SetTrack(TrackId.Parse("health"), new ExactValue(100), ExactTrackSetPolicy.ClampToBounds);
         Assert.True(combat.TryBeginEnemyAttack(2000, DaggerfallActorIdentity.PlayerEntityId, 77, 1_000, .125, facts));
+    }
+
+    [Fact]
+    public void A_ranged_shot_draws_one_arrow_from_the_shooter_s_authored_quiver()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId,
+            placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallMeleeTargetingModule targeting = new(perception.Service, targetingSpatial, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
+        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories, definitions, authored, targeting);
+        FactBuffer<IProductFact> facts = new();
+        long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
+        WorldRpg.Kit.Inventory.MechanicsInventoryCoordinator quiver = session.State.ActorInventories[archer];
+
+        // The pack authors the archer's quiver; the managed inventory carries it.
+        Assert.Equal(12UL, quiver.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
+
+        Assert.True(combat.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 400, .125, facts));
+        Assert.Equal(11UL, quiver.Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
+        List<IProductFact> decided = [];
+        facts.Deliver(decided.Add);
+        Assert.Contains(decided, fact => fact is EnemyAttackStartedFact);
+    }
+
+    [Fact]
+    public void An_archer_with_no_arrows_refuses_the_shot_and_reports_it_instead_of_missing()
+    {
+        string root = RepositoryRoot();
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        List<string> releases = [];
+        ContentFake content = new(releases);
+        PopulateContent(content, inputs);
+        SpatialFake spatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        PerceptionFake perception = PerceptionFake.Create();
+        EngineContextFake engine = EngineContextFake.Create(content, spatial.Service, new AppearanceFake(releases), perception.Service);
+        using DaggerfallSession session = new(engine.Context, definitions, inputs, DaggerfallTuning.Defaults);
+        using SpatialMovementSystem targetingSpatial = new(spatial.Service, content, inputs.SpatialArtifact, DaggerfallTuning.Defaults.Spatial);
+        Dictionary<long, DaggerfallActorDefinition> authored = inputs.Project.Actors.Values.ToDictionary(
+            placement => placement.EntityId,
+            placement => definitions.RequireActor(placement.ActorId));
+        authored[DaggerfallActorIdentity.PlayerEntityId] = definitions.RequireActor(new DaggerfallActorId("player"));
+        DaggerfallMeleeTargetingModule targeting = new(perception.Service, targetingSpatial, session.State.Actors, authored, DaggerfallTuning.Defaults.MeleeTargeting);
+        CombatModule combat = new(RandomMinimum.Create(), session.State.Actors, session.State.Equipment, session.State.ActorInventories, definitions, authored, targeting);
+        FactBuffer<IProductFact> facts = new();
+        long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
+        session.State.ActorInventories[archer].Consume(new WorldRpg.Kit.Inventory.InventoryConsume(
+            "test.empty-quiver", $"test.quiver.{archer}", new WorldRpg.Kit.Inventory.InventoryItemId("arrow"), 12));
+        long playerHealthBefore = session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw;
+
+        Assert.False(combat.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 77, 400, .125, facts));
+        List<IProductFact> decided = [];
+        facts.Deliver(decided.Add);
+        AttackRejectedFact rejection = Assert.Single(decided.OfType<AttackRejectedFact>());
+        Assert.Equal(AttackRejection.EmptyQuiver, rejection.Reason);
+        Assert.Equal(archer, rejection.ActorId);
+        Assert.DoesNotContain(decided, fact => fact is EnemyAttackStartedFact);
+
+        // No pending impact exists behind the refusal, so the player is never damaged by a
+        // shot that was never made, and every later attempt is refused the same way.
+        Assert.Equal(playerHealthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+        Assert.False(combat.TryBeginEnemyAttack(archer, DaggerfallActorIdentity.PlayerEntityId, 78, 401, .125, facts));
+        Assert.Equal(playerHealthBefore, session.State.Actors.Player.Mechanics.ReadTrack(TrackId.Parse("health")).Current.Raw);
+    }
+
+    [Fact]
+    public void A_restored_session_keeps_the_quiver_count_its_save_carried()
+    {
+        string root = RepositoryRoot();
+        DaggerfallDefinitions definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/payloads/daggerfall.base.json")));
+        PrivateersHoldInputs inputs = ReadInputs(root);
+        List<string> releases = [];
+        ContentFake sourceContent = new(releases);
+        PopulateContent(sourceContent, inputs);
+        SpatialFake sourceSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake source = EngineContextFake.Create(sourceContent, sourceSpatial.Service, new AppearanceFake(releases));
+        long archer = Assert.Single(inputs.Project.Actors.Values, placement => placement.ActorId == new DaggerfallActorId("archer")).EntityId;
+        RulesetSavePayload payload;
+        using (DaggerfallSession original = new(source.Context, definitions, inputs, DaggerfallTuning.Defaults))
+        {
+            // One drawn arrow leaves eleven; the save must carry exactly that, not a refill.
+            original.State.ActorInventories[archer].Consume(new WorldRpg.Kit.Inventory.InventoryConsume(
+                "test.draw", $"test.quiver.{archer}", new WorldRpg.Kit.Inventory.InventoryItemId("arrow"), 1));
+            payload = original.CaptureSave();
+        }
+
+        Assert.Equal(11UL, DaggerfallSavePayload.Read(payload).Payload.ActorInventories!
+            .Single(section => section.EntityId == archer).Stacks.Single(stack => stack.ItemId == "arrow").Quantity);
+
+        ContentFake resumedContent = new(releases);
+        PopulateContent(resumedContent, inputs);
+        SpatialFake resumedSpatial = SpatialFake.Create(inputs.SpatialArtifact.Sha256, releases);
+        EngineContextFake resumedEngine = EngineContextFake.Create(resumedContent, resumedSpatial.Service, new AppearanceFake(releases));
+        ResolvedCompositionIdentity identity = GameCompositionResolver.Resolve(FullContent(root), new GameBundleId("daggerfall.privateers-hold")).RequireComposition().Identity;
+        using DaggerfallSession resumed = DaggerfallSession.Restore(resumedEngine.Context, identity, definitions, inputs, DaggerfallTuning.Defaults, payload, RandomMinimum.Create());
+
+        Assert.Equal(11UL, resumed.State.ActorInventories[archer].Read().Stacks.Single(stack => stack.Definition.Value == "arrow").Quantity);
     }
 
     [Fact]
