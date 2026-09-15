@@ -256,6 +256,33 @@ public sealed class GeometryPublicationTests
     }
 
     [Fact]
+    public void Reports_a_material_whose_texture_record_declares_no_extent()
+    {
+        // The guard's sub-branches are told apart by what the record itself states, so the record that
+        // states a frame and an extent no frame can have is refused for the extent it declares rather than
+        // falling through to the decoder's reason for refusing the frame. The corpus carries no such
+        // record, so this fixture builds one through the decoder the inventory reads, as the frame the
+        // fixture cuts short is built.
+        const int LeafId = 34;
+        TextureLeafInventory textures = Textures((LeafId, $"TEXTURE.{LeafId:000}", TextureLeaf(frameDecodes: false, width: 0)));
+        Assert.True(textures.TryGetRecord(LeafId, 0, out TextureRecordFacts? facts));
+        Assert.Equal(1, facts!.Frames);
+        Assert.Equal(0, facts.Width);
+        Assert.Equal(2, facts.Height);
+
+        GeometryPublication publication = Publish(
+            ["9004"],
+            textures,
+            NumericArchive((9004, MeshFixture((LeafId, 0)))));
+
+        GeometryMaterialLink extentless = Assert.Single(Assert.Single(publication.Meshes).Materials);
+        Assert.Equal(GeometryMaterialDisposition.TextureRecordUnusable, extentless.Disposition);
+        Assert.Contains("declares the extent 0x2", extentless.Note, StringComparison.Ordinal);
+        Assert.DoesNotContain("cannot be read", extentless.Note, StringComparison.Ordinal);
+        Assert.Equal(extentless, Assert.Single(publication.UnresolvedMaterials));
+    }
+
+    [Fact]
     public void Publishes_a_number_once_however_its_spelling_arrives()
     {
         // One number, one spelling in the publication: a pack that spells a missing number two ways cannot
@@ -440,11 +467,13 @@ public sealed class GeometryPublicationTests
         "local/arena2");
 
     /// <summary>
-    /// Builds one texture leaf holding a single 2x2 record. A single-frame record reads its rows at a
-    /// 256-byte stride, so the frame a leaf cut short of the second row declares is one the decoder refuses;
-    /// the full leaf carries both rows and decodes.
+    /// Builds one texture leaf holding a single record of the supplied extent. A single-frame record reads
+    /// its rows at a 256-byte stride, so the frame a leaf cut short of the second row declares is one the
+    /// decoder refuses; the full leaf carries both rows and decodes. A record of no extent is one no frame
+    /// can have, whichever way the leaf is cut: the publication refuses it for the extent it declares, and
+    /// the decoder here refuses the frame for the same reason.
     /// </summary>
-    private static byte[] TextureLeaf(bool frameDecodes)
+    private static byte[] TextureLeaf(bool frameDecodes = true, short width = 2, short height = 2)
     {
         const int recordOffset = 46;
         const int dataOffset = 28;
@@ -452,8 +481,8 @@ public sealed class GeometryPublicationTests
         byte[] bytes = new byte[recordOffset + (frameDecodes ? dataOffset + dataBytes : dataOffset + 2)];
         BitConverter.GetBytes((short)1).CopyTo(bytes, 0);
         BitConverter.GetBytes(recordOffset).CopyTo(bytes, 28);
-        BitConverter.GetBytes((short)2).CopyTo(bytes, recordOffset + 4);
-        BitConverter.GetBytes((short)2).CopyTo(bytes, recordOffset + 6);
+        BitConverter.GetBytes(width).CopyTo(bytes, recordOffset + 4);
+        BitConverter.GetBytes(height).CopyTo(bytes, recordOffset + 6);
         BitConverter.GetBytes((uint)dataOffset).CopyTo(bytes, recordOffset + 14);
         BitConverter.GetBytes((ushort)1).CopyTo(bytes, recordOffset + 20);
         bytes[recordOffset + dataOffset] = 1;
