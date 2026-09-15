@@ -28,11 +28,18 @@ export const MODE_SCREENS: readonly ModeScreen[] = [
 /**
  * The published screens no mode shows yet, named so the gap is a stated one rather than an omission.
  *
- * `screen.start-menu` is the donor's load, new and exit menu and `screen.prison` is where the original
- * game opens; neither is a state this product's lifecycle has. `screen.character-generation` and
- * `screen.pick.02` belong to a character-creation flow the product does not have yet. All four are
- * admitted, slotted and delivered to the DOM, and nothing selects them. A delivered screen named in
- * neither this list nor the table above is one the client forgot, which is what the delivery test checks.
+ * `screen.start-menu` is the donor's load, new and exit menu (`DaggerfallStartWindow`) and
+ * `screen.prison` is the cell the donor shows while a prison sentence is served (`DaggerfallCourtWindow`,
+ * days until freedom); neither is a state this product's lifecycle has, and neither is an opening
+ * screen. `screen.character-generation` and `screen.pick.02` belong to a character-creation flow the
+ * product does not have yet. All four are admitted, slotted and delivered to the DOM, and nothing
+ * selects them. A delivered screen named in neither this list nor the table above is one the client
+ * forgot, which is what the delivery test checks.
+ *
+ * No published identity is an intro: the donor opens a new game on a sequence of cinematics rather than
+ * on a screen, so a mode for it would be one showing an artifact no publication carries. That sequence
+ * and the completion that starts the game belong to cinematic playback
+ * (`docs/coverage/content-scope.md`, CNT-025), not to this table.
  */
 export const MODE_LESS_SCREENS: readonly string[] = [
   'screen.character-generation',
