@@ -99,6 +99,25 @@ public sealed class DungeonNormalizerTests
     }
 
     [Fact]
+    public void Reports_a_placement_whose_record_declares_only_a_degenerate_plane()
+    {
+        // The edge is a plane that cannot draw, not a record that states no planes at all: a record that
+        // decodes with one two-point plane states no polygon either, and is reported by the same reason
+        // rather than dropped silently while the valid placement beside it still normalizes and still draws.
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixtureWithModels(["42", "99"]))));
+        Replace(sources, "ARCH3D.BSA", CreateNumericBsa((42U, CreateArch3dFixture()), (99U, CreateArch3dFixture(planePointCount: 2))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        GeometryUnresolvedMeshReference unresolved = Assert.Single(result.UnresolvedMeshReferences);
+        Assert.Equal("99", unresolved.MeshId);
+        Assert.Contains("declares no drawable plane", unresolved.Reason, StringComparison.Ordinal);
+        Assert.Equal("mesh/fixture-hold/texture-2-0/static", Assert.Single(result.Document.Meshes).Id);
+        Assert.Equal(["42", "99"], result.ReferencedMeshIds);
+    }
+
+    [Fact]
     public void EnforcesExplicitQuotas()
     {
         DungeonNormalizationRequest request = Request(CreateSources()) with
@@ -320,7 +339,7 @@ public sealed class DungeonNormalizerTests
         return data;
     }
 
-    private static byte[] CreateArch3dFixture(int planeCount = 1)
+    private static byte[] CreateArch3dFixture(int planeCount = 1, int planePointCount = 3)
     {
         byte[] data = new byte[132];
         Encoding.ASCII.GetBytes("v2.6").CopyTo(data, 0);
@@ -331,14 +350,16 @@ public sealed class DungeonNormalizerTests
         WriteVector(data, 64, [0, 0, 0]);
         WriteVector(data, 76, [256, 0, 0]);
         WriteVector(data, 88, [0, 0, 256]);
-        data[100] = 3;
+        // The plane header states how many points the polygon has, so the fixture writes the entries the
+        // caller asks the record to declare: a plane of fewer than three points is the record's own claim.
+        data[100] = (byte)planePointCount;
         BitConverter.GetBytes((ushort)((2 << 7) | 0)).CopyTo(data, 102);
-        foreach ((int index, short u, short v) in new[] { (0, (short)0, (short)0), (1, (short)32, (short)0), (2, (short)0, (short)32) })
+        for (int index = 0; index < planePointCount; index++)
         {
             int offset = 108 + (index * 8);
             BitConverter.GetBytes(index * 12).CopyTo(data, offset);
-            BitConverter.GetBytes(u).CopyTo(data, offset + 4);
-            BitConverter.GetBytes(v).CopyTo(data, offset + 6);
+            BitConverter.GetBytes((short)(index == 1 ? 32 : 0)).CopyTo(data, offset + 4);
+            BitConverter.GetBytes((short)(index == 2 ? 32 : 0)).CopyTo(data, offset + 6);
         }
 
         return data;
