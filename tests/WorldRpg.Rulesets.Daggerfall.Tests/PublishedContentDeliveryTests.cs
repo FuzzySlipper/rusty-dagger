@@ -406,24 +406,15 @@ public sealed class PublishedContentDeliveryTests
             Path.GetFileName(identified["inventory.icon.iron-dagger"].Path));
 
         // Every identity both sides name must be the same file, so a republish that moved one side and
-        // not the other cannot pass on one sampled row. The identities the pack does not name yet are
-        // the death screen and the five service screens: the committed bundle publication predates
-        // them, and republishing that bundle is what adds them - so this line fails, loudly, the day
-        // it does.
+        // not the other cannot pass on one sampled row. The committed bundle publication used to trail
+        // this group: it named none of the death screen, the five screens that carry their own palette,
+        // or the window chrome, and the list of identities it was allowed to trail is gone with the
+        // republish that carried them. Nothing trails now, which the empty difference states rather
+        // than a list of permitted exceptions that a later republish could quietly satisfy again.
         Assert.Equal(
             [.. identified.Keys.Where(packPaths.ContainsKey).Order(StringComparer.Ordinal)],
             [.. packPaths.Keys.Where(identified.ContainsKey).Order(StringComparer.Ordinal)]);
-        Assert.Equal(
-            [
-                // The five screens that carry their own palette joined the closure, so the import bundle
-                // that predates them trails five more identities.
-                "screen.character-generation", "screen.death", "screen.pick.02", "screen.prison", "screen.start-menu", "screen.title",
-                "window.bank.panel", "window.book.reader", "window.guild.member", "window.guild.service",
-                "window.merchant.buttons.buy", "window.merchant.buttons.identify", "window.merchant.buttons.repair",
-                "window.merchant.buttons.sell", "window.merchant.buttons.sell-gold", "window.merchant.cost",
-                "window.rest.hours-past", "window.rest.hours-remaining", "window.rest.panel",
-            ],
-            identified.Keys.Except(packPaths.Keys).Order(StringComparer.Ordinal));
+        Assert.Empty(identified.Keys.Except(packPaths.Keys));
         Assert.All(
             identified.Keys.Where(packPaths.ContainsKey),
             id => Assert.Equal(Path.GetFileName(packPaths[id]), Path.GetFileName(identified[id].Path)));
