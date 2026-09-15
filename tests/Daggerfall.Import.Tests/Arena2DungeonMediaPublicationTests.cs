@@ -76,6 +76,30 @@ public sealed class Arena2DungeonMediaPublicationTests
     }
 
     [Fact]
+    public void PublishesTheDonorRangedGroupOnlyForAMobileThatDeclaresIt()
+    {
+        DungeonActorSpriteMedia archer = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(141, 482, actorRecordCount: 25)).Actors);
+        AssertState(archer.States.Single(state => state.State == DungeonActorSpriteState.RangedAttack1), DungeonActorSpriteState.RangedAttack1, 10F, false);
+        // The donor's RangedAttack2 group names no adopted mobile, so no source declares it
+        // and no ranged state beyond the humanoid bow group is published.
+        Assert.DoesNotContain(archer.States, state => state.State == DungeonActorSpriteState.RangedAttack2);
+        Assert.Equal(new sbyte[] { 3, 2, 0, 0, 0, -1, 1, 1, 2, 3 }, archer.SourceAttackSequence.RangedFrames);
+
+        DungeonActorSpriteMedia orc = Assert.Single(Arena2DungeonMediaPublication.Create(CreateActorRequest(7, 262)).Actors);
+        Assert.DoesNotContain(orc.States, state => state.State is DungeonActorSpriteState.RangedAttack1 or DungeonActorSpriteState.RangedAttack2);
+        Assert.Null(orc.SourceAttackSequence.RangedFrames);
+    }
+
+    [Fact]
+    public void FailsARangedMobileWhoseArchiveLacksTheRangedSourceRecords()
+    {
+        // Unlike the optional idle groups, a declared ranged group is a combat fact: an
+        // archive that cannot play it must fail the publication instead of silently
+        // regenerating a ranged mobile with no ranged animation.
+        Assert.Throws<InvalidOperationException>(() => Arena2DungeonMediaPublication.Create(CreateActorRequest(141, 482)));
+    }
+
+    [Fact]
     public void ActorAndCorpseAtlasesRetainFullVariableSourceCanvasesWithAsymmetricTransparentMargins()
     {
         Arena2DungeonMediaSource[] sources = CreateSources();
@@ -248,7 +272,7 @@ public sealed class Arena2DungeonMediaPublicationTests
     private static Arena2DungeonMediaRequest CreateRequest(bool reverseSources = false) =>
         Arena2DungeonMediaRequest.Create(CreateDungeon(), new Arena2DungeonMediaSourceSet(reverseSources ? CreateSources().Reverse() : CreateSources()));
 
-    private static Arena2DungeonMediaRequest CreateActorRequest(byte mobileId, ushort archive)
+    private static Arena2DungeonMediaRequest CreateActorRequest(byte mobileId, ushort archive, int actorRecordCount = 20)
     {
         NormalizedImportDocument document = CreateDungeon();
         string actorId = $"actor/mobile-{mobileId}";
@@ -270,7 +294,7 @@ public sealed class Arena2DungeonMediaPublicationTests
         [
             new Arena2DungeonMediaSource("arena2/PAL.PAL", CreatePalette()),
             new Arena2DungeonMediaSource("arena2/TEXTURE.002", CreateTextureArchive(2)),
-            new Arena2DungeonMediaSource($"arena2/TEXTURE.{archive:000}", CreateTextureArchive(20)),
+            new Arena2DungeonMediaSource($"arena2/TEXTURE.{archive:000}", CreateTextureArchive(actorRecordCount)),
         ];
         if (MobileSourceMetadata.TryGet(new Arena2MobileId(mobileId), out Arena2MobileSource? mobile) && mobile.Corpse is Arena2MobileCorpseSource corpse)
         {

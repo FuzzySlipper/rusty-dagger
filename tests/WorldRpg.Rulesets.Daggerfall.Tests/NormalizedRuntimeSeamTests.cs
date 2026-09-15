@@ -1113,6 +1113,44 @@ public sealed class NormalizedRuntimeSeamTests
     }
 
     [Fact]
+    public void A_ranged_mobile_plays_its_published_ranged_state_for_every_attack_without_the_melee_roll()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        KeyedRandomFake random = KeyedRandomFake.Create(40);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(rangedFrames: [3, 2, 0, 0, 0, -1, 1, 1, 2, 3]), random: random.Service);
+
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
+
+        // The donor plays a ranged mobile's ranged animation for every attack, so the published
+        // ranged sequence replaces the melee alternate pool instead of joining it: its authored
+        // frame order plays verbatim, and the marker step becomes the playback marker the donor
+        // launches its missile on, with no alternate roll drawn.
+        Assert.Equal("rangedAttack1", Visual(presentation).State);
+        SpritePlaybackCreateRequest request = appearance.PlaybackRequests.Last();
+        Assert.Equal(new uint[] { 3, 2, 0, 0, 0, 1, 1, 2, 3 }, request.Frames.Span.ToArray().Select(frame => frame.FrameId).ToArray());
+        Assert.Equal([new SpritePlaybackMarker(6, 5)], request.Markers.Span.ToArray());
+        Assert.DoesNotContain(random.Requests, request => request.Scope == "daggerfall.media.attack-alternate.v1");
+    }
+
+    [Fact]
+    public void A_mobile_without_a_ranged_declaration_keeps_playing_its_melee_pool()
+    {
+        List<string> releases = [];
+        ContentFake content = MediaContent(releases);
+        AppearanceFake appearance = new(releases);
+        using PrivateersHoldAppearance presentation = new(content, appearance, MediaInputs(primaryFrames: [0, -1, 1], includeAlternate: false));
+
+        presentation.React(new EnemyAttackStartedFact(11, 12, true, 7, 9));
+
+        Assert.Equal("primaryAttack", Visual(presentation).State);
+        SpritePlaybackCreateRequest request = appearance.PlaybackRequests.Last();
+        Assert.Equal(new uint[] { 2, 3 }, request.Frames.Span.ToArray().Select(frame => frame.FrameId).ToArray());
+        Assert.Equal([new SpritePlaybackMarker(2, 1)], request.Markers.Span.ToArray());
+    }
+
+    [Fact]
     public void Marker_crossings_are_consumed_once_without_emitting_a_second_combat_presentation()
     {
         List<string> releases = [];
@@ -1638,6 +1676,36 @@ public sealed class NormalizedRuntimeSeamTests
             JsonNode frame = frames.Last(value => value!["orientation"]!.GetValue<int>() == 7)!;
             frames.Remove(frame);
         }), payload, definitions));
+    }
+
+    [Fact]
+    public void Generated_media_declares_ranged_states_only_for_mobiles_the_donor_makes_ranged()
+    {
+        string root = RepositoryRoot();
+        JsonObject media = JsonNode.Parse(File.ReadAllBytes(Path.Combine(root, "content/worldrpg/imports/privateers-hold/media/dungeon/manifest.json")))!.AsObject();
+        Dictionary<int, JsonObject> actors = media["actors"]!.AsArray()
+            .Select(value => value!.AsObject())
+            .ToDictionary(actor => actor["mobileId"]!.GetValue<int>(), actor => actor);
+
+        foreach (int rangedMobile in new[] { 138, 141 })
+        {
+            JsonObject actor = actors[rangedMobile];
+            JsonObject ranged = actor["states"]!.AsArray().Select(value => value!.AsObject())
+                .Single(state => state["state"]!.GetValue<string>() == "rangedAttack1");
+            Assert.Equal(10F, ranged["sourcePlayback"]!["framesPerSecond"]!.GetValue<float>());
+            Assert.False(ranged["sourcePlayback"]!["loops"]!.GetValue<bool>());
+            Assert.Equal(new[] { 3, 2, 0, 0, 0, -1, 1, 1, 2, 3 },
+                actor["sourceAttackSequence"]!["rangedFrames"]!.AsArray().Select(value => value!.GetValue<int>()).ToArray());
+            Assert.Equal(20, ranged["frames"]!.AsArray().First(frame => frame!["orientation"]!.GetValue<int>() == 0)!["sourceRecord"]!.GetValue<int>());
+        }
+
+        foreach (int meleeMobile in new[] { 0, 1, 3, 7, 15 })
+        {
+            JsonObject actor = actors[meleeMobile];
+            Assert.DoesNotContain(actor["states"]!.AsArray(), value => value!["state"]!.GetValue<string>() == "rangedAttack1");
+            // JSON null is published explicitly: the mobile declares no ranged sequence.
+            Assert.True(actor["sourceAttackSequence"]!.AsObject().TryGetPropertyValue("rangedFrames", out JsonNode? rangedFrames) && rangedFrames is null);
+        }
     }
 
     [Fact]
@@ -3868,7 +3936,7 @@ public sealed class NormalizedRuntimeSeamTests
         return content;
     }
 
-    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null)
+    private static PrivateersHoldInputs MediaInputs(int primaryChance = 50, IReadOnlyList<int>? primaryFrames = null, bool includeAlternate = true, bool directional = false, IReadOnlyList<NormalizedAudioClip>? audio = null, string? preferredRestState = null, NormalizedClassicPresentation? classic = null, IReadOnlyList<NormalizedAtlasFrame>? actorFrames = null, IReadOnlyList<int>? rangedFrames = null)
     {
         NormalizedSpriteState idle = new("idle", [0], 10F, true)
         {
@@ -3892,6 +3960,7 @@ public sealed class NormalizedRuntimeSeamTests
             [attack.Name] = attack,
         };
         if (preferredRestState is not null && !states.ContainsKey(preferredRestState)) states.Add(preferredRestState, new(preferredRestState, [0], 10F, true));
+        if (rangedFrames is not null) states.Add("rangedAttack1", new("rangedAttack1", [0, 1, 2, 3], 10F, false));
         NormalizedActorSprite sprite = new("sprite/enemy.png", Hash, 32, 32,
             actorFrames ?? [new NormalizedAtlasFrame(0, 0, 0, 8, 8), new NormalizedAtlasFrame(1, 8, 0, 8, 8), new NormalizedAtlasFrame(2, 16, 0, 8, 8), new NormalizedAtlasFrame(3, 24, 0, 8, 8)],
             0, new Vector2(.5F, 0F), Vector2.One)
@@ -3901,6 +3970,7 @@ public sealed class NormalizedRuntimeSeamTests
             AttackSequences = includeAlternate
                 ? [new NormalizedAttackSequence(100 - primaryChance, primaryFrames ?? [0]), new NormalizedAttackSequence(primaryChance, [1])]
                 : [new NormalizedAttackSequence(100, primaryFrames ?? [0])],
+            RangedAttackSequence = rangedFrames is null ? null : new NormalizedAttackSequence(100, rangedFrames, "rangedAttack1"),
         };
         return new PrivateersHoldInputs(
             new ProjectFacts(null, new Dictionary<long, AuthoredActor>()),

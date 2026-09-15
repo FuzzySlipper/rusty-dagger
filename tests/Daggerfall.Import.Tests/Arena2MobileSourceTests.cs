@@ -53,6 +53,40 @@ public sealed class Arena2MobileSourceTests
     }
 
     [Fact]
+    public void RangedMobilesDeclareTheDonorRangedShootSequence()
+    {
+        // The donor's humanoid RangedAttack1Anims sequence; its marked frame launches the
+        // missile rather than applying a damage beat.
+        sbyte[] donorRanged = [3, 2, 0, 0, 0, -1, 1, 1, 2, 3];
+        Assert.True(MobileSourceMetadata.TryGet(new(141), out Arena2MobileSource? archer));
+        Assert.Equal(donorRanged, archer.RangedAttackFrames);
+        Assert.True(MobileSourceMetadata.TryGet(new(138), out Arena2MobileSource? thief));
+        Assert.Equal(donorRanged, thief.RangedAttackFrames);
+
+        foreach (byte id in new byte[] { 0, 1, 3, 4, 7, 15 })
+        {
+            Assert.True(MobileSourceMetadata.TryGet(new(id), out Arena2MobileSource? mobile));
+            Assert.Null(mobile.RangedAttackFrames);
+        }
+    }
+
+    [Fact]
+    public void RangedFrameGroupsPreserveTheDonorArchiveRecordRanges()
+    {
+        Arena2MobileFrameRecord[] ranged1 = MobileSourceMetadata.GetFrameRecords(Arena2MobileFrameGroup.RangedAttack1).ToArray();
+        Assert.Equal(8, ranged1.Length);
+        Assert.Equal(new Arena2MobileFrameRecord(20, false), ranged1[0]);
+        Assert.Equal(new Arena2MobileFrameRecord(24, false), ranged1[4]);
+        Assert.Equal(new Arena2MobileFrameRecord(23, true), ranged1[5]);
+
+        Arena2MobileFrameRecord[] ranged2 = MobileSourceMetadata.GetFrameRecords(Arena2MobileFrameGroup.RangedAttack2).ToArray();
+        Assert.Equal(8, ranged2.Length);
+        Assert.Equal(new Arena2MobileFrameRecord(25, false), ranged2[0]);
+        Assert.Equal(new Arena2MobileFrameRecord(29, false), ranged2[4]);
+        Assert.Equal(new Arena2MobileFrameRecord(28, true), ranged2[5]);
+    }
+
+    [Fact]
     public void SourceFrameGroupsPreserveEightSectorRecordAndMirrorLayout()
     {
         Assert.Equal(

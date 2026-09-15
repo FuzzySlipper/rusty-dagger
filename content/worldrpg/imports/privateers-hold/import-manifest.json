@@ -1624,8 +1624,8 @@
     },
     {
       "relativePath": "media/dungeon/actors/mobile-138.png",
-      "contentHash": "99f0d5bc26ef5a44f883da6e057108b3d9fef5d6d1ef5bf0b0d5aeef47196568",
-      "byteLen": 257398,
+      "contentHash": "7e0c99bae5d08fbeed322bb8dc79f6f8a63f4fb5fe7977cf81b56a3ac182fc3e",
+      "byteLen": 327921,
       "dependsOnPaths": []
     },
     {
@@ -1636,8 +1636,8 @@
     },
     {
       "relativePath": "media/dungeon/actors/mobile-141.png",
-      "contentHash": "3de7e7eebbca4b306b020e70b57e3d92df1ea0139f49891217e6980999f8b19d",
-      "byteLen": 278660,
+      "contentHash": "59e9470407d70691e33ae86adb359f093a7a247c9f736fe9de825db1140f3186",
+      "byteLen": 351492,
       "dependsOnPaths": []
     },
     {
@@ -1876,8 +1876,8 @@
     },
     {
       "relativePath": "media/dungeon/manifest.json",
-      "contentHash": "cd3adf811fda52800cf638e31d3f231c2c3b333d9f2cf23990409d179c039d9f",
-      "byteLen": 1039699,
+      "contentHash": "40ac6c2d02a244df255a8439840013206e184ed6d3a5340954c1b61b8659e532",
+      "byteLen": 1122720,
       "dependsOnPaths": [
         "media/dungeon/actors/mobile-0-corpse.png",
         "media/dungeon/actors/mobile-0.png",
