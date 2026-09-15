@@ -19,6 +19,7 @@ internal sealed class CombatModule
     private readonly IRandomService _random;
     private readonly ActorsState _actors;
     private readonly MechanicsEquipmentCoordinator _equipment;
+    private readonly IReadOnlyDictionary<long, MechanicsInventoryCoordinator> _actorInventories;
     private readonly IReadOnlyDictionary<DaggerfallItemId, DaggerfallItemDefinition> _items;
     private readonly IReadOnlyDictionary<string, int> _weaponMaterialRanks;
     private readonly IReadOnlyDictionary<string, DaggerfallActionDefinition> _actions;
@@ -27,12 +28,16 @@ internal sealed class CombatModule
     private readonly Dictionary<(ulong Generation, long Attacker), ulong> _readyAtStep = [];
     private readonly Dictionary<(ulong Generation, long Attacker), PendingEnemyImpact> _pendingImpacts = [];
     private readonly Dictionary<long, ulong> _restoredRemainingCooldowns = [];
+    // The pack's arrow item is the one ammunition the adopted ranged shots draw. A second ranged
+    // action with different ammunition would move this name onto the authored action.
+    private const string ArrowItemId = "arrow";
 
-    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallMeleeTargetingModule targeting)
+    internal CombatModule(IRandomService random, ActorsState actors, MechanicsEquipmentCoordinator equipment, IReadOnlyDictionary<long, MechanicsInventoryCoordinator> actorInventories, DaggerfallDefinitions definitions, IReadOnlyDictionary<long, DaggerfallActorDefinition> definitionsByEntity, DaggerfallMeleeTargetingModule targeting)
     {
         _random = random;
         _actors = actors;
         _equipment = equipment;
+        _actorInventories = actorInventories;
         _items = definitions.Items;
         _weaponMaterialRanks = DaggerfallFormulaPolicy.ClassicWeaponMaterialRanks;
         _actions = definitions.Actions;
@@ -218,6 +223,7 @@ internal sealed class CombatModule
             facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, attackerId));
             return false;
         }
+        if (authoredAction.Interpretation == "fixed-ranged" && !TrySpendArrow(attackerId, facts)) return false;
         ExplicitMeleeRequest request = new(attackerId, targetId, generation, simulationStep, fixedDeltaSeconds);
         int chance = HitChance(attacker, target, attack.Skill);
         int roll = Draw(request, attackerId, targetId, CombatRandomKey.HitSalt, 1, 100, enemy: true);
@@ -274,6 +280,31 @@ internal sealed class CombatModule
     /// to the behaviour that admitted the attack, not to this module.
     /// </summary>
     internal void InterruptPendingAttack(long attackerId, ulong generation) => _pendingImpacts.Remove((generation, attackerId));
+
+    /// <summary>
+    /// A ranged shot draws one arrow from the shooter's managed quiver and refuses the shot
+    /// outright when it is empty: an out-of-arrows archer stops shooting rather than silently
+    /// missing. The arrow is spent when the shot begins, so a swing interrupted after its
+    /// decision was a drawn-and-not-loosed shot and stays spent; the donor's own quiver
+    /// discipline does not refund a drawn arrow either.
+    /// </summary>
+    private bool TrySpendArrow(long shooterId, FactBuffer<IProductFact> facts)
+    {
+        if (!_actorInventories.TryGetValue(shooterId, out MechanicsInventoryCoordinator? quiver))
+        {
+            // A ranged actor without a managed quiver is a composition defect its owner has to
+            // see, not an empty quiver the player could misread as a bad roll.
+            facts.Append(new AttackRejectedFact(AttackRejection.NoAttackPolicy, shooterId));
+            return false;
+        }
+        if (!quiver.Read().Stacks.Any(stack => stack.Definition.Value == ArrowItemId && stack.Quantity > 0))
+        {
+            facts.Append(new AttackRejectedFact(AttackRejection.EmptyQuiver, shooterId));
+            return false;
+        }
+        quiver.Consume(new InventoryConsume("daggerfall.arrow-drawn", $"daggerfall.quiver.{shooterId}", new InventoryItemId(ArrowItemId), 1));
+        return true;
+    }
 
     private bool TryAdmitPlayerAttack(ulong generation, ulong simulationStep, double fixedDeltaSeconds, DaggerfallActionId? action, out DaggerfallAttackDefinition attack, FactBuffer<IProductFact> facts)
     {

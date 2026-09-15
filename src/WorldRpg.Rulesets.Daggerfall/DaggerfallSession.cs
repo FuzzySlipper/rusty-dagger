@@ -35,6 +35,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
     private readonly SpatialMovementSystem _spatial;
     private readonly FirstPersonCameraSystem _camera;
     private readonly CombatModule _combat;
+    private readonly Dictionary<long, DaggerfallActorDefinition> _authoredDefinitions;
     private readonly DaggerfallStaminaRecoveryModule _staminaRecovery;
     private readonly DaggerfallEnemyBehaviorModule _enemyBehavior;
     private readonly DaggerfallCorpseLootModule _corpseLoot;
@@ -221,6 +222,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             partiallyConstructed.Add(player);
             List<ActorState> actorStates = [];
             Dictionary<long, DaggerfallActorDefinition> authored = [];
+            Dictionary<long, MechanicsInventoryCoordinator> actorInventories = [];
             foreach (AuthoredActor source in inputs.Project.Actors.Values)
             {
                 if (!definitions.Actors.TryGetValue(source.ActorId, out DaggerfallActorDefinition? definition))
@@ -233,9 +235,34 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                 partiallyConstructed.Add(actor);
                 actorStates.Add(actor);
                 authored.Add(source.EntityId, definition);
+                // A placed actor whose definition declares a loadout carries it in a managed
+                // inventory over the session's one world: today that is the ranged actors'
+                // quiver, which a shot draws from and the save persists. A unique loadout entry
+                // would need an equipped placement, which no placed actor has yet, so one is
+                // refused rather than half-granted.
+                if (definition.Loadout.Count > 0)
+                {
+                    if (definitions.Items.Where(item => definition.Loadout.Any(entry => entry.ItemId == item.Key)).Any(item => item.Value.IsFungible is false))
+                        throw new InvalidOperationException($"Placed actor '{source.ActorId.Value}' loadout carries a unique item, which placed actors do not equip yet.");
+                    EntityId actorEntity = new(checked((ulong)source.EntityId));
+                    inventoryWorld.RegisterInventory(new InventoryState(actorEntity));
+                    MechanicsInventoryCoordinator actorInventory = new(inventoryWorld, actorEntity, itemDefinitions);
+                    actorInventories.Add(source.EntityId, actorInventory);
+                    if (saved is null)
+                    {
+                        foreach (DaggerfallLoadoutEntry entry in definition.Loadout.Where(entry => definitions.Items[entry.ItemId].IsFungible))
+                        {
+                            actorInventory.Grant(new InventoryGrant(
+                                "daggerfall.initial-loadout",
+                                $"daggerfall.loadout.{source.EntityId}.{entry.ItemId.Value}",
+                                new InventoryItemId(entry.ItemId.Value),
+                                entry.Quantity));
+                        }
+                    }
+                }
             }
             ActorsState actors = new(player, actorStates);
-            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState(), inventory, equipmentCoordinator, containers);
+            State = new DaggerfallState(new PlayerControlState(inputs.Project.PlayerPosition, inputs.InitialLook.YawRadians, inputs.InitialLook.PitchRadians), actors, new ProgressionState(), inventory, equipmentCoordinator, containers, actorInventories);
             Presentation = new PresentationState("Ready");
             _time = new DaggerfallWorldTime(
                 saved?.Calendar is { } restored
@@ -275,8 +302,9 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             _camera = new FirstPersonCameraSystem(engine.CameraView, State.PlayerControl, tuning.Camera);
             partiallyConstructed.Add(_camera);
             authored.Add(checked((long)PlayerMechanicsEntityId), playerDefinition);
+            _authoredDefinitions = authored;
             DaggerfallMeleeTargetingModule targeting = new(engine.Perception, _spatial, State.Actors, authored, tuning.MeleeTargeting);
-            _combat = new CombatModule(_random, State.Actors, State.Equipment, definitions, authored, targeting);
+            _combat = new CombatModule(_random, State.Actors, State.Equipment, State.ActorInventories, definitions, authored, targeting);
             _staminaRecovery = new DaggerfallStaminaRecoveryModule(tuning.StaminaRecovery);
             _enemyBehavior = new DaggerfallEnemyBehaviorModule(
                 engine.Perception,
@@ -392,6 +420,16 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
         DaggerfallContinuationSave? continuation = _spatial.HasContinuation
             ? new DaggerfallContinuationSave(_spatial.CaptureContinuation())
             : null;
+        // Every placed actor's managed inventory persists: today that is the ranged actors'
+        // quiver, and an uncounted quiver would silently refill on restore.
+        DaggerfallActorInventorySave[] actorInventories = State.ActorInventories
+            .OrderBy(entry => entry.Key)
+            .Select(entry => new DaggerfallActorInventorySave(
+                entry.Key,
+                entry.Value.Read().Stacks
+                    .OrderBy(stack => stack.Definition.Value, StringComparer.Ordinal)
+                    .Select(stack => new DaggerfallStackSave(stack.Definition.Value, stack.Quantity)).ToArray()))
+            .ToArray();
         return DaggerfallSavePayload.Encode(new DaggerfallSavePayload(
             DaggerfallSavePayload.CurrentSchemaVersion,
             player,
@@ -412,7 +450,8 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
                 .Concat(_carriedOwnerSections)
                 .OrderBy(section => section.OwnerId, StringComparer.Ordinal)],
             new DaggerfallCalendarSave(_time.Calendar.Year, _time.Calendar.Month, _time.Calendar.Day, _time.Calendar.Hour, _time.Calendar.Minute, _time.Calendar.Second, _time.RemainderSeconds),
-            _site.Capture()));
+            _site.Capture(),
+            actorInventories));
     }
 
     private static DaggerfallSiteId? ToSiteId(DaggerfallSiteIdSave? id) => id?.Require();
@@ -688,6 +727,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             ApplyTracks(State.Actors.All[actor.EntityId].Mechanics, actor.Health, actor.Stamina, actor.Magicka, $"actor {actor.EntityId}");
 
         ApplyInventory(saved.Inventory);
+        ApplyActorInventories(saved.ActorInventories);
 
         WorldPoint position = new(saved.Player.X, saved.Player.Y, saved.Player.Z);
         State.PlayerControl.YawRadians = saved.Player.YawRadians;
@@ -760,6 +800,37 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             State.Equipment.Equip(unique[group.Key], group.Select(value => new KitEquipmentSlotId(value.SlotId)).ToArray(),
                 new EquipmentChange("daggerfall.restore.equipment", $"daggerfall.restore.equipment.{group.Key}"));
         }
+    }
+
+    /// <summary>
+    /// Refills each placed actor's managed inventory from its saved stacks. A save from before
+    /// the sections existed carries none, so those actors start from their authored loadout:
+    /// the composition registered their inventories fresh and skipped the new-game grants only
+    /// when a section said otherwise, so the authored default is granted here.
+    /// </summary>
+    private void ApplyActorInventories(DaggerfallActorInventorySave[]? saved)
+    {
+        Dictionary<long, DaggerfallActorInventorySave> sections = (saved ?? []).ToDictionary(section => section.EntityId);
+        foreach ((long entityId, MechanicsInventoryCoordinator inventory) in State.ActorInventories)
+        {
+            foreach (DaggerfallStackSave stack in sections.TryGetValue(entityId, out DaggerfallActorInventorySave? section)
+                ? section.Stacks
+                : AuthoredLoadoutStacks(entityId))
+            {
+                if (stack.Quantity == 0) continue;
+                inventory.Grant(new InventoryGrant(
+                    "daggerfall.restore.actor-inventory", $"daggerfall.restore.actor.{entityId}.{stack.ItemId}",
+                    new InventoryItemId(stack.ItemId), stack.Quantity));
+            }
+        }
+    }
+
+    private IReadOnlyList<DaggerfallStackSave> AuthoredLoadoutStacks(long entityId)
+    {
+        if (!_authoredDefinitions.TryGetValue(entityId, out DaggerfallActorDefinition? definition)) return [];
+        // Composition refuses unique loadout entries for placed actors, so every entry that
+        // reaches here is a fungible stack.
+        return definition.Loadout.Select(entry => new DaggerfallStackSave(entry.ItemId.Value, entry.Quantity)).ToArray();
     }
 
     public void Dispose()

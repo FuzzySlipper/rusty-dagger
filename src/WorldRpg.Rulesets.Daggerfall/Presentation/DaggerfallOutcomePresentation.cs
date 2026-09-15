@@ -38,6 +38,9 @@ internal sealed class DaggerfallOutcomePresentation(
                     // An actor that reached its swing with no authored policy is a missing capability,
                     // not a silent miss, so the line says which actor and what is missing.
                     AttackRejection.NoAttackPolicy => rejected.ActorId is { } attacker ? $"No authored attack for {Name(attacker)}" : "No authored attack policy",
+                    // An empty quiver is refused and named: the shooter stops shooting rather
+                    // than the player reading the refusal as a missed shot.
+                    AttackRejection.EmptyQuiver => rejected.ActorId is { } shooter ? $"{Name(shooter)} has no arrows" : "Out of arrows",
                     _ => "Melee request rejected",
                 });
                 break;
