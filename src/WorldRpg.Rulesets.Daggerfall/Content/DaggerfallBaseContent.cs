@@ -2061,11 +2061,16 @@ internal static class DaggerfallBaseContent
             "chain2-material-alias-is-not-authored",
             "bows-retain-donor-both-hands-policy",
             "loot-matrix-uses-fall-exe-errata",
-            // A shot is resolved when its authored damage frame is reached rather than travelling, nothing
-            // is drawn from a quiver although the pack models an arrow item the donor consumes, and the
-            // RangedAttack1/RangedAttack2 groups the donor record declares are not selected, so a shot
-            // presents as a swing. The id names the delivery; the scope is stated where the catalog is
-            // checked, because a donor erratum is an identity rather than a description.
+            // Landed: a ranged shot draws one arrow from the shooter's Kit-coordinated quiver as the
+            // shot begins and is refused outright with an EmptyQuiver rejection naming the shooter
+            // when the quiver is empty; ranged mobiles publish their rangedAttack1 state fail-closed
+            // and play it for the shot. Remaining: the shot resolves at its authored damage frame
+            // from a prerolled outcome that ignores static cover, with no projectile flight rendered
+            // and no static-cover test. The id names a delivery the behavior contradicts on the
+            // ammunition half and is pending rename to
+            // ranged-shots-preroll-their-outcome-and-ignore-cover in Den task #8284, which owns the
+            // pack donorErrata line, this scope comment, the catalog test list, and the fingerprint
+            // fixture; a donor erratum is an identity rather than a description.
             "ranged-attacks-are-hitscan-and-consume-no-ammunition",
         ];
         if (!errata.Select(erratum => erratum.Id).Order().SequenceEqual(expectedErrata.Order())) diagnostics.Add("Donor errata must name mobile 39, the Chain2 omission, the bow two-hand policy, the loot errata and the ranged delivery exactly.");
