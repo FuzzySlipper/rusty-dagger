@@ -219,6 +219,43 @@ public sealed class GeometryPublicationTests
     }
 
     [Fact]
+    public void Reports_a_material_whose_texture_record_cannot_be_read()
+    {
+        // The leaf proves a record's first frame decodes before a material is called bindable, and the corpus
+        // carries no record that fails that proof, so this fixture builds one through the decoder itself: a
+        // leaf cut short of the frame its record declares. The corpus's own frames-less record rides on the
+        // second plane. Both are reported with what their owner established rather than as a material a
+        // consumer could bind.
+        const int LeafId = 34;
+        GeometryPublication publication = Publish(
+            ["9004"],
+            Textures((LeafId, $"TEXTURE.{LeafId:000}", TextureLeaf(frameDecodes: false))),
+            NumericArchive((9004, MeshFixture((81, 4), (LeafId, 0)))));
+
+        GeometryMeshArtifact mesh = Assert.Single(publication.Meshes);
+        Assert.Equal(2, mesh.Materials.Count);
+        GeometryMaterialLink frameLess = mesh.Materials.Single(material => material.Archive == 81 && material.Record == 4);
+        Assert.Equal(GeometryMaterialDisposition.TextureRecordUnusable, frameLess.Disposition);
+        Assert.Contains("declares no frame", frameLess.Note, StringComparison.Ordinal);
+        GeometryMaterialLink unreadable = mesh.Materials.Single(material => material.Archive == LeafId && material.Record == 0);
+        Assert.Equal(GeometryMaterialDisposition.TextureRecordUnusable, unreadable.Disposition);
+        Assert.Contains("cannot be read", unreadable.Note, StringComparison.Ordinal);
+        Assert.Equal(2, publication.UnresolvedMaterials.Count);
+        Assert.Equal(
+            publication.UnresolvedMaterials.Count,
+            publication.Meshes.Sum(value => value.Materials.Count(material => material.Disposition != GeometryMaterialDisposition.Resolved)));
+
+        // The control: the same fixture leaf, carrying the frame its record declares, resolves. The
+        // disposition is the decoder's proof about the bytes and not the leaf id or the reference spelling.
+        GeometryPublication readable = Publish(
+            ["9004"],
+            Textures((LeafId, $"TEXTURE.{LeafId:000}", TextureLeaf(frameDecodes: true))),
+            NumericArchive((9004, MeshFixture((LeafId, 0)))));
+        Assert.Equal(GeometryMaterialDisposition.Resolved, Assert.Single(Assert.Single(readable.Meshes).Materials).Disposition);
+        Assert.Empty(readable.UnresolvedMaterials);
+    }
+
+    [Fact]
     public void Publishes_a_number_once_however_its_spelling_arrives()
     {
         // One number, one spelling in the publication: a pack that spells a missing number two ways cannot
@@ -390,11 +427,89 @@ public sealed class GeometryPublicationTests
     private static GeometryPublication Publish(IReadOnlyList<string> referenced, TextureLeafInventory textures) =>
         GeometryPublicationBuilder.Create(new GeometryPublicationRequest(Archive.Value, File.ReadAllBytes(Path.Combine(RepositoryRoot(), "local/arena2/ARCH3D.BSA")), referenced, textures));
 
+    /// <summary>Publishes the references against a mesh archive the test supplies.</summary>
+    private static GeometryPublication Publish(IReadOnlyList<string> referenced, TextureLeafInventory textures, byte[] archive) =>
+        GeometryPublicationBuilder.Create(new GeometryPublicationRequest(
+            Arch3dInventoryReader.Read(archive, "local/arena2/ARCH3D.BSA"), archive, referenced, textures));
+
     /// <summary>The corpus's texture leaves, which is what a material reference resolves against.</summary>
-    private static TextureLeafInventory Textures() => TextureLeafInventory.Enumerate(
+    private static TextureLeafInventory Textures(params (int Id, string Path, ReadOnlyMemory<byte> Bytes)[] supplied) => TextureLeafInventory.Enumerate(
         Directory.EnumerateFiles(Path.Combine(RepositoryRoot(), "local/arena2"), "TEXTURE.*")
-            .Select(path => (int.Parse(Path.GetFileName(path)["TEXTURE.".Length..]), Path.GetFileName(path), (ReadOnlyMemory<byte>)File.ReadAllBytes(path))),
+            .Select(path => (int.Parse(Path.GetFileName(path)["TEXTURE.".Length..]), Path.GetFileName(path), (ReadOnlyMemory<byte>)File.ReadAllBytes(path)))
+            .Concat(supplied),
         "local/arena2");
+
+    /// <summary>
+    /// Builds one texture leaf holding a single 2x2 record. A single-frame record reads its rows at a
+    /// 256-byte stride, so the frame a leaf cut short of the second row declares is one the decoder refuses;
+    /// the full leaf carries both rows and decodes.
+    /// </summary>
+    private static byte[] TextureLeaf(bool frameDecodes)
+    {
+        const int recordOffset = 46;
+        const int dataOffset = 28;
+        const int dataBytes = 258;
+        byte[] bytes = new byte[recordOffset + (frameDecodes ? dataOffset + dataBytes : dataOffset + 2)];
+        BitConverter.GetBytes((short)1).CopyTo(bytes, 0);
+        BitConverter.GetBytes(recordOffset).CopyTo(bytes, 28);
+        BitConverter.GetBytes((short)2).CopyTo(bytes, recordOffset + 4);
+        BitConverter.GetBytes((short)2).CopyTo(bytes, recordOffset + 6);
+        BitConverter.GetBytes((uint)dataOffset).CopyTo(bytes, recordOffset + 14);
+        BitConverter.GetBytes((ushort)1).CopyTo(bytes, recordOffset + 20);
+        bytes[recordOffset + dataOffset] = 1;
+        bytes[recordOffset + dataOffset + 1] = 2;
+        if (frameDecodes)
+        {
+            bytes[recordOffset + dataOffset + 256] = 3;
+            bytes[recordOffset + dataOffset + 257] = 4;
+        }
+
+        return bytes;
+    }
+
+    /// <summary>
+    /// Builds an ARCH3D mesh record carrying one three-point plane per supplied texture reference, in the
+    /// 64-byte header, twelve-byte point list and eight-byte plane headers the decoder reads.
+    /// </summary>
+    private static byte[] MeshFixture(params (ushort Archive, ushort Record)[] textures)
+    {
+        const int headerBytes = 64;
+        const int planeHeaderBytes = 8;
+        const int planePointBytes = 8;
+        const int pointListBytes = 3 * 12;
+        const int planeBytes = planeHeaderBytes + (3 * planePointBytes);
+        byte[] bytes = new byte[headerBytes + pointListBytes + (textures.Length * planeBytes)];
+        System.Text.Encoding.ASCII.GetBytes("v2.6").CopyTo(bytes, 0);
+        BitConverter.GetBytes(3).CopyTo(bytes, 4);
+        BitConverter.GetBytes(textures.Length).CopyTo(bytes, 8);
+        BitConverter.GetBytes(headerBytes).CopyTo(bytes, 48);
+        BitConverter.GetBytes(headerBytes + pointListBytes).CopyTo(bytes, 60);
+        WriteMeshVector(bytes, 64, 0, 0, 0);
+        WriteMeshVector(bytes, 76, 256, 0, 0);
+        WriteMeshVector(bytes, 88, 0, 0, 256);
+        for (int index = 0; index < textures.Length; index++)
+        {
+            int plane = headerBytes + pointListBytes + (index * planeBytes);
+            bytes[plane] = 3;
+            BitConverter.GetBytes((ushort)((textures[index].Archive << 7) | textures[index].Record)).CopyTo(bytes, plane + 2);
+            for (int point = 0; point < 3; point++)
+            {
+                int entry = plane + planeHeaderBytes + (point * planePointBytes);
+                BitConverter.GetBytes(point * 12).CopyTo(bytes, entry);
+                BitConverter.GetBytes((short)(point == 1 ? 32 : 0)).CopyTo(bytes, entry + 4);
+                BitConverter.GetBytes((short)(point == 2 ? 32 : 0)).CopyTo(bytes, entry + 6);
+            }
+        }
+
+        return bytes;
+    }
+
+    private static void WriteMeshVector(byte[] bytes, int offset, int x, int y, int z)
+    {
+        BitConverter.GetBytes(x).CopyTo(bytes, offset);
+        BitConverter.GetBytes(y).CopyTo(bytes, offset + 4);
+        BitConverter.GetBytes(z).CopyTo(bytes, offset + 8);
+    }
 
     /// <summary>Builds the numeric BSA variant around the supplied payloads.</summary>
     private static byte[] NumericArchive(params (uint Id, byte[] Payload)[] records)

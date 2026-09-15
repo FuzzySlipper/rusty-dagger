@@ -64,6 +64,41 @@ public sealed class DungeonNormalizerTests
     }
 
     [Fact]
+    public void Reports_a_missing_mesh_number_once_however_often_the_block_places_it()
+    {
+        // The same number placed twice is one fact about the archive rather than two: the pack names the
+        // reference it could not serve once, because the number is what the archive could not serve.
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixtureWithModels(["42", "99", "99"]))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        GeometryUnresolvedMeshReference unresolved = Assert.Single(result.UnresolvedMeshReferences);
+        Assert.Equal("99", unresolved.MeshId);
+        Assert.Contains("carries no numeric model '99'", unresolved.Reason, StringComparison.Ordinal);
+        Assert.Equal(["42", "99"], result.ReferencedMeshIds);
+        Assert.Single(result.Document.Meshes);
+    }
+
+    [Fact]
+    public void Reports_a_placement_whose_record_declares_no_drawable_plane()
+    {
+        // A record that decodes but states no polygon is not geometry: the placement is reported with the
+        // archive's own reason while the valid placement beside it still normalizes and still draws.
+        DungeonLogicalSource[] sources = CreateSources();
+        Replace(sources, "BLOCKS.BSA", CreateNamedBsa(("S0000007.RDB", CreateRdbFixtureWithModels(["42", "99"]))));
+        Replace(sources, "ARCH3D.BSA", CreateNumericBsa((42U, CreateArch3dFixture()), (99U, CreateArch3dFixture(planeCount: 0))));
+
+        DungeonNormalizationResult result = DungeonNormalizer.Normalize(Request(sources));
+
+        GeometryUnresolvedMeshReference unresolved = Assert.Single(result.UnresolvedMeshReferences);
+        Assert.Equal("99", unresolved.MeshId);
+        Assert.Contains("declares no drawable plane", unresolved.Reason, StringComparison.Ordinal);
+        Assert.Equal("mesh/fixture-hold/texture-2-0/static", Assert.Single(result.Document.Meshes).Id);
+        Assert.Equal(["42", "99"], result.ReferencedMeshIds);
+    }
+
+    [Fact]
     public void EnforcesExplicitQuotas()
     {
         DungeonNormalizationRequest request = Request(CreateSources()) with
@@ -227,26 +262,56 @@ public sealed class DungeonNormalizerTests
         ushort flatTextureArchive = RdbSourceClassification.EditorFlatArchive,
         ushort flatTextureRecord = RdbSourceClassification.StartMarkerRecord,
         ushort factionOrMobileId = 0,
+        string modelDescription = "MOD") =>
+        CreateRdbFixtureWithModels(["42"], flatTextureArchive, flatTextureRecord, factionOrMobileId, modelDescription);
+
+    /// <summary>
+    /// Builds an RDB block whose single cell places one model per entry of <paramref name="modelIds"/>, in
+    /// order, so a block can name the same model number twice and can name one the archive cannot serve.
+    /// Model-reference entry <c>i</c> carries <c>modelIds[i]</c>, and the object list links one model node
+    /// per entry into the block's flat and light.
+    /// </summary>
+    private static byte[] CreateRdbFixtureWithModels(
+        IReadOnlyList<string> modelIds,
+        ushort flatTextureArchive = RdbSourceClassification.EditorFlatArchive,
+        ushort flatTextureRecord = RdbSourceClassification.StartMarkerRecord,
+        ushort factionOrMobileId = 0,
         string modelDescription = "MOD")
     {
-        const int roots = 6020;
-        const int modelNode = 6024;
-        const int flatNode = 6049;
-        const int lightNode = 6074;
-        const int modelResource = 6099;
-        const int flatResource = 6122;
-        const int lightResource = 6133;
-        byte[] data = new byte[6143];
+        // The classic RDB layout the decoder reads: a 20-byte header, a fixed 750-entry model-reference
+        // table, one cell root, then 25-byte object nodes and their resources.
+        const int headerBytes = 20;
+        const int modelReferences = 750;
+        const int referenceBytes = 8;
+        const int nodeBytes = 25;
+        const int modelResourceBytes = 23;
+        const int flatResourceBytes = 11;
+        const int lightResourceBytes = 10;
+        int roots = headerBytes + (modelReferences * referenceBytes);
+        int firstModelNode = roots + sizeof(int);
+        int flatNode = firstModelNode + (modelIds.Count * nodeBytes);
+        int lightNode = flatNode + nodeBytes;
+        int firstModelResource = lightNode + nodeBytes;
+        int flatResource = firstModelResource + (modelIds.Count * modelResourceBytes);
+        int lightResource = flatResource + flatResourceBytes;
+        byte[] data = new byte[lightResource + lightResourceBytes];
         BitConverter.GetBytes(1U).CopyTo(data, 4);
         BitConverter.GetBytes(1U).CopyTo(data, 8);
         BitConverter.GetBytes((uint)roots).CopyTo(data, 12);
-        Encoding.ASCII.GetBytes("42\0").CopyTo(data, 20);
-        Encoding.ASCII.GetBytes(modelDescription).CopyTo(data, 25);
-        BitConverter.GetBytes(modelNode).CopyTo(data, roots);
-        WriteNode(data, modelNode, flatNode, [0, 0, 0], 1, modelResource);
+        BitConverter.GetBytes(firstModelNode).CopyTo(data, roots);
+        for (int index = 0; index < modelIds.Count; index++)
+        {
+            int reference = headerBytes + (index * referenceBytes);
+            Encoding.ASCII.GetBytes(modelIds[index] + "\0").CopyTo(data, reference);
+            Encoding.ASCII.GetBytes(modelDescription).CopyTo(data, reference + 5);
+            int resource = firstModelResource + (index * modelResourceBytes);
+            BitConverter.GetBytes((ushort)index).CopyTo(data, resource + 12);
+            int next = index + 1 < modelIds.Count ? firstModelNode + ((index + 1) * nodeBytes) : flatNode;
+            WriteNode(data, firstModelNode + (index * nodeBytes), next, [index, 0, 0], 1, resource);
+        }
+
         WriteNode(data, flatNode, lightNode, [10, -20, 30], 3, flatResource);
         WriteNode(data, lightNode, -1, [1, -2, 3], 2, lightResource);
-        BitConverter.GetBytes((ushort)0).CopyTo(data, modelResource + 12);
         BitConverter.GetBytes((ushort)((flatTextureArchive << 7) | flatTextureRecord)).CopyTo(data, flatResource);
         data[flatResource + 4] = (byte)factionOrMobileId;
         data[flatResource + 5] = (byte)(factionOrMobileId >> 8);
@@ -255,12 +320,12 @@ public sealed class DungeonNormalizerTests
         return data;
     }
 
-    private static byte[] CreateArch3dFixture()
+    private static byte[] CreateArch3dFixture(int planeCount = 1)
     {
         byte[] data = new byte[132];
         Encoding.ASCII.GetBytes("v2.6").CopyTo(data, 0);
         BitConverter.GetBytes(3).CopyTo(data, 4);
-        BitConverter.GetBytes(1).CopyTo(data, 8);
+        BitConverter.GetBytes(planeCount).CopyTo(data, 8);
         BitConverter.GetBytes(64).CopyTo(data, 48);
         BitConverter.GetBytes(100).CopyTo(data, 60);
         WriteVector(data, 64, [0, 0, 0]);
