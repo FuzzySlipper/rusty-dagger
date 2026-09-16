@@ -53,7 +53,7 @@ public sealed class DaggerfallRewardReactionTests
         DaggerfallActorDefinition thief = definitions.RequireActor(new DaggerfallActorId("thief"));
         Dictionary<long, DaggerfallActorDefinition> actors = new() { [9000] = thief };
         EntityId owner = new(DaggerfallActorIdentity.PlayerEntityId);
-        InventoryWorld world = new();
+        InventoryStore world = new();
         world.RegisterInventory(new InventoryState(owner));
         world.RegisterEquipment(new EquipmentState(owner));
         Dictionary<KitInventoryItemId, EngineItemDefinition> managed = new()
@@ -88,7 +88,7 @@ public sealed class DaggerfallRewardReactionTests
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         DaggerfallActorDefinition thief = definitions.RequireActor(new DaggerfallActorId("thief"));
         EntityId owner = new(DaggerfallActorIdentity.PlayerEntityId);
-        InventoryWorld world = new();
+        InventoryStore world = new();
         world.RegisterInventory(new InventoryState(owner));
         world.RegisterEquipment(new EquipmentState(owner));
         MechanicsInventoryCoordinator inventory = new(world, owner, new Dictionary<KitInventoryItemId, EngineItemDefinition>());
@@ -211,7 +211,7 @@ public sealed class DaggerfallRewardReactionTests
         DaggerfallActorDefinition player = definitions.RequireActor(new DaggerfallActorId("player"));
         DaggerfallActorDefinition thief = definitions.RequireActor(new DaggerfallActorId("thief"));
         EntityId owner = new(DaggerfallActorIdentity.PlayerEntityId);
-        InventoryWorld world = new();
+        InventoryStore world = new();
         world.RegisterInventory(new InventoryState(owner));
         world.RegisterEquipment(new EquipmentState(owner));
         MechanicsInventoryCoordinator inventory = new(world, owner, new Dictionary<KitInventoryItemId, EngineItemDefinition>());
@@ -271,7 +271,7 @@ public sealed class DaggerfallRewardReactionTests
         IReadOnlyDictionary<long, DaggerfallActorDefinition> actors)
     {
         EntityId owner = new(DaggerfallActorIdentity.PlayerEntityId);
-        InventoryWorld world = new();
+        InventoryStore world = new();
         world.RegisterInventory(new InventoryState(owner));
         world.RegisterEquipment(new EquipmentState(owner));
         return new DaggerfallRewardReactions(

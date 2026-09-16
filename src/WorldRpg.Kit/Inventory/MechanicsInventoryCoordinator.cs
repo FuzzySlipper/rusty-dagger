@@ -105,12 +105,12 @@ public sealed class EquipmentRead(
 /// </summary>
 public sealed class MechanicsInventoryCoordinator
 {
-    private readonly InventoryWorld _world;
+    private readonly InventoryStore _world;
     private readonly EntityId _owner;
     private readonly IReadOnlyDictionary<InventoryItemId, ItemDefinition> _items;
 
     public MechanicsInventoryCoordinator(
-        InventoryWorld world,
+        InventoryStore world,
         EntityId owner,
         IReadOnlyDictionary<InventoryItemId, ItemDefinition> items)
     {
@@ -138,7 +138,7 @@ public sealed class MechanicsInventoryCoordinator
         ArgumentNullException.ThrowIfNull(grants);
         InventoryAtomicGrant[] values = grants.Select(grant => grant.Validate()).ToArray();
         if (values.Length == 0) throw new ArgumentException("At least one atomic grant is required.", nameof(grants));
-        InventoryWorldCandidate candidate = _world.Prepare();
+        InventoryEdit candidate = _world.Prepare();
         foreach (InventoryAtomicGrant grant in values)
         {
             ItemDefinition definition = RequireDefinition(grant.Item);
@@ -173,12 +173,12 @@ public sealed class MechanicsInventoryCoordinator
 
 /// <summary>
 /// Thin typed coordination over managed unique-item containment and equipment.
-/// It keeps only ruleset-facing identity conversion; InventoryWorld remains the
+/// It keeps only ruleset-facing identity conversion; InventoryStore remains the
 /// state owner and validates every relationship mutation atomically.
 /// </summary>
 public sealed class MechanicsEquipmentCoordinator : IDisposable
 {
-    private readonly InventoryWorld _world;
+    private readonly InventoryStore _world;
     private readonly EntityId _owner;
     private readonly IReadOnlyDictionary<InventoryItemId, ItemDefinition> _items;
     private readonly IReadOnlyDictionary<EquipmentSlotId, EquipmentSlotDefinition> _slots;
@@ -186,7 +186,7 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
     private bool _disposed;
 
     public MechanicsEquipmentCoordinator(
-        InventoryWorld world,
+        InventoryStore world,
         EntityId owner,
         IReadOnlyDictionary<InventoryItemId, ItemDefinition> items,
         IReadOnlyDictionary<EquipmentSlotId, EquipmentSlotDefinition> slots)
@@ -216,7 +216,7 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
                 new UniqueInventoryItem(assignment.Item.Value, RequireContained(contained, assignment.Item))));
         }
 
-        return new EquipmentRead(assignments, equipment.Revision, inventory.WorldRevision);
+        return new EquipmentRead(assignments, equipment.Revision, inventory.StoreRevision);
     }
 
     public UniqueInventoryItem Materialize(UniqueItemMaterialization item)
@@ -291,7 +291,7 @@ public sealed class MechanicsEquipmentCoordinator : IDisposable
     {
         ThrowIfDisposed();
         change.Validate();
-        InventoryWorldCandidate candidate = _world.Prepare();
+        InventoryEdit candidate = _world.Prepare();
         candidate.Unequip(_owner, RequireEntity(item));
         foreach (UniqueInventoryItem outgoing in replaced) candidate.Unequip(_owner, RequireEntity(outgoing));
         EquipmentMutationReceipt receipt = candidate.Equip(_owner, RequireEntity(item), slots.Select(RequireSlot));

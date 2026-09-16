@@ -10,7 +10,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Selective_transfers_move_one_unit_or_unique_and_reject_stale_or_capacity_failures_atomically()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
         EntityId source = new(10), player = new(20);
         containers.RegisterOwner(source);
@@ -37,7 +37,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Seed_and_transfer_all_preserve_mixed_contents_with_one_publish_each()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
         EntityId chest = new(10);
         EntityId player = new(20);
@@ -69,7 +69,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Transfer_all_returns_stacks_and_unique_items_in_deterministic_order()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
         EntityId source = new(10);
         EntityId destination = new(20);
@@ -92,7 +92,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Transfer_all_of_an_empty_owner_publishes_once_and_reports_empty_transfer()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
         EntityId source = new(10);
         EntityId destination = new(20);
@@ -112,7 +112,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Failed_transfer_candidate_leaves_both_owners_and_world_revision_unchanged()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
         EntityId source = new(10);
         EntityId destination = new(20);
@@ -138,7 +138,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Unique_seed_identities_and_entities_are_materialized_exactly_once()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
         EntityId owner = new(10);
         containers.RegisterOwner(owner);
@@ -160,7 +160,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Container_operations_require_registered_nonzero_distinct_owners()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         MechanicsInventoryContainerCoordinator containers = CreateCoordinator(world);
         EntityId owner = new(10);
 
@@ -175,7 +175,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Constructor_requires_exact_product_to_managed_definition_mapping()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         ItemDefinition gold = Fungible("gold", maximumQuantity: 10);
 
         Assert.Throws<ArgumentException>(() => new MechanicsInventoryContainerCoordinator(
@@ -189,7 +189,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
     [Fact]
     public void Constructor_snapshots_definition_mapping_against_later_caller_mutation()
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         ItemDefinition originalGold = Fungible("gold", maximumQuantity: 10);
         ItemDefinition originalSword = Unique("sword");
         var callerDefinitions = new Dictionary<InventoryItemId, ItemDefinition>
@@ -221,7 +221,7 @@ public sealed class MechanicsInventoryContainerCoordinatorTests
         Assert.DoesNotContain(transfer.Stacks, item => item.Item.Value == "amber");
     }
 
-    private static MechanicsInventoryContainerCoordinator CreateCoordinator(InventoryWorld world) =>
+    private static MechanicsInventoryContainerCoordinator CreateCoordinator(InventoryStore world) =>
         new(world, new Dictionary<InventoryItemId, ItemDefinition>
         {
             [new InventoryItemId("amber")] = Fungible("amber", maximumQuantity: 10),

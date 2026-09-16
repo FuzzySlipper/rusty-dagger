@@ -14,7 +14,7 @@ public sealed class MechanicsInventoryCoordinatorTests
     public void Grant_and_consume_use_the_managed_inventory_world()
     {
         EntityId owner = new(7);
-        InventoryWorld world = CreateWorld(owner);
+        InventoryStore world = CreateWorld(owner);
         ItemDefinition gold = Fungible("gold", maximumQuantity: 100);
         MechanicsInventoryCoordinator inventory = new(
             world,
@@ -41,7 +41,7 @@ public sealed class MechanicsInventoryCoordinatorTests
     public void Invalid_or_unknown_inventory_requests_stop_before_managed_mutation()
     {
         EntityId owner = new(7);
-        InventoryWorld world = CreateWorld(owner);
+        InventoryStore world = CreateWorld(owner);
         MechanicsInventoryCoordinator inventory = new(
             world,
             owner,
@@ -58,7 +58,7 @@ public sealed class MechanicsInventoryCoordinatorTests
     public void Atomic_grants_publish_all_items_or_none()
     {
         EntityId owner = new(7);
-        InventoryWorld world = CreateWorld(owner);
+        InventoryStore world = CreateWorld(owner);
         ItemDefinition gold = Fungible("gold", maximumQuantity: 100);
         ItemDefinition sword = UniqueEquipment("sword");
         MechanicsInventoryCoordinator inventory = new(
@@ -99,7 +99,7 @@ public sealed class MechanicsInventoryCoordinatorTests
     public void Materialize_equip_unequip_and_swap_use_managed_item_and_equipment_state()
     {
         EntityId owner = new(7);
-        InventoryWorld world = CreateWorld(owner);
+        InventoryStore world = CreateWorld(owner);
         ItemDefinition sword = UniqueEquipment("sword");
         ItemDefinition dagger = UniqueEquipment("dagger");
         EquipmentSlotDefinition hand = new(
@@ -154,9 +154,9 @@ public sealed class MechanicsInventoryCoordinatorTests
         Assert.Equal(daggerItem, swappedItem);
     }
 
-    private static InventoryWorld CreateWorld(EntityId owner)
+    private static InventoryStore CreateWorld(EntityId owner)
     {
-        InventoryWorld world = new();
+        InventoryStore world = new();
         world.RegisterInventory(new InventoryState(owner));
         world.RegisterEquipment(new EquipmentState(owner));
         return world;

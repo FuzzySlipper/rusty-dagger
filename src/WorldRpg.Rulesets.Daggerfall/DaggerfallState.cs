@@ -16,7 +16,7 @@ internal sealed class DaggerfallState(PlayerControlState playerControl, ActorsSt
     internal MechanicsInventoryContainerCoordinator Containers { get; } = containers;
     /// <summary>
     /// One managed inventory per placed actor whose definition declares a loadout, over the
-    /// session's single InventoryWorld. Today this carries the ranged actors' quivers: a shot
+    /// session's single InventoryStore. Today this carries the ranged actors' quivers: a shot
     /// draws from it, and its contents persist with the save.
     /// </summary>
     internal IReadOnlyDictionary<long, MechanicsInventoryCoordinator> ActorInventories { get; } = actorInventories;

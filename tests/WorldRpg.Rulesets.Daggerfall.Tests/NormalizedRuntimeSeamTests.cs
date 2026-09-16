@@ -2180,7 +2180,7 @@ public sealed class NormalizedRuntimeSeamTests
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.ToDictionary(
             item => new InventoryItemId(item.Id.Value),
             item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
-        InventoryWorld world = new();
+        InventoryStore world = new();
         EntityId playerOwner = new(1);
         world.RegisterInventory(new InventoryState(playerOwner));
         MechanicsInventoryContainerCoordinator containers = new(world, items);
@@ -3060,7 +3060,7 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.True(corpse.IsRegistered);
         session.State.Containers.Seed(corpse.Owner, [new InventoryContainerSeed(new InventoryItemId("gold-piece"), 5)]);
         perception.Receipt = Receipt(new PerceptionPair(1, 2000, 1d, 1d, PerceptionPairKind.Visible, 1d));
-        ulong before = session.State.Inventory.Read().WorldRevision;
+        ulong before = session.State.Inventory.Read().StoreRevision;
         void Ui(string json, ulong step)
         {
             ProductInputEvent action = Input(InputEventKind.DirectDigital) with
@@ -3073,14 +3073,14 @@ public sealed class NormalizedRuntimeSeamTests
         }
         Ui("{\"action\":\"loot\"}", 2);
         LootPresentation opened = Assert.IsType<LootPresentation>(session.OpenLoot);
-        Assert.Equal(before, session.State.Inventory.Read().WorldRevision);
+        Assert.Equal(before, session.State.Inventory.Read().StoreRevision);
         InventoryItemPresentation gold = opened.Items.Single(item => item.Definition == "gold-piece");
         string take = System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key });
         Ui(take, 3);
         Assert.Equal(ulong.Parse(gold.Quantity) - 1, ulong.Parse(session.OpenLoot!.Items.Single(item => item.Key == gold.Key).Quantity));
-        ulong after = session.State.Inventory.Read().WorldRevision;
+        ulong after = session.State.Inventory.Read().StoreRevision;
         Ui(take, 4);
-        Assert.Equal(after, session.State.Inventory.Read().WorldRevision);
+        Assert.Equal(after, session.State.Inventory.Read().StoreRevision);
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-close", container = opened.Container }), 5);
         Assert.Null(session.OpenLoot);
     }
@@ -3099,7 +3099,7 @@ public sealed class NormalizedRuntimeSeamTests
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.ToDictionary(
             item => new InventoryItemId(item.Id.Value),
             item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
-        InventoryWorld world = new();
+        InventoryStore world = new();
         EntityId playerOwner = new(1);
         world.RegisterInventory(new InventoryState(playerOwner));
         MechanicsInventoryContainerCoordinator containers = new(world, items);
@@ -3191,7 +3191,7 @@ public sealed class NormalizedRuntimeSeamTests
         Dictionary<InventoryItemId, ItemDefinition> items = definitions.Items.Values.ToDictionary(
             item => new InventoryItemId(item.Id.Value),
             item => new ItemDefinition(ItemDefinitionId.Parse(item.Id.Value), item.IsFungible ? ItemKind.Fungible : ItemKind.Unique, item.MaximumQuantity));
-        InventoryWorld world = new();
+        InventoryStore world = new();
         EntityId playerOwner = new(1);
         world.RegisterInventory(new InventoryState(playerOwner));
         MechanicsInventoryContainerCoordinator containers = new(world, items);
@@ -4594,7 +4594,7 @@ public sealed class NormalizedRuntimeSeamTests
         // Held movement reaches no world step while a modal owns input, and the modal's own action
         // still lands: the gold moves even though the world does not.
         int stepsBeforeModal = spatial.StepCalls;
-        ulong revisionBefore = session.State.Inventory.Read().WorldRevision;
+        ulong revisionBefore = session.State.Inventory.Read().StoreRevision;
         session.Update(new ProductUpdate(OuterUpdate(3), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         Assert.Equal(stepsBeforeModal, spatial.StepCalls);
 
@@ -4624,7 +4624,7 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal("Poisoned", engine.PublishedArrayItem("slots", 0, "label"));
         Assert.Equal("effect.poison", engine.PublishedArrayItem("slots", 0, "owner"));
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = opened.Container, revision = opened.Revision, item = gold.Key }), 4);
-        Assert.NotEqual(revisionBefore, session.State.Inventory.Read().WorldRevision);
+        Assert.NotEqual(revisionBefore, session.State.Inventory.Read().StoreRevision);
 
         // Closing through the interaction's own token is what returns the session to ordinary play,
         // and it asks the product for it rather than deciding for itself.
@@ -4655,12 +4655,12 @@ public sealed class NormalizedRuntimeSeamTests
         Assert.Equal(ProductMode.Dead, session.PendingModeRequest);
         session.ApplyProductMode(ProductMode.Dead);
         int stepsBeforeDeath = spatial.StepCalls;
-        ulong afterDeath = session.State.Inventory.Read().WorldRevision;
+        ulong afterDeath = session.State.Inventory.Read().StoreRevision;
         InventoryItemPresentation remaining = reopened.Items.Single(item => item.Definition == "gold-piece");
         session.Update(new ProductUpdate(OuterUpdate(8), [Input(InputEventKind.Key, InputEdge.Pressed, keyboard: KeyboardControl.KeyW)]));
         Ui(System.Text.Json.JsonSerializer.Serialize(new { action = "loot-take", container = reopened.Container, revision = reopened.Revision, item = remaining.Key }), 9);
         Assert.Equal(stepsBeforeDeath, spatial.StepCalls);
-        Assert.Equal(afterDeath, session.State.Inventory.Read().WorldRevision);
+        Assert.Equal(afterDeath, session.State.Inventory.Read().StoreRevision);
 
         // A dead product advertises no closable interaction: its own gate would ignore the close, so
         // offering the token would be a control that silently does nothing. The contents panel is
