@@ -26,7 +26,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
             .Select(stack => items.DescribeItem(DaggerfallInventoryPresentation.StackKey(stack.Definition.Value), stack.Definition.Value, stack.Quantity))
             .Concat(contents.UniqueItems.Select(item => items.DescribeItem(DaggerfallInventoryPresentation.UniqueKey(item.Entity.Value), item.Definition.Value, 1)))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
-        return new(Token, $"{Token}:{contents?.WorldRevision ?? 0}", DaggerfallInventoryPresentation.Label(loot.ContainerName(actor)) + " — loot",
+        return new(Token, $"{Token}:{contents?.StoreRevision ?? 0}", DaggerfallInventoryPresentation.Label(loot.ContainerName(actor)) + " — loot",
             rows, rows.Length == 0, Message);
     }
 
@@ -63,7 +63,7 @@ internal sealed class DaggerfallLootPresentation(DaggerfallCorpseLootModule loot
         return prepared with
         {
             Selection = selection,
-            ExpectedWorldRevision = contents.WorldRevision,
+            ExpectedWorldRevision = contents.StoreRevision,
             Facts = [new LootAwardedFact(prepared.Container.ActorId, item.Definition, 1, prepared.Container.OriginatingSequence)],
         };
     }

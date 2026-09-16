@@ -32,7 +32,7 @@ internal sealed class DaggerfallInventoryPresentation(
             .Concat(current.Stacks.Select(stack => (Key: StackKey(stack.Definition.Value), Definition: stack.Definition.Value, Quantity: stack.Quantity, Slots: Array.Empty<string>())))
             .OrderBy(item => item.Key, StringComparer.Ordinal).ToArray();
         _layout.Reconcile(items.Where(item => item.Slots.Length == 0).Select(item => item.Key));
-        return new InventoryPresentation($"{current.WorldRevision}:{_layout.Revision}", items.Select(item =>
+        return new InventoryPresentation($"{current.StoreRevision}:{_layout.Revision}", items.Select(item =>
             DescribeItem(item.Key, item.Definition, item.Quantity, item.Slots.Length == 0 ? _layout.Position(item.Key) : null, item.Slots)).ToArray(),
             definitions.EquipmentSlots.Values.Select(slot => new EquipmentSlotPresentation(slot.Id.Value, Label(slot.Id.Value),
                 equipped.TryGet(new SlotId(slot.Id.Value), out UniqueItem item) ? UniqueKey(item.EntityId) : null)).ToArray(), _message);

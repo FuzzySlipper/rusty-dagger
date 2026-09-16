@@ -187,7 +187,7 @@ internal sealed class DaggerfallSession : ISaveableGameSession, IRestoringGameSe
             Dictionary<KitEquipmentSlotId, EquipmentSlotDefinition> equipmentSlots = definitions.EquipmentSlots.Values
                 .ToDictionary(slot => new KitEquipmentSlotId(slot.Id.Value), ToManagedSlot);
             EntityId playerEntity = new(PlayerMechanicsEntityId);
-            InventoryWorld inventoryWorld = new();
+            InventoryStore inventoryWorld = new();
             inventoryWorld.RegisterInventory(new InventoryState(playerEntity));
             inventoryWorld.RegisterEquipment(new EquipmentState(playerEntity));
             MechanicsInventoryCoordinator inventory = new(inventoryWorld, playerEntity, itemDefinitions);

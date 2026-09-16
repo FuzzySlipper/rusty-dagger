@@ -123,7 +123,7 @@ internal sealed class DaggerfallCorpseLootModule
 
         // Actor ids are already validated as non-zero Mechanics ids at session
         // composition.  An enemy has no inventory registered yet, so the same
-        // stable id is safe as its durable corpse owner in this InventoryWorld.
+        // stable id is safe as its durable corpse owner in this InventoryStore.
         IReadOnlyList<InventoryContainerSeed> seeds = GenerateSeeds(fact, actor);
         EntityId owner = new(checked((ulong)fact.ActorId));
         // Donor RemoveLootContainer disables interaction but preserves the

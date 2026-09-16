@@ -70,7 +70,7 @@ public sealed class DaggerfallCharacterPresentationTests
             var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallSession.ToManagedItem);
             var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallSession.ToManagedSlot);
             EntityId owner = new(1);
-            InventoryWorld world = new();
+            InventoryStore world = new();
             world.RegisterInventory(new InventoryState(owner));
             world.RegisterEquipment(new EquipmentState(owner));
             equipment = new MechanicsEquipmentCoordinator(world, owner, items, slots);

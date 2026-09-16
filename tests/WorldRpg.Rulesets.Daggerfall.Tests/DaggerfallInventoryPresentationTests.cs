@@ -95,7 +95,7 @@ public sealed class DaggerfallInventoryPresentationTests
             var definitions = DaggerfallBaseContent.Read(File.ReadAllBytes(Path.Combine(directory!.FullName, "content/worldrpg/payloads/daggerfall.base.json")));
             var items = definitions.Items.Values.ToDictionary(item => new InventoryItemId(item.Id.Value), DaggerfallSession.ToManagedItem);
             var slots = definitions.EquipmentSlots.Values.ToDictionary(slot => new SlotId(slot.Id.Value), DaggerfallSession.ToManagedSlot);
-            InventoryWorld world = new();
+            InventoryStore world = new();
             EntityId owner = new(1);
             world.RegisterInventory(new InventoryState(owner));
             world.RegisterEquipment(new EquipmentState(owner));

@@ -108,13 +108,13 @@ public sealed class InventoryContainerTransferReceipt
 /// </summary>
 public sealed class MechanicsInventoryContainerCoordinator
 {
-    private readonly InventoryWorld _world;
+    private readonly InventoryStore _world;
     private readonly FrozenDictionary<InventoryItemId, ItemDefinition> _definitions;
     private readonly FrozenDictionary<ItemDefinitionId, InventoryItemId> _definitionIds;
     private readonly HashSet<string> _materializedUniqueIdentities = new(StringComparer.Ordinal);
 
     public MechanicsInventoryContainerCoordinator(
-        InventoryWorld world,
+        InventoryStore world,
         IReadOnlyDictionary<InventoryItemId, ItemDefinition> definitions)
     {
         _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -156,7 +156,7 @@ public sealed class MechanicsInventoryContainerCoordinator
         ValidateSeeds(values);
         InventoryView beforeView = _world.Read(owner);
         ulong worldRevisionBefore = _world.Revision;
-        InventoryWorldCandidate candidate = _world.Prepare(worldRevisionBefore);
+        InventoryEdit candidate = _world.Prepare(worldRevisionBefore);
         foreach (InventoryContainerSeed seed in values)
         {
             ItemDefinition definition = RequireDefinition(seed.Item);
@@ -219,7 +219,7 @@ public sealed class MechanicsInventoryContainerCoordinator
             .OrderBy(item => item.Entity.Value)
             .ToArray();
         ulong worldRevisionBefore = _world.Revision;
-        InventoryWorldCandidate candidate = _world.Prepare(expectedWorldRevision ?? worldRevisionBefore);
+        InventoryEdit candidate = _world.Prepare(expectedWorldRevision ?? worldRevisionBefore);
         if (selection is not null)
         {
             ItemDefinition definition = RequireDefinition(selection.Item);
